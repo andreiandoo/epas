@@ -9,87 +9,78 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::beginTransaction();
-
-        try {
-            // Ensure base taxonomy tables exist (no-op if already there)
-            foreach ([
-                'event_categories' => 'id',
-                'event_genres'     => 'id',
-                'music_genres'     => 'id',
-                'event_tags'       => 'id',
-                'events'           => 'id',
-            ] as $table => $pk) {
-                if (! Schema::hasTable($table)) {
-                    throw new RuntimeException("Missing required table [{$table}]. Please run your base migrations first.");
-                }
+        // Ensure base taxonomy tables exist (no-op if already there)
+        foreach ([
+            'event_categories' => 'id',
+            'event_genres'     => 'id',
+            'music_genres'     => 'id',
+            'event_tags'       => 'id',
+            'events'           => 'id',
+        ] as $table => $pk) {
+            if (! Schema::hasTable($table)) {
+                throw new \RuntimeException("Missing required table [{$table}]. Please run your base migrations first.");
             }
-
-            // 1) Create final pivot tables if missing
-            $this->createPivotIfMissing('event_event_category', 'event_id', 'event_category_id', 'events', 'event_categories');
-            $this->createPivotIfMissing('event_event_genre', 'event_id', 'event_genre_id', 'events', 'event_genres');
-            $this->createPivotIfMissing('event_music_genre', 'event_id', 'music_genre_id', 'events', 'music_genres');
-            $this->createPivotIfMissing('event_event_tag', 'event_id', 'event_tag_id', 'events', 'event_tags');
-
-            // 2) Copy data from legacy pivots (if they exist)
-            $this->migrateLegacyPivot(
-                legacyTable: 'category_event',
-                legacyEventCol: $this->firstExistingColumn('category_event', ['event_id']),
-                legacyTaxCol: $this->firstExistingColumn('category_event', ['category_id','event_category_id']),
-                newTable: 'event_event_category',
-                newEventCol: 'event_id',
-                newTaxCol: 'event_category_id'
-            );
-
-            $this->migrateLegacyPivot(
-                legacyTable: 'event_genre_event',
-                legacyEventCol: $this->firstExistingColumn('event_genre_event', ['event_id']),
-                legacyTaxCol: $this->firstExistingColumn('event_genre_event', ['event_genre_id','genre_id']),
-                newTable: 'event_event_genre',
-                newEventCol: 'event_id',
-                newTaxCol: 'event_genre_id'
-            );
-
-            $this->migrateLegacyPivot(
-                legacyTable: 'music_genre_event',
-                legacyEventCol: $this->firstExistingColumn('music_genre_event', ['event_id']),
-                legacyTaxCol: $this->firstExistingColumn('music_genre_event', ['music_genre_id','genre_id']),
-                newTable: 'event_music_genre',
-                newEventCol: 'event_id',
-                newTaxCol: 'music_genre_id'
-            );
-
-            // Some projects name tag relations both ways:
-            $this->migrateLegacyPivot(
-                legacyTable: 'event_tag',
-                legacyEventCol: $this->firstExistingColumn('event_tag', ['event_id']),
-                legacyTaxCol: $this->firstExistingColumn('event_tag', ['event_tag_id','tag_id']),
-                newTable: 'event_event_tag',
-                newEventCol: 'event_id',
-                newTaxCol: 'event_tag_id'
-            );
-
-            $this->migrateLegacyPivot(
-                legacyTable: 'tag_event',
-                legacyEventCol: $this->firstExistingColumn('tag_event', ['event_id']),
-                legacyTaxCol: $this->firstExistingColumn('tag_event', ['event_tag_id','tag_id']),
-                newTable: 'event_event_tag',
-                newEventCol: 'event_id',
-                newTaxCol: 'event_tag_id'
-            );
-
-            // 3) Drop legacy tables if they exist
-            $this->dropIfExists('category_event');
-            $this->dropIfExists('event_genre_event');
-            $this->dropIfExists('music_genre_event');
-            $this->dropIfExists('event_tag');
-            $this->dropIfExists('tag_event');
-
-            DB::commit();
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            throw $e;
         }
+
+        // 1) Create final pivot tables if missing
+        $this->createPivotIfMissing('event_event_category', 'event_id', 'event_category_id', 'events', 'event_categories');
+        $this->createPivotIfMissing('event_event_genre', 'event_id', 'event_genre_id', 'events', 'event_genres');
+        $this->createPivotIfMissing('event_music_genre', 'event_id', 'music_genre_id', 'events', 'music_genres');
+        $this->createPivotIfMissing('event_event_tag', 'event_id', 'event_tag_id', 'events', 'event_tags');
+
+        // 2) Copy data from legacy pivots (if they exist)
+        $this->migrateLegacyPivot(
+            legacyTable: 'category_event',
+            legacyEventCol: $this->firstExistingColumn('category_event', ['event_id']),
+            legacyTaxCol: $this->firstExistingColumn('category_event', ['category_id','event_category_id']),
+            newTable: 'event_event_category',
+            newEventCol: 'event_id',
+            newTaxCol: 'event_category_id'
+        );
+
+        $this->migrateLegacyPivot(
+            legacyTable: 'event_genre_event',
+            legacyEventCol: $this->firstExistingColumn('event_genre_event', ['event_id']),
+            legacyTaxCol: $this->firstExistingColumn('event_genre_event', ['event_genre_id','genre_id']),
+            newTable: 'event_event_genre',
+            newEventCol: 'event_id',
+            newTaxCol: 'event_genre_id'
+        );
+
+        $this->migrateLegacyPivot(
+            legacyTable: 'music_genre_event',
+            legacyEventCol: $this->firstExistingColumn('music_genre_event', ['event_id']),
+            legacyTaxCol: $this->firstExistingColumn('music_genre_event', ['music_genre_id','genre_id']),
+            newTable: 'event_music_genre',
+            newEventCol: 'event_id',
+            newTaxCol: 'music_genre_id'
+        );
+
+        // Some projects name tag relations both ways:
+        $this->migrateLegacyPivot(
+            legacyTable: 'event_tag',
+            legacyEventCol: $this->firstExistingColumn('event_tag', ['event_id']),
+            legacyTaxCol: $this->firstExistingColumn('event_tag', ['event_tag_id','tag_id']),
+            newTable: 'event_event_tag',
+            newEventCol: 'event_id',
+            newTaxCol: 'event_tag_id'
+        );
+
+        $this->migrateLegacyPivot(
+            legacyTable: 'tag_event',
+            legacyEventCol: $this->firstExistingColumn('tag_event', ['event_id']),
+            legacyTaxCol: $this->firstExistingColumn('tag_event', ['event_tag_id','tag_id']),
+            newTable: 'event_event_tag',
+            newEventCol: 'event_id',
+            newTaxCol: 'event_tag_id'
+        );
+
+        // 3) Drop legacy tables if they exist
+        $this->dropIfExists('category_event');
+        $this->dropIfExists('event_genre_event');
+        $this->dropIfExists('music_genre_event');
+        $this->dropIfExists('event_tag');
+        $this->dropIfExists('tag_event');
     }
 
     public function down(): void
