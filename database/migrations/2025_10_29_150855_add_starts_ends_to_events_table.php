@@ -12,7 +12,7 @@ return new class extends Migration {
         if (! Schema::hasColumn('events', 'starts_at')) {
             Schema::table('events', function (Blueprint $table) {
                 // Postgres: folosește timestamptz pentru timezone
-                $table->timestampTz('starts_at')->nullable()->after('country');
+                $table->timestampTz('starts_at')->nullable()->after('city');
             });
 
             // backfill: dacă nu avem altă sursă, punem created_at ca fallback
