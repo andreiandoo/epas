@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 130234,
+        'name'      => 'Huyện Bắc Hà',
+        'latitude'  => '22.50998000',
+        'longitude' => '104.30769000',
+    ],
+    [
+        'id'        => 130232,
+        'name'      => 'Huyện Bảo Yên',
+        'latitude'  => '22.26109000',
+        'longitude' => '104.46424000',
+    ],
+    [
+        'id'        => 130219,
+        'name'      => 'Huyện Bát Xát',
+        'latitude'  => '22.56767000',
+        'longitude' => '103.71339000',
+    ],
+    [
+        'id'        => 130355,
+        'name'      => 'Huyện Lục Yên',
+        'latitude'  => '22.10235000',
+        'longitude' => '104.72538000',
+    ],
+    [
+        'id'        => 130360,
+        'name'      => 'Huyện Mù Cang Chải',
+        'latitude'  => '21.78815000',
+        'longitude' => '104.11998000',
+    ],
+    [
+        'id'        => 130362,
+        'name'      => 'Huyện Mường Khương',
+        'latitude'  => '22.67111000',
+        'longitude' => '104.11772000',
+    ],
+    [
+        'id'        => 130418,
+        'name'      => 'Huyện Sa Pa',
+        'latitude'  => '22.33769000',
+        'longitude' => '103.84037000',
+    ],
+    [
+        'id'        => 130420,
+        'name'      => 'Huyện Si Ma Cai',
+        'latitude'  => '22.67161000',
+        'longitude' => '104.27326000',
+    ],
+    [
+        'id'        => 130470,
+        'name'      => 'Huyện Trạm Tấu',
+        'latitude'  => '21.48553000',
+        'longitude' => '104.42756000',
+    ],
+    [
+        'id'        => 130473,
+        'name'      => 'Huyện Trấn Yên',
+        'latitude'  => '21.66586000',
+        'longitude' => '104.79702000',
+    ],
+    [
+        'id'        => 130495,
+        'name'      => 'Huyện Văn Bàn',
+        'latitude'  => '22.07002000',
+        'longitude' => '104.18122000',
+    ],
+    [
+        'id'        => 130496,
+        'name'      => 'Huyện Văn Chấn',
+        'latitude'  => '21.55722000',
+        'longitude' => '104.64038000',
+    ],
+    [
+        'id'        => 130497,
+        'name'      => 'Huyện Văn Yên',
+        'latitude'  => '21.90022000',
+        'longitude' => '104.56669000',
+    ],
+    [
+        'id'        => 130571,
+        'name'      => 'Lào Cai',
+        'latitude'  => '22.48556000',
+        'longitude' => '103.97066000',
+    ],
+    [
+        'id'        => 130568,
+        'name'      => 'Lao Chải',
+        'latitude'  => '22.31377000',
+        'longitude' => '103.86844000',
+    ],
+    [
+        'id'        => 130591,
+        'name'      => 'Sa Pa',
+        'latitude'  => '22.34023000',
+        'longitude' => '103.84415000',
+    ],
+    [
+        'id'        => 130628,
+        'name'      => 'Yên Bái',
+        'latitude'  => '21.72288000',
+        'longitude' => '104.91130000',
+    ],
+];

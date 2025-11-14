@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48246,
+        'name'      => 'Ammanford',
+        'latitude'  => '51.79279000',
+        'longitude' => '-3.98833000',
+    ],
+    [
+        'id'        => 48533,
+        'name'      => 'Bishopston',
+        'latitude'  => '51.57750000',
+        'longitude' => '-4.04806000',
+    ],
+    [
+        'id'        => 48784,
+        'name'      => 'Burry Port',
+        'latitude'  => '51.68435000',
+        'longitude' => '-4.24687000',
+    ],
+    [
+        'id'        => 49005,
+        'name'      => 'City and County of Swansea',
+        'latitude'  => '51.58333000',
+        'longitude' => '-4.00000000',
+    ],
+    [
+        'id'        => 49042,
+        'name'      => 'Clydach',
+        'latitude'  => '51.68333000',
+        'longitude' => '-3.90000000',
+    ],
+    [
+        'id'        => 49165,
+        'name'      => 'Crofty',
+        'latitude'  => '51.63448000',
+        'longitude' => '-4.12937000',
+    ],
+    [
+        'id'        => 49647,
+        'name'      => 'Glanamman',
+        'latitude'  => '51.80000000',
+        'longitude' => '-3.93333000',
+    ],
+    [
+        'id'        => 49684,
+        'name'      => 'Gorseinon',
+        'latitude'  => '51.66931000',
+        'longitude' => '-4.04163000',
+    ],
+    [
+        'id'        => 49759,
+        'name'      => 'Grovesend',
+        'latitude'  => '51.68472000',
+        'longitude' => '-4.03833000',
+    ],
+    [
+        'id'        => 50350,
+        'name'      => 'Llanelli',
+        'latitude'  => '51.68195000',
+        'longitude' => '-4.16191000',
+    ],
+    [
+        'id'        => 50875,
+        'name'      => 'Pen-clawdd',
+        'latitude'  => '51.64028000',
+        'longitude' => '-4.09917000',
+    ],
+    [
+        'id'        => 50937,
+        'name'      => 'Pontarddulais',
+        'latitude'  => '51.71423000',
+        'longitude' => '-4.03859000',
+    ],
+    [
+        'id'        => 50941,
+        'name'      => 'Pontlliw',
+        'latitude'  => '51.69139000',
+        'longitude' => '-4.01056000',
+    ],
+    [
+        'id'        => 51375,
+        'name'      => 'Southgate',
+        'latitude'  => '51.56944000',
+        'longitude' => '-4.08972000',
+    ],
+    [
+        'id'        => 51532,
+        'name'      => 'Swansea',
+        'latitude'  => '51.62079000',
+        'longitude' => '-3.94323000',
+    ],
+    [
+        'id'        => 51611,
+        'name'      => 'Three Crosses',
+        'latitude'  => '51.62865000',
+        'longitude' => '-4.06263000',
+    ],
+    [
+        'id'        => 51684,
+        'name'      => 'Tycroes',
+        'latitude'  => '51.77806000',
+        'longitude' => '-4.02000000',
+    ],
+];

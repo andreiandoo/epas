@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 67562,
+        'name'      => 'Zelenikovo',
+        'latitude'  => '41.88413000',
+        'longitude' => '21.58848000',
+    ],
+];

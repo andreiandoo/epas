@@ -47,6 +47,14 @@ services:
     networks:
       - sail
 
+  node:
+    image: node:20.19.0-alpine
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html:delegated
+    entrypoint: [ "sh", "-lc" ]
+
+
 networks:
   sail:
     driver: bridge

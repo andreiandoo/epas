@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 105255,
+        'name'      => 'Amphoe Borabue',
+        'latitude'  => '15.98881000',
+        'longitude' => '103.12521000',
+    ],
+    [
+        'id'        => 105300,
+        'name'      => 'Amphoe Chiang Yuen',
+        'latitude'  => '16.40942000',
+        'longitude' => '103.07005000',
+    ],
+    [
+        'id'        => 105308,
+        'name'      => 'Amphoe Chuen Chom',
+        'latitude'  => '16.54801000',
+        'longitude' => '103.14796000',
+    ],
+    [
+        'id'        => 105363,
+        'name'      => 'Amphoe Kae Dam',
+        'latitude'  => '16.04961000',
+        'longitude' => '103.38953000',
+    ],
+    [
+        'id'        => 105373,
+        'name'      => 'Amphoe Kantharawichai',
+        'latitude'  => '16.27992000',
+        'longitude' => '103.25892000',
+    ],
+    [
+        'id'        => 105450,
+        'name'      => 'Amphoe Kosum Phisai',
+        'latitude'  => '16.23882000',
+        'longitude' => '102.99081000',
+    ],
+    [
+        'id'        => 105467,
+        'name'      => 'Amphoe Kut Rang',
+        'latitude'  => '16.02970000',
+        'longitude' => '102.95059000',
+    ],
+    [
+        'id'        => 105551,
+        'name'      => 'Amphoe Mueang Maha Sarakham',
+        'latitude'  => '16.11882000',
+        'longitude' => '103.31160000',
+    ],
+    [
+        'id'        => 105609,
+        'name'      => 'Amphoe Na Chueak',
+        'latitude'  => '15.80180000',
+        'longitude' => '103.05725000',
+    ],
+    [
+        'id'        => 105612,
+        'name'      => 'Amphoe Na Dun',
+        'latitude'  => '15.71952000',
+        'longitude' => '103.23004000',
+    ],
+    [
+        'id'        => 105734,
+        'name'      => 'Amphoe Phayakkhaphum Phisai',
+        'latitude'  => '15.51963000',
+        'longitude' => '103.23268000',
+    ],
+    [
+        'id'        => 106352,
+        'name'      => 'Amphoe Wapi Pathum',
+        'latitude'  => '15.85953000',
+        'longitude' => '103.34091000',
+    ],
+    [
+        'id'        => 106375,
+        'name'      => 'Amphoe Yang Si Surat',
+        'latitude'  => '15.64953000',
+        'longitude' => '103.08916000',
+    ],
+    [
+        'id'        => 106539,
+        'name'      => 'Kosum Phisai',
+        'latitude'  => '16.24858000',
+        'longitude' => '103.06739000',
+    ],
+    [
+        'id'        => 106568,
+        'name'      => 'Maha Sarakham',
+        'latitude'  => '16.18483000',
+        'longitude' => '103.30067000',
+    ],
+    [
+        'id'        => 106628,
+        'name'      => 'Phayakkhaphum Phisai',
+        'latitude'  => '15.51631000',
+        'longitude' => '103.19367000',
+    ],
+    [
+        'id'        => 106749,
+        'name'      => 'Wapi Pathum',
+        'latitude'  => '15.84523000',
+        'longitude' => '103.37678000',
+    ],
+];

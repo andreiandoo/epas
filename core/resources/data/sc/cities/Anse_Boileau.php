@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 102906,
+        'name'      => 'Anse Boileau',
+        'latitude'  => '-4.71667000',
+        'longitude' => '55.48333000',
+    ],
+];

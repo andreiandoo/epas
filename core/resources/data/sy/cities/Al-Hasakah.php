@@ -1,0 +1,39 @@
+<?php
+return [
+    [
+        'id'        => 104940,
+        'name'      => 'Ad Darbāsīyah',
+        'latitude'  => '37.07279000',
+        'longitude' => '40.65199000',
+    ],
+    [
+        'id'        => 104957,
+        'name'      => 'Al Ḩasakah',
+        'latitude'  => '36.50237000',
+        'longitude' => '40.74772000',
+    ],
+    [
+        'id'        => 104950,
+        'name'      => 'Al Mālikīyah',
+        'latitude'  => '37.17701000',
+        'longitude' => '42.14006000',
+    ],
+    [
+        'id'        => 104955,
+        'name'      => 'Al Qāmishlī',
+        'latitude'  => '37.05215000',
+        'longitude' => '41.23142000',
+    ],
+    [
+        'id'        => 104960,
+        'name'      => 'Al-Malikiyah District',
+        'latitude'  => '36.94113000',
+        'longitude' => '41.90157000',
+    ],
+    [
+        'id'        => 104967,
+        'name'      => 'Amude',
+        'latitude'  => '37.10417000',
+        'longitude' => '40.93000000',
+    ],
+];

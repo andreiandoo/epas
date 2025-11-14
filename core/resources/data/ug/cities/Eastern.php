@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 110878,
+        'name'      => 'Bugembe',
+        'latitude'  => '0.48213000',
+        'longitude' => '33.24065000',
+    ],
+    [
+        'id'        => 110879,
+        'name'      => 'Bugiri',
+        'latitude'  => '0.57139000',
+        'longitude' => '33.74167000',
+    ],
+    [
+        'id'        => 110881,
+        'name'      => 'Bukwa District',
+        'latitude'  => '1.27115000',
+        'longitude' => '34.66778000',
+    ],
+    [
+        'id'        => 110882,
+        'name'      => 'Bulambuli District',
+        'latitude'  => '1.32055000',
+        'longitude' => '34.28062000',
+    ],
+    [
+        'id'        => 110884,
+        'name'      => 'Busembatia',
+        'latitude'  => '0.77725000',
+        'longitude' => '33.62364000',
+    ],
+    [
+        'id'        => 110885,
+        'name'      => 'Busia',
+        'latitude'  => '0.46588000',
+        'longitude' => '34.09221000',
+    ],
+    [
+        'id'        => 110887,
+        'name'      => 'Buwenge',
+        'latitude'  => '0.64996000',
+        'longitude' => '33.17128000',
+    ],
+    [
+        'id'        => 110898,
+        'name'      => 'Iganga',
+        'latitude'  => '0.60917000',
+        'longitude' => '33.46861000',
+    ],
+    [
+        'id'        => 110899,
+        'name'      => 'Jinja',
+        'latitude'  => '0.43902000',
+        'longitude' => '33.20317000',
+    ],
+    [
+        'id'        => 110905,
+        'name'      => 'Kamuli',
+        'latitude'  => '0.94722000',
+        'longitude' => '33.11972000',
+    ],
+    [
+        'id'        => 110909,
+        'name'      => 'Kapchorwa',
+        'latitude'  => '1.40096000',
+        'longitude' => '34.45038000',
+    ],
+    [
+        'id'        => 110914,
+        'name'      => 'Kibuku District',
+        'latitude'  => '1.05000000',
+        'longitude' => '33.80879000',
+    ],
+    [
+        'id'        => 110922,
+        'name'      => 'Kumi',
+        'latitude'  => '1.46083000',
+        'longitude' => '33.93611000',
+    ],
+    [
+        'id'        => 110933,
+        'name'      => 'Mayuge',
+        'latitude'  => '0.45972000',
+        'longitude' => '33.48028000',
+    ],
+    [
+        'id'        => 110934,
+        'name'      => 'Mbale',
+        'latitude'  => '1.08209000',
+        'longitude' => '34.17503000',
+    ],
+    [
+        'id'        => 110955,
+        'name'      => 'Pallisa',
+        'latitude'  => '1.14500000',
+        'longitude' => '33.70944000',
+    ],
+    [
+        'id'        => 110958,
+        'name'      => 'Sironko',
+        'latitude'  => '1.23132000',
+        'longitude' => '34.24773000',
+    ],
+    [
+        'id'        => 110959,
+        'name'      => 'Soroti',
+        'latitude'  => '1.71464000',
+        'longitude' => '33.61113000',
+    ],
+    [
+        'id'        => 110960,
+        'name'      => 'Tororo',
+        'latitude'  => '0.69299000',
+        'longitude' => '34.18085000',
+    ],
+];

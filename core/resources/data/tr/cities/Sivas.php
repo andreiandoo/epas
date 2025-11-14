@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 107113,
+        'name'      => 'Akıncılar',
+        'latitude'  => '40.07172000',
+        'longitude' => '38.34330000',
+    ],
+    [
+        'id'        => 107149,
+        'name'      => 'Altınyayla',
+        'latitude'  => '39.27249000',
+        'longitude' => '36.75098000',
+    ],
+    [
+        'id'        => 107500,
+        'name'      => 'Divriği',
+        'latitude'  => '39.37100000',
+        'longitude' => '38.11370000',
+    ],
+    [
+        'id'        => 107523,
+        'name'      => 'Doğanşar',
+        'latitude'  => '40.20841000',
+        'longitude' => '37.53123000',
+    ],
+    [
+        'id'        => 107658,
+        'name'      => 'Gemerek',
+        'latitude'  => '39.18342000',
+        'longitude' => '36.07189000',
+    ],
+    [
+        'id'        => 107700,
+        'name'      => 'Gölova',
+        'latitude'  => '40.06194000',
+        'longitude' => '38.60667000',
+    ],
+    [
+        'id'        => 107757,
+        'name'      => 'Gürün',
+        'latitude'  => '38.72225000',
+        'longitude' => '37.27097000',
+    ],
+    [
+        'id'        => 107772,
+        'name'      => 'Hafik',
+        'latitude'  => '39.85639000',
+        'longitude' => '37.38639000',
+    ],
+    [
+        'id'        => 108894,
+        'name'      => 'İmranlı',
+        'latitude'  => '39.87544000',
+        'longitude' => '38.11358000',
+    ],
+    [
+        'id'        => 107883,
+        'name'      => 'Kangal',
+        'latitude'  => '39.23354000',
+        'longitude' => '37.39111000',
+    ],
+    [
+        'id'        => 108029,
+        'name'      => 'Koyulhisar',
+        'latitude'  => '40.30184000',
+        'longitude' => '37.82336000',
+    ],
+    [
+        'id'        => 108187,
+        'name'      => 'Merkez',
+        'latitude'  => '39.71613000',
+        'longitude' => '36.97695000',
+    ],
+    [
+        'id'        => 108938,
+        'name'      => 'Şarkışla',
+        'latitude'  => '39.35186000',
+        'longitude' => '36.40976000',
+    ],
+    [
+        'id'        => 108513,
+        'name'      => 'Suşehri',
+        'latitude'  => '40.16005000',
+        'longitude' => '38.08413000',
+    ],
+    [
+        'id'        => 108618,
+        'name'      => 'Ulaş',
+        'latitude'  => '39.44492000',
+        'longitude' => '37.03900000',
+    ],
+    [
+        'id'        => 108747,
+        'name'      => 'Yıldızeli',
+        'latitude'  => '39.87601000',
+        'longitude' => '36.60652000',
+    ],
+    [
+        'id'        => 108749,
+        'name'      => 'Zara',
+        'latitude'  => '39.82406000',
+        'longitude' => '37.77499000',
+    ],
+];

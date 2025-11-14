@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 63420,
+        'name'      => 'Hakui',
+        'latitude'  => '36.88333000',
+        'longitude' => '136.78333000',
+    ],
+    [
+        'id'        => 63421,
+        'name'      => 'Hakui Shi',
+        'latitude'  => '36.91136000',
+        'longitude' => '136.81626000',
+    ],
+    [
+        'id'        => 63422,
+        'name'      => 'Hakusan Shi',
+        'latitude'  => '36.27558000',
+        'longitude' => '136.66966000',
+    ],
+    [
+        'id'        => 63657,
+        'name'      => 'Kaga Shi',
+        'latitude'  => '36.25503000',
+        'longitude' => '136.37963000',
+    ],
+    [
+        'id'        => 63660,
+        'name'      => 'Kahoku Shi',
+        'latitude'  => '36.74365000',
+        'longitude' => '136.73273000',
+    ],
+    [
+        'id'        => 63706,
+        'name'      => 'Kanazawa',
+        'latitude'  => '36.60000000',
+        'longitude' => '136.61667000',
+    ],
+    [
+        'id'        => 63707,
+        'name'      => 'Kanazawa-shi',
+        'latitude'  => '36.51919000',
+        'longitude' => '136.70836000',
+    ],
+    [
+        'id'        => 63837,
+        'name'      => 'Komatsu',
+        'latitude'  => '36.40263000',
+        'longitude' => '136.45088000',
+    ],
+    [
+        'id'        => 63938,
+        'name'      => 'Matsutō',
+        'latitude'  => '36.51667000',
+        'longitude' => '136.56667000',
+    ],
+    [
+        'id'        => 64099,
+        'name'      => 'Nanao Shi',
+        'latitude'  => '37.07844000',
+        'longitude' => '136.92860000',
+    ],
+    [
+        'id'        => 64165,
+        'name'      => 'Nomi Shi',
+        'latitude'  => '36.43593000',
+        'longitude' => '136.54456000',
+    ],
+    [
+        'id'        => 64166,
+        'name'      => 'Nonoichi',
+        'latitude'  => '36.53333000',
+        'longitude' => '136.61667000',
+    ],
+    [
+        'id'        => 64167,
+        'name'      => 'Nonoichi-shi',
+        'latitude'  => '36.52288000',
+        'longitude' => '136.60589000',
+    ],
+    [
+        'id'        => 64394,
+        'name'      => 'Suzu',
+        'latitude'  => '37.43459000',
+        'longitude' => '137.26009000',
+    ],
+    [
+        'id'        => 64395,
+        'name'      => 'Suzu Shi',
+        'latitude'  => '37.45533000',
+        'longitude' => '137.22587000',
+    ],
+    [
+        'id'        => 64539,
+        'name'      => 'Tsubata',
+        'latitude'  => '36.67012000',
+        'longitude' => '136.74030000',
+    ],
+    [
+        'id'        => 64556,
+        'name'      => 'Tsurugi-asahimachi',
+        'latitude'  => '36.45000000',
+        'longitude' => '136.63333000',
+    ],
+    [
+        'id'        => 64615,
+        'name'      => 'Wajima Shi',
+        'latitude'  => '37.33753000',
+        'longitude' => '136.88757000',
+    ],
+];

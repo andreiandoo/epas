@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 15690,
+        'name'      => 'Cockburn Town',
+        'latitude'  => '24.05179000',
+        'longitude' => '-74.53138000',
+    ],
+];

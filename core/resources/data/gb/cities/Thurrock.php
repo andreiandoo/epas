@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48420,
+        'name'      => 'Basildon',
+        'latitude'  => '51.56844000',
+        'longitude' => '0.45782000',
+    ],
+    [
+        'id'        => 48503,
+        'name'      => 'Billericay',
+        'latitude'  => '51.62867000',
+        'longitude' => '0.41963000',
+    ],
+    [
+        'id'        => 48608,
+        'name'      => 'Borough of Thurrock',
+        'latitude'  => '51.50000000',
+        'longitude' => '0.41667000',
+    ],
+    [
+        'id'        => 48759,
+        'name'      => 'Bulphan',
+        'latitude'  => '51.54612000',
+        'longitude' => '0.36066000',
+    ],
+    [
+        'id'        => 48906,
+        'name'      => 'Chadwell St Mary',
+        'latitude'  => '51.48140000',
+        'longitude' => '0.36343000',
+    ],
+    [
+        'id'        => 48907,
+        'name'      => 'Chafford Hundred',
+        'latitude'  => '51.48920000',
+        'longitude' => '0.29440000',
+    ],
+    [
+        'id'        => 49412,
+        'name'      => 'East Tilbury',
+        'latitude'  => '51.48053000',
+        'longitude' => '0.41714000',
+    ],
+    [
+        'id'        => 49703,
+        'name'      => 'Gravesend',
+        'latitude'  => '51.44206000',
+        'longitude' => '0.37106000',
+    ],
+    [
+        'id'        => 49704,
+        'name'      => 'Grays',
+        'latitude'  => '51.47566000',
+        'longitude' => '0.32521000',
+    ],
+    [
+        'id'        => 49992,
+        'name'      => 'Horndon on the Hill',
+        'latitude'  => '51.52358000',
+        'longitude' => '0.40491000',
+    ],
+    [
+        'id'        => 50819,
+        'name'      => 'Orsett',
+        'latitude'  => '51.51232000',
+        'longitude' => '0.36753000',
+    ],
+    [
+        'id'        => 50919,
+        'name'      => 'Pitsea',
+        'latitude'  => '51.56387000',
+        'longitude' => '0.50859000',
+    ],
+    [
+        'id'        => 51423,
+        'name'      => 'Stanford-le-Hope',
+        'latitude'  => '51.52274000',
+        'longitude' => '0.43422000',
+    ],
+    [
+        'id'        => 51531,
+        'name'      => 'Swanscombe',
+        'latitude'  => '51.44713000',
+        'longitude' => '0.31028000',
+    ],
+    [
+        'id'        => 51623,
+        'name'      => 'Tilbury',
+        'latitude'  => '51.46248000',
+        'longitude' => '0.35856000',
+    ],
+    [
+        'id'        => 51832,
+        'name'      => 'West Thurrock',
+        'latitude'  => '51.47828000',
+        'longitude' => '0.27672000',
+    ],
+    [
+        'id'        => 51891,
+        'name'      => 'Wickford',
+        'latitude'  => '51.61101000',
+        'longitude' => '0.52331000',
+    ],
+];

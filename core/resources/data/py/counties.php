@@ -1,0 +1,21 @@
+<?php
+return [
+    'Alto Paraguay',
+    'Alto Paraná',
+    'Amambay',
+    'Asuncion',
+    'Boquerón',
+    'Caaguazú',
+    'Caazapá',
+    'Canindeyú',
+    'Central',
+    'Concepción',
+    'Cordillera',
+    'Guairá',
+    'Itapúa',
+    'Misiones',
+    'Ñeembucú',
+    'Paraguarí',
+    'Presidente Hayes',
+    'San Pedro',
+];

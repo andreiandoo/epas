@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 104110,
+        'name'      => 'Gornji Petrovci',
+        'latitude'  => '46.80528000',
+        'longitude' => '16.22250000',
+    ],
+];
