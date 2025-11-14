@@ -38,21 +38,10 @@ return new class extends Migration {
                 $table->index(['tenant_id', 'status']);
             });
         }
-
-        if (! \Illuminate\Support\Facades\Schema::hasTable('event_artist')) {
-            \Illuminate\Support\Facades\Schema::create('event_artist', function (\Illuminate\Database\Schema\Blueprint $table) {
-                $table->id();
-                $table->foreignId('event_id')->constrained()->cascadeOnDelete();
-                $table->foreignId('artist_id')->constrained()->cascadeOnDelete();
-                $table->timestamps();
-                $table->unique(['event_id', 'artist_id']);
-            });
-        }
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('event_artist');
         Schema::dropIfExists('events');
     }
 };
