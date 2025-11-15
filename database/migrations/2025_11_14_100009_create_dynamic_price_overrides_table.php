@@ -21,7 +21,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['event_seating_id', 'seat_uid']);
-            $table->index(['event_seating_id', 'effective_from', 'effective_to']);
+            $table->index(['event_seating_id', 'effective_from', 'effective_to'], 'dpo_event_effective_idx');
             $table->index('source_rule_id');
         });
     }
