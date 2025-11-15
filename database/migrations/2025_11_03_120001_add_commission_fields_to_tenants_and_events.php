@@ -12,7 +12,7 @@ return new class extends Migration {
             // Commission mode: 'included' (in ticket price) or 'added_on_top' (added to ticket price)
             $table->string('commission_mode', 32)
                 ->default('included')
-                ->after('type')
+                ->after('plan')
                 ->comment('included|added_on_top');
 
             // Commission rate in percentage (e.g., 5.00 = 5%)
