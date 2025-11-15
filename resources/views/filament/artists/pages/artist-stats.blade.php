@@ -1,25 +1,56 @@
 <x-filament::page>
     <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <x-filament::stats::card
-            heading="Events (last 12 months)"
-            :value="$record->eventsLastYearCount()"
-            icon="heroicon-o-calendar"
-        />
-        <x-filament::stats::card
-            heading="Tickets sold (last 12 months)"
-            :value="number_format(($record->ticketsSoldLastYear()['sold'] ?? 0))"
-            icon="heroicon-o-ticket"
-        />
-        <x-filament::stats::card
-            heading="Avg tickets / event"
-            :value="number_format(($record->ticketsSoldLastYear()['avg_per_event'] ?? 0), 1)"
-            icon="heroicon-o-chart-bar"
-        />
-        <x-filament::stats::card
-            heading="Avg price"
-            :value="optional(($record->ticketsSoldLastYear()['avg_price'] ?? null), fn($v) => number_format($v, 2) . ' ' . ($record->currency ?? '')) ?? '—'"
-            icon="heroicon-o-currency-dollar"
-        />
+        {{-- Events stat card --}}
+        <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
+            <div class="p-6">
+                <div class="flex items-center gap-3">
+                    <x-filament::icon icon="heroicon-o-calendar" class="h-6 w-6 text-gray-400" />
+                    <div class="flex-1">
+                        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Events (last 12 months)</h3>
+                        <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ $record->eventsLastYearCount() }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Tickets sold stat card --}}
+        <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
+            <div class="p-6">
+                <div class="flex items-center gap-3">
+                    <x-filament::icon icon="heroicon-o-ticket" class="h-6 w-6 text-gray-400" />
+                    <div class="flex-1">
+                        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Tickets sold (last 12 months)</h3>
+                        <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ number_format(($record->ticketsSoldLastYear()['sold'] ?? 0)) }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Avg tickets per event stat card --}}
+        <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
+            <div class="p-6">
+                <div class="flex items-center gap-3">
+                    <x-filament::icon icon="heroicon-o-chart-bar" class="h-6 w-6 text-gray-400" />
+                    <div class="flex-1">
+                        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Avg tickets / event</h3>
+                        <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ number_format(($record->ticketsSoldLastYear()['avg_per_event'] ?? 0), 1) }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Avg price stat card --}}
+        <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
+            <div class="p-6">
+                <div class="flex items-center gap-3">
+                    <x-filament::icon icon="heroicon-o-currency-dollar" class="h-6 w-6 text-gray-400" />
+                    <div class="flex-1">
+                        <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">Avg price</h3>
+                        <p class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{ optional(($record->ticketsSoldLastYear()['avg_price'] ?? null), fn($v) => number_format($v, 2) . ' ' . ($record->currency ?? '')) ?? '—' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="grid gap-6 mt-8 md:grid-cols-2">
