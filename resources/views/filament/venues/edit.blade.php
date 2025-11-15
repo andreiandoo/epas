@@ -14,7 +14,7 @@
         </aside>
 
         <section class="ep-card ep-card--p">
-            <x-filament-panels::form wire:submit="save">
+            <form wire:submit="save">
                 {{ $this->form }}
 
                 <div style="height:16px;"></div>
@@ -24,7 +24,7 @@
                         <x-filament::button color="gray" type="button" wire:click="cancel">Cancel</x-filament::button>
                     </div>
                 </div>
-            </x-filament-panels::form>
+            </form>
         </section>
     </div>
 </x-filament-panels::page>

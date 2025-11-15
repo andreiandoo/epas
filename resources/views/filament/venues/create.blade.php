@@ -13,17 +13,17 @@
 
         {{-- Dreapta: form --}}
         <section class="ep-card ep-card--p">
-            <x-filament-panels::form wire:submit="create">
+            <form wire:submit="create">
                 {{ $this->form }}
 
                 <div style="height:16px;"></div>
                 <div class="fi-sc fi-grid">
                     <div>
                         <x-filament::button type="submit">Create Venue</x-filament::button>
-                        <x-filament::button color="gray" type="button" wire:click="cancel">Cancel</x-filiment::button>
+                        <x-filament::button color="gray" type="button" wire:click="cancel">Cancel</x-filament::button>
                     </div>
                 </div>
-            </x-filament-panels::form>
+            </form>
         </section>
     </div>
 </x-filament-panels::page>
