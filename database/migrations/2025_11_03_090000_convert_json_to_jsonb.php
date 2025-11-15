@@ -6,6 +6,11 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration {
     public function up(): void
     {
+        // This migration is PostgreSQL-specific (MySQL doesn't have JSONB type)
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         // Găsește toate coloanele de tip JSON (nu JSONB) din schema curentă și le convertește în JSONB.
         $cols = DB::select("
             SELECT table_schema, table_name, column_name
@@ -35,6 +40,11 @@ return new class extends Migration {
 
     public function down(): void
     {
+        // This migration is PostgreSQL-specific (MySQL doesn't have JSONB type)
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         // (Opțional) Convertire inversă jsonb -> json
         $cols = DB::select("
             SELECT table_schema, table_name, column_name
