@@ -10,19 +10,16 @@ return new class extends Migration {
       if (!Schema::hasColumn('ticket_types', 'sku')) {
         $table->string('sku', 64)->nullable()->after('name');
       }
-      if (!Schema::hasColumn('ticket_types', 'currency')) {
-        $table->string('currency', 3)->nullable()->after('sku');
-      }
-      // ai deja price_max / price / discount_percent; dacă nu, adaugă-le aici
+      // currency already exists in base table, skip adding it
       if (!Schema::hasColumn('ticket_types', 'bulk_discounts')) {
-        $table->json('bulk_discounts')->nullable()->after('discount_percent');
+        $table->json('bulk_discounts')->nullable()->after('meta');
       }
     });
   }
   public function down(): void {
     Schema::table('ticket_types', function (Blueprint $table) {
       if (Schema::hasColumn('ticket_types', 'bulk_discounts')) $table->dropColumn('bulk_discounts');
-      if (Schema::hasColumn('ticket_types', 'currency')) $table->dropColumn('currency');
+      // currency is part of base table, don't drop it
       if (Schema::hasColumn('ticket_types', 'sku')) $table->dropColumn('sku');
     });
   }
