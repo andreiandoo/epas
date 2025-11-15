@@ -52,4 +52,13 @@ class User extends Authenticatable
     public function isAdmin(): bool { return $this->role === 'admin'; }
     public function isEditor(): bool { return $this->role === 'editor'; }
     public function isTenant(): bool { return $this->role === 'tenant'; }
+
+    /**
+     * Determine if the user can access the Filament admin panel.
+     */
+    public function canAccessPanel(\Filament\Panel $panel): bool
+    {
+        // Allow super-admins, admins, and editors to access the admin panel
+        return in_array($this->role, ['super-admin', 'admin', 'editor']);
+    }
 }
