@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Public\SeatingController;
 use App\Http\Controllers\Api\AffiliateController;
 use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\Api\TicketTemplateController;
+use App\Http\Controllers\Api\InviteController;
 
 Route::get('/v1/public/events', function () {
     return response()->json([
@@ -182,4 +183,54 @@ Route::prefix('tickets/templates')->middleware(['throttle:api'])->group(function
     // Create a new version of a template
     Route::post('/{id}/create-version', [TicketTemplateController::class, 'createVersion'])
         ->name('api.tickets.templates.create-version');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Invitations API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for invitation management (zero-value tickets)
+|
+*/
+
+Route::prefix('inv')->middleware(['throttle:api'])->group(function () {
+    // Batch management
+    Route::post('/batch', [InviteController::class, 'createBatch'])
+        ->name('api.inv.batch.create');
+
+    Route::post('/batch/import', [InviteController::class, 'importRecipients'])
+        ->name('api.inv.batch.import');
+
+    Route::post('/batch/render', [InviteController::class, 'renderBatch'])
+        ->name('api.inv.batch.render');
+
+    Route::get('/batch/{id}/export', [InviteController::class, 'exportBatch'])
+        ->name('api.inv.batch.export');
+
+    Route::get('/batch/{id}/download-zip', [InviteController::class, 'downloadBatchZip'])
+        ->name('api.inv.batch.download-zip');
+
+    // Email sending
+    Route::post('/send', [InviteController::class, 'sendEmails'])
+        ->name('api.inv.send');
+
+    // Individual invite management
+    Route::get('/{id}', [InviteController::class, 'getInvite'])
+        ->name('api.inv.get');
+
+    Route::post('/{id}/void', [InviteController::class, 'voidInvite'])
+        ->name('api.inv.void');
+
+    Route::post('/{id}/resend', [InviteController::class, 'resend'])
+        ->name('api.inv.resend');
+
+    // Download (signed URL - public access)
+    Route::get('/{id}/download', [InviteController::class, 'download'])
+        ->name('api.inv.download')
+        ->middleware(['signed']);
+
+    // Tracking webhooks
+    Route::post('/webhook/open', [InviteController::class, 'trackOpen'])
+        ->name('api.inv.webhook.open');
 });

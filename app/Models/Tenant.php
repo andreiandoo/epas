@@ -157,4 +157,22 @@ class Tenant extends Model
             ->where('status', 'active')
             ->first();
     }
+
+    public function inviteBatches(): HasMany
+    {
+        return $this->hasMany(InviteBatch::class);
+    }
+
+    public function invites(): HasMany
+    {
+        return $this->hasMany(Invite::class);
+    }
+
+    /**
+     * Get active invite batches (not cancelled)
+     */
+    public function activeInviteBatches(): HasMany
+    {
+        return $this->inviteBatches()->where('status', '!=', 'cancelled');
+    }
 }
