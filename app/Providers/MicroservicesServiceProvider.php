@@ -5,10 +5,13 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use App\Services\WhatsApp\WhatsAppService;
 use App\Services\WhatsApp\Adapters\MockBspAdapter;
+use App\Services\WhatsApp\Adapters\TwilioAdapter;
 use App\Services\EFactura\EFacturaService;
 use App\Services\EFactura\Adapters\MockAnafAdapter;
+use App\Services\EFactura\Adapters\AnafAdapter;
 use App\Services\Accounting\AccountingService;
 use App\Services\Accounting\Adapters\MockAccountingAdapter;
+use App\Services\Accounting\Adapters\SmartBillAdapter;
 use App\Services\Insurance\InsuranceService;
 use App\Services\Insurance\Adapters\MockInsurerAdapter;
 
@@ -31,12 +34,12 @@ class MicroservicesServiceProvider extends ServiceProvider
             // Register mock adapter for development/testing
             $service->registerAdapter('mock', new MockBspAdapter());
 
-            // Register real adapters based on configuration
+            // Register Twilio adapter (recommended production BSP)
+            $service->registerAdapter('twilio', new TwilioAdapter());
+
+            // Future: Register 360dialog adapter when credentials available
             // if (config('services.whatsapp.360dialog.enabled')) {
             //     $service->registerAdapter('360dialog', new ThreeSixZeroDialogAdapter());
-            // }
-            // if (config('services.whatsapp.twilio.enabled')) {
-            //     $service->registerAdapter('twilio', new TwilioAdapter());
             // }
 
             return $service;
@@ -49,10 +52,8 @@ class MicroservicesServiceProvider extends ServiceProvider
             // Register mock adapter for development/testing
             $service->registerAdapter('mock', new MockAnafAdapter());
 
-            // Register real ANAF adapter
-            // if (config('services.efactura.enabled')) {
-            //     $service->registerAdapter('anaf', new AnafAdapter());
-            // }
+            // Register real ANAF adapter for production
+            $service->registerAdapter('anaf', new AnafAdapter());
 
             return $service;
         });
@@ -64,10 +65,10 @@ class MicroservicesServiceProvider extends ServiceProvider
             // Register mock adapter for development/testing
             $service->registerAdapter('mock', new MockAccountingAdapter());
 
-            // Register real adapters based on configuration
-            // if (config('services.accounting.smartbill.enabled')) {
-            //     $service->registerAdapter('smartbill', new SmartBillAdapter());
-            // }
+            // Register SmartBill adapter for production (Romanian accounting)
+            $service->registerAdapter('smartbill', new SmartBillAdapter());
+
+            // Future: Register other accounting adapters
             // if (config('services.accounting.fgo.enabled')) {
             //     $service->registerAdapter('fgo', new FgoAdapter());
             // }
