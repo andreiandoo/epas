@@ -133,4 +133,28 @@ class Tenant extends Model
     {
         return $this->trackingIntegrations()->where('enabled', true);
     }
+
+    public function ticketTemplates(): HasMany
+    {
+        return $this->hasMany(TicketTemplate::class);
+    }
+
+    /**
+     * Get active ticket templates
+     */
+    public function activeTicketTemplates(): HasMany
+    {
+        return $this->ticketTemplates()->where('status', 'active');
+    }
+
+    /**
+     * Get default ticket template
+     */
+    public function defaultTicketTemplate(): ?TicketTemplate
+    {
+        return $this->ticketTemplates()
+            ->where('is_default', true)
+            ->where('status', 'active')
+            ->first();
+    }
 }

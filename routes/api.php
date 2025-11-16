@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Public\SeatingController;
 use App\Http\Controllers\Api\AffiliateController;
 use App\Http\Controllers\Api\TrackingController;
+use App\Http\Controllers\Api\TicketTemplateController;
 
 Route::get('/v1/public/events', function () {
     return response()->json([
@@ -126,4 +127,59 @@ Route::prefix('tracking')->middleware(['throttle:api'])->group(function () {
     // Debug: Preview script injection
     Route::get('/debug/preview', [TrackingController::class, 'debugPreview'])
         ->name('api.tracking.debug.preview');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Ticket Template API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for ticket template customizer (WYSIWYG editor)
+|
+*/
+
+Route::prefix('tickets/templates')->middleware(['throttle:api'])->group(function () {
+    // Get available variables and sample data
+    Route::get('/variables', [TicketTemplateController::class, 'getVariables'])
+        ->name('api.tickets.templates.variables');
+
+    // Validate template JSON
+    Route::post('/validate', [TicketTemplateController::class, 'validate'])
+        ->name('api.tickets.templates.validate');
+
+    // Generate preview image
+    Route::post('/preview', [TicketTemplateController::class, 'preview'])
+        ->name('api.tickets.templates.preview');
+
+    // Get preset dimensions
+    Route::get('/presets', [TicketTemplateController::class, 'getPresets'])
+        ->name('api.tickets.templates.presets');
+
+    // List templates for a tenant
+    Route::get('/', [TicketTemplateController::class, 'index'])
+        ->name('api.tickets.templates.index');
+
+    // Create a new template
+    Route::post('/', [TicketTemplateController::class, 'store'])
+        ->name('api.tickets.templates.store');
+
+    // Get a specific template
+    Route::get('/{id}', [TicketTemplateController::class, 'show'])
+        ->name('api.tickets.templates.show');
+
+    // Update a template
+    Route::put('/{id}', [TicketTemplateController::class, 'update'])
+        ->name('api.tickets.templates.update');
+
+    // Delete a template
+    Route::delete('/{id}', [TicketTemplateController::class, 'destroy'])
+        ->name('api.tickets.templates.destroy');
+
+    // Set template as default
+    Route::post('/{id}/set-default', [TicketTemplateController::class, 'setDefault'])
+        ->name('api.tickets.templates.set-default');
+
+    // Create a new version of a template
+    Route::post('/{id}/create-version', [TicketTemplateController::class, 'createVersion'])
+        ->name('api.tickets.templates.create-version');
 });
