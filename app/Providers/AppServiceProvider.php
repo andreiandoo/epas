@@ -18,7 +18,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Register Consent Service for tracking
+        $this->app->singleton(
+            \App\Services\Tracking\ConsentServiceInterface::class,
+            \App\Services\Tracking\SessionConsentService::class
+        );
     }
 
     /**

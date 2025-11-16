@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Public\SeatingController;
 use App\Http\Controllers\Api\AffiliateController;
+use App\Http\Controllers\Api\TrackingController;
 
 Route::get('/v1/public/events', function () {
     return response()->json([
@@ -92,4 +93,37 @@ Route::prefix('affiliates')->middleware(['throttle:api'])->group(function () {
 
     Route::post('/reverse-order', [AffiliateController::class, 'reverseOrder'])
         ->name('api.affiliates.reverse-order');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Tracking & Pixels API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for tracking configuration and consent management
+|
+*/
+
+Route::prefix('tracking')->middleware(['throttle:api'])->group(function () {
+    // Get tracking configuration
+    Route::get('/config', [TrackingController::class, 'getConfig'])
+        ->name('api.tracking.config');
+
+    // Consent management
+    Route::get('/consent', [TrackingController::class, 'getConsent'])
+        ->name('api.tracking.consent.get');
+
+    Route::post('/consent', [TrackingController::class, 'updateConsent'])
+        ->name('api.tracking.consent.update');
+
+    Route::post('/consent/revoke', [TrackingController::class, 'revokeConsent'])
+        ->name('api.tracking.consent.revoke');
+
+    // Admin: Manage integrations
+    Route::post('/integrations', [TrackingController::class, 'storeIntegration'])
+        ->name('api.tracking.integrations.store');
+
+    // Debug: Preview script injection
+    Route::get('/debug/preview', [TrackingController::class, 'debugPreview'])
+        ->name('api.tracking.debug.preview');
 });
