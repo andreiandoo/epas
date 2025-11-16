@@ -175,4 +175,14 @@ class Tenant extends Model
     {
         return $this->inviteBatches()->where('status', '!=', 'cancelled');
     }
+
+    public function insuranceConfigs(): HasMany
+    {
+        return $this->hasMany(InsuranceConfig::class);
+    }
+
+    public function insurancePolicies(): HasMany
+    {
+        return $this->hasMany(InsurancePolicy::class);
+    }
 }

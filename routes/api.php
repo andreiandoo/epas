@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AffiliateController;
 use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\Api\TicketTemplateController;
 use App\Http\Controllers\Api\InviteController;
+use App\Http\Controllers\Api\InsuranceController;
 
 Route::get('/v1/public/events', function () {
     return response()->json([
@@ -233,4 +234,43 @@ Route::prefix('inv')->middleware(['throttle:api'])->group(function () {
     // Tracking webhooks
     Route::post('/webhook/open', [InviteController::class, 'trackOpen'])
         ->name('api.inv.webhook.open');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Ticket Insurance API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for ticket insurance (optional checkout add-on)
+|
+*/
+
+Route::prefix('ti')->middleware(['throttle:api'])->group(function () {
+    // Quote endpoint
+    Route::get('/quote', [InsuranceController::class, 'quote'])
+        ->name('api.ti.quote');
+
+    // Policy issuance
+    Route::post('/issue', [InsuranceController::class, 'issue'])
+        ->name('api.ti.issue');
+
+    // Policy sync with provider
+    Route::post('/sync', [InsuranceController::class, 'sync'])
+        ->name('api.ti.sync');
+
+    // List policies
+    Route::get('/policies', [InsuranceController::class, 'listPolicies'])
+        ->name('api.ti.policies');
+
+    // Statistics
+    Route::get('/stats', [InsuranceController::class, 'stats'])
+        ->name('api.ti.stats');
+
+    // Void policy
+    Route::post('/{id}/void', [InsuranceController::class, 'void'])
+        ->name('api.ti.void');
+
+    // Refund policy
+    Route::post('/{id}/refund', [InsuranceController::class, 'refund'])
+        ->name('api.ti.refund');
 });
