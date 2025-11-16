@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\DomainController;
 use App\Http\Controllers\MicroserviceMarketplaceController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\TenantPaymentWebhookController;
+use App\Http\Controllers\StatusController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
 
@@ -152,3 +153,12 @@ Route::middleware(['web', 'auth'])->group(function () {
         ]);
     })->name('api.tenants.show');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Public Status Page
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/status', [StatusController::class, 'index'])
+    ->name('status');

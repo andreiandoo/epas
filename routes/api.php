@@ -10,6 +10,10 @@ use App\Http\Controllers\Api\InsuranceController;
 use App\Http\Controllers\Api\AccountingController;
 use App\Http\Controllers\Api\EFacturaController;
 use App\Http\Controllers\Api\WhatsAppController;
+use App\Http\Controllers\Api\MicroservicesController;
+use App\Http\Controllers\Api\WebhookController;
+use App\Http\Controllers\Api\FeatureFlagController;
+use App\Http\Controllers\Api\NotificationController;
 
 Route::get('/v1/public/events', function () {
     return response()->json([
@@ -380,3 +384,122 @@ Route::prefix('wa')->middleware(['throttle:api'])->group(function () {
     Route::get('/schedules/{tenantId}', [WhatsAppController::class, 'listSchedules'])
         ->name('api.wa.schedules');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Microservices Management API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for managing microservices, webhooks, feature flags, and notifications
+|
+*/
+
+Route::prefix('microservices')->middleware(['throttle:api'])->group(function () {
+    // List all available microservices
+    Route::get('/', [MicroservicesController::class, 'index'])
+        ->name('api.microservices.index');
+    
+    // Get tenant's active microservices
+    Route::get('/tenant/{tenantId}', [MicroservicesController::class, 'tenantMicroservices'])
+        ->name('api.microservices.tenant');
+    
+    // Activate microservice
+    Route::post('/activate', [MicroservicesController::class, 'activate'])
+        ->name('api.microservices.activate');
+    
+    // Deactivate microservice
+    Route::post('/tenant/{tenantId}/{microserviceSlug}/deactivate', [MicroservicesController::class, 'deactivate'])
+        ->name('api.microservices.deactivate');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Webhooks Management API Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('webhooks')->middleware(['throttle:api'])->group(function () {
+    Route::get('/{tenantId}', [WebhookController::class, 'index'])
+        ->name('api.webhooks.index');
+    
+    Route::post('/{tenantId}', [WebhookController::class, 'store'])
+        ->name('api.webhooks.store');
+    
+    Route::put('/{tenantId}/{webhookId}', [WebhookController::class, 'update'])
+        ->name('api.webhooks.update');
+    
+    Route::delete('/{tenantId}/{webhookId}', [WebhookController::class, 'destroy'])
+        ->name('api.webhooks.destroy');
+    
+    Route::get('/{tenantId}/{webhookId}/deliveries', [WebhookController::class, 'deliveries'])
+        ->name('api.webhooks.deliveries');
+    
+    Route::post('/{tenantId}/deliveries/{deliveryId}/retry', [WebhookController::class, 'retryDelivery'])
+        ->name('api.webhooks.retry');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Feature Flags API Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('feature-flags')->middleware(['throttle:api'])->group(function () {
+    Route::get('/', [FeatureFlagController::class, 'index'])
+        ->name('api.feature-flags.index');
+    
+    Route::post('/', [FeatureFlagController::class, 'store'])
+        ->name('api.feature-flags.store');
+    
+    Route::put('/{featureKey}', [FeatureFlagController::class, 'update'])
+        ->name('api.feature-flags.update');
+    
+    Route::post('/{featureKey}/enable', [FeatureFlagController::class, 'enable'])
+        ->name('api.feature-flags.enable');
+    
+    Route::post('/{featureKey}/disable', [FeatureFlagController::class, 'disable'])
+        ->name('api.feature-flags.disable');
+    
+    Route::get('/{featureKey}/check', [FeatureFlagController::class, 'check'])
+        ->name('api.feature-flags.check');
+    
+    Route::post('/{featureKey}/tenant/{tenantId}/enable', [FeatureFlagController::class, 'enableForTenant'])
+        ->name('api.feature-flags.enable-tenant');
+    
+    Route::post('/{featureKey}/tenant/{tenantId}/disable', [FeatureFlagController::class, 'disableForTenant'])
+        ->name('api.feature-flags.disable-tenant');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Notifications API Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('notifications')->middleware(['throttle:api'])->group(function () {
+    Route::get('/{tenantId}', [NotificationController::class, 'index'])
+        ->name('api.notifications.index');
+    
+    Route::post('/{tenantId}/{notificationId}/read', [NotificationController::class, 'markAsRead'])
+        ->name('api.notifications.mark-read');
+    
+    Route::post('/{tenantId}/read-all', [NotificationController::class, 'markAllAsRead'])
+        ->name('api.notifications.mark-all-read');
+    
+    Route::delete('/{tenantId}/{notificationId}', [NotificationController::class, 'destroy'])
+        ->name('api.notifications.destroy');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Health Check API Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/health', [App\Http\Controllers\Api\HealthController::class, 'index'])
+    ->name('api.health')
+    ->withoutMiddleware(['throttle:api']);
+
+Route::get('/ping', [App\Http\Controllers\Api\HealthController::class, 'ping'])
+    ->name('api.ping')
+    ->withoutMiddleware(['throttle:api']);
