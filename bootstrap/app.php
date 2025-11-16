@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'seating.session' => \App\Http\Middleware\SeatingSessionMiddleware::class,
             'set.locale' => \App\Http\Middleware\SetLocale::class,
+            'tenant.auth' => \App\Http\Middleware\TenantAuthentication::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
