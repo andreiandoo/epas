@@ -120,4 +120,17 @@ class Tenant extends Model
             ->where('is_active', true)
             ->first();
     }
+
+    public function trackingIntegrations(): HasMany
+    {
+        return $this->hasMany(TrackingIntegration::class);
+    }
+
+    /**
+     * Get enabled tracking integrations
+     */
+    public function activeTrackingIntegrations(): HasMany
+    {
+        return $this->trackingIntegrations()->where('enabled', true);
+    }
 }
