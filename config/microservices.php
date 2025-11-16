@@ -147,4 +147,73 @@ return [
         'timeout' => env('HEALTH_CHECK_TIMEOUT', 5), // seconds
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Alerts Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'alerts' => [
+        'enabled' => env('ALERTS_ENABLED', true),
+
+        // Email alerts
+        'email' => [
+            'enabled' => env('ALERTS_EMAIL_ENABLED', true),
+        ],
+
+        // Slack alerts
+        'slack' => [
+            'enabled' => env('ALERTS_SLACK_ENABLED', false),
+            'webhook_url' => env('ALERTS_SLACK_WEBHOOK_URL'),
+        ],
+
+        // Alert recipients by type
+        'recipients' => [
+            'default' => env('ALERTS_DEFAULT_RECIPIENTS', 'admin@example.com'),
+            'health' => env('ALERTS_HEALTH_RECIPIENTS'),
+            'microservice_expiring' => env('ALERTS_MICROSERVICE_EXPIRING_RECIPIENTS'),
+            'microservice_suspended' => env('ALERTS_MICROSERVICE_SUSPENDED_RECIPIENTS'),
+            'webhook_failure' => env('ALERTS_WEBHOOK_FAILURE_RECIPIENTS'),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | API Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'api' => [
+        'enabled' => env('MICROSERVICES_API_ENABLED', true),
+        'track_detailed_usage' => env('MICROSERVICES_API_TRACK_USAGE', false),
+        'usage_retention_days' => env('MICROSERVICES_API_USAGE_RETENTION_DAYS', 90),
+        'default_rate_limit' => env('MICROSERVICES_API_DEFAULT_RATE_LIMIT', 1000), // per hour
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cache Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'cache' => [
+        'enabled' => env('MICROSERVICES_CACHE_ENABLED', true),
+        'catalog_ttl' => env('MICROSERVICES_CACHE_CATALOG_TTL', 3600), // 1 hour
+        'subscription_ttl' => env('MICROSERVICES_CACHE_SUBSCRIPTION_TTL', 300), // 5 minutes
+        'config_ttl' => env('MICROSERVICES_CACHE_CONFIG_TTL', 600), // 10 minutes
+        'webhook_ttl' => env('MICROSERVICES_CACHE_WEBHOOK_TTL', 300), // 5 minutes
+        'warm_on_boot' => env('MICROSERVICES_CACHE_WARM_ON_BOOT', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Audit Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'audit' => [
+        'enabled' => env('MICROSERVICES_AUDIT_ENABLED', true),
+        'retention_days' => env('MICROSERVICES_AUDIT_RETENTION_DAYS', 365), // 1 year
+    ],
+
 ];

@@ -118,3 +118,60 @@ Schedule::call(function () {
         );
     }
 })->daily()->timezone('Europe/Bucharest');
+
+// Webhooks: Retry failed deliveries (every 10 minutes)
+Schedule::call(function () {
+    $webhookService = app(\App\Services\Webhooks\WebhookService::class);
+    $result = $webhookService->processRetries();
+    \Log::info('Webhook retries processed', $result);
+})->everyTenMinutes();
+
+// Metrics: Daily cleanup of old metrics (daily at 3 AM)
+Schedule::call(function () {
+    $metricsService = app(\App\Services\Metrics\MetricsService::class);
+    $deleted = $metricsService->cleanup();
+    \Log::info('Metrics cleanup completed', ['deleted' => $deleted]);
+})->dailyAt('03:00')->timezone('Europe/Bucharest');
+
+// Health: Monitor system health and send alerts (every 5 minutes)
+Schedule::call(function () {
+    $healthService = app(\App\Services\Health\HealthCheckService::class);
+    $health = $healthService->checkAll();
+
+    if ($health['status'] === 'unhealthy') {
+        \Log::critical('System health check failed', $health);
+
+        // Send alert notification
+        $alertService = app(\App\Services\Alerts\AlertService::class);
+        $alertService->sendHealthAlert($health);
+    } elseif ($health['status'] === 'degraded') {
+        \Log::warning('System health degraded', $health);
+    }
+})->everyFiveMinutes();
+
+// Cache: Warm up global caches (every hour)
+Schedule::call(function () {
+    if (config('microservices.cache.enabled', true)) {
+        $cacheService = app(\App\Services\Cache\MicroservicesCacheService::class);
+        $cacheService->warmGlobalCache();
+        \Log::info('Global cache warmed');
+    }
+})->hourly();
+
+// Audit: Cleanup old audit logs (daily at 4 AM)
+Schedule::call(function () {
+    $auditService = app(\App\Services\Audit\AuditService::class);
+    $retentionDays = config('microservices.audit.retention_days', 365);
+    $deleted = $auditService->cleanup($retentionDays);
+    \Log::info('Audit logs cleanup completed', ['deleted' => $deleted]);
+})->dailyAt('04:00')->timezone('Europe/Bucharest');
+
+// API Usage: Cleanup old usage records (weekly on Sunday at 5 AM)
+Schedule::call(function () {
+    if (config('microservices.api.track_detailed_usage', false)) {
+        $apiKeyService = app(\App\Services\Api\TenantApiKeyService::class);
+        $retentionDays = config('microservices.api.usage_retention_days', 90);
+        $deleted = $apiKeyService->cleanupUsage($retentionDays);
+        \Log::info('API usage cleanup completed', ['deleted' => $deleted]);
+    }
+})->weeklyOn(0, '05:00')->timezone('Europe/Bucharest');
