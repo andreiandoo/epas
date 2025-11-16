@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\TicketTemplateController;
 use App\Http\Controllers\Api\InviteController;
 use App\Http\Controllers\Api\InsuranceController;
 use App\Http\Controllers\Api\AccountingController;
+use App\Http\Controllers\Api\EFacturaController;
 
 Route::get('/v1/public/events', function () {
     return response()->json([
@@ -294,4 +295,43 @@ Route::prefix('acc')->middleware(['throttle:api'])->group(function () {
 
     Route::post('/credit', [AccountingController::class, 'credit'])
         ->name('api.acc.credit');
+});
+
+/*
+|--------------------------------------------------------------------------
+| eFactura (RO) API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for automatic submission of invoices to ANAF SPV
+|
+*/
+
+Route::prefix('efactura')->middleware(['throttle:api'])->group(function () {
+    // Queue invoice for submission
+    Route::post('/submit', [EFacturaController::class, 'submit'])
+        ->name('api.efactura.submit');
+
+    // Manual retry
+    Route::post('/retry', [EFacturaController::class, 'retry'])
+        ->name('api.efactura.retry');
+
+    // Poll status
+    Route::post('/poll', [EFacturaController::class, 'poll'])
+        ->name('api.efactura.poll');
+
+    // Get status
+    Route::get('/status/{queueId}', [EFacturaController::class, 'status'])
+        ->name('api.efactura.status');
+
+    // Download receipt
+    Route::get('/download/{queueId}', [EFacturaController::class, 'download'])
+        ->name('api.efactura.download');
+
+    // Statistics
+    Route::get('/stats/{tenantId}', [EFacturaController::class, 'stats'])
+        ->name('api.efactura.stats');
+
+    // Queue list
+    Route::get('/queue/{tenantId}', [EFacturaController::class, 'queueList'])
+        ->name('api.efactura.queue');
 });
