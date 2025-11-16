@@ -541,6 +541,7 @@ class TenantResource extends Resource
             'index' => Pages\ListTenants::route('/'),
             'create' => Pages\CreateTenant::route('/create'),
             'edit' => Pages\EditTenant::route('/{record}/edit'),
+            'payment-config' => Pages\ManagePaymentConfig::route('/{record}/payment-config'),
         ];
     }
 }

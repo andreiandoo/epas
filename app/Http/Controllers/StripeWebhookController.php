@@ -107,7 +107,9 @@ class StripeWebhookController extends Controller
         $settings = Setting::current();
 
         $subtotal = collect($microservices)->sum('price');
-        $vatRate = 19; // Romania VAT rate
+
+        // Apply VAT if enabled
+        $vatRate = $settings->vat_enabled ? ($settings->vat_rate ?? 21.00) : 0;
         $vatAmount = ($subtotal * $vatRate) / 100;
         $total = $subtotal + $vatAmount;
 

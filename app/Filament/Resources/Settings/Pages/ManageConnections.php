@@ -32,6 +32,8 @@ class ManageConnections extends Page implements HasForms
             'stripe_live_public_key' => $settings->stripe_live_public_key,
             'stripe_live_secret_key' => $settings->stripe_live_secret_key,
             'stripe_webhook_secret' => $settings->stripe_webhook_secret,
+            'vat_enabled' => $settings->vat_enabled ?? false,
+            'vat_rate' => $settings->vat_rate ?? 21.00,
         ]);
     }
 
@@ -122,6 +124,29 @@ class ManageConnections extends Page implements HasForms
                                 ->color('gray'),
                         ]),
                     ])
+                    ->columnSpanFull(),
+
+                Forms\Components\Section::make('VAT Configuration')
+                    ->description('Configure VAT/Tax settings for invoices and payments')
+                    ->schema([
+                        Forms\Components\Toggle::make('vat_enabled')
+                            ->label('Enable VAT')
+                            ->helperText('Enable this if your company is VAT registered and needs to charge VAT on invoices')
+                            ->live()
+                            ->default(false),
+
+                        Forms\Components\TextInput::make('vat_rate')
+                            ->label('VAT Rate (%)')
+                            ->numeric()
+                            ->default(21.00)
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->step(0.01)
+                            ->suffix('%')
+                            ->helperText('Default VAT rate for Romania is 21%')
+                            ->visible(fn (Forms\Get $get) => $get('vat_enabled')),
+                    ])
+                    ->columns(2)
                     ->columnSpanFull(),
             ])
             ->statePath('data');

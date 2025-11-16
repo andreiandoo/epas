@@ -52,6 +52,9 @@ class Tenant extends Model
         'contact_last_name',
         'contact_email',
         'contact_phone',
+        // Payment processor
+        'payment_processor',
+        'payment_processor_mode',
     ];
 
     protected $casts = [
@@ -96,5 +99,25 @@ class Tenant extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    public function paymentConfigs(): HasMany
+    {
+        return $this->hasMany(TenantPaymentConfig::class);
+    }
+
+    /**
+     * Get active payment config for the selected processor
+     */
+    public function activePaymentConfig(): ?TenantPaymentConfig
+    {
+        if (!$this->payment_processor) {
+            return null;
+        }
+
+        return $this->paymentConfigs()
+            ->where('processor', $this->payment_processor)
+            ->where('is_active', true)
+            ->first();
     }
 }

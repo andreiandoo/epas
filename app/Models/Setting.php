@@ -35,6 +35,8 @@ class Setting extends Model
         'stripe_live_public_key',
         'stripe_live_secret_key',
         'stripe_webhook_secret',
+        'vat_enabled',
+        'vat_rate',
         'meta',
     ];
 
@@ -45,6 +47,8 @@ class Setting extends Model
         'stripe_test_secret_key' => 'encrypted',
         'stripe_live_secret_key' => 'encrypted',
         'stripe_webhook_secret' => 'encrypted',
+        'vat_enabled' => 'boolean',
+        'vat_rate' => 'decimal:2',
     ];
 
     /**

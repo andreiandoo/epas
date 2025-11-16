@@ -8,6 +8,7 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\Admin\DomainController;
 use App\Http\Controllers\MicroserviceMarketplaceController;
 use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\TenantPaymentWebhookController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
 
@@ -20,6 +21,11 @@ Route::pattern('locale', 'en|ro|de|fr|es');
 // Stripe Webhook (must be outside CSRF protection)
 Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle'])
     ->name('webhooks.stripe')
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
+// Tenant Payment Processor Webhooks
+Route::post('/webhooks/tenant-payment/{tenant}/{processor}', [TenantPaymentWebhookController::class, 'handle'])
+    ->name('webhooks.tenant-payment')
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
 // Microservices Marketplace Routes

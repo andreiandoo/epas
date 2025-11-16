@@ -330,6 +330,37 @@
                                 </div>
                             </div>
 
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-3">Procesor de Plată *</label>
+                                <p class="text-sm text-gray-500 mb-4">Selectează sistemul de plăți pe care dorești să-l folosești pentru procesarea plăților de la clienții tăi</p>
+                                <div class="grid grid-cols-2 gap-4">
+                                    @foreach($paymentProcessors as $key => $processor)
+                                    <div
+                                        @click="formData.payment_processor = '{{ $key }}'"
+                                        class="border-2 rounded-lg p-4 cursor-pointer transition hover:shadow-md"
+                                        :class="formData.payment_processor === '{{ $key }}' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'"
+                                    >
+                                        <div class="flex items-center mb-2">
+                                            <input
+                                                type="radio"
+                                                name="payment_processor"
+                                                value="{{ $key }}"
+                                                x-model="formData.payment_processor"
+                                                class="mr-2"
+                                            >
+                                            <div class="font-semibold text-gray-900">{{ $processor['name'] }}</div>
+                                        </div>
+                                        <p class="text-xs text-gray-600 mb-2">{{ $processor['description'] }}</p>
+                                        <div class="text-xs text-gray-500">
+                                            <div><strong>Monede:</strong> {{ implode(', ', array_slice($processor['supported_currencies'], 0, 3)) }}</div>
+                                            <div class="mt-1"><strong>Comision:</strong> {{ $processor['fees'] }}</div>
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                </div>
+                                <span x-show="errors.payment_processor" class="text-red-500 text-sm" x-text="errors.payment_processor"></span>
+                            </div>
+
                             <div class="mt-8 flex justify-between">
                                 <button
                                     type="button"
@@ -557,6 +588,7 @@
                     address: '',
                     city: '',
                     state: '',
+                    payment_processor: 'stripe',
                     // Step 3
                     domains: [''],
                     estimated_monthly_tickets: '',
