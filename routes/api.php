@@ -503,3 +503,140 @@ Route::get('/health', [App\Http\Controllers\Api\HealthController::class, 'index'
 Route::get('/ping', [App\Http\Controllers\Api\HealthController::class, 'ping'])
     ->name('api.ping')
     ->withoutMiddleware(['throttle:api']);
+
+/*
+|--------------------------------------------------------------------------
+| Tenant API Routes (v1)
+|--------------------------------------------------------------------------
+|
+| Authenticated tenant API endpoints with API key authentication
+|
+*/
+
+Route::prefix('v1/tenant')->middleware(['api.tenant', 'throttle:api'])->group(function () {
+    // API Key Management
+    Route::prefix('api-keys')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\V1\Tenant\ApiKeyController::class, 'index'])
+            ->name('api.v1.tenant.api-keys.index');
+
+        Route::post('/', [App\Http\Controllers\Api\V1\Tenant\ApiKeyController::class, 'store'])
+            ->name('api.v1.tenant.api-keys.store');
+
+        Route::get('/scopes', [App\Http\Controllers\Api\V1\Tenant\ApiKeyController::class, 'scopes'])
+            ->name('api.v1.tenant.api-keys.scopes');
+
+        Route::get('/{keyId}', [App\Http\Controllers\Api\V1\Tenant\ApiKeyController::class, 'show'])
+            ->name('api.v1.tenant.api-keys.show');
+
+        Route::put('/{keyId}', [App\Http\Controllers\Api\V1\Tenant\ApiKeyController::class, 'update'])
+            ->name('api.v1.tenant.api-keys.update');
+
+        Route::delete('/{keyId}', [App\Http\Controllers\Api\V1\Tenant\ApiKeyController::class, 'destroy'])
+            ->name('api.v1.tenant.api-keys.destroy');
+
+        Route::get('/{keyId}/usage', [App\Http\Controllers\Api\V1\Tenant\ApiKeyController::class, 'usage'])
+            ->name('api.v1.tenant.api-keys.usage');
+    });
+
+    // Audit Logs
+    Route::prefix('audit')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\V1\Tenant\AuditController::class, 'index'])
+            ->name('api.v1.tenant.audit.index');
+
+        Route::get('/actions', [App\Http\Controllers\Api\V1\Tenant\AuditController::class, 'actions'])
+            ->name('api.v1.tenant.audit.actions');
+    });
+
+    // Health Monitoring
+    Route::prefix('health')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\V1\Tenant\HealthController::class, 'index'])
+            ->name('api.v1.tenant.health.index');
+
+        Route::get('/{service}', [App\Http\Controllers\Api\V1\Tenant\HealthController::class, 'show'])
+            ->name('api.v1.tenant.health.show');
+    });
+
+    // Usage Metrics
+    Route::prefix('metrics')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\V1\Tenant\MetricsController::class, 'index'])
+            ->name('api.v1.tenant.metrics.index');
+
+        Route::get('/summary', [App\Http\Controllers\Api\V1\Tenant\MetricsController::class, 'summary'])
+            ->name('api.v1.tenant.metrics.summary');
+
+        Route::get('/breakdown', [App\Http\Controllers\Api\V1\Tenant\MetricsController::class, 'breakdown'])
+            ->name('api.v1.tenant.metrics.breakdown');
+    });
+
+    // Subscriptions
+    Route::prefix('subscriptions')->group(function () {
+        Route::get('/', [App\Http\Controllers\Api\V1\Tenant\SubscriptionController::class, 'index'])
+            ->name('api.v1.tenant.subscriptions.index');
+
+        Route::get('/catalog', [App\Http\Controllers\Api\V1\Tenant\SubscriptionController::class, 'catalog'])
+            ->name('api.v1.tenant.subscriptions.catalog');
+
+        Route::get('/{subscriptionId}', [App\Http\Controllers\Api\V1\Tenant\SubscriptionController::class, 'show'])
+            ->name('api.v1.tenant.subscriptions.show');
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin API Routes
+|--------------------------------------------------------------------------
+|
+| Administrative endpoints for system monitoring and management
+| Note: Add authentication middleware as needed
+|
+*/
+
+Route::prefix('admin')->middleware(['throttle:api'])->group(function () {
+    // System Health
+    Route::prefix('health')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\SystemHealthController::class, 'index'])
+            ->name('api.admin.health.index');
+
+        Route::get('/history', [App\Http\Controllers\Admin\SystemHealthController::class, 'history'])
+            ->name('api.admin.health.history');
+
+        Route::get('/{service}', [App\Http\Controllers\Admin\SystemHealthController::class, 'service'])
+            ->name('api.admin.health.service');
+    });
+
+    // Alert Management
+    Route::prefix('alerts')->group(function () {
+        Route::get('/config', [App\Http\Controllers\Admin\AlertController::class, 'config'])
+            ->name('api.admin.alerts.config');
+
+        Route::post('/test', [App\Http\Controllers\Admin\AlertController::class, 'test'])
+            ->name('api.admin.alerts.test');
+    });
+
+    // Audit Logs
+    Route::prefix('audit')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\AuditController::class, 'index'])
+            ->name('api.admin.audit.index');
+
+        Route::get('/stats', [App\Http\Controllers\Admin\AuditController::class, 'stats'])
+            ->name('api.admin.audit.stats');
+
+        Route::get('/export', [App\Http\Controllers\Admin\AuditController::class, 'export'])
+            ->name('api.admin.audit.export');
+    });
+
+    // API Usage Monitoring
+    Route::prefix('api-usage')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\ApiUsageController::class, 'index'])
+            ->name('api.admin.api-usage.index');
+
+        Route::get('/by-tenant', [App\Http\Controllers\Admin\ApiUsageController::class, 'byTenant'])
+            ->name('api.admin.api-usage.by-tenant');
+
+        Route::get('/rate-limit-violations', [App\Http\Controllers\Admin\ApiUsageController::class, 'rateLimitViolations'])
+            ->name('api.admin.api-usage.rate-limit-violations');
+
+        Route::get('/{keyId}', [App\Http\Controllers\Admin\ApiUsageController::class, 'show'])
+            ->name('api.admin.api-usage.show');
+    });
+});
