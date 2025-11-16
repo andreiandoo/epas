@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Public\SeatingController;
+use App\Http\Controllers\Api\AffiliateController;
 
 Route::get('/v1/public/events', function () {
     return response()->json([
@@ -50,4 +51,45 @@ Route::prefix('public')->middleware(['seating.session'])->group(function () {
     Route::get('/seats/holds', [SeatingController::class, 'getSessionHolds'])
         ->name('api.seating.get-holds')
         ->middleware('throttle:seating_query');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Affiliate Tracking API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for affiliate tracking and management
+|
+*/
+
+Route::prefix('affiliates')->middleware(['throttle:api'])->group(function () {
+    // Tenant admin endpoints
+    Route::post('/', [AffiliateController::class, 'store'])
+        ->name('api.affiliates.create');
+
+    Route::get('/{id}/dashboard', [AffiliateController::class, 'dashboard'])
+        ->name('api.affiliates.dashboard');
+
+    Route::get('/{id}/export', [AffiliateController::class, 'export'])
+        ->name('api.affiliates.export');
+
+    // Affiliate self-service endpoint
+    Route::get('/me', [AffiliateController::class, 'me'])
+        ->name('api.affiliates.me');
+
+    // Tracking endpoints
+    Route::post('/track-click', [AffiliateController::class, 'trackClick'])
+        ->name('api.affiliates.track-click');
+
+    Route::post('/attribute-order', [AffiliateController::class, 'attributeOrder'])
+        ->name('api.affiliates.attribute-order');
+
+    Route::post('/confirm-order', [AffiliateController::class, 'confirmOrder'])
+        ->name('api.affiliates.confirm-order');
+
+    Route::post('/approve-order', [AffiliateController::class, 'approveOrder'])
+        ->name('api.affiliates.approve-order');
+
+    Route::post('/reverse-order', [AffiliateController::class, 'reverseOrder'])
+        ->name('api.affiliates.reverse-order');
 });

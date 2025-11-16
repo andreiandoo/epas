@@ -177,7 +177,8 @@ class MicroserviceResource extends Resource
                     ->label('Active Tenants')
                     ->counts('tenants')
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable()
+                    ->url(fn (Microservice $record) => static::getUrl('tenants', ['record' => $record])),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')
@@ -206,6 +207,7 @@ class MicroserviceResource extends Resource
             'index' => Pages\ListMicroservices::route('/'),
             'create' => Pages\CreateMicroservice::route('/create'),
             'edit' => Pages\EditMicroservice::route('/{record}/edit'),
+            'tenants' => Pages\ViewMicroserviceTenants::route('/{record}/tenants'),
         ];
     }
 }

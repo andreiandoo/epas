@@ -12,6 +12,10 @@ class EditMicroservice extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            \Filament\Actions\Action::make('viewTenants')
+                ->label('View Tenants')
+                ->icon('heroicon-o-users')
+                ->url(fn () => static::getResource()::getUrl('tenants', ['record' => $this->record])),
             \Filament\Actions\DeleteAction::make(),
         ];
     }
