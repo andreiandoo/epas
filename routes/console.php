@@ -75,13 +75,20 @@ Schedule::call(function () {
         ->whereBetween('expires_at', [now(), now()->addDays(7)])
         ->get();
 
+    $notificationService = app(\App\Services\NotificationService::class);
+
     foreach ($expiringSoon as $subscription) {
         \Log::info('Microservice expiring soon', [
             'tenant_id' => $subscription->tenant_id,
             'microservice_id' => $subscription->microservice_id,
             'expires_at' => $subscription->expires_at,
         ]);
-        // TODO: Send notification to tenant
+
+        // Send notification to tenant
+        $notificationService->notifyMicroserviceExpiring(
+            $subscription->tenant_id,
+            (array) $subscription
+        );
     }
 })->dailyAt('08:00')->timezone('Europe/Bucharest');
 
@@ -92,6 +99,8 @@ Schedule::call(function () {
         ->where('expires_at', '<', now())
         ->get();
 
+    $notificationService = app(\App\Services\NotificationService::class);
+
     foreach ($expired as $subscription) {
         \DB::table('tenant_microservices')
             ->where('id', $subscription->id)
@@ -101,6 +110,11 @@ Schedule::call(function () {
             'tenant_id' => $subscription->tenant_id,
             'microservice_id' => $subscription->microservice_id,
         ]);
-        // TODO: Send notification to tenant
+
+        // Send notification to tenant
+        $notificationService->notifyMicroserviceSuspended(
+            $subscription->tenant_id,
+            (array) $subscription
+        );
     }
 })->daily()->timezone('Europe/Bucharest');
