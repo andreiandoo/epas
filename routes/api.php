@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\Api\TicketTemplateController;
 use App\Http\Controllers\Api\InviteController;
 use App\Http\Controllers\Api\InsuranceController;
+use App\Http\Controllers\Api\AccountingController;
 
 Route::get('/v1/public/events', function () {
     return response()->json([
@@ -273,4 +274,24 @@ Route::prefix('ti')->middleware(['throttle:api'])->group(function () {
     // Refund policy
     Route::post('/{id}/refund', [InsuranceController::class, 'refund'])
         ->name('api.ti.refund');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Accounting Connectors API Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('acc')->middleware(['throttle:api'])->group(function () {
+    Route::post('/connect', [AccountingController::class, 'connect'])
+        ->name('api.acc.connect');
+
+    Route::post('/map', [AccountingController::class, 'map'])
+        ->name('api.acc.map');
+
+    Route::post('/issue', [AccountingController::class, 'issue'])
+        ->name('api.acc.issue');
+
+    Route::post('/credit', [AccountingController::class, 'credit'])
+        ->name('api.acc.credit');
 });
