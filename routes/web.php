@@ -6,8 +6,36 @@ use App\Http\Controllers\Public\VenueController as PublicVenueController;
 use App\Http\Controllers\Public\LocationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\Admin\DomainController;
+use App\Http\Controllers\MicroserviceMarketplaceController;
+use App\Http\Controllers\StripeWebhookController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
+
+/*
+|--------------------------------------------------------------------------
+| Microservices Marketplace & Stripe Routes
+|--------------------------------------------------------------------------
+*/
+
+// Stripe Webhook (must be outside CSRF protection)
+Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle'])
+    ->name('webhooks.stripe')
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
+// Microservices Marketplace Routes
+Route::prefix('micro')->middleware(['web'])->group(function () {
+    Route::get('/marketplace', [MicroserviceMarketplaceController::class, 'index'])
+        ->name('micro.marketplace');
+
+    Route::post('/checkout', [MicroserviceMarketplaceController::class, 'checkout'])
+        ->name('micro.checkout');
+
+    Route::get('/payment/success', [MicroserviceMarketplaceController::class, 'success'])
+        ->name('micro.payment.success');
+
+    Route::get('/payment/cancel', [MicroserviceMarketplaceController::class, 'cancel'])
+        ->name('micro.payment.cancel');
+});
 
 // Onboarding routes (no locale prefix needed for registration)
 Route::get('/register', [OnboardingController::class, 'index'])->name('onboarding.index');

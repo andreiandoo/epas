@@ -169,6 +169,14 @@ class SettingsResource extends Resource
     {
         return [
             'index' => Pages\ManageSettings::route('/'),
+            'connections' => Pages\ManageConnections::route('/connections'),
+        ];
+    }
+
+    public static function getNavigationItems(): array
+    {
+        return [
+            ...parent::getNavigationItems(),
         ];
     }
 

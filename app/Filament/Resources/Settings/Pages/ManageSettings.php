@@ -26,6 +26,10 @@ class ManageSettings extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('connections')
+                ->label('Connections')
+                ->icon('heroicon-o-link')
+                ->url(fn () => static::getResource()::getUrl('connections')),
             Actions\Action::make('reset_invoice_number')
                 ->label('Reset Invoice Number')
                 ->icon('heroicon-o-arrow-path')
