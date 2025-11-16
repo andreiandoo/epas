@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\InviteController;
 use App\Http\Controllers\Api\InsuranceController;
 use App\Http\Controllers\Api\AccountingController;
 use App\Http\Controllers\Api\EFacturaController;
+use App\Http\Controllers\Api\WhatsAppController;
 
 Route::get('/v1/public/events', function () {
     return response()->json([
@@ -334,4 +335,48 @@ Route::prefix('efactura')->middleware(['throttle:api'])->group(function () {
     // Queue list
     Route::get('/queue/{tenantId}', [EFacturaController::class, 'queueList'])
         ->name('api.efactura.queue');
+});
+
+/*
+|--------------------------------------------------------------------------
+| WhatsApp Notifications API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for WhatsApp messaging: confirmations, reminders, promos
+|
+*/
+
+Route::prefix('wa')->middleware(['throttle:api'])->group(function () {
+    // Template management
+    Route::post('/templates', [WhatsAppController::class, 'storeTemplate'])
+        ->name('api.wa.templates.store');
+
+    // Send messages
+    Route::post('/send/confirm', [WhatsAppController::class, 'sendConfirmation'])
+        ->name('api.wa.send.confirm');
+
+    Route::post('/schedule/reminders', [WhatsAppController::class, 'scheduleReminders'])
+        ->name('api.wa.schedule.reminders');
+
+    Route::post('/send/promo', [WhatsAppController::class, 'sendPromo'])
+        ->name('api.wa.send.promo');
+
+    // Webhook
+    Route::post('/webhook', [WhatsAppController::class, 'webhook'])
+        ->name('api.wa.webhook')
+        ->withoutMiddleware(['throttle:api']); // Webhooks should not be throttled
+
+    // Opt-in management
+    Route::post('/optin', [WhatsAppController::class, 'manageOptIn'])
+        ->name('api.wa.optin');
+
+    // Statistics and lists
+    Route::get('/stats/{tenantId}', [WhatsAppController::class, 'stats'])
+        ->name('api.wa.stats');
+
+    Route::get('/messages/{tenantId}', [WhatsAppController::class, 'listMessages'])
+        ->name('api.wa.messages');
+
+    Route::get('/schedules/{tenantId}', [WhatsAppController::class, 'listSchedules'])
+        ->name('api.wa.schedules');
 });
