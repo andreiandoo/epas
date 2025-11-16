@@ -216,4 +216,41 @@ return [
         'retention_days' => env('MICROSERVICES_AUDIT_RETENTION_DAYS', 365), // 1 year
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Admin Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'admin' => [
+        // Admin user IDs (for direct ID-based authentication)
+        'user_ids' => array_filter(explode(',', env('MICROSERVICES_ADMIN_USER_IDS', ''))),
+
+        // Allowed email domains for admin access (for development)
+        'allowed_domains' => array_filter(explode(',', env('MICROSERVICES_ADMIN_DOMAINS', ''))),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Webhook Security Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'webhooks_security' => [
+        // Signature verification
+        'verify_signatures' => env('WEBHOOKS_VERIFY_SIGNATURES', true),
+
+        // Custom webhook signature secret (for non-provider webhooks)
+        'signature_secret' => env('WEBHOOKS_SIGNATURE_SECRET'),
+
+        // Twilio webhook verification (uses auth_token from whatsapp config)
+        'twilio_verify' => env('WEBHOOKS_TWILIO_VERIFY', true),
+
+        // Stripe webhook secret
+        'stripe_webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+
+        // GitHub webhook secret
+        'github_webhook_secret' => env('GITHUB_WEBHOOK_SECRET'),
+    ],
+
 ];

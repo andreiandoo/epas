@@ -365,9 +365,10 @@ Route::prefix('wa')->middleware(['throttle:api'])->group(function () {
     Route::post('/send/promo', [WhatsAppController::class, 'sendPromo'])
         ->name('api.wa.send.promo');
 
-    // Webhook
+    // Webhook (with signature verification)
     Route::post('/webhook', [WhatsAppController::class, 'webhook'])
         ->name('api.wa.webhook')
+        ->middleware('webhook.verify:twilio')
         ->withoutMiddleware(['throttle:api']); // Webhooks should not be throttled
 
     // Opt-in management
@@ -591,7 +592,7 @@ Route::prefix('v1/tenant')->middleware(['api.tenant', 'throttle:api'])->group(fu
 |
 */
 
-Route::prefix('admin')->middleware(['throttle:api'])->group(function () {
+Route::prefix('admin')->middleware(['throttle:api', 'admin.auth'])->group(function () {
     // System Health
     Route::prefix('health')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\SystemHealthController::class, 'index'])

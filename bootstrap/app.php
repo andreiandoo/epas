@@ -27,6 +27,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'set.locale' => \App\Http\Middleware\SetLocale::class,
             'tenant.auth' => \App\Http\Middleware\TenantAuthentication::class,
             'api.tenant' => \App\Http\Middleware\AuthenticateTenantApi::class,
+            'admin.auth' => \App\Http\Middleware\AuthenticateAdmin::class,
+            'webhook.verify' => \App\Http\Middleware\VerifyWebhookSignature::class,
+        ]);
+
+        // Add global middleware for API routes
+        $middleware->api(append: [
+            \App\Http\Middleware\AddRateLimitHeaders::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
