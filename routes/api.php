@@ -523,6 +523,42 @@ Route::prefix('promo-codes')->middleware(['throttle:api'])->group(function () {
     Route::get('/{id}/stats', [App\Http\Controllers\Api\PromoCodeController::class, 'stats'])
         ->name('api.promo-codes.stats');
 
+    Route::post('/{id}/duplicate', [App\Http\Controllers\Api\PromoCodeController::class, 'duplicate'])
+        ->name('api.promo-codes.duplicate');
+
+    // Usage history and analytics
+    Route::get('/{id}/usage-history', [App\Http\Controllers\Api\PromoCodeController::class, 'usageHistory'])
+        ->name('api.promo-codes.usage-history');
+
+    Route::get('/{id}/fraud-detection', [App\Http\Controllers\Api\PromoCodeController::class, 'fraudDetection'])
+        ->name('api.promo-codes.fraud-detection');
+
+    Route::get('/{id}/usage-timeline', [App\Http\Controllers\Api\PromoCodeController::class, 'usageTimeline'])
+        ->name('api.promo-codes.usage-timeline');
+
+    // Export/Import
+    Route::get('/{tenantId}/export', [App\Http\Controllers\Api\PromoCodeController::class, 'export'])
+        ->name('api.promo-codes.export');
+
+    Route::post('/{tenantId}/import', [App\Http\Controllers\Api\PromoCodeController::class, 'import'])
+        ->name('api.promo-codes.import');
+
+    Route::get('/{id}/export-usage', [App\Http\Controllers\Api\PromoCodeController::class, 'exportUsage'])
+        ->name('api.promo-codes.export-usage');
+
+    // Bulk operations
+    Route::post('/{tenantId}/bulk-create', [App\Http\Controllers\Api\PromoCodeController::class, 'bulkCreate'])
+        ->name('api.promo-codes.bulk-create');
+
+    Route::post('/bulk-activate', [App\Http\Controllers\Api\PromoCodeController::class, 'bulkActivate'])
+        ->name('api.promo-codes.bulk-activate');
+
+    Route::post('/bulk-deactivate', [App\Http\Controllers\Api\PromoCodeController::class, 'bulkDeactivate'])
+        ->name('api.promo-codes.bulk-deactivate');
+
+    Route::post('/bulk-delete', [App\Http\Controllers\Api\PromoCodeController::class, 'bulkDelete'])
+        ->name('api.promo-codes.bulk-delete');
+
     // Public endpoint for validating codes
     Route::post('/{tenantId}/validate', [App\Http\Controllers\Api\PromoCodeController::class, 'validate'])
         ->name('api.promo-codes.validate')

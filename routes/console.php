@@ -175,3 +175,41 @@ Schedule::call(function () {
         \Log::info('API usage cleanup completed', ['deleted' => $deleted]);
     }
 })->weeklyOn(0, '05:00')->timezone('Europe/Bucharest');
+
+/*
+|--------------------------------------------------------------------------
+| Promo Codes Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Promo Codes: Auto-expire codes (every hour)
+Schedule::command('promo:expire')
+    ->hourly()
+    ->onSuccess(function () {
+        \Log::info('Promo codes expiration check completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to expire promo codes');
+    });
+
+// Promo Codes: Alert for codes expiring soon (daily at 9 AM)
+Schedule::command('promo:alert-expiring --days=7')
+    ->dailyAt('09:00')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('Promo code expiration alerts sent');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to send promo code alerts');
+    });
+
+// Promo Codes: Cleanup old usage records (weekly on Sunday at 6 AM)
+Schedule::command('promo:cleanup --days=365')
+    ->weeklyOn(0, '06:00')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('Promo code cleanup completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to cleanup promo code records');
+    });

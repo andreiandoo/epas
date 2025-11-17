@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Services\PromoCodes\PromoCodeService;
 use App\Services\PromoCodes\PromoCodeValidator;
 use App\Services\PromoCodes\PromoCodeCalculator;
+use App\Services\PromoCodes\PromoCodeExportService;
+use App\Services\PromoCodes\PromoCodeImportService;
+use App\Services\PromoCodes\PromoCodeUsageAnalyzer;
 use App\Services\Audit\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -22,6 +25,9 @@ class PromoCodeController extends Controller
         protected PromoCodeService $promoCodeService,
         protected PromoCodeValidator $validator,
         protected PromoCodeCalculator $calculator,
+        protected PromoCodeExportService $exportService,
+        protected PromoCodeImportService $importService,
+        protected PromoCodeUsageAnalyzer $usageAnalyzer,
         protected AuditService $auditService
     ) {}
 
@@ -343,5 +349,365 @@ class PromoCodeController extends Controller
             'valid' => false,
             'reason' => $validation['reason'],
         ], 400);
+    }
+
+    /**
+     * Bulk create promo codes
+     *
+     * @param Request $request
+     * @param string $tenantId
+     * @return JsonResponse
+     */
+    public function bulkCreate(Request $request, string $tenantId): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'count' => 'required|integer|min:1|max:1000',
+            'template' => 'required|array',
+            'template.type' => 'required|in:fixed,percentage',
+            'template.value' => 'required|numeric|min:0',
+            'template.applies_to' => 'required|in:cart,event,ticket_type',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $codes = $this->promoCodeService->bulkCreate(
+                $tenantId,
+                $request->count,
+                $request->template
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => count($codes) . ' promo codes created successfully',
+                'data' => $codes,
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Bulk activate promo codes
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function bulkActivate(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'promo_code_ids' => 'required|array',
+            'promo_code_ids.*' => 'uuid',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $count = $this->promoCodeService->bulkActivate($request->promo_code_ids);
+
+            return response()->json([
+                'success' => true,
+                'message' => "{$count} promo code(s) activated successfully",
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Bulk deactivate promo codes
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function bulkDeactivate(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'promo_code_ids' => 'required|array',
+            'promo_code_ids.*' => 'uuid',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $count = $this->promoCodeService->bulkDeactivate(
+                $request->promo_code_ids,
+                auth()->id()
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => "{$count} promo code(s) deactivated successfully",
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Bulk delete promo codes
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function bulkDelete(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'promo_code_ids' => 'required|array',
+            'promo_code_ids.*' => 'uuid',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $count = $this->promoCodeService->bulkDelete($request->promo_code_ids);
+
+            return response()->json([
+                'success' => true,
+                'message' => "{$count} promo code(s) deleted successfully",
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Clone a promo code
+     *
+     * @param Request $request
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function duplicate(Request $request, string $id): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'code' => 'nullable|string|max:50|alpha_num',
+            'name' => 'nullable|string|max:255',
+            'usage_limit' => 'nullable|integer|min:1',
+            'starts_at' => 'nullable|date',
+            'expires_at' => 'nullable|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $newCode = $this->promoCodeService->clone($id, $validator->validated());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Promo code duplicated successfully',
+                'data' => $newCode,
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 404);
+        }
+    }
+
+    /**
+     * Export promo codes to CSV
+     *
+     * @param Request $request
+     * @param string $tenantId
+     * @return Response
+     */
+    public function export(Request $request, string $tenantId)
+    {
+        $filters = [
+            'status' => $request->query('status'),
+            'type' => $request->query('type'),
+        ];
+
+        $csv = $this->exportService->exportToCSV($tenantId, array_filter($filters));
+
+        return response($csv, 200)
+            ->header('Content-Type', 'text/csv')
+            ->header('Content-Disposition', 'attachment; filename="promo-codes-' . date('Y-m-d') . '.csv"');
+    }
+
+    /**
+     * Import promo codes from CSV
+     *
+     * @param Request $request
+     * @param string $tenantId
+     * @return JsonResponse
+     */
+    public function import(Request $request, string $tenantId): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file|mimes:csv,txt',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $csvContent = file_get_contents($request->file('file')->getRealPath());
+            $results = $this->importService->importFromCSV($tenantId, $csvContent);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Import completed: {$results['success']} successful, {$results['failed']} failed",
+                'data' => $results,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 400);
+        }
+    }
+
+    /**
+     * Get usage history for a promo code
+     *
+     * @param Request $request
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function usageHistory(Request $request, string $id): JsonResponse
+    {
+        try {
+            $filters = [
+                'customer_id' => $request->query('customer_id'),
+                'date_from' => $request->query('date_from'),
+                'date_to' => $request->query('date_to'),
+                'min_discount' => $request->query('min_discount'),
+                'order_by' => $request->query('order_by', 'used_at'),
+                'order_dir' => $request->query('order_dir', 'desc'),
+                'limit' => min($request->query('limit', 100), 500),
+                'offset' => $request->query('offset', 0),
+            ];
+
+            $usage = $this->usageAnalyzer->getUsageHistory($id, array_filter($filters));
+
+            return response()->json([
+                'success' => true,
+                'data' => $usage,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 404);
+        }
+    }
+
+    /**
+     * Detect fraud patterns
+     *
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function fraudDetection(string $id): JsonResponse
+    {
+        try {
+            $fraudAnalysis = $this->usageAnalyzer->detectFraud($id);
+
+            return response()->json([
+                'success' => true,
+                'data' => $fraudAnalysis,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 404);
+        }
+    }
+
+    /**
+     * Get usage timeline analytics
+     *
+     * @param Request $request
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function usageTimeline(Request $request, string $id): JsonResponse
+    {
+        try {
+            $groupBy = $request->query('group_by', 'day');
+
+            if (!in_array($groupBy, ['day', 'week', 'month'])) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Invalid group_by parameter. Must be: day, week, or month',
+                ], 422);
+            }
+
+            $timeline = $this->usageAnalyzer->getUsageTimeline($id, $groupBy);
+
+            return response()->json([
+                'success' => true,
+                'data' => $timeline,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 404);
+        }
+    }
+
+    /**
+     * Export usage history to CSV
+     *
+     * @param string $id
+     * @return Response
+     */
+    public function exportUsage(string $id)
+    {
+        try {
+            $csv = $this->exportService->exportUsageToCSV($id);
+
+            return response($csv, 200)
+                ->header('Content-Type', 'text/csv')
+                ->header('Content-Disposition', 'attachment; filename="promo-code-usage-' . $id . '.csv"');
+        } catch (\Exception $e) {
+            return response($e->getMessage(), 404);
+        }
     }
 }

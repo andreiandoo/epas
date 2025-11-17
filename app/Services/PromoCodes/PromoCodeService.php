@@ -2,6 +2,12 @@
 
 namespace App\Services\PromoCodes;
 
+use App\Events\PromoCodes\PromoCodeCreated;
+use App\Events\PromoCodes\PromoCodeUsed;
+use App\Events\PromoCodes\PromoCodeExpired;
+use App\Events\PromoCodes\PromoCodeDepleted;
+use App\Events\PromoCodes\PromoCodeUpdated;
+use App\Events\PromoCodes\PromoCodeDeactivated;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
@@ -68,7 +74,12 @@ class PromoCodeService
             'updated_at' => now(),
         ]);
 
-        return $this->getById($promoCodeId);
+        $promoCode = $this->getById($promoCodeId);
+
+        // Dispatch event
+        event(new PromoCodeCreated($promoCode, $data['created_by'] ?? null));
+
+        return $promoCode;
     }
 
     /**
@@ -78,7 +89,7 @@ class PromoCodeService
      * @param array $data
      * @return array
      */
-    public function update(string $promoCodeId, array $data): array
+    public function update(string $promoCodeId, array $data, ?string $userId = null): array
     {
         $updateData = array_filter([
             'name' => $data['name'] ?? null,
@@ -103,7 +114,14 @@ class PromoCodeService
                 ->update($updateData);
         }
 
-        return $this->getById($promoCodeId);
+        $promoCode = $this->getById($promoCodeId);
+
+        // Dispatch event
+        if (!empty($updateData)) {
+            event(new PromoCodeUpdated($promoCode, $updateData, $userId));
+        }
+
+        return $promoCode;
     }
 
     /**
@@ -112,14 +130,23 @@ class PromoCodeService
      * @param string $promoCodeId
      * @return bool
      */
-    public function deactivate(string $promoCodeId): bool
+    public function deactivate(string $promoCodeId, ?string $userId = null): bool
     {
-        return DB::table('promo_codes')
+        $promoCode = $this->getById($promoCodeId);
+
+        $result = DB::table('promo_codes')
             ->where('id', $promoCodeId)
             ->update([
                 'status' => 'inactive',
                 'updated_at' => now(),
             ]) > 0;
+
+        if ($result) {
+            // Dispatch event
+            event(new PromoCodeDeactivated($promoCode, $userId));
+        }
+
+        return $result;
     }
 
     /**
@@ -264,6 +291,9 @@ class PromoCodeService
             ->where('id', $promoCodeId)
             ->increment('usage_count');
 
+        // Dispatch event
+        event(new PromoCodeUsed($promoCode, $orderId, $usageData));
+
         // Check if usage limit reached and update status
         $this->updateStatusIfNeeded($promoCodeId);
 
@@ -360,7 +390,146 @@ class PromoCodeService
                     'status' => $newStatus,
                     'updated_at' => now(),
                 ]);
+
+            // Dispatch appropriate event
+            $updatedCode = $this->getById($promoCodeId);
+            if ($newStatus === 'expired') {
+                event(new PromoCodeExpired($updatedCode));
+            } elseif ($newStatus === 'depleted') {
+                event(new PromoCodeDepleted($updatedCode));
+            }
         }
+    }
+
+    /**
+     * Bulk create promo codes
+     *
+     * @param string $tenantId
+     * @param int $count
+     * @param array $template
+     * @return array
+     */
+    public function bulkCreate(string $tenantId, int $count, array $template): array
+    {
+        $codes = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            $data = $template;
+            $data['code'] = $this->generateCode();
+
+            try {
+                $codes[] = $this->create($tenantId, $data);
+            } catch (\Exception $e) {
+                Log::error('Bulk create failed for code', ['error' => $e->getMessage()]);
+            }
+        }
+
+        return $codes;
+    }
+
+    /**
+     * Bulk activate promo codes
+     *
+     * @param array $promoCodeIds
+     * @return int Number of codes activated
+     */
+    public function bulkActivate(array $promoCodeIds): int
+    {
+        return DB::table('promo_codes')
+            ->whereIn('id', $promoCodeIds)
+            ->whereIn('status', ['inactive', 'depleted'])
+            ->update([
+                'status' => 'active',
+                'updated_at' => now(),
+            ]);
+    }
+
+    /**
+     * Bulk deactivate promo codes
+     *
+     * @param array $promoCodeIds
+     * @param string|null $userId
+     * @return int Number of codes deactivated
+     */
+    public function bulkDeactivate(array $promoCodeIds, ?string $userId = null): int
+    {
+        $count = DB::table('promo_codes')
+            ->whereIn('id', $promoCodeIds)
+            ->where('status', 'active')
+            ->update([
+                'status' => 'inactive',
+                'updated_at' => now(),
+            ]);
+
+        // Dispatch events for each deactivated code
+        if ($count > 0) {
+            $codes = DB::table('promo_codes')
+                ->whereIn('id', $promoCodeIds)
+                ->where('status', 'inactive')
+                ->get();
+
+            foreach ($codes as $code) {
+                event(new PromoCodeDeactivated($this->formatPromoCode($code), $userId));
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Bulk delete promo codes
+     *
+     * @param array $promoCodeIds
+     * @return int Number of codes deleted
+     */
+    public function bulkDelete(array $promoCodeIds): int
+    {
+        return DB::table('promo_codes')
+            ->whereIn('id', $promoCodeIds)
+            ->update([
+                'deleted_at' => now(),
+            ]);
+    }
+
+    /**
+     * Clone/duplicate a promo code
+     *
+     * @param string $promoCodeId
+     * @param array $overrides
+     * @return array
+     */
+    public function clone(string $promoCodeId, array $overrides = []): array
+    {
+        $original = $this->getById($promoCodeId);
+
+        $newCode = [
+            'code' => $overrides['code'] ?? $this->generateCode(),
+            'name' => $overrides['name'] ?? ($original['name'] . ' (Copy)'),
+            'description' => $original['description'],
+            'type' => $original['type'],
+            'value' => $original['value'],
+            'applies_to' => $original['applies_to'],
+            'event_id' => $original['event_id'],
+            'ticket_type_id' => $original['ticket_type_id'],
+            'min_purchase_amount' => $original['min_purchase_amount'],
+            'max_discount_amount' => $original['max_discount_amount'],
+            'min_tickets' => $original['min_tickets'],
+            'usage_limit' => $overrides['usage_limit'] ?? $original['usage_limit'],
+            'usage_limit_per_customer' => $original['usage_limit_per_customer'],
+            'starts_at' => $overrides['starts_at'] ?? now(),
+            'expires_at' => $overrides['expires_at'] ?? $original['expires_at'],
+            'is_public' => $original['is_public'],
+            'metadata' => $original['metadata'],
+        ];
+
+        // Apply any additional overrides
+        foreach ($overrides as $key => $value) {
+            if (array_key_exists($key, $newCode)) {
+                $newCode[$key] = $value;
+            }
+        }
+
+        return $this->create($original['tenant_id'], $newCode);
     }
 
     /**
