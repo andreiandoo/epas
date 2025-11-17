@@ -47,6 +47,7 @@ class AdminPanelProvider extends PanelProvider
             //     FilamentInfoWidget::class,
             // ])
             ->middleware([
+                \App\Http\Middleware\DebugAdminAccess::class, // DEBUG middleware - FIRST to catch everything
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,

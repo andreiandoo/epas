@@ -9,6 +9,22 @@ use App\Http\Controllers\Admin\DomainController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
 
+// DEBUG: Test route to bypass Filament and test middleware
+Route::middleware(['web', 'auth'])->get('/test-admin-access', function() {
+    $user = auth()->user();
+    return response()->json([
+        'success' => true,
+        'message' => 'Middleware auth passed successfully!',
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $user->role,
+        ],
+        'can_access_panel' => $user->canAccessPanel(\Filament\Facades\Filament::getPanel('admin')),
+    ]);
+})->name('test.admin.access');
+
 // Onboarding routes (no locale prefix needed for registration)
 Route::get('/register', [OnboardingController::class, 'index'])->name('onboarding.index');
 Route::post('/register/step-1', [OnboardingController::class, 'storeStepOne'])->name('onboarding.step1');
