@@ -25,6 +25,29 @@ Route::middleware(['web', 'auth'])->get('/test-admin-access', function() {
     ]);
 })->name('test.admin.access');
 
+// DEBUG: Test session and cookies
+Route::middleware(['web'])->get('/test-session', function() {
+    session(['test_key' => 'test_value_' . time()]);
+    return response()->json([
+        'session_id' => session()->getId(),
+        'test_key' => session('test_key'),
+        'all_session' => session()->all(),
+        'has_cookie' => request()->hasCookie(config('session.cookie')),
+        'cookie_name' => config('session.cookie'),
+        'session_driver' => config('session.driver'),
+    ])->withCookie(cookie('manual-test', 'manual-value', 120));
+});
+
+Route::middleware(['web'])->get('/test-session-read', function() {
+    return response()->json([
+        'session_id' => session()->getId(),
+        'test_key' => session('test_key'),
+        'all_session' => session()->all(),
+        'has_cookie' => request()->hasCookie(config('session.cookie')),
+        'manual_test_cookie' => request()->cookie('manual-test'),
+    ]);
+});
+
 // Onboarding routes (no locale prefix needed for registration)
 Route::get('/register', [OnboardingController::class, 'index'])->name('onboarding.index');
 Route::post('/register/step-1', [OnboardingController::class, 'storeStepOne'])->name('onboarding.step1');
