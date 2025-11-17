@@ -47,8 +47,6 @@ class AdminPanelProvider extends PanelProvider
             //     FilamentInfoWidget::class,
             // ])
             ->middleware([
-                \App\Http\Middleware\DebugCookieSession::class, // DEBUG - Track cookie/session changes
-                \App\Http\Middleware\DebugAdminAccess::class, // DEBUG middleware - FIRST to catch everything
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
@@ -58,6 +56,8 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                \App\Http\Middleware\DebugAdminAccess::class, // DEBUG - After all processing
+                \App\Http\Middleware\DebugCookieSession::class, // DEBUG - LAST to see final cookies
             ])
             ->authMiddleware([
                 Authenticate::class,

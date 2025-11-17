@@ -43,8 +43,15 @@ class DebugCookieSession
 
         // Get all Set-Cookie headers from response
         $setCookieHeaders = [];
+        $allResponseHeaders = [];
+
         if (method_exists($response, 'headers')) {
             $headers = $response->headers;
+
+            // Get ALL headers for debugging
+            $allResponseHeaders = $headers->all();
+
+            // Try to get cookies via getCookies method
             if (method_exists($headers, 'getCookies')) {
                 foreach ($headers->getCookies() as $cookie) {
                     $setCookieHeaders[] = [
@@ -58,6 +65,11 @@ class DebugCookieSession
                         'expires' => $cookie->getExpiresTime(),
                     ];
                 }
+            }
+
+            // Also check for set-cookie in raw headers
+            if (isset($allResponseHeaders['set-cookie'])) {
+                $setCookieHeaders['raw_set_cookie'] = $allResponseHeaders['set-cookie'];
             }
         }
 
