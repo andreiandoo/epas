@@ -86,15 +86,7 @@ class AdminPanelProvider extends PanelProvider
 
     public function boot(): void
     {
-        // Nu mai injectăm CSS aici; îl tratăm în epas-skin.js (adaugă clasă de route).
-        FilamentView::registerRenderHook('panels::content.start', fn () => '');
-
-        // FilamentView::registerRenderHook(
-        //     'panels::content.start',
-        //     fn () => request()->routeIs('filament.admin.resources.artists.*')
-        //         ? '<style>.fi-page .fi-main{padding:1.5rem}</style>'
-        //         : ''
-        // );
+        // All render hooks disabled
     }
 }
 
