@@ -61,26 +61,27 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->maxContentWidth('full')
 
-            // === Assets: CSS + JS mutate din head/body hooks în fișiere ===
-            ->assets([
-                Css::make('epas-skin', asset('admin/epas-skin.css')),
-                Js::make('epas-skin', asset('admin/epas-skin.js')),
-            ])
+            // === Assets: CSS + JS - TEMPORARILY DISABLED (files missing) ===
+            // ->assets([
+            //     Css::make('epas-skin', asset('admin/epas-skin.css')),
+            //     Js::make('epas-skin', asset('admin/epas-skin.js')),
+            // ])
 
-            // Render hooks for custom layout elements
-            ->renderHook('panels::sidebar.header', fn (): string => view('filament.components.sidebar-brand')->render())
+            // Render hooks for custom layout elements - TEMPORARILY DISABLED
+            // ->renderHook('panels::sidebar.header', fn (): string => view('filament.components.sidebar-brand')->render())
 
-            // Custom topbar inside main content + event form menu
-            ->renderHook('panels::content.start', function (): string {
-                $html = view('filament.components.custom-topbar')->render();
+            // Custom topbar inside main content + event form menu - TEMPORARILY DISABLED
+            // ->renderHook('panels::content.start', function (): string {
+            //     $html = view('filament.components.custom-topbar')->render();
 
-                // Add event form anchor menu if on event pages
-                if (request()->routeIs('filament.admin.resources.events.*')) {
-                    $html .= view('filament.events.widgets.event-form-anchor-menu')->render();
-                }
+            //     // Add event form anchor menu if on event pages
+            //     if (request()->routeIs('filament.admin.resources.events.*')) {
+            //         $html .= view('filament.events.widgets.event-form-anchor-menu')->render();
+            //     }
 
-                return $html;
-            });
+            //     return $html;
+            // })
+            ;
     }
 
     public function boot(): void
