@@ -493,6 +493,45 @@ Route::prefix('notifications')->middleware(['throttle:api'])->group(function () 
 
 /*
 |--------------------------------------------------------------------------
+| Promo Codes API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for managing promo/voucher codes
+|
+*/
+
+Route::prefix('promo-codes')->middleware(['throttle:api'])->group(function () {
+    // Tenant admin endpoints
+    Route::get('/{tenantId}', [App\Http\Controllers\Api\PromoCodeController::class, 'index'])
+        ->name('api.promo-codes.index');
+
+    Route::post('/{tenantId}', [App\Http\Controllers\Api\PromoCodeController::class, 'store'])
+        ->name('api.promo-codes.store');
+
+    Route::get('/{id}/show', [App\Http\Controllers\Api\PromoCodeController::class, 'show'])
+        ->name('api.promo-codes.show');
+
+    Route::put('/{id}', [App\Http\Controllers\Api\PromoCodeController::class, 'update'])
+        ->name('api.promo-codes.update');
+
+    Route::post('/{id}/deactivate', [App\Http\Controllers\Api\PromoCodeController::class, 'deactivate'])
+        ->name('api.promo-codes.deactivate');
+
+    Route::delete('/{id}', [App\Http\Controllers\Api\PromoCodeController::class, 'destroy'])
+        ->name('api.promo-codes.destroy');
+
+    Route::get('/{id}/stats', [App\Http\Controllers\Api\PromoCodeController::class, 'stats'])
+        ->name('api.promo-codes.stats');
+
+    // Public endpoint for validating codes
+    Route::post('/{tenantId}/validate', [App\Http\Controllers\Api\PromoCodeController::class, 'validate'])
+        ->name('api.promo-codes.validate')
+        ->withoutMiddleware(['throttle:api'])
+        ->middleware('throttle:60,1'); // 60 requests per minute
+});
+
+/*
+|--------------------------------------------------------------------------
 | Health Check API Routes
 |--------------------------------------------------------------------------
 */

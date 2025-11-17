@@ -253,4 +253,29 @@ return [
         'github_webhook_secret' => env('GITHUB_WEBHOOK_SECRET'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Promo Codes Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'promo_codes' => [
+        'enabled' => env('PROMO_CODES_ENABLED', true),
+
+        // Default code length when auto-generating
+        'default_code_length' => env('PROMO_CODES_DEFAULT_LENGTH', 8),
+
+        // Maximum discount percentage allowed
+        'max_percentage' => env('PROMO_CODES_MAX_PERCENTAGE', 100),
+
+        // Default validity period (days)
+        'default_validity_days' => env('PROMO_CODES_DEFAULT_VALIDITY_DAYS', 30),
+
+        // Allow stacking multiple promo codes
+        'allow_stacking' => env('PROMO_CODES_ALLOW_STACKING', false),
+
+        // Cleanup old expired codes after X days
+        'cleanup_expired_after_days' => env('PROMO_CODES_CLEANUP_DAYS', 365),
+    ],
+
 ];
