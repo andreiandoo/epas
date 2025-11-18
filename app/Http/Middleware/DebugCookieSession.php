@@ -78,7 +78,10 @@ class DebugCookieSession
             'session_changed' => $sessionIdBefore !== $sessionIdAfter,
             'set_cookie_headers_count' => count($setCookieHeaders),
             'set_cookie_headers' => $setCookieHeaders,
+            'all_response_headers' => array_keys($allResponseHeaders), // Just the keys to avoid huge log
+            'has_set_cookie_header' => isset($allResponseHeaders['set-cookie']),
             'response_status' => $response->getStatusCode(),
+            'response_class' => get_class($response),
             'user_id' => auth()->id(),
             'session_has_auth' => session()->has('login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d'),
         ]);
