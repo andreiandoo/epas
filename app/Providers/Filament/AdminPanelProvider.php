@@ -35,17 +35,17 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
-            // TESTING: Disable ALL resources to isolate 403 issue
-            // ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
-            // ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
-            // ->pages([
-            //     Dashboard::class,
-            // ])
-            // ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
-            // ->widgets([
-            //     AccountWidget::class,
-            //     FilamentInfoWidget::class,
-            // ])
+            // RE-ENABLE resources and Dashboard now that session is fixed
+            ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
+            ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
+            ->pages([
+                Dashboard::class,
+            ])
+            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
+            ->widgets([
+                AccountWidget::class,
+                FilamentInfoWidget::class,
+            ])
             ->middleware([
                 // \App\Http\Middleware\DebugCookieSession::class, // DISABLED - was calling session() too early
                 // \App\Http\Middleware\DebugAdminAccess::class, // DISABLED - not needed
