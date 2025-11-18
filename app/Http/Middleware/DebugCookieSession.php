@@ -44,16 +44,26 @@ class DebugCookieSession
         // Get all Set-Cookie headers from response
         $setCookieHeaders = [];
         $allResponseHeaders = [];
+        $debugInfo = [];
+
+        // Deep debug of response object
+        $debugInfo['has_headers_property'] = property_exists($response, 'headers');
+        $debugInfo['has_headers_method'] = method_exists($response, 'headers');
 
         if (method_exists($response, 'headers')) {
             $headers = $response->headers;
+            $debugInfo['headers_type'] = get_class($headers);
+            $debugInfo['headers_count'] = $headers->count();
 
             // Get ALL headers for debugging
             $allResponseHeaders = $headers->all();
 
             // Try to get cookies via getCookies method
             if (method_exists($headers, 'getCookies')) {
-                foreach ($headers->getCookies() as $cookie) {
+                $cookies = $headers->getCookies();
+                $debugInfo['cookies_count'] = count($cookies);
+
+                foreach ($cookies as $cookie) {
                     $setCookieHeaders[] = [
                         'name' => $cookie->getName(),
                         'value' => substr($cookie->getValue(), 0, 50) . '...', // Truncate for readability
@@ -65,6 +75,8 @@ class DebugCookieSession
                         'expires' => $cookie->getExpiresTime(),
                     ];
                 }
+            } else {
+                $debugInfo['getCookies_exists'] = false;
             }
 
             // Also check for set-cookie in raw headers
@@ -82,6 +94,7 @@ class DebugCookieSession
             'has_set_cookie_header' => isset($allResponseHeaders['set-cookie']),
             'response_status' => $response->getStatusCode(),
             'response_class' => get_class($response),
+            'debug_info' => $debugInfo,
             'user_id' => auth()->id(),
             'session_has_auth' => session()->has('login_web_59ba36addc2b2f9401580f014c7f58ea4e30989d'),
         ]);
