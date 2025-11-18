@@ -22,6 +22,7 @@ use Filament\Support\Facades\FilamentView;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use App\Filament\Pages\CustomDashboard;
+use App\Http\Middleware\TraceRequest;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -47,6 +48,7 @@ class AdminPanelProvider extends PanelProvider
                 FilamentInfoWidget::class,
             ])
             ->middleware([
+                TraceRequest::class, // TRACE ALL REQUESTS - helps debug 403
                 // \App\Http\Middleware\DebugCookieSession::class, // DISABLED - was calling session() too early
                 // \App\Http\Middleware\DebugAdminAccess::class, // DISABLED - not needed
                 EncryptCookies::class,
