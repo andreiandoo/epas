@@ -50,7 +50,8 @@ class DebugCookieSession
         $debugInfo['has_headers_property'] = property_exists($response, 'headers');
         $debugInfo['has_headers_method'] = method_exists($response, 'headers');
 
-        if (method_exists($response, 'headers')) {
+        // FIX: Check for PROPERTY, not method!
+        if (property_exists($response, 'headers') && $response->headers) {
             $headers = $response->headers;
             $debugInfo['headers_type'] = get_class($headers);
             $debugInfo['headers_count'] = $headers->count();
