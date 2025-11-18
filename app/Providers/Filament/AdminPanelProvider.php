@@ -47,8 +47,8 @@ class AdminPanelProvider extends PanelProvider
             //     FilamentInfoWidget::class,
             // ])
             ->middleware([
-                \App\Http\Middleware\DebugCookieSession::class, // DEBUG - FIRST so "after" code runs LAST
-                \App\Http\Middleware\DebugAdminAccess::class, // DEBUG
+                // \App\Http\Middleware\DebugCookieSession::class, // DISABLED - was calling session() too early
+                // \App\Http\Middleware\DebugAdminAccess::class, // DISABLED - not needed
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
