@@ -17,7 +17,7 @@ class ViewAffiliateStats extends Page implements HasTable
 
     protected static string $resource = AffiliateResource::class;
 
-    protected static string $view = 'filament.resources.affiliates.pages.view-affiliate-stats';
+    protected string $view = 'filament.resources.affiliates.pages.view-affiliate-stats';
 
     public ?Affiliate $record = null;
     public array $stats = [];

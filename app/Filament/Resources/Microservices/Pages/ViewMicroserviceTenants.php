@@ -16,7 +16,7 @@ class ViewMicroserviceTenants extends Page implements HasTable
 
     protected static string $resource = MicroserviceResource::class;
 
-    protected static string $view = 'filament.resources.microservices.pages.view-microservice-tenants';
+    protected string $view = 'filament.resources.microservices.pages.view-microservice-tenants';
 
     public ?Microservice $record = null;
 

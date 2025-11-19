@@ -18,7 +18,7 @@ class ManageConnections extends Page implements HasForms
 
     protected static string $resource = SettingsResource::class;
 
-    protected static string $view = 'filament.resources.settings.pages.manage-connections';
+    protected string $view = 'filament.resources.settings.pages.manage-connections';
 
     public ?array $data = [];
 
