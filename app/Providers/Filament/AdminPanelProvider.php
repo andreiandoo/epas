@@ -66,15 +66,14 @@ class AdminPanelProvider extends PanelProvider
 
             // Custom assets
             ->assets([
-                // Tailwind CSS Play CDN - includes all Tailwind utilities
-                Js::make('tailwind-cdn', 'https://cdn.tailwindcss.com')
-                    ->loadedOnRequest(),
-                // Custom EPAS styles
                 Css::make('epas-skin', asset('css/epas-skin.css')),
                 Js::make('epas-skin', asset('js/epas-skin.js')),
             ])
 
             // Render hooks for custom layout elements
+            // Tailwind CSS Play CDN - includes all Tailwind utilities
+            ->renderHook('panels::head.end', fn (): string => '<script src="https://cdn.tailwindcss.com"></script>')
+
             ->renderHook('panels::sidebar.header', fn (): string => view('filament.components.sidebar-brand')->render())
 
             // Custom topbar in actual topbar (not in content)
