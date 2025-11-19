@@ -36,25 +36,37 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
-            // RE-ENABLE resources and Dashboard now that session is fixed
-            ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
-            ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
-            ->pages([
-                CustomDashboard::class, // Using custom Dashboard with logging
-            ])
-            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
-            ->widgets([
-                AccountWidget::class,
-                FilamentInfoWidget::class,
-            ])
+
+            // ============================================
+            // ULTRA-MINIMAL CONFIG - Testing 403 fix
+            // Everything disabled except bare essentials
+            // ============================================
+
+            // NO resource discovery - commented out
+            // ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
+
+            // NO page discovery - commented out
+            // ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
+
+            // NO custom pages - use default Filament Dashboard
+            // ->pages([
+            //     CustomDashboard::class,
+            // ])
+
+            // NO widget discovery - commented out
+            // ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
+
+            // NO widgets - empty dashboard
+            // ->widgets([
+            //     AccountWidget::class,
+            //     FilamentInfoWidget::class,
+            // ])
+
+            // MINIMAL middleware - only what's absolutely required
             ->middleware([
-                TraceRequest::class, // TRACE ALL REQUESTS - helps debug 403
-                // \App\Http\Middleware\DebugCookieSession::class, // DISABLED - was calling session() too early
-                // \App\Http\Middleware\DebugAdminAccess::class, // DISABLED - not needed
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
-                // AuthenticateSession::class, // DISABLED - causes session regeneration issues
                 ShareErrorsFromSession::class,
                 VerifyCsrfToken::class,
                 SubstituteBindings::class,
@@ -64,7 +76,6 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            ->maxContentWidth('full')
 
             // === Assets: CSS + JS - TEMPORARILY DISABLED (files missing) ===
             // ->assets([
