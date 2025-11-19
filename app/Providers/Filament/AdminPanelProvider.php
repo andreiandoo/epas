@@ -34,8 +34,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            // TEMPORARILY REMOVED ->login() to test if auth is the issue
-            // ->login()
+            ->login() // Re-enabled - testing if login page works
             ->colors([
                 'primary' => Color::Amber,
             ])
