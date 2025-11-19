@@ -34,7 +34,8 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            // TEMPORARILY REMOVED ->login() to test if auth is the issue
+            // ->login()
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -75,9 +76,10 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
-            ->authMiddleware([
-                Authenticate::class,
-            ])
+            // TEMPORARILY REMOVED authMiddleware to test if this is the blocker
+            // ->authMiddleware([
+            //     Authenticate::class,
+            // ])
 
             // === Assets: CSS + JS - TEMPORARILY DISABLED (files missing) ===
             // ->assets([
