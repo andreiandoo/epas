@@ -1,0 +1,26 @@
+<?php
+
+namespace App\Filament\Pages;
+
+use Filament\Pages\Page;
+
+class TestPage extends Page
+{
+    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+
+    protected static string $view = 'filament.pages.test-page';
+
+    protected static ?string $title = 'Test Page';
+
+    // FORCE access to always be true
+    public static function canAccess(): bool
+    {
+        \Illuminate\Support\Facades\Log::info('=== TestPage::canAccess() called ===');
+        return true;
+    }
+
+    public function mount(): void
+    {
+        \Illuminate\Support\Facades\Log::info('=== TestPage::mount() called ===');
+    }
+}

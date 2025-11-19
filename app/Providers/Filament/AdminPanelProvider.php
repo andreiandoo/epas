@@ -23,6 +23,7 @@ use Filament\Support\Facades\FilamentView;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use App\Filament\Pages\CustomDashboard;
+use App\Filament\Pages\TestPage;
 use App\Http\Middleware\TraceRequest;
 
 class AdminPanelProvider extends PanelProvider
@@ -49,9 +50,9 @@ class AdminPanelProvider extends PanelProvider
             // NO page discovery - commented out
             // ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
 
-            // EXPLICIT default Filament Dashboard (not custom)
+            // TEST: Ultra-simple custom page with explicit logging
             ->pages([
-                Dashboard::class, // Default Filament Dashboard
+                TestPage::class, // Our own test page
             ])
 
             // NO widget discovery - commented out
