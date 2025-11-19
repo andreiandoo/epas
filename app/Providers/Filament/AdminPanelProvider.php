@@ -23,8 +23,6 @@ use Filament\Support\Facades\FilamentView;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
 use App\Filament\Pages\CustomDashboard;
-use App\Filament\Pages\TestPage;
-use App\Http\Middleware\TraceRequest;
 use App\Http\Middleware\DebugFilamentAuth;
 
 class AdminPanelProvider extends PanelProvider
@@ -36,37 +34,22 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->authGuard('web') // Explicitly set auth guard
+            ->authGuard('web')
             ->colors([
                 'primary' => Color::Amber,
             ])
 
-            // ============================================
-            // ULTRA-MINIMAL CONFIG - Testing 403 fix
-            // Everything disabled except bare essentials
-            // ============================================
+            // Auto-discover resources, pages, and widgets
+            ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
+            ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
+            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
 
-            // NO resource discovery - commented out
-            // ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
-
-            // NO page discovery - commented out
-            // ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
-
-            // TEST: Ultra-simple custom page with explicit logging
-            ->pages([
-                TestPage::class, // Our own test page
+            // Default widgets
+            ->widgets([
+                AccountWidget::class,
+                FilamentInfoWidget::class,
             ])
 
-            // NO widget discovery - commented out
-            // ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
-
-            // NO widgets - empty dashboard
-            // ->widgets([
-            //     AccountWidget::class,
-            //     FilamentInfoWidget::class,
-            // ])
-
-            // MINIMAL middleware - only what's absolutely required
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
@@ -77,37 +60,35 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
-            // Using custom debug middleware to trace authentication flow
             ->authMiddleware([
-                DebugFilamentAuth::class,
+                DebugFilamentAuth::class, // Custom middleware that explicitly checks canAccessPanel()
             ])
 
-            // === Assets: CSS + JS - TEMPORARILY DISABLED (files missing) ===
-            // ->assets([
-            //     Css::make('epas-skin', asset('admin/epas-skin.css')),
-            //     Js::make('epas-skin', asset('admin/epas-skin.js')),
-            // ])
+            // Custom assets
+            ->assets([
+                Css::make('epas-skin', asset('admin/epas-skin.css')),
+                Js::make('epas-skin', asset('admin/epas-skin.js')),
+            ])
 
-            // Render hooks for custom layout elements - TEMPORARILY DISABLED
-            // ->renderHook('panels::sidebar.header', fn (): string => view('filament.components.sidebar-brand')->render())
+            // Render hooks for custom layout elements
+            ->renderHook('panels::sidebar.header', fn (): string => view('filament.components.sidebar-brand')->render())
 
-            // Custom topbar inside main content + event form menu - TEMPORARILY DISABLED
-            // ->renderHook('panels::content.start', function (): string {
-            //     $html = view('filament.components.custom-topbar')->render();
+            // Custom topbar inside main content + event form menu
+            ->renderHook('panels::content.start', function (): string {
+                $html = view('filament.components.custom-topbar')->render();
 
-            //     // Add event form anchor menu if on event pages
-            //     if (request()->routeIs('filament.admin.resources.events.*')) {
-            //         $html .= view('filament.events.widgets.event-form-anchor-menu')->render();
-            //     }
+                // Add event form anchor menu if on event pages
+                if (request()->routeIs('filament.admin.resources.events.*')) {
+                    $html .= view('filament.events.widgets.event-form-anchor-menu')->render();
+                }
 
-            //     return $html;
-            // })
+                return $html;
+            })
             ;
     }
 
     public function boot(): void
     {
-        // All render hooks disabled
+        // Render hooks are now in panel() method above
     }
 }
-
