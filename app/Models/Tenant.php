@@ -52,6 +52,9 @@ class Tenant extends Model
         'contact_last_name',
         'contact_email',
         'contact_phone',
+        // Payment processor
+        'payment_processor',
+        'payment_processor_mode',
     ];
 
     protected $casts = [
@@ -96,5 +99,90 @@ class Tenant extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    public function paymentConfigs(): HasMany
+    {
+        return $this->hasMany(TenantPaymentConfig::class);
+    }
+
+    /**
+     * Get active payment config for the selected processor
+     */
+    public function activePaymentConfig(): ?TenantPaymentConfig
+    {
+        if (!$this->payment_processor) {
+            return null;
+        }
+
+        return $this->paymentConfigs()
+            ->where('processor', $this->payment_processor)
+            ->where('is_active', true)
+            ->first();
+    }
+
+    public function trackingIntegrations(): HasMany
+    {
+        return $this->hasMany(TrackingIntegration::class);
+    }
+
+    /**
+     * Get enabled tracking integrations
+     */
+    public function activeTrackingIntegrations(): HasMany
+    {
+        return $this->trackingIntegrations()->where('enabled', true);
+    }
+
+    public function ticketTemplates(): HasMany
+    {
+        return $this->hasMany(TicketTemplate::class);
+    }
+
+    /**
+     * Get active ticket templates
+     */
+    public function activeTicketTemplates(): HasMany
+    {
+        return $this->ticketTemplates()->where('status', 'active');
+    }
+
+    /**
+     * Get default ticket template
+     */
+    public function defaultTicketTemplate(): ?TicketTemplate
+    {
+        return $this->ticketTemplates()
+            ->where('is_default', true)
+            ->where('status', 'active')
+            ->first();
+    }
+
+    public function inviteBatches(): HasMany
+    {
+        return $this->hasMany(InviteBatch::class);
+    }
+
+    public function invites(): HasMany
+    {
+        return $this->hasMany(Invite::class);
+    }
+
+    /**
+     * Get active invite batches (not cancelled)
+     */
+    public function activeInviteBatches(): HasMany
+    {
+        return $this->inviteBatches()->where('status', '!=', 'cancelled');
+    }
+
+    public function insuranceConfigs(): HasMany
+    {
+        return $this->hasMany(InsuranceConfig::class);
+    }
+
+    public function insurancePolicies(): HasMany
+    {
+        return $this->hasMany(InsurancePolicy::class);
     }
 }

@@ -7,6 +7,10 @@ use App\Http\Controllers\Public\LocationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\Admin\DomainController;
 use App\Http\Controllers\Admin\GlobalSearchController;
+use App\Http\Controllers\MicroserviceMarketplaceController;
+use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\TenantPaymentWebhookController;
+use App\Http\Controllers\StatusController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
 
@@ -64,6 +68,37 @@ Route::middleware(['web'])->get('/test-session-read', function() {
         'has_cookie' => request()->hasCookie(config('session.cookie')),
         'manual_test_cookie' => request()->cookie('manual-test'),
     ]);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Microservices Marketplace & Stripe Routes
+|--------------------------------------------------------------------------
+*/
+
+// Stripe Webhook (must be outside CSRF protection)
+Route::post('/webhooks/stripe', [StripeWebhookController::class, 'handle'])
+    ->name('webhooks.stripe')
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
+// Tenant Payment Processor Webhooks
+Route::post('/webhooks/tenant-payment/{tenant}/{processor}', [TenantPaymentWebhookController::class, 'handle'])
+    ->name('webhooks.tenant-payment')
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
+// Microservices Marketplace Routes
+Route::prefix('micro')->middleware(['web'])->group(function () {
+    Route::get('/marketplace', [MicroserviceMarketplaceController::class, 'index'])
+        ->name('micro.marketplace');
+
+    Route::post('/checkout', [MicroserviceMarketplaceController::class, 'checkout'])
+        ->name('micro.checkout');
+
+    Route::get('/payment/success', [MicroserviceMarketplaceController::class, 'success'])
+        ->name('micro.payment.success');
+
+    Route::get('/payment/cancel', [MicroserviceMarketplaceController::class, 'cancel'])
+        ->name('micro.payment.cancel');
 });
 
 // Onboarding routes (no locale prefix needed for registration)
@@ -176,3 +211,12 @@ Route::middleware(['web', 'auth'])->group(function () {
         ]);
     })->name('api.tenants.show');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Public Status Page
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/status', [StatusController::class, 'index'])
+    ->name('status');

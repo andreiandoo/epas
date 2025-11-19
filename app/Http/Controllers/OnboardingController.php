@@ -8,6 +8,7 @@ use App\Models\Domain;
 use App\Models\Microservice;
 use App\Services\AnafService;
 use App\Services\LocationService;
+use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
@@ -44,7 +45,10 @@ class OnboardingController extends Controller
         // Get Romanian counties for step 2
         $romaniaCounties = $this->locationService->getStates('ro');
 
-        return view('onboarding.wizard', compact('step', 'data', 'microservices', 'romaniaCounties'));
+        // Get available payment processors for step 2
+        $paymentProcessors = PaymentProcessorFactory::getAvailableProcessors();
+
+        return view('onboarding.wizard', compact('step', 'data', 'microservices', 'romaniaCounties', 'paymentProcessors'));
     }
 
     /**
@@ -94,6 +98,7 @@ class OnboardingController extends Controller
             'address' => 'required|string',
             'city' => 'required|string|max:255',
             'state' => 'required|string|max:255',
+            'payment_processor' => 'required|in:stripe,netopia,euplatesc,payu',
         ]);
 
         if ($validator->fails()) {
@@ -106,7 +111,7 @@ class OnboardingController extends Controller
         // Store in session
         $onboarding = Session::get('onboarding', []);
         $onboarding['data']['step2'] = $request->only([
-            'country', 'vat_payer', 'cui', 'company_name', 'reg_com', 'address', 'city', 'state'
+            'country', 'vat_payer', 'cui', 'company_name', 'reg_com', 'address', 'city', 'state', 'payment_processor'
         ]);
         $onboarding['step'] = 3;
         Session::put('onboarding', $onboarding);
@@ -238,6 +243,8 @@ class OnboardingController extends Controller
                 'contact_last_name' => $step1['last_name'],
                 'contact_email' => $step1['email'],
                 'contact_phone' => $step1['phone'],
+                'payment_processor' => $step2['payment_processor'] ?? null,
+                'payment_processor_mode' => 'test', // Start in test mode
                 'onboarding_completed' => true,
                 'onboarding_completed_at' => now(),
                 'billing_starts_at' => now(),

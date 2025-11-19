@@ -29,6 +29,14 @@ class Setting extends Model
         'default_payment_terms_days',
         'logo_path',
         'invoice_footer',
+        'stripe_mode',
+        'stripe_test_public_key',
+        'stripe_test_secret_key',
+        'stripe_live_public_key',
+        'stripe_live_secret_key',
+        'stripe_webhook_secret',
+        'vat_enabled',
+        'vat_rate',
         'meta',
     ];
 
@@ -36,6 +44,11 @@ class Setting extends Model
         'meta' => 'array',
         'invoice_next_number' => 'integer',
         'default_payment_terms_days' => 'integer',
+        'stripe_test_secret_key' => 'encrypted',
+        'stripe_live_secret_key' => 'encrypted',
+        'stripe_webhook_secret' => 'encrypted',
+        'vat_enabled' => 'boolean',
+        'vat_rate' => 'decimal:2',
     ];
 
     /**
@@ -59,5 +72,30 @@ class Setting extends Model
         $this->increment('invoice_next_number');
 
         return "{$prefix}-{$series}" . str_pad($number, 6, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Get active Stripe keys based on mode
+     */
+    public function getStripePublicKey(): ?string
+    {
+        return $this->stripe_mode === 'live'
+            ? $this->stripe_live_public_key
+            : $this->stripe_test_public_key;
+    }
+
+    public function getStripeSecretKey(): ?string
+    {
+        return $this->stripe_mode === 'live'
+            ? $this->stripe_live_secret_key
+            : $this->stripe_test_secret_key;
+    }
+
+    public function isStripeConfigured(): bool
+    {
+        $publicKey = $this->getStripePublicKey();
+        $secretKey = $this->getStripeSecretKey();
+
+        return !empty($publicKey) && !empty($secretKey);
     }
 }

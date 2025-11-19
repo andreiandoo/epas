@@ -18,7 +18,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Register Consent Service for tracking
+        $this->app->singleton(
+            \App\Services\Tracking\ConsentServiceInterface::class,
+            \App\Services\Tracking\SessionConsentService::class
+        );
     }
 
     /**
@@ -33,5 +37,19 @@ class AppServiceProvider extends ServiceProvider
 
         // Register observers
         \App\Models\Invoice::observe(\App\Observers\InvoiceObserver::class);
+
+        // Register microservices event listeners
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\OrderConfirmed::class,
+            \App\Listeners\SendOrderConfirmationListener::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\PaymentCaptured::class,
+            [
+                \App\Listeners\SubmitEFacturaListener::class,
+                \App\Listeners\IssueInvoiceListener::class,
+            ]
+        );
     }
 }
