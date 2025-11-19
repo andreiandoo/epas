@@ -106,9 +106,37 @@ If you have both databases accessible, you can export from one and import to ano
 5. **Verify parent relationships** after import
 6. **Use slugs consistently** - they are used for parent-child matching
 
+## Venues
+
+### CSV Format for Venues
+
+**Required:** `name`
+
+**Optional:** slug, address, city, state, country, website_url, phone, email, facebook_url, instagram_url, capacity, capacity_total, capacity_standing, capacity_seated, lat, lng, description
+
+### Import Venues
+```bash
+php artisan import:venues /path/to/venues.csv
+```
+
+See `venues-example.csv` for format with Romanian venues.
+
+## Artists
+
+### CSV Format for Artists
+
+**Required:** `name`
+
+**Optional:** slug, email, phone, website_url, facebook_url, instagram_url, tiktok_url, spotify_url, youtube_url, country, city, bio, formed_at (YYYY-MM-DD)
+
+### Import Artists
+```bash
+php artisan import:artists /path/to/artists.csv
+```
+
+See `artists-example.csv` for format with Romanian artists.
+
 ## Future enhancements
 
-The following import/export commands are planned:
-- Venues
-- Artists
-- Events (complex, with relations)
+- Export commands for Venues and Artists
+- Events import/export (complex, with relations)
