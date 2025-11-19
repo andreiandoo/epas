@@ -17,7 +17,7 @@
 @endphp
 
 <div class="fi-custom-topbar sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 mb-6">
-    <div class="flex items-center justify-between max-w-full">
+    <div class="flex items-center justify-between gap-4 max-w-full">
         {{-- Left: Sidebar Toggle Button --}}
         <div class="flex items-center gap-3">
             <button
@@ -30,6 +30,25 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                 </svg>
             </button>
+        </div>
+
+        {{-- Center: Global Search --}}
+        <div class="flex-1 hidden md:block">
+            <div class="epas-global-search">
+                <input
+                    type="text"
+                    id="epas-global-search-input"
+                    placeholder="Search venues, artists, tenants, customers, users..."
+                    class="dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:border-gray-600"
+                    autocomplete="off"
+                >
+                <div class="search-icon">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <div id="epas-search-results" class="epas-search-results hidden"></div>
+            </div>
         </div>
 
         {{-- Right: Language Selector, Public Site Link & User Menu --}}

@@ -66,8 +66,8 @@ class AdminPanelProvider extends PanelProvider
 
             // Custom assets
             ->assets([
-                Css::make('epas-skin', asset('admin/epas-skin.css')),
-                Js::make('epas-skin', asset('admin/epas-skin.js')),
+                Css::make('epas-skin', asset('css/epas-skin.css')),
+                Js::make('epas-skin', asset('js/epas-skin.js')),
             ])
 
             // Render hooks for custom layout elements

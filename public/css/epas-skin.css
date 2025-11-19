@@ -1,0 +1,127 @@
+/* EPAS Admin Panel Custom Styles */
+
+/* Custom Topbar Styles */
+.fi-custom-topbar {
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+/* Global Search Styles */
+.epas-global-search {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+}
+
+.epas-global-search input {
+    width: 100%;
+    padding: 0.5rem 2.5rem 0.5rem 1rem;
+    border: 1px solid rgba(209, 213, 219, 1);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.epas-global-search input:focus {
+    outline: none;
+    border-color: rgba(var(--primary-500), 1);
+    box-shadow: 0 0 0 3px rgba(var(--primary-500), 0.1);
+}
+
+.epas-global-search .search-icon {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.epas-search-results {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    right: 0;
+    max-height: 400px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid rgba(229, 231, 235, 1);
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    z-index: 50;
+}
+
+.dark .epas-search-results {
+    background: rgba(31, 41, 55, 1);
+    border-color: rgba(55, 65, 81, 1);
+}
+
+.epas-search-result-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(229, 231, 235, 1);
+    cursor: pointer;
+    transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .epas-search-result-item {
+    border-bottom-color: rgba(55, 65, 81, 1);
+}
+
+.epas-search-result-item:hover {
+    background-color: rgba(249, 250, 251, 1);
+}
+
+.dark .epas-search-result-item:hover {
+    background-color: rgba(55, 65, 81, 1);
+}
+
+.epas-search-result-item:last-child {
+    border-bottom: none;
+}
+
+.epas-search-category {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: rgba(107, 114, 128, 1);
+    padding: 0.5rem 1rem;
+    background-color: rgba(249, 250, 251, 1);
+}
+
+.dark .epas-search-category {
+    background-color: rgba(17, 24, 39, 1);
+    color: rgba(156, 163, 175, 1);
+}
+
+/* Sidebar Brand Styles */
+.fi-sidebar-brand {
+    background: linear-gradient(135deg, rgba(var(--primary-500), 0.05) 0%, rgba(var(--primary-600), 0.1) 100%);
+}
+
+/* Custom scrollbar for search results */
+.epas-search-results::-webkit-scrollbar {
+    width: 6px;
+}
+
+.epas-search-results::-webkit-scrollbar-track {
+    background: rgba(243, 244, 246, 1);
+}
+
+.dark .epas-search-results::-webkit-scrollbar-track {
+    background: rgba(31, 41, 55, 1);
+}
+
+.epas-search-results::-webkit-scrollbar-thumb {
+    background: rgba(209, 213, 219, 1);
+    border-radius: 3px;
+}
+
+.dark .epas-search-results::-webkit-scrollbar-thumb {
+    background: rgba(75, 85, 99, 1);
+}
+
+.epas-search-results::-webkit-scrollbar-thumb:hover {
+    background: rgba(156, 163, 175, 1);
+}
+
+.dark .epas-search-results::-webkit-scrollbar-thumb:hover {
+    background: rgba(107, 114, 128, 1);
+}

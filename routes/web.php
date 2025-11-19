@@ -6,6 +6,7 @@ use App\Http\Controllers\Public\VenueController as PublicVenueController;
 use App\Http\Controllers\Public\LocationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\Admin\DomainController;
+use App\Http\Controllers\Admin\GlobalSearchController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
 
@@ -38,6 +39,9 @@ Route::middleware(['web', 'auth'])->get('/test-admin-access', function() {
         'can_access_panel' => $user->canAccessPanel(\Filament\Facades\Filament::getPanel('admin')),
     ]);
 })->name('test.admin.access');
+
+// Admin Global Search API (requires authentication)
+Route::middleware(['web', 'auth'])->get('/admin/api/global-search', [GlobalSearchController::class, 'search'])->name('admin.api.global-search');
 
 // DEBUG: Test session and cookies
 Route::middleware(['web'])->get('/test-session', function() {
