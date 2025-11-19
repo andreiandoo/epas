@@ -25,6 +25,7 @@ use Filament\Support\Assets\Js;
 use App\Filament\Pages\CustomDashboard;
 use App\Filament\Pages\TestPage;
 use App\Http\Middleware\TraceRequest;
+use App\Http\Middleware\DebugFilamentAuth;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -76,9 +77,9 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
-            // Re-enabled with explicit authGuard('web') set above
+            // Using custom debug middleware to trace authentication flow
             ->authMiddleware([
-                Authenticate::class,
+                DebugFilamentAuth::class,
             ])
 
             // === Assets: CSS + JS - TEMPORARILY DISABLED (files missing) ===
