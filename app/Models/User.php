@@ -58,27 +58,6 @@ class User extends Authenticatable
      */
     public function canAccessPanel(\Filament\Panel $panel): bool
     {
-        \Illuminate\Support\Facades\Log::info('=== User->canAccessPanel() CALLED ===', [
-            'user_id' => $this->id,
-            'user_email' => $this->email,
-            'user_role' => $this->role,
-            'panel_id' => $panel->getId(),
-            'panel_path' => $panel->getPath(),
-            'is_authenticated' => auth()->check(),
-            'auth_user_id' => auth()->id(),
-        ]);
-
-        // TEMPORARY: Allow all authenticated users to test
-        $result = true;
-
-        \Illuminate\Support\Facades\Log::info('=== User->canAccessPanel() RETURNING ===', [
-            'result' => $result,
-            'user_id' => $this->id,
-        ]);
-
-        return $result;
-
-        // Original logic (will restore after testing):
-        // return in_array($this->role, ['super-admin', 'admin', 'editor']);
+        return in_array($this->role, ['super-admin', 'admin', 'editor']);
     }
 }

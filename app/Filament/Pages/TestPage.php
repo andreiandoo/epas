@@ -14,15 +14,8 @@ class TestPage extends Page
 
     protected static ?string $title = 'Test Page';
 
-    // FORCE access to always be true
     public static function canAccess(): bool
     {
-        \Illuminate\Support\Facades\Log::info('=== TestPage::canAccess() called ===');
         return true;
-    }
-
-    public function mount(): void
-    {
-        \Illuminate\Support\Facades\Log::info('=== TestPage::mount() called ===');
     }
 }
