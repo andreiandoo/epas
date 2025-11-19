@@ -66,6 +66,10 @@ class AdminPanelProvider extends PanelProvider
 
             // Custom assets
             ->assets([
+                // Tailwind CSS Play CDN - includes all Tailwind utilities
+                Js::make('tailwind-cdn', 'https://cdn.tailwindcss.com')
+                    ->loadedOnRequest(),
+                // Custom EPAS styles
                 Css::make('epas-skin', asset('css/epas-skin.css')),
                 Js::make('epas-skin', asset('js/epas-skin.js')),
             ])

@@ -3,6 +3,12 @@
 /* Custom Topbar Styles */
 .fi-custom-topbar {
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    width: auto;
+    flex: auto;
+}
+.fi-custom-topbar svg {
+    width: 1rem;
+    height: 1rem;
 }
 
 /* Global Search Styles */
@@ -124,4 +130,20 @@
 
 .dark .epas-search-results::-webkit-scrollbar-thumb:hover {
     background: rgba(107, 114, 128, 1);
+}
+
+
+nav.fi-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+}
+nav.fi-topbar .fi-topbar-start {
+    margin-inline: 0px;
+    margin-inline-end: 0;
+}
+nav.fi-topbar .fi-topbar-end {
+    margin-inline-end: 0px;
+    margin-inline-start: 0;
 }
