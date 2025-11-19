@@ -73,16 +73,15 @@ class AdminPanelProvider extends PanelProvider
             // Render hooks for custom layout elements
             ->renderHook('panels::sidebar.header', fn (): string => view('filament.components.sidebar-brand')->render())
 
-            // Custom topbar inside main content + event form menu
+            // Custom topbar in actual topbar (not in content)
+            ->renderHook('panels::topbar.end', fn (): string => view('filament.components.custom-topbar')->render())
+
+            // Event form anchor menu (only on event pages)
             ->renderHook('panels::content.start', function (): string {
-                $html = view('filament.components.custom-topbar')->render();
-
-                // Add event form anchor menu if on event pages
                 if (request()->routeIs('filament.admin.resources.events.*')) {
-                    $html .= view('filament.events.widgets.event-form-anchor-menu')->render();
+                    return view('filament.events.widgets.event-form-anchor-menu')->render();
                 }
-
-                return $html;
+                return '';
             })
             ;
     }
