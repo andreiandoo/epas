@@ -12,7 +12,7 @@ class TestPage extends Page
 
     protected string $view = 'filament.pages.test-page'; // NOT static!
 
-    protected static string | Htmlable | null $title = 'Test Page';
+    protected static ?string $title = 'Test Page';
 
     // FORCE access to always be true
     public static function canAccess(): bool
