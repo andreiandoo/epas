@@ -9,6 +9,20 @@ use App\Http\Controllers\Admin\DomainController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
 
+// DEBUG: Check auth status (NO auth middleware - shows if user is logged in)
+Route::middleware(['web'])->get('/check-auth', function() {
+    return response()->json([
+        'is_authenticated' => auth()->check(),
+        'user_id' => auth()->id(),
+        'user_email' => auth()->user()?->email,
+        'user_role' => auth()->user()?->role,
+        'session_id' => session()->getId(),
+        'session_driver' => config('session.driver'),
+        'has_session_cookie' => request()->hasCookie(config('session.cookie')),
+        'session_data' => session()->all(),
+    ]);
+})->name('check.auth');
+
 // DEBUG: Test route to bypass Filament and test middleware
 Route::middleware(['web', 'auth'])->get('/test-admin-access', function() {
     $user = auth()->user();
