@@ -10,7 +10,7 @@ class TestPage extends Page
 {
     protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static string $view = 'filament.pages.test-page';
+    protected string $view = 'filament.pages.test-page'; // NOT static!
 
     protected static string | Htmlable | null $title = 'Test Page';
 
