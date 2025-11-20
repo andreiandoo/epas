@@ -8,6 +8,7 @@ use App\Models\PlatformCost;
 use App\Models\Microservice;
 use Filament\Pages\Page;
 use Illuminate\Support\Carbon;
+use Livewire\Attributes\Url;
 
 class RevenueAnalytics extends Page
 {
@@ -22,14 +23,39 @@ class RevenueAnalytics extends Page
     public array $monthlyData = [];
     public array $revenueBreakdown = [];
     public array $costBreakdown = [];
+    public array $microserviceBreakdown = [];
+    public array $chartData = [];
+    public array $filteredRevenue = [];
+
+    #[Url]
+    public ?string $startDate = null;
+
+    #[Url]
+    public ?string $endDate = null;
 
     public function mount(): void
+    {
+        $this->startDate = $this->startDate ?? now()->startOfMonth()->format('Y-m-d');
+        $this->endDate = $this->endDate ?? now()->endOfMonth()->format('Y-m-d');
+        $this->calculateMetrics();
+    }
+
+    public function updatedStartDate(): void
+    {
+        $this->calculateMetrics();
+    }
+
+    public function updatedEndDate(): void
     {
         $this->calculateMetrics();
     }
 
     protected function calculateMetrics(): void
     {
+        // Parse filter dates
+        $filterStart = Carbon::parse($this->startDate)->startOfDay();
+        $filterEnd = Carbon::parse($this->endDate)->endOfDay();
+
         // Current month dates
         $currentMonthStart = now()->startOfMonth();
         $currentMonthEnd = now()->endOfMonth();
@@ -50,12 +76,14 @@ class RevenueAnalytics extends Page
         $currentMonthCommission = $currentMonthOrderRevenue * ($avgCommissionRate / 100);
         $lastMonthCommission = $lastMonthOrderRevenue * ($avgCommissionRate / 100);
 
-        // === REVENUE FROM MICROSERVICES ===
-        // Count active tenant-microservice subscriptions
-        $microserviceRevenue = $this->calculateMicroserviceRevenue();
+        // === MICROSERVICE REVENUE BREAKDOWN ===
+        $microserviceData = $this->calculateMicroserviceBreakdown();
+        $recurringMicroserviceRevenue = $microserviceData['recurring'];
+        $fixedMicroserviceRevenue = $microserviceData['fixed'];
+        $totalMicroserviceRevenue = $recurringMicroserviceRevenue + $fixedMicroserviceRevenue;
 
         // === MONTHLY RECURRING REVENUE (MRR) ===
-        $mrr = $currentMonthCommission + $microserviceRevenue;
+        $mrr = $currentMonthCommission + $recurringMicroserviceRevenue;
 
         // === COSTS ===
         $monthlyCosts = PlatformCost::active()->recurring()->get()
@@ -65,7 +93,7 @@ class RevenueAnalytics extends Page
         $netProfit = $mrr - $monthlyCosts;
 
         // === GROWTH ===
-        $lastMonthMRR = $lastMonthCommission + $microserviceRevenue; // Simplified
+        $lastMonthMRR = $lastMonthCommission + $recurringMicroserviceRevenue;
         $mrrGrowth = $lastMonthMRR > 0 ? (($mrr - $lastMonthMRR) / $lastMonthMRR) * 100 : 0;
 
         // === ANNUAL RECURRING REVENUE (ARR) ===
@@ -77,7 +105,9 @@ class RevenueAnalytics extends Page
             'mrr_growth' => $mrrGrowth,
             'gross_revenue' => $currentMonthOrderRevenue,
             'commission_revenue' => $currentMonthCommission,
-            'microservice_revenue' => $microserviceRevenue,
+            'recurring_microservice_revenue' => $recurringMicroserviceRevenue,
+            'fixed_microservice_revenue' => $fixedMicroserviceRevenue,
+            'total_microservice_revenue' => $totalMicroserviceRevenue,
             'monthly_costs' => $monthlyCosts,
             'net_profit' => $netProfit,
             'profit_margin' => $mrr > 0 ? ($netProfit / $mrr) * 100 : 0,
@@ -91,10 +121,14 @@ class RevenueAnalytics extends Page
         // === MONTHLY HISTORICAL DATA ===
         $this->calculateMonthlyData();
 
-        // === REVENUE BREAKDOWN ===
+        // === FILTERED PERIOD REVENUE ===
+        $this->calculateFilteredRevenue($filterStart, $filterEnd, $avgCommissionRate);
+
+        // === REVENUE BREAKDOWN (3 parts) ===
         $this->revenueBreakdown = [
-            ['label' => 'Commission from Sales', 'value' => $currentMonthCommission],
-            ['label' => 'Microservice Subscriptions', 'value' => $microserviceRevenue],
+            ['label' => 'Commission from Sales', 'value' => $currentMonthCommission, 'color' => '#3b82f6'],
+            ['label' => 'Recurring Microservices', 'value' => $recurringMicroserviceRevenue, 'color' => '#22c55e'],
+            ['label' => 'One-time Microservices', 'value' => $fixedMicroserviceRevenue, 'color' => '#f59e0b'],
         ];
 
         // === COST BREAKDOWN ===
@@ -105,56 +139,102 @@ class RevenueAnalytics extends Page
             ->map(fn ($value, $key) => ['label' => ucfirst($key), 'value' => $value])
             ->values()
             ->toArray();
+
+        // === CHART DATA ===
+        $this->prepareChartData();
     }
 
-    protected function calculateMicroserviceRevenue(): float
+    protected function calculateMicroserviceBreakdown(): array
     {
-        $revenue = 0;
+        $recurring = 0;
+        $fixed = 0;
+        $this->microserviceBreakdown = [];
 
-        // Get all microservices with their pricing
         $microservices = Microservice::where('is_active', true)->get();
 
         foreach ($microservices as $microservice) {
-            // Count active tenants using this microservice
             $activeCount = $microservice->tenants()
                 ->wherePivot('status', 'active')
                 ->count();
 
-            // Calculate monthly revenue based on pricing model
+            $isRecurring = in_array($microservice->billing_cycle, ['monthly', 'yearly']);
+
             $monthlyPrice = match ($microservice->billing_cycle) {
                 'yearly' => $microservice->price / 12,
-                'one_time' => 0,
+                'one_time' => $microservice->price,
                 default => $microservice->price,
             };
 
-            $revenue += $monthlyPrice * $activeCount;
+            $monthlyRevenue = $monthlyPrice * $activeCount;
+
+            if ($isRecurring) {
+                $recurring += $monthlyRevenue;
+            } else {
+                $fixed += $monthlyRevenue;
+            }
+
+            $this->microserviceBreakdown[] = [
+                'id' => $microservice->id,
+                'name' => $microservice->name,
+                'price' => $microservice->price,
+                'billing_cycle' => $microservice->billing_cycle,
+                'active_tenants' => $activeCount,
+                'monthly_revenue' => $monthlyRevenue,
+                'is_recurring' => $isRecurring,
+                'projections' => [
+                    3 => $monthlyRevenue * 3,
+                    6 => $monthlyRevenue * 6,
+                    9 => $monthlyRevenue * 9,
+                    12 => $monthlyRevenue * 12,
+                ],
+            ];
         }
 
-        return $revenue;
+        return ['recurring' => $recurring, 'fixed' => $fixed];
     }
 
     protected function calculateProjections(float $mrr, float $growthRate, float $costs): void
     {
-        // Use conservative growth rate (half of current if positive, 0 if negative)
         $projectedGrowthRate = max(0, $growthRate / 2) / 100;
 
         $this->projections = [];
 
-        foreach ([3, 6, 9, 12] as $months) {
-            // Compound growth
-            $projectedMRR = $mrr * pow(1 + $projectedGrowthRate, $months);
-            // Assume costs grow at 5% per year
-            $projectedCosts = $costs * pow(1 + (0.05 / 12), $months);
+        foreach ([0, 3, 6, 9, 12] as $months) {
+            $projectedMRR = $months === 0 ? $mrr : $mrr * pow(1 + $projectedGrowthRate, $months);
+            $projectedCosts = $months === 0 ? $costs : $costs * pow(1 + (0.05 / 12), $months);
 
             $this->projections[$months] = [
+                'label' => $months === 0 ? 'Current' : "{$months}mo",
                 'mrr' => $projectedMRR,
                 'arr' => $projectedMRR * 12,
                 'costs' => $projectedCosts,
                 'net_profit' => $projectedMRR - $projectedCosts,
-                'cumulative_revenue' => $mrr * $months * (1 + ($projectedGrowthRate * $months / 2)),
-                'cumulative_profit' => ($mrr - $costs) * $months,
+                'cumulative_revenue' => $months === 0 ? $mrr : $mrr * $months * (1 + ($projectedGrowthRate * $months / 2)),
+                'cumulative_profit' => $months === 0 ? ($mrr - $costs) : ($mrr - $costs) * $months,
             ];
         }
+    }
+
+    protected function calculateFilteredRevenue(Carbon $start, Carbon $end, float $avgCommissionRate): void
+    {
+        $orderRevenue = Order::where('status', 'completed')
+            ->whereBetween('created_at', [$start, $end])
+            ->sum('total_cents') / 100;
+
+        $commission = $orderRevenue * ($avgCommissionRate / 100);
+
+        // Calculate months in period for recurring revenue
+        $monthsInPeriod = $start->diffInMonths($end) + 1;
+        $recurringRevenue = $this->metrics['recurring_microservice_revenue'] * $monthsInPeriod;
+
+        $this->filteredRevenue = [
+            'start' => $start->format('M d, Y'),
+            'end' => $end->format('M d, Y'),
+            'gross_sales' => $orderRevenue,
+            'commission' => $commission,
+            'recurring_microservices' => $recurringRevenue,
+            'total' => $commission + $recurringRevenue,
+        ];
     }
 
     protected function calculateMonthlyData(): void
@@ -168,7 +248,6 @@ class RevenueAnalytics extends Page
                 ->whereBetween('created_at', [$start, $end])
                 ->sum('total_cents') / 100;
 
-            // Estimate commission (2% average)
             $commission = $orderRevenue * 0.02;
 
             return [
@@ -177,6 +256,23 @@ class RevenueAnalytics extends Page
                 'commission' => $commission,
             ];
         })->values()->toArray();
+    }
+
+    protected function prepareChartData(): void
+    {
+        $this->chartData = [
+            'projections' => [
+                'labels' => array_column($this->projections, 'label'),
+                'mrr' => array_column($this->projections, 'mrr'),
+                'costs' => array_column($this->projections, 'costs'),
+                'profit' => array_column($this->projections, 'net_profit'),
+            ],
+            'revenue_breakdown' => [
+                'labels' => array_column($this->revenueBreakdown, 'label'),
+                'values' => array_column($this->revenueBreakdown, 'value'),
+                'colors' => array_column($this->revenueBreakdown, 'color'),
+            ],
+        ];
     }
 
     public static function getNavigationBadge(): ?string
