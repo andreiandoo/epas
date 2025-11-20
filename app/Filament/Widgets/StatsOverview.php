@@ -22,8 +22,9 @@ class StatsOverview extends StatsOverviewWidget
         $totalEvents = Event::count();
         $activeEvents = Event::where('status', 'published')
             ->where(function ($q) {
-                $q->where('start_date', '>=', now())
-                    ->orWhere('end_date', '>=', now());
+                $q->where('event_date', '>=', now()->toDateString())
+                    ->orWhere('range_end_date', '>=', now()->toDateString())
+                    ->orWhere('range_start_date', '>=', now()->toDateString());
             })
             ->count();
 
