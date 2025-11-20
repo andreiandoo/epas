@@ -47,42 +47,50 @@ class StatsOverview extends StatsOverviewWidget
             Stat::make('Total Events', number_format($totalEvents))
                 ->description("{$activeEvents} active")
                 ->descriptionIcon('heroicon-m-calendar')
-                ->color('primary'),
+                ->color('primary')
+                ->url(route('filament.admin.resources.events.index')),
 
             Stat::make('Tenants', number_format($totalTenants))
                 ->description("{$activeTenants} active")
                 ->descriptionIcon('heroicon-m-building-office-2')
-                ->color('success'),
+                ->color('success')
+                ->url(route('filament.admin.resources.tenants.index')),
 
             Stat::make('Users', number_format($totalUsers))
                 ->description('Registered accounts')
                 ->descriptionIcon('heroicon-m-users')
-                ->color('info'),
+                ->color('info')
+                ->url(route('filament.admin.resources.users.index')),
 
             Stat::make('Customers', number_format($totalCustomers))
                 ->description('Ticket buyers')
                 ->descriptionIcon('heroicon-m-user-group')
-                ->color('warning'),
+                ->color('warning')
+                ->url(route('filament.admin.resources.customers.index')),
 
             Stat::make('Orders', number_format($totalOrders))
                 ->description('Total orders')
                 ->descriptionIcon('heroicon-m-shopping-cart')
-                ->color('gray'),
+                ->color('gray')
+                ->url(route('filament.admin.resources.orders.index')),
 
             Stat::make('Revenue', '€' . number_format($totalRevenue, 2))
                 ->description('Total sales')
                 ->descriptionIcon('heroicon-m-banknotes')
-                ->color('success'),
+                ->color('success')
+                ->url(route('filament.admin.pages.revenue-analytics')),
 
             Stat::make('Tickets Sold', number_format($ticketsSold))
                 ->description("of {$totalTickets} total")
                 ->descriptionIcon('heroicon-m-ticket')
-                ->color('primary'),
+                ->color('primary')
+                ->url(route('filament.admin.resources.tickets.index')),
 
             Stat::make('Artists', number_format($totalArtists))
                 ->description("{$totalVenues} venues")
                 ->descriptionIcon('heroicon-m-musical-note')
-                ->color('info'),
+                ->color('info')
+                ->url(route('filament.admin.resources.artists.index')),
         ];
     }
 }
