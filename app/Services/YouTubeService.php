@@ -12,7 +12,9 @@ class YouTubeService
 
     public function __construct()
     {
-        $this->apiKey = config('services.youtube.api_key', '');
+        // Try to get from Settings first, then fallback to env
+        $settings = \App\Models\Setting::current();
+        $this->apiKey = $settings->youtube_api_key ?: config('services.youtube.api_key', '');
     }
 
     /**

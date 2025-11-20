@@ -14,8 +14,10 @@ class SpotifyService
 
     public function __construct()
     {
-        $this->clientId = config('services.spotify.client_id', '');
-        $this->clientSecret = config('services.spotify.client_secret', '');
+        // Try to get from Settings first, then fallback to env
+        $settings = \App\Models\Setting::current();
+        $this->clientId = $settings->spotify_client_id ?: config('services.spotify.client_id', '');
+        $this->clientSecret = $settings->spotify_client_secret ?: config('services.spotify.client_secret', '');
     }
 
     /**

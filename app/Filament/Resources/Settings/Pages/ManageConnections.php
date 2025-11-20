@@ -35,6 +35,9 @@ class ManageConnections extends Page implements HasForms
             'stripe_webhook_secret' => $settings->stripe_webhook_secret,
             'vat_enabled' => $settings->vat_enabled ?? false,
             'vat_rate' => $settings->vat_rate ?? 21.00,
+            'youtube_api_key' => $settings->youtube_api_key,
+            'spotify_client_id' => $settings->spotify_client_id,
+            'spotify_client_secret' => $settings->spotify_client_secret,
         ]);
     }
 
@@ -149,6 +152,67 @@ class ManageConnections extends Page implements HasForms
                     ])
                     ->columns(2)
                     ->columnSpanFull(),
+
+                SC\Section::make('YouTube Data API')
+                    ->description('Configure YouTube API for fetching artist channel statistics')
+                    ->schema([
+                        Forms\Components\TextInput::make('youtube_api_key')
+                            ->label('API Key')
+                            ->placeholder('AIza...')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->helperText('YouTube Data API v3 key from Google Cloud Console'),
+
+                        SC\Actions::make([
+                            Actions\Action::make('test_youtube')
+                                ->label('Test YouTube Connection')
+                                ->icon('heroicon-o-play')
+                                ->color('info')
+                                ->action('testYoutubeConnection'),
+
+                            Actions\Action::make('youtube_docs')
+                                ->label('Get API Key')
+                                ->icon('heroicon-o-arrow-top-right-on-square')
+                                ->url('https://console.cloud.google.com/apis/credentials', shouldOpenInNewTab: true)
+                                ->color('gray'),
+                        ]),
+                    ])
+                    ->columnSpanFull(),
+
+                SC\Section::make('Spotify Web API')
+                    ->description('Configure Spotify API for fetching artist data and statistics')
+                    ->schema([
+                        Forms\Components\TextInput::make('spotify_client_id')
+                            ->label('Client ID')
+                            ->placeholder('Your Spotify Client ID')
+                            ->maxLength(255)
+                            ->helperText('Client ID from Spotify Developer Dashboard'),
+
+                        Forms\Components\TextInput::make('spotify_client_secret')
+                            ->label('Client Secret')
+                            ->placeholder('Your Spotify Client Secret')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->helperText('Client Secret from Spotify Developer Dashboard - stored encrypted'),
+
+                        SC\Actions::make([
+                            Actions\Action::make('test_spotify')
+                                ->label('Test Spotify Connection')
+                                ->icon('heroicon-o-play')
+                                ->color('info')
+                                ->action('testSpotifyConnection'),
+
+                            Actions\Action::make('spotify_docs')
+                                ->label('Create Spotify App')
+                                ->icon('heroicon-o-arrow-top-right-on-square')
+                                ->url('https://developer.spotify.com/dashboard', shouldOpenInNewTab: true)
+                                ->color('gray'),
+                        ]),
+                    ])
+                    ->columns(2)
+                    ->columnSpanFull(),
             ])
             ->statePath('data');
     }
@@ -193,6 +257,90 @@ class ManageConnections extends Page implements HasForms
                 ->title('Connection successful!')
                 ->body("Connected to Stripe account: {$account->email}")
                 ->send();
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Connection failed')
+                ->body("Error: {$e->getMessage()}")
+                ->send();
+        }
+    }
+
+    public function testYoutubeConnection(): void
+    {
+        $data = $this->form->getState();
+
+        if (empty($data['youtube_api_key'])) {
+            Notification::make()
+                ->warning()
+                ->title('No API key provided')
+                ->body('Please enter your YouTube API key.')
+                ->send();
+            return;
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::get('https://www.googleapis.com/youtube/v3/channels', [
+                'key' => $data['youtube_api_key'],
+                'part' => 'snippet',
+                'id' => 'UC_x5XG1OV2P6uZZ5FSM9Ttw', // Google Developers channel
+            ]);
+
+            if ($response->successful() && !empty($response->json('items'))) {
+                Notification::make()
+                    ->success()
+                    ->title('YouTube API connected!')
+                    ->body('API key is valid and working.')
+                    ->send();
+            } else {
+                Notification::make()
+                    ->danger()
+                    ->title('Connection failed')
+                    ->body($response->json('error.message') ?? 'Invalid API key')
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Connection failed')
+                ->body("Error: {$e->getMessage()}")
+                ->send();
+        }
+    }
+
+    public function testSpotifyConnection(): void
+    {
+        $data = $this->form->getState();
+
+        if (empty($data['spotify_client_id']) || empty($data['spotify_client_secret'])) {
+            Notification::make()
+                ->warning()
+                ->title('Missing credentials')
+                ->body('Please enter both Client ID and Client Secret.')
+                ->send();
+            return;
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::asForm()
+                ->withBasicAuth($data['spotify_client_id'], $data['spotify_client_secret'])
+                ->post('https://accounts.spotify.com/api/token', [
+                    'grant_type' => 'client_credentials',
+                ]);
+
+            if ($response->successful() && $response->json('access_token')) {
+                Notification::make()
+                    ->success()
+                    ->title('Spotify API connected!')
+                    ->body('Credentials are valid. Token obtained successfully.')
+                    ->send();
+            } else {
+                Notification::make()
+                    ->danger()
+                    ->title('Connection failed')
+                    ->body($response->json('error_description') ?? 'Invalid credentials')
+                    ->send();
+            }
         } catch (\Exception $e) {
             Notification::make()
                 ->danger()

@@ -37,6 +37,9 @@ class Setting extends Model
         'stripe_webhook_secret',
         'vat_enabled',
         'vat_rate',
+        'youtube_api_key',
+        'spotify_client_id',
+        'spotify_client_secret',
         'meta',
     ];
 
@@ -47,6 +50,8 @@ class Setting extends Model
         'stripe_test_secret_key' => 'encrypted',
         'stripe_live_secret_key' => 'encrypted',
         'stripe_webhook_secret' => 'encrypted',
+        'youtube_api_key' => 'encrypted',
+        'spotify_client_secret' => 'encrypted',
         'vat_enabled' => 'boolean',
         'vat_rate' => 'decimal:2',
     ];
