@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\MicroservicesController;
 use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\FeatureFlagController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\TenantClient\DomainVerificationController;
 
 Route::get('/v1/public/events', function () {
     return response()->json([
@@ -655,6 +656,37 @@ Route::prefix('v1/tenant')->middleware(['api.tenant', 'throttle:api'])->group(fu
         Route::get('/{subscriptionId}', [App\Http\Controllers\Api\V1\Tenant\SubscriptionController::class, 'show'])
             ->name('api.v1.tenant.subscriptions.show');
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Domain Verification API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for domain ownership verification
+|
+*/
+
+Route::prefix('tenant/domains')->middleware(['throttle:api', 'auth:sanctum'])->group(function () {
+    // Initiate domain verification
+    Route::post('/{domain}/verify/initiate', [DomainVerificationController::class, 'initiate'])
+        ->name('api.tenant.domains.verify.initiate');
+
+    // Get verification status
+    Route::get('/{domain}/verify/status', [DomainVerificationController::class, 'status'])
+        ->name('api.tenant.domains.verify.status');
+
+    // Trigger verification check
+    Route::post('/{domain}/verify', [DomainVerificationController::class, 'verify'])
+        ->name('api.tenant.domains.verify');
+
+    // Get instructions for a verification method
+    Route::get('/{domain}/verify/instructions', [DomainVerificationController::class, 'instructions'])
+        ->name('api.tenant.domains.verify.instructions');
+
+    // Schedule background verification
+    Route::post('/{domain}/verify/schedule', [DomainVerificationController::class, 'scheduleVerification'])
+        ->name('api.tenant.domains.verify.schedule');
 });
 
 /*
