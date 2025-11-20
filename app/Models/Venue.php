@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,6 +10,13 @@ use Illuminate\Support\Str;
 
 class Venue extends Model
 {
+    use Translatable;
+
+    /**
+     * Translatable fields
+     */
+    public array $translatable = ['name', 'description'];
+
     protected $fillable = [
         'tenant_id','name','slug','address','city','state','country',
         'website_url','phone','email',
@@ -18,6 +26,8 @@ class Venue extends Model
     ];
 
     protected $casts = [
+        'name' => 'array',
+        'description' => 'array',
         'meta' => 'array',
         'gallery' => 'array',
         'established_at' => 'date',
@@ -43,8 +53,12 @@ class Venue extends Model
     protected static function booted(): void
     {
         static::creating(function (self $venue) {
-            if (blank($venue->slug) && filled($venue->name)) {
-                $venue->slug = static::uniqueSlug(Str::slug($venue->name));
+            if (blank($venue->slug)) {
+                // Get English name from translatable field
+                $name = is_array($venue->name) ? ($venue->name['en'] ?? '') : $venue->name;
+                if (filled($name)) {
+                    $venue->slug = static::uniqueSlug(Str::slug($name));
+                }
             }
         });
 

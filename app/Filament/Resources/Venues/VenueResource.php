@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Venues;
 
 use App\Filament\Resources\Venues\Pages;
+use App\Filament\Forms\Components\TranslatableField;
 use App\Models\Venue;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -28,14 +29,8 @@ class VenueResource extends Resource
         return $schema->schema([
             // HEADER: Nume mare pe un rând, apoi slug + tenant
             SC\Section::make('Header')->schema([
-                Forms\Components\TextInput::make('name')
-                    ->label('Venue name')
-                    ->placeholder('Ex: Arena Națională')
-                    ->prefixIcon('heroicon-o-building-office-2')
-                    ->required()
-                    ->maxLength(190)
-                    ->columnSpanFull()
-                    ->extraInputAttributes(['class' => 'text-xl font-semibold']),
+                TranslatableField::make('name', 'Venue name')
+                    ->columnSpanFull(),
 
                 SC\Grid::make(2)->schema([
                     Forms\Components\TextInput::make('slug')
@@ -131,25 +126,7 @@ class VenueResource extends Resource
             ])->columns(2),
 
             SC\Section::make('Descriere')->schema([
-                Forms\Components\RichEditor::make('description')
-                    ->label('Descriere')
-                    ->toolbarButtons([
-                        'bold',
-                        'italic',
-                        'underline',
-                        'strike',
-                        'link',
-                        'bulletList',
-                        'orderedList',
-                        'h2',
-                        'h3',
-                        'blockquote',
-                        'codeBlock',
-                        'undo',
-                        'redo',
-                    ])
-                    ->fileAttachmentsDirectory('venues/attachments')
-                    ->fileAttachmentsVisibility('public')
+                TranslatableField::richEditor('description', 'Descriere')
                     ->columnSpanFull(),
             ]),
         ]);
@@ -159,7 +136,7 @@ class VenueResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                Tables\Columns\TextColumn::make('name.en')
                     ->label('Nume')
                     ->searchable()
                     ->sortable()

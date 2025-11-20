@@ -9,6 +9,7 @@ use App\Filament\Resources\Artists\Pages\ViewArtist;
 use App\Filament\Resources\Artists\Pages\ArtistStats;
 use Illuminate\Database\Eloquent\Builder;
 use App\Support\Locations;
+use App\Filament\Forms\Components\TranslatableField;
 use Filament\Forms;
 use App\Models\Artist;
 use App\Models\ArtistGenre;
@@ -69,11 +70,8 @@ class ArtistResource extends Resource
             SC\Section::make('Content')
                 ->extraAttributes(['id' => 'artist-content'])
                 ->schema([
-                    Forms\Components\RichEditor::make('bio_html.en')
-                        ->label('Bio (EN)')
-                        ->default('')           // editorul primește mereu string, nu null
-                        ->columnSpanFull()
-                        ->placeholder('Write the artist bio (HTML allowed)…'),
+                    TranslatableField::richEditor('bio_html', 'Bio')
+                        ->columnSpanFull(),
                 ])
                 ->columns(1),
 

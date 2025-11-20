@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Taxonomies;
 
 use App\Filament\Resources\Taxonomies\EventGenreResource\Pages;
+use App\Filament\Forms\Components\TranslatableField;
 use App\Models\EventGenre;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -27,14 +28,8 @@ class EventGenreResource extends Resource
         return $schema->schema([
             SC\Section::make('Genre')
                 ->schema([
-                    Forms\Components\TextInput::make('name')
-                        ->required()->maxLength(190)
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
-                            if ($state && ! $set('slug')) {
-                                $set('slug', Str::slug($state));
-                            }
-                        }),
+                    TranslatableField::make('name', 'Name')
+                        ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('slug')
                         ->maxLength(190)
@@ -44,10 +39,11 @@ class EventGenreResource extends Resource
 
                     Forms\Components\Select::make('parent_id')
                         ->label('Parent')
-                        ->relationship('parent', 'name')
+                        ->relationship('parent', 'name->en')
                         ->searchable()->preload(),
 
-                    Forms\Components\Textarea::make('description')->rows(3),
+                    TranslatableField::textarea('description', 'Description', 3)
+                        ->columnSpanFull(),
                 ])->columns(2),
         ]);
     }
@@ -56,7 +52,7 @@ class EventGenreResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                Tables\Columns\TextColumn::make('name.en')
                     ->label('Genre')
                     ->sortable()
                     ->searchable()

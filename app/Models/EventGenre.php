@@ -2,12 +2,22 @@
 
 namespace App\Models;
 
+use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class EventGenre extends Model
 {
+    use Translatable;
+
+    public array $translatable = ['name', 'description'];
+
     protected $fillable = ['name','slug','description','tenant_id','parent_id'];
+
+    protected $casts = [
+        'name' => 'array',
+        'description' => 'array',
+    ];
 
     public function parent() { return $this->belongsTo(static::class, 'parent_id'); }
     public function children() { return $this->hasMany(static::class, 'parent_id'); }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -12,6 +13,12 @@ use Illuminate\Support\Facades\Schema;
 class Artist extends Model
 {
     use HasFactory;
+    use Translatable;
+
+    /**
+     * Translatable fields
+     */
+    public array $translatable = ['bio_html'];
 
     protected $guarded = [];
 

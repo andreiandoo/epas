@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Microservices;
 
 use App\Models\Microservice;
+use App\Filament\Forms\Components\TranslatableField;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
@@ -27,39 +28,21 @@ class MicroserviceResource extends Resource
                 // Left column - Microservice Details
                 SC\Section::make('Microservice Details')
                     ->schema([
-                        Forms\Components\TextInput::make('name')
-                            ->label('Name')
-                            ->required()
-                            ->maxLength(255)
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(function ($state, \Filament\Forms\Set $set) {
-                                if (!$state) return;
-                                $set('slug', \Illuminate\Support\Str::slug($state));
-                            }),
+                        TranslatableField::make('name', 'Name')
+                            ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('slug')
                             ->label('Slug')
                             ->required()
                             ->unique(ignoreRecord: true)
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->columnSpanFull(),
 
-                        Forms\Components\RichEditor::make('description')
-                            ->label('Description')
-                            ->columnSpanFull()
-                            ->toolbarButtons([
-                                'bold', 'italic', 'underline', 'strike',
-                                'bulletList', 'orderedList',
-                                'h2', 'h3',
-                                'link', 'blockquote',
-                                'redo', 'undo',
-                            ])
-                            ->helperText('Full description of this microservice'),
+                        TranslatableField::richEditor('description', 'Description')
+                            ->columnSpanFull(),
 
-                        Forms\Components\Textarea::make('short_description')
-                            ->label('Short Description')
-                            ->rows(2)
-                            ->columnSpanFull()
-                            ->helperText('Brief description for cards (1-2 sentences)'),
+                        TranslatableField::textarea('short_description', 'Short Description', 2)
+                            ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('icon')
                             ->label('Icon')
@@ -174,11 +157,13 @@ class MicroserviceResource extends Resource
                             ->defaultImageUrl(fn () => 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.39 48.39 0 01-4.163-.3c.186 1.613.293 3.25.315 4.907a.656.656 0 01-.658.663v0c-.355 0-.676-.186-.959-.401a1.647 1.647 0 00-1.003-.349c-1.036 0-1.875 1.007-1.875 2.25s.84 2.25 1.875 2.25c.369 0 .713-.128 1.003-.349.283-.215.604-.401.959-.401v0c.31 0 .555.26.532.57a48.039 48.039 0 01-.642 5.056c1.518.19 3.058.309 4.616.354a.64.64 0 00.657-.643v0c0-.355-.186-.676-.401-.959a1.647 1.647 0 01-.349-1.003c0-1.035 1.008-1.875 2.25-1.875 1.243 0 2.25.84 2.25 1.875 0 .369-.128.713-.349 1.003-.215.283-.401.604-.401.959v0c0 .333.277.599.61.58a48.1 48.1 0 005.427-.63 48.05 48.05 0 00.582-4.717.532.532 0 00-.533-.57v0c-.355 0-.676.186-.959.401-.29.221-.634.349-1.003.349-1.035 0-1.875-1.007-1.875-2.25s.84-2.25 1.875-2.25c.37 0 .713.128 1.003.349.283.215.604.401.959.401v0a.656.656 0 00.659-.663 47.703 47.703 0 00-.31-4.82 48.847 48.847 0 01-6.067.21v0a.64.64 0 01-.657-.643v0z" /></svg>')
                             ->grow(false),
                         Tables\Columns\Layout\Stack::make([
-                            Tables\Columns\TextColumn::make('name')
+                            Tables\Columns\TextColumn::make('name.en')
+                                ->label('Name')
                                 ->weight('bold')
                                 ->searchable()
                                 ->sortable(),
-                            Tables\Columns\TextColumn::make('short_description')
+                            Tables\Columns\TextColumn::make('short_description.en')
+                                ->label('Description')
                                 ->size('sm')
                                 ->color('gray')
                                 ->limit(80)

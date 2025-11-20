@@ -2,11 +2,19 @@
 
 namespace App\Models;
 
+use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Microservice extends Model
 {
+    use Translatable;
+
+    /**
+     * Translatable fields
+     */
+    public array $translatable = ['name', 'description', 'short_description'];
+
     protected $fillable = [
         'name',
         'slug',
@@ -28,6 +36,9 @@ class Microservice extends Model
     ];
 
     protected $casts = [
+        'name' => 'array',
+        'description' => 'array',
+        'short_description' => 'array',
         'price' => 'decimal:2',
         'is_active' => 'boolean',
         'features' => 'array',
