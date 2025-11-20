@@ -12,9 +12,6 @@ return new class extends Migration
             // Google Maps
             $table->string('google_maps_api_key', 255)->nullable();
 
-            // SendGrid for transactional emails
-            $table->string('sendgrid_api_key', 255)->nullable();
-
             // Twilio for SMS
             $table->string('twilio_account_sid', 255)->nullable();
             $table->string('twilio_auth_token', 255)->nullable();
@@ -30,7 +27,6 @@ return new class extends Migration
         Schema::table('settings', function (Blueprint $table) {
             $table->dropColumn([
                 'google_maps_api_key',
-                'sendgrid_api_key',
                 'twilio_account_sid',
                 'twilio_auth_token',
                 'twilio_phone_number',

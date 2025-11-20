@@ -39,7 +39,6 @@ class ManageConnections extends Page implements HasForms
             'spotify_client_id' => $settings->spotify_client_id,
             'spotify_client_secret' => $settings->spotify_client_secret,
             'google_maps_api_key' => $settings->google_maps_api_key,
-            'sendgrid_api_key' => $settings->sendgrid_api_key,
             'twilio_account_sid' => $settings->twilio_account_sid,
             'twilio_auth_token' => $settings->twilio_auth_token,
             'twilio_phone_number' => $settings->twilio_phone_number,
@@ -248,33 +247,6 @@ class ManageConnections extends Page implements HasForms
                                 ->label('Get API Key')
                                 ->icon('heroicon-o-arrow-top-right-on-square')
                                 ->url('https://console.cloud.google.com/apis/credentials', shouldOpenInNewTab: true)
-                                ->color('gray'),
-                        ]),
-                    ])
-                    ->columnSpanFull(),
-
-                SC\Section::make('SendGrid')
-                    ->description('Configure SendGrid for transactional emails (confirmations, notifications)')
-                    ->schema([
-                        Forms\Components\TextInput::make('sendgrid_api_key')
-                            ->label('API Key')
-                            ->placeholder('SG...')
-                            ->password()
-                            ->revealable()
-                            ->maxLength(255)
-                            ->helperText('SendGrid API key for sending transactional emails'),
-
-                        SC\Actions::make([
-                            Actions\Action::make('test_sendgrid')
-                                ->label('Test SendGrid')
-                                ->icon('heroicon-o-envelope')
-                                ->color('info')
-                                ->action('testSendGridConnection'),
-
-                            Actions\Action::make('sendgrid_docs')
-                                ->label('Get API Key')
-                                ->icon('heroicon-o-arrow-top-right-on-square')
-                                ->url('https://app.sendgrid.com/settings/api_keys', shouldOpenInNewTab: true)
                                 ->color('gray'),
                         ]),
                     ])
@@ -607,45 +579,6 @@ class ManageConnections extends Page implements HasForms
                     ->danger()
                     ->title('Connection failed')
                     ->body($response->json('error_message') ?? 'Invalid API key or API not enabled')
-                    ->send();
-            }
-        } catch (\Exception $e) {
-            Notification::make()
-                ->danger()
-                ->title('Connection failed')
-                ->body("Error: {$e->getMessage()}")
-                ->send();
-        }
-    }
-
-    public function testSendGridConnection(): void
-    {
-        $data = $this->form->getState();
-
-        if (empty($data['sendgrid_api_key'])) {
-            Notification::make()
-                ->warning()
-                ->title('No API key provided')
-                ->body('Please enter your SendGrid API key.')
-                ->send();
-            return;
-        }
-
-        try {
-            $response = \Illuminate\Support\Facades\Http::withToken($data['sendgrid_api_key'])
-                ->get('https://api.sendgrid.com/v3/user/profile');
-
-            if ($response->successful()) {
-                Notification::make()
-                    ->success()
-                    ->title('SendGrid API connected!')
-                    ->body('API key is valid and working.')
-                    ->send();
-            } else {
-                Notification::make()
-                    ->danger()
-                    ->title('Connection failed')
-                    ->body($response->json('errors.0.message') ?? 'Invalid API key')
                     ->send();
             }
         } catch (\Exception $e) {

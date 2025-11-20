@@ -23,7 +23,7 @@ class MicroserviceResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            // First row: Details (left) + Pricing & Images (right)
+            // First row: Details (left) + Pricing & Images (right) 
             SC\Grid::make(2)->schema([
                 // Left column - Microservice Details
                 SC\Section::make('Microservice Details')
@@ -141,7 +141,7 @@ class MicroserviceResource extends Resource
                         ->url()
                         ->helperText('Link to documentation'),
                 ])->columns(4),
-        ]);
+        ])->columns(1);
     }
 
     public static function table(Tables\Table $table): Tables\Table
