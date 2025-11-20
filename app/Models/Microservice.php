@@ -36,8 +36,8 @@ class Microservice extends Model
 
     public function tenants(): BelongsToMany
     {
-        return $this->belongsToMany(Tenant::class, 'tenant_microservice')
-            ->withPivot(['is_active', 'activated_at', 'expires_at', 'configuration'])
+        return $this->belongsToMany(Tenant::class, 'tenant_microservices')
+            ->withPivot(['status', 'activated_at', 'expires_at', 'settings', 'usage_stats'])
             ->withTimestamps();
     }
 
