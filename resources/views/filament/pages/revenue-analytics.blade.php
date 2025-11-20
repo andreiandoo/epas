@@ -62,7 +62,7 @@
                         <x-heroicon-o-calculator class="w-6 h-6 text-red-600 dark:text-red-400" />
                     </div>
                 </div>
-                <a href="{{ route('filament.admin.resources.platform-costs.index') }}" class="mt-2 text-sm text-primary-600 hover:underline">
+                <a href="{{ route('filament.admin.resources.costs.platform-costs.index') }}" class="mt-2 text-sm text-primary-600 hover:underline">
                     Manage costs →
                 </a>
             </div>
@@ -131,7 +131,7 @@
                     </div>
                 @else
                     <p class="text-gray-500 dark:text-gray-400 text-sm">No costs configured yet.</p>
-                    <a href="{{ route('filament.admin.resources.platform-costs.create') }}" class="mt-2 inline-block text-sm text-primary-600 hover:underline">
+                    <a href="{{ route('filament.admin.resources.costs.platform-costs.create') }}" class="mt-2 inline-block text-sm text-primary-600 hover:underline">
                         Add your first cost →
                     </a>
                 @endif
