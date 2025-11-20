@@ -100,8 +100,8 @@ return new class extends Migration
         // ANAF queue - optimize processing
         if (Schema::hasTable('anaf_queue')) {
             Schema::table('anaf_queue', function (Blueprint $table) {
-                // Index for pending submissions
-                if (!$this->indexExists('anaf_queue', 'idx_anaf_status_priority')) {
+                // Index for pending submissions (only if priority column exists)
+                if (Schema::hasColumn('anaf_queue', 'priority') && !$this->indexExists('anaf_queue', 'idx_anaf_status_priority')) {
                     $table->index(['status', 'priority', 'created_at'], 'idx_anaf_status_priority');
                 }
 
@@ -149,8 +149,8 @@ return new class extends Migration
                     $table->index(['batch_id', 'status'], 'idx_invites_batch_status');
                 }
 
-                // Index for pending emails
-                if (!$this->indexExists('inv_invites', 'idx_invites_email_status')) {
+                // Index for pending emails (only if email_status column exists)
+                if (Schema::hasColumn('inv_invites', 'email_status') && !$this->indexExists('inv_invites', 'idx_invites_email_status')) {
                     $table->index(['email_status', 'emailed_at'], 'idx_invites_email_status');
                 }
 
@@ -164,8 +164,8 @@ return new class extends Migration
         // Accounting connectors
         if (Schema::hasTable('acc_connectors')) {
             Schema::table('acc_connectors', function (Blueprint $table) {
-                // Index for active connectors
-                if (!$this->indexExists('acc_connectors', 'idx_acc_tenant_active')) {
+                // Index for active connectors (only if is_active column exists)
+                if (Schema::hasColumn('acc_connectors', 'is_active') && !$this->indexExists('acc_connectors', 'idx_acc_tenant_active')) {
                     $table->index(['tenant_id', 'is_active'], 'idx_acc_tenant_active');
                 }
             });
@@ -178,8 +178,8 @@ return new class extends Migration
                     $table->index(['status', 'created_at'], 'idx_acc_jobs_status');
                 }
 
-                // Index for connector lookup
-                if (!$this->indexExists('acc_jobs', 'idx_acc_jobs_connector')) {
+                // Index for connector lookup (only if connector_id column exists)
+                if (Schema::hasColumn('acc_jobs', 'connector_id') && !$this->indexExists('acc_jobs', 'idx_acc_jobs_connector')) {
                     $table->index('connector_id', 'idx_acc_jobs_connector');
                 }
             });
@@ -193,8 +193,8 @@ return new class extends Migration
                     $table->index(['tenant_id', 'status'], 'idx_policies_tenant_status');
                 }
 
-                // Index for expiration monitoring
-                if (!$this->indexExists('ti_policies', 'idx_policies_expires')) {
+                // Index for expiration monitoring (only if expires_at column exists)
+                if (Schema::hasColumn('ti_policies', 'expires_at') && !$this->indexExists('ti_policies', 'idx_policies_expires')) {
                     $table->index('expires_at', 'idx_policies_expires');
                 }
             });
