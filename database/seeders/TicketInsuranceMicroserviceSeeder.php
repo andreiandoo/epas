@@ -72,46 +72,9 @@ class TicketInsuranceMicroserviceSeeder extends Seeder
                     'Void/refund rate monitoring',
                     'Provider error tracking',
                     'CSV export',
-
-                    // API Endpoints
-                    'GET /api/ti/quote - Get insurance quote',
-                    'POST /api/ti/issue - Issue policy',
-                    'POST /api/ti/sync - Sync with provider',
-                    'GET /api/ti/policies - List policies',
-                    'GET /api/ti/stats - Get statistics',
-                    'POST /api/ti/{id}/void - Void policy',
-                    'POST /api/ti/{id}/refund - Refund policy',
-                ],
-                'tech_stack' => [
-                    'Laravel 12.x',
-                    'Provider adapter pattern',
-                    'Event sourcing for audit trail',
-                    'JSON schema validation',
-                ],
-                'requirements' => [
-                    'PHP 8.2+',
-                    'Laravel 12+',
-                    'Insurance provider account (or use mock adapter)',
-                ],
-                'setup_instructions' => [
-                    '1. Run migrations: php artisan migrate',
-                    '2. Configure insurance provider adapter',
-                    '3. Create insurance config for tenant',
-                    '4. Integrate checkout UI component',
-                    '5. Set up webhook for payment_captured event',
-                ],
-                'api_endpoints' => [
-                    'GET /api/ti/quote',
-                    'POST /api/ti/issue',
-                    'POST /api/ti/sync',
-                    'GET /api/ti/policies',
-                    'GET /api/ti/stats',
-                    'POST /api/ti/{id}/void',
-                    'POST /api/ti/{id}/refund',
                 ],
                 'documentation_url' => '/docs/microservices/ticket-insurance',
                 'icon' => 'heroicon-o-shield-check',
-                'color' => '#3B82F6',
                 'metadata' => [
                     'version' => '1.0.0',
                     'author' => 'EPAS Development Team',
@@ -119,6 +82,6 @@ class TicketInsuranceMicroserviceSeeder extends Seeder
             ]
         );
 
-        $this->command->info('✓ Ticket Insurance microservice seeded');
+        $this->command->info('Ticket Insurance microservice seeded');
     }
 }

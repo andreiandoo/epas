@@ -105,78 +105,15 @@ class InvitationsMicroserviceSeeder extends Seeder
                     'Batch statuses: draft, rendering, ready, sending, completed, cancelled',
                     'Delivery statuses: pending, sent, delivered, bounced, failed, complaint',
                 ],
-                'tech_stack' => [
-                    'Laravel 12.x backend',
-                    'Queue system for email delivery',
-                    'Signed URLs for secure downloads',
-                    'CSV processing with validation',
-                    'Ticket Templates integration',
-                    'Anti-replay QR codes with HMAC',
-                ],
-                'requirements' => [
-                    'PHP 8.2+',
-                    'Laravel 12+',
-                    'Ticket Templates microservice (for PDF generation)',
-                    'Queue worker configured (for email delivery)',
-                    'Mail driver configured (SMTP/SES/etc.)',
-                    'Storage disk for invitations and exports',
-                    'ZIP extension enabled',
-                ],
-                'setup_instructions' => [
-                    '1. Run migrations: php artisan migrate',
-                    '2. Configure mail driver in .env',
-                    '3. Configure queue driver (redis/database recommended)',
-                    '4. Start queue worker: php artisan queue:work',
-                    '5. Ensure storage/app/public is linked: php artisan storage:link',
-                    '6. (Optional) Configure email templates per tenant',
-                    '7. Access API: /api/inv/*',
-                ],
-                'api_endpoints' => [
-                    'POST /api/inv/batch - Create invitation batch',
-                    'POST /api/inv/batch/import - Import recipients from CSV',
-                    'POST /api/inv/batch/render - Render PDFs for batch',
-                    'GET /api/inv/batch/{id}/export - Export batch as CSV',
-                    'GET /api/inv/batch/{id}/download-zip - Download batch as ZIP',
-                    'POST /api/inv/send - Send emails (batch or individual)',
-                    'GET /api/inv/{id} - Get invitation details',
-                    'POST /api/inv/{id}/void - Void invitation',
-                    'POST /api/inv/{id}/resend - Resend invitation email',
-                    'GET /api/inv/{id}/download - Download PDF (signed URL)',
-                    'POST /api/inv/webhook/open - Track email opens (pixel)',
-                ],
                 'documentation_url' => '/docs/microservices/invitations',
-                'demo_url' => null,
                 'icon' => 'heroicon-o-envelope',
-                'color' => '#10B981', // Green
                 'metadata' => [
                     'version' => '1.0.0',
                     'author' => 'EPAS Development Team',
-                    'created_at' => now()->toDateTimeString(),
-                    'last_updated' => now()->toDateTimeString(),
-                    'compatibility' => [
-                        'min_php_version' => '8.2',
-                        'min_laravel_version' => '12.0',
-                        'requires_queue' => true,
-                        'requires_mail' => true,
-                        'depends_on' => ['ticket-customizer'],
-                    ],
-                    'support' => [
-                        'email' => 'support@epas.ro',
-                        'docs' => '/docs/microservices/invitations',
-                        'issues' => 'https://github.com/epas/issues',
-                    ],
-                    'use_cases' => [
-                        'VIP guest invitations',
-                        'Press passes and media credentials',
-                        'Complimentary tickets for partners',
-                        'Staff and crew access',
-                        'Sponsor guest lists',
-                        'Early bird access for special guests',
-                    ],
                 ],
             ]
         );
 
-        $this->command->info('✓ Invitations microservice seeded (1 EUR/month recurring)');
+        $this->command->info('Invitations microservice seeded (1 EUR/month recurring)');
     }
 }
