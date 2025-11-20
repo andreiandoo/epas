@@ -36,6 +36,16 @@ class EventTypeResource extends Resource
                         ->searchable()->preload(),
                     TranslatableField::textarea('description', 'Description', 3)
                         ->columnSpanFull(),
+
+                    Forms\Components\Select::make('allowedEventGenres')
+                        ->label('Allowed Genres')
+                        ->relationship('allowedEventGenres', 'slug')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->name['en'] ?? $record->slug)
+                        ->multiple()
+                        ->searchable()
+                        ->preload()
+                        ->columnSpanFull()
+                        ->helperText('Select which genres are available for this event type'),
                 ])->columns(2),
         ]);
     }
