@@ -238,8 +238,6 @@ class ArtistTaxonomySeeder extends Seeder
                     DB::table('artist_type_artist_genre')->insert([
                         'artist_type_id' => $typeId,
                         'artist_genre_id' => $genreIds[$genreSlug],
-                        'created_at' => now(),
-                        'updated_at' => now(),
                     ]);
                 }
             }
