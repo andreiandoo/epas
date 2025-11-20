@@ -222,7 +222,8 @@ class TrackingIntegrationResource extends Resource
                 Tables\Columns\TextColumn::make('tenant.name')
                     ->label('Tenant')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->url(fn ($record) => static::getUrl('edit', ['record' => $record])),
 
                 Tables\Columns\BadgeColumn::make('provider')
                     ->label('Provider')
@@ -288,15 +289,6 @@ class TrackingIntegrationResource extends Resource
                         'analytics' => 'Analytics',
                         'marketing' => 'Marketing',
                     ]),
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
             ])
             ->defaultSort('created_at', 'desc');
     }
