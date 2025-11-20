@@ -67,11 +67,10 @@ class WhatsAppMicroserviceSeeder extends Seeder
         // Seed demo opt-ins
         $tenantId = 'tenant_demo';
 
-        DB::table('wa_optin')->insert([
+        DB::table('wa_optin')->updateOrInsert(
+            ['tenant_id' => $tenantId, 'phone_e164' => '+40722123456'],
             [
-                'tenant_id' => $tenantId,
                 'user_ref' => 'user_001',
-                'phone_e164' => '+40722123456',
                 'status' => 'opt_in',
                 'source' => 'checkout',
                 'consented_at' => now()->subDays(10),
@@ -81,11 +80,13 @@ class WhatsAppMicroserviceSeeder extends Seeder
                 ]),
                 'created_at' => now()->subDays(10),
                 'updated_at' => now()->subDays(10),
-            ],
+            ]
+        );
+
+        DB::table('wa_optin')->updateOrInsert(
+            ['tenant_id' => $tenantId, 'phone_e164' => '+40722654321'],
             [
-                'tenant_id' => $tenantId,
                 'user_ref' => 'user_002',
-                'phone_e164' => '+40722654321',
                 'status' => 'opt_in',
                 'source' => 'settings_page',
                 'consented_at' => now()->subDays(5),
@@ -95,19 +96,21 @@ class WhatsAppMicroserviceSeeder extends Seeder
                 ]),
                 'created_at' => now()->subDays(5),
                 'updated_at' => now()->subDays(5),
-            ],
+            ]
+        );
+
+        DB::table('wa_optin')->updateOrInsert(
+            ['tenant_id' => $tenantId, 'phone_e164' => '+40722999888'],
             [
-                'tenant_id' => $tenantId,
                 'user_ref' => 'user_003',
-                'phone_e164' => '+40722999888',
                 'status' => 'opt_out',
                 'source' => 'checkout',
                 'consented_at' => null,
                 'metadata' => null,
                 'created_at' => now()->subDays(2),
                 'updated_at' => now()->subDays(2),
-            ],
-        ]);
+            ]
+        );
 
         // Seed demo templates
         DB::table('wa_templates')->insert([
