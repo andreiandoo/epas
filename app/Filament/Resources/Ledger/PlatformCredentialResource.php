@@ -15,8 +15,8 @@ class PlatformCredentialResource extends Resource
     protected static ?string $model = PlatformCredential::class;
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-key';
-    protected static \UnitEnum|string|null $navigationGroup = 'System';
-    protected static ?int $navigationSort = 100;
+    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+    protected static ?int $navigationSort = 50;
     protected static ?string $modelLabel = 'Credential';
     protected static ?string $pluralModelLabel = 'Credentials Ledger';
     protected static ?string $navigationLabel = 'Ledger';
@@ -123,6 +123,10 @@ class PlatformCredentialResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->searchable()
                     ->toggleable(),
+
+                Tables\Columns\ViewColumn::make('password')
+                    ->label('Password')
+                    ->view('filament.tables.columns.password-reveal'),
 
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean()
