@@ -113,10 +113,9 @@ class WhatsAppMicroserviceSeeder extends Seeder
         );
 
         // Seed demo templates
-        DB::table('wa_templates')->insert([
+        DB::table('wa_templates')->updateOrInsert(
+            ['tenant_id' => $tenantId, 'name' => 'order_confirmation'],
             [
-                'tenant_id' => $tenantId,
-                'name' => 'order_confirmation',
                 'language' => 'ro',
                 'category' => 'order_confirm',
                 'body' => 'Buna {first_name}! Comanda ta {order_code} pentru {event_name} a fost confirmata. Total: {total_amount}. Descarca biletele: {download_url}',
@@ -129,10 +128,12 @@ class WhatsAppMicroserviceSeeder extends Seeder
                 'approved_at' => now()->subDays(14),
                 'created_at' => now()->subDays(20),
                 'updated_at' => now()->subDays(14),
-            ],
+            ]
+        );
+
+        DB::table('wa_templates')->updateOrInsert(
+            ['tenant_id' => $tenantId, 'name' => 'event_reminder'],
             [
-                'tenant_id' => $tenantId,
-                'name' => 'event_reminder',
                 'language' => 'ro',
                 'category' => 'reminder',
                 'body' => 'Salut {first_name}! Reminder: {event_name} este pe {event_date} la {event_time}. Locatie: {venue_name}, {venue_address}. Ne vedem acolo!',
@@ -145,10 +146,12 @@ class WhatsAppMicroserviceSeeder extends Seeder
                 'approved_at' => now()->subDays(14),
                 'created_at' => now()->subDays(20),
                 'updated_at' => now()->subDays(14),
-            ],
+            ]
+        );
+
+        DB::table('wa_templates')->updateOrInsert(
+            ['tenant_id' => $tenantId, 'name' => 'promo_discount'],
             [
-                'tenant_id' => $tenantId,
-                'name' => 'promo_discount',
                 'language' => 'ro',
                 'category' => 'promo',
                 'body' => 'Buna {first_name}! Oferta speciala: {discount_code} - {discount_percent}% reducere la toate biletele! Valabil pana pe {expiry_date}. Shop now!',
@@ -161,8 +164,8 @@ class WhatsAppMicroserviceSeeder extends Seeder
                 'approved_at' => now()->subDays(9),
                 'created_at' => now()->subDays(12),
                 'updated_at' => now()->subDays(9),
-            ],
-        ]);
+            ]
+        );
 
         // Seed demo messages (insert separately due to different columns)
         DB::table('wa_messages')->insert([
