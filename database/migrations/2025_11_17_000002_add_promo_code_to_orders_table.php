@@ -14,7 +14,7 @@ return new class extends Migration
         // Add promo code fields to orders table
         if (Schema::hasTable('orders')) {
             Schema::table('orders', function (Blueprint $table) {
-                $table->unsignedBigInteger('promo_code_id')->nullable()->after('total');
+                $table->unsignedBigInteger('promo_code_id')->nullable()->after('total_cents');
                 $table->string('promo_code')->nullable()->after('promo_code_id');
                 $table->decimal('promo_discount', 10, 2)->default(0)->after('promo_code');
 
