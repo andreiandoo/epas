@@ -34,7 +34,7 @@ class StatsOverview extends StatsOverviewWidget
         $totalCustomers = Customer::count();
 
         $totalOrders = Order::count();
-        $totalRevenue = Order::where('status', 'completed')->sum('total_amount');
+        $totalRevenue = Order::where('status', 'completed')->sum('total_cents') / 100;
 
         $totalTickets = Ticket::count();
         $ticketsSold = Ticket::where('status', 'sold')->count();

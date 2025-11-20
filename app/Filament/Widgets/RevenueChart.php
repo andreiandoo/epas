@@ -21,7 +21,7 @@ class RevenueChart extends ChartWidget
                 'revenue' => Order::where('status', 'completed')
                     ->whereYear('created_at', $date->year)
                     ->whereMonth('created_at', $date->month)
-                    ->sum('total_amount'),
+                    ->sum('total_cents') / 100,
             ];
         });
 
