@@ -51,18 +51,16 @@ return new class extends Migration
                         ->update([$column => $jsonValue]);
                 }
 
-                // Step 2: Alter column type to JSON (for better query support)
-                // Note: SQLite doesn't support column type changes, so we skip for SQLite
-                $driver = DB::connection()->getDriverName();
-
-                if ($driver === 'pgsql') {
-                    // PostgreSQL: Convert to JSONB
-                    DB::statement("ALTER TABLE {$table} ALTER COLUMN {$column} TYPE JSONB USING {$column}::JSONB");
-                } elseif ($driver === 'mysql') {
-                    // MySQL: Convert to JSON
-                    DB::statement("ALTER TABLE {$table} MODIFY {$column} JSON");
-                }
-                // SQLite: Keep as TEXT (already stores JSON strings fine)
+                // Note: We skip altering column type to JSON because:
+                // - MySQL doesn't allow JSON columns with indexes
+                // - SQLite doesn't support column type changes
+                // - TEXT columns work fine with JSON strings via Eloquent casts
+                //
+                // If you want native JSON type for PostgreSQL, uncomment below:
+                // $driver = DB::connection()->getDriverName();
+                // if ($driver === 'pgsql') {
+                //     DB::statement("ALTER TABLE {$table} ALTER COLUMN {$column} TYPE JSONB USING {$column}::JSONB");
+                // }
             }
         }
     }
@@ -95,14 +93,7 @@ return new class extends Migration
                     }
                 }
 
-                // Revert column type
-                $driver = DB::connection()->getDriverName();
-
-                if ($driver === 'pgsql') {
-                    DB::statement("ALTER TABLE {$table} ALTER COLUMN {$column} TYPE TEXT");
-                } elseif ($driver === 'mysql') {
-                    DB::statement("ALTER TABLE {$table} MODIFY {$column} TEXT");
-                }
+                // Column type reversion not needed since we keep TEXT type
             }
         }
     }
