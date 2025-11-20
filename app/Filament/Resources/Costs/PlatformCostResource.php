@@ -149,15 +149,7 @@ class PlatformCostResource extends Resource
                         'one_time' => 'One-time',
                     ]),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->recordUrl(fn ($record) => static::getUrl('edit', ['record' => $record]))
             ->defaultSort('name', 'asc');
     }
 
