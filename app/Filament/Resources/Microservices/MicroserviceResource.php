@@ -22,51 +22,55 @@ class MicroserviceResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
-            SC\Grid::make(3)->schema([
-                // Left column - Details + Pricing + Images
+            // First row: Details (left) + Pricing & Images (right)
+            SC\Grid::make(2)->schema([
+                // Left column - Microservice Details
+                SC\Section::make('Microservice Details')
+                    ->schema([
+                        Forms\Components\TextInput::make('name')
+                            ->label('Name')
+                            ->required()
+                            ->maxLength(255)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function ($state, \Filament\Forms\Set $set) {
+                                if (!$state) return;
+                                $set('slug', \Illuminate\Support\Str::slug($state));
+                            }),
+
+                        Forms\Components\TextInput::make('slug')
+                            ->label('Slug')
+                            ->required()
+                            ->unique(ignoreRecord: true)
+                            ->maxLength(255),
+
+                        Forms\Components\RichEditor::make('description')
+                            ->label('Description')
+                            ->columnSpanFull()
+                            ->toolbarButtons([
+                                'bold', 'italic', 'underline', 'strike',
+                                'bulletList', 'orderedList',
+                                'h2', 'h3',
+                                'link', 'blockquote',
+                                'redo', 'undo',
+                            ])
+                            ->helperText('Full description of this microservice'),
+
+                        Forms\Components\Textarea::make('short_description')
+                            ->label('Short Description')
+                            ->rows(2)
+                            ->columnSpanFull()
+                            ->helperText('Brief description for cards (1-2 sentences)'),
+
+                        Forms\Components\TextInput::make('icon')
+                            ->label('Icon')
+                            ->columnSpanFull()
+                            ->helperText('Heroicon name (e.g., heroicon-o-shield-check)')
+                            ->maxLength(255),
+                    ])->columns(2)
+                    ->columnSpan(1),
+
+                // Right column - Pricing + Images stacked
                 SC\Grid::make(1)->schema([
-                    SC\Section::make('Microservice Details')
-                        ->schema([
-                            Forms\Components\TextInput::make('name')
-                                ->label('Name')
-                                ->required()
-                                ->maxLength(255)
-                                ->live(onBlur: true)
-                                ->afterStateUpdated(function ($state, \Filament\Forms\Set $set) {
-                                    if (!$state) return;
-                                    $set('slug', \Illuminate\Support\Str::slug($state));
-                                }),
-
-                            Forms\Components\TextInput::make('slug')
-                                ->label('Slug')
-                                ->required()
-                                ->unique(ignoreRecord: true)
-                                ->maxLength(255),
-
-                            Forms\Components\RichEditor::make('description')
-                                ->label('Description')
-                                ->columnSpanFull()
-                                ->toolbarButtons([
-                                    'bold', 'italic', 'underline', 'strike',
-                                    'bulletList', 'orderedList',
-                                    'h2', 'h3',
-                                    'link', 'blockquote',
-                                    'redo', 'undo',
-                                ])
-                                ->helperText('Full description of this microservice'),
-
-                            Forms\Components\Textarea::make('short_description')
-                                ->label('Short Description')
-                                ->rows(2)
-                                ->columnSpanFull()
-                                ->helperText('Brief description for cards (1-2 sentences)'),
-
-                            Forms\Components\TextInput::make('icon')
-                                ->label('Icon')
-                                ->helperText('Heroicon name (e.g., heroicon-o-shield-check)')
-                                ->maxLength(255),
-                        ])->columns(2),
-
                     SC\Section::make('Pricing')
                         ->schema([
                             Forms\Components\TextInput::make('price')
@@ -126,36 +130,34 @@ class MicroserviceResource extends Resource
                                 ->maxSize(5120)
                                 ->helperText('Larger image for public pages (800x600px or larger)'),
                         ])->columns(2),
-                ])->columnSpan(2),
-
-                // Right column - Configuration
-                SC\Grid::make(1)->schema([
-                    SC\Section::make('Configuration')
-                        ->schema([
-                            Forms\Components\Toggle::make('is_active')
-                                ->label('Active')
-                                ->default(true)
-                                ->helperText('Whether this microservice is available for activation'),
-
-                            Forms\Components\TextInput::make('sort_order')
-                                ->label('Sort Order')
-                                ->numeric()
-                                ->default(0)
-                                ->minValue(0)
-                                ->helperText('Display order (lower numbers first)'),
-
-                            Forms\Components\TagsInput::make('features')
-                                ->label('Features List')
-                                ->helperText('Key features of this microservice')
-                                ->placeholder('Add a feature'),
-
-                            Forms\Components\TextInput::make('documentation_url')
-                                ->label('Documentation URL')
-                                ->url()
-                                ->helperText('Link to documentation'),
-                        ])->columns(1),
                 ])->columnSpan(1),
             ]),
+
+            // Second row: Configuration (full width)
+            SC\Section::make('Configuration')
+                ->schema([
+                    Forms\Components\Toggle::make('is_active')
+                        ->label('Active')
+                        ->default(true)
+                        ->helperText('Whether this microservice is available for activation'),
+
+                    Forms\Components\TextInput::make('sort_order')
+                        ->label('Sort Order')
+                        ->numeric()
+                        ->default(0)
+                        ->minValue(0)
+                        ->helperText('Display order (lower numbers first)'),
+
+                    Forms\Components\TagsInput::make('features')
+                        ->label('Features List')
+                        ->helperText('Key features of this microservice')
+                        ->placeholder('Add a feature'),
+
+                    Forms\Components\TextInput::make('documentation_url')
+                        ->label('Documentation URL')
+                        ->url()
+                        ->helperText('Link to documentation'),
+                ])->columns(4),
         ]);
     }
 

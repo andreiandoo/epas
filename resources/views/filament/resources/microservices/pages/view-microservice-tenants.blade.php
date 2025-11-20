@@ -17,7 +17,7 @@
                 </div>
                 <div>
                     <span class="text-sm text-gray-500 dark:text-gray-400">Total Active Tenants:</span>
-                    <p class="font-medium">{{ $record->tenants()->wherePivot('is_active', true)->count() }}</p>
+                    <p class="font-medium">{{ $record->tenants()->wherePivot('status', 'active')->count() }}</p>
                 </div>
             </div>
         </div>
