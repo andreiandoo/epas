@@ -7,7 +7,7 @@ use Filament\Widgets\ChartWidget;
 
 class TicketSalesChart extends ChartWidget
 {
-    protected static ?string $heading = 'Tickets Sold (Last 30 Days)';
+    protected ?string $heading = 'Tickets Sold (Last 30 Days)';
     protected static ?int $sort = 7;
     protected int | string | array $columnSpan = 1;
 

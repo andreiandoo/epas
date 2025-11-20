@@ -8,7 +8,7 @@ use Illuminate\Support\Carbon;
 
 class EventsByMonthChart extends ChartWidget
 {
-    protected static ?string $heading = 'Events Created (Last 12 Months)';
+    protected ?string $heading = 'Events Created (Last 12 Months)';
     protected static ?int $sort = 2;
     protected int | string | array $columnSpan = 'full';
 
