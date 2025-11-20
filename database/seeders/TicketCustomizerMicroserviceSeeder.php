@@ -27,7 +27,7 @@ class TicketCustomizerMicroserviceSeeder extends Seeder
                 'category' => 'design',
                 'price' => 30.00,
                 'currency' => 'EUR',
-                'billing_cycle' => null,
+                'billing_cycle' => 'one_time',
                 'pricing_model' => 'one_time',
                 'is_active' => true,
                 'features' => [
