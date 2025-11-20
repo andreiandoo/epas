@@ -20,7 +20,7 @@ class ViewMicroserviceTenants extends Page implements HasTable
 
     public ?Microservice $record = null;
 
-    public function mount($record): void
+    public function mount(int|string $record): void
     {
         $this->record = Microservice::findOrFail($record);
     }
@@ -53,9 +53,14 @@ class ViewMicroserviceTenants extends Page implements HasTable
                     ->searchable()
                     ->toggleable(),
 
-                Tables\Columns\IconColumn::make('pivot.is_active')
-                    ->label('Active')
-                    ->boolean()
+                Tables\Columns\BadgeColumn::make('pivot.status')
+                    ->label('Status')
+                    ->colors([
+                        'success' => 'active',
+                        'warning' => 'suspended',
+                        'danger' => 'cancelled',
+                        'info' => 'trial',
+                    ])
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('pivot.activated_at')
@@ -83,12 +88,14 @@ class ViewMicroserviceTenants extends Page implements HasTable
                     ->sortable(),
             ])
             ->filters([
-                Tables\Filters\TernaryFilter::make('pivot.is_active')
-                    ->label('Microservice Active')
-                    ->boolean()
-                    ->trueLabel('Active only')
-                    ->falseLabel('Inactive only')
-                    ->native(false),
+                Tables\Filters\SelectFilter::make('pivot.status')
+                    ->label('Activation Status')
+                    ->options([
+                        'active' => 'Active',
+                        'suspended' => 'Suspended',
+                        'cancelled' => 'Cancelled',
+                        'trial' => 'Trial',
+                    ]),
 
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Tenant Status')
