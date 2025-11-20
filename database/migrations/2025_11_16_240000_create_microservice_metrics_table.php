@@ -22,8 +22,8 @@ return new class extends Migration
             $table->json('metadata')->nullable(); // Additional context
             $table->timestamp('created_at');
 
-            $table->index(['tenant_id', 'microservice_slug', 'created_at']);
-            $table->index(['microservice_slug', 'created_at']);
+            $table->index(['tenant_id', 'microservice_slug', 'created_at'], 'idx_metrics_tenant_ms_time');
+            $table->index(['microservice_slug', 'created_at'], 'idx_metrics_ms_time');
         });
 
         Schema::create('microservice_usage_summary', function (Blueprint $table) {
@@ -39,7 +39,7 @@ return new class extends Migration
             $table->json('breakdown')->nullable(); // Breakdown by action
             $table->timestamps();
 
-            $table->unique(['tenant_id', 'microservice_slug', 'date']);
+            $table->unique(['tenant_id', 'microservice_slug', 'date'], 'uniq_usage_tenant_ms_date');
         });
     }
 
