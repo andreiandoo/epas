@@ -6,7 +6,7 @@ use App\Models\ExchangeRate;
 use App\Services\ExchangeRateService;
 use Filament\Pages\Page;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Actions\Action;
@@ -91,9 +91,9 @@ class ExchangeRates extends Page implements HasForms
         ];
     }
 
-    public function manualRateForm(Form $form): Form
+    public function manualRateForm(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\DatePicker::make('date')
                     ->label('Date')
