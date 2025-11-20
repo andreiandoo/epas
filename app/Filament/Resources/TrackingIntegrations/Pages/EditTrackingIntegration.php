@@ -6,7 +6,7 @@ use App\Filament\Resources\TrackingIntegrations\TrackingIntegrationResource;
 use App\Services\Tracking\Providers\TrackingProviderFactory;
 use App\Services\Tracking\TrackingScriptInjector;
 use App\Services\Tracking\SessionConsentService;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Notifications\Notification;
 

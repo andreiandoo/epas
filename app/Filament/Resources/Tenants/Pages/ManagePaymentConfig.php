@@ -6,7 +6,7 @@ use App\Filament\Resources\Tenants\TenantResource;
 use App\Models\TenantPaymentConfig;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use Filament\Forms;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\ManageRecords;
 use Filament\Notifications\Notification;
 
