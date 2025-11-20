@@ -8,6 +8,7 @@ use Filament\Actions;
 use Filament\Resources\Pages\Page;
 use Filament\Forms;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components as SC;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
@@ -41,7 +42,7 @@ class ManageConnections extends Page implements HasForms
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Stripe Payment Gateway')
+                SC\Section::make('Stripe Payment Gateway')
                     ->description('Configure Stripe for processing microservice payments')
                     ->schema([
                         Forms\Components\Select::make('stripe_mode')
@@ -55,7 +56,7 @@ class ManageConnections extends Page implements HasForms
                             ->live()
                             ->helperText('Switch between test and live mode. Always test first!'),
 
-                        Forms\Components\Fieldset::make('Test Mode Keys')
+                        SC\Fieldset::make('Test Mode Keys')
                             ->schema([
                                 Forms\Components\TextInput::make('stripe_test_public_key')
                                     ->label('Test Publishable Key')
@@ -73,7 +74,7 @@ class ManageConnections extends Page implements HasForms
                             ])
                             ->columns(2),
 
-                        Forms\Components\Fieldset::make('Live Mode Keys')
+                        SC\Fieldset::make('Live Mode Keys')
                             ->schema([
                                 Forms\Components\TextInput::make('stripe_live_public_key')
                                     ->label('Live Publishable Key')
@@ -91,7 +92,7 @@ class ManageConnections extends Page implements HasForms
                             ])
                             ->columns(2),
 
-                        Forms\Components\Fieldset::make('Webhook Configuration')
+                        SC\Fieldset::make('Webhook Configuration')
                             ->schema([
                                 Forms\Components\TextInput::make('stripe_webhook_secret')
                                     ->label('Webhook Signing Secret')
@@ -110,14 +111,14 @@ class ManageConnections extends Page implements HasForms
                             ])
                             ->columns(1),
 
-                        Forms\Components\Actions::make([
-                            Forms\Components\Actions\Action::make('test_connection')
+                        SC\Actions::make([
+                            SC\Actions\Action::make('test_connection')
                                 ->label('Test Stripe Connection')
                                 ->icon('heroicon-o-bolt')
                                 ->color('info')
                                 ->action('testStripeConnection'),
 
-                            Forms\Components\Actions\Action::make('view_stripe_docs')
+                            SC\Actions\Action::make('view_stripe_docs')
                                 ->label('View Stripe Documentation')
                                 ->icon('heroicon-o-book-open')
                                 ->url('https://stripe.com/docs/keys', shouldOpenInNewTab: true)
@@ -126,7 +127,7 @@ class ManageConnections extends Page implements HasForms
                     ])
                     ->columnSpanFull(),
 
-                Forms\Components\Section::make('VAT Configuration')
+                SC\Section::make('VAT Configuration')
                     ->description('Configure VAT/Tax settings for invoices and payments')
                     ->schema([
                         Forms\Components\Toggle::make('vat_enabled')
