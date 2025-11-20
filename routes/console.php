@@ -213,3 +213,20 @@ Schedule::command('promo:cleanup --days=365')
     ->onFailure(function () {
         \Log::error('Failed to cleanup promo code records');
     });
+
+/*
+|--------------------------------------------------------------------------
+| Exchange Rates Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Fetch daily exchange rates (daily at 10 AM - after ECB publishes)
+Schedule::command('exchange-rates:fetch')
+    ->dailyAt('10:00')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('Exchange rates fetched successfully');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to fetch exchange rates');
+    });
