@@ -27,7 +27,7 @@ class PlatformCredentialResource extends Resource
     public static function canAccess(): bool
     {
         $user = auth()->user();
-        return $user && $user->hasRole('super-admin');
+        return $user && $user->isSuperAdmin();
     }
 
     public static function form(Schema $schema): Schema
