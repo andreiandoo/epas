@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\FeatureFlagController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\TenantClient\DomainVerificationController;
+use App\Http\Controllers\Api\TenantClient\PackageController;
 
 Route::get('/v1/public/events', function () {
     return response()->json([
@@ -687,7 +688,35 @@ Route::prefix('tenant/domains')->middleware(['throttle:api', 'auth:sanctum'])->g
     // Schedule background verification
     Route::post('/{domain}/verify/schedule', [DomainVerificationController::class, 'scheduleVerification'])
         ->name('api.tenant.domains.verify.schedule');
+
+    // Package management
+    Route::post('/{domain}/package/generate', [PackageController::class, 'generate'])
+        ->name('api.tenant.domains.package.generate');
+
+    Route::get('/{domain}/package/status', [PackageController::class, 'status'])
+        ->name('api.tenant.domains.package.status');
+
+    Route::get('/{domain}/packages', [PackageController::class, 'list'])
+        ->name('api.tenant.domains.packages');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Package Download Routes (Public with hash verification)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/tenant/package/{package}/download/{hash}', [PackageController::class, 'download'])
+    ->name('api.tenant.package.download')
+    ->middleware('throttle:60,1');
+
+Route::get('/tenant/package/{package}/install-code', [PackageController::class, 'installCode'])
+    ->name('api.tenant.package.install-code')
+    ->middleware(['throttle:api', 'auth:sanctum']);
+
+Route::post('/tenant/package/{package}/invalidate', [PackageController::class, 'invalidate'])
+    ->name('api.tenant.package.invalidate')
+    ->middleware(['throttle:api', 'auth:sanctum']);
 
 /*
 |--------------------------------------------------------------------------
