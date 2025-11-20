@@ -22,7 +22,7 @@ class AffiliateTrackingMicroserviceSeeder extends Seeder
                 'icon' => 'heroicon-o-user-group',
                 'price' => 10.00, // 10 euros one-time payment
                 'pricing_model' => 'one-time',
-                'status' => 'active',
+                'is_active' => true,
                 'sort_order' => 10,
                 'features' => [
                     'Last-click attribution with 90-day cookie window',

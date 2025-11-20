@@ -19,7 +19,7 @@ class TicketInsuranceMicroserviceSeeder extends Seeder
                 'currency' => 'EUR',
                 'billing_cycle' => null,
                 'pricing_model' => 'free', // Revenue from insurance commission
-                'status' => 'active',
+                'is_active' => true,
                 'features' => [
                     // Configuration
                     'Hierarchical config: tenant → event → ticket_type',
@@ -82,21 +82,25 @@ class TicketInsuranceMicroserviceSeeder extends Seeder
                     'POST /api/ti/{id}/void - Void policy',
                     'POST /api/ti/{id}/refund - Refund policy',
                 ],
+                'tech_stack' => [
                     'Laravel 12.x',
                     'Provider adapter pattern',
                     'Event sourcing for audit trail',
                     'JSON schema validation',
                 ],
+                'requirements' => [
                     'PHP 8.2+',
                     'Laravel 12+',
                     'Insurance provider account (or use mock adapter)',
                 ],
+                'setup_instructions' => [
                     '1. Run migrations: php artisan migrate',
                     '2. Configure insurance provider adapter',
                     '3. Create insurance config for tenant',
                     '4. Integrate checkout UI component',
                     '5. Set up webhook for payment_captured event',
                 ],
+                'api_endpoints' => [
                     'GET /api/ti/quote',
                     'POST /api/ti/issue',
                     'POST /api/ti/sync',
@@ -107,6 +111,7 @@ class TicketInsuranceMicroserviceSeeder extends Seeder
                 ],
                 'documentation_url' => '/docs/microservices/ticket-insurance',
                 'icon' => 'heroicon-o-shield-check',
+                'color' => '#3B82F6',
                 'metadata' => [
                     'version' => '1.0.0',
                     'author' => 'EPAS Development Team',

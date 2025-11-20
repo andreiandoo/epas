@@ -19,7 +19,7 @@ class AccountingConnectorsMicroserviceSeeder extends Seeder
                 'currency' => 'EUR',
                 'billing_cycle' => 'monthly',
                 'pricing_model' => 'recurring',
-                'status' => 'active',
+                'is_active' => true,
                 'features' => [
                     'Provider-agnostic adapter pattern',
                     'Supported: SmartBill, FGO, Exact, Xero, QuickBooks',
@@ -38,21 +38,25 @@ class AccountingConnectorsMicroserviceSeeder extends Seeder
                     'eFactura integration (provider-managed or platform)',
                     'Error tracking and DLQ',
                 ],
+                'tech_stack' => [
                     'Laravel 12.x',
                     'Adapter pattern',
                     'Job queue',
                     'Encrypted credentials',
                 ],
+                'requirements' => [
                     'PHP 8.2+',
                     'Laravel 12+',
                     'Accounting provider account',
                 ],
+                'api_endpoints' => [
                     'POST /api/acc/connect',
                     'POST /api/acc/map',
                     'POST /api/acc/issue',
                     'POST /api/acc/credit',
                 ],
                 'icon' => 'heroicon-o-document-text',
+                'color' => '#059669',
                 'metadata' => [
                     'version' => '1.0.0',
                     'author' => 'EPAS Development Team',
