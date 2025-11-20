@@ -9,6 +9,13 @@ class EventTaxonomySeeder extends Seeder
 {
     public function run(): void
     {
+        // Clear existing data
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        DB::table('event_type_event_genre')->truncate();
+        DB::table('event_types')->truncate();
+        DB::table('event_genres')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
         // Event Types with parent-child hierarchy (Romanian source, translated to both languages)
         $eventTypes = [
             // Music & Concerts
