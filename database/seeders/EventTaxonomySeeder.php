@@ -165,7 +165,7 @@ class EventTaxonomySeeder extends Seeder
             ],
             'performing-arts' => [
                 ['slug' => 'drama', 'en' => 'Drama', 'ro' => 'Dramă'],
-                ['slug' => 'comedy-theatre', 'en' => 'Comedy', 'ro' => 'Comedie'],
+                ['slug' => 'comedy-theatre', 'en' => 'Comedy (Theatre)', 'ro' => 'Comedie (Teatru)'],
                 ['slug' => 'tragedy', 'en' => 'Tragedy', 'ro' => 'Tragedie'],
                 ['slug' => 'musical-theatre', 'en' => 'Musical Theatre', 'ro' => 'Teatru muzical'],
                 ['slug' => 'physical-theatre', 'en' => 'Physical Theatre', 'ro' => 'Teatru fizic'],
@@ -196,7 +196,7 @@ class EventTaxonomySeeder extends Seeder
                 ['slug' => 'action-film', 'en' => 'Action', 'ro' => 'Acțiune'],
                 ['slug' => 'adventure-film', 'en' => 'Adventure', 'ro' => 'Aventură'],
                 ['slug' => 'animation', 'en' => 'Animation', 'ro' => 'Animație'],
-                ['slug' => 'comedy-film', 'en' => 'Comedy', 'ro' => 'Comedie'],
+                ['slug' => 'comedy-film', 'en' => 'Comedy (Film)', 'ro' => 'Comedie (Film)'],
                 ['slug' => 'documentary-film', 'en' => 'Documentary', 'ro' => 'Documentar'],
                 ['slug' => 'drama-film', 'en' => 'Drama', 'ro' => 'Dramă'],
                 ['slug' => 'horror', 'en' => 'Horror', 'ro' => 'Horror'],
