@@ -118,13 +118,13 @@ class AffiliateResource extends Resource
                     ->label('Code')
                     ->searchable()
                     ->sortable()
-                    ->copyable()
-                    ->url(fn (Affiliate $record) => static::getUrl('edit', ['record' => $record])),
+                    ->copyable(),
 
                 Tables\Columns\TextColumn::make('name')
                     ->label('Name')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->url(fn (Affiliate $record) => static::getUrl('edit', ['record' => $record])),
 
                 Tables\Columns\TextColumn::make('contact_email')
                     ->label('Email')
@@ -156,6 +156,13 @@ class AffiliateResource extends Resource
                     ->dateTime()
                     ->sortable()
                     ->toggleable(),
+
+                Tables\Columns\IconColumn::make('stats_link')
+                    ->label('')
+                    ->icon('heroicon-o-chart-bar')
+                    ->color('primary')
+                    ->url(fn (Affiliate $record) => static::getUrl('stats', ['record' => $record]))
+                    ->openUrlInNewTab(false),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
@@ -165,14 +172,6 @@ class AffiliateResource extends Resource
                         'inactive' => 'Inactive',
                         'suspended' => 'Suspended',
                     ]),
-            ])
-            ->actions([
-                Tables\Actions\ViewAction::make()
-                    ->label('Stats')
-                    ->icon('heroicon-o-chart-bar')
-                    ->url(fn (Affiliate $record) => static::getUrl('stats', ['record' => $record])),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
             ])
             ->defaultSort('created_at', 'desc');
     }

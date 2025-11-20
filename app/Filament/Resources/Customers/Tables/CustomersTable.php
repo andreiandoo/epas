@@ -16,7 +16,8 @@ class CustomersTable
                 TextColumn::make('full_name')->label('Nume complet')
                     ->state(fn($r) => $r->full_name ?? trim(($r->first_name ?? '').' '.($r->last_name ?? '')))
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->url(fn($record) => \App\Filament\Resources\Customers\CustomerResource::getUrl('edit', ['record' => $record])),
                 TextColumn::make('email')->label('Email')->searchable()->copyable(),
                 TextColumn::make('orders_count')->label('Orders')->sortable()
                     ->state(fn($r) => $r->orders()->count()),
@@ -41,14 +42,11 @@ class CustomersTable
                     })
                     ->limit(80)
                     ->tooltip(fn($state) => $state),
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\ViewAction::make()
-                    ->label('Stats')
+                Tables\Columns\IconColumn::make('stats_link')
+                    ->label('')
                     ->icon('heroicon-o-chart-bar')
+                    ->color('primary')
                     ->url(fn($record) => \App\Filament\Resources\Customers\CustomerResource::getUrl('stats', ['record' => $record])),
-                Tables\Actions\DeleteAction::make(),
             ])
             ->defaultSort('created_at', 'desc');
     }
