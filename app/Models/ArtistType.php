@@ -40,4 +40,14 @@ class ArtistType extends Model
     {
         return $this->hasMany(ArtistType::class, 'parent_id');
     }
+
+    public function genres(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            ArtistGenre::class,
+            'artist_type_artist_genre',
+            'artist_type_id',
+            'artist_genre_id'
+        );
+    }
 }

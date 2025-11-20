@@ -36,6 +36,15 @@ class ArtistTypeResource extends Resource
                         ->searchable()->preload(),
                     TranslatableField::textarea('description', 'Description', 3)
                         ->columnSpanFull(),
+
+                    Forms\Components\Select::make('genres')
+                        ->label('Allowed Genres')
+                        ->relationship('genres', 'name->en')
+                        ->multiple()
+                        ->searchable()
+                        ->preload()
+                        ->columnSpanFull()
+                        ->helperText('Select which genres are available for this artist type'),
                 ])->columns(2),
         ]);
     }
