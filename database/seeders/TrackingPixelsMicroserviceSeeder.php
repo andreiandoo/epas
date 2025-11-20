@@ -49,7 +49,7 @@ Perfect for e-commerce sites, event platforms, and any business that needs compr
                 'price' => 1.00, // 1 EUR per month
                 'currency' => 'EUR',
                 'billing_cycle' => 'monthly',
-                'is_active' => true,
+                'status' => 'active',
                 'features' => [
                     'GA4 Integration',
                     'GTM Integration',
@@ -61,7 +61,6 @@ Perfect for e-commerce sites, event platforms, and any business that needs compr
                     'Unlimited Pageviews',
                     'CSP-Compliant Scripts',
                 ],
-                'requirements' => [
                     'Valid tracking IDs from providers',
                     'HTTPS website (required for consent)',
                     'User consent banner (recommended)',

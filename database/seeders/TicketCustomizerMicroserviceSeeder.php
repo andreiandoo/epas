@@ -29,7 +29,7 @@ class TicketCustomizerMicroserviceSeeder extends Seeder
                 'currency' => 'EUR',
                 'billing_cycle' => null,
                 'pricing_model' => 'one_time',
-                'is_active' => true,
+                'status' => 'active',
                 'features' => [
                     // Core Features
                     'WYSIWYG visual editor with drag-and-drop',
@@ -90,7 +90,6 @@ class TicketCustomizerMicroserviceSeeder extends Seeder
                     'Bulk operations support',
                     'Template duplication and versioning',
                 ],
-                'tech_stack' => [
                     'Laravel 12.x backend',
                     'React 18+ with TypeScript frontend',
                     'RESTful API architecture',
@@ -98,7 +97,6 @@ class TicketCustomizerMicroserviceSeeder extends Seeder
                     'Filament 4.x admin interface',
                     'JSON schema validation',
                 ],
-                'requirements' => [
                     'PHP 8.2+',
                     'Laravel 12+',
                     'React 18+ (for WYSIWYG editor)',
@@ -106,7 +104,6 @@ class TicketCustomizerMicroserviceSeeder extends Seeder
                     'GD or Imagick extension (for image handling)',
                     'Storage disk for templates and previews',
                 ],
-                'setup_instructions' => [
                     '1. Run migration: php artisan migrate',
                     '2. Install frontend dependencies: npm install react react-dom @types/react @types/react-dom axios',
                     '3. Configure Vite with React plugin',
@@ -115,7 +112,6 @@ class TicketCustomizerMicroserviceSeeder extends Seeder
                     '6. Access admin panel: /admin/ticket-templates',
                     '7. Access visual editor: /ticket-customizer/{template-id}',
                 ],
-                'api_endpoints' => [
                     'GET /api/tickets/templates/variables?tenant={id}',
                     'POST /api/tickets/templates/validate',
                     'POST /api/tickets/templates/preview',
@@ -129,9 +125,7 @@ class TicketCustomizerMicroserviceSeeder extends Seeder
                     'POST /api/tickets/templates/{id}/create-version',
                 ],
                 'documentation_url' => '/docs/microservices/ticket-customizer',
-                'demo_url' => null,
                 'icon' => 'heroicon-o-ticket',
-                'color' => '#8B5CF6', // Purple
                 'metadata' => [
                     'version' => '1.0.0',
                     'author' => 'EPAS Development Team',

@@ -28,7 +28,7 @@ class InvitationsMicroserviceSeeder extends Seeder
                 'currency' => 'EUR',
                 'billing_cycle' => 'monthly',
                 'pricing_model' => 'recurring',
-                'is_active' => true,
+                'status' => 'active',
                 'features' => [
                     // Batch Management
                     'Create invitation batches for events',
@@ -105,7 +105,6 @@ class InvitationsMicroserviceSeeder extends Seeder
                     'Batch statuses: draft, rendering, ready, sending, completed, cancelled',
                     'Delivery statuses: pending, sent, delivered, bounced, failed, complaint',
                 ],
-                'tech_stack' => [
                     'Laravel 12.x backend',
                     'Queue system for email delivery',
                     'Signed URLs for secure downloads',
@@ -113,7 +112,6 @@ class InvitationsMicroserviceSeeder extends Seeder
                     'Ticket Templates integration',
                     'Anti-replay QR codes with HMAC',
                 ],
-                'requirements' => [
                     'PHP 8.2+',
                     'Laravel 12+',
                     'Ticket Templates microservice (for PDF generation)',
@@ -122,7 +120,6 @@ class InvitationsMicroserviceSeeder extends Seeder
                     'Storage disk for invitations and exports',
                     'ZIP extension enabled',
                 ],
-                'setup_instructions' => [
                     '1. Run migrations: php artisan migrate',
                     '2. Configure mail driver in .env',
                     '3. Configure queue driver (redis/database recommended)',
@@ -131,7 +128,6 @@ class InvitationsMicroserviceSeeder extends Seeder
                     '6. (Optional) Configure email templates per tenant',
                     '7. Access API: /api/inv/*',
                 ],
-                'api_endpoints' => [
                     'POST /api/inv/batch - Create invitation batch',
                     'POST /api/inv/batch/import - Import recipients from CSV',
                     'POST /api/inv/batch/render - Render PDFs for batch',
@@ -145,9 +141,7 @@ class InvitationsMicroserviceSeeder extends Seeder
                     'POST /api/inv/webhook/open - Track email opens (pixel)',
                 ],
                 'documentation_url' => '/docs/microservices/invitations',
-                'demo_url' => null,
                 'icon' => 'heroicon-o-envelope',
-                'color' => '#10B981', // Green
                 'metadata' => [
                     'version' => '1.0.0',
                     'author' => 'EPAS Development Team',
