@@ -38,6 +38,12 @@ class ManageConnections extends Page implements HasForms
             'youtube_api_key' => $settings->youtube_api_key,
             'spotify_client_id' => $settings->spotify_client_id,
             'spotify_client_secret' => $settings->spotify_client_secret,
+            'google_maps_api_key' => $settings->google_maps_api_key,
+            'sendgrid_api_key' => $settings->sendgrid_api_key,
+            'twilio_account_sid' => $settings->twilio_account_sid,
+            'twilio_auth_token' => $settings->twilio_auth_token,
+            'twilio_phone_number' => $settings->twilio_phone_number,
+            'openweather_api_key' => $settings->openweather_api_key,
         ]);
     }
 
@@ -213,6 +219,125 @@ class ManageConnections extends Page implements HasForms
                     ])
                     ->columns(2)
                     ->columnSpanFull(),
+
+                SC\Section::make('Google Maps')
+                    ->description('Configure Google Maps API for displaying venue maps on tenant websites')
+                    ->schema([
+                        Forms\Components\TextInput::make('google_maps_api_key')
+                            ->label('API Key')
+                            ->placeholder('AIza...')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->helperText('Google Maps JavaScript API key - enable Maps JavaScript API and Places API'),
+
+                        SC\Actions::make([
+                            Actions\Action::make('test_google_maps')
+                                ->label('Test Google Maps')
+                                ->icon('heroicon-o-map')
+                                ->color('info')
+                                ->action('testGoogleMapsConnection'),
+
+                            Actions\Action::make('google_maps_docs')
+                                ->label('Get API Key')
+                                ->icon('heroicon-o-arrow-top-right-on-square')
+                                ->url('https://console.cloud.google.com/apis/credentials', shouldOpenInNewTab: true)
+                                ->color('gray'),
+                        ]),
+                    ])
+                    ->columnSpanFull(),
+
+                SC\Section::make('SendGrid')
+                    ->description('Configure SendGrid for transactional emails (confirmations, notifications)')
+                    ->schema([
+                        Forms\Components\TextInput::make('sendgrid_api_key')
+                            ->label('API Key')
+                            ->placeholder('SG...')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->helperText('SendGrid API key for sending transactional emails'),
+
+                        SC\Actions::make([
+                            Actions\Action::make('test_sendgrid')
+                                ->label('Test SendGrid')
+                                ->icon('heroicon-o-envelope')
+                                ->color('info')
+                                ->action('testSendGridConnection'),
+
+                            Actions\Action::make('sendgrid_docs')
+                                ->label('Get API Key')
+                                ->icon('heroicon-o-arrow-top-right-on-square')
+                                ->url('https://app.sendgrid.com/settings/api_keys', shouldOpenInNewTab: true)
+                                ->color('gray'),
+                        ]),
+                    ])
+                    ->columnSpanFull(),
+
+                SC\Section::make('Twilio')
+                    ->description('Configure Twilio for SMS notifications to customers')
+                    ->schema([
+                        Forms\Components\TextInput::make('twilio_account_sid')
+                            ->label('Account SID')
+                            ->placeholder('AC...')
+                            ->maxLength(255)
+                            ->helperText('Your Twilio Account SID'),
+
+                        Forms\Components\TextInput::make('twilio_auth_token')
+                            ->label('Auth Token')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->helperText('Your Twilio Auth Token - stored encrypted'),
+
+                        Forms\Components\TextInput::make('twilio_phone_number')
+                            ->label('Phone Number')
+                            ->placeholder('+1234567890')
+                            ->maxLength(50)
+                            ->helperText('Your Twilio phone number for sending SMS'),
+
+                        SC\Actions::make([
+                            Actions\Action::make('test_twilio')
+                                ->label('Test Twilio')
+                                ->icon('heroicon-o-device-phone-mobile')
+                                ->color('info')
+                                ->action('testTwilioConnection'),
+
+                            Actions\Action::make('twilio_docs')
+                                ->label('Twilio Console')
+                                ->icon('heroicon-o-arrow-top-right-on-square')
+                                ->url('https://console.twilio.com', shouldOpenInNewTab: true)
+                                ->color('gray'),
+                        ]),
+                    ])
+                    ->columns(3)
+                    ->columnSpanFull(),
+
+                SC\Section::make('OpenWeather')
+                    ->description('Configure OpenWeather API for weather forecasts at outdoor events')
+                    ->schema([
+                        Forms\Components\TextInput::make('openweather_api_key')
+                            ->label('API Key')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->helperText('OpenWeather API key for weather data'),
+
+                        SC\Actions::make([
+                            Actions\Action::make('test_openweather')
+                                ->label('Test OpenWeather')
+                                ->icon('heroicon-o-cloud')
+                                ->color('info')
+                                ->action('testOpenWeatherConnection'),
+
+                            Actions\Action::make('openweather_docs')
+                                ->label('Get API Key')
+                                ->icon('heroicon-o-arrow-top-right-on-square')
+                                ->url('https://openweathermap.org/api', shouldOpenInNewTab: true)
+                                ->color('gray'),
+                        ]),
+                    ])
+                    ->columnSpanFull(),
             ])
             ->statePath('data');
     }
@@ -339,6 +464,167 @@ class ManageConnections extends Page implements HasForms
                     ->danger()
                     ->title('Connection failed')
                     ->body($response->json('error_description') ?? 'Invalid credentials')
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Connection failed')
+                ->body("Error: {$e->getMessage()}")
+                ->send();
+        }
+    }
+
+    public function testGoogleMapsConnection(): void
+    {
+        $data = $this->form->getState();
+
+        if (empty($data['google_maps_api_key'])) {
+            Notification::make()
+                ->warning()
+                ->title('No API key provided')
+                ->body('Please enter your Google Maps API key.')
+                ->send();
+            return;
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::get('https://maps.googleapis.com/maps/api/geocode/json', [
+                'key' => $data['google_maps_api_key'],
+                'address' => 'Bucharest, Romania',
+            ]);
+
+            if ($response->successful() && $response->json('status') === 'OK') {
+                Notification::make()
+                    ->success()
+                    ->title('Google Maps API connected!')
+                    ->body('API key is valid and working.')
+                    ->send();
+            } else {
+                Notification::make()
+                    ->danger()
+                    ->title('Connection failed')
+                    ->body($response->json('error_message') ?? 'Invalid API key or API not enabled')
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Connection failed')
+                ->body("Error: {$e->getMessage()}")
+                ->send();
+        }
+    }
+
+    public function testSendGridConnection(): void
+    {
+        $data = $this->form->getState();
+
+        if (empty($data['sendgrid_api_key'])) {
+            Notification::make()
+                ->warning()
+                ->title('No API key provided')
+                ->body('Please enter your SendGrid API key.')
+                ->send();
+            return;
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withToken($data['sendgrid_api_key'])
+                ->get('https://api.sendgrid.com/v3/user/profile');
+
+            if ($response->successful()) {
+                Notification::make()
+                    ->success()
+                    ->title('SendGrid API connected!')
+                    ->body('API key is valid and working.')
+                    ->send();
+            } else {
+                Notification::make()
+                    ->danger()
+                    ->title('Connection failed')
+                    ->body($response->json('errors.0.message') ?? 'Invalid API key')
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Connection failed')
+                ->body("Error: {$e->getMessage()}")
+                ->send();
+        }
+    }
+
+    public function testTwilioConnection(): void
+    {
+        $data = $this->form->getState();
+
+        if (empty($data['twilio_account_sid']) || empty($data['twilio_auth_token'])) {
+            Notification::make()
+                ->warning()
+                ->title('Missing credentials')
+                ->body('Please enter both Account SID and Auth Token.')
+                ->send();
+            return;
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withBasicAuth($data['twilio_account_sid'], $data['twilio_auth_token'])
+                ->get("https://api.twilio.com/2010-04-01/Accounts/{$data['twilio_account_sid']}.json");
+
+            if ($response->successful()) {
+                Notification::make()
+                    ->success()
+                    ->title('Twilio API connected!')
+                    ->body("Account: {$response->json('friendly_name')}")
+                    ->send();
+            } else {
+                Notification::make()
+                    ->danger()
+                    ->title('Connection failed')
+                    ->body($response->json('message') ?? 'Invalid credentials')
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Connection failed')
+                ->body("Error: {$e->getMessage()}")
+                ->send();
+        }
+    }
+
+    public function testOpenWeatherConnection(): void
+    {
+        $data = $this->form->getState();
+
+        if (empty($data['openweather_api_key'])) {
+            Notification::make()
+                ->warning()
+                ->title('No API key provided')
+                ->body('Please enter your OpenWeather API key.')
+                ->send();
+            return;
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::get('https://api.openweathermap.org/data/2.5/weather', [
+                'appid' => $data['openweather_api_key'],
+                'q' => 'Bucharest,RO',
+            ]);
+
+            if ($response->successful()) {
+                $weather = $response->json('weather.0.description') ?? 'Unknown';
+                Notification::make()
+                    ->success()
+                    ->title('OpenWeather API connected!')
+                    ->body("Current weather in Bucharest: {$weather}")
+                    ->send();
+            } else {
+                Notification::make()
+                    ->danger()
+                    ->title('Connection failed')
+                    ->body($response->json('message') ?? 'Invalid API key')
                     ->send();
             }
         } catch (\Exception $e) {

@@ -40,6 +40,12 @@ class Setting extends Model
         'youtube_api_key',
         'spotify_client_id',
         'spotify_client_secret',
+        'google_maps_api_key',
+        'sendgrid_api_key',
+        'twilio_account_sid',
+        'twilio_auth_token',
+        'twilio_phone_number',
+        'openweather_api_key',
         'meta',
     ];
 
@@ -52,6 +58,10 @@ class Setting extends Model
         'stripe_webhook_secret' => 'encrypted',
         'youtube_api_key' => 'encrypted',
         'spotify_client_secret' => 'encrypted',
+        'google_maps_api_key' => 'encrypted',
+        'sendgrid_api_key' => 'encrypted',
+        'twilio_auth_token' => 'encrypted',
+        'openweather_api_key' => 'encrypted',
         'vat_enabled' => 'boolean',
         'vat_rate' => 'decimal:2',
     ];

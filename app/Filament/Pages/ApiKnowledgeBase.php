@@ -104,14 +104,38 @@ class ApiKnowledgeBase extends Page
                 'endpoints' => [
                     [
                         'method' => 'HEADER',
-                        'path' => 'X-API-Key: your_api_key',
+                        'path' => 'X-API-Key: pk_your_api_key',
                         'description' => 'Send API key in header (recommended)',
                         'response' => '',
                     ],
                     [
                         'method' => 'QUERY',
-                        'path' => '?api_key=your_api_key',
+                        'path' => '?api_key=pk_your_api_key',
                         'description' => 'Send API key as query parameter',
+                        'response' => '',
+                    ],
+                ],
+            ],
+            [
+                'category' => 'HMAC Signature (Optional)',
+                'description' => 'For enhanced security, API keys can require HMAC signature verification',
+                'endpoints' => [
+                    [
+                        'method' => 'HEADER',
+                        'path' => 'X-Timestamp: unix_timestamp',
+                        'description' => 'Current Unix timestamp (must be within 5 minutes)',
+                        'response' => '',
+                    ],
+                    [
+                        'method' => 'HEADER',
+                        'path' => 'X-Signature: hmac_sha256',
+                        'description' => 'HMAC-SHA256 of (timestamp + request_path) using secret_key',
+                        'response' => '',
+                    ],
+                    [
+                        'method' => 'CODE',
+                        'path' => 'signature = hmac_sha256(secret_key, timestamp + path)',
+                        'description' => 'Example: hmac_sha256("sk_xxx", "1700000000" + "api/v1/public/stats")',
                         'response' => '',
                     ],
                 ],

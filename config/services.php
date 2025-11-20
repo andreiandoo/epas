@@ -44,4 +44,22 @@ return [
         'client_secret' => env('SPOTIFY_CLIENT_SECRET'),
     ],
 
+    'google_maps' => [
+        'api_key' => env('GOOGLE_MAPS_API_KEY'),
+    ],
+
+    'sendgrid' => [
+        'api_key' => env('SENDGRID_API_KEY'),
+    ],
+
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+        'phone_number' => env('TWILIO_PHONE_NUMBER'),
+    ],
+
+    'openweather' => [
+        'api_key' => env('OPENWEATHER_API_KEY'),
+    ],
+
 ];

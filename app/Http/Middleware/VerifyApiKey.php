@@ -34,6 +34,26 @@ class VerifyApiKey
             ], 403);
         }
 
+        // Verify HMAC signature if required
+        if ($apiKey->require_signature) {
+            $timestamp = $request->header('X-Timestamp');
+            $signature = $request->header('X-Signature');
+
+            if (!$timestamp || !$signature) {
+                return response()->json([
+                    'error' => 'Signature required',
+                    'message' => 'This API key requires HMAC signature. Provide X-Timestamp and X-Signature headers.',
+                ], 401);
+            }
+
+            if (!$apiKey->verifySignature($signature, (int) $timestamp, $request->path())) {
+                return response()->json([
+                    'error' => 'Invalid signature',
+                    'message' => 'HMAC signature verification failed. Check your secret key and timestamp.',
+                ], 401);
+            }
+        }
+
         $apiKey->recordUsage();
 
         $request->attributes->set('api_key', $apiKey);
