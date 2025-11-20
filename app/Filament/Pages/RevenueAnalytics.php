@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 
 class RevenueAnalytics extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
     protected static string $view = 'filament.pages.revenue-analytics';
     protected static \UnitEnum|string|null $navigationGroup = 'Finance';
     protected static ?int $navigationSort = 10;
