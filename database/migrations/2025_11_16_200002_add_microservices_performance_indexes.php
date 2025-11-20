@@ -291,10 +291,11 @@ return new class extends Migration
      */
     protected function indexExists(string $table, string $index): bool
     {
-        $connection = Schema::getConnection();
-        $indexes = $connection->getDoctrineSchemaManager()
-            ->listTableIndexes($table);
+        $result = DB::select(
+            "SHOW INDEX FROM `{$table}` WHERE Key_name = ?",
+            [$index]
+        );
 
-        return array_key_exists($index, $indexes);
+        return count($result) > 0;
     }
 };
