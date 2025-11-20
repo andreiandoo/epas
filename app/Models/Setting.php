@@ -46,6 +46,12 @@ class Setting extends Model
         'twilio_auth_token',
         'twilio_phone_number',
         'openweather_api_key',
+        'facebook_app_id',
+        'facebook_app_secret',
+        'facebook_access_token',
+        'google_analytics_property_id',
+        'google_analytics_credentials_json',
+        'brevo_api_key',
         'meta',
     ];
 
@@ -62,6 +68,10 @@ class Setting extends Model
         'sendgrid_api_key' => 'encrypted',
         'twilio_auth_token' => 'encrypted',
         'openweather_api_key' => 'encrypted',
+        'facebook_app_secret' => 'encrypted',
+        'facebook_access_token' => 'encrypted',
+        'google_analytics_credentials_json' => 'encrypted',
+        'brevo_api_key' => 'encrypted',
         'vat_enabled' => 'boolean',
         'vat_rate' => 'decimal:2',
     ];

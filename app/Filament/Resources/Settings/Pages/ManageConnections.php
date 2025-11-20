@@ -44,6 +44,12 @@ class ManageConnections extends Page implements HasForms
             'twilio_auth_token' => $settings->twilio_auth_token,
             'twilio_phone_number' => $settings->twilio_phone_number,
             'openweather_api_key' => $settings->openweather_api_key,
+            'facebook_app_id' => $settings->facebook_app_id,
+            'facebook_app_secret' => $settings->facebook_app_secret,
+            'facebook_access_token' => $settings->facebook_access_token,
+            'google_analytics_property_id' => $settings->google_analytics_property_id,
+            'google_analytics_credentials_json' => $settings->google_analytics_credentials_json,
+            'brevo_api_key' => $settings->brevo_api_key,
         ]);
     }
 
@@ -338,6 +344,102 @@ class ManageConnections extends Page implements HasForms
                         ]),
                     ])
                     ->columnSpanFull(),
+
+                SC\Section::make('Facebook / Instagram Graph API')
+                    ->description('Configure Meta Graph API for fetching artist follower counts from Facebook and Instagram')
+                    ->schema([
+                        Forms\Components\TextInput::make('facebook_app_id')
+                            ->label('App ID')
+                            ->placeholder('Your Facebook App ID')
+                            ->maxLength(255)
+                            ->helperText('Facebook App ID from Meta for Developers'),
+
+                        Forms\Components\TextInput::make('facebook_app_secret')
+                            ->label('App Secret')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->helperText('Facebook App Secret - stored encrypted'),
+
+                        Forms\Components\Textarea::make('facebook_access_token')
+                            ->label('Access Token')
+                            ->rows(2)
+                            ->maxLength(1000)
+                            ->helperText('Long-lived access token for API calls - stored encrypted'),
+
+                        SC\Actions::make([
+                            Actions\Action::make('test_facebook')
+                                ->label('Test Facebook API')
+                                ->icon('heroicon-o-user-group')
+                                ->color('info')
+                                ->action('testFacebookConnection'),
+
+                            Actions\Action::make('facebook_docs')
+                                ->label('Meta for Developers')
+                                ->icon('heroicon-o-arrow-top-right-on-square')
+                                ->url('https://developers.facebook.com/apps/', shouldOpenInNewTab: true)
+                                ->color('gray'),
+                        ]),
+                    ])
+                    ->columns(2)
+                    ->columnSpanFull(),
+
+                SC\Section::make('Google Analytics')
+                    ->description('Configure Google Analytics API for tenant website analytics')
+                    ->schema([
+                        Forms\Components\TextInput::make('google_analytics_property_id')
+                            ->label('Property ID')
+                            ->placeholder('123456789')
+                            ->maxLength(255)
+                            ->helperText('Google Analytics 4 property ID (numbers only)'),
+
+                        Forms\Components\Textarea::make('google_analytics_credentials_json')
+                            ->label('Service Account Credentials (JSON)')
+                            ->rows(4)
+                            ->helperText('Paste the entire JSON credentials file content here - stored encrypted'),
+
+                        SC\Actions::make([
+                            Actions\Action::make('test_google_analytics')
+                                ->label('Test Google Analytics')
+                                ->icon('heroicon-o-chart-bar')
+                                ->color('info')
+                                ->action('testGoogleAnalyticsConnection'),
+
+                            Actions\Action::make('google_analytics_docs')
+                                ->label('Google Analytics Admin')
+                                ->icon('heroicon-o-arrow-top-right-on-square')
+                                ->url('https://analytics.google.com/analytics/web/', shouldOpenInNewTab: true)
+                                ->color('gray'),
+                        ]),
+                    ])
+                    ->columnSpanFull(),
+
+                SC\Section::make('Brevo')
+                    ->description('Configure Brevo (formerly Sendinblue) for transactional emails')
+                    ->schema([
+                        Forms\Components\TextInput::make('brevo_api_key')
+                            ->label('API Key')
+                            ->placeholder('xkeysib-...')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->helperText('Brevo API key for sending transactional emails - stored encrypted'),
+
+                        SC\Actions::make([
+                            Actions\Action::make('test_brevo')
+                                ->label('Test Brevo')
+                                ->icon('heroicon-o-envelope')
+                                ->color('info')
+                                ->action('testBrevoConnection'),
+
+                            Actions\Action::make('brevo_docs')
+                                ->label('Brevo Dashboard')
+                                ->icon('heroicon-o-arrow-top-right-on-square')
+                                ->url('https://app.brevo.com/settings/keys/api', shouldOpenInNewTab: true)
+                                ->color('gray'),
+                        ]),
+                    ])
+                    ->columnSpanFull(),
             ])
             ->statePath('data');
     }
@@ -619,6 +721,122 @@ class ManageConnections extends Page implements HasForms
                     ->success()
                     ->title('OpenWeather API connected!')
                     ->body("Current weather in Bucharest: {$weather}")
+                    ->send();
+            } else {
+                Notification::make()
+                    ->danger()
+                    ->title('Connection failed')
+                    ->body($response->json('message') ?? 'Invalid API key')
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Connection failed')
+                ->body("Error: {$e->getMessage()}")
+                ->send();
+        }
+    }
+
+    public function testFacebookConnection(): void
+    {
+        $data = $this->form->getState();
+
+        if (empty($data['facebook_access_token'])) {
+            Notification::make()
+                ->warning()
+                ->title('No access token provided')
+                ->body('Please enter your Facebook access token.')
+                ->send();
+            return;
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::get('https://graph.facebook.com/v18.0/me', [
+                'access_token' => $data['facebook_access_token'],
+                'fields' => 'id,name',
+            ]);
+
+            if ($response->successful()) {
+                $name = $response->json('name') ?? 'Unknown';
+                Notification::make()
+                    ->success()
+                    ->title('Facebook API connected!')
+                    ->body("Connected as: {$name}")
+                    ->send();
+            } else {
+                Notification::make()
+                    ->danger()
+                    ->title('Connection failed')
+                    ->body($response->json('error.message') ?? 'Invalid access token')
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Connection failed')
+                ->body("Error: {$e->getMessage()}")
+                ->send();
+        }
+    }
+
+    public function testGoogleAnalyticsConnection(): void
+    {
+        $data = $this->form->getState();
+
+        if (empty($data['google_analytics_property_id']) || empty($data['google_analytics_credentials_json'])) {
+            Notification::make()
+                ->warning()
+                ->title('Missing credentials')
+                ->body('Please enter both Property ID and Service Account Credentials.')
+                ->send();
+            return;
+        }
+
+        try {
+            $credentials = json_decode($data['google_analytics_credentials_json'], true);
+            if (!$credentials) {
+                throw new \Exception('Invalid JSON format for credentials');
+            }
+
+            Notification::make()
+                ->success()
+                ->title('Credentials format valid')
+                ->body('Service account credentials JSON is valid. Full API test requires Google Analytics package.')
+                ->send();
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Connection failed')
+                ->body("Error: {$e->getMessage()}")
+                ->send();
+        }
+    }
+
+    public function testBrevoConnection(): void
+    {
+        $data = $this->form->getState();
+
+        if (empty($data['brevo_api_key'])) {
+            Notification::make()
+                ->warning()
+                ->title('No API key provided')
+                ->body('Please enter your Brevo API key.')
+                ->send();
+            return;
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'api-key' => $data['brevo_api_key'],
+            ])->get('https://api.brevo.com/v3/account');
+
+            if ($response->successful()) {
+                $email = $response->json('email') ?? 'Unknown';
+                Notification::make()
+                    ->success()
+                    ->title('Brevo API connected!')
+                    ->body("Account: {$email}")
                     ->send();
             } else {
                 Notification::make()

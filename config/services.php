@@ -62,4 +62,17 @@ return [
         'api_key' => env('OPENWEATHER_API_KEY'),
     ],
 
+    'facebook' => [
+        'app_id' => env('FACEBOOK_APP_ID'),
+        'app_secret' => env('FACEBOOK_APP_SECRET'),
+    ],
+
+    'google_analytics' => [
+        'property_id' => env('GOOGLE_ANALYTICS_PROPERTY_ID'),
+    ],
+
+    'brevo' => [
+        'api_key' => env('BREVO_API_KEY'),
+    ],
+
 ];
