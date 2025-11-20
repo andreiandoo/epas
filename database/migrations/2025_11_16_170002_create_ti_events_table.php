@@ -15,8 +15,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('ti_events', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('policy_id')->constrained('ti_policies')->onDelete('cascade');
+            $table->id();
+            $table->foreignId('policy_id')->constrained('ti_policies')->onDelete('cascade');
 
             // Event type
             $table->enum('type', [

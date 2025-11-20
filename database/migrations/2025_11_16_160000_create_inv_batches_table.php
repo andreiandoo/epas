@@ -15,12 +15,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('inv_batches', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('tenant_id')->constrained('tenants')->onDelete('cascade');
+            $table->id();
+            $table->foreignId('tenant_id')->constrained('tenants')->onDelete('cascade');
             $table->string('event_ref')->index()->comment('Reference to event (external or internal)');
             $table->string('name')->comment('Batch name for identification');
             $table->integer('qty_planned')->comment('Planned number of invitations');
-            $table->foreignUuid('template_id')->nullable()->constrained('ticket_templates')->onDelete('set null');
+            $table->foreignId('template_id')->nullable()->constrained('ticket_templates')->onDelete('set null');
 
             // Options stored as JSON
             $table->json('options')->comment('Batch options: watermark, seat_mode, notes, etc.');
@@ -47,7 +47,7 @@ return new class extends Migration
             $table->integer('qty_voided')->default(0);
 
             // Audit
-            $table->foreignUuid('created_by')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
             $table->timestamps();
             $table->softDeletes();
 

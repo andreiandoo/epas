@@ -15,8 +15,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('inv_logs', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('invite_id')->constrained('inv_invites')->onDelete('cascade');
+            $table->id();
+            $table->foreignId('invite_id')->constrained('inv_invites')->onDelete('cascade');
 
             // Log type
             $table->enum('type', [
@@ -53,7 +53,7 @@ return new class extends Migration
             // }
 
             // Actor (if applicable)
-            $table->foreignUuid('actor_id')->nullable()->constrained('users')->onDelete('set null');
+            $table->foreignId('actor_id')->nullable()->constrained('users')->onDelete('set null');
             $table->string('actor_type')->nullable()->comment('admin|system|guest');
 
             // Request context

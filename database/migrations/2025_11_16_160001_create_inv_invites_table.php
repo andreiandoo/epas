@@ -15,9 +15,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('inv_invites', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('batch_id')->constrained('inv_batches')->onDelete('cascade');
-            $table->foreignUuid('tenant_id')->constrained('tenants')->onDelete('cascade');
+            $table->id();
+            $table->foreignId('batch_id')->constrained('inv_batches')->onDelete('cascade');
+            $table->foreignId('tenant_id')->constrained('tenants')->onDelete('cascade');
 
             // Unique invitation code (opaque, for public URLs)
             $table->string('invite_code', 32)->unique()->index()->comment('Unique opaque code for URLs');

@@ -15,8 +15,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('acc_jobs', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('tenant_id')->constrained('tenants')->onDelete('cascade');
+            $table->id();
+            $table->foreignId('tenant_id')->constrained('tenants')->onDelete('cascade');
 
             // Job type
             $table->enum('type', [

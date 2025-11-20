@@ -15,8 +15,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('ti_policies', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('tenant_id')->constrained('tenants')->onDelete('cascade');
+            $table->id();
+            $table->foreignId('tenant_id')->constrained('tenants')->onDelete('cascade');
 
             // Order and ticket references
             $table->string('order_ref')->index()->comment('Reference to order');
