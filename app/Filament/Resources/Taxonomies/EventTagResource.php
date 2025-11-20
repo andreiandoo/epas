@@ -27,12 +27,6 @@ class EventTagResource extends Resource
         return $schema->schema([
             SC\Section::make('Tag')
                 ->schema([
-                    Forms\Components\Select::make('tenant_id')
-                        ->relationship('tenant','name')
-                        ->label('Tenant')
-                        ->searchable()->preload()
-                        ->required(),
-
                     Forms\Components\TextInput::make('name')
                         ->required()->maxLength(190)
                         ->live(onBlur: true)
@@ -57,7 +51,6 @@ class EventTagResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('tenant.name')->label('Tenant')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('name')
                     ->label('Tag')
                     ->sortable()
@@ -66,9 +59,7 @@ class EventTagResource extends Resource
                 Tables\Columns\TextColumn::make('slug'),
                 Tables\Columns\TextColumn::make('created_at')->since(),
             ])
-            ->filters([
-                Tables\Filters\SelectFilter::make('tenant_id')->relationship('tenant','name')->label('Tenant'),
-            ])
+            ->filters([])
             ->actions([])
             ->bulkActions([]);
     }

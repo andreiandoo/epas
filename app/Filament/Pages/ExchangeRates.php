@@ -7,12 +7,15 @@ use App\Services\ExchangeRateService;
 use Filament\Pages\Page;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Carbon;
 
-class ExchangeRates extends Page
+class ExchangeRates extends Page implements HasForms
 {
+    use InteractsWithForms;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-currency-euro';
     protected string $view = 'filament.pages.exchange-rates';
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
@@ -78,6 +81,13 @@ class ExchangeRates extends Page
                         ->success()
                         ->send();
                 }),
+        ];
+    }
+
+    protected function getForms(): array
+    {
+        return [
+            'manualRateForm',
         ];
     }
 

@@ -46,7 +46,7 @@ class TrackingIntegrationResource extends Resource
                         ])
                         ->required()
                         ->live()
-                        ->afterStateUpdated(function ($state, Forms\Set $set) use ($providers) {
+                        ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) use ($providers) {
                             if ($state && isset($providers[$state])) {
                                 $set('consent_category', $providers[$state]['consent_category']);
                             }
@@ -97,7 +97,7 @@ class TrackingIntegrationResource extends Resource
                         ->required()
                         ->helperText('Where to inject tracking scripts'),
                 ])
-                ->visible(fn (Forms\Get $get) => $get('provider') === 'ga4')
+                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('provider') === 'ga4')
                 ->columns(3),
 
             SC\Section::make('Google Tag Manager Settings')
@@ -129,7 +129,7 @@ class TrackingIntegrationResource extends Resource
                         ->required()
                         ->helperText('Where to inject tracking scripts'),
                 ])
-                ->visible(fn (Forms\Get $get) => $get('provider') === 'gtm')
+                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('provider') === 'gtm')
                 ->columns(3),
 
             SC\Section::make('Meta Pixel Settings')
@@ -161,7 +161,7 @@ class TrackingIntegrationResource extends Resource
                         ->required()
                         ->helperText('Where to inject tracking scripts'),
                 ])
-                ->visible(fn (Forms\Get $get) => $get('provider') === 'meta')
+                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('provider') === 'meta')
                 ->columns(3),
 
             SC\Section::make('TikTok Pixel Settings')
@@ -193,7 +193,7 @@ class TrackingIntegrationResource extends Resource
                         ->required()
                         ->helperText('Where to inject tracking scripts'),
                 ])
-                ->visible(fn (Forms\Get $get) => $get('provider') === 'tiktok')
+                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('provider') === 'tiktok')
                 ->columns(3),
 
             SC\Section::make('Important Notes')

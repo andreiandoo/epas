@@ -229,7 +229,7 @@
                         <tbody>
                             @foreach($microserviceBreakdown as $ms)
                                 <tr class="border-b border-gray-100 dark:border-gray-700">
-                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">{{ $ms['name'] }}</td>
+                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">{{ is_array($ms['name']) ? ($ms['name']['en'] ?? '') : $ms['name'] }}</td>
                                     <td class="py-3 px-4 text-right text-gray-900 dark:text-white">€{{ number_format($ms['price'], 2) }}</td>
                                     <td class="py-3 px-4 text-center">
                                         <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $ms['is_recurring'] ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' }}">

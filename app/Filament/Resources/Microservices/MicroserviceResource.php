@@ -228,14 +228,7 @@ class MicroserviceResource extends Resource
                         ->pluck('category', 'category')
                         ->toArray()),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make()
-                    ->iconButton(),
-                Tables\Actions\Action::make('tenants')
-                    ->icon('heroicon-o-building-office-2')
-                    ->iconButton()
-                    ->url(fn (Microservice $record) => static::getUrl('tenants', ['record' => $record])),
-            ])
+            ->actions([])
             ->recordUrl(fn (Microservice $record) => static::getUrl('edit', ['record' => $record]))
             ->defaultSort('sort_order', 'asc');
     }
