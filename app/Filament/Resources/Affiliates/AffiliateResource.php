@@ -167,7 +167,7 @@ class AffiliateResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\Action::make('viewStats')
+                Tables\Actions\ViewAction::make()
                     ->label('Stats')
                     ->icon('heroicon-o-chart-bar')
                     ->url(fn (Affiliate $record) => static::getUrl('stats', ['record' => $record])),

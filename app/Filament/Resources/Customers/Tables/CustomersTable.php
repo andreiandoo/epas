@@ -2,13 +2,9 @@
 
 namespace App\Filament\Resources\Customers\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
 use Filament\Tables\Table;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Support\Colors\Color;
 
 class CustomersTable
 {
@@ -46,12 +42,11 @@ class CustomersTable
                     ->limit(80)
                     ->tooltip(fn($state) => $state),
             ])
-            ->recordActions([
+            ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('stats')
+                Tables\Actions\ViewAction::make()
                     ->label('Stats')
                     ->icon('heroicon-o-chart-bar')
-                    ->color(Color::Blue)
                     ->url(fn($record) => \App\Filament\Resources\Customers\CustomerResource::getUrl('stats', ['record' => $record])),
                 Tables\Actions\DeleteAction::make(),
             ])

@@ -271,68 +271,12 @@ class TicketTemplateResource extends Resource
                     ->preload(),
             ])
             ->actions([
-                Tables\Actions\Action::make('preview')
-                    ->label('Preview')
-                    ->icon('heroicon-o-eye')
-                    ->url(fn ($record) => route('api.tickets.templates.show', $record->id))
-                    ->openUrlInNewTab(),
-
-                Tables\Actions\Action::make('edit_visual')
-                    ->label('Edit (Visual)')
-                    ->icon('heroicon-o-pencil-square')
-                    ->url(fn ($record) => "/ticket-customizer/{$record->id}")
-                    ->openUrlInNewTab()
-                    ->color('primary'),
-
-                Tables\Actions\Action::make('set_default')
-                    ->label('Set Default')
-                    ->icon('heroicon-o-star')
-                    ->action(fn ($record) => $record->setAsDefault())
-                    ->requiresConfirmation()
-                    ->visible(fn ($record) => !$record->is_default && $record->status === 'active')
-                    ->color('warning'),
-
-                Tables\Actions\Action::make('create_version')
-                    ->label('Create Version')
-                    ->icon('heroicon-o-document-duplicate')
-                    ->form([
-                        Forms\Components\TextInput::make('name')
-                            ->label('Version Name')
-                            ->required()
-                            ->maxLength(255)
-                            ->placeholder('e.g., "V2 - Updated Logo"'),
-                    ])
-                    ->action(function ($record, array $data) {
-                        $record->createVersion($record->template_data, $data['name']);
-                    })
-                    ->successNotificationTitle('Version created successfully')
-                    ->color('success'),
-
                 Tables\Actions\EditAction::make(),
-
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
-
-                    Tables\Actions\BulkAction::make('activate')
-                        ->label('Activate Selected')
-                        ->icon('heroicon-o-check-circle')
-                        ->action(function ($records) {
-                            $records->each->update(['status' => 'active']);
-                        })
-                        ->deselectRecordsAfterCompletion()
-                        ->color('success'),
-
-                    Tables\Actions\BulkAction::make('archive')
-                        ->label('Archive Selected')
-                        ->icon('heroicon-o-archive-box')
-                        ->action(function ($records) {
-                            $records->each->update(['status' => 'archived']);
-                        })
-                        ->deselectRecordsAfterCompletion()
-                        ->color('warning'),
                 ]),
             ])
             ->defaultSort('updated_at', 'desc');
