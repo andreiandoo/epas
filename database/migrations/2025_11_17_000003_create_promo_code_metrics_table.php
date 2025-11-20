@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('promo_code_metrics', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('promo_code_id');
+            $table->id();
+            $table->foreignId('promo_code_id');
             $table->date('date');
             $table->integer('uses')->default(0);
             $table->decimal('total_discount', 10, 2)->default(0);

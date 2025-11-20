@@ -12,13 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('promo_code_usage', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('promo_code_id');
-            $table->uuid('tenant_id');
+            $table->id();
+            $table->foreignId('promo_code_id');
+            $table->foreignId('tenant_id');
 
             // Order information
-            $table->uuid('order_id');
-            $table->uuid('customer_id')->nullable(); // Customer who used the code
+            $table->unsignedBigInteger('order_id');
+            $table->unsignedBigInteger('customer_id')->nullable(); // Customer who used the code
             $table->string('customer_email')->nullable();
 
             // Discount calculation

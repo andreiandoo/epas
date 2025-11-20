@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('promo_codes', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('tenant_id');
+            $table->id();
+            $table->foreignId('tenant_id');
 
             // Code details
             $table->string('code', 50)->unique(); // The actual promo code
@@ -26,8 +26,8 @@ return new class extends Migration
 
             // Application scope
             $table->enum('applies_to', ['cart', 'event', 'ticket_type'])->default('cart');
-            $table->uuid('event_id')->nullable(); // If applies_to = 'event'
-            $table->uuid('ticket_type_id')->nullable(); // If applies_to = 'ticket_type'
+            $table->unsignedBigInteger('event_id')->nullable(); // If applies_to = 'event'
+            $table->unsignedBigInteger('ticket_type_id')->nullable(); // If applies_to = 'ticket_type'
 
             // Conditions
             $table->decimal('min_purchase_amount', 10, 2)->nullable(); // Minimum cart value required
@@ -51,7 +51,7 @@ return new class extends Migration
             $table->json('metadata')->nullable(); // Additional custom data
 
             // Tracking
-            $table->uuid('created_by')->nullable(); // User who created the code
+            $table->unsignedBigInteger('created_by')->nullable(); // User who created the code
             $table->timestamps();
             $table->softDeletes();
 

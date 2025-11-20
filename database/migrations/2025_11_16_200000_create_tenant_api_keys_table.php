@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tenant_api_keys', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('tenant_id');
+            $table->id();
+            $table->foreignId('tenant_id');
             $table->string('name'); // Descriptive name for the API key
             $table->string('api_key', 64)->unique(); // SHA256 hash of the actual key
             $table->json('scopes')->nullable(); // Array of permission scopes
@@ -33,8 +33,8 @@ return new class extends Migration
 
         // Optional: Detailed usage tracking table
         Schema::create('tenant_api_usage', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('api_key_id');
+            $table->id();
+            $table->foreignId('api_key_id');
             $table->string('endpoint');
             $table->string('method', 10);
             $table->string('ip_address', 45);

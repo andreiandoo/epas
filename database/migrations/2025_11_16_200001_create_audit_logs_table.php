@@ -12,14 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('audit_logs', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('tenant_id')->nullable(); // Null for system-level actions
+            $table->id();
+            $table->unsignedBigInteger('tenant_id')->nullable(); // Null for system-level actions
             $table->string('actor_type')->nullable(); // 'user', 'api_key', 'system'
-            $table->uuid('actor_id')->nullable(); // User ID or API key ID
+            $table->unsignedBigInteger('actor_id')->nullable(); // User ID or API key ID
             $table->string('actor_name')->nullable(); // Display name
             $table->string('action'); // e.g., 'microservice.activated', 'webhook.created'
             $table->string('resource_type')->nullable(); // e.g., 'microservice', 'webhook', 'api_key'
-            $table->uuid('resource_id')->nullable();
+            $table->unsignedBigInteger('resource_id')->nullable();
             $table->json('metadata')->nullable(); // Additional context about the action
             $table->json('changes')->nullable(); // Before/after values for updates
             $table->string('ip_address', 45)->nullable();

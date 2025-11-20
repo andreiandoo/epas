@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('promo_code_templates', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('tenant_id');
+            $table->id();
+            $table->foreignId('tenant_id');
             $table->string('name');
             $table->text('description')->nullable();
             $table->enum('type', ['fixed', 'percentage']);

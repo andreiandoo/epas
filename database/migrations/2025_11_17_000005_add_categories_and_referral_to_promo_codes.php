@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::table('promo_codes', function (Blueprint $table) {
             $table->string('category')->nullable()->after('code');
             $table->json('tags')->nullable()->after('category');
-            $table->uuid('customer_id')->nullable()->after('tenant_id'); // For customer-specific codes
+            $table->unsignedBigInteger('customer_id')->nullable()->after('tenant_id'); // For customer-specific codes
             $table->string('referral_source')->nullable()->after('customer_id');
             $table->string('campaign_id')->nullable()->after('referral_source');
             $table->boolean('combinable')->default(false)->after('is_public'); // Can be combined with other codes
