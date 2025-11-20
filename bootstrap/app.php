@@ -29,6 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.tenant' => \App\Http\Middleware\AuthenticateTenantApi::class,
             'admin.auth' => \App\Http\Middleware\AuthenticateAdmin::class,
             'webhook.verify' => \App\Http\Middleware\VerifyWebhookSignature::class,
+            'api.key' => \App\Http\Middleware\VerifyApiKey::class,
         ]);
 
         // Add global middleware for API routes

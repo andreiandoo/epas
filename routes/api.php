@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Public\SeatingController;
+use App\Http\Controllers\Api\PublicDataController;
 use App\Http\Controllers\Api\AffiliateController;
 use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\Api\TicketTemplateController;
@@ -15,11 +16,25 @@ use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\FeatureFlagController;
 use App\Http\Controllers\Api\NotificationController;
 
-Route::get('/v1/public/events', function () {
-    return response()->json([
-        ['id'=>1,'slug'=>'concert-demo','title'=>'Concert Demo'],
-        ['id'=>2,'slug'=>'premiera-odeon','title'=>'Premiera Odeon'],
-    ]);
+/*
+|--------------------------------------------------------------------------
+| Public Data API Routes (for WordPress/external integrations)
+|--------------------------------------------------------------------------
+|
+| Secured with API key authentication
+|
+*/
+
+Route::prefix('v1/public')->middleware(['api.key'])->group(function () {
+    Route::get('/stats', [PublicDataController::class, 'stats'])->name('api.public.stats');
+    Route::get('/venues', [PublicDataController::class, 'venues'])->name('api.public.venues');
+    Route::get('/venues/{slug}', [PublicDataController::class, 'venue'])->name('api.public.venue');
+    Route::get('/artists', [PublicDataController::class, 'artists'])->name('api.public.artists');
+    Route::get('/artists/{slug}', [PublicDataController::class, 'artist'])->name('api.public.artist');
+    Route::get('/tenants', [PublicDataController::class, 'tenants'])->name('api.public.tenants');
+    Route::get('/tenants/{slug}', [PublicDataController::class, 'tenant'])->name('api.public.tenant');
+    Route::get('/events', [PublicDataController::class, 'events'])->name('api.public.events');
+    Route::get('/events/{slug}', [PublicDataController::class, 'event'])->name('api.public.event');
 });
 
 /*
