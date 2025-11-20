@@ -16,16 +16,22 @@ class Microservice extends Model
         'icon_image',
         'public_image',
         'price',
+        'currency',
+        'billing_cycle',
         'pricing_model',
         'is_active',
         'sort_order',
         'features',
+        'category',
+        'documentation_url',
+        'metadata',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'is_active' => 'boolean',
         'features' => 'array',
+        'metadata' => 'array',
     ];
 
     public function tenants(): BelongsToMany
