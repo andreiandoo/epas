@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Microservice extends Model
 {
@@ -33,6 +34,11 @@ class Microservice extends Model
         return $this->belongsToMany(Tenant::class, 'tenant_microservice')
             ->withPivot(['is_active', 'activated_at', 'expires_at', 'configuration'])
             ->withTimestamps();
+    }
+
+    public function tenantMicroservices(): HasMany
+    {
+        return $this->hasMany(TenantMicroservice::class);
     }
 
     /**
