@@ -112,13 +112,13 @@ class ManageConnections extends Page implements HasForms
                             ->columns(1),
 
                         SC\Actions::make([
-                            SC\Actions\Action::make('test_connection')
+                            Actions\Action::make('test_connection')
                                 ->label('Test Stripe Connection')
                                 ->icon('heroicon-o-bolt')
                                 ->color('info')
                                 ->action('testStripeConnection'),
 
-                            SC\Actions\Action::make('view_stripe_docs')
+                            Actions\Action::make('view_stripe_docs')
                                 ->label('View Stripe Documentation')
                                 ->icon('heroicon-o-book-open')
                                 ->url('https://stripe.com/docs/keys', shouldOpenInNewTab: true)
