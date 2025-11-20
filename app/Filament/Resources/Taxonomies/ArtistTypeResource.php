@@ -39,7 +39,8 @@ class ArtistTypeResource extends Resource
 
                     Forms\Components\Select::make('genres')
                         ->label('Allowed Genres')
-                        ->relationship('genres', 'name->en')
+                        ->relationship('genres', 'slug')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->name['en'] ?? $record->slug)
                         ->multiple()
                         ->searchable()
                         ->preload()
