@@ -16,14 +16,14 @@ class AffiliateTrackingMicroserviceSeeder extends Seeder
             ['slug' => 'affiliate-tracking'],
             [
                 'name' => 'Affiliate Tracking & Commissions',
-                'slug' => 'affiliate-tracking',
                 'description' => 'Complete affiliate tracking system with last-click attribution, commission management, and detailed reporting. Track affiliate clicks, manage multiple affiliates, set custom commission rates, and monitor conversions with 90-day cookie tracking. Includes deduplication, self-purchase guard, and comprehensive dashboards for both tenants and affiliates.',
-                'short_description' => 'Track and manage affiliate referrals with automatic commission calculation and detailed analytics.',
                 'icon' => 'heroicon-o-user-group',
-                'price' => 10.00, // 10 euros one-time payment
-                'pricing_model' => 'one-time',
+                'price' => 10.00,
+                'currency' => 'EUR',
+                'billing_cycle' => 'one_time',
+                'pricing_model' => 'one_time',
+                'category' => 'marketing',
                 'is_active' => true,
-                'sort_order' => 10,
                 'features' => [
                     'Last-click attribution with 90-day cookie window',
                     'Support for both link and coupon-based tracking',
