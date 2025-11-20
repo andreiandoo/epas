@@ -198,7 +198,7 @@ class EventTaxonomySeeder extends Seeder
                 ['slug' => 'animation', 'en' => 'Animation', 'ro' => 'Animație'],
                 ['slug' => 'comedy-film', 'en' => 'Comedy (Film)', 'ro' => 'Comedie (Film)'],
                 ['slug' => 'documentary-film', 'en' => 'Documentary', 'ro' => 'Documentar'],
-                ['slug' => 'drama-film', 'en' => 'Drama', 'ro' => 'Dramă'],
+                ['slug' => 'drama-film', 'en' => 'Drama (Film)', 'ro' => 'Dramă (Film)'],
                 ['slug' => 'horror', 'en' => 'Horror', 'ro' => 'Horror'],
                 ['slug' => 'sci-fi', 'en' => 'Sci-Fi', 'ro' => 'Sci-Fi'],
                 ['slug' => 'thriller-film', 'en' => 'Thriller', 'ro' => 'Thriller'],
