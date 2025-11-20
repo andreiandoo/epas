@@ -102,33 +102,8 @@ class ApiKeys extends Page implements HasTable
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->actions([
-                Tables\Actions\Action::make('toggle')
-                    ->label(fn ($record) => $record->is_active ? 'Deactivate' : 'Activate')
-                    ->icon(fn ($record) => $record->is_active ? 'heroicon-o-x-circle' : 'heroicon-o-check-circle')
-                    ->color(fn ($record) => $record->is_active ? 'danger' : 'success')
-                    ->requiresConfirmation()
-                    ->action(fn ($record) => $record->update(['is_active' => !$record->is_active])),
-
-                Tables\Actions\Action::make('copy')
-                    ->label('Copy Key')
-                    ->icon('heroicon-o-clipboard')
-                    ->action(function ($record) {
-                        Notification::make()
-                            ->title('Key copied to clipboard')
-                            ->success()
-                            ->send();
-                    })
-                    ->extraAttributes(fn ($record) => [
-                        'x-on:click' => "navigator.clipboard.writeText('{$record->key}')",
-                    ]),
-
-                Tables\Actions\DeleteAction::make()
-                    ->requiresConfirmation(),
-            ])
-            ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
-            ]);
+            ->actions([])
+            ->bulkActions([]);
     }
 
     public static function canAccess(): bool
