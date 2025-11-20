@@ -31,6 +31,9 @@ Route::prefix('v1/public')->middleware(['api.key'])->group(function () {
     Route::get('/venues/{slug}', [PublicDataController::class, 'venue'])->name('api.public.venue');
     Route::get('/artists', [PublicDataController::class, 'artists'])->name('api.public.artists');
     Route::get('/artists/{slug}', [PublicDataController::class, 'artist'])->name('api.public.artist');
+    Route::get('/artists/{slug}/stats', [PublicDataController::class, 'artistStats'])->name('api.public.artist.stats');
+    Route::get('/artists/{slug}/youtube', [PublicDataController::class, 'artistYoutubeStats'])->name('api.public.artist.youtube');
+    Route::get('/artists/{slug}/spotify', [PublicDataController::class, 'artistSpotifyStats'])->name('api.public.artist.spotify');
     Route::get('/tenants', [PublicDataController::class, 'tenants'])->name('api.public.tenants');
     Route::get('/tenants/{slug}', [PublicDataController::class, 'tenant'])->name('api.public.tenant');
     Route::get('/events', [PublicDataController::class, 'events'])->name('api.public.events');
