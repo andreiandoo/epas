@@ -7,7 +7,7 @@ use Filament\Pages\Page;
 class ApiKnowledgeBase extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-code-bracket';
-    protected static ?string $navigationGroup = 'Settings';
+    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
     protected static ?string $navigationLabel = 'API KB';
     protected static ?int $navigationSort = 99;
     protected static string $view = 'filament.pages.api-knowledge-base';
