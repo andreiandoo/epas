@@ -145,7 +145,7 @@ class ManageConnections extends Page implements HasForms
                             ->step(0.01)
                             ->suffix('%')
                             ->helperText('Default VAT rate for Romania is 21%')
-                            ->visible(fn (Forms\Get $get) => $get('vat_enabled')),
+                            ->visible(fn (SC\Utilities\Get $get) => $get('vat_enabled')),
                     ])
                     ->columns(2)
                     ->columnSpanFull(),
