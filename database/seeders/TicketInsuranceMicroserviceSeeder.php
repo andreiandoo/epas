@@ -17,8 +17,8 @@ class TicketInsuranceMicroserviceSeeder extends Seeder
                 'category' => 'payment-addons',
                 'price' => 0.00,
                 'currency' => 'EUR',
-                'billing_cycle' => null,
-                'pricing_model' => 'free', // Revenue from insurance commission
+                'billing_cycle' => 'one_time',
+                'pricing_model' => 'one_time', // Free - revenue from insurance commission
                 'is_active' => true,
                 'features' => [
                     // Configuration
