@@ -131,16 +131,19 @@ class MicroserviceResource extends Resource
                         ->minValue(0)
                         ->helperText('Display order (lower numbers first)'),
 
-                    Forms\Components\TagsInput::make('features')
-                        ->label('Features List')
-                        ->helperText('Key features of this microservice')
-                        ->placeholder('Add a feature'),
-
                     Forms\Components\TextInput::make('documentation_url')
                         ->label('Documentation URL')
                         ->url()
                         ->helperText('Link to documentation'),
-                ])->columns(4),
+                ])->columns(3),
+
+            SC\Section::make('Features')
+            ->schema([
+                Forms\Components\TagsInput::make('features')
+                    ->label('Features List')
+                    ->helperText('Key features of this microservice')
+                    ->placeholder('Add a feature'),
+            ])->columns(1),
         ])->columns(1);
     }
 
