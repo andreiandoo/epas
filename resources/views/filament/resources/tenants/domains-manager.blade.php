@@ -121,16 +121,85 @@
 
                         <!-- Actions -->
                         <td class="whitespace-nowrap px-4 py-4 text-right">
-                            <a
-                                href="{{ route('tenant.login-as-admin', ['tenantId' => $tenantId, 'domain' => $domain->domain]) }}"
-                                target="_blank"
-                                class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                            >
-                                <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
-                                </svg>
-                                Login as Admin
-                            </a>
+                            <div class="flex items-center justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onclick="showVerificationCode({{ $domain->id }})"
+                                    class="inline-flex items-center rounded-md bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                                    title="Show verification code"
+                                >
+                                    <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                                    </svg>
+                                    Code
+                                </button>
+                                <a
+                                    href="{{ route('tenant.login-as-admin', ['tenantId' => $tenantId, 'domain' => $domain->domain]) }}"
+                                    target="_blank"
+                                    class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                >
+                                    <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
+                                    </svg>
+                                    Login
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- Verification Code Row (hidden by default) -->
+                    <tr id="verification-row-{{ $domain->id }}" class="hidden bg-gray-50">
+                        <td colspan="5" class="px-4 py-4">
+                            @php
+                                $verification = $domain->verifications()->latest()->first();
+                            @endphp
+                            @if($verification)
+                                <div class="space-y-3">
+                                    <h4 class="text-sm font-semibold text-gray-900">Verification Code for {{ $domain->domain }}</h4>
+                                    <p class="text-xs text-gray-600">Choose one of the following methods to verify domain ownership:</p>
+
+                                    <!-- DNS TXT Record -->
+                                    <div class="rounded border border-gray-200 bg-white p-3">
+                                        <h5 class="text-xs font-medium text-gray-700 mb-2">Method 1: DNS TXT Record</h5>
+                                        <p class="text-xs text-gray-500 mb-2">Add a TXT record to your DNS:</p>
+                                        <div class="bg-gray-100 rounded p-2 font-mono text-xs">
+                                            <div><strong>Name:</strong> {{ $verification->getDnsRecordName() }}</div>
+                                            <div><strong>Value:</strong> {{ $verification->getDnsRecordValue() }}</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Meta Tag -->
+                                    <div class="rounded border border-gray-200 bg-white p-3">
+                                        <h5 class="text-xs font-medium text-gray-700 mb-2">Method 2: Meta Tag</h5>
+                                        <p class="text-xs text-gray-500 mb-2">Add this meta tag to your homepage &lt;head&gt;:</p>
+                                        <div class="bg-gray-100 rounded p-2 font-mono text-xs overflow-x-auto">
+                                            {{ $verification->getMetaTagHtml() }}
+                                        </div>
+                                    </div>
+
+                                    <!-- File Upload -->
+                                    <div class="rounded border border-gray-200 bg-white p-3">
+                                        <h5 class="text-xs font-medium text-gray-700 mb-2">Method 3: File Upload</h5>
+                                        <p class="text-xs text-gray-500 mb-2">Create a file at <code class="bg-gray-100 px-1 rounded">{{ $verification->getFileUploadPath() }}</code> with content:</p>
+                                        <div class="bg-gray-100 rounded p-2 font-mono text-xs">
+                                            {{ $verification->getFileUploadContent() }}
+                                        </div>
+                                    </div>
+
+                                    <p class="text-xs text-gray-500">
+                                        <strong>Status:</strong>
+                                        @if($verification->isVerified())
+                                            <span class="text-green-600">Verified</span>
+                                        @elseif($verification->isExpired())
+                                            <span class="text-red-600">Expired</span>
+                                        @else
+                                            <span class="text-yellow-600">Pending</span>
+                                            (expires {{ $verification->expires_at->diffForHumans() }})
+                                        @endif
+                                    </p>
+                                </div>
+                            @else
+                                <p class="text-xs text-gray-500">No verification code generated yet. Click "Confirm" toggle to create one.</p>
+                            @endif
                         </td>
                     </tr>
                 @endforeach
@@ -184,7 +253,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                 },
-                body: JSON.stringify({ is_active: newStatus === 'true' })
+                body: JSON.stringify({ is_active: newStatus })
             })
             .then(response => response.json())
             .then(data => {
@@ -207,7 +276,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                 },
-                body: JSON.stringify({ is_verified: newStatus === 'true' })
+                body: JSON.stringify({ is_verified: newStatus })
             })
             .then(response => response.json())
             .then(data => {
@@ -230,7 +299,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                 },
-                body: JSON.stringify({ is_suspended: newStatus === 'true' })
+                body: JSON.stringify({ is_suspended: newStatus })
             })
             .then(response => response.json())
             .then(data => {
@@ -244,6 +313,13 @@
                 console.error('Error:', error);
                 alert('An error occurred while updating the suspended status');
             });
+        }
+
+        function showVerificationCode(domainId) {
+            const row = document.getElementById(`verification-row-${domainId}`);
+            if (row) {
+                row.classList.toggle('hidden');
+            }
         }
     </script>
 @endif

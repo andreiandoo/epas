@@ -32,6 +32,13 @@ class DomainController extends Controller
                 'is_active' => true, // Default to active
             ]);
 
+            // Create verification entry for the domain
+            $domain->verifications()->create([
+                'tenant_id' => $tenant->id,
+                'verification_method' => 'pending',
+                'status' => 'pending',
+            ]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Domain added successfully',

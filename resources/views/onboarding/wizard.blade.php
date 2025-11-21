@@ -177,6 +177,18 @@
                             </div>
 
                             <div class="mt-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Funcție în Companie</label>
+                                <input
+                                    type="text"
+                                    x-model="formData.contact_position"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="ex: Director General, Administrator"
+                                >
+                                <p class="text-xs text-gray-500 mt-1">Funcția pe care o ocupi în companie (opțional)</p>
+                                <span x-show="errors.contact_position" class="text-red-500 text-sm" x-text="errors.contact_position"></span>
+                            </div>
+
+                            <div class="mt-6">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Parolă *</label>
                                 <input
                                     type="password"
@@ -582,6 +594,7 @@
                     public_name: '',
                     email: '',
                     phone: '',
+                    contact_position: '',
                     password: '',
                     password_confirmation: '',
                     // Step 2

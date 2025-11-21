@@ -6,9 +6,14 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Domain;
 use App\Models\Microservice;
+use App\Models\EmailTemplate;
+use App\Models\EmailLog;
+use App\Models\Setting;
 use App\Services\AnafService;
 use App\Services\LocationService;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -63,6 +68,7 @@ class OnboardingController extends Controller
             'public_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'phone' => 'required|string|max:20',
+            'contact_position' => 'nullable|string|max:255',
             'password' => 'required|string|min:8|confirmed',
         ]);
 
@@ -75,7 +81,7 @@ class OnboardingController extends Controller
 
         // Store in session
         $onboarding = Session::get('onboarding', []);
-        $onboarding['data']['step1'] = $request->only(['first_name', 'last_name', 'public_name', 'email', 'phone', 'password']);
+        $onboarding['data']['step1'] = $request->only(['first_name', 'last_name', 'public_name', 'email', 'phone', 'contact_position', 'password']);
         $onboarding['step'] = 2;
         Session::put('onboarding', $onboarding);
 
@@ -244,6 +250,7 @@ class OnboardingController extends Controller
                 'contact_last_name' => $step1['last_name'],
                 'contact_email' => $step1['email'],
                 'contact_phone' => $step1['phone'],
+                'contact_position' => $step1['contact_position'] ?? null,
                 'payment_processor' => $step2['payment_processor'] ?? null,
                 'payment_processor_mode' => 'test', // Start in test mode
                 'onboarding_completed' => true,
@@ -260,11 +267,18 @@ class OnboardingController extends Controller
                     $domainName = explode('/', $domainName)[0];
                 }
 
-                Domain::create([
+                $domain = Domain::create([
                     'tenant_id' => $tenant->id,
                     'domain' => $domainName,
                     'is_primary' => $index === 0,
                     'is_active' => false, // Activate after email verification
+                ]);
+
+                // Create verification entry for the domain
+                $domain->verifications()->create([
+                    'tenant_id' => $tenant->id,
+                    'verification_method' => 'pending',
+                    'status' => 'pending',
                 ]);
             }
 
@@ -279,6 +293,9 @@ class OnboardingController extends Controller
             }
 
             \DB::commit();
+
+            // Send registration confirmation email
+            $this->sendRegistrationConfirmationEmail($user, $tenant, $step1);
 
             // Log in the user
             Auth::login($user);
@@ -416,5 +433,109 @@ class OnboardingController extends Controller
         ];
 
         return $mapping[$countryName] ?? 'RO';
+    }
+
+    /**
+     * Send registration confirmation email
+     */
+    private function sendRegistrationConfirmationEmail(User $user, Tenant $tenant, array $step1): void
+    {
+        try {
+            // Find the registration confirmation template
+            $template = EmailTemplate::where('event_trigger', 'registration_confirmation')
+                ->where('is_active', true)
+                ->first();
+
+            if (!$template) {
+                Log::warning('Registration confirmation email template not found or inactive');
+                return;
+            }
+
+            // Prepare variables for the template
+            $variables = [
+                'first_name' => $step1['first_name'],
+                'last_name' => $step1['last_name'],
+                'full_name' => $step1['first_name'] . ' ' . $step1['last_name'],
+                'email' => $step1['email'],
+                'public_name' => $step1['public_name'],
+                'company_name' => $tenant->company_name,
+                'website_url' => config('app.url'),
+                'verification_link' => config('app.url') . '/verify/' . Str::random(64),
+            ];
+
+            // Process template
+            $processed = $template->processTemplate($variables);
+
+            // Get settings for email sending
+            $settings = Setting::current();
+
+            if (!empty($settings->brevo_api_key)) {
+                // Send via Brevo API
+                $response = Http::withHeaders([
+                    'api-key' => $settings->brevo_api_key,
+                    'Content-Type' => 'application/json',
+                ])->post('https://api.brevo.com/v3/smtp/email', [
+                    'sender' => [
+                        'name' => $settings->company_name ?? 'Tixello',
+                        'email' => $settings->email ?? 'noreply@tixello.com',
+                    ],
+                    'to' => [
+                        ['email' => $step1['email'], 'name' => $step1['first_name'] . ' ' . $step1['last_name']]
+                    ],
+                    'subject' => $processed['subject'],
+                    'htmlContent' => $processed['body'] . ($settings->email_footer ?? ''),
+                ]);
+
+                // Log the email
+                EmailLog::create([
+                    'email_template_id' => $template->id,
+                    'tenant_id' => $tenant->id,
+                    'recipient_email' => $step1['email'],
+                    'recipient_name' => $step1['first_name'] . ' ' . $step1['last_name'],
+                    'subject' => $processed['subject'],
+                    'body' => $processed['body'] . ($settings->email_footer ?? ''),
+                    'status' => $response->successful() ? 'sent' : 'failed',
+                    'sent_at' => $response->successful() ? now() : null,
+                    'failed_at' => $response->successful() ? null : now(),
+                    'error_message' => $response->successful() ? null : ($response->json('message') ?? 'Unknown error'),
+                    'metadata' => [
+                        'type' => 'registration_confirmation',
+                        'sender_email' => $settings->email ?? 'noreply@tixello.com',
+                        'sender_name' => $settings->company_name ?? 'Tixello',
+                        'provider' => 'brevo',
+                    ],
+                ]);
+            } else {
+                // Fallback to Laravel mail
+                Mail::html($processed['body'] . ($settings->email_footer ?? ''), function ($message) use ($step1, $processed) {
+                    $message->to($step1['email'], $step1['first_name'] . ' ' . $step1['last_name'])
+                        ->subject($processed['subject']);
+                });
+
+                // Log the email
+                EmailLog::create([
+                    'email_template_id' => $template->id,
+                    'tenant_id' => $tenant->id,
+                    'recipient_email' => $step1['email'],
+                    'recipient_name' => $step1['first_name'] . ' ' . $step1['last_name'],
+                    'subject' => $processed['subject'],
+                    'body' => $processed['body'] . ($settings->email_footer ?? ''),
+                    'status' => 'sent',
+                    'sent_at' => now(),
+                    'metadata' => [
+                        'type' => 'registration_confirmation',
+                        'sender_email' => config('mail.from.address'),
+                        'sender_name' => config('mail.from.name'),
+                        'provider' => 'laravel_mail',
+                    ],
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send registration confirmation email', [
+                'user_id' => $user->id,
+                'tenant_id' => $tenant->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
