@@ -8,6 +8,8 @@ use App\Services\SpotifyService;
 use App\Services\YouTubeService;
 use Filament\Actions\Action;
 use Filament\Forms;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
@@ -16,8 +18,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use BackedEnum;
 
-class ImportArtists extends Page
+class ImportArtists extends Page implements HasForms
 {
+    use InteractsWithForms;
     protected static string $resource = ArtistResource::class;
 
     protected string $view = 'filament.resources.artists.pages.import-artists';
