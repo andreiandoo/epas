@@ -6,6 +6,7 @@ use App\Filament\Resources\Venues\Pages;
 use App\Filament\Forms\Components\TranslatableField;
 use App\Models\Venue;
 use BackedEnum;
+use Filament\Actions;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
@@ -109,7 +110,7 @@ class VenueResource extends Resource
                     ->label('Longitudine')->numeric()->step('0.0000001')
                     ->placeholder('26.1025'),
                 SC\Actions::make([
-                    SC\Actions\Action::make('geocode')
+                    Actions\Action::make('geocode')
                         ->label('Auto-detect coordinates')
                         ->icon('heroicon-o-map-pin')
                         ->color('info')
