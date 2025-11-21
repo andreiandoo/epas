@@ -13,7 +13,10 @@ use Filament\Schemas\Components as SC;
 use Filament\Forms;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Infolists;
+use Filament\Infolists\Infolist;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\HtmlString;
 
 class VenueResource extends Resource
 {
@@ -260,6 +263,196 @@ class VenueResource extends Resource
             ->recordUrl(null)       // ⟵ IMPORTANT: previne linkul implicit spre `view` fără record
             ->actions([])
             ->bulkActions([]);
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                // Hero Section with Image and Name
+                Infolists\Components\Section::make()
+                    ->schema([
+                        Infolists\Components\Grid::make(3)
+                            ->schema([
+                                Infolists\Components\ImageEntry::make('image_url')
+                                    ->label('')
+                                    ->disk('public')
+                                    ->height(200)
+                                    ->extraImgAttributes(['class' => 'rounded-xl object-cover'])
+                                    ->columnSpan(1),
+                                Infolists\Components\Group::make([
+                                    Infolists\Components\TextEntry::make('name')
+                                        ->label('')
+                                        ->formatStateUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?? $record->getTranslation('name', 'en'))
+                                        ->size(Infolists\Components\TextEntry\TextEntrySize::Large)
+                                        ->weight('bold'),
+                                    Infolists\Components\TextEntry::make('location')
+                                        ->label('')
+                                        ->state(fn ($record) => collect([$record->address, $record->city, $record->state, $record->country])->filter()->implode(', '))
+                                        ->icon('heroicon-o-map-pin')
+                                        ->color('gray'),
+                                    Infolists\Components\TextEntry::make('tenant.name')
+                                        ->label('Tenant')
+                                        ->badge()
+                                        ->color('primary')
+                                        ->placeholder('Public venue'),
+                                ])->columnSpan(2),
+                            ]),
+                    ])
+                    ->columnSpanFull(),
+
+                // Statistics Grid
+                Infolists\Components\Section::make('Capacity & Info')
+                    ->icon('heroicon-o-users')
+                    ->schema([
+                        Infolists\Components\Grid::make(4)
+                            ->schema([
+                                Infolists\Components\TextEntry::make('capacity_total')
+                                    ->label('Total Capacity')
+                                    ->numeric()
+                                    ->placeholder('—')
+                                    ->icon('heroicon-o-users'),
+                                Infolists\Components\TextEntry::make('capacity_standing')
+                                    ->label('Standing')
+                                    ->numeric()
+                                    ->placeholder('—'),
+                                Infolists\Components\TextEntry::make('capacity_seated')
+                                    ->label('Seated')
+                                    ->numeric()
+                                    ->placeholder('—'),
+                                Infolists\Components\TextEntry::make('established_at')
+                                    ->label('Established')
+                                    ->date('Y')
+                                    ->placeholder('—'),
+                            ]),
+                    ])
+                    ->collapsible(),
+
+                // Location & Map
+                Infolists\Components\Section::make('Location')
+                    ->icon('heroicon-o-map')
+                    ->schema([
+                        Infolists\Components\Grid::make(2)
+                            ->schema([
+                                Infolists\Components\Group::make([
+                                    Infolists\Components\TextEntry::make('address')
+                                        ->label('Address')
+                                        ->placeholder('—'),
+                                    Infolists\Components\TextEntry::make('city')
+                                        ->label('City')
+                                        ->placeholder('—'),
+                                    Infolists\Components\TextEntry::make('state')
+                                        ->label('State/Region')
+                                        ->placeholder('—'),
+                                    Infolists\Components\TextEntry::make('country')
+                                        ->label('Country')
+                                        ->placeholder('—'),
+                                    Infolists\Components\TextEntry::make('coordinates')
+                                        ->label('Coordinates')
+                                        ->state(fn ($record) => $record->lat && $record->lng ? "{$record->lat}, {$record->lng}" : null)
+                                        ->placeholder('—'),
+                                ]),
+                                Infolists\Components\ViewEntry::make('map')
+                                    ->view('filament.infolists.entries.venue-map')
+                                    ->visible(fn ($record) => $record->lat && $record->lng),
+                            ]),
+                    ])
+                    ->collapsible(),
+
+                // Contact Information
+                Infolists\Components\Section::make('Contact & Social')
+                    ->icon('heroicon-o-phone')
+                    ->schema([
+                        Infolists\Components\Grid::make(3)
+                            ->schema([
+                                Infolists\Components\TextEntry::make('phone')
+                                    ->label('Phone')
+                                    ->icon('heroicon-o-phone')
+                                    ->url(fn ($state) => $state ? "tel:{$state}" : null)
+                                    ->placeholder('—'),
+                                Infolists\Components\TextEntry::make('email')
+                                    ->label('Email')
+                                    ->icon('heroicon-o-envelope')
+                                    ->url(fn ($state) => $state ? "mailto:{$state}" : null)
+                                    ->placeholder('—'),
+                                Infolists\Components\TextEntry::make('website_url')
+                                    ->label('Website')
+                                    ->icon('heroicon-o-globe-alt')
+                                    ->url(fn ($state) => $state)
+                                    ->openUrlInNewTab()
+                                    ->placeholder('—'),
+                                Infolists\Components\TextEntry::make('facebook_url')
+                                    ->label('Facebook')
+                                    ->icon('heroicon-o-link')
+                                    ->url(fn ($state) => $state)
+                                    ->openUrlInNewTab()
+                                    ->placeholder('—'),
+                                Infolists\Components\TextEntry::make('instagram_url')
+                                    ->label('Instagram')
+                                    ->icon('heroicon-o-link')
+                                    ->url(fn ($state) => $state)
+                                    ->openUrlInNewTab()
+                                    ->placeholder('—'),
+                                Infolists\Components\TextEntry::make('tiktok_url')
+                                    ->label('TikTok')
+                                    ->icon('heroicon-o-link')
+                                    ->url(fn ($state) => $state)
+                                    ->openUrlInNewTab()
+                                    ->placeholder('—'),
+                            ]),
+                    ])
+                    ->collapsible(),
+
+                // Description
+                Infolists\Components\Section::make('Description')
+                    ->icon('heroicon-o-document-text')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('description')
+                            ->label('')
+                            ->html()
+                            ->formatStateUsing(fn ($record) => new HtmlString($record->getTranslation('description', app()->getLocale()) ?? $record->getTranslation('description', 'en') ?? '<em class="text-gray-400">No description</em>'))
+                            ->columnSpanFull(),
+                    ])
+                    ->collapsible(),
+
+                // Gallery
+                Infolists\Components\Section::make('Gallery')
+                    ->icon('heroicon-o-photo')
+                    ->schema([
+                        Infolists\Components\ImageEntry::make('gallery')
+                            ->label('')
+                            ->disk('public')
+                            ->height(150)
+                            ->extraImgAttributes(['class' => 'rounded-lg object-cover'])
+                            ->stacked()
+                            ->limit(10)
+                            ->columnSpanFull(),
+                    ])
+                    ->collapsible()
+                    ->collapsed()
+                    ->visible(fn ($record) => !empty($record->gallery)),
+
+                // Metadata
+                Infolists\Components\Section::make('System Info')
+                    ->icon('heroicon-o-cog')
+                    ->schema([
+                        Infolists\Components\Grid::make(3)
+                            ->schema([
+                                Infolists\Components\TextEntry::make('slug')
+                                    ->label('Slug')
+                                    ->badge()
+                                    ->color('gray'),
+                                Infolists\Components\TextEntry::make('created_at')
+                                    ->label('Created')
+                                    ->dateTime(),
+                                Infolists\Components\TextEntry::make('updated_at')
+                                    ->label('Last Updated')
+                                    ->dateTime(),
+                            ]),
+                    ])
+                    ->collapsible()
+                    ->collapsed(),
+            ]);
     }
 
     public static function getRelations(): array

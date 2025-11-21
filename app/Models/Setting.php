@@ -29,6 +29,7 @@ class Setting extends Model
         'default_payment_terms_days',
         'logo_path',
         'invoice_footer',
+        'email_footer',
         'stripe_mode',
         'stripe_test_public_key',
         'stripe_test_secret_key',

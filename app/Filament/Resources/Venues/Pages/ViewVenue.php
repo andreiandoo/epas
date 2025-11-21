@@ -15,8 +15,7 @@ class ViewVenue extends ViewRecord
 
     protected function hasInfolist(): bool
     {
-        // vrem doar widget-urile custom, nu infolist cu câmpuri read-only
-        return false;
+        return true;
     }
 
     public function getHeaderWidgetsColumns(): array|int

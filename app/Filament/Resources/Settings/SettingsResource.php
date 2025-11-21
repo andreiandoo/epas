@@ -162,6 +162,21 @@ class SettingsResource extends Resource
                     ->columnSpanFull()
                     ->hint('Text displayed at the bottom of invoices'),
             ])->columns(1),
+
+            SC\Section::make('Email Settings')->schema([
+                Forms\Components\RichEditor::make('email_footer')
+                    ->label('Email Footer (HTML)')
+                    ->toolbarButtons([
+                        'bold',
+                        'italic',
+                        'underline',
+                        'link',
+                        'bulletList',
+                        'orderedList',
+                    ])
+                    ->columnSpanFull()
+                    ->hint('HTML footer added to all email templates. Use for company info, social links, unsubscribe, etc.'),
+            ])->columns(1),
         ]);
     }
 
