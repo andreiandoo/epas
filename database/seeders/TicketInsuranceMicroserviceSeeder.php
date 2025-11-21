@@ -12,8 +12,8 @@ class TicketInsuranceMicroserviceSeeder extends Seeder
         Microservice::updateOrCreate(
             ['slug' => 'ticket-insurance'],
             [
-                'name' => 'Ticket Insurance',
-                'description' => 'Optional insurance add-on for ticket purchases with provider-agnostic integration, real-time quoting, and automated policy management.',
+                'name' => ['en' => 'Ticket Insurance'],
+                'description' => ['en' => 'Optional insurance add-on for ticket purchases with provider-agnostic integration, real-time quoting, and automated policy management.'],
                 'category' => 'payment-addons',
                 'price' => 0.00,
                 'currency' => 'EUR',

@@ -12,8 +12,8 @@ class AccountingConnectorsMicroserviceSeeder extends Seeder
         Microservice::updateOrCreate(
             ['slug' => 'accounting-connectors'],
             [
-                'name' => 'Conectori Contabilitate',
-                'description' => 'Integrations with accounting systems (SmartBill, FGO, Exact, Xero, QuickBooks) for external invoice issuance with provider-agnostic adapter pattern.',
+                'name' => ['en' => 'Accounting Connectors', 'ro' => 'Conectori Contabilitate'],
+                'description' => ['en' => 'Integrations with accounting systems (SmartBill, FGO, Exact, Xero, QuickBooks) for external invoice issuance with provider-agnostic adapter pattern.'],
                 'category' => 'accounting',
                 'price' => 1.00,
                 'currency' => 'EUR',

@@ -15,8 +15,8 @@ class TrackingPixelsMicroserviceSeeder extends Seeder
         Microservice::updateOrCreate(
             ['slug' => 'tracking-pixels-manager'],
             [
-                'name' => 'Tracking & Pixels Manager',
-                'description' => 'Manage tracking pixels and analytics integrations with GDPR-compliant consent management. Support for Google Analytics 4, Google Tag Manager, Meta Pixel, and TikTok Pixel.',
+                'name' => ['en' => 'Tracking & Pixels Manager'],
+                'description' => ['en' => 'Manage tracking pixels and analytics integrations with GDPR-compliant consent management. Support for Google Analytics 4, Google Tag Manager, Meta Pixel, and TikTok Pixel.'],
                 'pricing_model' => 'recurring',
                 'price' => 1.00, // 1 EUR per month
                 'currency' => 'EUR',

@@ -22,8 +22,8 @@ class TicketCustomizerMicroserviceSeeder extends Seeder
                 'slug' => 'ticket-customizer',
             ],
             [
-                'name' => 'Ticket Customizer Component',
-                'description' => 'WYSIWYG editor for designing custom ticket templates with drag-and-drop, real-time preview, and variable placeholders. Includes support for text, images, QR codes, barcodes, and shapes with print-ready output.',
+                'name' => ['en' => 'Ticket Customizer Component'],
+                'description' => ['en' => 'WYSIWYG editor for designing custom ticket templates with drag-and-drop, real-time preview, and variable placeholders. Includes support for text, images, QR codes, barcodes, and shapes with print-ready output.'],
                 'category' => 'design',
                 'price' => 30.00,
                 'currency' => 'EUR',

@@ -15,8 +15,8 @@ class AffiliateTrackingMicroserviceSeeder extends Seeder
         Microservice::updateOrCreate(
             ['slug' => 'affiliate-tracking'],
             [
-                'name' => 'Affiliate Tracking & Commissions',
-                'description' => 'Complete affiliate tracking system with last-click attribution, commission management, and detailed reporting. Track affiliate clicks, manage multiple affiliates, set custom commission rates, and monitor conversions with 90-day cookie tracking. Includes deduplication, self-purchase guard, and comprehensive dashboards for both tenants and affiliates.',
+                'name' => ['en' => 'Affiliate Tracking & Commissions'],
+                'description' => ['en' => 'Complete affiliate tracking system with last-click attribution, commission management, and detailed reporting. Track affiliate clicks, manage multiple affiliates, set custom commission rates, and monitor conversions with 90-day cookie tracking. Includes deduplication, self-purchase guard, and comprehensive dashboards for both tenants and affiliates.'],
                 'icon' => 'heroicon-o-user-group',
                 'price' => 10.00,
                 'currency' => 'EUR',

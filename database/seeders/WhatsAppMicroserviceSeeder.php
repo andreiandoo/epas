@@ -16,8 +16,8 @@ class WhatsAppMicroserviceSeeder extends Seeder
         DB::table('microservices')->updateOrInsert(
             ['slug' => 'whatsapp-notifications'],
             [
-                'name' => 'Notificări WhatsApp',
-                'description' => 'WhatsApp messaging for order confirmations, event reminders (D-7/D-3/D-1), and promotional campaigns. Includes opt-in management, template approval workflow, and BSP integration (360dialog/Twilio/etc.).',
+                'name' => json_encode(['en' => 'WhatsApp Notifications', 'ro' => 'Notificări WhatsApp']),
+                'description' => json_encode(['en' => 'WhatsApp messaging for order confirmations, event reminders (D-7/D-3/D-1), and promotional campaigns. Includes opt-in management, template approval workflow, and BSP integration (360dialog/Twilio/etc.).']),
                 'price' => 0.00, // Pricing TBD (could be per-message or monthly)
                 'currency' => 'EUR',
                 'billing_cycle' => 'monthly',

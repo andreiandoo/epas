@@ -16,8 +16,8 @@ class EFacturaMicroserviceSeeder extends Seeder
         DB::table('microservices')->updateOrInsert(
             ['slug' => 'efactura-ro'],
             [
-                'name' => 'eFactura (RO)',
-                'description' => 'Automatic submission of invoices to ANAF SPV (Romanian tax authority). Transforms internal invoices to UBL/CII XML format, signs, submits, and polls for acceptance/rejection status.',
+                'name' => json_encode(['en' => 'eFactura (RO)']),
+                'description' => json_encode(['en' => 'Automatic submission of invoices to ANAF SPV (Romanian tax authority). Transforms internal invoices to UBL/CII XML format, signs, submits, and polls for acceptance/rejection status.']),
                 'price' => 3.00,
                 'currency' => 'EUR',
                 'billing_cycle' => 'monthly',

@@ -21,8 +21,8 @@ class InvitationsMicroserviceSeeder extends Seeder
                 'slug' => 'invitations',
             ],
             [
-                'name' => 'Invitations (Zero-Value Tickets)',
-                'description' => 'Complete invitation management system for zero-value tickets with batch generation, CSV import, PDF rendering, email distribution, download tracking, and check-in integration. Perfect for VIP guests, press passes, and complimentary tickets.',
+                'name' => ['en' => 'Invitations (Zero-Value Tickets)'],
+                'description' => ['en' => 'Complete invitation management system for zero-value tickets with batch generation, CSV import, PDF rendering, email distribution, download tracking, and check-in integration. Perfect for VIP guests, press passes, and complimentary tickets.'],
                 'category' => 'distribution',
                 'price' => 1.00,
                 'currency' => 'EUR',
