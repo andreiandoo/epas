@@ -14,6 +14,7 @@ use Filament\Resources\Pages\Page;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use BackedEnum;
 
 class ImportArtists extends Page
 {
@@ -23,7 +24,7 @@ class ImportArtists extends Page
 
     protected static ?string $title = 'Import Artists';
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-up-tray';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-arrow-up-tray';
 
     public ?array $data = [];
 
