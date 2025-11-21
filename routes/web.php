@@ -86,19 +86,39 @@ Route::post('/webhooks/tenant-payment/{tenant}/{processor}', [TenantPaymentWebho
     ->name('webhooks.tenant-payment')
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
-// Microservices Marketplace Routes
-Route::prefix('micro')->middleware(['web'])->group(function () {
-    Route::get('/marketplace', [MicroserviceMarketplaceController::class, 'index'])
-        ->name('micro.marketplace');
+// Microservices Store Routes
+Route::prefix('store')->middleware(['web'])->group(function () {
+    // Public pages
+    Route::get('/', [MicroserviceMarketplaceController::class, 'index'])
+        ->name('store.index');
 
-    Route::post('/checkout', [MicroserviceMarketplaceController::class, 'checkout'])
-        ->name('micro.checkout');
+    Route::get('/microservice/{slug}', [MicroserviceMarketplaceController::class, 'show'])
+        ->name('store.show');
+
+    // Cart management (session-based)
+    Route::post('/cart/add', [MicroserviceMarketplaceController::class, 'addToCart'])
+        ->name('store.cart.add');
+
+    Route::post('/cart/remove', [MicroserviceMarketplaceController::class, 'removeFromCart'])
+        ->name('store.cart.remove');
+
+    Route::get('/cart', [MicroserviceMarketplaceController::class, 'cart'])
+        ->name('store.cart');
+
+    // Checkout (requires auth + tenant role)
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/checkout', [MicroserviceMarketplaceController::class, 'checkoutPage'])
+            ->name('store.checkout');
+
+        Route::post('/checkout/process', [MicroserviceMarketplaceController::class, 'processCheckout'])
+            ->name('store.checkout.process');
+    });
 
     Route::get('/payment/success', [MicroserviceMarketplaceController::class, 'success'])
-        ->name('micro.payment.success');
+        ->name('store.payment.success');
 
     Route::get('/payment/cancel', [MicroserviceMarketplaceController::class, 'cancel'])
-        ->name('micro.payment.cancel');
+        ->name('store.payment.cancel');
 });
 
 // Onboarding routes (no locale prefix needed for registration)

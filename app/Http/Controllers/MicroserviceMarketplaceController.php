@@ -17,62 +17,197 @@ class MicroserviceMarketplaceController extends Controller
     }
 
     /**
-     * Display the microservices marketplace
+     * Display the microservices store
      */
     public function index(Request $request)
     {
-        // Get current tenant (you might need to adjust this based on your auth system)
-        // For now, assuming tenant_id is in session or request
-        $tenantId = $request->input('tenant_id') ?? session('tenant_id') ?? 1;
-        $tenant = Tenant::find($tenantId);
+        $microservices = Microservice::active()->get();
+        $cart = session('cart', []);
+        $cartCount = count($cart);
 
-        if (!$tenant) {
-            abort(404, 'Tenant not found');
+        return view('store.index', compact('microservices', 'cartCount'));
+    }
+
+    /**
+     * Display single microservice details
+     */
+    public function show(string $slug)
+    {
+        $microservice = Microservice::where('slug', $slug)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        $cart = session('cart', []);
+        $inCart = in_array($microservice->id, $cart);
+        $cartCount = count($cart);
+
+        // Get related microservices
+        $relatedMicroservices = Microservice::active()
+            ->where('id', '!=', $microservice->id)
+            ->where('category', $microservice->category)
+            ->limit(3)
+            ->get();
+
+        return view('store.show', compact('microservice', 'inCart', 'cartCount', 'relatedMicroservices'));
+    }
+
+    /**
+     * Add microservice to cart
+     */
+    public function addToCart(Request $request)
+    {
+        $request->validate([
+            'microservice_id' => 'required|exists:microservices,id',
+        ]);
+
+        $cart = session('cart', []);
+        $microserviceId = $request->microservice_id;
+
+        if (!in_array($microserviceId, $cart)) {
+            $cart[] = $microserviceId;
+            session(['cart' => $cart]);
         }
 
-        // Get all active microservices
-        $microservices = Microservice::active()->get();
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'cartCount' => count($cart),
+                'message' => 'Added to cart',
+            ]);
+        }
 
-        // Get tenant's currently active microservices
-        $activeMicroserviceIds = $tenant->microservices()
-            ->wherePivot('is_active', true)
+        return back()->with('success', 'Microservice added to cart');
+    }
+
+    /**
+     * Remove microservice from cart
+     */
+    public function removeFromCart(Request $request)
+    {
+        $request->validate([
+            'microservice_id' => 'required|exists:microservices,id',
+        ]);
+
+        $cart = session('cart', []);
+        $cart = array_values(array_diff($cart, [$request->microservice_id]));
+        session(['cart' => $cart]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'cartCount' => count($cart),
+                'message' => 'Removed from cart',
+            ]);
+        }
+
+        return back()->with('success', 'Microservice removed from cart');
+    }
+
+    /**
+     * Display cart page
+     */
+    public function cart()
+    {
+        $cart = session('cart', []);
+        $microservices = Microservice::whereIn('id', $cart)->get();
+
+        $subtotal = $microservices->sum('price');
+        $currency = $microservices->first()?->currency ?? 'EUR';
+
+        return view('store.cart', compact('microservices', 'subtotal', 'currency'));
+    }
+
+    /**
+     * Display checkout page (requires auth + tenant)
+     */
+    public function checkoutPage(Request $request)
+    {
+        $user = auth()->user();
+
+        // Check if user is a tenant
+        if ($user->role !== 'tenant') {
+            return redirect()->route('store.cart')
+                ->with('error', 'Only tenant accounts can purchase microservices. Please register as a tenant first.');
+        }
+
+        // Get tenant associated with this user
+        $tenant = Tenant::where('owner_id', $user->id)->first();
+
+        if (!$tenant) {
+            return redirect()->route('store.cart')
+                ->with('error', 'No tenant account found. Please complete your registration.');
+        }
+
+        $cart = session('cart', []);
+
+        if (empty($cart)) {
+            return redirect()->route('store.index')
+                ->with('error', 'Your cart is empty');
+        }
+
+        $microservices = Microservice::whereIn('id', $cart)->get();
+
+        // Check if any microservices are already owned
+        $ownedIds = $tenant->microservices()
+            ->wherePivot('status', 'active')
             ->pluck('microservices.id')
             ->toArray();
 
+        $alreadyOwned = $microservices->whereIn('id', $ownedIds);
+
+        $subtotal = $microservices->sum('price');
+        $currency = $microservices->first()?->currency ?? 'EUR';
+
         // Check if Stripe is configured
         $stripeConfigured = $this->stripeService->isConfigured();
+        $stripePublicKey = $this->stripeService->getPublishableKey();
 
-        return view('marketplace.index', compact(
+        return view('store.checkout', compact(
             'microservices',
             'tenant',
-            'activeMicroserviceIds',
-            'stripeConfigured'
+            'subtotal',
+            'currency',
+            'alreadyOwned',
+            'stripeConfigured',
+            'stripePublicKey'
         ));
     }
 
     /**
-     * Initiate checkout process
+     * Process checkout and redirect to Stripe
      */
-    public function checkout(Request $request)
+    public function processCheckout(Request $request)
     {
-        $request->validate([
-            'tenant_id' => 'required|exists:tenants,id',
-            'microservices' => 'required|array|min:1',
-            'microservices.*' => 'exists:microservices,id',
-        ]);
+        $user = auth()->user();
 
-        $tenant = Tenant::findOrFail($request->tenant_id);
-        $microserviceIds = $request->microservices;
+        if ($user->role !== 'tenant') {
+            return redirect()->route('store.cart')
+                ->with('error', 'Only tenant accounts can purchase microservices.');
+        }
+
+        $tenant = Tenant::where('owner_id', $user->id)->first();
+
+        if (!$tenant) {
+            return redirect()->route('store.cart')
+                ->with('error', 'No tenant account found.');
+        }
+
+        $cart = session('cart', []);
+
+        if (empty($cart)) {
+            return redirect()->route('store.index')
+                ->with('error', 'Your cart is empty');
+        }
 
         try {
             $session = $this->stripeService->createCheckoutSession(
                 $tenant,
-                $microserviceIds,
-                route('micro.payment.success'),
-                route('micro.payment.cancel')
+                $cart,
+                route('store.payment.success'),
+                route('store.payment.cancel')
             );
 
-            // Store session ID in the session for later retrieval
+            // Store session ID for later retrieval
             session(['stripe_checkout_session_id' => $session->id]);
 
             return redirect($session->url);
@@ -89,7 +224,7 @@ class MicroserviceMarketplaceController extends Controller
         $sessionId = $request->query('session_id');
 
         if (!$sessionId) {
-            return redirect()->route('micro.marketplace')->with('error', 'Invalid session');
+            return redirect()->route('store.index')->with('error', 'Invalid session');
         }
 
         try {
@@ -102,9 +237,13 @@ class MicroserviceMarketplaceController extends Controller
             $tenant = Tenant::find($tenantId);
             $microservices = Microservice::whereIn('id', $microserviceIds)->get();
 
-            return view('marketplace.success', compact('session', 'tenant', 'microservices'));
+            // Clear the cart
+            session()->forget('cart');
+
+            return view('store.success', compact('session', 'tenant', 'microservices'));
         } catch (\Exception $e) {
-            return redirect()->route('micro.marketplace')->with('error', 'Failed to retrieve session: ' . $e->getMessage());
+            return redirect()->route('store.index')
+                ->with('error', 'Failed to retrieve session: ' . $e->getMessage());
         }
     }
 
@@ -113,6 +252,7 @@ class MicroserviceMarketplaceController extends Controller
      */
     public function cancel()
     {
-        return redirect()->route('micro.marketplace')->with('warning', 'Payment was cancelled');
+        return redirect()->route('store.cart')
+            ->with('warning', 'Payment was cancelled. Your cart is still available.');
     }
 }
