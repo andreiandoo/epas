@@ -72,7 +72,7 @@ class SeatingLayoutResource extends Resource
 
                 SC\Section::make('Canvas Settings')
                     ->schema([
-                        Forms\Components\TextInput::make('canvas_width')
+                        Forms\Components\TextInput::make('canvas_w')
                             ->label('Canvas Width (px)')
                             ->required()
                             ->numeric()
@@ -81,7 +81,7 @@ class SeatingLayoutResource extends Resource
                             ->maxValue(config('seating.canvas.max_width', 4096))
                             ->columnSpan(1),
 
-                        Forms\Components\TextInput::make('canvas_height')
+                        Forms\Components\TextInput::make('canvas_h')
                             ->label('Canvas Height (px)')
                             ->required()
                             ->numeric()
@@ -145,9 +145,9 @@ class SeatingLayoutResource extends Resource
                         default => 'gray',
                     }),
 
-                Tables\Columns\TextColumn::make('canvas_width')
+                Tables\Columns\TextColumn::make('canvas_w')
                     ->label('Canvas')
-                    ->formatStateUsing(fn ($record) => "{$record->canvas_width}x{$record->canvas_height}")
+                    ->formatStateUsing(fn ($record) => "{$record->canvas_w}x{$record->canvas_h}")
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('sections_count')

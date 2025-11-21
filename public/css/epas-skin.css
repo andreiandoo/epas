@@ -3127,3 +3127,27 @@ nav.fi-topbar .fi-topbar-end {
 .min-h-screen{
   min-height: 100vh;
 }
+
+@media screen and (min-width: 768px) {
+    .md\:h-auto{
+        height: auto;
+    }
+    .md\:grid-cols-2{
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .md\:grid-cols-3{
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .md\:grid-cols-4{
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .md\:hidden{
+        display: none;
+    }
+    .md\:inline{
+        display: inline;
+    }
+    .md\:block{
+        display: block;
+    }
+}
