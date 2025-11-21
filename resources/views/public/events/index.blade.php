@@ -39,7 +39,11 @@
                     <select x-model="selectedType" @change="filterGenres(); applyFilters()" class="w-full px-4 py-2 border rounded-lg">
                         <option value="">All Types</option>
                         @foreach($eventTypes as $type)
-                            <option value="{{ $type->slug }}">{{ $type->name }}</option>
+                            @php
+                                $typeSlug = is_array($type->slug) ? ($type->slug[app()->getLocale()] ?? $type->slug['en'] ?? '') : $type->slug;
+                                $typeName = $type->getTranslation('name', app()->getLocale()) ?? $type->getTranslation('name', 'en');
+                            @endphp
+                            <option value="{{ $typeSlug }}">{{ $typeName }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -150,8 +154,14 @@ function eventsFilter() {
         countries: [],
         states: [],
         cities: [],
-        eventGenres: @json($eventGenres),
-        filteredGenres: @json($eventGenres),
+        eventGenres: @json($eventGenres->map(fn($g) => [
+            'slug' => is_array($g->slug) ? ($g->slug[app()->getLocale()] ?? $g->slug['en'] ?? '') : $g->slug,
+            'name' => $g->getTranslation('name', app()->getLocale()) ?? $g->getTranslation('name', 'en')
+        ])),
+        filteredGenres: @json($eventGenres->map(fn($g) => [
+            'slug' => is_array($g->slug) ? ($g->slug[app()->getLocale()] ?? $g->slug['en'] ?? '') : $g->slug,
+            'name' => $g->getTranslation('name', app()->getLocale()) ?? $g->getTranslation('name', 'en')
+        ])),
 
         async init() {
             await this.loadCountries();
