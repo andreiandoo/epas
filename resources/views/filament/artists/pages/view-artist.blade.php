@@ -6,8 +6,8 @@
     $tickets  = $seriesTickets  ?? [];
     $revenue  = $seriesRevenue  ?? [];
 
-    $types    = $record->artistTypes?->pluck('name')->all() ?? [];
-    $genres   = $record->artistGenres?->pluck('name')->all() ?? [];
+    $types    = $record->artistTypes?->map(fn($t) => $t->getTranslation('name', app()->getLocale()))->all() ?? [];
+    $genres   = $record->artistGenres?->map(fn($g) => $g->getTranslation('name', app()->getLocale()))->all() ?? [];
 
     $country  = $record->country ?? null;
     $city     = $record->city ?? null;
@@ -33,7 +33,25 @@
         ? ($record->bio_html['en'] ?? reset($record->bio_html))
         : ($record->bio_html ?? $record->bio ?? null);
 
-    $videos = is_array($record->youtube_videos ?? null) ? $record->youtube_videos : [];
+    // Convert YouTube URLs to embed format
+    $rawVideos = is_array($record->youtube_videos ?? null) ? $record->youtube_videos : [];
+    $videos = [];
+    foreach ($rawVideos as $v) {
+        $url = is_array($v) ? ($v['url'] ?? '') : $v;
+        if (empty($url)) continue;
+
+        // Extract video ID from various YouTube URL formats
+        $videoId = null;
+        if (preg_match('/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/', $url, $matches)) {
+            $videoId = $matches[1];
+        } elseif (strlen($url) === 11 && preg_match('/^[a-zA-Z0-9_-]+$/', $url)) {
+            $videoId = $url; // Already just the ID
+        }
+
+        if ($videoId) {
+            $videos[] = "https://www.youtube.com/embed/{$videoId}";
+        }
+    }
 
     // ==== CALCULE KPI ====
     $totalEvents  = is_array($events)  ? array_sum($events)  : 0;
@@ -43,49 +61,21 @@
     $avgTicketsPerEvent = $totalEvents > 0 ? round($totalTickets / $totalEvents, 1) : 0;
     $avgTicketPrice     = $totalTickets > 0 ? round($totalRevenue / $totalTickets, 2) : 0.00;
 
-    // ==== LISTE TOP 10 (fallback demo dacă nu vin din controller) ====
-    $topVenues   = $topVenues   ?? [
-        ['name'=>'Argo Club', 'tickets'=>1240, 'orders'=>980],
-        ['name'=>'Odeon Hall', 'tickets'=>980, 'orders'=>760],
-        ['name'=>'City Arena', 'tickets'=>870, 'orders'=>640],
-        ['name'=>'Riverside Stage', 'tickets'=>790, 'orders'=>603],
-        ['name'=>'Nebula Dome', 'tickets'=>720, 'orders'=>555],
-        ['name'=>'Harbor Hall', 'tickets'=>690, 'orders'=>510],
-        ['name'=>'Skyline Loft', 'tickets'=>650, 'orders'=>488],
-        ['name'=>'Zenith Park', 'tickets'=>605, 'orders'=>462],
-        ['name'=>'Echo Theatre', 'tickets'=>570, 'orders'=>430],
-        ['name'=>'Nova Grounds', 'tickets'=>530, 'orders'=>408],
-    ];
-    $topCities   = $topCities   ?? [
-        ['name'=>'București', 'tickets'=>4200, 'orders'=>3180],
-        ['name'=>'Cluj-Napoca', 'tickets'=>2100, 'orders'=>1580],
-        ['name'=>'Iași', 'tickets'=>1620, 'orders'=>1210],
-        ['name'=>'Timișoara', 'tickets'=>1540, 'orders'=>1150],
-        ['name'=>'Constanța', 'tickets'=>1120, 'orders'=>840],
-        ['name'=>'Brașov', 'tickets'=>980,  'orders'=>740],
-        ['name'=>'Sibiu', 'tickets'=>860,  'orders'=>640],
-        ['name'=>'Ploiești', 'tickets'=>790, 'orders'=>610],
-        ['name'=>'Oradea', 'tickets'=>730,  'orders'=>560],
-        ['name'=>'Galați', 'tickets'=>700,  'orders'=>540],
-    ];
-    $topCounties = $topCounties ?? [
-        ['name'=>'București', 'tickets'=>4200, 'orders'=>3180],
-        ['name'=>'Cluj', 'tickets'=>2200, 'orders'=>1640],
-        ['name'=>'Timiș', 'tickets'=>1720, 'orders'=>1290],
-        ['name'=>'Iași', 'tickets'=>1650, 'orders'=>1230],
-        ['name'=>'Constanța', 'tickets'=>1300, 'orders'=>980],
-        ['name'=>'Brașov', 'tickets'=>1080, 'orders'=>820],
-        ['name'=>'Sibiu', 'tickets'=>960, 'orders'=>720],
-        ['name'=>'Prahova', 'tickets'=>900, 'orders'=>680],
-        ['name'=>'Bihor', 'tickets'=>820, 'orders'=>630],
-        ['name'=>'Galați', 'tickets'=>760, 'orders'=>590],
-    ];
+    // ==== LISTE TOP 10 (from controller or empty) ====
+    $topVenues   = $topVenues   ?? [];
+    $topCities   = $topCities   ?? [];
+    $topCounties = $topCounties ?? [];
 
     // ==== FILTER RANGE (UI only; linkuri GET) ====
     $currentRange = request()->input('range', '12m');
 
-    // ==== SPOTIFY PLAYLIST EMBED (hardcoded) ====
-    $spotifyPlaylistId = '37i9dQZF1DXcBWIGoYBM5M'; // demo public playlist
+    // ==== SPOTIFY EMBED (use artist's ID if available) ====
+    $spotifyArtistId = $record->spotify_id ?? null;
+
+    // Lists from controller
+    $artistEvents = $artistEvents ?? collect();
+    $artistVenues = $artistVenues ?? collect();
+    $artistTenants = $artistTenants ?? collect();
 @endphp
 
 @push('styles')
@@ -328,16 +318,18 @@ canvas{width:100% !important; height:240px !important;}
                     </div>
                 </div>
 
-                {{-- Spotify Playlist Embed (hardcoded) --}}
+                {{-- Spotify Artist Embed --}}
+                @if($spotifyArtistId)
                 <div class="" style="margin-top:24px">
                     <div class="av-card-body">
                         <div class="spotify-embed">
-                            <iframe style="border-radius:12px" src="https://open.spotify.com/embed/playlist/{{ $spotifyPlaylistId }}?utm_source=generator"
+                            <iframe style="border-radius:12px" src="https://open.spotify.com/embed/artist/{{ $spotifyArtistId }}?utm_source=generator"
                                 width="100%" height="352" frameborder="0" allowfullscreen=""
                                 allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
                         </div>
                     </div>
                 </div>
+                @endif
 
                 {{-- Audience --}}
                 <div class="" style="margin-top:24px">
@@ -369,10 +361,7 @@ canvas{width:100% !important; height:240px !important;}
                     <div class="" style="margin-top:24px">
                         <div class="av-card-body">
                             <div class="video-grid">
-                                @foreach($videos as $v)
-                                    @php
-                                        $videoUrl = is_array($v) ? ($v['url'] ?? '') : $v;
-                                    @endphp
+                                @foreach($videos as $videoUrl)
                                     <div class="video">
                                         <iframe
                                             src="{{ $videoUrl }}"
@@ -388,63 +377,129 @@ canvas{width:100% !important; height:240px !important;}
                     </div>
                 @endif
 
+                {{-- Events List --}}
+                @if($artistEvents->count())
+                <div class="av-card" style="margin-top:24px">
+                    <div class="av-card-header">Events ({{ $artistEvents->count() }})</div>
+                    <div class="av-card-body">
+                        <table class="tbl">
+                            <thead><tr><th>Date</th><th>Event</th><th>Venue</th><th>Tenant</th></tr></thead>
+                            <tbody>
+                                @foreach($artistEvents->take(20) as $event)
+                                    <tr>
+                                        <td>{{ $event->event_date ? \Carbon\Carbon::parse($event->event_date)->format('d M Y') : '—' }}</td>
+                                        <td>{{ $event->getTranslation('title', app()->getLocale()) ?? $event->title ?? '—' }}</td>
+                                        <td>{{ $event->venue?->name ?? '—' }}</td>
+                                        <td>{{ $event->tenant?->public_name ?? $event->tenant?->name ?? '—' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
+
+                {{-- Venues List --}}
+                @if($artistVenues->count())
+                <div class="av-card" style="margin-top:24px">
+                    <div class="av-card-header">Venues ({{ $artistVenues->count() }})</div>
+                    <div class="av-card-body">
+                        <table class="tbl">
+                            <thead><tr><th>Venue</th><th>City</th><th>Country</th></tr></thead>
+                            <tbody>
+                                @foreach($artistVenues as $venue)
+                                    <tr>
+                                        <td>{{ $venue->name ?? '—' }}</td>
+                                        <td>{{ $venue->city ?? '—' }}</td>
+                                        <td>{{ $venue->country ?? '—' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
+
+                {{-- Tenants List --}}
+                @if($artistTenants->count())
+                <div class="av-card" style="margin-top:24px">
+                    <div class="av-card-header">Tenants ({{ $artistTenants->count() }})</div>
+                    <div class="av-card-body">
+                        <table class="tbl">
+                            <thead><tr><th>Tenant</th><th>Country</th></tr></thead>
+                            <tbody>
+                                @foreach($artistTenants as $tenant)
+                                    <tr>
+                                        <td>{{ $tenant->public_name ?? $tenant->name ?? '—' }}</td>
+                                        <td>{{ $tenant->country ?? '—' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
+
                 {{-- Top 10 Venue/City/County by sales --}}
+                @if(count($topVenues))
                 <div class="av-card" style="margin-top:24px">
                     <div class="av-card-header">Top Venues by Sales</div>
                     <div class="av-card-body">
                         <table class="tbl">
-                            <thead><tr><th>#</th><th>Venue</th><th>Tickets</th><th>Orders</th></tr></thead>
+                            <thead><tr><th>#</th><th>Venue</th><th>Tickets</th></tr></thead>
                             <tbody>
                                 @foreach($topVenues as $i=>$row)
                                     <tr>
                                         <td>{{ $i+1 }}</td>
-                                        <td>{{ $row['name'] }}</td>
-                                        <td><span class="badge">{{ number_format($row['tickets']) }}</span></td>
-                                        <td>{{ number_format($row['orders']) }}</td>
+                                        <td>{{ $row->name }}</td>
+                                        <td><span class="badge">{{ number_format($row->tickets_count) }}</span></td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
                     </div>
                 </div>
+                @endif
 
+                @if(count($topCities))
                 <div class="av-card" style="margin-top:24px">
                     <div class="av-card-header">Top Cities by Sales</div>
                     <div class="av-card-body">
                         <table class="tbl">
-                            <thead><tr><th>#</th><th>City</th><th>Tickets</th><th>Orders</th></tr></thead>
+                            <thead><tr><th>#</th><th>City</th><th>Tickets</th></tr></thead>
                             <tbody>
                                 @foreach($topCities as $i=>$row)
                                     <tr>
                                         <td>{{ $i+1 }}</td>
-                                        <td>{{ $row['name'] }}</td>
-                                        <td><span class="badge">{{ number_format($row['tickets']) }}</span></td>
-                                        <td>{{ number_format($row['orders']) }}</td>
+                                        <td>{{ $row->name }}</td>
+                                        <td><span class="badge">{{ number_format($row->tickets_count) }}</span></td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
                     </div>
                 </div>
+                @endif
 
+                @if(count($topCounties))
                 <div class="av-card" style="margin-top:24px">
                     <div class="av-card-header">Top Counties by Sales</div>
                     <div class="av-card-body">
                         <table class="tbl">
-                            <thead><tr><th>#</th><th>County</th><th>Tickets</th><th>Orders</th></tr></thead>
+                            <thead><tr><th>#</th><th>County</th><th>Tickets</th></tr></thead>
                             <tbody>
                                 @foreach($topCounties as $i=>$row)
                                     <tr>
                                         <td>{{ $i+1 }}</td>
-                                        <td>{{ $row['name'] }}</td>
-                                        <td><span class="badge">{{ number_format($row['tickets']) }}</span></td>
-                                        <td>{{ number_format($row['orders']) }}</td>
+                                        <td>{{ $row->name }}</td>
+                                        <td><span class="badge">{{ number_format($row->tickets_count) }}</span></td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
                     </div>
                 </div>
+                @endif
 
             </div>
         </div>

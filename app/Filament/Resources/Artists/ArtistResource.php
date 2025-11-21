@@ -329,26 +329,6 @@ class ArtistResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TagsColumn::make('artistTypes.name')
-                    ->label('Types')
-                    ->badge()
-                    ->limit(2)
-                    ->separator(',')
-                    ->toggleable(),
-
-                Tables\Columns\TagsColumn::make('artistGenres.name')
-                    ->label('Genres')
-                    ->badge()
-                    ->limit(3)
-                    ->separator(',')
-                    ->toggleable(),
-
-                Tables\Columns\TextColumn::make('events_count')
-                    ->label('Events')
-                    ->counts('events')
-                    ->sortable()
-                    ->toggleable(),
-
                 Tables\Columns\TextColumn::make('name')
                     ->label('Name')
                     ->searchable()
@@ -357,13 +337,11 @@ class ArtistResource extends Resource
 
                 Tables\Columns\TextColumn::make('country')
                     ->label('Country')
-                    ->badge()
                     ->sortable()
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('city')
                     ->label('City')
-                    ->badge()
                     ->sortable()
                     ->toggleable(),
 
@@ -372,11 +350,23 @@ class ArtistResource extends Resource
                     ->boolean()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Created')
-                    ->dateTime('Y-m-d H:i')
+                Tables\Columns\TextColumn::make('events_count')
+                    ->label('Events')
+                    ->counts('events')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('types_display')
+                    ->label('Types')
+                    ->badge()
+                    ->getStateUsing(fn ($record) => $record->artistTypes->map(fn($t) => $t->getTranslation('name', app()->getLocale()))->implode(', '))
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('genres_display')
+                    ->label('Genres')
+                    ->badge()
+                    ->getStateUsing(fn ($record) => $record->artistGenres->map(fn($g) => $g->getTranslation('name', app()->getLocale()))->implode(', '))
+                    ->toggleable(),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')
@@ -460,12 +450,10 @@ class ArtistResource extends Resource
                     ->toggle(),
             ])
             ->actions([
-                // \Filament\Tables\Actions\Action::make('view')
-                //     ->label('View')
-                //     ->icon('heroicon-m-eye')
-                //     ->url(fn (\App\Models\Artist $record) => static::getUrl('view', ['record' => $record->getKey()])),
-                // \Filament\Tables\Actions\EditAction::make()
-                //     ->label('Edit'),
+                Tables\Actions\EditAction::make()
+                    ->iconButton(),
+                Tables\Actions\DeleteAction::make()
+                    ->iconButton(),
             ])
             ->defaultSort('created_at', 'desc');
     }

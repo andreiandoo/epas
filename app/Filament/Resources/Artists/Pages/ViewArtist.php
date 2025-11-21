@@ -32,7 +32,72 @@ class ViewArtist extends Page
         // Serii (dacă le folosești în grafic)
         [$months, $events, $tickets, $revenue] = $this->record->buildYearlySeries();
 
-        return compact('kpis', 'months', 'events', 'tickets', 'revenue', 'from', 'to');
+        // Events list for this artist
+        $artistEvents = $this->record->events()
+            ->with(['venue', 'tenant'])
+            ->orderBy('event_date', 'desc')
+            ->get();
+
+        // Unique venues from events
+        $artistVenues = $artistEvents
+            ->pluck('venue')
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        // Unique tenants from events
+        $artistTenants = $artistEvents
+            ->pluck('tenant')
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        // Top venues by ticket sales for this artist
+        $topVenues = \Illuminate\Support\Facades\DB::table('tickets')
+            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+            ->join('events', 'events.id', '=', 'ticket_types.event_id')
+            ->join('event_artist', 'event_artist.event_id', '=', 'events.id')
+            ->join('venues', 'venues.id', '=', 'events.venue_id')
+            ->where('event_artist.artist_id', $this->record->id)
+            ->select('venues.id', 'venues.name', \Illuminate\Support\Facades\DB::raw('COUNT(tickets.id) as tickets_count'))
+            ->groupBy('venues.id', 'venues.name')
+            ->orderByDesc('tickets_count')
+            ->limit(10)
+            ->get();
+
+        // Top cities by ticket sales
+        $topCities = \Illuminate\Support\Facades\DB::table('tickets')
+            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+            ->join('events', 'events.id', '=', 'ticket_types.event_id')
+            ->join('event_artist', 'event_artist.event_id', '=', 'events.id')
+            ->join('venues', 'venues.id', '=', 'events.venue_id')
+            ->where('event_artist.artist_id', $this->record->id)
+            ->whereNotNull('venues.city')
+            ->select('venues.city as name', \Illuminate\Support\Facades\DB::raw('COUNT(tickets.id) as tickets_count'))
+            ->groupBy('venues.city')
+            ->orderByDesc('tickets_count')
+            ->limit(10)
+            ->get();
+
+        // Top counties/states by ticket sales
+        $topCounties = \Illuminate\Support\Facades\DB::table('tickets')
+            ->join('ticket_types', 'ticket_types.id', '=', 'tickets.ticket_type_id')
+            ->join('events', 'events.id', '=', 'ticket_types.event_id')
+            ->join('event_artist', 'event_artist.event_id', '=', 'events.id')
+            ->join('venues', 'venues.id', '=', 'events.venue_id')
+            ->where('event_artist.artist_id', $this->record->id)
+            ->whereNotNull('venues.state')
+            ->select('venues.state as name', \Illuminate\Support\Facades\DB::raw('COUNT(tickets.id) as tickets_count'))
+            ->groupBy('venues.state')
+            ->orderByDesc('tickets_count')
+            ->limit(10)
+            ->get();
+
+        return compact(
+            'kpis', 'months', 'events', 'tickets', 'revenue', 'from', 'to',
+            'artistEvents', 'artistVenues', 'artistTenants',
+            'topVenues', 'topCities', 'topCounties'
+        );
     }
 
     /** Serii pentru chart-uri (ultimele 12 luni) */
