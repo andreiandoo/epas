@@ -15,7 +15,6 @@
     ];
     $currentLocale = app()->getLocale();
 @endphp
- 
 <div class="sticky top-0 z-20 px-4 bg-white border-b border-gray-200 fi-custom-topbar dark:bg-gray-900 dark:border-gray-700">
     <div class="flex items-center justify-between max-w-full gap-4">
         {{-- Center: Global Search --}}
