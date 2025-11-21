@@ -6,17 +6,20 @@ use App\Models\Artist;
 use App\Services\SpotifyService;
 use App\Services\YouTubeService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ImportArtistsCommand extends Command
 {
-    protected $signature = 'import:artists {file} {--update : Update existing artists instead of skipping}';
-    protected $description = 'Import artists from CSV file';
+    protected $signature = 'import:artists {file} {--update : Update existing artists instead of skipping} {--download-images : Download images from URLs}';
+    protected $description = 'Import artists from CSV file with optional image download';
 
     public function handle()
     {
         $file = $this->argument('file');
         $updateExisting = $this->option('update');
+        $downloadImages = $this->option('download-images');
 
         if (!file_exists($file)) {
             $this->error("File not found: {$file}");
@@ -24,6 +27,9 @@ class ImportArtistsCommand extends Command
         }
 
         $this->info("Importing artists from {$file}...");
+        if ($downloadImages) {
+            $this->info("Image download enabled - images will be fetched from URLs");
+        }
 
         $handle = fopen($file, 'r');
         $header = fgetcsv($handle);
@@ -123,6 +129,36 @@ class ImportArtistsCommand extends Command
                 $artistData['spotify_id'] = SpotifyService::extractArtistId($artistData['spotify_url']);
             }
 
+            // Download images if enabled
+            if ($downloadImages) {
+                // Main image
+                $mainImageUrl = $data['main_image'] ?? $data['main_image_url'] ?? $data['image_url'] ?? null;
+                if (!empty($mainImageUrl)) {
+                    $localPath = $this->downloadImage($mainImageUrl, $slug, 'main');
+                    if ($localPath) {
+                        $artistData['main_image_url'] = $localPath;
+                    }
+                }
+
+                // Horizontal logo
+                $logoHUrl = $data['logo_h'] ?? $data['logo_url'] ?? null;
+                if (!empty($logoHUrl)) {
+                    $localPath = $this->downloadImage($logoHUrl, $slug, 'logo_h');
+                    if ($localPath) {
+                        $artistData['logo_url'] = $localPath;
+                    }
+                }
+
+                // Vertical/portrait logo
+                $logoVUrl = $data['logo_v'] ?? $data['portrait_url'] ?? null;
+                if (!empty($logoVUrl)) {
+                    $localPath = $this->downloadImage($logoVUrl, $slug, 'logo_v');
+                    if ($localPath) {
+                        $artistData['portrait_url'] = $localPath;
+                    }
+                }
+            }
+
             // Check if already exists
             $existing = Artist::where('slug', $slug)->first();
 
@@ -152,5 +188,82 @@ class ImportArtistsCommand extends Command
         $this->info("Skipped: {$skipped}");
 
         return 0;
+    }
+
+    /**
+     * Download image from URL and store locally
+     */
+    protected function downloadImage(string $url, string $slug, string $type): ?string
+    {
+        try {
+            // Skip if not a valid URL
+            if (!filter_var($url, FILTER_VALIDATE_URL)) {
+                $this->warn("  Invalid URL for {$type}: {$url}");
+                return null;
+            }
+
+            $response = Http::timeout(30)->get($url);
+
+            if (!$response->successful()) {
+                $this->warn("  Failed to download {$type} image: HTTP {$response->status()}");
+                return null;
+            }
+
+            // Determine file extension from content type or URL
+            $contentType = $response->header('Content-Type');
+            $extension = $this->getExtensionFromContentType($contentType);
+
+            if (!$extension) {
+                // Try to get from URL
+                $pathInfo = pathinfo(parse_url($url, PHP_URL_PATH));
+                $extension = strtolower($pathInfo['extension'] ?? 'jpg');
+            }
+
+            // Validate it's an image extension
+            if (!in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                $extension = 'jpg';
+            }
+
+            // Create filename and path
+            $filename = "{$slug}_{$type}.{$extension}";
+            $path = "artists/{$filename}";
+
+            // Store the image
+            Storage::disk('public')->put($path, $response->body());
+
+            $this->line("  Downloaded {$type} image: {$filename}");
+
+            return $path;
+
+        } catch (\Exception $e) {
+            $this->warn("  Error downloading {$type} image: {$e->getMessage()}");
+            return null;
+        }
+    }
+
+    /**
+     * Get file extension from content type
+     */
+    protected function getExtensionFromContentType(?string $contentType): ?string
+    {
+        if (!$contentType) {
+            return null;
+        }
+
+        $map = [
+            'image/jpeg' => 'jpg',
+            'image/jpg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/webp' => 'webp',
+        ];
+
+        foreach ($map as $mime => $ext) {
+            if (str_contains($contentType, $mime)) {
+                return $ext;
+            }
+        }
+
+        return null;
     }
 }
