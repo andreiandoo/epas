@@ -65,11 +65,46 @@ class AffiliateResource extends Resource
                                 ->required()
                                 ->maxLength(255),
 
+                            Forms\Components\Select::make('discount_type')
+                                ->label('Discount Type')
+                                ->options([
+                                    'percentage' => 'Percentage (%)',
+                                    'fixed' => 'Fixed Amount',
+                                ])
+                                ->default('percentage')
+                                ->required(),
+
+                            Forms\Components\TextInput::make('discount_value')
+                                ->label('Discount Value')
+                                ->numeric()
+                                ->minValue(0)
+                                ->step(0.01)
+                                ->required()
+                                ->helperText('Enter percentage (e.g., 10 for 10%) or fixed amount'),
+
+                            Forms\Components\TextInput::make('min_order_amount')
+                                ->label('Min Order Amount')
+                                ->numeric()
+                                ->minValue(0)
+                                ->step(0.01)
+                                ->helperText('Minimum order value to apply coupon'),
+
+                            Forms\Components\TextInput::make('max_uses')
+                                ->label('Max Uses')
+                                ->numeric()
+                                ->minValue(1)
+                                ->integer()
+                                ->helperText('Leave empty for unlimited'),
+
+                            Forms\Components\DateTimePicker::make('expires_at')
+                                ->label('Expires At')
+                                ->helperText('Leave empty for no expiration'),
+
                             Forms\Components\Toggle::make('active')
                                 ->label('Active')
                                 ->default(true),
                         ])
-                        ->columns(2)
+                        ->columns(3)
                         ->columnSpanFull()
                         ->defaultItems(0)
                         ->addActionLabel('Add Coupon'),
