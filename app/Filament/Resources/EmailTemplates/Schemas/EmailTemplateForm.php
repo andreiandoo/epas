@@ -69,7 +69,7 @@ class EmailTemplateForm
 
                         RichEditor::make('body')
                             ->label('Email Body (Visual)')
-                            ->required()
+                            ->required(fn ($get) => !$get('html_mode'))
                             ->toolbarButtons([
                                 'bold',
                                 'italic',
@@ -84,15 +84,21 @@ class EmailTemplateForm
                             ])
                             ->columnSpanFull()
                             ->helperText('Use {{variable_name}} placeholders for dynamic content')
-                            ->visible(fn ($get) => !$get('html_mode')),
+                            ->hidden(fn ($get) => $get('html_mode')),
 
-                        Textarea::make('body')
+                        Textarea::make('body_html')
                             ->label('Email Body (HTML Source)')
-                            ->required()
+                            ->required(fn ($get) => $get('html_mode'))
                             ->rows(20)
                             ->columnSpanFull()
                             ->helperText('Raw HTML content with {{variable_name}} placeholders. You can paste full HTML templates here.')
-                            ->visible(fn ($get) => $get('html_mode')),
+                            ->hidden(fn ($get) => !$get('html_mode'))
+                            ->afterStateHydrated(function ($state, $set, $record) {
+                                if ($record) {
+                                    $set('body_html', $record->body);
+                                }
+                            })
+                            ->dehydrateStateUsing(fn ($state, $get) => $get('html_mode') ? $state : null),
 
                         TagsInput::make('available_variables')
                             ->label('Available Variables')

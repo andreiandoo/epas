@@ -17,6 +17,19 @@ class EditEmailTemplate extends EditRecord
 {
     protected static string $resource = EmailTemplateResource::class;
 
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        // If HTML mode is enabled, use body_html as body
+        if (!empty($data['html_mode']) && isset($data['body_html'])) {
+            $data['body'] = $data['body_html'];
+        }
+
+        // Remove temporary fields
+        unset($data['html_mode'], $data['body_html']);
+
+        return $data;
+    }
+
     protected function getHeaderActions(): array
     {
         return [

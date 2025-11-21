@@ -86,41 +86,79 @@ class DomainController extends Controller
     }
 
     /**
-     * Manually confirm domain verification
+     * Toggle domain confirmed/verified status
      */
-    public function confirm($domainId)
+    public function toggleConfirmed(Request $request, $domainId)
     {
         try {
             $domain = Domain::findOrFail($domainId);
 
-            // Create or update verification record
-            $verification = $domain->verifications()->latest()->first();
+            $isVerified = $request->input('is_verified');
+            $shouldVerify = $isVerified === true || $isVerified === 'true';
 
-            if ($verification) {
-                $verification->markAsVerified();
+            if ($shouldVerify) {
+                // Create or update verification record
+                $verification = $domain->verifications()->latest()->first();
+
+                if ($verification) {
+                    $verification->markAsVerified();
+                } else {
+                    // Create a new verification marked as verified
+                    $domain->verifications()->create([
+                        'tenant_id' => $domain->tenant_id,
+                        'verification_method' => 'manual',
+                        'status' => 'verified',
+                        'verified_at' => now(),
+                    ]);
+                }
             } else {
-                // Create a new verification marked as verified
-                $domain->verifications()->create([
-                    'tenant_id' => $domain->tenant_id,
-                    'verification_method' => 'manual',
-                    'status' => 'verified',
-                    'verified_at' => now(),
-                ]);
+                // Unverify - delete or update verification
+                $domain->verifications()->delete();
             }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Domain confirmed successfully',
+                'message' => $shouldVerify ? 'Domain confirmed successfully' : 'Domain unconfirmed',
             ]);
         } catch (\Exception $e) {
-            \Log::error('Domain confirmation error', [
+            \Log::error('Domain toggle confirmed error', [
                 'domain_id' => $domainId,
                 'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to confirm domain: ' . $e->getMessage(),
+                'message' => 'Failed to update confirmation status: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Toggle domain suspended status
+     */
+    public function toggleSuspended(Request $request, $domainId)
+    {
+        try {
+            $domain = Domain::findOrFail($domainId);
+
+            $isSuspended = $request->input('is_suspended');
+            $domain->is_suspended = $isSuspended === true || $isSuspended === 'true';
+            $domain->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => $domain->is_suspended ? 'Domain suspended' : 'Domain unsuspended',
+                'is_suspended' => $domain->is_suspended,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Domain toggle suspended error', [
+                'domain_id' => $domainId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update suspended status',
             ], 500);
         }
     }
