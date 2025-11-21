@@ -7,6 +7,7 @@ use App\Models\Artist;
 use App\Services\SpotifyService;
 use App\Services\YouTubeService;
 use Filament\Actions\Action;
+use Filament\Forms\Components as FC;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
@@ -44,7 +45,7 @@ class ImportArtists extends Page implements HasForms
             ->schema([
                 SC\Section::make('Import Settings')
                     ->schema([
-                        SC\FileUpload::make('csv_file')
+                        FC\FileUpload::make('csv_file')
                             ->label('CSV File')
                             ->acceptedFileTypes(['text/csv', 'application/vnd.ms-excel', 'text/plain'])
                             ->required()
@@ -52,12 +53,12 @@ class ImportArtists extends Page implements HasForms
                             ->directory('imports')
                             ->helperText('Upload a CSV file with artist data. Must have at least a "name" column.'),
 
-                        SC\Toggle::make('update_existing')
+                        FC\Toggle::make('update_existing')
                             ->label('Update Existing Artists')
                             ->helperText('If enabled, existing artists (matched by slug) will be updated with new data')
                             ->default(true),
 
-                        SC\Toggle::make('download_images')
+                        FC\Toggle::make('download_images')
                             ->label('Download Images from URLs')
                             ->helperText('If enabled, images will be downloaded from URLs in the CSV and stored locally')
                             ->default(true),
