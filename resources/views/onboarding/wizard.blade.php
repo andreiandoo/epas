@@ -528,8 +528,8 @@
                                             class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                         >
                                         <div class="ml-3 flex-1">
-                                            <div class="font-medium">{{ $microservice->name }}</div>
-                                            <div class="text-sm text-gray-500">{{ $microservice->description }}</div>
+                                            <div class="font-medium">{{ $microservice->getTranslation('name', app()->getLocale()) }}</div>
+                                            <div class="text-sm text-gray-500">{{ $microservice->getTranslation('short_description', app()->getLocale()) }}</div>
                                             <div class="text-sm font-semibold text-blue-600 mt-1">
                                                 {{ number_format($microservice->price, 2) }} RON / {{ $microservice->pricing_model }}
                                             </div>

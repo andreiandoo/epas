@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $microservice->name['en'] ?? $microservice->slug }} - Documentation</title>
+    <title>{{ $microservice->getTranslation('name', app()->getLocale()) }} - Documentation</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50">
@@ -16,7 +16,7 @@
                         <nav class="text-sm text-gray-500 mb-2">
                             <a href="{{ route('docs.microservices.index') }}" class="hover:text-gray-700">Documentation</a>
                             <span class="mx-2">/</span>
-                            <span class="text-gray-900">{{ $microservice->name['en'] ?? $microservice->slug }}</span>
+                            <span class="text-gray-900">{{ $microservice->getTranslation('name', app()->getLocale()) }}</span>
                         </nav>
                         <h1 class="text-3xl font-bold text-gray-900">
                             {{ $microservice->getTranslation('name', app()->getLocale()) ?? $microservice->name['en'] ?? $microservice->slug }}
@@ -165,10 +165,10 @@
                                         <a href="{{ route('docs.microservices.show', $relatedService->slug) }}"
                                            class="block hover:bg-gray-50 -mx-2 px-2 py-2 rounded">
                                             <span class="text-sm font-medium text-blue-600 hover:text-blue-800">
-                                                {{ $relatedService->name['en'] ?? $relatedService->slug }}
+                                                {{ $relatedService->getTranslation('name', app()->getLocale()) }}
                                             </span>
                                             <p class="text-xs text-gray-500 mt-1 line-clamp-2">
-                                                {{ $relatedService->short_description['en'] ?? '' }}
+                                                {{ $relatedService->getTranslation('short_description', app()->getLocale()) }}
                                             </p>
                                         </a>
                                     </li>

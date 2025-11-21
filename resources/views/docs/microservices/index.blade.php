@@ -57,7 +57,7 @@
                                 </div>
                                 @if($microservice->icon_image)
                                     <img src="{{ Storage::url($microservice->icon_image) }}"
-                                         alt="{{ $microservice->name['en'] ?? '' }}"
+                                         alt="{{ $microservice->getTranslation('name', app()->getLocale()) }}"
                                          class="w-10 h-10 rounded-lg">
                                 @endif
                             </div>
