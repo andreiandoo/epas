@@ -20,7 +20,7 @@ class ImportArtists extends Page
 {
     protected static string $resource = ArtistResource::class;
 
-    protected static string $view = 'filament.resources.artists.pages.import-artists';
+    protected string $view = 'filament.resources.artists.pages.import-artists';
 
     protected static ?string $title = 'Import Artists';
 
