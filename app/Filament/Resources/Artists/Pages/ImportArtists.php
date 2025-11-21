@@ -7,10 +7,10 @@ use App\Models\Artist;
 use App\Services\SpotifyService;
 use App\Services\YouTubeService;
 use Filament\Actions\Action;
-use Filament\Forms\Components as FormComponents;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components as SC;
 use Filament\Schemas\Schema;
 use Filament\Resources\Pages\Page;
 use Illuminate\Support\Facades\Http;
@@ -42,9 +42,9 @@ class ImportArtists extends Page implements HasForms
     {
         return $form
             ->schema([
-                FormComponents\Section::make('Import Settings')
+                SC\Section::make('Import Settings')
                     ->schema([
-                        FormComponents\FileUpload::make('csv_file')
+                        SC\FileUpload::make('csv_file')
                             ->label('CSV File')
                             ->acceptedFileTypes(['text/csv', 'application/vnd.ms-excel', 'text/plain'])
                             ->required()
@@ -52,20 +52,20 @@ class ImportArtists extends Page implements HasForms
                             ->directory('imports')
                             ->helperText('Upload a CSV file with artist data. Must have at least a "name" column.'),
 
-                        FormComponents\Toggle::make('update_existing')
+                        SC\Toggle::make('update_existing')
                             ->label('Update Existing Artists')
                             ->helperText('If enabled, existing artists (matched by slug) will be updated with new data')
                             ->default(true),
 
-                        FormComponents\Toggle::make('download_images')
+                        SC\Toggle::make('download_images')
                             ->label('Download Images from URLs')
                             ->helperText('If enabled, images will be downloaded from URLs in the CSV and stored locally')
                             ->default(true),
                     ])->columns(1),
 
-                FormComponents\Section::make('CSV Format')
+                SC\Section::make('CSV Format')
                     ->schema([
-                        FormComponents\Placeholder::make('format_info')
+                        SC\Placeholder::make('format_info')
                             ->content(new \Illuminate\Support\HtmlString('
                                 <div class="text-sm space-y-2">
                                     <p><strong>Required column:</strong> name</p>
