@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\SeatingLayoutResource\Pages;
 
 use App\Filament\Resources\SeatingLayoutResource;
+use App\Models\Tenant;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateSeatingLayout extends CreateRecord
@@ -15,7 +16,7 @@ class CreateSeatingLayout extends CreateRecord
         $data['tenant_id'] = auth()->user()?->tenant_id
             ?? session('tenant_id')
             ?? request()->input('tenant_id')
-            ?? 1; // Default to tenant_id = 1 for development
+            ?? Tenant::first()?->id; // Use first available tenant
 
         return $data;
     }
