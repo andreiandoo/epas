@@ -21,11 +21,60 @@ class MicroserviceMarketplaceController extends Controller
      */
     public function index(Request $request)
     {
+        // Handle locale from query parameter
+        if ($request->has('locale')) {
+            app()->setLocale($request->get('locale'));
+        }
+
         $microservices = Microservice::active()->get();
+
+        // Group by category
+        $microservicesByCategory = $microservices->groupBy('category');
+
+        // Define category metadata (colors and descriptions)
+        $categoryMeta = [
+            'sales' => [
+                'name' => 'Sales & Ticketing',
+                'description' => 'Boost your revenue with powerful sales tools, door management, and ticketing solutions.',
+                'color' => 'indigo',
+                'icon' => 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z',
+            ],
+            'communication' => [
+                'name' => 'Communication',
+                'description' => 'Stay connected with your audience through multiple channels and automated messaging.',
+                'color' => 'green',
+                'icon' => 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z',
+            ],
+            'compliance' => [
+                'name' => 'Compliance & Legal',
+                'description' => 'Ensure regulatory compliance with e-invoicing, tax reporting, and legal documentation.',
+                'color' => 'amber',
+                'icon' => 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+            ],
+            'analytics' => [
+                'name' => 'Analytics & Insights',
+                'description' => 'Make data-driven decisions with comprehensive analytics and reporting tools.',
+                'color' => 'purple',
+                'icon' => 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
+            ],
+            'marketing' => [
+                'name' => 'Marketing & Growth',
+                'description' => 'Grow your audience with affiliate programs, CRM, and marketing automation.',
+                'color' => 'rose',
+                'icon' => 'M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z',
+            ],
+            'experience' => [
+                'name' => 'Attendee Experience',
+                'description' => 'Enhance the attendee journey with mobile wallets, waitlists, and group bookings.',
+                'color' => 'cyan',
+                'icon' => 'M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+            ],
+        ];
+
         $cart = session('cart', []);
         $cartCount = count($cart);
 
-        return view('store.index', compact('microservices', 'cartCount'));
+        return view('store.index', compact('microservices', 'microservicesByCategory', 'categoryMeta', 'cartCount'));
     }
 
     /**

@@ -58,7 +58,7 @@
                 </div>
             @endif
 
-            <!-- Microservices Grid -->
+            <!-- Microservices by Category -->
             @if($microservices->isEmpty())
                 <div class="text-center py-12">
                     <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,36 +67,75 @@
                     <p class="text-gray-500">No microservices available at the moment.</p>
                 </div>
             @else
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    @foreach($microservices as $microservice)
+                @php
+                    $colorClasses = [
+                        'indigo' => ['bg' => 'bg-indigo-50', 'text' => 'text-indigo-600', 'border' => 'border-indigo-200', 'icon-bg' => 'bg-indigo-100'],
+                        'green' => ['bg' => 'bg-green-50', 'text' => 'text-green-600', 'border' => 'border-green-200', 'icon-bg' => 'bg-green-100'],
+                        'amber' => ['bg' => 'bg-amber-50', 'text' => 'text-amber-600', 'border' => 'border-amber-200', 'icon-bg' => 'bg-amber-100'],
+                        'purple' => ['bg' => 'bg-purple-50', 'text' => 'text-purple-600', 'border' => 'border-purple-200', 'icon-bg' => 'bg-purple-100'],
+                        'rose' => ['bg' => 'bg-rose-50', 'text' => 'text-rose-600', 'border' => 'border-rose-200', 'icon-bg' => 'bg-rose-100'],
+                        'cyan' => ['bg' => 'bg-cyan-50', 'text' => 'text-cyan-600', 'border' => 'border-cyan-200', 'icon-bg' => 'bg-cyan-100'],
+                    ];
+                @endphp
+
+                @foreach($microservicesByCategory as $category => $categoryMicroservices)
+                    @php
+                        $meta = $categoryMeta[$category] ?? [
+                            'name' => ucfirst($category ?? 'Other'),
+                            'description' => 'Additional tools and services for your platform.',
+                            'color' => 'indigo',
+                            'icon' => 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z',
+                        ];
+                        $colors = $colorClasses[$meta['color']] ?? $colorClasses['indigo'];
+                    @endphp
+
+                    <section class="mb-16">
+                        <!-- Category Header -->
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="p-3 rounded-xl {{ $colors['icon-bg'] }}">
+                                <svg class="w-6 h-6 {{ $colors['text'] }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $meta['icon'] }}"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-2xl font-bold text-gray-900">{{ $meta['name'] }}</h2>
+                                <p class="text-gray-600">{{ $meta['description'] }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Category Microservices Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            @foreach($categoryMicroservices as $microservice)
                         <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
                             <!-- Image -->
-                            @if($microservice->public_image)
-                                <div class="aspect-video bg-gray-100">
-                                    <img src="{{ Storage::url($microservice->public_image) }}"
-                                         alt="{{ $microservice->getTranslation('name', app()->getLocale()) }}"
-                                         class="w-full h-full object-cover">
-                                </div>
-                            @else
-                                <div class="aspect-video bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                                    @if($microservice->icon_image)
-                                        <img src="{{ Storage::url($microservice->icon_image) }}"
+                            <a href="{{ route('store.show', $microservice->slug) }}" class="block">
+                                @if($microservice->public_image)
+                                    <div class="aspect-video bg-gray-100">
+                                        <img src="{{ Storage::url($microservice->public_image) }}"
                                              alt="{{ $microservice->getTranslation('name', app()->getLocale()) }}"
-                                             class="w-16 h-16">
-                                    @else
-                                        <svg class="w-16 h-16 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-                                        </svg>
-                                    @endif
-                                </div>
-                            @endif
+                                             class="w-full h-full object-cover">
+                                    </div>
+                                @else
+                                    <div class="aspect-video bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                                        @if($microservice->icon_image)
+                                            <img src="{{ Storage::url($microservice->icon_image) }}"
+                                                 alt="{{ $microservice->getTranslation('name', app()->getLocale()) }}"
+                                                 class="w-16 h-16">
+                                        @else
+                                            <svg class="w-16 h-16 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                                            </svg>
+                                        @endif
+                                    </div>
+                                @endif
+                            </a>
 
                             <!-- Content -->
                             <div class="p-6">
                                 <div class="flex items-start justify-between mb-3">
-                                    <h3 class="font-semibold text-lg text-gray-900">
+                                    <a href="{{ route('store.show', $microservice->slug) }}" class="font-semibold text-lg text-gray-900 hover:text-indigo-600 transition-colors">
                                         {{ $microservice->getTranslation('name', app()->getLocale()) }}
-                                    </h3>
+                                    </a>
                                     @if($microservice->category)
                                         <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
                                             {{ $microservice->category }}
@@ -140,42 +179,17 @@
                                             @endif
                                         </span>
                                     </div>
-                                    <div class="flex gap-2">
-                                        <a href="{{ route('store.show', $microservice->slug) }}"
-                                           class="text-sm text-indigo-600 hover:text-indigo-800">
-                                            Details
-                                        </a>
-                                        <form action="{{ route('store.cart.add') }}" method="POST" class="inline"
-                                              @submit.prevent="
-                                                  fetch('{{ route('store.cart.add') }}', {
-                                                      method: 'POST',
-                                                      headers: {
-                                                          'Content-Type': 'application/json',
-                                                          'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                                          'Accept': 'application/json'
-                                                      },
-                                                      body: JSON.stringify({ microservice_id: {{ $microservice->id }} })
-                                                  })
-                                                  .then(r => r.json())
-                                                  .then(data => {
-                                                      cartCount = data.cartCount;
-                                                      $el.querySelector('button').textContent = 'Added!';
-                                                      setTimeout(() => $el.querySelector('button').textContent = 'Add to Cart', 2000);
-                                                  })
-                                              ">
-                                            @csrf
-                                            <input type="hidden" name="microservice_id" value="{{ $microservice->id }}">
-                                            <button type="submit"
-                                                    class="bg-indigo-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
-                                                Add to Cart
-                                            </button>
-                                        </form>
-                                    </div>
+                                    <a href="{{ route('store.show', $microservice->slug) }}"
+                                       class="bg-indigo-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                                        Details
+                                    </a>
                                 </div>
                             </div>
                         </div>
-                    @endforeach
-                </div>
+                            @endforeach
+                        </div>
+                    </section>
+                @endforeach
             @endif
         </div>
     </main>

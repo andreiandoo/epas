@@ -15,6 +15,11 @@ use App\Http\Controllers\DocsController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
 
+// Define login route that redirects to Filament admin login
+Route::get('/login', function () {
+    return redirect('/admin/login');
+})->name('login');
+
 // DEBUG: Check auth status (NO auth middleware - shows if user is logged in)
 Route::middleware(['web'])->get('/check-auth', function() {
     return response()->json([
