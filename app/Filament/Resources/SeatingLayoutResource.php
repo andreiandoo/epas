@@ -42,6 +42,7 @@ class SeatingLayoutResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('venue_id')
                             ->relationship('venue', 'name')
+                            ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?? $record->getTranslation('name', 'en') ?? 'Unnamed Venue')
                             ->required()
                             ->searchable()
                             ->preload()

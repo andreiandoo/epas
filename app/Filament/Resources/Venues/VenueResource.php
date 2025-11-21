@@ -133,7 +133,7 @@ class VenueResource extends Resource
                                 ->implode(', ');
 
                             // Get Google Maps API key from settings
-                            $settings = \App\Models\Settings::first();
+                            $settings = \App\Models\Setting::first();
                             $apiKey = $settings?->google_maps_api_key;
 
                             if (empty($apiKey)) {
