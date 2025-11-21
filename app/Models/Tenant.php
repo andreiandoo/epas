@@ -89,11 +89,26 @@ class Tenant extends Model
         return $this->hasMany(Domain::class);
     }
 
+    public function packages(): HasMany
+    {
+        return $this->hasMany(TenantPackage::class);
+    }
+
+    public function verifications(): HasMany
+    {
+        return $this->hasMany(DomainVerification::class);
+    }
+
     public function microservices(): BelongsToMany
     {
         return $this->belongsToMany(Microservice::class, 'tenant_microservice')
             ->withPivot(['is_active', 'activated_at', 'expires_at', 'configuration'])
             ->withTimestamps();
+    }
+
+    public function tenantMicroservices(): HasMany
+    {
+        return $this->hasMany(TenantMicroservice::class);
     }
 
     public function owner(): BelongsTo
@@ -184,5 +199,15 @@ class Tenant extends Model
     public function insurancePolicies(): HasMany
     {
         return $this->hasMany(InsurancePolicy::class);
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    public function getActiveMicroservices()
+    {
+        return $this->tenantMicroservices()->where('is_active', true)->get();
     }
 }

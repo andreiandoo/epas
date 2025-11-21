@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Domain extends Model
 {
@@ -29,6 +31,36 @@ class Domain extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function verifications(): HasMany
+    {
+        return $this->hasMany(DomainVerification::class);
+    }
+
+    public function latestVerification(): HasOne
+    {
+        return $this->hasOne(DomainVerification::class)->latestOfMany();
+    }
+
+    public function packages(): HasMany
+    {
+        return $this->hasMany(TenantPackage::class);
+    }
+
+    public function latestPackage(): HasOne
+    {
+        return $this->hasOne(TenantPackage::class)->latestOfMany();
+    }
+
+    public function isVerified(): bool
+    {
+        return $this->latestVerification?->isVerified() ?? false;
+    }
+
+    public function hasReadyPackage(): bool
+    {
+        return $this->packages()->ready()->exists();
     }
 
     /**

@@ -15,6 +15,14 @@ use App\Http\Controllers\Api\MicroservicesController;
 use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\FeatureFlagController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\TenantClient\DomainVerificationController;
+use App\Http\Controllers\Api\TenantClient\PackageController;
+use App\Http\Controllers\Api\TenantClient\BootstrapController;
+use App\Http\Controllers\Api\TenantClient\EventsController;
+use App\Http\Controllers\Api\TenantClient\AuthController;
+use App\Http\Controllers\Api\TenantClient\CartController;
+use App\Http\Controllers\Api\TenantClient\CheckoutController;
+use App\Http\Controllers\Api\TenantClient\AdminController;
 
 /*
 |--------------------------------------------------------------------------
@@ -674,6 +682,176 @@ Route::prefix('v1/tenant')->middleware(['api.tenant', 'throttle:api'])->group(fu
             ->name('api.v1.tenant.subscriptions.show');
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Domain Verification API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for domain ownership verification
+|
+*/
+
+Route::prefix('tenant/domains')->middleware(['throttle:api', 'auth:sanctum'])->group(function () {
+    // Initiate domain verification
+    Route::post('/{domain}/verify/initiate', [DomainVerificationController::class, 'initiate'])
+        ->name('api.tenant.domains.verify.initiate');
+
+    // Get verification status
+    Route::get('/{domain}/verify/status', [DomainVerificationController::class, 'status'])
+        ->name('api.tenant.domains.verify.status');
+
+    // Trigger verification check
+    Route::post('/{domain}/verify', [DomainVerificationController::class, 'verify'])
+        ->name('api.tenant.domains.verify');
+
+    // Get instructions for a verification method
+    Route::get('/{domain}/verify/instructions', [DomainVerificationController::class, 'instructions'])
+        ->name('api.tenant.domains.verify.instructions');
+
+    // Schedule background verification
+    Route::post('/{domain}/verify/schedule', [DomainVerificationController::class, 'scheduleVerification'])
+        ->name('api.tenant.domains.verify.schedule');
+
+    // Package management
+    Route::post('/{domain}/package/generate', [PackageController::class, 'generate'])
+        ->name('api.tenant.domains.package.generate');
+
+    Route::get('/{domain}/package/status', [PackageController::class, 'status'])
+        ->name('api.tenant.domains.package.status');
+
+    Route::get('/{domain}/packages', [PackageController::class, 'list'])
+        ->name('api.tenant.domains.packages');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Package Download Routes (Public with hash verification)
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/tenant/package/{package}/download/{hash}', [PackageController::class, 'download'])
+    ->name('api.tenant.package.download')
+    ->middleware('throttle:60,1');
+
+Route::get('/tenant/package/{package}/install-code', [PackageController::class, 'installCode'])
+    ->name('api.tenant.package.install-code')
+    ->middleware(['throttle:api', 'auth:sanctum']);
+
+Route::post('/tenant/package/{package}/invalidate', [PackageController::class, 'invalidate'])
+    ->name('api.tenant.package.invalidate')
+    ->middleware(['throttle:api', 'auth:sanctum']);
+
+/*
+|--------------------------------------------------------------------------
+| Tenant Client API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints called by the tenant client package (deployed on tenant domains)
+| These use custom middleware for request verification and signature checking
+|
+*/
+
+Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client'])->group(function () {
+    // Bootstrap
+    Route::get('/bootstrap', [BootstrapController::class, 'index'])
+        ->name('api.tenant-client.bootstrap');
+
+    // Auth (public)
+    Route::prefix('auth')->group(function () {
+        Route::post('/register', [AuthController::class, 'register'])
+            ->name('api.tenant-client.auth.register');
+        Route::post('/login', [AuthController::class, 'login'])
+            ->name('api.tenant-client.auth.login');
+        Route::get('/me', [AuthController::class, 'me'])
+            ->name('api.tenant-client.auth.me');
+        Route::post('/logout', [AuthController::class, 'logout'])
+            ->name('api.tenant-client.auth.logout');
+        Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
+            ->name('api.tenant-client.auth.forgot-password');
+        Route::post('/reset-password', [AuthController::class, 'resetPassword'])
+            ->name('api.tenant-client.auth.reset-password');
+        Route::post('/super-login', [AuthController::class, 'superAdminLogin'])
+            ->name('api.tenant-client.auth.super-login');
+    });
+
+    // Events (public)
+    Route::prefix('events')->group(function () {
+        Route::get('/', [EventsController::class, 'index'])
+            ->name('api.tenant-client.events.index');
+        Route::get('/{slug}', [EventsController::class, 'show'])
+            ->name('api.tenant-client.events.show');
+        Route::get('/{slug}/tickets', [EventsController::class, 'tickets'])
+            ->name('api.tenant-client.events.tickets');
+        Route::get('/{slug}/seating', [EventsController::class, 'seating'])
+            ->name('api.tenant-client.events.seating');
+    });
+
+    // Cart
+    Route::prefix('cart')->group(function () {
+        Route::get('/', [CartController::class, 'index'])
+            ->name('api.tenant-client.cart.index');
+        Route::post('/items', [CartController::class, 'addItem'])
+            ->name('api.tenant-client.cart.add');
+        Route::put('/items/{itemId}', [CartController::class, 'updateItem'])
+            ->name('api.tenant-client.cart.update');
+        Route::delete('/items/{itemId}', [CartController::class, 'removeItem'])
+            ->name('api.tenant-client.cart.remove');
+        Route::delete('/', [CartController::class, 'clear'])
+            ->name('api.tenant-client.cart.clear');
+        Route::post('/promo-code', [CartController::class, 'applyPromoCode'])
+            ->name('api.tenant-client.cart.promo-code.apply');
+        Route::delete('/promo-code', [CartController::class, 'removePromoCode'])
+            ->name('api.tenant-client.cart.promo-code.remove');
+    });
+
+    // Checkout
+    Route::prefix('checkout')->group(function () {
+        Route::post('/init', [CheckoutController::class, 'init'])
+            ->name('api.tenant-client.checkout.init');
+        Route::post('/submit', [CheckoutController::class, 'submit'])
+            ->name('api.tenant-client.checkout.submit');
+        Route::get('/order/{orderId}', [CheckoutController::class, 'orderStatus'])
+            ->name('api.tenant-client.checkout.order-status');
+        Route::post('/insurance-quote', [CheckoutController::class, 'insuranceQuote'])
+            ->name('api.tenant-client.checkout.insurance-quote');
+    });
+
+    // Admin (requires admin auth)
+    Route::prefix('admin')->group(function () {
+        Route::get('/dashboard', [AdminController::class, 'dashboard'])
+            ->name('api.tenant-client.admin.dashboard');
+
+        // Events management
+        Route::get('/events', [AdminController::class, 'events'])
+            ->name('api.tenant-client.admin.events');
+        Route::post('/events', [AdminController::class, 'createEvent'])
+            ->name('api.tenant-client.admin.events.create');
+        Route::put('/events/{eventId}', [AdminController::class, 'updateEvent'])
+            ->name('api.tenant-client.admin.events.update');
+
+        // Orders
+        Route::get('/orders', [AdminController::class, 'orders'])
+            ->name('api.tenant-client.admin.orders');
+        Route::get('/orders/{orderId}', [AdminController::class, 'orderDetail'])
+            ->name('api.tenant-client.admin.orders.detail');
+
+        // Customers
+        Route::get('/customers', [AdminController::class, 'customers'])
+            ->name('api.tenant-client.admin.customers');
+
+        // Settings
+        Route::get('/settings', [AdminController::class, 'settings'])
+            ->name('api.tenant-client.admin.settings');
+        Route::put('/settings', [AdminController::class, 'updateSettings'])
+            ->name('api.tenant-client.admin.settings.update');
+    });
+});
+
+// Payment callbacks (no tenant.client middleware - called by payment processors)
+Route::post('/tenant-client/checkout/callback/{provider}', [CheckoutController::class, 'paymentCallback'])
+    ->name('api.tenant-client.checkout.callback')
+    ->middleware('throttle:60,1');
 
 /*
 |--------------------------------------------------------------------------
