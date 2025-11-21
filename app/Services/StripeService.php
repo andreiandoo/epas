@@ -14,18 +14,22 @@ use Stripe\Exception\SignatureVerificationException;
 class StripeService
 {
     protected Setting $settings;
+    protected bool $initialized = false;
 
     public function __construct()
     {
         $this->settings = Setting::current();
-        $this->initializeStripe();
     }
 
     /**
-     * Initialize Stripe with API keys
+     * Ensure Stripe is initialized before making API calls
      */
-    protected function initializeStripe(): void
+    protected function ensureInitialized(): void
     {
+        if ($this->initialized) {
+            return;
+        }
+
         $secretKey = $this->settings->getStripeSecretKey();
 
         if (!$secretKey) {
@@ -33,6 +37,7 @@ class StripeService
         }
 
         Stripe::setApiKey($secretKey);
+        $this->initialized = true;
     }
 
     /**
@@ -50,6 +55,8 @@ class StripeService
         string $successUrl,
         string $cancelUrl
     ): Session {
+        $this->ensureInitialized();
+
         $microservices = Microservice::whereIn('id', $microserviceIds)
             ->where('is_active', true)
             ->get();
@@ -136,6 +143,8 @@ class StripeService
      */
     public function retrieveSession(string $sessionId): Session
     {
+        $this->ensureInitialized();
+
         return Session::retrieve($sessionId);
     }
 
@@ -144,6 +153,8 @@ class StripeService
      */
     public function constructWebhookEvent(string $payload, string $signature): \Stripe\Event
     {
+        $this->ensureInitialized();
+
         $webhookSecret = $this->settings->stripe_webhook_secret;
 
         if (!$webhookSecret) {
@@ -234,6 +245,8 @@ class StripeService
      */
     public function createCustomer(Tenant $tenant): Customer
     {
+        $this->ensureInitialized();
+
         return Customer::create([
             'email' => $tenant->contact_email ?? $tenant->owner->email,
             'name' => $tenant->public_name ?? $tenant->name,
