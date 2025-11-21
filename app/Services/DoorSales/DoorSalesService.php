@@ -10,11 +10,19 @@ use App\Models\TicketType;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\Customer;
+use App\Models\Tenant;
+use App\Services\Stripe\StripeConnectService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class DoorSalesService
 {
+    protected StripeConnectService $stripeConnect;
+
+    public function __construct(StripeConnectService $stripeConnect)
+    {
+        $this->stripeConnect = $stripeConnect;
+    }
     /**
      * Get available events for door sales
      */
@@ -71,15 +79,18 @@ class DoorSalesService
             ];
         }
 
-        $platformFee = $this->calculatePlatformFee($subtotal);
-        $processingFee = $this->calculateProcessingFee($subtotal + $platformFee);
-        $total = $subtotal + $platformFee + $processingFee;
+        // Get tenant-specific fee percentage
+        $tenant = isset($data['tenant_id']) ? Tenant::find($data['tenant_id']) : null;
+        $feePercentage = $tenant?->platform_fee_percentage ?? config('door-sales.platform_fee_percentage', 5.0);
+
+        $platformFee = $this->calculatePlatformFee($subtotal, $feePercentage);
+        $total = $subtotal + $platformFee; // No separate processing fee - included in platform fee
 
         return [
             'items' => $itemDetails,
             'subtotal' => round($subtotal, 2),
             'platform_fee' => round($platformFee, 2),
-            'processing_fee' => round($processingFee, 2),
+            'fee_percentage' => $feePercentage,
             'total' => round($total, 2),
             'currency' => $data['currency'] ?? 'EUR',
         ];
@@ -172,33 +183,41 @@ class DoorSalesService
     }
 
     /**
-     * Process payment via Stripe Tap to Pay
+     * Process payment via Stripe Connect with split
      */
     protected function processPayment(DoorSale $doorSale, array $data): array
     {
-        // In real implementation, use Stripe Terminal SDK
-        // This is a placeholder for the payment processing logic
+        // Create split payment via Stripe Connect
+        $paymentResult = $this->stripeConnect->createSplitPayment($doorSale);
 
-        try {
-            // $stripe = new \Stripe\StripeClient(config('services.stripe.secret'));
-            //
-            // For Tap to Pay, you would:
-            // 1. Create PaymentIntent on server
-            // 2. Collect payment on device using Terminal SDK
-            // 3. Confirm payment
-
-            // Simulated success response
-            return [
-                'success' => true,
-                'transaction_id' => 'txn_' . Str::random(24),
-                'payment_intent_id' => 'pi_' . Str::random(24),
-            ];
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage(),
-            ];
+        if (!$paymentResult['success']) {
+            return $paymentResult;
         }
+
+        // In production, the mobile app would use Stripe Terminal SDK to:
+        // 1. Collect payment method using the payment_intent_id
+        // 2. Confirm the payment
+        // 3. Return the result
+
+        // For now, simulate the Terminal collection
+        // The actual implementation would be in the mobile app
+
+        // Confirm and record the split
+        $confirmResult = $this->stripeConnect->confirmPayment(
+            $paymentResult['payment_intent_id'],
+            $doorSale
+        );
+
+        if (!$confirmResult['success']) {
+            return $confirmResult;
+        }
+
+        return [
+            'success' => true,
+            'transaction_id' => $confirmResult['transaction_id'],
+            'payment_intent_id' => $paymentResult['payment_intent_id'],
+            'split' => $confirmResult['split'],
+        ];
     }
 
     /**
@@ -351,26 +370,15 @@ class DoorSalesService
     }
 
     /**
-     * Calculate platform fee
+     * Calculate platform fee (includes Stripe processing)
      */
-    protected function calculatePlatformFee(float $amount): float
+    protected function calculatePlatformFee(float $amount, ?float $percentage = null): float
     {
-        $percentage = config('door-sales.platform_fee_percentage', 2.5);
+        $percentage = $percentage ?? config('door-sales.platform_fee_percentage', 5.0);
         $minFee = config('door-sales.min_fee', 0.10);
 
         $fee = $amount * ($percentage / 100);
 
         return max($fee, $minFee);
-    }
-
-    /**
-     * Calculate payment processing fee (Stripe)
-     */
-    protected function calculateProcessingFee(float $amount): float
-    {
-        $percentage = config('door-sales.processing_fee_percentage', 1.4);
-        $fixed = config('door-sales.processing_fee_fixed', 0.25);
-
-        return ($amount * ($percentage / 100)) + $fixed;
     }
 }

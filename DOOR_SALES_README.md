@@ -41,18 +41,41 @@ Sell tickets at the door using Tap to Pay on mobile devices.
 - `apple_pay` - Apple Pay
 - `google_pay` - Google Pay
 
-## Revenue Model
+## Revenue Model - Stripe Connect Split Payments
 ```
-Platform Fee: 2.5% of subtotal (configurable)
+Platform Fee: 5% of subtotal (configurable per tenant)
 Minimum Fee: €0.10
-Processing Fee: 1.4% + €0.25 (Stripe passthrough)
+Stripe fees included in platform fee
 
 Example: €100 ticket sale
 - Subtotal: €100.00
-- Platform Fee: €2.50
-- Processing Fee: €1.65
-- Total Charged: €104.15
+- Platform Fee: €5.00 (5%)
+- Total Charged: €105.00
+
+Automatic Split:
+- Tenant receives: €100.00 (instant transfer)
+- Platform receives: €5.00
+- Stripe fee (~€1.70): deducted from platform fee
+- Net Platform: €3.30
 ```
+
+## Stripe Connect Integration
+
+### Tenant Onboarding
+```
+POST /api/stripe/connect/onboard → Get onboarding URL
+→ Tenant completes KYC on Stripe
+POST /api/stripe/connect/refresh → Update status
+```
+
+### API Endpoints
+- `GET /api/stripe/connect/status` - Account status
+- `POST /api/stripe/connect/onboard` - Start onboarding
+- `POST /api/stripe/connect/refresh` - Refresh status
+- `GET /api/stripe/connect/dashboard` - Stripe dashboard link
+- `GET /api/stripe/connect/earnings` - Earnings summary
+- `POST /api/stripe/terminal/connection-token` - Terminal token
+- `PUT /api/stripe/connect/fee` - Update fee percentage
 
 ## Usage
 
