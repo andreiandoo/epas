@@ -5,8 +5,8 @@ namespace App\Filament\Resources\TenantResource\RelationManagers;
 use App\Models\Domain;
 use App\Models\DomainVerification;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Notifications\Notification;
@@ -17,7 +17,7 @@ class DomainsRelationManager extends RelationManager
 {
     protected static string $relationship = 'domains';
 
-    public function form(Form $form): Form
+    public function form(Schema $form): Schema
     {
         return $form
             ->schema([
