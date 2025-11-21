@@ -31,37 +31,9 @@ class ListArtists extends ListRecords
 
             Actions\Action::make('import')
                 ->label('Import CSV')
-                ->icon('heroicon-o-arrow-down-tray')
+                ->icon('heroicon-o-arrow-up-tray')
                 ->color('gray')
-                ->form([
-                    Forms\Components\FileUpload::make('file')
-                        ->label('CSV File')
-                        ->acceptedFileTypes(['text/csv', 'application/csv', 'text/plain'])
-                        ->required()
-                        ->helperText('Upload a CSV file with artist data. See documentation for format.')
-                        ->disk('local')
-                        ->directory('imports'),
-                ])
-                ->action(function (array $data) {
-                    $filePath = storage_path('app/' . $data['file']);
-
-                    Artisan::call('import:artists', [
-                        'file' => $filePath,
-                    ]);
-
-                    $output = Artisan::output();
-
-                    Notification::make()
-                        ->title('Import completed')
-                        ->body($output)
-                        ->success()
-                        ->send();
-
-                    // Delete uploaded file after import
-                    if (file_exists($filePath)) {
-                        unlink($filePath);
-                    }
-                }),
+                ->url(fn () => ArtistResource::getUrl('import')),
         ];
     }
 }

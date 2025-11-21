@@ -7,6 +7,7 @@ use App\Filament\Resources\Artists\Pages\EditArtist;
 use App\Filament\Resources\Artists\Pages\ListArtists;
 use App\Filament\Resources\Artists\Pages\ViewArtist;
 use App\Filament\Resources\Artists\Pages\ArtistStats;
+use App\Filament\Resources\Artists\Pages\ImportArtists;
 use Illuminate\Database\Eloquent\Builder;
 use App\Support\Locations;
 use App\Filament\Forms\Components\TranslatableField;
@@ -498,6 +499,7 @@ class ArtistResource extends Resource
         return [
             'index'  => ListArtists::route('/'),
             'create' => CreateArtist::route('/create'),
+            'import' => ImportArtists::route('/import'),
             'view'   => ViewArtist::route('/{record}'),
             //'view'   => ViewArtist::route('/{slug}'),
             'edit'   => EditArtist::route('/{record}/edit'),
