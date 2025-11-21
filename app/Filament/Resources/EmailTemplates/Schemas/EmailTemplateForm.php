@@ -4,6 +4,7 @@ namespace App\Filament\Resources\EmailTemplates\Schemas;
 
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Toggle;
@@ -59,12 +60,39 @@ class EmailTemplateForm
                             ->placeholder('Welcome {{first_name}} to {{public_name}}!')
                             ->helperText('Use {{variable_name}} to insert variables'),
 
+                        Toggle::make('html_mode')
+                            ->label('HTML Source Mode')
+                            ->default(false)
+                            ->live()
+                            ->columnSpanFull()
+                            ->helperText('Toggle to switch between visual editor and raw HTML'),
+
+                        RichEditor::make('body')
+                            ->label('Email Body (Visual)')
+                            ->required()
+                            ->toolbarButtons([
+                                'bold',
+                                'italic',
+                                'underline',
+                                'strike',
+                                'link',
+                                'bulletList',
+                                'orderedList',
+                                'h2',
+                                'h3',
+                                'blockquote',
+                            ])
+                            ->columnSpanFull()
+                            ->helperText('Use {{variable_name}} placeholders for dynamic content')
+                            ->visible(fn ($get) => !$get('html_mode')),
+
                         Textarea::make('body')
-                            ->label('Email Body (HTML)')
+                            ->label('Email Body (HTML Source)')
                             ->required()
                             ->rows(20)
                             ->columnSpanFull()
-                            ->helperText('Raw HTML content with {{variable_name}} placeholders. You can paste full HTML templates here.'),
+                            ->helperText('Raw HTML content with {{variable_name}} placeholders. You can paste full HTML templates here.')
+                            ->visible(fn ($get) => $get('html_mode')),
 
                         TagsInput::make('available_variables')
                             ->label('Available Variables')

@@ -383,11 +383,32 @@ class TenantResource extends Resource
             SC\Section::make('Domains')
                 ->description('Websites associated with this tenant - manage domain status and access')
                 ->schema([
+                    // Show repeater for creating new domains (when no record exists)
+                    Forms\Components\Repeater::make('new_domains')
+                        ->label('Domains')
+                        ->schema([
+                            Forms\Components\TextInput::make('domain')
+                                ->label('Domain Name')
+                                ->required()
+                                ->placeholder('events.example.com')
+                                ->helperText('Full domain without http/https'),
+                            Forms\Components\Toggle::make('is_primary')
+                                ->label('Primary Domain')
+                                ->default(false),
+                        ])
+                        ->columns(2)
+                        ->defaultItems(1)
+                        ->addActionLabel('Add Domain')
+                        ->reorderable(false)
+                        ->visible(fn ($record) => $record === null)
+                        ->helperText('Add domains for this tenant. You can manage them after saving.'),
+
+                    // Show existing domains manager for editing
                     Forms\Components\Placeholder::make('domains_manager')
                         ->label('')
                         ->content(function ($record) {
                             if (!$record) {
-                                return 'Save the tenant first to manage domains.';
+                                return '';
                             }
                             return new \Illuminate\Support\HtmlString(
                                 view('filament.resources.tenants.domains-manager', [
@@ -395,9 +416,9 @@ class TenantResource extends Resource
                                     'tenantId' => $record->id,
                                 ])->render()
                             );
-                        }),
-                ])->collapsible()
-                ->visible(fn ($record) => $record !== null),
+                        })
+                        ->visible(fn ($record) => $record !== null),
+                ])->collapsible(),
 
             SC\Section::make('Ticket Terms & Conditions')
                 ->description('Terms and conditions that apply to all events for this tenant')

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\EmailTemplates\Pages;
 
 use App\Filament\Resources\EmailTemplates\EmailTemplateResource;
+use App\Models\EmailLog;
 use App\Models\Setting;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
@@ -99,12 +100,47 @@ class EditEmailTemplate extends EditRecord
                 ]);
 
                 if ($response->successful()) {
+                    // Log successful email
+                    EmailLog::create([
+                        'email_template_id' => $template->id,
+                        'recipient_email' => $email,
+                        'recipient_name' => 'Test User',
+                        'subject' => '[TEST] ' . $processed['subject'],
+                        'body' => $processed['body'] . ($settings->email_footer ?? ''),
+                        'status' => 'sent',
+                        'sent_at' => now(),
+                        'metadata' => [
+                            'type' => 'test',
+                            'sender_email' => $settings->email ?? 'noreply@tixello.com',
+                            'sender_name' => $settings->company_name ?? 'Tixello',
+                            'provider' => 'brevo',
+                        ],
+                    ]);
+
                     Notification::make()
                         ->success()
                         ->title('Test email sent!')
                         ->body("Email sent to {$email} via Brevo")
                         ->send();
                 } else {
+                    // Log failed email
+                    EmailLog::create([
+                        'email_template_id' => $template->id,
+                        'recipient_email' => $email,
+                        'recipient_name' => 'Test User',
+                        'subject' => '[TEST] ' . $processed['subject'],
+                        'body' => $processed['body'] . ($settings->email_footer ?? ''),
+                        'status' => 'failed',
+                        'failed_at' => now(),
+                        'error_message' => $response->json('message') ?? 'Unknown error',
+                        'metadata' => [
+                            'type' => 'test',
+                            'sender_email' => $settings->email ?? 'noreply@tixello.com',
+                            'sender_name' => $settings->company_name ?? 'Tixello',
+                            'provider' => 'brevo',
+                        ],
+                    ]);
+
                     Notification::make()
                         ->danger()
                         ->title('Failed to send email')
@@ -112,6 +148,24 @@ class EditEmailTemplate extends EditRecord
                         ->send();
                 }
             } catch (\Exception $e) {
+                // Log exception
+                EmailLog::create([
+                    'email_template_id' => $template->id,
+                    'recipient_email' => $email,
+                    'recipient_name' => 'Test User',
+                    'subject' => '[TEST] ' . $processed['subject'],
+                    'body' => $processed['body'] . ($settings->email_footer ?? ''),
+                    'status' => 'failed',
+                    'failed_at' => now(),
+                    'error_message' => $e->getMessage(),
+                    'metadata' => [
+                        'type' => 'test',
+                        'sender_email' => $settings->email ?? 'noreply@tixello.com',
+                        'sender_name' => $settings->company_name ?? 'Tixello',
+                        'provider' => 'brevo',
+                    ],
+                ]);
+
                 Notification::make()
                     ->danger()
                     ->title('Error sending email')
@@ -126,12 +180,47 @@ class EditEmailTemplate extends EditRecord
                         ->subject('[TEST] ' . $processed['subject']);
                 });
 
+                // Log successful email
+                EmailLog::create([
+                    'email_template_id' => $template->id,
+                    'recipient_email' => $email,
+                    'recipient_name' => 'Test User',
+                    'subject' => '[TEST] ' . $processed['subject'],
+                    'body' => $processed['body'] . ($settings->email_footer ?? ''),
+                    'status' => 'sent',
+                    'sent_at' => now(),
+                    'metadata' => [
+                        'type' => 'test',
+                        'sender_email' => config('mail.from.address'),
+                        'sender_name' => config('mail.from.name'),
+                        'provider' => 'laravel_mail',
+                    ],
+                ]);
+
                 Notification::make()
                     ->success()
                     ->title('Test email sent!')
                     ->body("Email sent to {$email} via Laravel Mail")
                     ->send();
             } catch (\Exception $e) {
+                // Log failed email
+                EmailLog::create([
+                    'email_template_id' => $template->id,
+                    'recipient_email' => $email,
+                    'recipient_name' => 'Test User',
+                    'subject' => '[TEST] ' . $processed['subject'],
+                    'body' => $processed['body'] . ($settings->email_footer ?? ''),
+                    'status' => 'failed',
+                    'failed_at' => now(),
+                    'error_message' => $e->getMessage(),
+                    'metadata' => [
+                        'type' => 'test',
+                        'sender_email' => config('mail.from.address'),
+                        'sender_name' => config('mail.from.name'),
+                        'provider' => 'laravel_mail',
+                    ],
+                ]);
+
                 Notification::make()
                     ->danger()
                     ->title('Error sending email')
