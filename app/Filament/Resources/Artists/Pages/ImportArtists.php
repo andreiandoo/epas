@@ -66,7 +66,7 @@ class ImportArtists extends Page implements HasForms
 
                 SC\Section::make('CSV Format')
                     ->schema([
-                        SC\Placeholder::make('format_info')
+                        FC\Placeholder::make('format_info')
                             ->content(new \Illuminate\Support\HtmlString('
                                 <div class="text-sm space-y-2">
                                     <p><strong>Required column:</strong> name</p>
