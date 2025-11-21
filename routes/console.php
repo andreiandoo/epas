@@ -237,9 +237,9 @@ Schedule::command('exchange-rates:fetch')
 |--------------------------------------------------------------------------
 */
 
-// Update artist social media stats (every 2 days at 3 AM)
+// Update artist social media stats (Monday and Thursday at 3 AM)
 Schedule::command('artists:update-social-stats')
-    ->twiceWeekly(1, 4, '03:00') // Monday and Thursday at 3 AM
+    ->weekly()->days([1, 4])->at('03:00')
     ->timezone('Europe/Bucharest')
     ->onSuccess(function () {
         \Log::info('Artist social stats updated successfully');
