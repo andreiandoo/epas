@@ -109,10 +109,13 @@
                                 </p>
 
                                 <!-- Features Preview -->
-                                @if($microservice->features && count($microservice->features) > 0)
+                                @php
+                                    $features = $microservice->getTranslation('features', app()->getLocale()) ?? [];
+                                @endphp
+                                @if(is_array($features) && count($features) > 0)
                                     <div class="mb-4">
                                         <ul class="text-sm text-gray-500 space-y-1">
-                                            @foreach(array_slice($microservice->features, 0, 3) as $feature)
+                                            @foreach(array_slice($features, 0, 3) as $feature)
                                                 <li class="flex items-center gap-2">
                                                     <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>

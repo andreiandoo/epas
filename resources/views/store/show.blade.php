@@ -88,11 +88,14 @@
                     </div>
 
                     <!-- Features -->
-                    @if($microservice->features && count($microservice->features) > 0)
+                    @php
+                        $features = $microservice->getTranslation('features', app()->getLocale()) ?? [];
+                    @endphp
+                    @if(is_array($features) && count($features) > 0)
                         <div class="bg-white rounded-xl p-8 shadow-sm border border-gray-100 mb-8">
                             <h2 class="text-xl font-semibold text-gray-900 mb-6">Features</h2>
                             <ul class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                @foreach($microservice->features as $feature)
+                                @foreach($features as $feature)
                                     <li class="flex items-start gap-3">
                                         <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
