@@ -13,8 +13,7 @@ use Filament\Schemas\Components as SC;
 use Filament\Forms;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Infolists;
-use Filament\Infolists\Infolist;
+use Filament\Infolists\Components as IC;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\HtmlString;
 
@@ -265,33 +264,33 @@ class VenueResource extends Resource
             ->bulkActions([]);
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Schema $schema): Schema
     {
-        return $infolist
+        return $schema
             ->schema([
                 // Hero Section with Image and Name
-                Infolists\Components\Section::make()
+                IC\Section::make()
                     ->schema([
-                        Infolists\Components\Grid::make(3)
+                        IC\Grid::make(3)
                             ->schema([
-                                Infolists\Components\ImageEntry::make('image_url')
+                                IC\ImageEntry::make('image_url')
                                     ->label('')
                                     ->disk('public')
                                     ->height(200)
                                     ->extraImgAttributes(['class' => 'rounded-xl object-cover'])
                                     ->columnSpan(1),
-                                Infolists\Components\Group::make([
-                                    Infolists\Components\TextEntry::make('name')
+                                IC\Group::make([
+                                    IC\TextEntry::make('name')
                                         ->label('')
                                         ->formatStateUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?? $record->getTranslation('name', 'en'))
-                                        ->size(Infolists\Components\TextEntry\TextEntrySize::Large)
+                                        ->size(IC\TextEntry\TextEntrySize::Large)
                                         ->weight('bold'),
-                                    Infolists\Components\TextEntry::make('location')
+                                    IC\TextEntry::make('location')
                                         ->label('')
                                         ->state(fn ($record) => collect([$record->address, $record->city, $record->state, $record->country])->filter()->implode(', '))
                                         ->icon('heroicon-o-map-pin')
                                         ->color('gray'),
-                                    Infolists\Components\TextEntry::make('tenant.name')
+                                    IC\TextEntry::make('tenant.name')
                                         ->label('Tenant')
                                         ->badge()
                                         ->color('primary')
@@ -302,25 +301,25 @@ class VenueResource extends Resource
                     ->columnSpanFull(),
 
                 // Statistics Grid
-                Infolists\Components\Section::make('Capacity & Info')
+                IC\Section::make('Capacity & Info')
                     ->icon('heroicon-o-users')
                     ->schema([
-                        Infolists\Components\Grid::make(4)
+                        IC\Grid::make(4)
                             ->schema([
-                                Infolists\Components\TextEntry::make('capacity_total')
+                                IC\TextEntry::make('capacity_total')
                                     ->label('Total Capacity')
                                     ->numeric()
                                     ->placeholder('—')
                                     ->icon('heroicon-o-users'),
-                                Infolists\Components\TextEntry::make('capacity_standing')
+                                IC\TextEntry::make('capacity_standing')
                                     ->label('Standing')
                                     ->numeric()
                                     ->placeholder('—'),
-                                Infolists\Components\TextEntry::make('capacity_seated')
+                                IC\TextEntry::make('capacity_seated')
                                     ->label('Seated')
                                     ->numeric()
                                     ->placeholder('—'),
-                                Infolists\Components\TextEntry::make('established_at')
+                                IC\TextEntry::make('established_at')
                                     ->label('Established')
                                     ->date('Y')
                                     ->placeholder('—'),
@@ -329,30 +328,30 @@ class VenueResource extends Resource
                     ->collapsible(),
 
                 // Location & Map
-                Infolists\Components\Section::make('Location')
+                IC\Section::make('Location')
                     ->icon('heroicon-o-map')
                     ->schema([
-                        Infolists\Components\Grid::make(2)
+                        IC\Grid::make(2)
                             ->schema([
-                                Infolists\Components\Group::make([
-                                    Infolists\Components\TextEntry::make('address')
+                                IC\Group::make([
+                                    IC\TextEntry::make('address')
                                         ->label('Address')
                                         ->placeholder('—'),
-                                    Infolists\Components\TextEntry::make('city')
+                                    IC\TextEntry::make('city')
                                         ->label('City')
                                         ->placeholder('—'),
-                                    Infolists\Components\TextEntry::make('state')
+                                    IC\TextEntry::make('state')
                                         ->label('State/Region')
                                         ->placeholder('—'),
-                                    Infolists\Components\TextEntry::make('country')
+                                    IC\TextEntry::make('country')
                                         ->label('Country')
                                         ->placeholder('—'),
-                                    Infolists\Components\TextEntry::make('coordinates')
+                                    IC\TextEntry::make('coordinates')
                                         ->label('Coordinates')
                                         ->state(fn ($record) => $record->lat && $record->lng ? "{$record->lat}, {$record->lng}" : null)
                                         ->placeholder('—'),
                                 ]),
-                                Infolists\Components\ViewEntry::make('map')
+                                IC\ViewEntry::make('map')
                                     ->view('filament.infolists.entries.venue-map')
                                     ->visible(fn ($record) => $record->lat && $record->lng),
                             ]),
@@ -360,40 +359,40 @@ class VenueResource extends Resource
                     ->collapsible(),
 
                 // Contact Information
-                Infolists\Components\Section::make('Contact & Social')
+                IC\Section::make('Contact & Social')
                     ->icon('heroicon-o-phone')
                     ->schema([
-                        Infolists\Components\Grid::make(3)
+                        IC\Grid::make(3)
                             ->schema([
-                                Infolists\Components\TextEntry::make('phone')
+                                IC\TextEntry::make('phone')
                                     ->label('Phone')
                                     ->icon('heroicon-o-phone')
                                     ->url(fn ($state) => $state ? "tel:{$state}" : null)
                                     ->placeholder('—'),
-                                Infolists\Components\TextEntry::make('email')
+                                IC\TextEntry::make('email')
                                     ->label('Email')
                                     ->icon('heroicon-o-envelope')
                                     ->url(fn ($state) => $state ? "mailto:{$state}" : null)
                                     ->placeholder('—'),
-                                Infolists\Components\TextEntry::make('website_url')
+                                IC\TextEntry::make('website_url')
                                     ->label('Website')
                                     ->icon('heroicon-o-globe-alt')
                                     ->url(fn ($state) => $state)
                                     ->openUrlInNewTab()
                                     ->placeholder('—'),
-                                Infolists\Components\TextEntry::make('facebook_url')
+                                IC\TextEntry::make('facebook_url')
                                     ->label('Facebook')
                                     ->icon('heroicon-o-link')
                                     ->url(fn ($state) => $state)
                                     ->openUrlInNewTab()
                                     ->placeholder('—'),
-                                Infolists\Components\TextEntry::make('instagram_url')
+                                IC\TextEntry::make('instagram_url')
                                     ->label('Instagram')
                                     ->icon('heroicon-o-link')
                                     ->url(fn ($state) => $state)
                                     ->openUrlInNewTab()
                                     ->placeholder('—'),
-                                Infolists\Components\TextEntry::make('tiktok_url')
+                                IC\TextEntry::make('tiktok_url')
                                     ->label('TikTok')
                                     ->icon('heroicon-o-link')
                                     ->url(fn ($state) => $state)
@@ -404,10 +403,10 @@ class VenueResource extends Resource
                     ->collapsible(),
 
                 // Description
-                Infolists\Components\Section::make('Description')
+                IC\Section::make('Description')
                     ->icon('heroicon-o-document-text')
                     ->schema([
-                        Infolists\Components\TextEntry::make('description')
+                        IC\TextEntry::make('description')
                             ->label('')
                             ->html()
                             ->formatStateUsing(fn ($record) => new HtmlString($record->getTranslation('description', app()->getLocale()) ?? $record->getTranslation('description', 'en') ?? '<em class="text-gray-400">No description</em>'))
@@ -416,10 +415,10 @@ class VenueResource extends Resource
                     ->collapsible(),
 
                 // Gallery
-                Infolists\Components\Section::make('Gallery')
+                IC\Section::make('Gallery')
                     ->icon('heroicon-o-photo')
                     ->schema([
-                        Infolists\Components\ImageEntry::make('gallery')
+                        IC\ImageEntry::make('gallery')
                             ->label('')
                             ->disk('public')
                             ->height(150)
@@ -433,19 +432,19 @@ class VenueResource extends Resource
                     ->visible(fn ($record) => !empty($record->gallery)),
 
                 // Metadata
-                Infolists\Components\Section::make('System Info')
+                IC\Section::make('System Info')
                     ->icon('heroicon-o-cog')
                     ->schema([
-                        Infolists\Components\Grid::make(3)
+                        IC\Grid::make(3)
                             ->schema([
-                                Infolists\Components\TextEntry::make('slug')
+                                IC\TextEntry::make('slug')
                                     ->label('Slug')
                                     ->badge()
                                     ->color('gray'),
-                                Infolists\Components\TextEntry::make('created_at')
+                                IC\TextEntry::make('created_at')
                                     ->label('Created')
                                     ->dateTime(),
-                                Infolists\Components\TextEntry::make('updated_at')
+                                IC\TextEntry::make('updated_at')
                                     ->label('Last Updated')
                                     ->dateTime(),
                             ]),
