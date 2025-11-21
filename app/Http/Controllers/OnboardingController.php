@@ -297,6 +297,9 @@ class OnboardingController extends Controller
             // Send registration confirmation email
             $this->sendRegistrationConfirmationEmail($user, $tenant, $step1);
 
+            // Send domain verification instructions email
+            $this->sendDomainVerificationInstructionsEmail($user, $tenant, $step1);
+
             // Log in the user
             Auth::login($user);
 
@@ -532,6 +535,179 @@ class OnboardingController extends Controller
             }
         } catch (\Exception $e) {
             Log::error('Failed to send registration confirmation email', [
+                'user_id' => $user->id,
+                'tenant_id' => $tenant->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Send domain verification instructions email
+     */
+    private function sendDomainVerificationInstructionsEmail(User $user, Tenant $tenant, array $step1): void
+    {
+        try {
+            // Get all domains with their verification codes
+            $domains = $tenant->domains()->with('verifications')->get();
+
+            if ($domains->isEmpty()) {
+                return;
+            }
+
+            // Build the email content
+            $domainsHtml = '';
+            foreach ($domains as $domain) {
+                $verification = $domain->verifications()->latest()->first();
+                if (!$verification) {
+                    continue;
+                }
+
+                $domainsHtml .= '<div style="margin-bottom: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #e9ecef;">';
+                $domainsHtml .= '<h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">🌐 ' . htmlspecialchars($domain->domain) . '</h3>';
+
+                // Method 1: DNS TXT Record
+                $domainsHtml .= '<div style="margin-bottom: 20px; padding: 15px; background-color: #fff; border-radius: 6px; border-left: 4px solid #007bff;">';
+                $domainsHtml .= '<h4 style="margin: 0 0 10px 0; color: #007bff; font-size: 14px;">Metoda 1: Înregistrare DNS TXT</h4>';
+                $domainsHtml .= '<p style="margin: 0 0 10px 0; color: #666; font-size: 13px;">Adaugă o înregistrare TXT în setările DNS ale domeniului tău:</p>';
+                $domainsHtml .= '<div style="background-color: #f1f3f4; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px;">';
+                $domainsHtml .= '<strong>Name/Host:</strong> ' . htmlspecialchars($verification->getDnsRecordName()) . '<br>';
+                $domainsHtml .= '<strong>Value/Content:</strong> ' . htmlspecialchars($verification->getDnsRecordValue());
+                $domainsHtml .= '</div>';
+                $domainsHtml .= '<p style="margin: 10px 0 0 0; color: #888; font-size: 11px;">💡 Modificările DNS pot dura până la 24-48 ore să se propage.</p>';
+                $domainsHtml .= '</div>';
+
+                // Method 2: Meta Tag
+                $domainsHtml .= '<div style="margin-bottom: 20px; padding: 15px; background-color: #fff; border-radius: 6px; border-left: 4px solid #28a745;">';
+                $domainsHtml .= '<h4 style="margin: 0 0 10px 0; color: #28a745; font-size: 14px;">Metoda 2: Meta Tag HTML</h4>';
+                $domainsHtml .= '<p style="margin: 0 0 10px 0; color: #666; font-size: 13px;">Adaugă acest meta tag în secțiunea &lt;head&gt; a paginii principale:</p>';
+                $domainsHtml .= '<div style="background-color: #f1f3f4; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; word-break: break-all;">';
+                $domainsHtml .= htmlspecialchars($verification->getMetaTagHtml());
+                $domainsHtml .= '</div>';
+                $domainsHtml .= '<p style="margin: 10px 0 0 0; color: #888; font-size: 11px;">💡 Pune tag-ul imediat după &lt;head&gt; sau înainte de &lt;/head&gt;.</p>';
+                $domainsHtml .= '</div>';
+
+                // Method 3: File Upload
+                $domainsHtml .= '<div style="padding: 15px; background-color: #fff; border-radius: 6px; border-left: 4px solid #ffc107;">';
+                $domainsHtml .= '<h4 style="margin: 0 0 10px 0; color: #856404; font-size: 14px;">Metoda 3: Fișier de Verificare</h4>';
+                $domainsHtml .= '<p style="margin: 0 0 10px 0; color: #666; font-size: 13px;">Creează un fișier pe serverul tău la această locație:</p>';
+                $domainsHtml .= '<div style="background-color: #f1f3f4; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px;">';
+                $domainsHtml .= '<strong>Cale fișier:</strong> ' . htmlspecialchars($verification->getFileUploadPath()) . '<br>';
+                $domainsHtml .= '<strong>Conținut fișier:</strong> ' . htmlspecialchars($verification->getFileUploadContent());
+                $domainsHtml .= '</div>';
+                $domainsHtml .= '<p style="margin: 10px 0 0 0; color: #888; font-size: 11px;">💡 Fișierul trebuie să fie accesibil la: https://' . htmlspecialchars($domain->domain) . $verification->getFileUploadPath() . '</p>';
+                $domainsHtml .= '</div>';
+
+                $domainsHtml .= '</div>';
+            }
+
+            // Build full email body
+            $emailBody = '
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px;">Instrucțiuni de Verificare Domeniu</h2>
+
+                <p style="color: #555; font-size: 14px; line-height: 1.6;">
+                    Salut ' . htmlspecialchars($step1['first_name']) . ',
+                </p>
+
+                <p style="color: #555; font-size: 14px; line-height: 1.6;">
+                    Pentru a activa website-ul tău de ticketing, trebuie să verifici proprietatea domeniilor înregistrate.
+                    <strong>Alege una dintre cele 3 metode</strong> pentru fiecare domeniu:
+                </p>
+
+                ' . $domainsHtml . '
+
+                <div style="margin-top: 30px; padding: 15px; background-color: #e7f3ff; border-radius: 8px; border: 1px solid #b8daff;">
+                    <h4 style="margin: 0 0 10px 0; color: #004085; font-size: 14px;">⏱️ Informații Importante</h4>
+                    <ul style="margin: 0; padding-left: 20px; color: #004085; font-size: 13px;">
+                        <li>Codul de verificare expiră în <strong>7 zile</strong></li>
+                        <li>Alege <strong>o singură metodă</strong> pentru fiecare domeniu</li>
+                        <li>După ce ai adăugat codul, domeniul va fi verificat automat sau manual de echipa noastră</li>
+                        <li>Vei primi un email de confirmare când domeniul este activat</li>
+                    </ul>
+                </div>
+
+                <div style="margin-top: 30px; padding: 15px; background-color: #fff3cd; border-radius: 8px; border: 1px solid #ffc107;">
+                    <h4 style="margin: 0 0 10px 0; color: #856404; font-size: 14px;">🔧 Ai nevoie de ajutor?</h4>
+                    <p style="margin: 0; color: #856404; font-size: 13px;">
+                        Dacă nu ești sigur cum să adaugi aceste coduri, contactează-ne sau trimite instrucțiunile administratorului tău web/IT.
+                    </p>
+                </div>
+
+                <p style="margin-top: 30px; color: #555; font-size: 14px;">
+                    Cu respect,<br>
+                    Echipa Tixello
+                </p>
+            </div>';
+
+            // Get settings for email sending
+            $settings = Setting::current();
+
+            if (!empty($settings->brevo_api_key)) {
+                // Send via Brevo API
+                $response = Http::withHeaders([
+                    'api-key' => $settings->brevo_api_key,
+                    'Content-Type' => 'application/json',
+                ])->post('https://api.brevo.com/v3/smtp/email', [
+                    'sender' => [
+                        'name' => $settings->company_name ?? 'Tixello',
+                        'email' => $settings->email ?? 'noreply@tixello.com',
+                    ],
+                    'to' => [
+                        ['email' => $step1['email'], 'name' => $step1['first_name'] . ' ' . $step1['last_name']]
+                    ],
+                    'subject' => 'Instrucțiuni de Verificare Domeniu - Tixello',
+                    'htmlContent' => $emailBody . ($settings->email_footer ?? ''),
+                ]);
+
+                // Log the email
+                EmailLog::create([
+                    'email_template_id' => null,
+                    'tenant_id' => $tenant->id,
+                    'recipient_email' => $step1['email'],
+                    'recipient_name' => $step1['first_name'] . ' ' . $step1['last_name'],
+                    'subject' => 'Instrucțiuni de Verificare Domeniu - Tixello',
+                    'body' => $emailBody . ($settings->email_footer ?? ''),
+                    'status' => $response->successful() ? 'sent' : 'failed',
+                    'sent_at' => $response->successful() ? now() : null,
+                    'failed_at' => $response->successful() ? null : now(),
+                    'error_message' => $response->successful() ? null : ($response->json('message') ?? 'Unknown error'),
+                    'metadata' => [
+                        'type' => 'domain_verification_instructions',
+                        'sender_email' => $settings->email ?? 'noreply@tixello.com',
+                        'sender_name' => $settings->company_name ?? 'Tixello',
+                        'provider' => 'brevo',
+                        'domains_count' => $domains->count(),
+                    ],
+                ]);
+            } else {
+                // Fallback to Laravel mail
+                Mail::html($emailBody . ($settings->email_footer ?? ''), function ($message) use ($step1) {
+                    $message->to($step1['email'], $step1['first_name'] . ' ' . $step1['last_name'])
+                        ->subject('Instrucțiuni de Verificare Domeniu - Tixello');
+                });
+
+                // Log the email
+                EmailLog::create([
+                    'email_template_id' => null,
+                    'tenant_id' => $tenant->id,
+                    'recipient_email' => $step1['email'],
+                    'recipient_name' => $step1['first_name'] . ' ' . $step1['last_name'],
+                    'subject' => 'Instrucțiuni de Verificare Domeniu - Tixello',
+                    'body' => $emailBody . ($settings->email_footer ?? ''),
+                    'status' => 'sent',
+                    'sent_at' => now(),
+                    'metadata' => [
+                        'type' => 'domain_verification_instructions',
+                        'sender_email' => config('mail.from.address'),
+                        'sender_name' => config('mail.from.name'),
+                        'provider' => 'laravel_mail',
+                        'domains_count' => $domains->count(),
+                    ],
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send domain verification instructions email', [
                 'user_id' => $user->id,
                 'tenant_id' => $tenant->id,
                 'error' => $e->getMessage(),
