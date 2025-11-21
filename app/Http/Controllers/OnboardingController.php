@@ -10,6 +10,7 @@ use App\Services\AnafService;
 use App\Services\LocationService;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Log;
@@ -279,12 +280,25 @@ class OnboardingController extends Controller
 
             \DB::commit();
 
-            // TODO: Send verification email
-            // For now, we'll just clear the session and return success
+            // Log in the user
+            Auth::login($user);
 
-            // Clear session
+            // Clear onboarding session
             Session::forget('onboarding');
 
+            // If microservices were selected, add to cart and redirect to checkout
+            if (!empty($step4['microservices'])) {
+                // Store microservice IDs in cart session (same format as store cart)
+                Session::put('cart', array_map('intval', $step4['microservices']));
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Registration completed! Redirecting to checkout...',
+                    'redirect' => '/checkout'
+                ]);
+            }
+
+            // No microservices selected, redirect to verify page
             return response()->json([
                 'success' => true,
                 'message' => 'Registration completed successfully! Please check your email to verify your account.',
