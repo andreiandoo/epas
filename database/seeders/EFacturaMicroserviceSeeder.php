@@ -68,6 +68,9 @@ class EFacturaMicroserviceSeeder extends Seeder
         // Create sample ANAF queue entries for demonstration
         $tenantId = 'tenant_demo';
 
+        // Clear existing demo data first
+        DB::table('anaf_queue')->where('tenant_id', $tenantId)->delete();
+
         // Insert each row separately (different columns per row)
         DB::table('anaf_queue')->insert([
             'tenant_id' => $tenantId,
