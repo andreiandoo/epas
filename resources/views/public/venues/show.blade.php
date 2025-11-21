@@ -1,17 +1,17 @@
 @extends('public.layout')
 
-@section('title', $venue->name . ' - Tixello')
+@section('title', $venue->getTranslation('name', app()->getLocale()) ?? $venue->getTranslation('name', 'en') . ' - Tixello')
 
 @section('content')
 {{-- Hero Section --}}
 <div class="relative bg-gradient-to-br from-indigo-900 to-purple-800 text-white">
     @if ($venue->image_url ?? false)
         <div class="absolute inset-0 opacity-30">
-            <img src="{{ \Illuminate\Support\Str::startsWith($venue->image_url, ['http://', 'https://']) ? $venue->image_url : \Illuminate\Support\Facades\Storage::url($venue->image_url) }}" alt="{{ $venue->name }}" class="w-full h-full object-cover">
+            <img src="{{ \Illuminate\Support\Str::startsWith($venue->image_url, ['http://', 'https://']) ? $venue->image_url : \Illuminate\Support\Facades\Storage::url($venue->image_url) }}" alt="{{ $venue->getTranslation('name', app()->getLocale()) ?? $venue->getTranslation('name', 'en') }}" class="w-full h-full object-cover">
         </div>
     @endif
     <div class="relative max-w-7xl mx-auto px-4 py-16">
-        <h1 class="text-5xl font-bold mb-4">{{ $venue->name }}</h1>
+        <h1 class="text-5xl font-bold mb-4">{{ $venue->getTranslation('name', app()->getLocale()) ?? $venue->getTranslation('name', 'en') }}</h1>
         <div class="flex flex-wrap gap-4 text-lg">
             @if($venue->address || $venue->city || $venue->country)
                 <div class="flex items-center gap-2">

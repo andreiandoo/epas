@@ -23,7 +23,8 @@ class VenueStats extends Page
 
     public function getHeading(): string
     {
-        return $this->record->name . ' — Statistics';
+        $name = $this->record->getTranslation('name', app()->getLocale()) ?? $this->record->getTranslation('name', 'en') ?? 'Venue';
+        return $name . ' — Statistics';
     }
 
     protected function getHeaderActions(): array
