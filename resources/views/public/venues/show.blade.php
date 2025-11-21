@@ -44,7 +44,7 @@
                 <section class="bg-white rounded-2xl border p-6">
                     <h2 class="text-2xl font-bold mb-4">About</h2>
                     <div class="prose max-w-none">
-                        {!! $venue->description !!}
+                        {!! $venue->getTranslation('description', app()->getLocale()) ?? $venue->getTranslation('description', 'en') !!}
                     </div>
                 </section>
             @endif
