@@ -11,6 +11,7 @@ use App\Http\Controllers\MicroserviceMarketplaceController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\TenantPaymentWebhookController;
 use App\Http\Controllers\StatusController;
+use App\Http\Controllers\DocsController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
 
@@ -137,6 +138,12 @@ Route::middleware(['web'])->prefix('admin')->group(function () {
     Route::post('/domains/{domainId}/toggle-active', [DomainController::class, 'toggleActive'])->name('admin.domains.toggle-active');
     Route::post('/domains/{domainId}/confirm', [DomainController::class, 'confirm'])->name('admin.domains.confirm');
     Route::get('/tenants/{tenantId}/domains/{domain}/login-as-admin', [DomainController::class, 'loginAsAdmin'])->name('tenant.login-as-admin');
+});
+
+// Documentation Routes
+Route::middleware(['web'])->prefix('docs')->group(function () {
+    Route::get('/microservices', [DocsController::class, 'microservicesIndex'])->name('docs.microservices.index');
+    Route::get('/microservices/{slug}', [DocsController::class, 'microserviceShow'])->name('docs.microservices.show');
 });
 
 // Define a helper to register public routes

@@ -87,9 +87,22 @@ class MicroserviceResource extends Resource
                                 ->default('monthly')
                                 ->helperText('Payment frequency'),
 
-                            Forms\Components\TextInput::make('category')
+                            Forms\Components\Select::make('category')
                                 ->label('Category')
-                                ->helperText('Category for grouping (e.g., compliance, communication)'),
+                                ->options([
+                                    'sales' => 'Sales',
+                                    'communication' => 'Communication',
+                                    'compliance' => 'Compliance',
+                                    'marketing' => 'Marketing',
+                                    'distribution' => 'Distribution',
+                                    'design' => 'Design',
+                                    'accounting' => 'Accounting',
+                                    'analytics' => 'Analytics',
+                                    'crm' => 'CRM',
+                                    'payment-addons' => 'Payment Add-ons',
+                                ])
+                                ->searchable()
+                                ->helperText('Category for grouping microservices'),
                         ])->columns(2),
 
                     SC\Section::make('Images')
@@ -139,10 +152,25 @@ class MicroserviceResource extends Resource
 
             SC\Section::make('Features')
             ->schema([
-                Forms\Components\TagsInput::make('features')
-                    ->label('Features List')
-                    ->helperText('Key features of this microservice')
-                    ->placeholder('Add a feature'),
+                SC\Tabs::make('Features')
+                    ->tabs([
+                        SC\Tabs\Tab::make('English')
+                            ->icon('heroicon-o-flag')
+                            ->schema([
+                                Forms\Components\TagsInput::make('features.en')
+                                    ->label('Features (English)')
+                                    ->helperText('Key features in English')
+                                    ->placeholder('Add a feature'),
+                            ]),
+                        SC\Tabs\Tab::make('Română')
+                            ->icon('heroicon-o-flag')
+                            ->schema([
+                                Forms\Components\TagsInput::make('features.ro')
+                                    ->label('Features (Română)')
+                                    ->helperText('Caracteristici cheie în Română')
+                                    ->placeholder('Adaugă o caracteristică'),
+                            ]),
+                    ]),
             ])->columns(1),
         ])->columns(1);
     }

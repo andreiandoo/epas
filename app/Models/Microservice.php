@@ -14,7 +14,7 @@ class Microservice extends Model
     /**
      * Translatable fields
      */
-    public array $translatable = ['name', 'description', 'short_description'];
+    public array $translatable = ['name', 'description', 'short_description', 'features'];
 
     protected $fillable = [
         'name',
