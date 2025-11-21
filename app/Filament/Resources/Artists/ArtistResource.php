@@ -187,6 +187,7 @@ class ArtistResource extends Resource
                     Forms\Components\Select::make('artistTypes')
                         ->label('Artist types')
                         ->relationship('artistTypes', 'name')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
                         ->multiple()
                         ->preload()
                         ->searchable()
@@ -195,26 +196,10 @@ class ArtistResource extends Resource
 
                     Forms\Components\Select::make('artistGenres')
                         ->label('Artist genres')
+                        ->relationship('artistGenres', 'name')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
                         ->multiple()
-                        ->options(function (Get $get) {
-                            $typeIds = $get('artistTypes') ?: [];
-                            if (empty($typeIds)) {
-                                return [];
-                            }
-
-                            $genreIds = \Illuminate\Support\Facades\DB::table('artist_type_allowed_genre')
-                                ->whereIn('artist_type_id', (array) $typeIds)
-                                ->pluck('artist_genre_id')
-                                ->unique()
-                                ->all();
-
-                            return \App\Models\ArtistGenre::query()
-                                ->whereIn('id', $genreIds)
-                                ->orderBy('name')
-                                ->pluck('name', 'id')
-                                ->toArray();
-                        })
-                        ->preload(false)
+                        ->preload()
                         ->searchable()
                         ->helperText('Genres are filtered by selected types.')
                         ->visible(fn (Get $get) => filled($get('artistTypes'))),

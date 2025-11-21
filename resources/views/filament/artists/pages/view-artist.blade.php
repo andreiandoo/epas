@@ -370,9 +370,12 @@ canvas{width:100% !important; height:240px !important;}
                         <div class="av-card-body">
                             <div class="video-grid">
                                 @foreach($videos as $v)
+                                    @php
+                                        $videoUrl = is_array($v) ? ($v['url'] ?? '') : $v;
+                                    @endphp
                                     <div class="video">
                                         <iframe
-                                            src="{{ $v }}"
+                                            src="{{ $videoUrl }}"
                                             title="Artist video"
                                             frameborder="0"
                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
