@@ -51,15 +51,20 @@ class UpdateArtistSocialStats extends Command
         foreach ($artists as $artist) {
             $changes = [];
 
-            // YouTube subscribers
+            // YouTube stats (subscribers, views)
             if (!empty($artist->youtube_id)) {
                 try {
                     // Clear cache for fresh data
                     $youtubeService->clearCache($artist->youtube_id);
 
                     $ytStats = $youtubeService->getChannelStats($artist->youtube_id);
-                    if ($ytStats && isset($ytStats['subscribers'])) {
-                        $changes['followers_youtube'] = $ytStats['subscribers'];
+                    if ($ytStats) {
+                        if (isset($ytStats['subscribers'])) {
+                            $changes['followers_youtube'] = $ytStats['subscribers'];
+                        }
+                        if (isset($ytStats['views'])) {
+                            $changes['youtube_total_views'] = $ytStats['views'];
+                        }
                     }
                 } catch (\Exception $e) {
                     $this->error("\nYouTube error for {$artist->name}: {$e->getMessage()}");
@@ -67,15 +72,20 @@ class UpdateArtistSocialStats extends Command
                 }
             }
 
-            // Spotify followers (monthly listeners)
+            // Spotify stats (followers, popularity)
             if (!empty($artist->spotify_id)) {
                 try {
                     // Clear cache for fresh data
                     $spotifyService->clearCache($artist->spotify_id);
 
                     $spStats = $spotifyService->getArtist($artist->spotify_id);
-                    if ($spStats && isset($spStats['followers'])) {
-                        $changes['spotify_monthly_listeners'] = $spStats['followers'];
+                    if ($spStats) {
+                        if (isset($spStats['followers'])) {
+                            $changes['spotify_monthly_listeners'] = $spStats['followers'];
+                        }
+                        if (isset($spStats['popularity'])) {
+                            $changes['spotify_popularity'] = $spStats['popularity'];
+                        }
                     }
                 } catch (\Exception $e) {
                     $this->error("\nSpotify error for {$artist->name}: {$e->getMessage()}");
@@ -84,6 +94,7 @@ class UpdateArtistSocialStats extends Command
             }
 
             if (!empty($changes)) {
+                $changes['social_stats_updated_at'] = now();
                 $artist->update($changes);
                 $updated++;
             }

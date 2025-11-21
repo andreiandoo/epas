@@ -131,33 +131,60 @@ class ArtistResource extends Resource
             // === SOCIAL STATS ===
             SC\Section::make('Social Stats')
                 ->extraAttributes(['id' => 'artist-social-stats'])
+                ->description('Stats are auto-fetched when YouTube ID or Spotify ID is saved')
                 ->schema([
+                    // YouTube Stats
+                    Forms\Components\TextInput::make('followers_youtube')
+                        ->label('YouTube Subscribers')
+                        ->numeric()
+                        ->minValue(0)
+                        ->disabled()
+                        ->dehydrated(),
+
+                    Forms\Components\TextInput::make('youtube_total_views')
+                        ->label('YouTube Total Views')
+                        ->numeric()
+                        ->minValue(0)
+                        ->disabled()
+                        ->dehydrated(),
+
+                    // Spotify Stats
+                    Forms\Components\TextInput::make('spotify_monthly_listeners')
+                        ->label('Spotify Followers')
+                        ->numeric()
+                        ->minValue(0)
+                        ->disabled()
+                        ->dehydrated(),
+
+                    Forms\Components\TextInput::make('spotify_popularity')
+                        ->label('Spotify Popularity')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(100)
+                        ->disabled()
+                        ->dehydrated()
+                        ->helperText('0-100 score'),
+
+                    // Manual entry fields
                     Forms\Components\TextInput::make('followers_facebook')
                         ->label('Facebook Followers')
                         ->numeric()
-                        ->minValue(0),
+                        ->minValue(0)
+                        ->helperText('Manual entry'),
 
                     Forms\Components\TextInput::make('followers_instagram')
                         ->label('Instagram Followers')
                         ->numeric()
-                        ->minValue(0),
+                        ->minValue(0)
+                        ->helperText('Manual entry'),
 
                     Forms\Components\TextInput::make('followers_tiktok')
                         ->label('TikTok Followers')
                         ->numeric()
-                        ->minValue(0),
-
-                    Forms\Components\TextInput::make('followers_youtube')
-                        ->label('YouTube Subscribers')
-                        ->numeric()
-                        ->minValue(0),
-
-                    Forms\Components\TextInput::make('spotify_monthly_listeners')
-                        ->label('Spotify Monthly Listeners')
-                        ->numeric()
-                        ->minValue(0),
+                        ->minValue(0)
+                        ->helperText('Manual entry'),
                 ])
-                ->columns(5)
+                ->columns(4)
                 ->collapsible(),
 
             // === MEDIA (cu validare dimensiuni minime) ===
@@ -399,6 +426,20 @@ class ArtistResource extends Resource
                     ->badge()
                     ->getStateUsing(fn ($record) => $record->artistGenres->map(fn($g) => $g->getTranslation('name', app()->getLocale()))->implode(', '))
                     ->toggleable(),
+
+                // Edit link
+                Tables\Columns\TextColumn::make('edit_link')
+                    ->label('')
+                    ->getStateUsing(fn () => '✏️')
+                    ->url(fn (Artist $record) => static::getUrl('edit', ['record' => $record->getKey()]))
+                    ->tooltip('Edit artist'),
+
+                // Delete link
+                Tables\Columns\TextColumn::make('delete_link')
+                    ->label('')
+                    ->getStateUsing(fn () => '🗑️')
+                    ->url(fn (Artist $record) => static::getUrl('edit', ['record' => $record->getKey()]) . '?delete=1')
+                    ->tooltip('Delete artist'),
             ])
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_active')

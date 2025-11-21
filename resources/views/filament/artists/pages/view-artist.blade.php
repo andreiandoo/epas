@@ -13,11 +13,13 @@
     $city     = $record->city ?? null;
 
     $followers = [
+        'YouTube Subscribers' => $record->followers_youtube ?? null,
+        'YouTube Views' => $record->youtube_total_views ?? null,
+        'Spotify Followers' => $record->spotify_monthly_listeners ?? null,
+        'Spotify Popularity' => $record->spotify_popularity ?? null,
         'Facebook'  => $record->followers_facebook ?? null,
         'Instagram' => $record->followers_instagram ?? null,
         'TikTok'    => $record->followers_tiktok ?? null,
-        'YouTube'   => $record->followers_youtube ?? null,
-        'Spotify (monthly)' => $record->spotify_monthly_listeners ?? null,
     ];
 
     $socialLinks = [

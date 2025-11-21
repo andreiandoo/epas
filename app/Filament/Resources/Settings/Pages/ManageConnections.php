@@ -49,6 +49,7 @@ class ManageConnections extends Page implements HasForms
             'google_analytics_property_id' => $settings->google_analytics_property_id,
             'google_analytics_credentials_json' => $settings->google_analytics_credentials_json,
             'brevo_api_key' => $settings->brevo_api_key,
+            'tiktok_api_key' => $settings->tiktok_api_key,
         ]);
     }
 
@@ -408,6 +409,27 @@ class ManageConnections extends Page implements HasForms
                                 ->label('Brevo Dashboard')
                                 ->icon('heroicon-o-arrow-top-right-on-square')
                                 ->url('https://app.brevo.com/settings/keys/api', shouldOpenInNewTab: true)
+                                ->color('gray'),
+                        ]),
+                    ])
+                    ->columnSpanFull(),
+
+                SC\Section::make('TikTok')
+                    ->description('Configure TikTok API for artist follower stats')
+                    ->schema([
+                        Forms\Components\TextInput::make('tiktok_api_key')
+                            ->label('API Key')
+                            ->placeholder('Your TikTok API key')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->helperText('TikTok API key for fetching artist follower counts - requires TikTok for Developers account'),
+
+                        SC\Actions::make([
+                            Actions\Action::make('tiktok_docs')
+                                ->label('TikTok Developers')
+                                ->icon('heroicon-o-arrow-top-right-on-square')
+                                ->url('https://developers.tiktok.com/', shouldOpenInNewTab: true)
                                 ->color('gray'),
                         ]),
                     ])

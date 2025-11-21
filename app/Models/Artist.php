@@ -34,6 +34,7 @@ class Artist extends Model
         'is_active',
         'facebook_followers','instagram_followers','tiktok_followers','spotify_followers','youtube_followers',
         'followers_facebook','followers_instagram','followers_tiktok','followers_youtube','spotify_monthly_listeners',
+        'youtube_total_views','youtube_total_likes','spotify_popularity','social_stats_updated_at',
     ];
 
     protected $casts = [
@@ -51,6 +52,10 @@ class Artist extends Model
         'followers_tiktok'         => 'integer',
         'followers_youtube'        => 'integer',
         'spotify_monthly_listeners' => 'integer',
+        'youtube_total_views'      => 'integer',
+        'youtube_total_likes'      => 'integer',
+        'spotify_popularity'       => 'integer',
+        'social_stats_updated_at'  => 'datetime',
     ];
 
     // --- Relations ---
