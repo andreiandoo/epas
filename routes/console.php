@@ -230,3 +230,20 @@ Schedule::command('exchange-rates:fetch')
     ->onFailure(function () {
         \Log::error('Failed to fetch exchange rates');
     });
+
+/*
+|--------------------------------------------------------------------------
+| Artist Social Stats Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Update artist social media stats (every 2 days at 3 AM)
+Schedule::command('artists:update-social-stats')
+    ->twiceWeekly(1, 4, '03:00') // Monday and Thursday at 3 AM
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('Artist social stats updated successfully');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to update artist social stats');
+    });
