@@ -52,6 +52,8 @@ class Setting extends Model
         'google_analytics_property_id',
         'google_analytics_credentials_json',
         'brevo_api_key',
+        'tiktok_client_key',
+        'tiktok_client_secret',
         'meta',
     ];
 
@@ -71,6 +73,7 @@ class Setting extends Model
         'facebook_access_token' => 'encrypted',
         'google_analytics_credentials_json' => 'encrypted',
         'brevo_api_key' => 'encrypted',
+        'tiktok_client_secret' => 'encrypted',
         'vat_enabled' => 'boolean',
         'vat_rate' => 'decimal:2',
     ];

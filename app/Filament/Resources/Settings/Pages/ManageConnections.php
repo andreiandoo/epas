@@ -49,7 +49,8 @@ class ManageConnections extends Page implements HasForms
             'google_analytics_property_id' => $settings->google_analytics_property_id,
             'google_analytics_credentials_json' => $settings->google_analytics_credentials_json,
             'brevo_api_key' => $settings->brevo_api_key,
-            'tiktok_api_key' => $settings->tiktok_api_key,
+            'tiktok_client_key' => $settings->tiktok_client_key,
+            'tiktok_client_secret' => $settings->tiktok_client_secret,
         ]);
     }
 
@@ -417,15 +418,27 @@ class ManageConnections extends Page implements HasForms
                 SC\Section::make('TikTok')
                     ->description('Configure TikTok API for artist follower stats')
                     ->schema([
-                        Forms\Components\TextInput::make('tiktok_api_key')
-                            ->label('API Key')
-                            ->placeholder('Your TikTok API key')
+                        Forms\Components\TextInput::make('tiktok_client_key')
+                            ->label('Client Key')
+                            ->placeholder('Your TikTok Client Key')
+                            ->maxLength(255)
+                            ->helperText('TikTok Client Key from TikTok for Developers'),
+
+                        Forms\Components\TextInput::make('tiktok_client_secret')
+                            ->label('Client Secret')
+                            ->placeholder('Your TikTok Client Secret')
                             ->password()
                             ->revealable()
                             ->maxLength(255)
-                            ->helperText('TikTok API key for fetching artist follower counts - requires TikTok for Developers account'),
+                            ->helperText('TikTok Client Secret - stored encrypted'),
 
                         SC\Actions::make([
+                            Actions\Action::make('test_tiktok')
+                                ->label('Test TikTok')
+                                ->icon('heroicon-o-play')
+                                ->color('info')
+                                ->action('testTikTokConnection'),
+
                             Actions\Action::make('tiktok_docs')
                                 ->label('TikTok Developers')
                                 ->icon('heroicon-o-arrow-top-right-on-square')
@@ -433,6 +446,7 @@ class ManageConnections extends Page implements HasForms
                                 ->color('gray'),
                         ]),
                     ])
+                    ->columns(2)
                     ->columnSpanFull(),
             ])
             ->statePath('data');
@@ -798,6 +812,50 @@ class ManageConnections extends Page implements HasForms
                     ->danger()
                     ->title('Connection failed')
                     ->body($response->json('message') ?? 'Invalid API key')
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Connection failed')
+                ->body("Error: {$e->getMessage()}")
+                ->send();
+        }
+    }
+
+    public function testTikTokConnection(): void
+    {
+        $data = $this->form->getState();
+
+        if (empty($data['tiktok_client_key']) || empty($data['tiktok_client_secret'])) {
+            Notification::make()
+                ->warning()
+                ->title('Missing credentials')
+                ->body('Please enter both Client Key and Client Secret.')
+                ->send();
+            return;
+        }
+
+        try {
+            // TikTok uses OAuth2 client credentials flow
+            $response = \Illuminate\Support\Facades\Http::asForm()
+                ->post('https://open.tiktokapis.com/v2/oauth/token/', [
+                    'client_key' => $data['tiktok_client_key'],
+                    'client_secret' => $data['tiktok_client_secret'],
+                    'grant_type' => 'client_credentials',
+                ]);
+
+            if ($response->successful() && $response->json('access_token')) {
+                Notification::make()
+                    ->success()
+                    ->title('TikTok API connected!')
+                    ->body('Credentials are valid. Token obtained successfully.')
+                    ->send();
+            } else {
+                Notification::make()
+                    ->danger()
+                    ->title('Connection failed')
+                    ->body($response->json('error_description') ?? $response->json('error') ?? 'Invalid credentials')
                     ->send();
             }
         } catch (\Exception $e) {
