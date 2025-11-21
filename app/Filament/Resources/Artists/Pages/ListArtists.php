@@ -34,6 +34,22 @@ class ListArtists extends ListRecords
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('gray')
                 ->url(fn () => ArtistResource::getUrl('import')),
+
+            Actions\Action::make('fetch_stats')
+                ->label('Fetch Social Stats')
+                ->icon('heroicon-o-arrow-path')
+                ->color('info')
+                ->requiresConfirmation()
+                ->modalHeading('Fetch Social Stats')
+                ->modalDescription('This will fetch YouTube and Spotify stats for all artists with configured IDs. This may take a few minutes.')
+                ->action(function () {
+                    Artisan::call('artists:update-social-stats');
+                    Notification::make()
+                        ->title('Social stats updated')
+                        ->body('YouTube and Spotify stats have been fetched for all artists.')
+                        ->success()
+                        ->send();
+                }),
         ];
     }
 }

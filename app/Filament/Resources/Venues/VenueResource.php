@@ -62,6 +62,8 @@ class VenueResource extends Resource
                 Forms\Components\FileUpload::make('image_url')
                     ->label('Imagine principală')
                     ->image()
+                    ->imagePreviewHeight('250')
+                    ->disk('public')
                     ->directory('venues')
                     ->visibility('public')
                     ->openable()
@@ -86,23 +88,96 @@ class VenueResource extends Resource
             SC\Section::make('Location')->schema([
                 Forms\Components\TextInput::make('address')
                     ->label('Adresa')->maxLength(255)
-                    ->placeholder('Strada și numărul'),
+                    ->placeholder('Strada și numărul')
+                    ->live(onBlur: true),
                 Forms\Components\TextInput::make('city')
                     ->label('Oraș')->maxLength(120)
                     ->placeholder('Ex: București')
-                    ->prefixIcon('heroicon-o-map-pin'),
+                    ->prefixIcon('heroicon-o-map-pin')
+                    ->live(onBlur: true),
                 Forms\Components\TextInput::make('state')
                     ->label('Județ')->maxLength(120)
                     ->placeholder('Ex: Ilfov'),
                 Forms\Components\TextInput::make('country')
                     ->label('Țara')->maxLength(120)
-                    ->placeholder('Ex: RO'),
+                    ->placeholder('Ex: RO')
+                    ->live(onBlur: true),
                 Forms\Components\TextInput::make('lat')
                     ->label('Latitudine')->numeric()->step('0.0000001')
                     ->placeholder('44.4268'),
                 Forms\Components\TextInput::make('lng')
                     ->label('Longitudine')->numeric()->step('0.0000001')
                     ->placeholder('26.1025'),
+                Forms\Components\Actions::make([
+                    Forms\Components\Actions\Action::make('geocode')
+                        ->label('Auto-detect coordinates')
+                        ->icon('heroicon-o-map-pin')
+                        ->color('info')
+                        ->action(function (\Filament\Schemas\Components\Utilities\Get $get, \Filament\Schemas\Components\Utilities\Set $set) {
+                            $address = $get('address');
+                            $city = $get('city');
+                            $country = $get('country');
+
+                            if (empty($city)) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('City is required for geocoding')
+                                    ->warning()
+                                    ->send();
+                                return;
+                            }
+
+                            // Build address string
+                            $fullAddress = collect([$address, $city, $country])
+                                ->filter()
+                                ->implode(', ');
+
+                            // Get Google Maps API key from settings
+                            $settings = \App\Models\Settings::first();
+                            $apiKey = $settings?->google_maps_api_key;
+
+                            if (empty($apiKey)) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Google Maps API key not configured')
+                                    ->body('Please add your API key in Settings > Connections')
+                                    ->danger()
+                                    ->send();
+                                return;
+                            }
+
+                            try {
+                                $response = \Illuminate\Support\Facades\Http::get('https://maps.googleapis.com/maps/api/geocode/json', [
+                                    'address' => $fullAddress,
+                                    'key' => $apiKey,
+                                ]);
+
+                                $data = $response->json();
+
+                                if ($data['status'] === 'OK' && !empty($data['results'])) {
+                                    $location = $data['results'][0]['geometry']['location'];
+                                    $set('lat', $location['lat']);
+                                    $set('lng', $location['lng']);
+
+                                    \Filament\Notifications\Notification::make()
+                                        ->title('Coordinates detected')
+                                        ->body("Lat: {$location['lat']}, Lng: {$location['lng']}")
+                                        ->success()
+                                        ->send();
+                                } else {
+                                    \Filament\Notifications\Notification::make()
+                                        ->title('Could not find coordinates')
+                                        ->body('Try adding more address details')
+                                        ->warning()
+                                        ->send();
+                                }
+                            } catch (\Exception $e) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Geocoding failed')
+                                    ->body($e->getMessage())
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+                ])->columnSpanFull(),
             ])->columns(3),
 
             SC\Section::make('Capacity')->schema([

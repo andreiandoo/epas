@@ -14,7 +14,7 @@ class PriceTier extends Model
         'name',
         'tier_code',
         'currency',
-        'price_cents',
+        'price',
         'color',
         'description',
         'is_active',
@@ -22,7 +22,7 @@ class PriceTier extends Model
     ];
 
     protected $casts = [
-        'price_cents' => 'integer',
+        'price' => 'decimal:2',
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
@@ -61,14 +61,14 @@ class PriceTier extends Model
      */
     public function getFormattedPriceAttribute(): string
     {
-        return number_format($this->price_cents / 100, 2) . ' ' . $this->currency;
+        return number_format($this->price, 2) . ' ' . $this->currency;
     }
 
     /**
-     * Convert cents to dollars/euros
+     * Get price in cents (for backward compatibility)
      */
-    public function getPriceAttribute(): float
+    public function getPriceCentsAttribute(): int
     {
-        return $this->price_cents / 100;
+        return (int) ($this->price * 100);
     }
 }

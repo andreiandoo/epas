@@ -54,14 +54,14 @@ class PriceTierResource extends Resource
                             ->helperText('Unique identifier (e.g., STD, VIP, BAL)')
                             ->columnSpan(1),
 
-                        Forms\Components\TextInput::make('price_cents')
+                        Forms\Components\TextInput::make('price')
                             ->label('Price')
                             ->required()
                             ->numeric()
                             ->minValue(0)
+                            ->step(0.01)
                             ->prefix('$')
-                            ->suffix('(in cents)')
-                            ->helperText('Enter price in cents (e.g., 5000 = $50.00)')
+                            ->helperText('Enter price with up to 2 decimals (e.g., 50.00)')
                             ->columnSpan(1),
 
                         Forms\Components\ColorPicker::make('color')
@@ -110,9 +110,9 @@ class PriceTierResource extends Resource
                     ->badge()
                     ->color('gray'),
 
-                Tables\Columns\TextColumn::make('price_cents')
+                Tables\Columns\TextColumn::make('price')
                     ->label('Price')
-                    ->money('USD', divideBy: 100)
+                    ->money('USD')
                     ->sortable(),
 
                 Tables\Columns\ColorColumn::make('color')

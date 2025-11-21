@@ -174,6 +174,7 @@ class SeatingLayoutResource extends Resource
 
                 Tables\Filters\SelectFilter::make('venue')
                     ->relationship('venue', 'name')
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->name ?? $record->getTranslation('name', 'en') ?? 'Unnamed Venue')
                     ->searchable()
                     ->preload(),
             ]);
