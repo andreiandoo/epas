@@ -418,7 +418,8 @@ class TenantResource extends Resource
                             );
                         })
                         ->visible(fn ($record) => $record !== null),
-                ])->collapsible(),
+                ])->collapsible()
+                ->columnSpanFull(),
 
             SC\Section::make('Ticket Terms & Conditions')
                 ->description('Terms and conditions that apply to all events for this tenant')
