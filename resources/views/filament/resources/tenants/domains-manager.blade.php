@@ -151,6 +151,14 @@
                         <td colspan="5" class="px-4 py-4">
                             @php
                                 $verification = $domain->verifications()->latest()->first();
+                                // Create verification entry for old domains that don't have one
+                                if (!$verification) {
+                                    $verification = $domain->verifications()->create([
+                                        'tenant_id' => $domain->tenant_id,
+                                        'verification_method' => 'dns_txt',
+                                        'status' => 'pending',
+                                    ]);
+                                }
                             @endphp
                             @if($verification)
                                 <div class="space-y-3">
@@ -197,8 +205,6 @@
                                         @endif
                                     </p>
                                 </div>
-                            @else
-                                <p class="text-xs text-gray-500">No verification code generated yet. Click "Confirm" toggle to create one.</p>
                             @endif
                         </td>
                     </tr>

@@ -35,7 +35,7 @@ class DomainController extends Controller
             // Create verification entry for the domain
             $domain->verifications()->create([
                 'tenant_id' => $tenant->id,
-                'verification_method' => 'pending',
+                'verification_method' => 'dns_txt',
                 'status' => 'pending',
             ]);
 
@@ -113,7 +113,7 @@ class DomainController extends Controller
                     // Create a new verification marked as verified
                     $domain->verifications()->create([
                         'tenant_id' => $domain->tenant_id,
-                        'verification_method' => 'manual',
+                        'verification_method' => 'dns_txt',
                         'status' => 'verified',
                         'verified_at' => now(),
                     ]);

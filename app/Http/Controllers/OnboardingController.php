@@ -277,7 +277,7 @@ class OnboardingController extends Controller
                 // Create verification entry for the domain
                 $domain->verifications()->create([
                     'tenant_id' => $tenant->id,
-                    'verification_method' => 'pending',
+                    'verification_method' => 'dns_txt',
                     'status' => 'pending',
                 ]);
             }
