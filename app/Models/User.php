@@ -54,10 +54,23 @@ class User extends Authenticatable
     public function isTenant(): bool { return $this->role === 'tenant'; }
 
     /**
-     * Determine if the user can access the Filament admin panel.
+     * Determine if the user can access a Filament panel.
      */
     public function canAccessPanel(\Filament\Panel $panel): bool
     {
+        if ($panel->getId() === 'tenant') {
+            return $this->role === 'tenant';
+        }
+
+        // Admin panel
         return in_array($this->role, ['super-admin', 'admin', 'editor']);
+    }
+
+    /**
+     * Get the tenant associated with this user (if tenant role).
+     */
+    public function tenant(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Tenant::class, 'owner_id');
     }
 }
