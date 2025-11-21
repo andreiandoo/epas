@@ -128,6 +128,38 @@ class ArtistResource extends Resource
                 ])
                 ->columns(2),
 
+            // === SOCIAL STATS ===
+            SC\Section::make('Social Stats')
+                ->extraAttributes(['id' => 'artist-social-stats'])
+                ->schema([
+                    Forms\Components\TextInput::make('followers_facebook')
+                        ->label('Facebook Followers')
+                        ->numeric()
+                        ->minValue(0),
+
+                    Forms\Components\TextInput::make('followers_instagram')
+                        ->label('Instagram Followers')
+                        ->numeric()
+                        ->minValue(0),
+
+                    Forms\Components\TextInput::make('followers_tiktok')
+                        ->label('TikTok Followers')
+                        ->numeric()
+                        ->minValue(0),
+
+                    Forms\Components\TextInput::make('followers_youtube')
+                        ->label('YouTube Subscribers')
+                        ->numeric()
+                        ->minValue(0),
+
+                    Forms\Components\TextInput::make('spotify_monthly_listeners')
+                        ->label('Spotify Monthly Listeners')
+                        ->numeric()
+                        ->minValue(0),
+                ])
+                ->columns(5)
+                ->collapsible(),
+
             // === MEDIA (cu validare dimensiuni minime) ===
             SC\Section::make('Media')
                 ->extraAttributes(['id' => 'artist-media'])
@@ -448,12 +480,6 @@ class ArtistResource extends Resource
                         ->orWhereNotNull('logo_url');
                     }))
                     ->toggle(),
-            ])
-            ->actions([
-                Tables\Actions\EditAction::make()
-                    ->iconButton(),
-                Tables\Actions\DeleteAction::make()
-                    ->iconButton(),
             ])
             ->defaultSort('created_at', 'desc');
     }
