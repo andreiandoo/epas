@@ -4,7 +4,6 @@ namespace App\Filament\Resources\EmailTemplates\Schemas;
 
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\Toggle;
@@ -60,24 +59,12 @@ class EmailTemplateForm
                             ->placeholder('Welcome {{first_name}} to {{public_name}}!')
                             ->helperText('Use {{variable_name}} to insert variables'),
 
-                        RichEditor::make('body')
+                        Textarea::make('body')
                             ->label('Email Body (HTML)')
                             ->required()
-                            ->toolbarButtons([
-                                'bold',
-                                'italic',
-                                'underline',
-                                'strike',
-                                'link',
-                                'bulletList',
-                                'orderedList',
-                                'h2',
-                                'h3',
-                                'blockquote',
-                                'codeBlock',
-                            ])
+                            ->rows(20)
                             ->columnSpanFull()
-                            ->helperText('HTML content with {{variable_name}} placeholders'),
+                            ->helperText('Raw HTML content with {{variable_name}} placeholders. You can paste full HTML templates here.'),
 
                         TagsInput::make('available_variables')
                             ->label('Available Variables')
