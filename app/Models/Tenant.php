@@ -52,6 +52,7 @@ class Tenant extends Model
         'contact_last_name',
         'contact_email',
         'contact_phone',
+        'contact_position',
         // Payment processor
         'payment_processor',
         'payment_processor_mode',

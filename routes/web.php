@@ -131,13 +131,13 @@ Route::post('/register/lookup-cui', [OnboardingController::class, 'lookupCui'])-
 Route::get('/register/api/cities/{country}/{state}', [OnboardingController::class, 'getCities'])->name('onboarding.cities');
 Route::get('/register/verify/{token}', [OnboardingController::class, 'verify'])->name('onboarding.verify');
 
-// Admin Domain Management Routes (TEMPORARILY DISABLED - testing 403 fix)
-// TODO: Re-enable with proper auth middleware after fixing 403 issue
-// Route::middleware(['web'])->prefix('admin')->group(function () {
-//     Route::post('/tenants/{tenantId}/domains', [DomainController::class, 'store'])->name('admin.tenants.domains.store');
-//     Route::post('/domains/{domainId}/toggle-active', [DomainController::class, 'toggleActive'])->name('admin.domains.toggle-active');
-//     Route::get('/tenants/{tenantId}/domains/{domain}/login-as-admin', [DomainController::class, 'loginAsAdmin'])->name('tenant.login-as-admin');
-// });
+// Admin Domain Management Routes
+Route::middleware(['web'])->prefix('admin')->group(function () {
+    Route::post('/tenants/{tenantId}/domains', [DomainController::class, 'store'])->name('admin.tenants.domains.store');
+    Route::post('/domains/{domainId}/toggle-active', [DomainController::class, 'toggleActive'])->name('admin.domains.toggle-active');
+    Route::post('/domains/{domainId}/confirm', [DomainController::class, 'confirm'])->name('admin.domains.confirm');
+    Route::get('/tenants/{tenantId}/domains/{domain}/login-as-admin', [DomainController::class, 'loginAsAdmin'])->name('tenant.login-as-admin');
+});
 
 // Define a helper to register public routes
 $registerPublicRoutes = function ($prefix = '') {

@@ -63,7 +63,8 @@ class DomainController extends Controller
         try {
             $domain = Domain::findOrFail($domainId);
 
-            $domain->is_active = $request->input('is_active') === 'true';
+            $isActive = $request->input('is_active');
+            $domain->is_active = $isActive === true || $isActive === 'true';
             $domain->save();
 
             return response()->json([
@@ -80,6 +81,46 @@ class DomainController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update domain status',
+            ], 500);
+        }
+    }
+
+    /**
+     * Manually confirm domain verification
+     */
+    public function confirm($domainId)
+    {
+        try {
+            $domain = Domain::findOrFail($domainId);
+
+            // Create or update verification record
+            $verification = $domain->verifications()->latest()->first();
+
+            if ($verification) {
+                $verification->markAsVerified();
+            } else {
+                // Create a new verification marked as verified
+                $domain->verifications()->create([
+                    'tenant_id' => $domain->tenant_id,
+                    'verification_method' => 'manual',
+                    'status' => 'verified',
+                    'verified_at' => now(),
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Domain confirmed successfully',
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Domain confirmation error', [
+                'domain_id' => $domainId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to confirm domain: ' . $e->getMessage(),
             ], 500);
         }
     }

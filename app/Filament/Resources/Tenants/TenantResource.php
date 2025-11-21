@@ -321,58 +321,64 @@ class TenantResource extends Resource
                         ->helperText('Expected monthly ticket volume'),
                 ])->columns(2),
 
-            SC\Section::make('Contact Person / Owner')
-                ->description('Person who created this tenant account during onboarding')
+            SC\Section::make('Tenant Representative')
+                ->description('The user who controls this tenant account')
                 ->schema([
-                    Forms\Components\Placeholder::make('owner_display')
-                        ->label('Owner Account')
-                        ->content(function ($record) {
-                            if (!$record) {
-                                return 'Save tenant first to see owner information.';
-                            }
-
-                            // Eager load owner if not loaded
-                            if (!$record->relationLoaded('owner')) {
-                                $record->load('owner');
-                            }
-
-                            if (!$record->owner_id || !$record->owner) {
-                                return 'No owner assigned to this tenant yet.';
-                            }
-
-                            $owner = $record->owner;
-                            return view('components.owner-info', [
-                                'name' => $owner->name,
-                                'email' => $owner->email,
-                                'role' => ucfirst($owner->role),
-                                'created' => $owner->created_at->format('Y-m-d H:i'),
-                            ])->render();
+                    Forms\Components\Select::make('owner_id')
+                        ->label('Owner User Account')
+                        ->relationship('owner', 'name')
+                        ->searchable()
+                        ->preload()
+                        ->createOptionForm([
+                            Forms\Components\TextInput::make('name')
+                                ->label('Full Name')
+                                ->required()
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('email')
+                                ->email()
+                                ->required()
+                                ->unique('users', 'email')
+                                ->maxLength(255),
+                            Forms\Components\TextInput::make('password')
+                                ->password()
+                                ->required()
+                                ->minLength(8)
+                                ->dehydrateStateUsing(fn ($state) => bcrypt($state)),
+                            Forms\Components\Hidden::make('role')
+                                ->default('tenant'),
+                        ])
+                        ->createOptionUsing(function (array $data) {
+                            return \App\Models\User::create($data)->id;
                         })
+                        ->helperText('Select existing user or create new one')
                         ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('contact_first_name')
-                        ->label('Contact First Name')
-                        ->disabled()
-                        ->dehydrated(false),
+                        ->label('First Name')
+                        ->required()
+                        ->maxLength(255),
 
                     Forms\Components\TextInput::make('contact_last_name')
-                        ->label('Contact Last Name')
-                        ->disabled()
-                        ->dehydrated(false),
+                        ->label('Last Name')
+                        ->required()
+                        ->maxLength(255),
 
                     Forms\Components\TextInput::make('contact_email')
-                        ->label('Contact Email')
+                        ->label('Email')
                         ->email()
-                        ->disabled()
-                        ->dehydrated(false),
+                        ->required()
+                        ->maxLength(255),
 
                     Forms\Components\TextInput::make('contact_phone')
-                        ->label('Contact Phone')
+                        ->label('Phone')
                         ->tel()
-                        ->disabled()
-                        ->dehydrated(false),
-                ])->columns(2)
-                ->visible(fn ($record) => $record !== null),
+                        ->maxLength(50),
+
+                    Forms\Components\TextInput::make('contact_position')
+                        ->label('Position in Company')
+                        ->maxLength(255)
+                        ->helperText('e.g., Manager, Director, Administrator'),
+                ])->columns(2),
 
             SC\Section::make('Domains')
                 ->description('Websites associated with this tenant - manage domain status and access')
