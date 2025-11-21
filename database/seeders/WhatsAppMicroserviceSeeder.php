@@ -67,6 +67,10 @@ class WhatsAppMicroserviceSeeder extends Seeder
         // Seed demo opt-ins
         $tenantId = 'tenant_demo';
 
+        // Clear existing demo data first (for tables using insert instead of updateOrInsert)
+        DB::table('wa_messages')->where('tenant_id', $tenantId)->delete();
+        DB::table('wa_schedules')->where('tenant_id', $tenantId)->delete();
+
         DB::table('wa_optin')->updateOrInsert(
             ['tenant_id' => $tenantId, 'phone_e164' => '+40722123456'],
             [
