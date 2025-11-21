@@ -38,14 +38,14 @@
         <select x-model="selectedType" @change="applyFilters()" class="px-4 py-3 border rounded-xl">
             <option value="">All Types</option>
             @foreach($artistTypes as $type)
-                <option value="{{ $type->id }}">{{ $type->name }}</option>
+                <option value="{{ $type->id }}">{{ $type->getTranslation('name', app()->getLocale()) ?? $type->getTranslation('name', 'en') }}</option>
             @endforeach
         </select>
 
         <select x-model="selectedGenre" @change="applyFilters()" class="px-4 py-3 border rounded-xl">
             <option value="">All Genres</option>
             @foreach($artistGenres as $genre)
-                <option value="{{ $genre->id }}">{{ $genre->name }}</option>
+                <option value="{{ $genre->id }}">{{ $genre->getTranslation('name', app()->getLocale()) ?? $genre->getTranslation('name', 'en') }}</option>
             @endforeach
         </select>
     </div>
@@ -87,21 +87,21 @@
             <a href="{{ route('public.artist.show', ['locale' => app()->getLocale(), 'slug' => $slug]) }}" class="group">
                 <div class="bg-white rounded-2xl border overflow-hidden hover:shadow-lg transition">
                     @if ($artist->portrait_url ?? false)
-                        <img src="{{ $artist->portrait_url }}" alt="{{ $artist->name }}" class="w-full h-64 object-cover group-hover:scale-105 transition duration-300">
+                        <img src="{{ $artist->portrait_url }}" alt="{{ $artist->getTranslation('name', app()->getLocale()) ?? $artist->getTranslation('name', 'en') }}" class="w-full h-64 object-cover group-hover:scale-105 transition duration-300">
                     @elseif ($artist->hero_image_url ?? false)
-                        <img src="{{ $artist->hero_image_url }}" alt="{{ $artist->name }}" class="w-full h-64 object-cover group-hover:scale-105 transition duration-300">
+                        <img src="{{ $artist->hero_image_url }}" alt="{{ $artist->getTranslation('name', app()->getLocale()) ?? $artist->getTranslation('name', 'en') }}" class="w-full h-64 object-cover group-hover:scale-105 transition duration-300">
                     @else
                         <div class="w-full h-64 bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center">
                             <span class="text-4xl">🎤</span>
                         </div>
                     @endif
                     <div class="p-4">
-                        <h3 class="font-bold text-lg mb-1">{{ $artist->name }}</h3>
+                        <h3 class="font-bold text-lg mb-1">{{ $artist->getTranslation('name', app()->getLocale()) ?? $artist->getTranslation('name', 'en') }}</h3>
                         <p class="text-sm text-gray-500">{{ $artist->city }}{{ $artist->city && $artist->country ? ', ' : '' }}{{ $artist->country }}</p>
                         @if ($artist->artistTypes?->isNotEmpty())
                             <div class="mt-2 flex flex-wrap gap-1">
                                 @foreach($artist->artistTypes->take(2) as $type)
-                                    <span class="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">{{ $type->name }}</span>
+                                    <span class="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">{{ $type->getTranslation('name', app()->getLocale()) ?? $type->getTranslation('name', 'en') }}</span>
                                 @endforeach
                             </div>
                         @endif
