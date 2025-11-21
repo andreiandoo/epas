@@ -23,8 +23,6 @@ return new class extends Migration
             $table->text('openweather_api_key')->nullable()->change();
             $table->text('facebook_app_id')->nullable()->change();
             $table->text('facebook_app_secret')->nullable()->change();
-            $table->text('google_analytics_id')->nullable()->change();
-            $table->text('google_analytics_key')->nullable()->change();
             $table->text('brevo_api_key')->nullable()->change();
         });
     }
@@ -45,8 +43,6 @@ return new class extends Migration
             $table->string('openweather_api_key')->nullable()->change();
             $table->string('facebook_app_id')->nullable()->change();
             $table->string('facebook_app_secret')->nullable()->change();
-            $table->string('google_analytics_id')->nullable()->change();
-            $table->string('google_analytics_key')->nullable()->change();
             $table->string('brevo_api_key')->nullable()->change();
         });
     }
