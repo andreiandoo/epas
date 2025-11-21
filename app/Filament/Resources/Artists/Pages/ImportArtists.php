@@ -38,10 +38,20 @@ class ImportArtists extends Page implements HasForms
         $this->form->fill();
     }
 
-    public function form(Form $form): Form
+    protected function getForms(): array
     {
-        return $form
-            ->schema([
+        return [
+            'form' => $this->form(
+                $this->makeForm()
+                    ->schema($this->getFormSchema())
+                    ->statePath('data')
+            ),
+        ];
+    }
+
+    protected function getFormSchema(): array
+    {
+        return [
                 Forms\Components\Section::make('Import Settings')
                     ->schema([
                         Forms\Components\FileUpload::make('csv_file')
@@ -83,8 +93,7 @@ class ImportArtists extends Page implements HasForms
                                 </div>
                             ')),
                     ])->collapsible(),
-            ])
-            ->statePath('data');
+        ];
     }
 
     public function import(): void
