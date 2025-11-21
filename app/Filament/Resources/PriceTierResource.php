@@ -60,8 +60,18 @@ class PriceTierResource extends Resource
                             ->numeric()
                             ->minValue(0)
                             ->step(0.01)
-                            ->prefix('$')
                             ->helperText('Enter price with up to 2 decimals (e.g., 50.00)')
+                            ->columnSpan(1),
+
+                        Forms\Components\Select::make('currency')
+                            ->label('Currency')
+                            ->options([
+                                'EUR' => 'EUR (€)',
+                                'RON' => 'RON (Lei)',
+                                'USD' => 'USD ($)',
+                            ])
+                            ->default('EUR')
+                            ->required()
                             ->columnSpan(1),
 
                         Forms\Components\ColorPicker::make('color')
@@ -112,8 +122,13 @@ class PriceTierResource extends Resource
 
                 Tables\Columns\TextColumn::make('price')
                     ->label('Price')
-                    ->money('USD')
+                    ->formatStateUsing(fn ($record) => number_format($record->price, 2) . ' ' . $record->currency)
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('currency')
+                    ->label('Currency')
+                    ->badge()
+                    ->toggleable(),
 
                 Tables\Columns\ColorColumn::make('color')
                     ->label('Color'),

@@ -108,8 +108,8 @@ class VenueResource extends Resource
                 Forms\Components\TextInput::make('lng')
                     ->label('Longitudine')->numeric()->step('0.0000001')
                     ->placeholder('26.1025'),
-                Forms\Components\Actions::make([
-                    Forms\Components\Actions\Action::make('geocode')
+                SC\Actions::make([
+                    SC\Actions\Action::make('geocode')
                         ->label('Auto-detect coordinates')
                         ->icon('heroicon-o-map-pin')
                         ->color('info')
