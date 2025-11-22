@@ -216,32 +216,8 @@ class DocResource extends Resource
 
                 Tables\Filters\TrashedFilter::make(),
             ])
-            ->actions([
-                Tables\Actions\Action::make('preview')
-                    ->icon('heroicon-o-eye')
-                    ->url(fn (Doc $record) => route('docs.show', $record->slug))
-                    ->openUrlInNewTab()
-                    ->visible(fn (Doc $record) => $record->is_public && $record->status === 'published'),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-                Tables\Actions\RestoreAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\RestoreBulkAction::make(),
-                    Tables\Actions\BulkAction::make('publish')
-                        ->label('Publish Selected')
-                        ->icon('heroicon-o-check')
-                        ->action(fn ($records) => $records->each->update(['status' => 'published']))
-                        ->requiresConfirmation(),
-                    Tables\Actions\BulkAction::make('makePublic')
-                        ->label('Make Public')
-                        ->icon('heroicon-o-globe-alt')
-                        ->action(fn ($records) => $records->each->update(['is_public' => true]))
-                        ->requiresConfirmation(),
-                ]),
-            ])
+            ->actions([])
+            ->bulkActions([])
             ->defaultSort('updated_at', 'desc');
     }
 
