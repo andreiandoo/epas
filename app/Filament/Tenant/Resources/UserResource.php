@@ -70,15 +70,7 @@ class UserResource extends Resource
                     ->dateTime()
                     ->sortable(),
             ])
-            ->filters([])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
+            ->filters([]);
     }
 
     public static function getPages(): array

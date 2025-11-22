@@ -88,10 +88,6 @@ class OrderResource extends Resource
                         'refunded' => 'Refunded',
                     ]),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-            ])
             ->defaultSort('created_at', 'desc');
     }
 
