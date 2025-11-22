@@ -1,7 +1,7 @@
 <!-- Add New Domain Form -->
 <div class="mb-4 rounded-lg border border-gray-300 bg-white p-4">
     <h3 class="mb-3 text-sm font-semibold text-gray-700">Add New Domain</h3>
-    <form id="add-domain-form" class="flex items-end gap-3">
+    <div id="add-domain-form" class="flex items-end gap-3">
         <div class="flex-1">
             <label for="new-domain" class="block text-xs font-medium text-gray-700 mb-1">Domain Name</label>
             <input
@@ -10,7 +10,6 @@
                 name="domain"
                 placeholder="example.com"
                 class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                required
             />
         </div>
         <div>
@@ -20,7 +19,8 @@
             </label>
         </div>
         <button
-            type="submit"
+            type="button"
+            id="add-domain-btn"
             class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         >
             <svg class="mr-1.5 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -28,7 +28,7 @@
             </svg>
             Add Domain
         </button>
-    </form>
+    </div>
 </div>
 
 @if($domains->isEmpty())
@@ -236,11 +236,12 @@
     </div>
 
     <script>
-        // Add Domain Form Handler
-        const addDomainForm = document.getElementById('add-domain-form');
-        if (addDomainForm) {
-            addDomainForm.addEventListener('submit', function(e) {
+        // Add Domain Button Handler
+        const addDomainBtn = document.getElementById('add-domain-btn');
+        if (addDomainBtn) {
+            addDomainBtn.addEventListener('click', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
 
                 const domainInput = document.getElementById('new-domain');
                 const isPrimaryCheckbox = document.getElementById('is-primary');
