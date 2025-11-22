@@ -9,6 +9,8 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Assets\Css;
+use Filament\Support\Assets\Js;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -29,7 +31,6 @@ class TenantPanelProvider extends PanelProvider
                 'primary' => Color::Indigo,
             ])
             ->brandName('Tixello Tenant')
-            ->viteTheme('resources/css/filament/admin/theme.css')
 
             // Discover tenant-specific resources, pages, and widgets
             ->discoverResources(in: app_path('Filament/Tenant/Resources'), for: 'App\\Filament\\Tenant\\Resources')
@@ -49,6 +50,16 @@ class TenantPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+
+            // Custom assets (same as admin panel)
+            ->assets([
+                Css::make('epas-skin', asset('css/epas-skin.css')),
+                Js::make('epas-skin', asset('js/epas-skin.js')),
+            ])
+
+            // Render hooks for custom layout elements
+            ->renderHook('panels::sidebar.header', fn (): string => view('filament.components.sidebar-brand')->render())
+            ->renderHook('panels::topbar.end', fn (): string => view('filament.components.custom-topbar')->render());
     }
 }
