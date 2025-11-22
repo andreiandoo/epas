@@ -7,7 +7,7 @@ use Spatie\Activitylog\Models\Activity;
 
 class ActivityLog extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-clock';
+    protected static $navigationIcon = 'heroicon-o-clock';
     protected static ?string $navigationLabel = 'Activity Log';
     protected static ?int $navigationSort = 6;
     protected static string $view = 'filament.tenant.pages.activity-log';
