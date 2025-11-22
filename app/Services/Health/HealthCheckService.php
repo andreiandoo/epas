@@ -202,11 +202,9 @@ class HealthCheckService
 
         try {
             $service = app(WhatsAppService::class);
-            $service->setAdapter('mock', []);
 
             return [
                 'status' => 'healthy',
-                'adapter' => 'mock',
                 'enabled' => true,
             ];
 
@@ -232,7 +230,6 @@ class HealthCheckService
 
         try {
             $service = app(EFacturaService::class);
-            $service->setAdapter('mock', []);
 
             // Check queue status
             $pending = DB::table('anaf_queue')
