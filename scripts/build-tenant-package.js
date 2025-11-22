@@ -45,7 +45,8 @@ if (!existsSync(resolve(clientDir, 'node_modules'))) {
 // Build the package
 console.log('Building package...');
 const buildMode = shouldObfuscate ? 'production' : 'development';
-execSync(`npx vite build --mode ${buildMode}`, { stdio: 'inherit' });
+const viteBin = resolve(clientDir, 'node_modules/.bin/vite');
+execSync(`${viteBin} build --mode ${buildMode}`, { stdio: 'inherit' });
 
 // Read the built file
 const builtFile = resolve(clientDir, 'dist/tixello-loader.iife.js');
