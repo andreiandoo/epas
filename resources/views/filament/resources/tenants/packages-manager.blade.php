@@ -84,18 +84,16 @@
                             Download Package
                         </a>
 
-                        <form action="{{ route('admin.tenant.package.regenerate', ['tenant' => $tenant->id, 'domain' => $domain->id]) }}" method="POST" class="inline">
-                            @csrf
-                            <button
-                                type="submit"
-                                class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition"
-                            >
-                                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                                </svg>
-                                Regenerate
-                            </button>
-                        </form>
+                        <button
+                            type="button"
+                            onclick="regeneratePackage({{ $tenant->id }}, {{ $domain->id }})"
+                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition"
+                        >
+                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Regenerate
+                        </button>
 
                         <a
                             href="{{ route('admin.tenant.package.instructions', ['tenant' => $tenant->id, 'domain' => $domain->id]) }}"
@@ -115,18 +113,16 @@
                         </p>
                     </div>
 
-                    <form action="{{ route('admin.tenant.package.generate', ['tenant' => $tenant->id, 'domain' => $domain->id]) }}" method="POST">
-                        @csrf
-                        <button
-                            type="submit"
-                            class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
-                        >
-                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                            </svg>
-                            Generate Package
-                        </button>
-                    </form>
+                    <button
+                        type="button"
+                        onclick="generatePackage({{ $tenant->id }}, {{ $domain->id }})"
+                        class="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+                    >
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                        Generate Package
+                    </button>
                 @endif
 
                 @if($package)
@@ -145,3 +141,55 @@
         @endforeach
     @endif
 </div>
+
+<script>
+    function generatePackage(tenantId, domainId) {
+        fetch(`/admin/tenants/${tenantId}/domains/${domainId}/package/generate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Package generated successfully');
+                location.reload();
+            } else {
+                alert('Error: ' + (data.message || 'Failed to generate package'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while generating the package');
+        });
+    }
+
+    function regeneratePackage(tenantId, domainId) {
+        if (!confirm('Are you sure you want to regenerate this package?')) {
+            return;
+        }
+
+        fetch(`/admin/tenants/${tenantId}/domains/${domainId}/package/regenerate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Package regenerated successfully');
+                location.reload();
+            } else {
+                alert('Error: ' + (data.message || 'Failed to regenerate package'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while regenerating the package');
+        });
+    }
+</script>
