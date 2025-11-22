@@ -12,14 +12,52 @@ export class Router {
     private routes: Route[] = [];
     private config: TixelloConfig;
     private currentPath: string = '';
+    private authToken: string | null = null;
+    private currentUser: any = null;
 
     constructor(config: TixelloConfig) {
         this.config = config;
+        this.loadAuthState();
         this.setupDefaultRoutes();
     }
 
+    // Auth state management
+    private loadAuthState(): void {
+        this.authToken = localStorage.getItem('tixello_auth_token');
+        const userJson = localStorage.getItem('tixello_user');
+        if (userJson) {
+            try {
+                this.currentUser = JSON.parse(userJson);
+            } catch {
+                this.currentUser = null;
+            }
+        }
+    }
+
+    private saveAuthState(token: string, user: any): void {
+        this.authToken = token;
+        this.currentUser = user;
+        localStorage.setItem('tixello_auth_token', token);
+        localStorage.setItem('tixello_user', JSON.stringify(user));
+    }
+
+    private clearAuthState(): void {
+        this.authToken = null;
+        this.currentUser = null;
+        localStorage.removeItem('tixello_auth_token');
+        localStorage.removeItem('tixello_user');
+    }
+
+    public isAuthenticated(): boolean {
+        return !!this.authToken;
+    }
+
+    public getUser(): any {
+        return this.currentUser;
+    }
+
     // API helper method
-    private async fetchApi(endpoint: string, params: Record<string, string> = {}): Promise<any> {
+    private async fetchApi(endpoint: string, params: Record<string, string> = {}, options: RequestInit = {}): Promise<any> {
         const url = new URL(`${this.config.apiEndpoint}${endpoint}`);
         url.searchParams.set('hostname', window.location.hostname);
 
@@ -27,11 +65,53 @@ export class Router {
             url.searchParams.set(key, value);
         });
 
-        const response = await fetch(url.toString());
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+            ...(options.headers || {}),
+        };
+
+        if (this.authToken) {
+            (headers as Record<string, string>)['Authorization'] = `Bearer ${this.authToken}`;
+        }
+
+        const response = await fetch(url.toString(), {
+            ...options,
+            headers,
+        });
+
         if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
+            const error = await response.json().catch(() => ({ message: 'Request failed' }));
+            throw new Error(error.message || `API error: ${response.status}`);
         }
         return response.json();
+    }
+
+    // POST helper
+    private async postApi(endpoint: string, data: any): Promise<any> {
+        const url = new URL(`${this.config.apiEndpoint}${endpoint}`);
+        url.searchParams.set('hostname', window.location.hostname);
+
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+        };
+
+        if (this.authToken) {
+            (headers as Record<string, string>)['Authorization'] = `Bearer ${this.authToken}`;
+        }
+
+        const response = await fetch(url.toString(), {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || result.error || 'Request failed');
+        }
+
+        return result;
     }
 
     // Event card HTML generator
@@ -604,6 +684,12 @@ export class Router {
     }
 
     private renderLogin(): void {
+        // Redirect if already logged in
+        if (this.isAuthenticated()) {
+            this.navigate('/account');
+            return;
+        }
+
         const content = this.getContentElement();
         if (!content) return;
 
@@ -611,9 +697,10 @@ export class Router {
             <div class="min-h-[60vh] flex items-center justify-center px-4">
                 <div class="max-w-md w-full space-y-8">
                     <div class="text-center">
-                        <h1 class="text-3xl font-bold text-gray-900">Welcome back</h1>
-                        <p class="mt-2 text-gray-600">Sign in to your account</p>
+                        <h1 class="text-3xl font-bold text-gray-900">Bine ai revenit</h1>
+                        <p class="mt-2 text-gray-600">Conectează-te la contul tău</p>
                     </div>
+                    <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"></div>
                     <form id="login-form" class="space-y-6">
                         <div>
                             <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -621,23 +708,56 @@ export class Router {
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         </div>
                         <div>
-                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Parolă</label>
                             <input type="password" id="password" required
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         </div>
-                        <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
-                            Sign In
+                        <button type="submit" id="login-btn" class="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                            Conectare
                         </button>
                     </form>
                     <p class="text-center text-gray-600">
-                        Don't have an account? <a href="/register" class="text-blue-600 hover:text-blue-700 font-medium">Register</a>
+                        Nu ai cont? <a href="/register" class="text-blue-600 hover:text-blue-700 font-medium">Înregistrează-te</a>
                     </p>
                 </div>
             </div>
         `;
+
+        // Setup form handler
+        const form = document.getElementById('login-form');
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = (document.getElementById('email') as HTMLInputElement).value;
+            const password = (document.getElementById('password') as HTMLInputElement).value;
+            const errorEl = document.getElementById('login-error');
+            const btn = document.getElementById('login-btn') as HTMLButtonElement;
+
+            btn.disabled = true;
+            btn.textContent = 'Se conectează...';
+            errorEl?.classList.add('hidden');
+
+            try {
+                const result = await this.postApi('/auth/login', { email, password });
+                this.saveAuthState(result.token, result.user);
+                this.navigate('/account');
+            } catch (error: any) {
+                if (errorEl) {
+                    errorEl.textContent = error.message || 'Eroare la autentificare';
+                    errorEl.classList.remove('hidden');
+                }
+                btn.disabled = false;
+                btn.textContent = 'Conectare';
+            }
+        });
     }
 
     private renderRegister(): void {
+        // Redirect if already logged in
+        if (this.isAuthenticated()) {
+            this.navigate('/account');
+            return;
+        }
+
         const content = this.getContentElement();
         if (!content) return;
 
@@ -645,18 +765,19 @@ export class Router {
             <div class="min-h-[60vh] flex items-center justify-center px-4">
                 <div class="max-w-md w-full space-y-8">
                     <div class="text-center">
-                        <h1 class="text-3xl font-bold text-gray-900">Create account</h1>
-                        <p class="mt-2 text-gray-600">Join us to book amazing events</p>
+                        <h1 class="text-3xl font-bold text-gray-900">Creează cont</h1>
+                        <p class="mt-2 text-gray-600">Înregistrează-te pentru a cumpăra bilete</p>
                     </div>
+                    <div id="register-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"></div>
                     <form id="register-form" class="space-y-6">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                                <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">Prenume</label>
                                 <input type="text" id="first_name" required
                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                             </div>
                             <div>
-                                <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                                <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Nume</label>
                                 <input type="text" id="last_name" required
                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                             </div>
@@ -667,29 +788,102 @@ export class Router {
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div>
-                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                            <input type="password" id="password" required
+                            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Telefon (opțional)</label>
+                            <input type="tel" id="phone"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         </div>
-                        <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
-                            Create Account
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Parolă</label>
+                            <input type="password" id="password" required minlength="8"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Confirmă parola</label>
+                            <input type="password" id="password_confirmation" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <button type="submit" id="register-btn" class="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                            Creează cont
                         </button>
                     </form>
                     <p class="text-center text-gray-600">
-                        Already have an account? <a href="/login" class="text-blue-600 hover:text-blue-700 font-medium">Sign in</a>
+                        Ai deja cont? <a href="/login" class="text-blue-600 hover:text-blue-700 font-medium">Conectează-te</a>
                     </p>
                 </div>
             </div>
         `;
+
+        // Setup form handler
+        const form = document.getElementById('register-form');
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const first_name = (document.getElementById('first_name') as HTMLInputElement).value;
+            const last_name = (document.getElementById('last_name') as HTMLInputElement).value;
+            const email = (document.getElementById('email') as HTMLInputElement).value;
+            const phone = (document.getElementById('phone') as HTMLInputElement).value;
+            const password = (document.getElementById('password') as HTMLInputElement).value;
+            const password_confirmation = (document.getElementById('password_confirmation') as HTMLInputElement).value;
+            const errorEl = document.getElementById('register-error');
+            const btn = document.getElementById('register-btn') as HTMLButtonElement;
+
+            if (password !== password_confirmation) {
+                if (errorEl) {
+                    errorEl.textContent = 'Parolele nu coincid';
+                    errorEl.classList.remove('hidden');
+                }
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Se creează contul...';
+            errorEl?.classList.add('hidden');
+
+            try {
+                const result = await this.postApi('/auth/register', {
+                    first_name,
+                    last_name,
+                    email,
+                    phone: phone || null,
+                    password,
+                    password_confirmation,
+                });
+                this.saveAuthState(result.token, result.user);
+                this.navigate('/account');
+            } catch (error: any) {
+                if (errorEl) {
+                    errorEl.textContent = error.message || 'Eroare la înregistrare';
+                    errorEl.classList.remove('hidden');
+                }
+                btn.disabled = false;
+                btn.textContent = 'Creează cont';
+            }
+        });
     }
 
     private renderAccount(): void {
+        // Redirect if not logged in
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
         const content = this.getContentElement();
         if (!content) return;
 
+        const user = this.getUser();
+        const userName = user?.full_name || user?.first_name || 'Utilizator';
+
         content.innerHTML = `
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <h1 class="text-3xl font-bold text-gray-900 mb-8">My Account</h1>
+                <div class="flex justify-between items-center mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900">Contul meu</h1>
+                        <p class="text-gray-600">Bun venit, ${userName}!</p>
+                    </div>
+                    <button id="logout-btn" class="px-4 py-2 text-red-600 hover:text-red-700 font-medium">
+                        Deconectare
+                    </button>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <a href="/account/orders" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
                         <div class="text-blue-600 mb-3">
@@ -697,8 +891,8 @@ export class Router {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                             </svg>
                         </div>
-                        <h3 class="text-lg font-semibold text-gray-900">My Orders</h3>
-                        <p class="text-gray-600 text-sm">View order history</p>
+                        <h3 class="text-lg font-semibold text-gray-900">Comenzile mele</h3>
+                        <p class="text-gray-600 text-sm">Vezi istoricul comenzilor</p>
                     </a>
                     <a href="/account/tickets" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
                         <div class="text-blue-600 mb-3">
@@ -706,8 +900,8 @@ export class Router {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
                             </svg>
                         </div>
-                        <h3 class="text-lg font-semibold text-gray-900">My Tickets</h3>
-                        <p class="text-gray-600 text-sm">Access your tickets</p>
+                        <h3 class="text-lg font-semibold text-gray-900">Biletele mele</h3>
+                        <p class="text-gray-600 text-sm">Accesează biletele tale</p>
                     </a>
                     <a href="/account/profile" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
                         <div class="text-blue-600 mb-3">
@@ -715,12 +909,24 @@ export class Router {
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                             </svg>
                         </div>
-                        <h3 class="text-lg font-semibold text-gray-900">Profile</h3>
-                        <p class="text-gray-600 text-sm">Edit your details</p>
+                        <h3 class="text-lg font-semibold text-gray-900">Profil</h3>
+                        <p class="text-gray-600 text-sm">Editează datele tale</p>
                     </a>
                 </div>
             </div>
         `;
+
+        // Setup logout handler
+        const logoutBtn = document.getElementById('logout-btn');
+        logoutBtn?.addEventListener('click', async () => {
+            try {
+                await this.postApi('/auth/logout', {});
+            } catch {
+                // Ignore errors
+            }
+            this.clearAuthState();
+            this.navigate('/');
+        });
     }
 
     private renderOrders(): void {

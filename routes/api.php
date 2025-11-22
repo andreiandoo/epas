@@ -56,6 +56,19 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
 
     Route::get('/categories', [TenantClientController::class, 'categories'])
         ->name('api.tenant-client-public.categories');
+
+    // Auth routes
+    Route::post('/auth/register', [App\Http\Controllers\Api\TenantClientAuthController::class, 'register'])
+        ->name('api.tenant-client-public.auth.register');
+
+    Route::post('/auth/login', [App\Http\Controllers\Api\TenantClientAuthController::class, 'login'])
+        ->name('api.tenant-client-public.auth.login');
+
+    Route::post('/auth/logout', [App\Http\Controllers\Api\TenantClientAuthController::class, 'logout'])
+        ->name('api.tenant-client-public.auth.logout');
+
+    Route::get('/auth/user', [App\Http\Controllers\Api\TenantClientAuthController::class, 'user'])
+        ->name('api.tenant-client-public.auth.user');
 });
 
 /*
