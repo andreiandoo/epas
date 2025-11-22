@@ -146,7 +146,8 @@ class PackageController extends Controller
 
     private function generateIndexHtml(Tenant $tenant, Domain $domain, TenantPackage $package): string
     {
-        $installCode = $package->getInstallationCode();
+        // Use local script path for self-contained ZIP package
+        $apiEndpoint = config('app.url') . '/api/tenant-client';
 
         return <<<HTML
 <!DOCTYPE html>
@@ -184,7 +185,16 @@ class PackageController extends Controller
     </style>
 </head>
 <body>
-    {$installCode}
+    <!-- Tixello Event Platform -->
+    <div id="tixello-app">
+        <div class="tixello-loading">
+            <div class="tixello-spinner"></div>
+        </div>
+    </div>
+    <script src="./tixello-loader.min.js"
+            data-api="{$apiEndpoint}"
+            data-tenant="{$tenant->id}"
+            data-domain="{$domain->id}"></script>
     <noscript>
         <div style="padding: 20px; text-align: center;">
             <h1>JavaScript Required</h1>
