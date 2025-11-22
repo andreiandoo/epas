@@ -6,11 +6,18 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { customerService } from '../../services/api';
 import { Ticket } from '../../types';
+
+// Conditional import for QR code (not available on web)
+let QRCode: any = null;
+if (Platform.OS !== 'web') {
+  QRCode = require('react-native-qrcode-svg').default;
+}
 
 export function TicketDetailScreen({ route }: any) {
   const { ticketCode } = route.params;
@@ -64,13 +71,26 @@ export function TicketDetailScreen({ route }: any) {
     }
   };
 
+  const qrData = ticket.qr_data || `TKT:${ticket.code}`;
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.qrSection}>
-        {/* QR Code placeholder - in real app, render actual QR */}
-        <View style={styles.qrPlaceholder}>
-          <Ionicons name="qr-code" size={120} color="#111827" />
-        </View>
+        {Platform.OS !== 'web' && QRCode ? (
+          <View style={styles.qrContainer}>
+            <QRCode
+              value={qrData}
+              size={200}
+              backgroundColor="#ffffff"
+              color="#000000"
+            />
+          </View>
+        ) : (
+          <View style={styles.qrPlaceholder}>
+            <Ionicons name="qr-code" size={120} color="#111827" />
+            <Text style={styles.qrFallbackText}>{ticket.code}</Text>
+          </View>
+        )}
         <Text style={styles.ticketCode}>#{ticket.code}</Text>
       </View>
 
@@ -129,6 +149,15 @@ export function TicketDetailScreen({ route }: any) {
           <Text style={styles.shareButtonText}>Share</Text>
         </TouchableOpacity>
       </View>
+
+      {ticket.status === 'valid' && (
+        <View style={styles.notice}>
+          <Ionicons name="information-circle-outline" size={20} color="#6366f1" />
+          <Text style={styles.noticeText}>
+            Present this QR code at the entrance for scanning
+          </Text>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -153,6 +182,16 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
     backgroundColor: '#fff',
   },
+  qrContainer: {
+    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
   qrPlaceholder: {
     width: 200,
     height: 200,
@@ -161,11 +200,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 8,
   },
+  qrFallbackText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#6b7280',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
   ticketCode: {
     fontSize: 14,
     color: '#6b7280',
     marginTop: 12,
-    fontFamily: 'monospace',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   card: {
     backgroundColor: '#fff',
@@ -248,5 +293,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  notice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e0e7ff',
+    marginHorizontal: 16,
+    marginBottom: 24,
+    padding: 16,
+    borderRadius: 8,
+  },
+  noticeText: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 14,
+    color: '#4338ca',
   },
 });
