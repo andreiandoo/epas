@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Hash;
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 1;
     protected static ?string $navigationLabel = 'Team Members';

@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 class TicketTypeResource extends Resource
 {
     protected static ?string $model = TicketType::class;
-    protected static ?string $navigationIcon = 'heroicon-o-ticket';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
     protected static \UnitEnum|string|null $navigationGroup = 'Content';
     protected static ?int $navigationSort = 3;
     protected static ?string $navigationLabel = 'Ticket Types';

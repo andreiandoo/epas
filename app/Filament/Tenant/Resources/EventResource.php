@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Builder;
 class EventResource extends Resource
 {
     protected static ?string $model = Event::class;
-    protected static ?string $navigationIcon = 'heroicon-o-calendar';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-calendar';
     protected static \UnitEnum|string|null $navigationGroup = 'Content';
     protected static ?int $navigationSort = 1;
 

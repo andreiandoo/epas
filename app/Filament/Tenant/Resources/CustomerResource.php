@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 class CustomerResource extends Resource
 {
     protected static ?string $model = Customer::class;
-    protected static ?string $navigationIcon = 'heroicon-o-users';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 2;
 
