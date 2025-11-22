@@ -811,7 +811,7 @@ Route::post('/tenant/package/{package}/invalidate', [PackageController::class, '
 |
 */
 
-Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client'])->group(function () {
+Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'])->group(function () {
     // Bootstrap
     Route::get('/bootstrap', [BootstrapController::class, 'index'])
         ->name('api.tenant-client.bootstrap');
