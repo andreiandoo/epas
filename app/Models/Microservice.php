@@ -63,6 +63,6 @@ class Microservice extends Model
      */
     public function scopeActive($query)
     {
-        return $query->where('is_active', true)->orderBy('sort_order');
+        return $query->where('microservices.is_active', true)->orderBy('sort_order');
     }
 }
