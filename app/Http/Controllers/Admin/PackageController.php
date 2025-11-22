@@ -208,6 +208,8 @@ HTML;
 
     private function generateHtaccess(): string
     {
+        $coreUrl = config('app.url');
+
         return <<<HTACCESS
 # Tixello Event Platform - Apache Configuration
 
@@ -217,6 +219,9 @@ RewriteEngine On
 # Force HTTPS
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Redirect /admin to tenant panel on core
+RewriteRule ^admin/?$ {$coreUrl}/tenant [R=302,L]
 
 # SPA routing - redirect all requests to index.html
 RewriteCond %{REQUEST_FILENAME} !-f

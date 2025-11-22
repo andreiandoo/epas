@@ -17,6 +17,13 @@ export interface ThemeConfig {
     fontFamily: string;
 }
 
+export interface InitAttributesConfig {
+    apiEndpoint: string;
+    tenantId: number;
+    domainId: number;
+    domain: string;
+}
+
 export class ConfigManager {
     private static config: TixelloConfig | null = null;
 
@@ -33,6 +40,47 @@ export class ConfigManager {
         } catch (error) {
             throw new Error('Failed to initialize configuration');
         }
+    }
+
+    static async initFromAttributes(attrs: InitAttributesConfig): Promise<TixelloConfig> {
+        // Create default config from attributes
+        this.config = {
+            tenantId: attrs.tenantId,
+            domainId: attrs.domainId,
+            domain: attrs.domain,
+            apiEndpoint: attrs.apiEndpoint,
+            modules: ['core', 'events', 'auth', 'cart', 'checkout'],
+            theme: {
+                primaryColor: '#3B82F6',
+                secondaryColor: '#1E40AF',
+                logo: null,
+                favicon: null,
+                fontFamily: 'Inter',
+            },
+            version: '1.0.0',
+            packageHash: '',
+        };
+
+        // Fetch full config from API
+        try {
+            const response = await fetch(`${attrs.apiEndpoint}/config?tenant=${attrs.tenantId}&domain=${attrs.domainId}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.theme) {
+                    this.config.theme = { ...this.config.theme, ...data.theme };
+                }
+                if (data.modules) {
+                    this.config.modules = data.modules;
+                }
+            }
+        } catch {
+            // Use defaults if API fails
+        }
+
+        // Apply theme
+        this.applyTheme(this.config.theme);
+
+        return this.config;
     }
 
     private static async decrypt(encrypted: string): Promise<string> {

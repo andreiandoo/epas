@@ -19,8 +19,21 @@ export class Router {
     }
 
     init(): void {
-        // Listen for hash changes
-        window.addEventListener('hashchange', () => this.handleRoute());
+        // Listen for popstate (browser back/forward)
+        window.addEventListener('popstate', () => this.handleRoute());
+
+        // Intercept all link clicks for SPA navigation
+        document.addEventListener('click', (e) => {
+            const target = e.target as HTMLElement;
+            const anchor = target.closest('a');
+            if (anchor && anchor.href && anchor.href.startsWith(window.location.origin)) {
+                const url = new URL(anchor.href);
+                if (!anchor.hasAttribute('data-external')) {
+                    e.preventDefault();
+                    this.navigate(url.pathname);
+                }
+            }
+        });
 
         // Handle initial route
         this.handleRoute();
@@ -30,7 +43,7 @@ export class Router {
         // Public routes
         this.addRoute('/', this.renderHome.bind(this));
         this.addRoute('/events', this.renderEvents.bind(this));
-        this.addRoute('/events/:slug', this.renderEventDetail.bind(this));
+        this.addRoute('/event/:slug', this.renderEventDetail.bind(this));
         this.addRoute('/cart', this.renderCart.bind(this));
         this.addRoute('/checkout', this.renderCheckout.bind(this));
         this.addRoute('/thank-you/:orderNumber', this.renderThankYou.bind(this));
@@ -42,22 +55,6 @@ export class Router {
         this.addRoute('/account/tickets', this.renderTickets.bind(this));
         this.addRoute('/account/events', this.renderMyEvents.bind(this));
         this.addRoute('/account/profile', this.renderProfile.bind(this));
-
-        // Admin routes
-        this.addRoute('/admin', this.renderAdminDashboard.bind(this));
-        this.addRoute('/admin/events', this.renderAdminEvents.bind(this));
-        this.addRoute('/admin/orders', this.renderAdminOrders.bind(this));
-        this.addRoute('/admin/customers', this.renderAdminCustomers.bind(this));
-        this.addRoute('/admin/users', this.renderAdminUsers.bind(this));
-        this.addRoute('/admin/venues', this.renderAdminVenues.bind(this));
-        this.addRoute('/admin/artists', this.renderAdminArtists.bind(this));
-        this.addRoute('/admin/seating', this.renderAdminSeating.bind(this));
-        this.addRoute('/admin/pricing', this.renderAdminPricing.bind(this));
-        this.addRoute('/admin/templates', this.renderAdminTemplates.bind(this));
-        this.addRoute('/admin/settings', this.renderAdminSettings.bind(this));
-        this.addRoute('/admin/payments', this.renderAdminPayments.bind(this));
-        this.addRoute('/admin/services', this.renderAdminServices.bind(this));
-        this.addRoute('/admin/services/:id', this.renderAdminServiceConfig.bind(this));
     }
 
     addRoute(path: string, handler: RouteHandler): void {
@@ -75,15 +72,16 @@ export class Router {
     }
 
     navigate(path: string): void {
-        window.location.hash = path;
+        window.history.pushState({}, '', path);
+        this.handleRoute();
     }
 
     private handleRoute(): void {
-        const hash = window.location.hash.slice(1) || '/';
-        this.currentPath = hash;
+        const path = window.location.pathname || '/';
+        this.currentPath = path;
 
         for (const route of this.routes) {
-            const match = hash.match(route.pattern);
+            const match = path.match(route.pattern);
             if (match) {
                 const params: Record<string, string> = {};
                 route.paramNames.forEach((name, index) => {
@@ -109,10 +107,43 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-home">
-                <h1>Welcome to ${this.config.domain}</h1>
-                <p>Browse our upcoming events</p>
-                <a href="#/events" class="tixello-btn">View Events</a>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <!-- Hero Section -->
+                <div class="text-center mb-16">
+                    <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+                        Discover Amazing Events
+                    </h1>
+                    <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+                        Find and book tickets for the best concerts, shows, and experiences
+                    </p>
+                    <a href="/events" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition">
+                        Browse Events
+                        <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                    </a>
+                </div>
+
+                <!-- Featured Events -->
+                <div class="mb-16">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Featured Events</h2>
+                    <div id="featured-events" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-64"></div>
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-64"></div>
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-64"></div>
+                    </div>
+                </div>
+
+                <!-- Categories -->
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Browse by Category</h2>
+                    <div id="categories" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -122,13 +153,27 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-events">
-                <h1>Events</h1>
-                <div id="events-list">Loading events...</div>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-4 md:mb-0">Events</h1>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <input type="search" id="event-search" placeholder="Search events..."
+                               class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <select id="event-filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="events-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-80"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-80"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-80"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-80"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-80"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-80"></div>
+                </div>
             </div>
         `;
-
-        // Events will be loaded via module
     }
 
     private renderEventDetail(params: Record<string, string>): void {
@@ -136,8 +181,29 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-event-detail">
-                <div id="event-${params.slug}">Loading event...</div>
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <a href="/events" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Back to Events
+                </a>
+                <div id="event-detail-${params.slug}" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2">
+                        <div class="animate-pulse bg-gray-200 rounded-lg h-96 mb-6"></div>
+                        <div class="animate-pulse bg-gray-200 h-8 w-3/4 mb-4 rounded"></div>
+                        <div class="animate-pulse bg-gray-200 h-4 w-full mb-2 rounded"></div>
+                        <div class="animate-pulse bg-gray-200 h-4 w-full mb-2 rounded"></div>
+                        <div class="animate-pulse bg-gray-200 h-4 w-2/3 rounded"></div>
+                    </div>
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-lg shadow-lg p-6 sticky top-4">
+                            <div class="animate-pulse bg-gray-200 h-6 w-1/2 mb-4 rounded"></div>
+                            <div class="animate-pulse bg-gray-200 h-10 w-full mb-4 rounded"></div>
+                            <div class="animate-pulse bg-gray-200 h-12 w-full rounded"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -147,9 +213,21 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-cart">
-                <h1>Shopping Cart</h1>
-                <div id="cart-items">Loading cart...</div>
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
+                <div id="cart-items" class="space-y-4 mb-8">
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                </div>
+                <div id="cart-summary" class="bg-gray-50 rounded-lg p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-lg font-medium text-gray-900">Total</span>
+                        <span class="text-2xl font-bold text-gray-900" id="cart-total">$0.00</span>
+                    </div>
+                    <a href="/checkout" class="block w-full text-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                        Proceed to Checkout
+                    </a>
+                </div>
             </div>
         `;
     }
@@ -159,9 +237,30 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-checkout">
-                <h1>Checkout</h1>
-                <div id="checkout-form">Loading...</div>
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div id="checkout-form" class="space-y-6">
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h2 class="text-lg font-semibold mb-4">Contact Information</h2>
+                            <div class="space-y-4">
+                                <input type="email" placeholder="Email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <input type="tel" placeholder="Phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <h2 class="text-lg font-semibold mb-4">Payment</h2>
+                            <div id="payment-element" class="animate-pulse bg-gray-200 h-32 rounded"></div>
+                        </div>
+                    </div>
+                    <div id="checkout-summary" class="bg-gray-50 rounded-lg p-6 h-fit sticky top-4">
+                        <h2 class="text-lg font-semibold mb-4">Order Summary</h2>
+                        <div class="animate-pulse space-y-2">
+                            <div class="bg-gray-200 h-4 rounded"></div>
+                            <div class="bg-gray-200 h-4 rounded"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -171,14 +270,31 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-auth">
-                <h1>Login</h1>
-                <form id="login-form">
-                    <input type="email" placeholder="Email" required>
-                    <input type="password" placeholder="Password" required>
-                    <button type="submit" class="tixello-btn">Login</button>
-                </form>
-                <p>Don't have an account? <a href="#/register">Register</a></p>
+            <div class="min-h-[60vh] flex items-center justify-center px-4">
+                <div class="max-w-md w-full space-y-8">
+                    <div class="text-center">
+                        <h1 class="text-3xl font-bold text-gray-900">Welcome back</h1>
+                        <p class="mt-2 text-gray-600">Sign in to your account</p>
+                    </div>
+                    <form id="login-form" class="space-y-6">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" id="email" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            <input type="password" id="password" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                            Sign In
+                        </button>
+                    </form>
+                    <p class="text-center text-gray-600">
+                        Don't have an account? <a href="/register" class="text-blue-600 hover:text-blue-700 font-medium">Register</a>
+                    </p>
+                </div>
             </div>
         `;
     }
@@ -188,15 +304,43 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-auth">
-                <h1>Register</h1>
-                <form id="register-form">
-                    <input type="text" placeholder="Name" required>
-                    <input type="email" placeholder="Email" required>
-                    <input type="password" placeholder="Password" required>
-                    <button type="submit" class="tixello-btn">Register</button>
-                </form>
-                <p>Already have an account? <a href="#/login">Login</a></p>
+            <div class="min-h-[60vh] flex items-center justify-center px-4">
+                <div class="max-w-md w-full space-y-8">
+                    <div class="text-center">
+                        <h1 class="text-3xl font-bold text-gray-900">Create account</h1>
+                        <p class="mt-2 text-gray-600">Join us to book amazing events</p>
+                    </div>
+                    <form id="register-form" class="space-y-6">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                                <input type="text" id="first_name" required
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                                <input type="text" id="last_name" required
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" id="email" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                            <input type="password" id="password" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                            Create Account
+                        </button>
+                    </form>
+                    <p class="text-center text-gray-600">
+                        Already have an account? <a href="/login" class="text-blue-600 hover:text-blue-700 font-medium">Sign in</a>
+                    </p>
+                </div>
             </div>
         `;
     }
@@ -206,12 +350,37 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-account">
-                <h1>My Account</h1>
-                <nav>
-                    <a href="#/account/orders">My Orders</a>
-                    <a href="#/account/tickets">My Tickets</a>
-                </nav>
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-8">My Account</h1>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <a href="/account/orders" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
+                        <div class="text-blue-600 mb-3">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">My Orders</h3>
+                        <p class="text-gray-600 text-sm">View order history</p>
+                    </a>
+                    <a href="/account/tickets" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
+                        <div class="text-blue-600 mb-3">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">My Tickets</h3>
+                        <p class="text-gray-600 text-sm">Access your tickets</p>
+                    </a>
+                    <a href="/account/profile" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
+                        <div class="text-blue-600 mb-3">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">Profile</h3>
+                        <p class="text-gray-600 text-sm">Edit your details</p>
+                    </a>
+                </div>
             </div>
         `;
     }
@@ -221,9 +390,19 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-orders">
-                <h1>My Orders</h1>
-                <div id="orders-list">Loading orders...</div>
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <a href="/account" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Back to Account
+                </a>
+                <h1 class="text-3xl font-bold text-gray-900 mb-8">My Orders</h1>
+                <div id="orders-list" class="space-y-4">
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                </div>
             </div>
         `;
     }
@@ -233,9 +412,18 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-tickets">
-                <h1>My Tickets</h1>
-                <div id="tickets-list">Loading tickets...</div>
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <a href="/account" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Back to Account
+                </a>
+                <h1 class="text-3xl font-bold text-gray-900 mb-8">My Tickets</h1>
+                <div id="tickets-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-48"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-48"></div>
+                </div>
             </div>
         `;
     }
@@ -245,9 +433,19 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-order-detail">
-                <a href="#/account/orders" style="color: #6b7280; margin-bottom: 1rem; display: inline-block;">← Back to Orders</a>
-                <div id="order-detail-${params.id}">Loading order details...</div>
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <a href="/account/orders" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Back to Orders
+                </a>
+                <div id="order-detail-${params.id}">
+                    <div class="animate-pulse space-y-4">
+                        <div class="bg-gray-200 h-8 w-1/3 rounded"></div>
+                        <div class="bg-gray-200 h-48 rounded-lg"></div>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -257,10 +455,19 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-my-events">
-                <h1>My Events</h1>
-                <p style="color: #6b7280; margin-bottom: 1.5rem;">Upcoming events you have tickets for</p>
-                <div id="my-events-list">Loading events...</div>
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <a href="/account" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Back to Account
+                </a>
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">My Events</h1>
+                <p class="text-gray-600 mb-8">Upcoming events you have tickets for</p>
+                <div id="my-events-list" class="space-y-4">
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-32"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-32"></div>
+                </div>
             </div>
         `;
     }
@@ -270,9 +477,22 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-profile">
-                <h1>My Profile</h1>
-                <div id="profile-form">Loading profile...</div>
+            <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <a href="/account" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Back to Account
+                </a>
+                <h1 class="text-3xl font-bold text-gray-900 mb-8">My Profile</h1>
+                <div id="profile-form" class="bg-white rounded-lg shadow p-6">
+                    <div class="animate-pulse space-y-4">
+                        <div class="bg-gray-200 h-10 rounded"></div>
+                        <div class="bg-gray-200 h-10 rounded"></div>
+                        <div class="bg-gray-200 h-10 rounded"></div>
+                        <div class="bg-gray-200 h-10 w-1/3 rounded"></div>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -282,187 +502,23 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-thank-you" style="text-align: center; padding: 3rem 1rem;">
-                <div style="font-size: 4rem; margin-bottom: 1rem;">✓</div>
-                <h1 style="font-size: 2rem; margin-bottom: 1rem;">Thank You!</h1>
-                <p style="color: #6b7280; margin-bottom: 2rem;">Your order has been confirmed.</p>
-                <div id="order-confirmation-${params.orderNumber}">Loading order details...</div>
-            </div>
-        `;
-    }
-
-    // Admin routes
-    private renderAdminDashboard(): void {
-        const content = this.getContentElement();
-        if (!content) return;
-
-        content.innerHTML = `
-            <div class="tixello-admin">
-                <h1>Admin Dashboard</h1>
-                <div id="admin-stats">Loading...</div>
-            </div>
-        `;
-    }
-
-    private renderAdminEvents(): void {
-        const content = this.getContentElement();
-        if (!content) return;
-
-        content.innerHTML = `
-            <div class="tixello-admin-events">
-                <h1>Manage Events</h1>
-                <div id="admin-events-list">Loading...</div>
-            </div>
-        `;
-    }
-
-    private renderAdminOrders(): void {
-        const content = this.getContentElement();
-        if (!content) return;
-
-        content.innerHTML = `
-            <div class="tixello-admin-orders">
-                <h1>Orders</h1>
-                <div id="admin-orders-list">Loading...</div>
-            </div>
-        `;
-    }
-
-    private renderAdminCustomers(): void {
-        const content = this.getContentElement();
-        if (!content) return;
-
-        content.innerHTML = `
-            <div class="tixello-admin-customers">
-                <h1>Customers</h1>
-                <div id="admin-customers-list">Loading...</div>
-            </div>
-        `;
-    }
-
-    private renderAdminSettings(): void {
-        const content = this.getContentElement();
-        if (!content) return;
-
-        content.innerHTML = `
-            <div class="tixello-admin-settings">
-                <h1>Settings</h1>
-                <div id="admin-settings-form">Loading...</div>
-            </div>
-        `;
-    }
-
-    private renderAdminUsers(): void {
-        const content = this.getContentElement();
-        if (!content) return;
-
-        content.innerHTML = `
-            <div class="tixello-admin-users">
-                <h1>Users</h1>
-                <div id="admin-users-list">Loading...</div>
-            </div>
-        `;
-    }
-
-    private renderAdminVenues(): void {
-        const content = this.getContentElement();
-        if (!content) return;
-
-        content.innerHTML = `
-            <div class="tixello-admin-venues">
-                <h1>Venues</h1>
-                <div id="admin-venues-list">Loading...</div>
-            </div>
-        `;
-    }
-
-    private renderAdminArtists(): void {
-        const content = this.getContentElement();
-        if (!content) return;
-
-        content.innerHTML = `
-            <div class="tixello-admin-artists">
-                <h1>Artists</h1>
-                <div id="admin-artists-list">Loading...</div>
-            </div>
-        `;
-    }
-
-    private renderAdminSeating(): void {
-        const content = this.getContentElement();
-        if (!content) return;
-
-        content.innerHTML = `
-            <div class="tixello-admin-seating">
-                <h1>Seating & Price Tiers</h1>
-                <div class="tabs" style="margin-bottom: 1rem;">
-                    <button class="tab-btn active" data-tab="layouts">Seating Layouts</button>
-                    <button class="tab-btn" data-tab="tiers">Price Tiers</button>
+            <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
                 </div>
-                <div id="admin-seating-layouts">Loading...</div>
-                <div id="admin-price-tiers" style="display: none;">Loading...</div>
-            </div>
-        `;
-    }
-
-    private renderAdminPricing(): void {
-        const content = this.getContentElement();
-        if (!content) return;
-
-        content.innerHTML = `
-            <div class="tixello-admin-pricing">
-                <h1>Dynamic Pricing</h1>
-                <div id="admin-pricing-rules">Loading...</div>
-            </div>
-        `;
-    }
-
-    private renderAdminTemplates(): void {
-        const content = this.getContentElement();
-        if (!content) return;
-
-        content.innerHTML = `
-            <div class="tixello-admin-templates">
-                <h1>Site Templates</h1>
-                <p style="color: #6b7280; margin-bottom: 1rem;">Choose a template for your public website</p>
-                <div id="admin-templates-list">Loading...</div>
-            </div>
-        `;
-    }
-
-    private renderAdminPayments(): void {
-        const content = this.getContentElement();
-        if (!content) return;
-
-        content.innerHTML = `
-            <div class="tixello-admin-payments">
-                <h1>Payment Processors</h1>
-                <p style="color: #6b7280; margin-bottom: 1rem;">Configure your payment gateway API keys</p>
-                <div id="admin-payments-list">Loading...</div>
-            </div>
-        `;
-    }
-
-    private renderAdminServices(): void {
-        const content = this.getContentElement();
-        if (!content) return;
-
-        content.innerHTML = `
-            <div class="tixello-admin-services">
-                <h1>Services</h1>
-                <p style="color: #6b7280; margin-bottom: 1rem;">Configure your subscribed microservices</p>
-                <div id="admin-services-list">Loading...</div>
-            </div>
-        `;
-    }
-
-    private renderAdminServiceConfig(params: Record<string, string>): void {
-        const content = this.getContentElement();
-        if (!content) return;
-
-        content.innerHTML = `
-            <div class="tixello-admin-service-config">
-                <div id="admin-service-config-${params.id}">Loading...</div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-4">Thank You!</h1>
+                <p class="text-gray-600 mb-8">Your order has been confirmed. Check your email for tickets.</p>
+                <div id="order-confirmation-${params.orderNumber}" class="bg-gray-50 rounded-lg p-6 text-left mb-8">
+                    <div class="animate-pulse space-y-3">
+                        <div class="bg-gray-200 h-4 w-1/2 rounded"></div>
+                        <div class="bg-gray-200 h-4 w-3/4 rounded"></div>
+                    </div>
+                </div>
+                <a href="/account/tickets" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                    View My Tickets
+                </a>
             </div>
         `;
     }
@@ -472,10 +528,15 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="tixello-404">
-                <h1>Page Not Found</h1>
-                <p>The page you're looking for doesn't exist.</p>
-                <a href="#/" class="tixello-btn">Go Home</a>
+            <div class="min-h-[60vh] flex items-center justify-center px-4">
+                <div class="text-center">
+                    <h1 class="text-6xl font-bold text-gray-300 mb-4">404</h1>
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-2">Page Not Found</h2>
+                    <p class="text-gray-600 mb-8">The page you're looking for doesn't exist.</p>
+                    <a href="/" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                        Go Home
+                    </a>
+                </div>
             </div>
         `;
     }

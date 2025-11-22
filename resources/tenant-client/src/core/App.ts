@@ -53,18 +53,81 @@ export class TixelloApp {
         if (!this.mountPoint) return;
 
         this.mountPoint.innerHTML = `
-            <div class="tixello-container">
-                <header class="tixello-header" id="tixello-header"></header>
-                <main class="tixello-main" id="tixello-content"></main>
-                <footer class="tixello-footer" id="tixello-footer"></footer>
+            <div class="min-h-screen flex flex-col bg-gray-50">
+                <header class="bg-white shadow-sm sticky top-0 z-50" id="tixello-header">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div class="flex justify-between items-center h-16">
+                            <a href="/" class="flex items-center">
+                                <span class="text-xl font-bold text-gray-900">Events</span>
+                            </a>
+                            <nav class="hidden md:flex items-center space-x-8">
+                                <a href="/events" class="text-gray-600 hover:text-gray-900 font-medium">Events</a>
+                                <a href="/cart" class="text-gray-600 hover:text-gray-900 font-medium flex items-center">
+                                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                    </svg>
+                                    Cart
+                                    <span id="cart-count" class="ml-1 bg-blue-600 text-white text-xs rounded-full px-2 py-0.5 hidden">0</span>
+                                </a>
+                                <a href="/account" class="text-gray-600 hover:text-gray-900 font-medium">Account</a>
+                            </nav>
+                            <button id="mobile-menu-btn" class="md:hidden p-2 text-gray-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Mobile menu -->
+                    <div id="mobile-menu" class="hidden md:hidden border-t">
+                        <div class="px-4 py-3 space-y-3">
+                            <a href="/events" class="block text-gray-600 hover:text-gray-900 font-medium">Events</a>
+                            <a href="/cart" class="block text-gray-600 hover:text-gray-900 font-medium">Cart</a>
+                            <a href="/account" class="block text-gray-600 hover:text-gray-900 font-medium">Account</a>
+                        </div>
+                    </div>
+                </header>
+                <main class="flex-1" id="tixello-content"></main>
+                <footer class="bg-white border-t mt-auto" id="tixello-footer">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                        <div class="flex flex-col md:flex-row justify-between items-center">
+                            <p class="text-gray-500 text-sm mb-4 md:mb-0">
+                                Powered by <a href="https://tixello.com" target="_blank" class="text-blue-600 hover:text-blue-700" data-external>Tixello</a>
+                            </p>
+                            <div class="flex space-x-6 text-sm text-gray-500">
+                                <a href="/terms" class="hover:text-gray-700">Terms</a>
+                                <a href="/privacy" class="hover:text-gray-700">Privacy</a>
+                            </div>
+                        </div>
+                    </div>
+                </footer>
             </div>
         `;
 
         // Inject styles
         this.injectStyles();
+
+        // Setup mobile menu toggle
+        this.setupMobileMenu();
+    }
+
+    private setupMobileMenu(): void {
+        const btn = document.getElementById('mobile-menu-btn');
+        const menu = document.getElementById('mobile-menu');
+        if (btn && menu) {
+            btn.addEventListener('click', () => {
+                menu.classList.toggle('hidden');
+            });
+        }
     }
 
     private injectStyles(): void {
+        // Add Tailwind CSS
+        const tailwind = document.createElement('script');
+        tailwind.src = 'https://cdn.tailwindcss.com';
+        document.head.appendChild(tailwind);
+
+        // Add custom styles
         const style = document.createElement('style');
         style.textContent = this.getBaseStyles();
         document.head.appendChild(style);
@@ -74,46 +137,15 @@ export class TixelloApp {
         const theme = this.config.theme;
 
         return `
-            .tixello-container {
+            body {
                 font-family: ${theme.fontFamily}, system-ui, sans-serif;
-                min-height: 100vh;
-                display: flex;
-                flex-direction: column;
             }
-            .tixello-header {
-                background: ${theme.primaryColor};
-                color: white;
-                padding: 1rem;
+            .animate-pulse {
+                animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
             }
-            .tixello-main {
-                flex: 1;
-                padding: 1rem;
-            }
-            .tixello-footer {
-                background: #f3f4f6;
-                padding: 1rem;
-                text-align: center;
-                font-size: 0.875rem;
-                color: #6b7280;
-            }
-            .tixello-btn {
-                background: ${theme.primaryColor};
-                color: white;
-                padding: 0.5rem 1rem;
-                border: none;
-                border-radius: 0.375rem;
-                cursor: pointer;
-                font-weight: 500;
-            }
-            .tixello-btn:hover {
-                background: ${theme.secondaryColor};
-            }
-            .tixello-card {
-                background: white;
-                border-radius: 0.5rem;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                padding: 1rem;
-                margin-bottom: 1rem;
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: .5; }
             }
         `;
     }
