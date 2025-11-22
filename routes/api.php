@@ -24,6 +24,39 @@ use App\Http\Controllers\Api\TenantClient\CartController;
 use App\Http\Controllers\Api\TenantClient\CheckoutController;
 use App\Http\Controllers\Api\TenantClient\AdminController;
 use App\Http\Controllers\Api\DocSearchController;
+use App\Http\Controllers\Api\TenantClientController;
+
+/*
+|--------------------------------------------------------------------------
+| Tenant Client Public API (for tenant domains)
+|--------------------------------------------------------------------------
+|
+| Public endpoints called by tenant SPA - no auth required
+| CORS enabled for tenant domains
+|
+*/
+
+Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cors'])->group(function () {
+    // Handle OPTIONS preflight requests
+    Route::options('/{any}', fn () => response('', 200))
+        ->where('any', '.*')
+        ->name('api.tenant-client-public.options');
+
+    Route::get('/config', [TenantClientController::class, 'config'])
+        ->name('api.tenant-client-public.config');
+
+    Route::get('/events', [TenantClientController::class, 'events'])
+        ->name('api.tenant-client-public.events');
+
+    Route::get('/events/featured', [TenantClientController::class, 'featuredEvents'])
+        ->name('api.tenant-client-public.events.featured');
+
+    Route::get('/events/{slug}', [TenantClientController::class, 'event'])
+        ->name('api.tenant-client-public.event');
+
+    Route::get('/categories', [TenantClientController::class, 'categories'])
+        ->name('api.tenant-client-public.categories');
+});
 
 /*
 |--------------------------------------------------------------------------

@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin.auth' => \App\Http\Middleware\AuthenticateAdmin::class,
             'webhook.verify' => \App\Http\Middleware\VerifyWebhookSignature::class,
             'api.key' => \App\Http\Middleware\VerifyApiKey::class,
+            'tenant.client.cors' => \App\Http\Middleware\TenantClientCors::class,
         ]);
 
         // Add global middleware for API routes
