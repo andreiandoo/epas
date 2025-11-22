@@ -41,7 +41,7 @@ class Dashboard extends Page
             'stats' => [
                 'domains' => $tenant->domains()->count(),
                 'active_domains' => $tenant->domains()->where('is_active', true)->count(),
-                'microservices' => $tenant->microservices()->wherePivot('status', 'active')->count(),
+                'microservices' => $tenant->microservices()->wherePivot('is_active', true)->count(),
                 'invoices' => $tenant->invoices()->count(),
                 'unpaid_invoices' => $tenant->invoices()->whereIn('status', ['pending', 'overdue'])->count(),
             ],
