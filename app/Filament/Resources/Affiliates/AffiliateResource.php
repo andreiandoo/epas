@@ -98,6 +98,7 @@ class AffiliateResource extends Resource
 
                             Forms\Components\DateTimePicker::make('expires_at')
                                 ->label('Expires At')
+                                ->native(false)
                                 ->helperText('Leave empty for no expiration'),
 
                             Forms\Components\Toggle::make('active')

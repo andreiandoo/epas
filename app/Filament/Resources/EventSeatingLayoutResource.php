@@ -73,12 +73,14 @@ class EventSeatingLayoutResource extends Resource
                 ->schema([
                     Forms\Components\DateTimePicker::make('published_at')
                         ->label('Published At')
+                        ->native(false)
                         ->helperText('When this layout went live (auto-set when status changes to published)')
                         ->disabled()
                         ->columnSpan(1),
 
                     Forms\Components\DateTimePicker::make('archived_at')
                         ->label('Archived At')
+                        ->native(false)
                         ->helperText('When this layout was archived (auto-set when status changes to archived)')
                         ->disabled()
                         ->columnSpan(1),

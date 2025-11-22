@@ -80,19 +80,23 @@ class InvoiceResource extends Resource
 
                     Forms\Components\DatePicker::make('issue_date')
                         ->label('Issue Date')
+                        ->native(false)
                         ->required()
                         ->default(now()),
 
                     Forms\Components\DatePicker::make('period_start')
                         ->label('Period Start')
+                        ->native(false)
                         ->helperText('Billing period start date'),
 
                     Forms\Components\DatePicker::make('period_end')
                         ->label('Period End')
+                        ->native(false)
                         ->helperText('Billing period end date'),
 
                     Forms\Components\DatePicker::make('due_date')
                         ->label('Due Date')
+                        ->native(false)
                         ->helperText('Payment due date'),
 
                     Forms\Components\Select::make('currency')

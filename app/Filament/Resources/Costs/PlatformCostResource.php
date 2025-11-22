@@ -71,10 +71,12 @@ class PlatformCostResource extends Resource
 
                     Forms\Components\DatePicker::make('start_date')
                         ->label('Start Date')
+                        ->native(false)
                         ->default(now()),
 
                     Forms\Components\DatePicker::make('end_date')
                         ->label('End Date')
+                        ->native(false)
                         ->helperText('Leave empty for ongoing costs'),
 
                     Forms\Components\Toggle::make('is_active')

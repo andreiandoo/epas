@@ -97,6 +97,7 @@ class ExchangeRates extends Page implements HasForms
             ->schema([
                 Forms\Components\DatePicker::make('date')
                     ->label('Date')
+                    ->native(false)
                     ->required()
                     ->default(now()),
 

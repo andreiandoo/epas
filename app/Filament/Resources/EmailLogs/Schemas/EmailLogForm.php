@@ -29,8 +29,8 @@ class EmailLogForm
                 TextInput::make('status')
                     ->required()
                     ->default('pending'),
-                DateTimePicker::make('sent_at'),
-                DateTimePicker::make('failed_at'),
+                DateTimePicker::make('sent_at')->native(false),
+                DateTimePicker::make('failed_at')->native(false),
                 Textarea::make('error_message')
                     ->columnSpanFull(),
                 TextInput::make('metadata'),

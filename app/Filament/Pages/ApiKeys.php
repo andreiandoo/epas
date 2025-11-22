@@ -44,6 +44,7 @@ class ApiKeys extends Page implements HasTable
 
                     Forms\Components\DateTimePicker::make('expires_at')
                         ->label('Expires At')
+                        ->native(false)
                         ->helperText('Leave empty for no expiration'),
                 ])
                 ->action(function (array $data) {

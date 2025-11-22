@@ -219,6 +219,7 @@ class TenantResource extends Resource
                 ->schema([
                     Forms\Components\DateTimePicker::make('billing_starts_at')
                         ->label('Billing Start Date')
+                        ->native(false)
                         ->default(now())
                         ->required()
                         ->reactive()
@@ -247,6 +248,7 @@ class TenantResource extends Resource
 
                     Forms\Components\DateTimePicker::make('due_at')
                         ->label('Next Billing Date')
+                        ->native(false)
                         ->nullable()
                         ->disabled()
                         ->dehydrated()

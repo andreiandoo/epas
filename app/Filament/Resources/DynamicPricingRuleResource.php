@@ -99,12 +99,14 @@ class DynamicPricingRuleResource extends Resource
                     ->schema([
                         Forms\Components\DateTimePicker::make('effective_from')
                             ->label('Effective From')
+                            ->native(false)
                             ->nullable()
                             ->helperText('Leave empty for immediate effect')
                             ->columnSpan(1),
 
                         Forms\Components\DateTimePicker::make('effective_to')
                             ->label('Effective To')
+                            ->native(false)
                             ->nullable()
                             ->helperText('Leave empty for no expiration')
                             ->columnSpan(1),
@@ -135,6 +137,7 @@ class DynamicPricingRuleResource extends Resource
 
                         Forms\Components\DateTimePicker::make('last_executed_at')
                             ->label('Last Executed')
+                            ->native(false)
                             ->disabled()
                             ->helperText('Auto-updated when rule runs')
                             ->columnSpan(1),

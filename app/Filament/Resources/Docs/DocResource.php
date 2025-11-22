@@ -142,7 +142,8 @@ class DocResource extends Resource
                                     ->maxLength(255),
 
                                 FC\DateTimePicker::make('published_at')
-                                    ->label('Publish Date'),
+                                    ->label('Publish Date')
+                                    ->native(false),
                             ]),
                     ])
                     ->columnSpan(['lg' => 1]),
