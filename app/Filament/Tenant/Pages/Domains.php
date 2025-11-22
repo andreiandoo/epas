@@ -2,14 +2,15 @@
 
 namespace App\Filament\Tenant\Pages;
 
+use BackedEnum;
 use Filament\Pages\Page;
 
 class Domains extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-globe-alt';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-globe-alt';
     protected static ?string $navigationLabel = 'Domains';
     protected static ?int $navigationSort = 3;
-    protected static string $view = 'filament.tenant.pages.domains';
+    protected string $view = 'filament.tenant.pages.domains';
 
     public function getTitle(): string
     {

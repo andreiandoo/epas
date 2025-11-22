@@ -2,14 +2,15 @@
 
 namespace App\Filament\Tenant\Pages;
 
+use BackedEnum;
 use Filament\Pages\Page;
 
 class Invoices extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-text';
     protected static ?string $navigationLabel = 'Invoices';
     protected static ?int $navigationSort = 5;
-    protected static string $view = 'filament.tenant.pages.invoices';
+    protected string $view = 'filament.tenant.pages.invoices';
 
     public function getTitle(): string
     {

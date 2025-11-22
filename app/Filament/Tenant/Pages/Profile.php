@@ -3,6 +3,7 @@
 namespace App\Filament\Tenant\Pages;
 
 use App\Models\Tenant;
+use BackedEnum;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -14,10 +15,10 @@ class Profile extends Page
 {
     use Forms\Concerns\InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-circle';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-user-circle';
     protected static ?string $navigationLabel = 'Profile';
     protected static ?int $navigationSort = 2;
-    protected static string $view = 'filament.tenant.pages.profile';
+    protected string $view = 'filament.tenant.pages.profile';
 
     public ?array $data = [];
 

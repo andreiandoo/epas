@@ -2,14 +2,15 @@
 
 namespace App\Filament\Tenant\Pages;
 
+use BackedEnum;
 use Filament\Pages\Page;
 
 class Microservices extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-puzzle-piece';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-puzzle-piece';
     protected static ?string $navigationLabel = 'Microservices';
     protected static ?int $navigationSort = 4;
-    protected static string $view = 'filament.tenant.pages.microservices';
+    protected string $view = 'filament.tenant.pages.microservices';
 
     public function getTitle(): string
     {
