@@ -29,6 +29,7 @@ class TenantPanelProvider extends PanelProvider
                 'primary' => Color::Indigo,
             ])
             ->brandName('Tixello Tenant')
+            ->viteTheme('resources/css/filament/admin/theme.css')
 
             // Discover tenant-specific resources, pages, and widgets
             ->discoverResources(in: app_path('Filament/Tenant/Resources'), for: 'App\\Filament\\Tenant\\Resources')
