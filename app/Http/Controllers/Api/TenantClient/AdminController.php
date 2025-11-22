@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Api\TenantClient;
 
 use App\Http\Controllers\Controller;
+use App\Models\Artist;
 use App\Models\Customer;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\User;
+use App\Models\Venue;
+use App\Models\Seating\SeatingLayout;
+use App\Models\Seating\PriceTier;
+use App\Models\Seating\DynamicPricingRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -415,6 +420,438 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Settings updated',
+        ]);
+    }
+
+    // ==================== VENUES ====================
+
+    /**
+     * List venues
+     */
+    public function venues(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $venues = Venue::where('tenant_id', $tenant->id)
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($venue) => [
+                'id' => $venue->id,
+                'name' => $venue->name,
+                'address' => $venue->address,
+                'city' => $venue->city,
+                'capacity' => $venue->capacity,
+                'has_seating' => $venue->seatingLayouts()->exists(),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => ['venues' => $venues],
+        ]);
+    }
+
+    /**
+     * Create venue
+     */
+    public function createVenue(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'address' => 'nullable|string',
+            'city' => 'nullable|string|max:255',
+            'state' => 'nullable|string|max:255',
+            'country' => 'nullable|string|max:255',
+            'capacity' => 'nullable|integer|min:1',
+            'description' => 'nullable|string',
+        ]);
+
+        $venue = Venue::create([
+            'tenant_id' => $tenant->id,
+            ...$validated,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Venue created',
+            'data' => ['id' => $venue->id],
+        ]);
+    }
+
+    /**
+     * Update venue
+     */
+    public function updateVenue(Request $request, int $venueId): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $venue = Venue::where('tenant_id', $tenant->id)->findOrFail($venueId);
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'address' => 'nullable|string',
+            'city' => 'nullable|string|max:255',
+            'capacity' => 'nullable|integer|min:1',
+        ]);
+
+        $venue->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Venue updated',
+        ]);
+    }
+
+    // ==================== ARTISTS ====================
+
+    /**
+     * List artists
+     */
+    public function artists(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $artists = Artist::where('tenant_id', $tenant->id)
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($artist) => [
+                'id' => $artist->id,
+                'name' => $artist->name,
+                'slug' => $artist->slug,
+                'genre' => $artist->genre,
+                'image_url' => $artist->image_url,
+                'events_count' => $artist->events()->count(),
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => ['artists' => $artists],
+        ]);
+    }
+
+    /**
+     * Create artist
+     */
+    public function createArtist(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'bio' => 'nullable|string',
+            'genre' => 'nullable|string|max:255',
+            'website' => 'nullable|url',
+            'social_links' => 'nullable|array',
+        ]);
+
+        $artist = Artist::create([
+            'tenant_id' => $tenant->id,
+            'name' => $validated['name'],
+            'slug' => \Str::slug($validated['name']),
+            'bio' => $validated['bio'] ?? null,
+            'genre' => $validated['genre'] ?? null,
+            'website' => $validated['website'] ?? null,
+            'social_links' => $validated['social_links'] ?? [],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Artist created',
+            'data' => ['id' => $artist->id],
+        ]);
+    }
+
+    /**
+     * Update artist
+     */
+    public function updateArtist(Request $request, int $artistId): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $artist = Artist::where('tenant_id', $tenant->id)->findOrFail($artistId);
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'bio' => 'nullable|string',
+            'genre' => 'nullable|string|max:255',
+        ]);
+
+        $artist->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Artist updated',
+        ]);
+    }
+
+    // ==================== SEATING LAYOUTS ====================
+
+    /**
+     * List seating layouts
+     */
+    public function seatingLayouts(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $layouts = SeatingLayout::where('tenant_id', $tenant->id)
+            ->with('venue')
+            ->orderBy('name')
+            ->get()
+            ->map(fn ($layout) => [
+                'id' => $layout->id,
+                'name' => $layout->name,
+                'venue_id' => $layout->venue_id,
+                'venue_name' => $layout->venue?->name,
+                'total_seats' => $layout->total_seats,
+                'sections_count' => $layout->sections()->count(),
+                'is_active' => $layout->is_active,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => ['layouts' => $layouts],
+        ]);
+    }
+
+    /**
+     * Get seating layout detail
+     */
+    public function seatingLayoutDetail(Request $request, int $layoutId): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $layout = SeatingLayout::where('tenant_id', $tenant->id)
+            ->with(['sections.rows.seats', 'venue'])
+            ->findOrFail($layoutId);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $layout->id,
+                'name' => $layout->name,
+                'venue' => $layout->venue ? [
+                    'id' => $layout->venue->id,
+                    'name' => $layout->venue->name,
+                ] : null,
+                'sections' => $layout->sections->map(fn ($section) => [
+                    'id' => $section->id,
+                    'name' => $section->name,
+                    'color' => $section->color,
+                    'rows' => $section->rows->map(fn ($row) => [
+                        'id' => $row->id,
+                        'name' => $row->name,
+                        'seats' => $row->seats->map(fn ($seat) => [
+                            'id' => $seat->id,
+                            'number' => $seat->seat_number,
+                            'status' => $seat->status,
+                        ]),
+                    ]),
+                ]),
+                'geometry' => $layout->geometry,
+            ],
+        ]);
+    }
+
+    // ==================== PRICE TIERS ====================
+
+    /**
+     * List price tiers
+     */
+    public function priceTiers(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $tiers = PriceTier::where('tenant_id', $tenant->id)
+            ->orderBy('sort_order')
+            ->get()
+            ->map(fn ($tier) => [
+                'id' => $tier->id,
+                'name' => $tier->name,
+                'color' => $tier->color,
+                'base_price' => $tier->base_price,
+                'currency' => $tier->currency ?? 'RON',
+                'is_active' => $tier->is_active,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => ['tiers' => $tiers],
+        ]);
+    }
+
+    /**
+     * Create price tier
+     */
+    public function createPriceTier(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'color' => 'nullable|string|max:7',
+            'base_price' => 'required|numeric|min:0',
+            'description' => 'nullable|string',
+        ]);
+
+        $tier = PriceTier::create([
+            'tenant_id' => $tenant->id,
+            'name' => $validated['name'],
+            'color' => $validated['color'] ?? '#3B82F6',
+            'base_price' => $validated['base_price'],
+            'description' => $validated['description'] ?? null,
+            'is_active' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Price tier created',
+            'data' => ['id' => $tier->id],
+        ]);
+    }
+
+    // ==================== DYNAMIC PRICING ====================
+
+    /**
+     * List dynamic pricing rules
+     */
+    public function dynamicPricingRules(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $rules = DynamicPricingRule::where('tenant_id', $tenant->id)
+            ->orderBy('priority')
+            ->get()
+            ->map(fn ($rule) => [
+                'id' => $rule->id,
+                'name' => $rule->name,
+                'type' => $rule->type,
+                'adjustment_type' => $rule->adjustment_type,
+                'adjustment_value' => $rule->adjustment_value,
+                'conditions' => $rule->conditions,
+                'is_active' => $rule->is_active,
+                'priority' => $rule->priority,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => ['rules' => $rules],
+        ]);
+    }
+
+    /**
+     * Create dynamic pricing rule
+     */
+    public function createDynamicPricingRule(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'type' => 'required|in:time_based,demand_based,inventory_based',
+            'adjustment_type' => 'required|in:percentage,fixed',
+            'adjustment_value' => 'required|numeric',
+            'conditions' => 'required|array',
+            'priority' => 'nullable|integer',
+        ]);
+
+        $rule = DynamicPricingRule::create([
+            'tenant_id' => $tenant->id,
+            ...$validated,
+            'is_active' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Dynamic pricing rule created',
+            'data' => ['id' => $rule->id],
+        ]);
+    }
+
+    // ==================== SITE TEMPLATES ====================
+
+    /**
+     * List available site templates
+     */
+    public function siteTemplates(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        // Get available templates from config or database
+        $templates = config('tenant-package.templates', [
+            [
+                'id' => 'modern',
+                'name' => 'Modern',
+                'description' => 'Clean, modern design with bold typography',
+                'preview_url' => '/templates/modern-preview.png',
+                'colors' => ['primary' => '#3B82F6', 'secondary' => '#1E40AF'],
+            ],
+            [
+                'id' => 'classic',
+                'name' => 'Classic',
+                'description' => 'Traditional, elegant layout',
+                'preview_url' => '/templates/classic-preview.png',
+                'colors' => ['primary' => '#1F2937', 'secondary' => '#374151'],
+            ],
+            [
+                'id' => 'vibrant',
+                'name' => 'Vibrant',
+                'description' => 'Colorful and energetic design for entertainment',
+                'preview_url' => '/templates/vibrant-preview.png',
+                'colors' => ['primary' => '#7C3AED', 'secondary' => '#EC4899'],
+            ],
+            [
+                'id' => 'minimal',
+                'name' => 'Minimal',
+                'description' => 'Simple and focused on content',
+                'preview_url' => '/templates/minimal-preview.png',
+                'colors' => ['primary' => '#111827', 'secondary' => '#6B7280'],
+            ],
+            [
+                'id' => 'dark',
+                'name' => 'Dark Mode',
+                'description' => 'Dark theme for nightlife and concerts',
+                'preview_url' => '/templates/dark-preview.png',
+                'colors' => ['primary' => '#F59E0B', 'secondary' => '#D97706'],
+            ],
+        ]);
+
+        // Get current template
+        $currentTemplate = $tenant->settings['site_template'] ?? 'modern';
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'templates' => $templates,
+                'current_template' => $currentTemplate,
+            ],
+        ]);
+    }
+
+    /**
+     * Select site template
+     */
+    public function selectSiteTemplate(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $validated = $request->validate([
+            'template_id' => 'required|string|in:modern,classic,vibrant,minimal,dark',
+        ]);
+
+        $settings = $tenant->settings ?? [];
+        $settings['site_template'] = $validated['template_id'];
+        $tenant->settings = $settings;
+        $tenant->save();
+
+        // Invalidate existing packages so they regenerate with new template
+        $tenant->packages()
+            ->where('status', 'ready')
+            ->update(['status' => 'invalidated']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Site template updated. Packages will be regenerated.',
         ]);
     }
 

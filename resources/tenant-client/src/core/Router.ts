@@ -44,6 +44,12 @@ export class Router {
         this.addRoute('/admin/events', this.renderAdminEvents.bind(this));
         this.addRoute('/admin/orders', this.renderAdminOrders.bind(this));
         this.addRoute('/admin/customers', this.renderAdminCustomers.bind(this));
+        this.addRoute('/admin/users', this.renderAdminUsers.bind(this));
+        this.addRoute('/admin/venues', this.renderAdminVenues.bind(this));
+        this.addRoute('/admin/artists', this.renderAdminArtists.bind(this));
+        this.addRoute('/admin/seating', this.renderAdminSeating.bind(this));
+        this.addRoute('/admin/pricing', this.renderAdminPricing.bind(this));
+        this.addRoute('/admin/templates', this.renderAdminTemplates.bind(this));
         this.addRoute('/admin/settings', this.renderAdminSettings.bind(this));
     }
 
@@ -284,6 +290,84 @@ export class Router {
             <div class="tixello-admin-settings">
                 <h1>Settings</h1>
                 <div id="admin-settings-form">Loading...</div>
+            </div>
+        `;
+    }
+
+    private renderAdminUsers(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="tixello-admin-users">
+                <h1>Users</h1>
+                <div id="admin-users-list">Loading...</div>
+            </div>
+        `;
+    }
+
+    private renderAdminVenues(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="tixello-admin-venues">
+                <h1>Venues</h1>
+                <div id="admin-venues-list">Loading...</div>
+            </div>
+        `;
+    }
+
+    private renderAdminArtists(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="tixello-admin-artists">
+                <h1>Artists</h1>
+                <div id="admin-artists-list">Loading...</div>
+            </div>
+        `;
+    }
+
+    private renderAdminSeating(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="tixello-admin-seating">
+                <h1>Seating & Price Tiers</h1>
+                <div class="tabs" style="margin-bottom: 1rem;">
+                    <button class="tab-btn active" data-tab="layouts">Seating Layouts</button>
+                    <button class="tab-btn" data-tab="tiers">Price Tiers</button>
+                </div>
+                <div id="admin-seating-layouts">Loading...</div>
+                <div id="admin-price-tiers" style="display: none;">Loading...</div>
+            </div>
+        `;
+    }
+
+    private renderAdminPricing(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="tixello-admin-pricing">
+                <h1>Dynamic Pricing</h1>
+                <div id="admin-pricing-rules">Loading...</div>
+            </div>
+        `;
+    }
+
+    private renderAdminTemplates(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="tixello-admin-templates">
+                <h1>Site Templates</h1>
+                <p style="color: #6b7280; margin-bottom: 1rem;">Choose a template for your public website</p>
+                <div id="admin-templates-list">Loading...</div>
             </div>
         `;
     }
