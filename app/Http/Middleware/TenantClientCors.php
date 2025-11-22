@@ -45,6 +45,12 @@ class TenantClientCors
             }
         }
 
+        // Handle preflight OPTIONS requests immediately
+        if ($request->isMethod('OPTIONS') && $allowCors) {
+            $response = response('', 200);
+            return $this->addCorsHeaders($response, $origin);
+        }
+
         // Execute request and get response
         try {
             $response = $next($request);
