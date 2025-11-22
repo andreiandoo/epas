@@ -275,11 +275,9 @@ class HealthCheckService
 
         try {
             $service = app(AccountingService::class);
-            $service->setAdapter('mock', []);
 
             return [
                 'status' => 'healthy',
-                'adapter' => 'mock',
                 'enabled' => true,
             ];
 
