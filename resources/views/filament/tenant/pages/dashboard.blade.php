@@ -5,7 +5,7 @@
         </div>
     @else
         <!-- Welcome Section -->
-        <div class="bg-white rounded-xl shadow-sm border p-6 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-6 mb-6">
             <h2 class="text-2xl font-bold text-gray-900">
                 Welcome, {{ $tenant->public_name ?? $tenant->name }}!
             </h2>
@@ -17,7 +17,7 @@
         <!-- Stats Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <!-- Domains -->
-            <div class="bg-white rounded-xl shadow-sm border p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-6">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm text-gray-500">Active Domains</p>
@@ -33,7 +33,7 @@
             </div>
 
             <!-- Microservices -->
-            <div class="bg-white rounded-xl shadow-sm border p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-6">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm text-gray-500">Active Microservices</p>
@@ -49,7 +49,7 @@
             </div>
 
             <!-- Invoices -->
-            <div class="bg-white rounded-xl shadow-sm border p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-6">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm text-gray-500">Total Invoices</p>
@@ -65,7 +65,7 @@
             </div>
 
             <!-- Unpaid -->
-            <div class="bg-white rounded-xl shadow-sm border p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-6">
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm text-gray-500">Unpaid Invoices</p>
@@ -83,7 +83,7 @@
         <!-- Quick Links -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Account Info -->
-            <div class="bg-white rounded-xl shadow-sm border p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-6">
                 <h3 class="font-semibold text-gray-900 mb-4">Account Information</h3>
                 <dl class="space-y-3 text-sm">
                     <div class="flex justify-between">
@@ -113,7 +113,7 @@
             </div>
 
             <!-- Quick Actions -->
-            <div class="bg-white rounded-xl shadow-sm border p-6">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-6">
                 <h3 class="font-semibold text-gray-900 mb-4">Quick Actions</h3>
                 <div class="space-y-3">
                     <a href="{{ route('store.index') }}" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">

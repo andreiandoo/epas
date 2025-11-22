@@ -42,8 +42,9 @@ class EventResource extends Resource
                             ->relationship('venue', 'name')
                             ->searchable()
                             ->preload(),
-                        Forms\Components\Select::make('event_type_id')
-                            ->relationship('eventType', 'name')
+                        Forms\Components\Select::make('eventTypes')
+                            ->relationship('eventTypes', 'name')
+                            ->multiple()
                             ->searchable()
                             ->preload(),
                         Forms\Components\DateTimePicker::make('start_date')

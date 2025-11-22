@@ -1,12 +1,12 @@
 <x-filament-panels::page>
     @if($activities->isEmpty())
-        <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-12 text-center">
             <x-heroicon-o-clock class="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <h3 class="text-lg font-semibold text-gray-900 mb-2">No activity yet</h3>
             <p class="text-gray-600">Your activity history will appear here.</p>
         </div>
     @else
-        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden">
             <div class="divide-y">
                 @foreach($activities as $activity)
                     <div class="p-4 hover:bg-gray-50">

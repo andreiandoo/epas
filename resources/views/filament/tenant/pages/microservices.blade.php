@@ -1,6 +1,6 @@
 <x-filament-panels::page>
     @if($microservices->isEmpty())
-        <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-12 text-center">
             <x-heroicon-o-puzzle-piece class="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <h3 class="text-lg font-semibold text-gray-900 mb-2">No microservices yet</h3>
             <p class="text-gray-600 mb-6">Browse our store to add powerful features to your account.</p>
@@ -11,7 +11,7 @@
     @else
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             @foreach($microservices as $microservice)
-                <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-start justify-between mb-4">
                             <h3 class="font-semibold text-gray-900">

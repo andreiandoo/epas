@@ -1,12 +1,12 @@
 <x-filament-panels::page>
     @if($domains->isEmpty())
-        <div class="bg-white rounded-xl shadow-sm border p-12 text-center">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border p-12 text-center">
             <x-heroicon-o-globe-alt class="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <h3 class="text-lg font-semibold text-gray-900 mb-2">No domains configured</h3>
             <p class="text-gray-600">Contact support to add your website domains.</p>
         </div>
     @else
-        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden">
             <table class="w-full">
                 <thead class="bg-gray-50 border-b">
                     <tr>
