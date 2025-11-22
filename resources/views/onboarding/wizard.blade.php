@@ -155,24 +155,58 @@
 
                             <div class="mt-6">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
-                                <input
-                                    type="email"
-                                    x-model="formData.email"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    required
-                                >
+                                <div class="relative">
+                                    <input
+                                        type="email"
+                                        x-model="formData.email"
+                                        @input.debounce.500ms="checkEmailAvailability()"
+                                        class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
+                                        :class="emailStatus === 'available' ? 'border-green-500' : (emailStatus === 'taken' ? 'border-red-500' : 'border-gray-300')"
+                                        required
+                                    >
+                                    <div class="absolute right-3 top-2.5">
+                                        <svg x-show="emailChecking" class="animate-spin h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <svg x-show="emailStatus === 'available' && !emailChecking" class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <svg x-show="emailStatus === 'taken' && !emailChecking" class="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <span x-show="emailStatus === 'taken'" class="text-red-500 text-sm">Această adresă de email este deja înregistrată</span>
                                 <span x-show="errors.email" class="text-red-500 text-sm" x-text="errors.email"></span>
                             </div>
 
                             <div class="mt-6">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Telefon *</label>
-                                <input
-                                    type="tel"
-                                    x-model="formData.phone"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="+40 xxx xxx xxx"
-                                    required
-                                >
+                                <div class="flex">
+                                    <select
+                                        x-model="formData.phone_country"
+                                        class="w-28 px-2 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50"
+                                    >
+                                        <option value="+40">🇷🇴 +40</option>
+                                        <option value="+49">🇩🇪 +49</option>
+                                        <option value="+33">🇫🇷 +33</option>
+                                        <option value="+44">🇬🇧 +44</option>
+                                        <option value="+1">🇺🇸 +1</option>
+                                        <option value="+36">🇭🇺 +36</option>
+                                        <option value="+359">🇧🇬 +359</option>
+                                        <option value="+373">🇲🇩 +373</option>
+                                        <option value="+39">🇮🇹 +39</option>
+                                        <option value="+34">🇪🇸 +34</option>
+                                    </select>
+                                    <input
+                                        type="tel"
+                                        x-model="formData.phone_number"
+                                        class="flex-1 px-4 py-2 border border-l-0 border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="xxx xxx xxx"
+                                        required
+                                    >
+                                </div>
                                 <span x-show="errors.phone" class="text-red-500 text-sm" x-text="errors.phone"></span>
                             </div>
 
@@ -188,31 +222,32 @@
                                 <span x-show="errors.contact_position" class="text-red-500 text-sm" x-text="errors.contact_position"></span>
                             </div>
 
-                            <div class="mt-6">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Parolă *</label>
-                                <input
-                                    type="password"
-                                    x-model="formData.password"
-                                    @input="checkPasswordStrength()"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    required
-                                    minlength="8"
-                                >
-                                <div class="password-strength-meter mt-2">
-                                    <div class="password-strength-fill" :class="passwordStrengthClass"></div>
+                            <div class="mt-6 grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Parolă *</label>
+                                    <input
+                                        type="password"
+                                        x-model="formData.password"
+                                        @input="checkPasswordStrength()"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        required
+                                        minlength="8"
+                                    >
+                                    <div class="password-strength-meter mt-2">
+                                        <div class="password-strength-fill" :class="passwordStrengthClass"></div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1" x-text="passwordStrengthText"></p>
+                                    <span x-show="errors.password" class="text-red-500 text-sm" x-text="errors.password"></span>
                                 </div>
-                                <p class="text-xs text-gray-500 mt-1" x-text="passwordStrengthText"></p>
-                                <span x-show="errors.password" class="text-red-500 text-sm" x-text="errors.password"></span>
-                            </div>
-
-                            <div class="mt-6">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Confirmă Parola *</label>
-                                <input
-                                    type="password"
-                                    x-model="formData.password_confirmation"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    required
-                                >
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Confirmă Parola *</label>
+                                    <input
+                                        type="password"
+                                        x-model="formData.password_confirmation"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        required
+                                    >
+                                </div>
                             </div>
 
                             <div class="mt-8 flex justify-end">
@@ -403,22 +438,27 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Domenii Website *</label>
                                 <div class="space-y-3">
                                     <template x-for="(domain, index) in formData.domains" :key="index">
-                                        <div class="flex gap-2">
-                                            <input
-                                                type="url"
-                                                x-model="formData.domains[index]"
-                                                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                placeholder="https://example.com"
-                                                required
-                                            >
-                                            <button
-                                                type="button"
-                                                @click="formData.domains.splice(index, 1)"
-                                                x-show="formData.domains.length > 1"
-                                                class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
-                                            >
-                                                Șterge
-                                            </button>
+                                        <div>
+                                            <div class="flex gap-2">
+                                                <input
+                                                    type="url"
+                                                    x-model="formData.domains[index]"
+                                                    @input.debounce.500ms="checkDomainAvailability(index)"
+                                                    class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                    :class="domainErrors[index] ? 'border-red-500' : 'border-gray-300'"
+                                                    placeholder="https://example.com"
+                                                    required
+                                                >
+                                                <button
+                                                    type="button"
+                                                    @click="formData.domains.splice(index, 1); delete domainErrors[index]"
+                                                    x-show="formData.domains.length > 1"
+                                                    class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+                                                >
+                                                    Șterge
+                                                </button>
+                                            </div>
+                                            <span x-show="domainErrors[index]" class="text-red-500 text-sm" x-text="domainErrors[index]"></span>
                                         </div>
                                     </template>
                                 </div>
@@ -587,6 +627,9 @@
                 loading: false,
                 cuiLoading: false,
                 errors: {},
+                emailChecking: false,
+                emailStatus: '', // 'available', 'taken', ''
+                domainErrors: {},
                 formData: {
                     // Step 1
                     first_name: '',
@@ -594,6 +637,8 @@
                     public_name: '',
                     email: '',
                     phone: '',
+                    phone_country: '+40',
+                    phone_number: '',
                     contact_position: '',
                     password: '',
                     password_confirmation: '',
@@ -668,8 +713,17 @@
                 },
 
                 async submitStep1() {
+                    // Check if email is taken
+                    if (this.emailStatus === 'taken') {
+                        alert('Această adresă de email este deja înregistrată. Te rugăm să folosești altă adresă.');
+                        return;
+                    }
+
                     this.loading = true;
                     this.errors = {};
+
+                    // Combine phone number
+                    this.formData.phone = this.formData.phone_country + this.formData.phone_number.replace(/\s/g, '');
 
                     try {
                         const response = await fetch('{{ route("onboarding.step1") }}', {
@@ -777,7 +831,14 @@
                             }
                         } else {
                             this.errors = data.errors || {};
-                            alert(data.message || 'A apărut o eroare.');
+                            let errorMsg = data.message || 'A apărut o eroare.';
+                            if (data.error) {
+                                errorMsg += '\n\nDetalii: ' + data.error;
+                                if (data.file) {
+                                    errorMsg += '\nFișier: ' + data.file;
+                                }
+                            }
+                            alert(errorMsg);
                         }
                     } catch (error) {
                         console.error('Error:', error);
@@ -809,13 +870,42 @@
                             this.formData.company_name = data.company_name || this.formData.company_name;
                             this.formData.reg_com = data.reg_com || this.formData.reg_com;
                             this.formData.address = data.address || this.formData.address;
-                            this.formData.city = data.city || this.formData.city;
-                            this.formData.state = data.state || this.formData.state;
                             this.formData.vat_payer = data.vat_payer;
 
-                            // Reload cities if state was auto-filled
+                            // Match state from ANAF with available states (case-insensitive)
                             if (data.state) {
-                                await this.loadCities();
+                                const anafState = data.state.toLowerCase().trim();
+                                const matchedState = this.availableStates.find(s =>
+                                    s.toLowerCase().trim() === anafState ||
+                                    s.toLowerCase().trim().includes(anafState) ||
+                                    anafState.includes(s.toLowerCase().trim())
+                                );
+
+                                if (matchedState) {
+                                    this.formData.state = matchedState;
+                                    // Load cities for the matched state
+                                    await this.loadCities();
+
+                                    // Now try to match the city (case-insensitive)
+                                    if (data.city && this.availableCities.length > 0) {
+                                        const anafCity = data.city.toLowerCase().trim();
+                                        const matchedCity = this.availableCities.find(c =>
+                                            c.toLowerCase().trim() === anafCity ||
+                                            c.toLowerCase().trim().includes(anafCity) ||
+                                            anafCity.includes(c.toLowerCase().trim())
+                                        );
+
+                                        if (matchedCity) {
+                                            this.formData.city = matchedCity;
+                                        } else {
+                                            // Use ANAF city value if no exact match
+                                            this.formData.city = data.city;
+                                        }
+                                    }
+                                } else {
+                                    // Use ANAF state value if no match found
+                                    this.formData.state = data.state;
+                                }
                             }
 
                             alert('Datele au fost preluate cu succes din ANAF!');
@@ -868,6 +958,64 @@
                     } else {
                         this.formData.microservices.push(id);
                     }
+                },
+
+                async checkEmailAvailability() {
+                    if (!this.formData.email || !this.formData.email.includes('@')) {
+                        this.emailStatus = '';
+                        return;
+                    }
+
+                    this.emailChecking = true;
+                    this.emailStatus = '';
+
+                    try {
+                        const response = await fetch('{{ route("onboarding.check-email") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ email: this.formData.email })
+                        });
+
+                        const data = await response.json();
+                        this.emailStatus = data.available ? 'available' : 'taken';
+                    } catch (error) {
+                        console.error('Error checking email:', error);
+                        this.emailStatus = '';
+                    } finally {
+                        this.emailChecking = false;
+                    }
+                },
+
+                async checkDomainAvailability(index) {
+                    const domain = this.formData.domains[index];
+                    if (!domain) {
+                        this.domainErrors[index] = '';
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('{{ route("onboarding.check-domain") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ domain: domain })
+                        });
+
+                        const data = await response.json();
+                        this.domainErrors[index] = data.available ? '' : data.message;
+                    } catch (error) {
+                        console.error('Error checking domain:', error);
+                        this.domainErrors[index] = '';
+                    }
+                },
+
+                getFullPhone() {
+                    return this.formData.phone_country + this.formData.phone_number.replace(/\s/g, '');
                 }
             }
         }

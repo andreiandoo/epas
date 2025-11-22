@@ -298,11 +298,24 @@ class OnboardingController extends Controller
 
             \DB::commit();
 
-            // Send registration confirmation email
-            $this->sendRegistrationConfirmationEmail($user, $tenant, $step1);
+            // Send emails (non-fatal - registration continues even if emails fail)
+            try {
+                $this->sendRegistrationConfirmationEmail($user, $tenant, $step1);
+            } catch (\Exception $e) {
+                Log::error('Failed to send registration confirmation email', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
-            // Send domain verification instructions email
-            $this->sendDomainVerificationInstructionsEmail($user, $tenant, $step1);
+            try {
+                $this->sendDomainVerificationInstructionsEmail($user, $tenant, $step1);
+            } catch (\Exception $e) {
+                Log::error('Failed to send domain verification email', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
 
             // Log in the user
             Auth::login($user);
@@ -334,6 +347,8 @@ class OnboardingController extends Controller
 
             Log::error('Onboarding Step 4 error', [
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
                 'step1' => $step1,
                 'step2' => $step2,
@@ -341,12 +356,74 @@ class OnboardingController extends Controller
                 'step4' => $step4,
             ]);
 
-            return response()->json([
+            $errorResponse = [
                 'success' => false,
                 'message' => 'An error occurred during registration. Please try again.',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal error'
-            ], 500);
+            ];
+
+            if (config('app.debug')) {
+                $errorResponse['error'] = $e->getMessage();
+                $errorResponse['file'] = $e->getFile() . ':' . $e->getLine();
+            }
+
+            return response()->json($errorResponse, 500);
         }
+    }
+
+    /**
+     * Check if email is available
+     */
+    public function checkEmail(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Format email invalid'
+            ]);
+        }
+
+        $exists = User::where('email', $request->email)->exists();
+
+        return response()->json([
+            'available' => !$exists,
+            'message' => $exists ? 'Această adresă de email este deja înregistrată' : 'Email disponibil'
+        ]);
+    }
+
+    /**
+     * Check if domain is available
+     */
+    public function checkDomain(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'domain' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Domeniu invalid'
+            ]);
+        }
+
+        // Parse the domain from URL
+        $domainUrl = $request->domain;
+        $domainName = parse_url($domainUrl, PHP_URL_HOST);
+        if (!$domainName) {
+            $domainName = str_replace(['http://', 'https://', 'www.'], '', $domainUrl);
+            $domainName = explode('/', $domainName)[0];
+        }
+
+        $exists = Domain::where('domain', $domainName)->exists();
+
+        return response()->json([
+            'available' => !$exists,
+            'message' => $exists ? 'Acest domeniu este deja înregistrat' : 'Domeniu disponibil'
+        ]);
     }
 
     /**
