@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             //EventTypesAndGenresSeeder::class,
             //ArtistDeepDemoSeeder::class,
             VenueSeeder::class,
+            DocumentationSeeder::class,
         ]);
     }
 }

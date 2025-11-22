@@ -12,6 +12,7 @@ use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\TenantPaymentWebhookController;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\DocsController;
+use App\Http\Controllers\Public\DocsController as PublicDocsController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
 
@@ -146,10 +147,18 @@ Route::middleware(['web'])->prefix('admin')->group(function () {
     Route::get('/tenants/{tenantId}/domains/{domain}/login-as-admin', [DomainController::class, 'loginAsAdmin'])->name('tenant.login-as-admin');
 });
 
-// Documentation Routes
+// Documentation Routes (Legacy - Microservices)
 Route::middleware(['web'])->prefix('docs')->group(function () {
     Route::get('/microservices', [DocsController::class, 'microservicesIndex'])->name('docs.microservices.index');
     Route::get('/microservices/{slug}', [DocsController::class, 'microserviceShow'])->name('docs.microservices.show');
+});
+
+// Public Documentation Routes
+Route::middleware(['web'])->group(function () {
+    Route::get('/docs', [PublicDocsController::class, 'index'])->name('docs.index');
+    Route::get('/docs/search', [PublicDocsController::class, 'search'])->name('docs.search');
+    Route::get('/docs/category/{categorySlug}', [PublicDocsController::class, 'category'])->name('docs.category');
+    Route::get('/docs/{slug}', [PublicDocsController::class, 'show'])->name('docs.show');
 });
 
 // Define a helper to register public routes

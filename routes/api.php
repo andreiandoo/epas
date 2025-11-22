@@ -23,6 +23,19 @@ use App\Http\Controllers\Api\TenantClient\AuthController;
 use App\Http\Controllers\Api\TenantClient\CartController;
 use App\Http\Controllers\Api\TenantClient\CheckoutController;
 use App\Http\Controllers\Api\TenantClient\AdminController;
+use App\Http\Controllers\Api\DocSearchController;
+
+/*
+|--------------------------------------------------------------------------
+| Documentation Search API (Public - no auth required)
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('docs')->group(function () {
+    Route::get('/autocomplete', [DocSearchController::class, 'autocomplete'])->name('api.docs.autocomplete');
+    Route::get('/search', [DocSearchController::class, 'search'])->name('api.docs.search');
+    Route::get('/suggestions', [DocSearchController::class, 'suggestions'])->name('api.docs.suggestions');
+});
 
 /*
 |--------------------------------------------------------------------------
