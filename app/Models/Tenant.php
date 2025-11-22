@@ -122,6 +122,11 @@ class Tenant extends Model
         return $this->hasMany(TenantPaymentConfig::class);
     }
 
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
     /**
      * Get active payment config for the selected processor
      */
