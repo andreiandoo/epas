@@ -16,7 +16,7 @@ class OrderResource extends Resource
 {
     protected static ?string $model = Order::class;
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
-    protected static ?string $navigationGroup = 'Sales';
+    protected static \UnitEnum|string|null $navigationGroup = 'Sales';
     protected static ?int $navigationSort = 1;
 
     public static function getEloquentQuery(): Builder

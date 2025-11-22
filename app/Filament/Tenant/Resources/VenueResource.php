@@ -16,7 +16,7 @@ class VenueResource extends Resource
 {
     protected static ?string $model = Venue::class;
     protected static ?string $navigationIcon = 'heroicon-o-building-office';
-    protected static ?string $navigationGroup = 'Content';
+    protected static \UnitEnum|string|null $navigationGroup = 'Content';
     protected static ?int $navigationSort = 2;
 
     public static function getEloquentQuery(): Builder
