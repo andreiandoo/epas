@@ -13,21 +13,57 @@ use Illuminate\Http\Request;
 class TenantClientController extends Controller
 {
     /**
+     * Resolve tenant from request (hostname preferred, ID fallback)
+     */
+    private function resolveTenant(Request $request): ?array
+    {
+        $hostname = $request->query('hostname');
+        $tenantId = $request->query('tenant');
+
+        if ($hostname) {
+            $domain = Domain::where('domain', $hostname)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$domain) {
+                return null;
+            }
+
+            return [
+                'tenant' => $domain->tenant,
+                'domain_id' => $domain->id,
+            ];
+        }
+
+        if ($tenantId) {
+            $tenant = Tenant::find($tenantId);
+            if (!$tenant) {
+                return null;
+            }
+
+            return [
+                'tenant' => $tenant,
+                'domain_id' => $request->query('domain'),
+            ];
+        }
+
+        return null;
+    }
+
+    /**
      * Get tenant configuration
+     * Supports both domain-based lookup (secure) and ID-based lookup (legacy)
      */
     public function config(Request $request): JsonResponse
     {
-        $tenantId = $request->query('tenant');
-        $domainId = $request->query('domain');
+        $resolved = $this->resolveTenant($request);
 
-        if (!$tenantId) {
-            return response()->json(['error' => 'Tenant ID required'], 400);
-        }
-
-        $tenant = Tenant::find($tenantId);
-        if (!$tenant) {
+        if (!$resolved) {
             return response()->json(['error' => 'Tenant not found'], 404);
         }
+
+        $tenant = $resolved['tenant'];
+        $domainId = $resolved['domain_id'];
 
         $settings = $tenant->settings ?? [];
 
@@ -53,15 +89,17 @@ class TenantClientController extends Controller
      */
     public function events(Request $request): JsonResponse
     {
-        $tenantId = $request->query('tenant');
+        $resolved = $this->resolveTenant($request);
+
+        if (!$resolved) {
+            return response()->json(['error' => 'Tenant not found'], 404);
+        }
+
+        $tenantId = $resolved['tenant']->id;
         $search = $request->query('search');
         $category = $request->query('category');
         $limit = $request->query('limit', 12);
         $offset = $request->query('offset', 0);
-
-        if (!$tenantId) {
-            return response()->json(['error' => 'Tenant ID required'], 400);
-        }
 
         $query = Event::where('tenant_id', $tenantId)
             ->where('is_active', true)
@@ -109,12 +147,14 @@ class TenantClientController extends Controller
      */
     public function featuredEvents(Request $request): JsonResponse
     {
-        $tenantId = $request->query('tenant');
-        $limit = $request->query('limit', 6);
+        $resolved = $this->resolveTenant($request);
 
-        if (!$tenantId) {
-            return response()->json(['error' => 'Tenant ID required'], 400);
+        if (!$resolved) {
+            return response()->json(['error' => 'Tenant not found'], 404);
         }
+
+        $tenantId = $resolved['tenant']->id;
+        $limit = $request->query('limit', 6);
 
         $events = Event::where('tenant_id', $tenantId)
             ->where('is_active', true)
@@ -142,11 +182,13 @@ class TenantClientController extends Controller
      */
     public function event(Request $request, string $slug): JsonResponse
     {
-        $tenantId = $request->query('tenant');
+        $resolved = $this->resolveTenant($request);
 
-        if (!$tenantId) {
-            return response()->json(['error' => 'Tenant ID required'], 400);
+        if (!$resolved) {
+            return response()->json(['error' => 'Tenant not found'], 404);
         }
+
+        $tenantId = $resolved['tenant']->id;
 
         $event = Event::where('tenant_id', $tenantId)
             ->where('slug', $slug)
@@ -167,11 +209,13 @@ class TenantClientController extends Controller
      */
     public function categories(Request $request): JsonResponse
     {
-        $tenantId = $request->query('tenant');
+        $resolved = $this->resolveTenant($request);
 
-        if (!$tenantId) {
-            return response()->json(['error' => 'Tenant ID required'], 400);
+        if (!$resolved) {
+            return response()->json(['error' => 'Tenant not found'], 404);
         }
+
+        $tenantId = $resolved['tenant']->id;
 
         // Get event types that have events for this tenant
         $types = EventType::whereHas('events', function ($q) use ($tenantId) {

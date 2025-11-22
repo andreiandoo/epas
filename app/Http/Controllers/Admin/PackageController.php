@@ -192,9 +192,7 @@ class PackageController extends Controller
         </div>
     </div>
     <script src="./tixello-loader.min.js"
-            data-api="{$apiEndpoint}"
-            data-tenant="{$tenant->id}"
-            data-domain="{$domain->id}"></script>
+            data-api="{$apiEndpoint}"></script>
     <noscript>
         <div style="padding: 20px; text-align: center;">
             <h1>JavaScript Required</h1>

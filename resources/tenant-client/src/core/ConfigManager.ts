@@ -24,6 +24,11 @@ export interface InitAttributesConfig {
     domain: string;
 }
 
+export interface InitHostnameConfig {
+    apiEndpoint: string;
+    hostname: string;
+}
+
 export class ConfigManager {
     private static config: TixelloConfig | null = null;
 
@@ -75,6 +80,52 @@ export class ConfigManager {
             }
         } catch {
             // Use defaults if API fails
+        }
+
+        // Apply theme
+        this.applyTheme(this.config.theme);
+
+        return this.config;
+    }
+
+    static async initFromHostname(attrs: InitHostnameConfig): Promise<TixelloConfig> {
+        // Create default config
+        this.config = {
+            tenantId: 0,
+            domainId: 0,
+            domain: attrs.hostname,
+            apiEndpoint: attrs.apiEndpoint,
+            modules: ['core', 'events', 'auth', 'cart', 'checkout'],
+            theme: {
+                primaryColor: '#3B82F6',
+                secondaryColor: '#1E40AF',
+                logo: null,
+                favicon: null,
+                fontFamily: 'Inter',
+            },
+            version: '1.0.0',
+            packageHash: '',
+        };
+
+        // Fetch config from API using hostname (secure - no IDs exposed)
+        try {
+            const response = await fetch(`${attrs.apiEndpoint}/config?hostname=${encodeURIComponent(attrs.hostname)}`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.theme) {
+                    this.config.theme = { ...this.config.theme, ...data.theme };
+                }
+                if (data.modules) {
+                    this.config.modules = data.modules;
+                }
+                if (data.tenant) {
+                    this.config.tenantId = data.tenant.id;
+                }
+            } else {
+                throw new Error('Failed to load tenant configuration');
+            }
+        } catch (error) {
+            throw new Error('Failed to initialize configuration from hostname');
         }
 
         // Apply theme

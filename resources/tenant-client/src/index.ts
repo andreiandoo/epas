@@ -26,26 +26,22 @@ SecurityGuard.init();
         // Get config from script tag data attributes
         const scriptTag = document.currentScript as HTMLScriptElement;
         const apiEndpoint = scriptTag?.getAttribute('data-api');
-        const tenantId = scriptTag?.getAttribute('data-tenant');
-        const domainId = scriptTag?.getAttribute('data-domain');
+        const encryptedConfig = scriptTag?.getAttribute('data-config') ||
+                               window.__TIXELLO_CONFIG__;
 
-        if (!apiEndpoint || !tenantId) {
-            // Fallback to encrypted config
-            const encryptedConfig = scriptTag?.getAttribute('data-config') ||
-                                   window.__TIXELLO_CONFIG__;
+        if (!apiEndpoint && !encryptedConfig) {
+            throw new Error('Tixello configuration not found');
+        }
 
-            if (!encryptedConfig) {
-                throw new Error('Tixello configuration not found');
-            }
-
-            var config = await ConfigManager.init(encryptedConfig);
+        let config;
+        if (encryptedConfig) {
+            // Legacy: encrypted config
+            config = await ConfigManager.init(encryptedConfig);
         } else {
-            // Initialize from data attributes
-            var config = await ConfigManager.initFromAttributes({
-                apiEndpoint,
-                tenantId: parseInt(tenantId),
-                domainId: parseInt(domainId || '0'),
-                domain: window.location.hostname,
+            // Secure: hostname-based lookup (no IDs exposed)
+            config = await ConfigManager.initFromHostname({
+                apiEndpoint: apiEndpoint!,
+                hostname: window.location.hostname,
             });
         }
 
