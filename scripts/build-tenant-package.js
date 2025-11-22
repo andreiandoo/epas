@@ -90,16 +90,16 @@ const securityWrapper = `
 `;
 
 // Add header
-const header = \`/**
+const header = `/**
  * Tixello Event Platform - Tenant Client
- * Domain: \${config.domain}
- * Version: \${config.version}
- * Generated: \${new Date().toISOString()}
+ * Domain: ${config.domain}
+ * Version: ${config.version}
+ * Generated: ${new Date().toISOString()}
  *
  * This code is proprietary and confidential.
  * Unauthorized copying or distribution is prohibited.
  */
-\`;
+`;
 
 content = header + securityWrapper + content;
 
