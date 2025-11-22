@@ -198,7 +198,7 @@ class MicroserviceMarketplaceController extends Controller
 
         // Check if any microservices are already owned
         $ownedIds = $tenant->microservices()
-            ->wherePivot('status', 'active')
+            ->wherePivot('is_active', true)
             ->pluck('microservices.id')
             ->toArray();
 
