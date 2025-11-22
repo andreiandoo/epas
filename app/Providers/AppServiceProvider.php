@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Http\Request;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -34,6 +37,11 @@ class AppServiceProvider extends ServiceProvider
         if (file_exists($helpers)) {
             require_once $helpers;
         }
+
+        // Define API rate limiter
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
 
         // Register observers
         \App\Models\Invoice::observe(\App\Observers\InvoiceObserver::class);
