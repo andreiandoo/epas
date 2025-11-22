@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use App\Services\WhatsApp\WhatsAppService;
 use App\Services\EFactura\EFacturaService;
 use App\Services\Accounting\AccountingService;
@@ -126,7 +127,7 @@ class HealthCheckService
 
             // Test cache write/read
             $testKey = 'health:cache:test';
-            $testValue = str_random(32);
+            $testValue = Str::random(32);
 
             Cache::put($testKey, $testValue, 60);
             $retrieved = Cache::get($testKey);
