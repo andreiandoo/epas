@@ -8,12 +8,14 @@ use App\Models\Domain;
 use App\Models\Tenant;
 use App\Models\TenantPackage;
 use App\Services\PackageGeneratorService;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PackageController extends Controller
 {
+    use AuthorizesRequests;
     public function __construct(
         private PackageGeneratorService $packageGenerator
     ) {}

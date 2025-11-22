@@ -168,6 +168,8 @@ Route::middleware(['web'])->prefix('admin')->group(function () {
     Route::post('/domains/{domainId}/toggle-active', [DomainController::class, 'toggleActive'])->name('admin.domains.toggle-active');
     Route::post('/domains/{domainId}/toggle-confirmed', [DomainController::class, 'toggleConfirmed'])->name('admin.domains.toggle-confirmed');
     Route::post('/domains/{domainId}/toggle-suspended', [DomainController::class, 'toggleSuspended'])->name('admin.domains.toggle-suspended');
+    Route::delete('/domains/{domainId}', [DomainController::class, 'destroy'])->name('admin.domains.destroy');
+    Route::post('/domains/{domainId}/verify', [DomainController::class, 'verify'])->name('admin.domains.verify');
     Route::get('/tenants/{tenantId}/domains/{domain}/login-as-admin', [DomainController::class, 'loginAsAdmin'])->name('tenant.login-as-admin');
 });
 
