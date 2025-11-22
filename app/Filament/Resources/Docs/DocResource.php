@@ -6,8 +6,8 @@ use App\Filament\Resources\Docs\DocResource\Pages;
 use App\Models\Doc;
 use App\Models\DocCategory;
 use BackedEnum;
-use Filament\Forms;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components as SC;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -29,28 +29,28 @@ class DocResource extends Resource
     {
         return $schema
             ->schema([
-                Forms\Components\Group::make()
+                SC\Group::make()
                     ->schema([
-                        Forms\Components\Section::make('Content')
+                        SC\Section::make('Content')
                             ->schema([
-                                Forms\Components\TextInput::make('title')
+                                SC\TextInput::make('title')
                                     ->required()
                                     ->maxLength(255)
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(fn ($state, callable $set) =>
                                         $set('slug', \Str::slug($state))),
 
-                                Forms\Components\TextInput::make('slug')
+                                SC\TextInput::make('slug')
                                     ->required()
                                     ->maxLength(255)
                                     ->unique(ignoreRecord: true),
 
-                                Forms\Components\Textarea::make('excerpt')
+                                SC\Textarea::make('excerpt')
                                     ->rows(2)
                                     ->maxLength(500)
                                     ->helperText('Brief description shown in listings'),
 
-                                Forms\Components\RichEditor::make('content')
+                                SC\RichEditor::make('content')
                                     ->required()
                                     ->columnSpanFull()
                                     ->fileAttachmentsDisk('public')
@@ -73,15 +73,15 @@ class DocResource extends Resource
                                     ]),
                             ]),
 
-                        Forms\Components\Section::make('Metadata')
+                        SC\Section::make('Metadata')
                             ->schema([
-                                Forms\Components\TagsInput::make('tags')
+                                SC\TagsInput::make('tags')
                                     ->suggestions([
                                         'api', 'component', 'guide', 'tutorial',
                                         'configuration', 'setup', 'integration',
                                     ]),
 
-                                Forms\Components\KeyValue::make('metadata')
+                                SC\KeyValue::make('metadata')
                                     ->keyLabel('Property')
                                     ->valueLabel('Value')
                                     ->addable()
@@ -92,55 +92,55 @@ class DocResource extends Resource
                     ])
                     ->columnSpan(['lg' => 2]),
 
-                Forms\Components\Group::make()
+                SC\Group::make()
                     ->schema([
-                        Forms\Components\Section::make('Status')
+                        SC\Section::make('Status')
                             ->schema([
-                                Forms\Components\Select::make('status')
+                                SC\Select::make('status')
                                     ->options(Doc::STATUSES)
                                     ->default('draft')
                                     ->required(),
 
-                                Forms\Components\Select::make('doc_category_id')
+                                SC\Select::make('doc_category_id')
                                     ->label('Category')
                                     ->options(DocCategory::pluck('name', 'id'))
                                     ->searchable()
                                     ->required(),
 
-                                Forms\Components\Select::make('type')
+                                SC\Select::make('type')
                                     ->options(Doc::TYPES)
                                     ->default('general')
                                     ->required(),
 
-                                Forms\Components\Select::make('parent_id')
+                                SC\Select::make('parent_id')
                                     ->label('Parent Document')
                                     ->options(Doc::pluck('title', 'id'))
                                     ->searchable()
                                     ->nullable(),
 
-                                Forms\Components\TextInput::make('version')
+                                SC\TextInput::make('version')
                                     ->default('1.0.0')
                                     ->required(),
                             ]),
 
-                        Forms\Components\Section::make('Visibility')
+                        SC\Section::make('Visibility')
                             ->schema([
-                                Forms\Components\Toggle::make('is_public')
+                                SC\Toggle::make('is_public')
                                     ->label('Public')
                                     ->helperText('Make visible to public'),
 
-                                Forms\Components\Toggle::make('is_featured')
+                                SC\Toggle::make('is_featured')
                                     ->label('Featured')
                                     ->helperText('Show on documentation homepage'),
 
-                                Forms\Components\TextInput::make('order')
+                                SC\TextInput::make('order')
                                     ->numeric()
                                     ->default(0),
 
-                                Forms\Components\TextInput::make('author')
+                                SC\TextInput::make('author')
                                     ->maxLength(255),
 
-                                Forms\Components\DateTimePicker::make('published_at')
+                                SC\DateTimePicker::make('published_at')
                                     ->label('Publish Date'),
                             ]),
                     ])
