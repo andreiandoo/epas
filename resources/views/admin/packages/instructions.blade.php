@@ -40,44 +40,95 @@
                 </div>
 
                 <div class="mb-8">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Installation Code</h2>
-                    <p class="text-sm text-gray-600 mb-3">Add this code to your website's HTML, just before the closing <code class="bg-gray-100 px-1 rounded">&lt;/body&gt;</code> tag:</p>
-                    <div class="relative">
-                        <pre class="bg-gray-900 text-green-400 text-sm p-4 rounded-lg overflow-x-auto"><code>{{ $package->getInstallationCode() }}</code></pre>
-                        <button
-                            onclick="copyCode(this)"
-                            data-code="{{ $package->getInstallationCode() }}"
-                            class="absolute top-2 right-2 px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded"
-                        >
-                            Copy
-                        </button>
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Step 1: Download Package</h2>
+                    <p class="text-sm text-gray-600 mb-4">
+                        Download the complete deployment package. This ZIP file contains everything you need - just upload and go!
+                    </p>
+                    <a
+                        href="{{ route('admin.tenant.package.download-zip', ['tenant' => $tenant->id, 'domain' => $domain->id]) }}"
+                        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                    >
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        Download ZIP Package
+                    </a>
+                </div>
+
+                <div class="mb-8">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Step 2: Upload to Server</h2>
+                    <ol class="list-decimal list-inside text-sm text-gray-600 space-y-3">
+                        <li>Connect to your server via FTP or file manager</li>
+                        <li>Navigate to the <strong>root directory</strong> of your domain (usually <code class="bg-gray-100 px-1 rounded">public_html</code> or <code class="bg-gray-100 px-1 rounded">www</code>)</li>
+                        <li>Upload and extract the ZIP file contents directly into the root directory</li>
+                        <li>Make sure <code class="bg-gray-100 px-1 rounded">index.html</code> is in the root directory, not in a subfolder</li>
+                    </ol>
+                </div>
+
+                <div class="mb-8">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Step 3: Verify Installation</h2>
+                    <p class="text-sm text-gray-600 mb-3">
+                        After uploading, visit your domain to verify the installation:
+                    </p>
+                    <a
+                        href="https://{{ $domain->domain }}"
+                        target="_blank"
+                        class="inline-flex items-center text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                        https://{{ $domain->domain }}
+                        <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                    </a>
+                </div>
+
+                <div class="mb-8">
+                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Package Contents</h2>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <ul class="text-sm text-gray-600 space-y-2">
+                            <li class="flex items-center">
+                                <svg class="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <strong>index.html</strong> - Main entry point
+                            </li>
+                            <li class="flex items-center">
+                                <svg class="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <strong>tixello-loader.min.js</strong> - Application code
+                            </li>
+                            <li class="flex items-center">
+                                <svg class="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <strong>.htaccess</strong> - Apache server configuration
+                            </li>
+                            <li class="flex items-center">
+                                <svg class="w-4 h-4 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                <strong>README.md</strong> - Documentation
+                            </li>
+                        </ul>
                     </div>
                 </div>
 
                 <div class="mb-8">
                     <h2 class="text-lg font-semibold text-gray-900 mb-4">Server Requirements</h2>
                     <ul class="list-disc list-inside text-sm text-gray-600 space-y-2">
-                        <li>HTTPS enabled (required for security)</li>
-                        <li>Ability to serve static files</li>
-                        <li>Rewrite rules for SPA routing</li>
+                        <li><strong>HTTPS enabled</strong> - Required for security (most hosts provide free SSL)</li>
+                        <li><strong>Apache server</strong> - The included .htaccess file handles URL routing</li>
+                        <li><strong>mod_rewrite enabled</strong> - Required for single-page app routing</li>
                     </ul>
                 </div>
 
-                <div class="mb-8">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Apache Configuration</h2>
-                    <p class="text-sm text-gray-600 mb-3">Add this to your <code class="bg-gray-100 px-1 rounded">.htaccess</code> file:</p>
-                    <pre class="bg-gray-900 text-green-400 text-sm p-4 rounded-lg overflow-x-auto"><code>RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ /index.html [L]</code></pre>
-                </div>
-
-                <div class="mb-8">
-                    <h2 class="text-lg font-semibold text-gray-900 mb-4">Nginx Configuration</h2>
-                    <p class="text-sm text-gray-600 mb-3">Add this to your server block:</p>
-                    <pre class="bg-gray-900 text-green-400 text-sm p-4 rounded-lg overflow-x-auto"><code>location / {
-    try_files $uri $uri/ /index.html;
-}</code></pre>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+                    <h3 class="text-sm font-semibold text-blue-800 mb-2">Need Help?</h3>
+                    <p class="text-sm text-blue-700">
+                        If you encounter any issues during installation, contact your account manager or email
+                        <a href="mailto:support@tixello.com" class="underline">support@tixello.com</a>
+                    </p>
                 </div>
 
                 <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -103,17 +154,5 @@ RewriteRule ^(.*)$ /index.html [L]</code></pre>
             </div>
         </div>
     </div>
-
-    <script>
-        function copyCode(button) {
-            const code = button.dataset.code;
-            navigator.clipboard.writeText(code).then(() => {
-                button.textContent = 'Copied!';
-                setTimeout(() => {
-                    button.textContent = 'Copy';
-                }, 2000);
-            });
-        }
-    </script>
 </body>
 </html>
