@@ -157,7 +157,7 @@ class TenantResource extends Resource
                         ->searchable()
                         ->default('Romania')
                         ->reactive()
-                        ->afterStateUpdated(function ($state, callable $set) {
+                        ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
                             // Clear dependent fields when country changes
                             $set('state', null);
                             $set('city', null);
@@ -166,7 +166,7 @@ class TenantResource extends Resource
 
                     Forms\Components\Select::make('state')
                         ->label('State / County')
-                        ->options(function (callable $get) {
+                        ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
                             $country = $get('country');
                             if (!$country) {
                                 return [];
@@ -183,16 +183,16 @@ class TenantResource extends Resource
                         })
                         ->searchable()
                         ->reactive()
-                        ->afterStateUpdated(function ($state, callable $set) {
+                        ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
                             // Clear city when state changes
                             $set('city', null);
                         })
-                        ->disabled(fn (callable $get) => !$get('country'))
+                        ->disabled(fn (\Filament\Schemas\Components\Utilities\Get $get) => !$get('country'))
                         ->helperText('Select state/county (Județ in Romania)'),
 
                     Forms\Components\Select::make('city')
                         ->label('City')
-                        ->options(function (callable $get) {
+                        ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
                             $country = $get('country');
                             $state = $get('state');
 
@@ -210,7 +210,7 @@ class TenantResource extends Resource
                             return $locationService->getCities($countryCode, $state);
                         })
                         ->searchable()
-                        ->disabled(fn (callable $get) => !$get('country') || !$get('state'))
+                        ->disabled(fn (\Filament\Schemas\Components\Utilities\Get $get) => !$get('country') || !$get('state'))
                         ->helperText('Select city'),
                 ])->columns(3),
 
@@ -223,7 +223,7 @@ class TenantResource extends Resource
                         ->default(now())
                         ->required()
                         ->reactive()
-                        ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                        ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                             $cycleDays = $get('billing_cycle_days') ?? 30;
                             if ($state) {
                                 $set('due_at', \Carbon\Carbon::parse($state)->addDays($cycleDays));
@@ -238,7 +238,7 @@ class TenantResource extends Resource
                         ->minValue(1)
                         ->required()
                         ->reactive()
-                        ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                        ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                             $billingStart = $get('billing_starts_at');
                             if ($billingStart && $state) {
                                 $set('due_at', \Carbon\Carbon::parse($billingStart)->addDays($state));
