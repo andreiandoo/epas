@@ -330,16 +330,16 @@ class OnboardingController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Registration completed! Redirecting to checkout...',
-                    'redirect' => '/checkout'
+                    'message' => 'Înregistrarea a fost completată cu succes! Vei fi redirecționat către checkout...',
+                    'redirect' => '/store/checkout'
                 ]);
             }
 
-            // No microservices selected, redirect to verify page
+            // No microservices selected, redirect to tenant panel
             return response()->json([
                 'success' => true,
-                'message' => 'Registration completed successfully! Please check your email to verify your account.',
-                'redirect' => route('onboarding.verify', ['token' => 'pending'])
+                'message' => 'Înregistrarea a fost completată cu succes! Verifică-ți email-ul pentru instrucțiunile de verificare a domeniului.',
+                'redirect' => '/tenant'
             ]);
 
         } catch (\Exception $e) {
@@ -544,7 +544,7 @@ class OnboardingController extends Controller
                 'public_name' => $step1['public_name'],
                 'company_name' => $tenant->company_name,
                 'website_url' => config('app.url'),
-                'verification_link' => config('app.url') . '/verify/' . Str::random(64),
+                'verification_link' => route('onboarding.verify', ['token' => Str::random(64)]),
             ];
 
             // Process template

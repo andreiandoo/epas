@@ -140,6 +140,18 @@ Route::post('/register/check-email', [OnboardingController::class, 'checkEmail']
 Route::post('/register/check-domain', [OnboardingController::class, 'checkDomain'])->name('onboarding.check-domain');
 Route::get('/register/api/cities/{country}/{state}', [OnboardingController::class, 'getCities'])->name('onboarding.cities');
 Route::get('/register/verify/{token}', [OnboardingController::class, 'verify'])->name('onboarding.verify');
+// Redirect /verify/{token} to /register/verify/{token}
+Route::get('/verify/{token}', function ($token) {
+    return redirect()->route('onboarding.verify', ['token' => $token]);
+});
+
+// Logout routes (support both GET and POST)
+Route::get('/admin/logout', function () {
+    \Illuminate\Support\Facades\Auth::logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect('/');
+})->name('filament.admin.logout.get');
 
 // Admin Domain Management Routes
 Route::middleware(['web'])->prefix('admin')->group(function () {

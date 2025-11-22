@@ -50,10 +50,50 @@
         .strength-weak { background: #ef4444; width: 33%; }
         .strength-medium { background: #f59e0b; width: 66%; }
         .strength-strong { background: #10b981; width: 100%; }
+        /* Modal styles */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
     <div class="min-h-screen flex flex-col" x-data="wizardData()" x-init="init()">
+        <!-- Modal Component -->
+        <div x-show="showModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 modal-backdrop transition-opacity" aria-hidden="true" @click="closeModal()"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+                    <div>
+                        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full" :class="modalType === 'success' ? 'bg-green-100' : (modalType === 'error' ? 'bg-red-100' : 'bg-blue-100')">
+                            <!-- Success icon -->
+                            <svg x-show="modalType === 'success'" class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            <!-- Error icon -->
+                            <svg x-show="modalType === 'error'" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            <!-- Info icon -->
+                            <svg x-show="modalType === 'info'" class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-5">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" x-text="modalTitle"></h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500 whitespace-pre-line" x-text="modalMessage"></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-5 sm:mt-6">
+                        <button type="button" @click="closeModal()" class="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 sm:text-sm" :class="modalType === 'success' ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500' : (modalType === 'error' ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500' : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500')">
+                            OK
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <!-- Header -->
         <header class="bg-white shadow-sm">
             <div class="max-w-5xl mx-auto px-4 py-6">
@@ -596,6 +636,34 @@
                                 </div>
                             </div>
 
+                            <!-- Terms & Conditions and GDPR Agreements -->
+                            <div class="mb-8 space-y-4 p-4 bg-gray-50 rounded-lg">
+                                <label class="flex items-start cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        x-model="formData.agree_terms"
+                                        class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        required
+                                    >
+                                    <span class="ml-3 text-sm text-gray-700">
+                                        Am citit și sunt de acord cu
+                                        <a href="/termeni-si-conditii" target="_blank" class="text-blue-600 hover:text-blue-800 underline">Termenii și Condițiile</a> *
+                                    </span>
+                                </label>
+                                <label class="flex items-start cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        x-model="formData.agree_gdpr"
+                                        class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        required
+                                    >
+                                    <span class="ml-3 text-sm text-gray-700">
+                                        Sunt de acord cu
+                                        <a href="/politica-confidentialitate" target="_blank" class="text-blue-600 hover:text-blue-800 underline">Procesarea Datelor cu Caracter Personal (GDPR)</a> *
+                                    </span>
+                                </label>
+                            </div>
+
                             <div class="mt-8 flex justify-between">
                                 <button
                                     type="button"
@@ -606,7 +674,7 @@
                                 </button>
                                 <button
                                     type="submit"
-                                    :disabled="loading"
+                                    :disabled="loading || !formData.agree_terms || !formData.agree_gdpr"
                                     class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-lg"
                                 >
                                     <span x-show="!loading">Finalizează Înregistrarea ✓</span>
@@ -630,6 +698,12 @@
                 emailChecking: false,
                 emailStatus: '', // 'available', 'taken', ''
                 domainErrors: {},
+                // Modal state
+                showModal: false,
+                modalTitle: '',
+                modalMessage: '',
+                modalType: 'info', // 'success', 'error', 'info'
+                modalCallback: null,
                 formData: {
                     // Step 1
                     first_name: '',
@@ -658,7 +732,9 @@
                     // Step 4
                     work_method: 'mixed',
                     microservices: [],
-                    locale: 'ro'
+                    locale: 'ro',
+                    agree_terms: false,
+                    agree_gdpr: false
                 },
                 passwordStrength: 0,
                 passwordStrengthClass: '',
@@ -688,6 +764,23 @@
                     return titles[step];
                 },
 
+                // Modal functions
+                openModal(title, message, type = 'info', callback = null) {
+                    this.modalTitle = title;
+                    this.modalMessage = message;
+                    this.modalType = type;
+                    this.modalCallback = callback;
+                    this.showModal = true;
+                },
+
+                closeModal() {
+                    this.showModal = false;
+                    if (this.modalCallback) {
+                        this.modalCallback();
+                        this.modalCallback = null;
+                    }
+                },
+
                 checkPasswordStrength() {
                     const password = this.formData.password;
                     let strength = 0;
@@ -715,7 +808,7 @@
                 async submitStep1() {
                     // Check if email is taken
                     if (this.emailStatus === 'taken') {
-                        alert('Această adresă de email este deja înregistrată. Te rugăm să folosești altă adresă.');
+                        this.openModal('Email indisponibil', 'Această adresă de email este deja înregistrată. Te rugăm să folosești altă adresă.', 'error');
                         return;
                     }
 
@@ -744,7 +837,7 @@
                         }
                     } catch (error) {
                         console.error('Error:', error);
-                        alert('A apărut o eroare. Te rugăm să încerci din nou.');
+                        this.openModal('Eroare', 'A apărut o eroare. Te rugăm să încerci din nou.', 'error');
                     } finally {
                         this.loading = false;
                     }
@@ -773,7 +866,7 @@
                         }
                     } catch (error) {
                         console.error('Error:', error);
-                        alert('A apărut o eroare. Te rugăm să încerci din nou.');
+                        this.openModal('Eroare', 'A apărut o eroare. Te rugăm să încerci din nou.', 'error');
                     } finally {
                         this.loading = false;
                     }
@@ -802,7 +895,7 @@
                         }
                     } catch (error) {
                         console.error('Error:', error);
-                        alert('A apărut o eroare. Te rugăm să încerci din nou.');
+                        this.openModal('Eroare', 'A apărut o eroare. Te rugăm să încerci din nou.', 'error');
                     } finally {
                         this.loading = false;
                     }
@@ -825,10 +918,11 @@
                         const data = await response.json();
 
                         if (data.success) {
-                            alert(data.message);
-                            if (data.redirect) {
-                                window.location.href = data.redirect;
-                            }
+                            this.openModal('Succes', data.message, 'success', () => {
+                                if (data.redirect) {
+                                    window.location.href = data.redirect;
+                                }
+                            });
                         } else {
                             this.errors = data.errors || {};
                             let errorMsg = data.message || 'A apărut o eroare.';
@@ -838,11 +932,11 @@
                                     errorMsg += '\nFișier: ' + data.file;
                                 }
                             }
-                            alert(errorMsg);
+                            this.openModal('Eroare', errorMsg, 'error');
                         }
                     } catch (error) {
                         console.error('Error:', error);
-                        alert('A apărut o eroare. Te rugăm să încerci din nou.');
+                        this.openModal('Eroare', 'A apărut o eroare. Te rugăm să încerci din nou.', 'error');
                     } finally {
                         this.loading = false;
                     }
@@ -908,13 +1002,13 @@
                                 }
                             }
 
-                            alert('Datele au fost preluate cu succes din ANAF!');
+                            this.openModal('Succes', 'Datele au fost preluate cu succes din ANAF!', 'success');
                         } else {
-                            alert(result.message || 'Nu s-au găsit date în ANAF pentru acest CUI.');
+                            this.openModal('ANAF', result.message || 'Nu s-au găsit date în ANAF pentru acest CUI.', 'info');
                         }
                     } catch (error) {
                         console.error('Error:', error);
-                        alert('Eroare la interogarea ANAF.');
+                        this.openModal('Eroare', 'Eroare la interogarea ANAF.', 'error');
                     } finally {
                         this.cuiLoading = false;
                     }
