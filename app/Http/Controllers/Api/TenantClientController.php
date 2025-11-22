@@ -102,7 +102,6 @@ class TenantClientController extends Controller
         $offset = $request->query('offset', 0);
 
         $query = Event::where('tenant_id', $tenantId)
-            ->whereNull('cancelled_at')
             ->where(function ($q) {
                 $q->where('end_date', '>=', now())
                   ->orWhere(function ($q2) {
@@ -110,6 +109,11 @@ class TenantClientController extends Controller
                          ->where('start_date', '>=', now());
                   });
             });
+
+        // Check if cancelled_at column exists
+        if (\Schema::hasColumn('events', 'cancelled_at')) {
+            $query->whereNull('cancelled_at');
+        }
 
         // Check if is_active column exists
         if (\Schema::hasColumn('events', 'is_active')) {
@@ -161,7 +165,6 @@ class TenantClientController extends Controller
         $limit = $request->query('limit', 6);
 
         $query = Event::where('tenant_id', $tenantId)
-            ->whereNull('cancelled_at')
             ->where(function ($q) {
                 $q->where('end_date', '>=', now())
                   ->orWhere(function ($q2) {
@@ -169,6 +172,11 @@ class TenantClientController extends Controller
                          ->where('start_date', '>=', now());
                   });
             });
+
+        // Check if cancelled_at column exists
+        if (\Schema::hasColumn('events', 'cancelled_at')) {
+            $query->whereNull('cancelled_at');
+        }
 
         // Check if is_active column exists
         if (\Schema::hasColumn('events', 'is_active')) {
