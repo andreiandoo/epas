@@ -1,0 +1,121 @@
+#!/bin/bash
+
+# Auto-versioning post-commit hook
+# This hook automatically increments version numbers based on changed files
+
+# Get the project root directory
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+VERSION_FILE="$PROJECT_ROOT/version.json"
+
+# Skip if version.json doesn't exist
+if [ ! -f "$VERSION_FILE" ]; then
+    exit 0
+fi
+
+# Get list of changed files in the last commit
+CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r HEAD)
+
+# Skip if no files changed
+if [ -z "$CHANGED_FILES" ]; then
+    exit 0
+fi
+
+# Skip if only version.json was changed (to avoid infinite loop)
+if [ "$CHANGED_FILES" = "version.json" ]; then
+    exit 0
+fi
+
+# Check if PHP and artisan are available
+if [ -f "$PROJECT_ROOT/artisan" ]; then
+    # Use the Laravel artisan command
+    cd "$PROJECT_ROOT"
+    php artisan version:auto --type=patch 2>/dev/null
+
+    # If version.json was modified, amend the commit to include it
+    if [ -n "$(git status --porcelain version.json)" ]; then
+        git add version.json
+        git commit --amend --no-edit --no-verify
+        echo "Version bumped and added to commit"
+    fi
+else
+    # Fallback: Use a simple bash-based version bumper
+
+    # Function to increment patch version
+    increment_version() {
+        local version=$1
+        local major=$(echo $version | cut -d. -f1)
+        local minor=$(echo $version | cut -d. -f2)
+        local patch=$(echo $version | cut -d. -f3)
+        patch=$((patch + 1))
+        echo "$major.$minor.$patch"
+    }
+
+    # Read current versions
+    VERSIONS=$(cat "$VERSION_FILE")
+
+    # Track what needs to be bumped
+    BUMP_CORE=false
+    declare -a BUMP_SERVICES
+
+    # Analyze changed files
+    while IFS= read -r file; do
+        # Check for service directory changes
+        if [[ $file =~ ^app/Services/([^/]+)/ ]]; then
+            service="${BASH_REMATCH[1]}"
+            if echo "$VERSIONS" | grep -q "\"$service\""; then
+                BUMP_SERVICES+=("$service")
+            fi
+        # Check for direct service files
+        elif [[ $file =~ ^app/Services/[^/]+\.php$ ]]; then
+            BUMP_CORE=true
+        # Any other app/ changes affect core
+        elif [[ $file =~ ^app/ ]]; then
+            BUMP_CORE=true
+        # Config, database, resources, routes affect core
+        elif [[ $file =~ ^(config|database|resources|routes)/ ]]; then
+            BUMP_CORE=true
+        fi
+    done <<< "$CHANGED_FILES"
+
+    # Remove duplicates from services
+    BUMP_SERVICES=($(echo "${BUMP_SERVICES[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '))
+
+    # Update versions using jq if available, otherwise use sed
+    MODIFIED=false
+
+    if command -v jq &> /dev/null; then
+        # Update core version
+        if [ "$BUMP_CORE" = true ]; then
+            CURRENT=$(echo "$VERSIONS" | jq -r '.core')
+            NEW=$(increment_version "$CURRENT")
+            VERSIONS=$(echo "$VERSIONS" | jq ".core = \"$NEW\"")
+            MODIFIED=true
+            echo "Core: $CURRENT -> $NEW"
+        fi
+
+        # Update service versions
+        for service in "${BUMP_SERVICES[@]}"; do
+            CURRENT=$(echo "$VERSIONS" | jq -r ".services.\"$service\"")
+            if [ "$CURRENT" != "null" ]; then
+                NEW=$(increment_version "$CURRENT")
+                VERSIONS=$(echo "$VERSIONS" | jq ".services.\"$service\" = \"$NEW\"")
+                MODIFIED=true
+                echo "$service: $CURRENT -> $NEW"
+            fi
+        done
+
+        # Update lastUpdated
+        if [ "$MODIFIED" = true ]; then
+            VERSIONS=$(echo "$VERSIONS" | jq ".lastUpdated = \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"")
+            echo "$VERSIONS" > "$VERSION_FILE"
+
+            # Amend commit to include version changes
+            git add version.json
+            git commit --amend --no-edit --no-verify
+            echo "Version file updated and added to commit"
+        fi
+    else
+        echo "Warning: jq not installed. Version auto-bump skipped."
+        echo "Install jq or use 'php artisan version:auto' manually."
+    fi
+fi
