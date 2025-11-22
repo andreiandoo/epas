@@ -29,6 +29,7 @@ class TenantPanelProvider extends PanelProvider
                 'primary' => Color::Indigo,
             ])
             ->brandName('Tixello Tenant')
+            ->authorize(fn () => auth()->check() && (auth()->user()->hasRole('tenant') || auth()->user()->tenant_id !== null))
 
             // Discover tenant-specific resources, pages, and widgets
             ->discoverResources(in: app_path('Filament/Tenant/Resources'), for: 'App\\Filament\\Tenant\\Resources')
