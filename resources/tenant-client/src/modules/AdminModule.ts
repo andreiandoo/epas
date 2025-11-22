@@ -623,60 +623,257 @@ export class AdminModule {
             const settings = response.data.data;
 
             container.innerHTML = `
-                <form id="site-settings-form" style="max-width: 600px;">
-                    <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Site Name</label>
-                        <input type="text" name="site_name" value="${settings.site_name || ''}"
-                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                <form id="site-settings-form" style="max-width: 800px;">
+                    <!-- Site Branding -->
+                    <h3 style="font-weight: 600; margin-bottom: 1rem; font-size: 1.125rem;">Site Branding</h3>
+                    <div class="tixello-card" style="margin-bottom: 1.5rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Site Name</label>
+                                <input type="text" name="site_name" value="${settings.site_name || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Tagline</label>
+                                <input type="text" name="tagline" value="${settings.tagline || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Logo</label>
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                ${settings.logo_url ?
+                                    `<img src="${settings.logo_url}" alt="Logo" style="height: 50px; object-fit: contain;">
+                                     <button type="button" id="delete-logo-btn" class="tixello-btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Remove</button>` :
+                                    '<span style="color: #6b7280;">No logo uploaded</span>'
+                                }
+                                <input type="file" id="logo-upload" accept="image/*" style="display: none;">
+                                <button type="button" id="upload-logo-btn" class="tixello-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Upload Logo</button>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Favicon</label>
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                ${settings.favicon_url ?
+                                    `<img src="${settings.favicon_url}" alt="Favicon" style="height: 32px; width: 32px; object-fit: contain;">
+                                     <button type="button" id="delete-favicon-btn" class="tixello-btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Remove</button>` :
+                                    '<span style="color: #6b7280;">No favicon uploaded</span>'
+                                }
+                                <input type="file" id="favicon-upload" accept="image/*,.ico" style="display: none;">
+                                <button type="button" id="upload-favicon-btn" class="tixello-btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Upload Favicon</button>
+                            </div>
+                        </div>
                     </div>
-                    <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Tagline</label>
-                        <input type="text" name="tagline" value="${settings.tagline || ''}"
-                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+
+                    <!-- Company Details -->
+                    <h3 style="font-weight: 600; margin-bottom: 1rem; font-size: 1.125rem;">Company Details</h3>
+                    <div class="tixello-card" style="margin-bottom: 1.5rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Company Name</label>
+                                <input type="text" name="company_name" value="${settings.company_name || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Registration Number</label>
+                                <input type="text" name="company_registration_number" value="${settings.company_registration_number || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">VAT Number</label>
+                                <input type="text" name="vat_number" value="${settings.vat_number || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Country</label>
+                                <input type="text" name="company_country" value="${settings.company_country || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Address</label>
+                            <input type="text" name="company_address" value="${settings.company_address || ''}"
+                                style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">City</label>
+                                <input type="text" name="company_city" value="${settings.company_city || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Postal Code</label>
+                                <input type="text" name="company_postal_code" value="${settings.company_postal_code || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                        </div>
+                        <h4 style="font-weight: 600; margin: 1.5rem 0 1rem;">Bank Details</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Bank Name</label>
+                                <input type="text" name="bank_name" value="${settings.bank_name || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">IBAN</label>
+                                <input type="text" name="bank_iban" value="${settings.bank_iban || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">SWIFT/BIC</label>
+                                <input type="text" name="bank_swift" value="${settings.bank_swift || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                        </div>
                     </div>
-                    <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Logo URL</label>
-                        <input type="url" name="logo_url" value="${settings.logo_url || ''}"
-                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+
+                    <!-- Contact Information -->
+                    <h3 style="font-weight: 600; margin-bottom: 1rem; font-size: 1.125rem;">Contact Information</h3>
+                    <div class="tixello-card" style="margin-bottom: 1.5rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Contact Email</label>
+                                <input type="email" name="contact_email" value="${settings.contact_email || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Contact Phone</label>
+                                <input type="tel" name="contact_phone" value="${settings.contact_phone || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Support Email</label>
+                                <input type="email" name="support_email" value="${settings.support_email || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Billing Email</label>
+                                <input type="email" name="billing_email" value="${settings.billing_email || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                        </div>
                     </div>
-                    <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Contact Email</label>
-                        <input type="email" name="contact_email" value="${settings.contact_email || ''}"
-                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+
+                    <!-- Social Media -->
+                    <h3 style="font-weight: 600; margin-bottom: 1rem; font-size: 1.125rem;">Social Media & Public Presence</h3>
+                    <div class="tixello-card" style="margin-bottom: 1.5rem;">
+                        <div style="margin-bottom: 1rem;">
+                            <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Website URL</label>
+                            <input type="url" name="website_url" value="${settings.website_url || ''}"
+                                style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">Facebook</label>
+                                <input type="url" name="social_facebook" value="${settings.social_links?.facebook || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">Instagram</label>
+                                <input type="url" name="social_instagram" value="${settings.social_links?.instagram || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">Twitter/X</label>
+                                <input type="url" name="social_twitter" value="${settings.social_links?.twitter || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">LinkedIn</label>
+                                <input type="url" name="social_linkedin" value="${settings.social_links?.linkedin || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">YouTube</label>
+                                <input type="url" name="social_youtube" value="${settings.social_links?.youtube || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">TikTok</label>
+                                <input type="url" name="social_tiktok" value="${settings.social_links?.tiktok || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                        </div>
                     </div>
-                    <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Contact Phone</label>
-                        <input type="tel" name="contact_phone" value="${settings.contact_phone || ''}"
-                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+
+                    <!-- Legal -->
+                    <h3 style="font-weight: 600; margin-bottom: 1rem; font-size: 1.125rem;">Legal Pages</h3>
+                    <div class="tixello-card" style="margin-bottom: 1.5rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Terms URL</label>
+                                <input type="url" name="terms_url" value="${settings.terms_url || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Privacy URL</label>
+                                <input type="url" name="privacy_url" value="${settings.privacy_url || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Refund Policy URL</label>
+                                <input type="url" name="refund_policy_url" value="${settings.refund_policy_url || ''}"
+                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            </div>
+                        </div>
                     </div>
-                    <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Address</label>
-                        <textarea name="address" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">${settings.address || ''}</textarea>
-                    </div>
-                    <h3 style="font-weight: 600; margin-bottom: 1rem;">Social Links</h3>
-                    <div style="margin-bottom: 1rem;">
-                        <label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">Facebook</label>
-                        <input type="url" name="social_facebook" value="${settings.social_links?.facebook || ''}"
-                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
-                    </div>
-                    <div style="margin-bottom: 1rem;">
-                        <label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">Instagram</label>
-                        <input type="url" name="social_instagram" value="${settings.social_links?.instagram || ''}"
-                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
-                    </div>
-                    <div style="margin-bottom: 1.5rem;">
-                        <label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">Twitter/X</label>
-                        <input type="url" name="social_twitter" value="${settings.social_links?.twitter || ''}"
-                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
-                    </div>
+
                     <div style="margin-bottom: 1.5rem;">
                         <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Footer Text</label>
-                        <textarea name="footer_text" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">${settings.footer_text || ''}</textarea>
+                        <textarea name="footer_text" rows="3" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">${settings.footer_text || ''}</textarea>
                     </div>
-                    <button type="submit" class="tixello-btn">Save Settings</button>
+
+                    <button type="submit" class="tixello-btn">Save All Settings</button>
                 </form>
             `;
 
+            // Logo upload handlers
+            document.getElementById('upload-logo-btn')?.addEventListener('click', () => document.getElementById('logo-upload')?.click());
+            document.getElementById('logo-upload')?.addEventListener('change', async (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file && this.apiClient) {
+                    const formData = new FormData();
+                    formData.append('type', 'logo');
+                    formData.append('file', file);
+                    try {
+                        await this.apiClient.post('/admin/brand-asset', formData);
+                        this.loadSiteSettings();
+                    } catch { alert('Failed to upload logo'); }
+                }
+            });
+            document.getElementById('delete-logo-btn')?.addEventListener('click', async () => {
+                if (this.apiClient) {
+                    try {
+                        await this.apiClient.delete('/admin/brand-asset', { data: { type: 'logo' } });
+                        this.loadSiteSettings();
+                    } catch { alert('Failed to remove logo'); }
+                }
+            });
+
+            // Favicon upload handlers
+            document.getElementById('upload-favicon-btn')?.addEventListener('click', () => document.getElementById('favicon-upload')?.click());
+            document.getElementById('favicon-upload')?.addEventListener('change', async (e) => {
+                const file = (e.target as HTMLInputElement).files?.[0];
+                if (file && this.apiClient) {
+                    const formData = new FormData();
+                    formData.append('type', 'favicon');
+                    formData.append('file', file);
+                    try {
+                        await this.apiClient.post('/admin/brand-asset', formData);
+                        this.loadSiteSettings();
+                    } catch { alert('Failed to upload favicon'); }
+                }
+            });
+            document.getElementById('delete-favicon-btn')?.addEventListener('click', async () => {
+                if (this.apiClient) {
+                    try {
+                        await this.apiClient.delete('/admin/brand-asset', { data: { type: 'favicon' } });
+                        this.loadSiteSettings();
+                    } catch { alert('Failed to remove favicon'); }
+                }
+            });
+
+            // Form submission
             document.getElementById('site-settings-form')?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const form = e.target as HTMLFormElement;
@@ -685,15 +882,32 @@ export class AdminModule {
                 const data = {
                     site_name: formData.get('site_name'),
                     tagline: formData.get('tagline'),
-                    logo_url: formData.get('logo_url'),
+                    company_name: formData.get('company_name'),
+                    company_registration_number: formData.get('company_registration_number'),
+                    vat_number: formData.get('vat_number'),
+                    company_address: formData.get('company_address'),
+                    company_city: formData.get('company_city'),
+                    company_country: formData.get('company_country'),
+                    company_postal_code: formData.get('company_postal_code'),
+                    bank_name: formData.get('bank_name'),
+                    bank_iban: formData.get('bank_iban'),
+                    bank_swift: formData.get('bank_swift'),
                     contact_email: formData.get('contact_email'),
                     contact_phone: formData.get('contact_phone'),
-                    address: formData.get('address'),
+                    support_email: formData.get('support_email'),
+                    billing_email: formData.get('billing_email'),
+                    website_url: formData.get('website_url'),
                     social_links: {
                         facebook: formData.get('social_facebook'),
                         instagram: formData.get('social_instagram'),
                         twitter: formData.get('social_twitter'),
+                        linkedin: formData.get('social_linkedin'),
+                        youtube: formData.get('social_youtube'),
+                        tiktok: formData.get('social_tiktok'),
                     },
+                    terms_url: formData.get('terms_url'),
+                    privacy_url: formData.get('privacy_url'),
+                    refund_policy_url: formData.get('refund_policy_url'),
                     footer_text: formData.get('footer_text'),
                 };
 
@@ -701,7 +915,7 @@ export class AdminModule {
                     try {
                         await this.apiClient.post('/admin/site-settings', data);
                         alert('Site settings saved successfully');
-                    } catch (error) {
+                    } catch {
                         alert('Failed to save site settings');
                     }
                 }

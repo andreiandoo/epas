@@ -1010,18 +1010,46 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
+                // Site branding
                 'site_name' => $settings['site_name'] ?? $tenant->name,
                 'tagline' => $settings['tagline'] ?? '',
                 'logo_url' => $settings['logo_url'] ?? '',
                 'favicon_url' => $settings['favicon_url'] ?? '',
+
+                // Company details
+                'company_name' => $settings['company_name'] ?? '',
+                'company_registration_number' => $settings['company_registration_number'] ?? '',
+                'vat_number' => $settings['vat_number'] ?? '',
+                'company_address' => $settings['company_address'] ?? '',
+                'company_city' => $settings['company_city'] ?? '',
+                'company_country' => $settings['company_country'] ?? '',
+                'company_postal_code' => $settings['company_postal_code'] ?? '',
+                'bank_name' => $settings['bank_name'] ?? '',
+                'bank_iban' => $settings['bank_iban'] ?? '',
+                'bank_swift' => $settings['bank_swift'] ?? '',
+
+                // Contact info
                 'contact_email' => $settings['contact_email'] ?? $tenant->email,
                 'contact_phone' => $settings['contact_phone'] ?? '',
-                'address' => $settings['address'] ?? '',
+                'support_email' => $settings['support_email'] ?? '',
+                'billing_email' => $settings['billing_email'] ?? '',
+
+                // Public presence
+                'website_url' => $settings['website_url'] ?? '',
                 'social_links' => $settings['social_links'] ?? [
                     'facebook' => '',
                     'instagram' => '',
                     'twitter' => '',
+                    'linkedin' => '',
+                    'youtube' => '',
+                    'tiktok' => '',
                 ],
+
+                // Legal
+                'terms_url' => $settings['terms_url'] ?? '',
+                'privacy_url' => $settings['privacy_url'] ?? '',
+                'refund_policy_url' => $settings['refund_policy_url'] ?? '',
+
                 'footer_text' => $settings['footer_text'] ?? '',
             ],
         ]);
@@ -1035,17 +1063,43 @@ class AdminController extends Controller
         $tenant = $request->attributes->get('tenant');
 
         $validated = $request->validate([
+            // Site branding
             'site_name' => 'required|string|max:255',
             'tagline' => 'nullable|string|max:500',
-            'logo_url' => 'nullable|url|max:500',
-            'favicon_url' => 'nullable|url|max:500',
+
+            // Company details
+            'company_name' => 'nullable|string|max:255',
+            'company_registration_number' => 'nullable|string|max:100',
+            'vat_number' => 'nullable|string|max:50',
+            'company_address' => 'nullable|string|max:500',
+            'company_city' => 'nullable|string|max:100',
+            'company_country' => 'nullable|string|max:100',
+            'company_postal_code' => 'nullable|string|max:20',
+            'bank_name' => 'nullable|string|max:255',
+            'bank_iban' => 'nullable|string|max:50',
+            'bank_swift' => 'nullable|string|max:20',
+
+            // Contact info
             'contact_email' => 'nullable|email|max:255',
             'contact_phone' => 'nullable|string|max:50',
-            'address' => 'nullable|string|max:500',
+            'support_email' => 'nullable|email|max:255',
+            'billing_email' => 'nullable|email|max:255',
+
+            // Public presence
+            'website_url' => 'nullable|url|max:500',
             'social_links' => 'nullable|array',
             'social_links.facebook' => 'nullable|url',
             'social_links.instagram' => 'nullable|url',
             'social_links.twitter' => 'nullable|url',
+            'social_links.linkedin' => 'nullable|url',
+            'social_links.youtube' => 'nullable|url',
+            'social_links.tiktok' => 'nullable|url',
+
+            // Legal
+            'terms_url' => 'nullable|url|max:500',
+            'privacy_url' => 'nullable|url|max:500',
+            'refund_policy_url' => 'nullable|url|max:500',
+
             'footer_text' => 'nullable|string|max:1000',
         ]);
 
@@ -1059,6 +1113,69 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Site settings updated.',
+        ]);
+    }
+
+    /**
+     * Upload logo or favicon
+     */
+    public function uploadBrandAsset(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $validated = $request->validate([
+            'type' => 'required|in:logo,favicon',
+            'file' => 'required|image|mimes:png,jpg,jpeg,svg,ico|max:2048',
+        ]);
+
+        $type = $validated['type'];
+        $file = $request->file('file');
+
+        // Store in tenant-specific directory
+        $path = $file->store("tenants/{$tenant->id}/brand", 'public');
+        $url = asset('storage/' . $path);
+
+        // Update settings
+        $settings = $tenant->settings ?? [];
+        $settings[$type . '_url'] = $url;
+        $tenant->settings = $settings;
+        $tenant->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => ucfirst($type) . ' uploaded successfully.',
+            'url' => $url,
+        ]);
+    }
+
+    /**
+     * Delete logo or favicon
+     */
+    public function deleteBrandAsset(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $validated = $request->validate([
+            'type' => 'required|in:logo,favicon',
+        ]);
+
+        $type = $validated['type'];
+        $settings = $tenant->settings ?? [];
+
+        // Delete old file if exists
+        $oldUrl = $settings[$type . '_url'] ?? null;
+        if ($oldUrl) {
+            $oldPath = str_replace(asset('storage/'), '', $oldUrl);
+            \Storage::disk('public')->delete($oldPath);
+        }
+
+        $settings[$type . '_url'] = '';
+        $tenant->settings = $settings;
+        $tenant->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => ucfirst($type) . ' removed.',
         ]);
     }
 
