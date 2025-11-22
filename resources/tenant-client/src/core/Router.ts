@@ -18,6 +18,53 @@ export class Router {
         this.setupDefaultRoutes();
     }
 
+    // API helper method
+    private async fetchApi(endpoint: string, params: Record<string, string> = {}): Promise<any> {
+        const url = new URL(`${this.config.apiEndpoint}${endpoint}`);
+        url.searchParams.set('hostname', window.location.hostname);
+
+        Object.entries(params).forEach(([key, value]) => {
+            url.searchParams.set(key, value);
+        });
+
+        const response = await fetch(url.toString());
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status}`);
+        }
+        return response.json();
+    }
+
+    // Event card HTML generator
+    private renderEventCard(event: any): string {
+        const date = event.start_date ? new Date(event.start_date).toLocaleDateString('ro-RO', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        }) : '';
+
+        return `
+            <a href="/event/${event.slug}" class="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition group">
+                <div class="aspect-[16/9] bg-gray-200 relative overflow-hidden">
+                    ${event.image
+                        ? `<img src="${event.image}" alt="${event.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">`
+                        : `<div class="w-full h-full flex items-center justify-center text-gray-400">
+                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                          </div>`
+                    }
+                    ${event.is_sold_out ? `<span class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">SOLD OUT</span>` : ''}
+                </div>
+                <div class="p-4">
+                    <h3 class="font-semibold text-gray-900 mb-1 line-clamp-2">${event.title}</h3>
+                    <p class="text-sm text-gray-500 mb-2">${date}</p>
+                    ${event.venue ? `<p class="text-sm text-gray-600 mb-2">${event.venue.name}${event.venue.city ? `, ${event.venue.city}` : ''}</p>` : ''}
+                    ${event.price_from ? `<p class="text-sm font-semibold text-blue-600">de la ${event.price_from} €</p>` : ''}
+                </div>
+            </a>
+        `;
+    }
+
     init(): void {
         // Listen for popstate (browser back/forward)
         window.addEventListener('popstate', () => this.handleRoute());
@@ -102,7 +149,7 @@ export class Router {
     }
 
     // Route handlers
-    private renderHome(): void {
+    private async renderHome(): Promise<void> {
         const content = this.getContentElement();
         if (!content) return;
 
@@ -111,13 +158,13 @@ export class Router {
                 <!-- Hero Section -->
                 <div class="text-center mb-16">
                     <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                        Discover Amazing Events
+                        Descoperă evenimente unice
                     </h1>
                     <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-                        Find and book tickets for the best concerts, shows, and experiences
+                        Găsește și cumpără bilete pentru cele mai bune concerte, spectacole și experiențe
                     </p>
                     <a href="/events" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition">
-                        Browse Events
+                        Vezi toate evenimentele
                         <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
                         </svg>
@@ -126,7 +173,7 @@ export class Router {
 
                 <!-- Featured Events -->
                 <div class="mb-16">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Featured Events</h2>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Evenimente recomandate</h2>
                     <div id="featured-events" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <div class="animate-pulse bg-gray-200 rounded-lg h-64"></div>
                         <div class="animate-pulse bg-gray-200 rounded-lg h-64"></div>
@@ -136,7 +183,7 @@ export class Router {
 
                 <!-- Categories -->
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Browse by Category</h2>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Explorează pe categorii</h2>
                     <div id="categories" class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
                         <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
@@ -146,21 +193,66 @@ export class Router {
                 </div>
             </div>
         `;
+
+        // Fetch and render featured events
+        try {
+            const [featuredData, categoriesData] = await Promise.all([
+                this.fetchApi('/events/featured'),
+                this.fetchApi('/categories')
+            ]);
+
+            // Render featured events
+            const featuredEl = document.getElementById('featured-events');
+            if (featuredEl && featuredData.data) {
+                if (featuredData.data.length === 0) {
+                    featuredEl.innerHTML = `<p class="col-span-3 text-center text-gray-500">Nu există evenimente recomandate momentan.</p>`;
+                } else {
+                    featuredEl.innerHTML = featuredData.data.map((event: any) => this.renderEventCard(event)).join('');
+                }
+            }
+
+            // Render categories
+            const categoriesEl = document.getElementById('categories');
+            if (categoriesEl && categoriesData.data) {
+                if (categoriesData.data.length === 0) {
+                    categoriesEl.innerHTML = `<p class="col-span-4 text-center text-gray-500">Nu există categorii disponibile.</p>`;
+                } else {
+                    categoriesEl.innerHTML = categoriesData.data.map((cat: any) => `
+                        <a href="/events?category=${cat.slug}" class="block p-4 bg-white rounded-lg shadow hover:shadow-md transition text-center">
+                            <div class="text-blue-600 mb-2">
+                                <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <span class="font-medium text-gray-900">${cat.name}</span>
+                        </a>
+                    `).join('');
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load home data:', error);
+        }
     }
 
-    private renderEvents(): void {
+    private async renderEvents(): Promise<void> {
         const content = this.getContentElement();
         if (!content) return;
+
+        // Get query params
+        const urlParams = new URLSearchParams(window.location.search);
+        const currentCategory = urlParams.get('category') || '';
+        const currentSearch = urlParams.get('search') || '';
 
         content.innerHTML = `
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-                    <h1 class="text-3xl font-bold text-gray-900 mb-4 md:mb-0">Events</h1>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-4 md:mb-0">Evenimente</h1>
                     <div class="flex flex-col sm:flex-row gap-4">
-                        <input type="search" id="event-search" placeholder="Search events..."
+                        <input type="search" id="event-search" placeholder="Caută evenimente..."
+                               value="${currentSearch}"
                                class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         <select id="event-filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                            <option value="">All Categories</option>
+                            <option value="">Toate categoriile</option>
                         </select>
                     </div>
                 </div>
@@ -174,9 +266,80 @@ export class Router {
                 </div>
             </div>
         `;
+
+        // Fetch events and categories
+        try {
+            const params: Record<string, string> = {};
+            if (currentCategory) params.category = currentCategory;
+            if (currentSearch) params.search = currentSearch;
+
+            const [eventsData, categoriesData] = await Promise.all([
+                this.fetchApi('/events', params),
+                this.fetchApi('/categories')
+            ]);
+
+            // Populate category filter
+            const filterEl = document.getElementById('event-filter') as HTMLSelectElement;
+            if (filterEl && categoriesData.data) {
+                categoriesData.data.forEach((cat: any) => {
+                    const option = document.createElement('option');
+                    option.value = cat.slug;
+                    option.textContent = cat.name;
+                    if (cat.slug === currentCategory) option.selected = true;
+                    filterEl.appendChild(option);
+                });
+
+                // Category change handler
+                filterEl.addEventListener('change', () => {
+                    const params = new URLSearchParams();
+                    if (filterEl.value) params.set('category', filterEl.value);
+                    const searchInput = document.getElementById('event-search') as HTMLInputElement;
+                    if (searchInput?.value) params.set('search', searchInput.value);
+                    this.navigate('/events' + (params.toString() ? '?' + params.toString() : ''));
+                });
+            }
+
+            // Search handler
+            const searchEl = document.getElementById('event-search') as HTMLInputElement;
+            if (searchEl) {
+                let timeout: number;
+                searchEl.addEventListener('input', () => {
+                    clearTimeout(timeout);
+                    timeout = window.setTimeout(() => {
+                        const params = new URLSearchParams();
+                        if (searchEl.value) params.set('search', searchEl.value);
+                        if (filterEl?.value) params.set('category', filterEl.value);
+                        this.navigate('/events' + (params.toString() ? '?' + params.toString() : ''));
+                    }, 500);
+                });
+            }
+
+            // Render events
+            const eventsEl = document.getElementById('events-list');
+            if (eventsEl && eventsData.data) {
+                if (eventsData.data.length === 0) {
+                    eventsEl.innerHTML = `
+                        <div class="col-span-3 text-center py-12">
+                            <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <p class="text-gray-500">Nu au fost găsite evenimente.</p>
+                        </div>
+                    `;
+                } else {
+                    eventsEl.innerHTML = eventsData.data.map((event: any) => this.renderEventCard(event)).join('');
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load events:', error);
+            const eventsEl = document.getElementById('events-list');
+            if (eventsEl) {
+                eventsEl.innerHTML = `<p class="col-span-3 text-center text-red-500">Eroare la încărcarea evenimentelor.</p>`;
+            }
+        }
     }
 
-    private renderEventDetail(params: Record<string, string>): void {
+    private async renderEventDetail(params: Record<string, string>): Promise<void> {
         const content = this.getContentElement();
         if (!content) return;
 
@@ -186,9 +349,9 @@ export class Router {
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
-                    Back to Events
+                    Înapoi la evenimente
                 </a>
-                <div id="event-detail-${params.slug}" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div id="event-detail" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div class="lg:col-span-2">
                         <div class="animate-pulse bg-gray-200 rounded-lg h-96 mb-6"></div>
                         <div class="animate-pulse bg-gray-200 h-8 w-3/4 mb-4 rounded"></div>
@@ -197,7 +360,7 @@ export class Router {
                         <div class="animate-pulse bg-gray-200 h-4 w-2/3 rounded"></div>
                     </div>
                     <div class="lg:col-span-1">
-                        <div class="bg-white rounded-lg shadow-lg p-6 sticky top-4">
+                        <div class="bg-white rounded-lg shadow-lg p-6 sticky top-24">
                             <div class="animate-pulse bg-gray-200 h-6 w-1/2 mb-4 rounded"></div>
                             <div class="animate-pulse bg-gray-200 h-10 w-full mb-4 rounded"></div>
                             <div class="animate-pulse bg-gray-200 h-12 w-full rounded"></div>
@@ -206,6 +369,181 @@ export class Router {
                 </div>
             </div>
         `;
+
+        // Fetch event details
+        try {
+            const eventData = await this.fetchApi(`/events/${params.slug}`);
+            const event = eventData.data;
+
+            if (!event) {
+                this.render404();
+                return;
+            }
+
+            const date = event.start_date ? new Date(event.start_date).toLocaleDateString('ro-RO', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            }) : '';
+
+            const time = event.start_date ? new Date(event.start_date).toLocaleTimeString('ro-RO', {
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : '';
+
+            const eventDetailEl = document.getElementById('event-detail');
+            if (eventDetailEl) {
+                eventDetailEl.innerHTML = `
+                    <div class="lg:col-span-2">
+                        ${event.image
+                            ? `<img src="${event.image}" alt="${event.title}" class="w-full h-96 object-cover rounded-lg mb-6">`
+                            : `<div class="w-full h-96 bg-gray-200 rounded-lg mb-6 flex items-center justify-center">
+                                <svg class="w-24 h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                              </div>`
+                        }
+
+                        <h1 class="text-3xl font-bold text-gray-900 mb-4">${event.title}</h1>
+
+                        <div class="flex flex-wrap gap-4 mb-6 text-gray-600">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                ${date}
+                            </div>
+                            ${time ? `
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                ${time}
+                            </div>
+                            ` : ''}
+                            ${event.venue ? `
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                ${event.venue.name}${event.venue.city ? `, ${event.venue.city}` : ''}
+                            </div>
+                            ` : ''}
+                        </div>
+
+                        ${event.description ? `
+                        <div class="prose max-w-none mb-8">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Descriere</h2>
+                            <div class="text-gray-700">${event.description}</div>
+                        </div>
+                        ` : ''}
+
+                        ${event.artists && event.artists.length > 0 ? `
+                        <div class="mb-8">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Artiști</h2>
+                            <div class="flex flex-wrap gap-4">
+                                ${event.artists.map((artist: any) => `
+                                    <div class="flex items-center bg-gray-100 rounded-lg p-3">
+                                        ${artist.image
+                                            ? `<img src="${artist.image}" alt="${artist.name}" class="w-10 h-10 rounded-full object-cover mr-3">`
+                                            : `<div class="w-10 h-10 rounded-full bg-gray-300 mr-3"></div>`
+                                        }
+                                        <span class="font-medium">${artist.name}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-lg shadow-lg p-6 sticky top-24">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Bilete</h2>
+
+                            ${event.ticket_types && event.ticket_types.length > 0 ? `
+                                <div class="space-y-4 mb-6">
+                                    ${event.ticket_types.map((ticket: any) => `
+                                        <div class="border border-gray-200 rounded-lg p-4">
+                                            <div class="flex justify-between items-start mb-2">
+                                                <div>
+                                                    <h3 class="font-semibold text-gray-900">${ticket.name}</h3>
+                                                    ${ticket.description ? `<p class="text-sm text-gray-500">${ticket.description}</p>` : ''}
+                                                </div>
+                                                <span class="font-bold text-blue-600">${ticket.price} ${ticket.currency}</span>
+                                            </div>
+                                            <div class="flex items-center justify-between mt-3">
+                                                <select class="ticket-qty px-3 py-1 border border-gray-300 rounded text-sm" data-ticket-id="${ticket.id}" data-price="${ticket.price}">
+                                                    ${Array.from({length: Math.min(ticket.max_per_order || 10, ticket.available || 10) + 1}, (_, i) =>
+                                                        `<option value="${i}">${i}</option>`
+                                                    ).join('')}
+                                                </select>
+                                                <span class="text-sm text-gray-500">${ticket.available || 0} disponibile</span>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+
+                                <div class="border-t pt-4 mb-4">
+                                    <div class="flex justify-between items-center text-lg font-bold">
+                                        <span>Total</span>
+                                        <span id="cart-total-price">0 €</span>
+                                    </div>
+                                </div>
+
+                                <button id="add-to-cart-btn" class="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                                    Adaugă în coș
+                                </button>
+                            ` : `
+                                <p class="text-gray-500 text-center py-4">Nu sunt bilete disponibile.</p>
+                            `}
+                        </div>
+                    </div>
+                `;
+
+                // Setup ticket quantity handlers
+                this.setupTicketHandlers();
+            }
+        } catch (error) {
+            console.error('Failed to load event:', error);
+            this.render404();
+        }
+    }
+
+    private setupTicketHandlers(): void {
+        const qtySelects = document.querySelectorAll('.ticket-qty');
+        const totalEl = document.getElementById('cart-total-price');
+        const addBtn = document.getElementById('add-to-cart-btn');
+
+        const updateTotal = () => {
+            let total = 0;
+            let hasSelection = false;
+
+            qtySelects.forEach((select) => {
+                const qty = parseInt((select as HTMLSelectElement).value);
+                const price = parseFloat((select as HTMLSelectElement).dataset.price || '0');
+                if (qty > 0) {
+                    total += qty * price;
+                    hasSelection = true;
+                }
+            });
+
+            if (totalEl) totalEl.textContent = `${total.toFixed(2)} €`;
+            if (addBtn) (addBtn as HTMLButtonElement).disabled = !hasSelection;
+        };
+
+        qtySelects.forEach((select) => {
+            select.addEventListener('change', updateTotal);
+        });
+
+        if (addBtn) {
+            addBtn.addEventListener('click', () => {
+                // TODO: Add to cart functionality
+                alert('Funcționalitate în dezvoltare. Biletele vor fi adăugate în coș.');
+                this.navigate('/cart');
+            });
+        }
     }
 
     private renderCart(): void {
