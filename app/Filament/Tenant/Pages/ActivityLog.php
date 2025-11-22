@@ -2,12 +2,13 @@
 
 namespace App\Filament\Tenant\Pages;
 
+use BackedEnum;
 use Filament\Pages\Page;
 use Spatie\Activitylog\Models\Activity;
 
 class ActivityLog extends Page
 {
-    protected static $navigationIcon = 'heroicon-o-clock';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-clock';
     protected static ?string $navigationLabel = 'Activity Log';
     protected static ?int $navigationSort = 6;
     protected static string $view = 'filament.tenant.pages.activity-log';
