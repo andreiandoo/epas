@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 153454,
+        'name'      => 'Beau Bassin',
+        'latitude'  => '-20.22538700',
+        'longitude' => '57.47145500',
+    ],
+    [
+        'id'        => 67832,
+        'name'      => 'Beau Bassin-Rose Hill',
+        'latitude'  => '-20.23325000',
+        'longitude' => '57.46609000',
+    ],
+    [
+        'id'        => 153916,
+        'name'      => 'Belle Terre',
+        'latitude'  => '-20.26948370',
+        'longitude' => '57.51655530',
+    ],
+    [
+        'id'        => 153911,
+        'name'      => 'Camp Fouqueraux',
+        'latitude'  => '-20.28568630',
+        'longitude' => '57.51718270',
+    ],
+    [
+        'id'        => 153914,
+        'name'      => 'Chebel',
+        'latitude'  => '-20.21373190',
+        'longitude' => '57.46075450',
+    ],
+    [
+        'id'        => 153913,
+        'name'      => 'Coromandel',
+        'latitude'  => '-20.19522920',
+        'longitude' => '57.44565340',
+    ],
+    [
+        'id'        => 67854,
+        'name'      => 'Curepipe',
+        'latitude'  => '-20.31628000',
+        'longitude' => '57.52594000',
+    ],
+    [
+        'id'        => 153456,
+        'name'      => 'Eau Coulee',
+        'latitude'  => '-20.30336600',
+        'longitude' => '57.52778800',
+    ],
+    [
+        'id'        => 67857,
+        'name'      => 'Ebene',
+        'latitude'  => '-20.24494000',
+        'longitude' => '57.49163000',
+    ],
+    [
+        'id'        => 153455,
+        'name'      => 'Floreal',
+        'latitude'  => '-20.31121400',
+        'longitude' => '57.50726300',
+    ],
+    [
+        'id'        => 153457,
+        'name'      => 'Forest Side',
+        'latitude'  => '-20.32952100',
+        'longitude' => '57.53898100',
+    ],
+    [
+        'id'        => 153912,
+        'name'      => 'Glen Park',
+        'latitude'  => '-20.32440680',
+        'longitude' => '57.47531880',
+    ],
+    [
+        'id'        => 153915,
+        'name'      => 'Henrietta',
+        'latitude'  => '-20.27200480',
+        'longitude' => '57.52898870',
+    ],
+    [
+        'id'        => 153918,
+        'name'      => 'Hermitage',
+        'latitude'  => '-20.27685080',
+        'longitude' => '57.53471370',
+    ],
+    [
+        'id'        => 153917,
+        'name'      => 'Highlands',
+        'latitude'  => '-20.27827480',
+        'longitude' => '57.51350410',
+    ],
+    [
+        'id'        => 67878,
+        'name'      => 'Midlands',
+        'latitude'  => '-20.31907000',
+        'longitude' => '57.57016000',
+    ],
+    [
+        'id'        => 153910,
+        'name'      => 'Phoenix',
+        'latitude'  => '-20.28584460',
+        'longitude' => '57.50291860',
+    ],
+    [
+        'id'        => 67900,
+        'name'      => 'Quatre Bornes',
+        'latitude'  => '-20.26381000',
+        'longitude' => '57.47910000',
+    ],
+    [
+        'id'        => 153453,
+        'name'      => 'Rose Hill',
+        'latitude'  => '-20.24347800',
+        'longitude' => '57.46985500',
+    ],
+    [
+        'id'        => 67920,
+        'name'      => 'Vacoas',
+        'latitude'  => '-20.29806000',
+        'longitude' => '57.47833000',
+    ],
+];

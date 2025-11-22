@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 53426,
+        'name'      => 'Agua Blanca',
+        'latitude'  => '14.50000000',
+        'longitude' => '-89.65000000',
+    ],
+    [
+        'id'        => 53432,
+        'name'      => 'Asunción Mita',
+        'latitude'  => '14.33083000',
+        'longitude' => '-89.71083000',
+    ],
+    [
+        'id'        => 53433,
+        'name'      => 'Atescatempa',
+        'latitude'  => '14.17444000',
+        'longitude' => '-89.74250000',
+    ],
+    [
+        'id'        => 53466,
+        'name'      => 'Comapa',
+        'latitude'  => '14.11667000',
+        'longitude' => '-89.91667000',
+    ],
+    [
+        'id'        => 53473,
+        'name'      => 'Conguaco',
+        'latitude'  => '14.04417000',
+        'longitude' => '-90.03111000',
+    ],
+    [
+        'id'        => 53480,
+        'name'      => 'El Adelanto',
+        'latitude'  => '14.16667000',
+        'longitude' => '-89.83333000',
+    ],
+    [
+        'id'        => 53486,
+        'name'      => 'El Progreso',
+        'latitude'  => '14.35000000',
+        'longitude' => '-89.85000000',
+    ],
+    [
+        'id'        => 53511,
+        'name'      => 'Jalpatagua',
+        'latitude'  => '14.14167000',
+        'longitude' => '-90.00861000',
+    ],
+    [
+        'id'        => 53512,
+        'name'      => 'Jerez',
+        'latitude'  => '14.10000000',
+        'longitude' => '-89.75000000',
+    ],
+    [
+        'id'        => 53516,
+        'name'      => 'Jutiapa',
+        'latitude'  => '14.29167000',
+        'longitude' => '-89.89583000',
+    ],
+    [
+        'id'        => 53539,
+        'name'      => 'Moyuta',
+        'latitude'  => '14.03861000',
+        'longitude' => '-90.08083000',
+    ],
+    [
+        'id'        => 53543,
+        'name'      => 'Municipio de Asunción Mita',
+        'latitude'  => '14.30330000',
+        'longitude' => '-89.67623000',
+    ],
+    [
+        'id'        => 53622,
+        'name'      => 'Pasaco',
+        'latitude'  => '13.97722000',
+        'longitude' => '-90.20639000',
+    ],
+    [
+        'id'        => 53637,
+        'name'      => 'Quesada',
+        'latitude'  => '14.27028000',
+        'longitude' => '-90.04028000',
+    ],
+    [
+        'id'        => 53682,
+        'name'      => 'San José Acatempa',
+        'latitude'  => '14.26528000',
+        'longitude' => '-90.12694000',
+    ],
+    [
+        'id'        => 53750,
+        'name'      => 'Santa Catarina Mita',
+        'latitude'  => '14.45000000',
+        'longitude' => '-89.75000000',
+    ],
+    [
+        'id'        => 53801,
+        'name'      => 'Yupiltepeque',
+        'latitude'  => '14.20000000',
+        'longitude' => '-89.78333000',
+    ],
+    [
+        'id'        => 53803,
+        'name'      => 'Zapotitlán',
+        'latitude'  => '14.13333000',
+        'longitude' => '-89.83333000',
+    ],
+];

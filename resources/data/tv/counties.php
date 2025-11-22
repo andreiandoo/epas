@@ -1,0 +1,11 @@
+<?php
+return [
+    'Funafuti',
+    'Nanumanga',
+    'Nanumea',
+    'Niutao Island Council',
+    'Nui',
+    'Nukufetau',
+    'Nukulaelae',
+    'Vaitupu',
+];

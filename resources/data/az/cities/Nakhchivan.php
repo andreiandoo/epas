@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 8068,
+        'name'      => 'Cahri',
+        'latitude'  => '39.34837000',
+        'longitude' => '45.41557000',
+    ],
+    [
+        'id'        => 8206,
+        'name'      => 'Çalxanqala',
+        'latitude'  => '39.44167000',
+        'longitude' => '45.28333000',
+    ],
+    [
+        'id'        => 8071,
+        'name'      => 'Culfa',
+        'latitude'  => '38.95397000',
+        'longitude' => '45.62961000',
+    ],
+    [
+        'id'        => 8072,
+        'name'      => 'Deste',
+        'latitude'  => '38.88375000',
+        'longitude' => '45.90963000',
+    ],
+    [
+        'id'        => 8091,
+        'name'      => 'Heydarabad',
+        'latitude'  => '39.72286000',
+        'longitude' => '44.84846000',
+    ],
+    [
+        'id'        => 8097,
+        'name'      => 'Julfa Rayon',
+        'latitude'  => '39.16667000',
+        'longitude' => '45.66667000',
+    ],
+    [
+        'id'        => 8129,
+        'name'      => 'Oğlanqala',
+        'latitude'  => '39.58694000',
+        'longitude' => '45.04611000',
+    ],
+    [
+        'id'        => 8126,
+        'name'      => 'Ordubad',
+        'latitude'  => '38.90961000',
+        'longitude' => '46.02274000',
+    ],
+    [
+        'id'        => 8127,
+        'name'      => 'Ordubad Rayon',
+        'latitude'  => '39.08333000',
+        'longitude' => '45.91667000',
+    ],
+    [
+        'id'        => 8157,
+        'name'      => 'Qıvraq',
+        'latitude'  => '39.39939000',
+        'longitude' => '45.11513000',
+    ],
+    [
+        'id'        => 8211,
+        'name'      => 'Şahbuz',
+        'latitude'  => '39.40722000',
+        'longitude' => '45.57389000',
+    ],
+    [
+        'id'        => 8170,
+        'name'      => 'Sedarak',
+        'latitude'  => '39.71427000',
+        'longitude' => '44.88455000',
+    ],
+    [
+        'id'        => 8172,
+        'name'      => 'Shahbuz Rayon',
+        'latitude'  => '39.41667000',
+        'longitude' => '45.58333000',
+    ],
+    [
+        'id'        => 8175,
+        'name'      => 'Sharur City',
+        'latitude'  => '39.55298000',
+        'longitude' => '44.97993000',
+    ],
+    [
+        'id'        => 8179,
+        'name'      => 'Sumbatan-diza',
+        'latitude'  => '38.94804000',
+        'longitude' => '45.82572000',
+    ],
+    [
+        'id'        => 8181,
+        'name'      => 'Tazakend',
+        'latitude'  => '39.15459000',
+        'longitude' => '45.44282000',
+    ],
+    [
+        'id'        => 8195,
+        'name'      => 'Yaycı',
+        'latitude'  => '38.94052000',
+        'longitude' => '45.73244000',
+    ],
+];

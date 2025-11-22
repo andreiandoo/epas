@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 17354,
+        'name'      => 'Sibiti',
+        'latitude'  => '-3.68192000',
+        'longitude' => '13.34985000',
+    ],
+];

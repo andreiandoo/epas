@@ -1,0 +1,20 @@
+<?php
+return [
+    'Agder',
+    'Akershus',
+    'Buskerud',
+    'Finnmark',
+    'Innlandet',
+    'Jan Mayen',
+    'Møre og Romsdal',
+    'Nordland',
+    'Oslo',
+    'Østfold',
+    'Rogaland',
+    'Svalbard',
+    'Telemark',
+    'Troms',
+    'Trøndelag',
+    'Vestfold',
+    'Vestland',
+];

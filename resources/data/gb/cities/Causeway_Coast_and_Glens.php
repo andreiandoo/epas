@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48349,
+        'name'      => 'Ballintoy Harbour',
+        'latitude'  => '55.24422000',
+        'longitude' => '-6.36919000',
+    ],
+    [
+        'id'        => 48351,
+        'name'      => 'Ballycastle',
+        'latitude'  => '55.20444000',
+        'longitude' => '-6.24298000',
+    ],
+    [
+        'id'        => 48356,
+        'name'      => 'Ballymoney',
+        'latitude'  => '55.07080000',
+        'longitude' => '-6.51009000',
+    ],
+    [
+        'id'        => 48358,
+        'name'      => 'Ballypatrick',
+        'latitude'  => '55.18112000',
+        'longitude' => '-6.15020000',
+    ],
+    [
+        'id'        => 48802,
+        'name'      => 'Bushmills',
+        'latitude'  => '55.20493000',
+        'longitude' => '-6.51918000',
+    ],
+    [
+        'id'        => 48885,
+        'name'      => 'Castlerock',
+        'latitude'  => '55.15000000',
+        'longitude' => '-6.78333000',
+    ],
+    [
+        'id'        => 48896,
+        'name'      => 'Causeway Coast and Glens',
+        'latitude'  => '55.06014000',
+        'longitude' => '-6.59081000',
+    ],
+    [
+        'id'        => 49067,
+        'name'      => 'Coleraine',
+        'latitude'  => '55.13333000',
+        'longitude' => '-6.66667000',
+    ],
+    [
+        'id'        => 49354,
+        'name'      => 'Dungiven',
+        'latitude'  => '54.93333000',
+        'longitude' => '-6.91667000',
+    ],
+    [
+        'id'        => 49359,
+        'name'      => 'Dunloy',
+        'latitude'  => '55.01100000',
+        'longitude' => '-6.41087000',
+    ],
+    [
+        'id'        => 49632,
+        'name'      => 'Garvagh',
+        'latitude'  => '54.98333000',
+        'longitude' => '-6.66667000',
+    ],
+    [
+        'id'        => 50152,
+        'name'      => 'Kilrea',
+        'latitude'  => '54.95091000',
+        'longitude' => '-6.55695000',
+    ],
+    [
+        'id'        => 50303,
+        'name'      => 'Limavady',
+        'latitude'  => '55.05045000',
+        'longitude' => '-6.95074000',
+    ],
+    [
+        'id'        => 50466,
+        'name'      => 'Maghera',
+        'latitude'  => '54.84390000',
+        'longitude' => '-6.67145000',
+    ],
+    [
+        'id'        => 50959,
+        'name'      => 'Portglenone',
+        'latitude'  => '54.87147000',
+        'longitude' => '-6.47146000',
+    ],
+    [
+        'id'        => 50968,
+        'name'      => 'Portrush',
+        'latitude'  => '55.19592000',
+        'longitude' => '-6.64930000',
+    ],
+    [
+        'id'        => 50973,
+        'name'      => 'Portstewart',
+        'latitude'  => '55.18132000',
+        'longitude' => '-6.71402000',
+    ],
+];

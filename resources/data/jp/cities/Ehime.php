@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 63529,
+        'name'      => 'Hōjō',
+        'latitude'  => '33.97661000',
+        'longitude' => '132.77767000',
+    ],
+    [
+        'id'        => 63560,
+        'name'      => 'Imabari-shi',
+        'latitude'  => '34.06667000',
+        'longitude' => '132.99791000',
+    ],
+    [
+        'id'        => 63636,
+        'name'      => 'Iyo',
+        'latitude'  => '33.75139000',
+        'longitude' => '132.70139000',
+    ],
+    [
+        'id'        => 63637,
+        'name'      => 'Iyo-shi',
+        'latitude'  => '33.68493000',
+        'longitude' => '132.68909000',
+    ],
+    [
+        'id'        => 63774,
+        'name'      => 'Kawanoechō',
+        'latitude'  => '34.01654000',
+        'longitude' => '133.57844000',
+    ],
+    [
+        'id'        => 63783,
+        'name'      => 'Kihoku-chō',
+        'latitude'  => '33.25592000',
+        'longitude' => '132.68343000',
+    ],
+    [
+        'id'        => 63925,
+        'name'      => 'Masaki-chō',
+        'latitude'  => '33.78757000',
+        'longitude' => '132.71124000',
+    ],
+    [
+        'id'        => 63941,
+        'name'      => 'Matsuyama-shi',
+        'latitude'  => '33.83568000',
+        'longitude' => '132.76224000',
+    ],
+    [
+        'id'        => 64131,
+        'name'      => 'Niihama',
+        'latitude'  => '33.96047000',
+        'longitude' => '133.30522000',
+    ],
+    [
+        'id'        => 64132,
+        'name'      => 'Niihama-shi',
+        'latitude'  => '33.90670000',
+        'longitude' => '133.33250000',
+    ],
+    [
+        'id'        => 64770,
+        'name'      => 'Ōzu',
+        'latitude'  => '33.50000000',
+        'longitude' => '132.55000000',
+    ],
+    [
+        'id'        => 64771,
+        'name'      => 'Ōzu-shi',
+        'latitude'  => '33.50619000',
+        'longitude' => '132.54430000',
+    ],
+    [
+        'id'        => 64245,
+        'name'      => 'Saijō',
+        'latitude'  => '33.91667000',
+        'longitude' => '133.18333000',
+    ],
+    [
+        'id'        => 64246,
+        'name'      => 'Saijō-shi',
+        'latitude'  => '33.86100000',
+        'longitude' => '133.10832000',
+    ],
+    [
+        'id'        => 64297,
+        'name'      => 'Seiyo-shi',
+        'latitude'  => '33.39408000',
+        'longitude' => '132.63262000',
+    ],
+    [
+        'id'        => 64322,
+        'name'      => 'Shikoku-chūō Shi',
+        'latitude'  => '33.93538000',
+        'longitude' => '133.53622000',
+    ],
+    [
+        'id'        => 64575,
+        'name'      => 'Tōon-shi',
+        'latitude'  => '33.79099000',
+        'longitude' => '132.87234000',
+    ],
+    [
+        'id'        => 64613,
+        'name'      => 'Uwajima',
+        'latitude'  => '33.22375000',
+        'longitude' => '132.56001000',
+    ],
+    [
+        'id'        => 64614,
+        'name'      => 'Uwajima-shi',
+        'latitude'  => '33.22325000',
+        'longitude' => '132.56069000',
+    ],
+    [
+        'id'        => 64667,
+        'name'      => 'Yawatahama-shi',
+        'latitude'  => '33.46302000',
+        'longitude' => '132.42336000',
+    ],
+];

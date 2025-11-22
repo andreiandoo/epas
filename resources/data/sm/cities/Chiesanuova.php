@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 104699,
+        'name'      => 'Poggio di Chiesanuova',
+        'latitude'  => '43.90451000',
+        'longitude' => '12.42142000',
+    ],
+];

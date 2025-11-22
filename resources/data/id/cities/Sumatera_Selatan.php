@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 56212,
+        'name'      => 'Baturaja',
+        'latitude'  => '-4.12891000',
+        'longitude' => '104.16695000',
+    ],
+    [
+        'id'        => 56402,
+        'name'      => 'Kabupaten Empat Lawang',
+        'latitude'  => '3.22667000',
+        'longitude' => '99.09256000',
+    ],
+    [
+        'id'        => 56542,
+        'name'      => 'Kabupaten Muara Enim',
+        'latitude'  => '-4.23270000',
+        'longitude' => '103.61410000',
+    ],
+    [
+        'id'        => 56548,
+        'name'      => 'Kabupaten Musi Banyuasin',
+        'latitude'  => '-2.41667000',
+        'longitude' => '103.75000000',
+    ],
+    [
+        'id'        => 56549,
+        'name'      => 'Kabupaten Musi Rawas',
+        'latitude'  => '-3.08333000',
+        'longitude' => '103.20000000',
+    ],
+    [
+        'id'        => 56550,
+        'name'      => 'Kabupaten Musi Rawas Utara',
+        'latitude'  => '-2.48533000',
+        'longitude' => '103.29346000',
+    ],
+    [
+        'id'        => 56563,
+        'name'      => 'Kabupaten Ogan Ilir',
+        'latitude'  => '-3.43186000',
+        'longitude' => '104.62727000',
+    ],
+    [
+        'id'        => 56564,
+        'name'      => 'Kabupaten Ogan Komering Ilir',
+        'latitude'  => '-3.36667000',
+        'longitude' => '105.36667000',
+    ],
+    [
+        'id'        => 56565,
+        'name'      => 'Kabupaten Ogan Komering Ulu',
+        'latitude'  => '-4.13333000',
+        'longitude' => '104.03333000',
+    ],
+    [
+        'id'        => 56566,
+        'name'      => 'Kabupaten Ogan Komering Ulu Selatan',
+        'latitude'  => '-4.65728000',
+        'longitude' => '104.00659000',
+    ],
+    [
+        'id'        => 56567,
+        'name'      => 'Kabupaten Ogan Komering Ulu Timur',
+        'latitude'  => '-3.85679000',
+        'longitude' => '104.75209000',
+    ],
+    [
+        'id'        => 56589,
+        'name'      => 'Kabupaten Penukal Abab Lematang Ilir',
+        'latitude'  => '-3.21342000',
+        'longitude' => '104.08722000',
+    ],
+    [
+        'id'        => 56833,
+        'name'      => 'Lahat',
+        'latitude'  => '-3.78514000',
+        'longitude' => '103.54279000',
+    ],
+    [
+        'id'        => 56834,
+        'name'      => 'Lahat Regency',
+        'latitude'  => '-3.78640000',
+        'longitude' => '103.54280000',
+    ],
+    [
+        'id'        => 56847,
+        'name'      => 'Lubuklinggau',
+        'latitude'  => '-3.29450000',
+        'longitude' => '102.86140000',
+    ],
+    [
+        'id'        => 56895,
+        'name'      => 'Pagar Alam',
+        'latitude'  => '-4.02506000',
+        'longitude' => '103.24694000',
+    ],
+    [
+        'id'        => 56898,
+        'name'      => 'Palembang',
+        'latitude'  => '-2.91673000',
+        'longitude' => '104.74580000',
+    ],
+    [
+        'id'        => 56939,
+        'name'      => 'Prabumulih',
+        'latitude'  => '-3.43447000',
+        'longitude' => '104.23056000',
+    ],
+    [
+        'id'        => 57020,
+        'name'      => 'Tanjungagung',
+        'latitude'  => '-3.93728000',
+        'longitude' => '103.80465000',
+    ],
+];

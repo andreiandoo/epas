@@ -1,0 +1,10 @@
+name,slug,description,parent_slug
+Concert,concert,Live music performances,
+Festival,festival,Multi-day music and arts events,
+Theater,theater,Theatrical performances,
+Rock Concert,rock-concert,Rock music concerts,concert
+Pop Concert,pop-concert,Pop music concerts,concert
+Jazz Festival,jazz-festival,Jazz music festivals,festival
+Music Festival,music-festival,General music festivals,festival
+Drama,drama,Drama theater performances,theater
+Musical,musical,Musical theater performances,theater

@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 21799,
+        'name'      => 'Ángeles',
+        'latitude'  => '9.99591000',
+        'longitude' => '-84.05126000',
+    ],
+    [
+        'id'        => 21649,
+        'name'      => 'Barva',
+        'latitude'  => '10.08333000',
+        'longitude' => '-84.10000000',
+    ],
+    [
+        'id'        => 21652,
+        'name'      => 'Belén',
+        'latitude'  => '9.98333000',
+        'longitude' => '-84.16667000',
+    ],
+    [
+        'id'        => 21679,
+        'name'      => 'Flores',
+        'latitude'  => '10.00000000',
+        'longitude' => '-84.15000000',
+    ],
+    [
+        'id'        => 21690,
+        'name'      => 'Heredia',
+        'latitude'  => '10.00236000',
+        'longitude' => '-84.11651000',
+    ],
+    [
+        'id'        => 21696,
+        'name'      => 'La Asunción',
+        'latitude'  => '9.97961000',
+        'longitude' => '-84.17281000',
+    ],
+    [
+        'id'        => 21704,
+        'name'      => 'Llorente',
+        'latitude'  => '9.99844000',
+        'longitude' => '-84.15448000',
+    ],
+    [
+        'id'        => 21708,
+        'name'      => 'Mercedes',
+        'latitude'  => '10.00695000',
+        'longitude' => '-84.13396000',
+    ],
+    [
+        'id'        => 21746,
+        'name'      => 'San Antonio',
+        'latitude'  => '9.98333000',
+        'longitude' => '-84.18333000',
+    ],
+    [
+        'id'        => 21750,
+        'name'      => 'San Francisco',
+        'latitude'  => '9.99299000',
+        'longitude' => '-84.12934000',
+    ],
+    [
+        'id'        => 21753,
+        'name'      => 'San Isidro',
+        'latitude'  => '10.03333000',
+        'longitude' => '-84.03333000',
+    ],
+    [
+        'id'        => 21754,
+        'name'      => 'San Josecito',
+        'latitude'  => '10.01667000',
+        'longitude' => '-84.10000000',
+    ],
+    [
+        'id'        => 21763,
+        'name'      => 'San Pablo',
+        'latitude'  => '10.00000000',
+        'longitude' => '-84.08333000',
+    ],
+    [
+        'id'        => 21767,
+        'name'      => 'San Rafael',
+        'latitude'  => '10.05000000',
+        'longitude' => '-84.06667000',
+    ],
+    [
+        'id'        => 21775,
+        'name'      => 'Santa Bárbara',
+        'latitude'  => '10.08333000',
+        'longitude' => '-84.15000000',
+    ],
+    [
+        'id'        => 21779,
+        'name'      => 'Santo Domingo',
+        'latitude'  => '10.06389000',
+        'longitude' => '-84.15499000',
+    ],
+    [
+        'id'        => 21780,
+        'name'      => 'Sarapiquí',
+        'latitude'  => '10.50000000',
+        'longitude' => '-84.00000000',
+    ],
+];

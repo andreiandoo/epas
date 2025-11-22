@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 107250,
+        'name'      => 'Aşkale',
+        'latitude'  => '39.92083000',
+        'longitude' => '40.69500000',
+    ],
+    [
+        'id'        => 107237,
+        'name'      => 'Aziziye',
+        'latitude'  => '39.94028000',
+        'longitude' => '41.11153000',
+    ],
+    [
+        'id'        => 108786,
+        'name'      => 'Çat',
+        'latitude'  => '39.61055000',
+        'longitude' => '40.97851000',
+    ],
+    [
+        'id'        => 107842,
+        'name'      => 'Hınıs',
+        'latitude'  => '39.35766000',
+        'longitude' => '41.69253000',
+    ],
+    [
+        'id'        => 107836,
+        'name'      => 'Horasan',
+        'latitude'  => '40.03885000',
+        'longitude' => '42.16366000',
+    ],
+    [
+        'id'        => 108918,
+        'name'      => 'İspir',
+        'latitude'  => '40.47981000',
+        'longitude' => '40.99373000',
+    ],
+    [
+        'id'        => 107921,
+        'name'      => 'Karaçoban',
+        'latitude'  => '39.34364000',
+        'longitude' => '42.09918000',
+    ],
+    [
+        'id'        => 107919,
+        'name'      => 'Karayazı',
+        'latitude'  => '39.69604000',
+        'longitude' => '42.14277000',
+    ],
+    [
+        'id'        => 108076,
+        'name'      => 'Köprüköy',
+        'latitude'  => '39.97178000',
+        'longitude' => '41.86804000',
+    ],
+    [
+        'id'        => 108241,
+        'name'      => 'Narman',
+        'latitude'  => '40.34449000',
+        'longitude' => '41.86088000',
+    ],
+    [
+        'id'        => 108265,
+        'name'      => 'Oltu',
+        'latitude'  => '40.53945000',
+        'longitude' => '41.98722000',
+    ],
+    [
+        'id'        => 108267,
+        'name'      => 'Olur',
+        'latitude'  => '40.82165000',
+        'longitude' => '42.13055000',
+    ],
+    [
+        'id'        => 108307,
+        'name'      => 'Palandöken',
+        'latitude'  => '39.85560000',
+        'longitude' => '41.27975000',
+    ],
+    [
+        'id'        => 108314,
+        'name'      => 'Pasinler',
+        'latitude'  => '39.97975000',
+        'longitude' => '41.66997000',
+    ],
+    [
+        'id'        => 108331,
+        'name'      => 'Pazaryolu',
+        'latitude'  => '40.41142000',
+        'longitude' => '40.76780000',
+    ],
+    [
+        'id'        => 108950,
+        'name'      => 'Şenkaya',
+        'latitude'  => '40.55652000',
+        'longitude' => '42.34266000',
+    ],
+    [
+        'id'        => 108562,
+        'name'      => 'Tekman',
+        'latitude'  => '39.64111000',
+        'longitude' => '41.50542000',
+    ],
+    [
+        'id'        => 108589,
+        'name'      => 'Tortum',
+        'latitude'  => '40.28892000',
+        'longitude' => '41.54096000',
+    ],
+    [
+        'id'        => 108636,
+        'name'      => 'Uzundere',
+        'latitude'  => '40.53218000',
+        'longitude' => '41.53832000',
+    ],
+    [
+        'id'        => 108663,
+        'name'      => 'Yakutiye',
+        'latitude'  => '40.00132000',
+        'longitude' => '41.30997000',
+    ],
+];

@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 105252,
+        'name'      => 'Amphoe Bo Phloi',
+        'latitude'  => '14.38723000',
+        'longitude' => '99.44990000',
+    ],
+    [
+        'id'        => 105319,
+        'name'      => 'Amphoe Dan Makham Tia',
+        'latitude'  => '13.83422000',
+        'longitude' => '99.34125000',
+    ],
+    [
+        'id'        => 105353,
+        'name'      => 'Amphoe Huai Krachao',
+        'latitude'  => '14.34056000',
+        'longitude' => '99.67633000',
+    ],
+    [
+        'id'        => 105484,
+        'name'      => 'Amphoe Lao Khwan',
+        'latitude'  => '14.59488000',
+        'longitude' => '99.68338000',
+    ],
+    [
+        'id'        => 105544,
+        'name'      => 'Amphoe Mueang Kanchanaburi',
+        'latitude'  => '14.06987000',
+        'longitude' => '99.32769000',
+    ],
+    [
+        'id'        => 105677,
+        'name'      => 'Amphoe Nong Prue',
+        'latitude'  => '14.67801000',
+        'longitude' => '99.41075000',
+    ],
+    [
+        'id'        => 105730,
+        'name'      => 'Amphoe Phanom Thuan',
+        'latitude'  => '14.15941000',
+        'longitude' => '99.66904000',
+    ],
+    [
+        'id'        => 105826,
+        'name'      => 'Amphoe Sai Yok',
+        'latitude'  => '14.25652000',
+        'longitude' => '98.93372000',
+    ],
+    [
+        'id'        => 106188,
+        'name'      => 'Amphoe Sangkhla Buri',
+        'latitude'  => '15.19337000',
+        'longitude' => '98.52791000',
+    ],
+    [
+        'id'        => 106225,
+        'name'      => 'Amphoe Si Sawat',
+        'latitude'  => '14.67254000',
+        'longitude' => '99.12992000',
+    ],
+    [
+        'id'        => 106278,
+        'name'      => 'Amphoe Tha Maka',
+        'latitude'  => '13.94665000',
+        'longitude' => '99.77900000',
+    ],
+    [
+        'id'        => 106279,
+        'name'      => 'Amphoe Tha Muang',
+        'latitude'  => '13.90947000',
+        'longitude' => '99.61540000',
+    ],
+    [
+        'id'        => 106309,
+        'name'      => 'Amphoe Thong Pha Phum',
+        'latitude'  => '14.83277000',
+        'longitude' => '98.69233000',
+    ],
+    [
+        'id'        => 106452,
+        'name'      => 'Bo Phloi',
+        'latitude'  => '14.32517000',
+        'longitude' => '99.51467000',
+    ],
+    [
+        'id'        => 106510,
+        'name'      => 'Kanchanaburi',
+        'latitude'  => '14.00412000',
+        'longitude' => '99.54832000',
+    ],
+    [
+        'id'        => 106624,
+        'name'      => 'Phanom Thuan',
+        'latitude'  => '14.13031000',
+        'longitude' => '99.69858000',
+    ],
+    [
+        'id'        => 106685,
+        'name'      => 'Sangkhla Buri',
+        'latitude'  => '15.15553000',
+        'longitude' => '98.45361000',
+    ],
+    [
+        'id'        => 106722,
+        'name'      => 'Tha Maka',
+        'latitude'  => '13.90000000',
+        'longitude' => '99.76667000',
+    ],
+    [
+        'id'        => 106723,
+        'name'      => 'Tha Muang',
+        'latitude'  => '13.96118000',
+        'longitude' => '99.64122000',
+    ],
+];

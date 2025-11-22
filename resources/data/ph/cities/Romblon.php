@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 154790,
+        'name'      => 'Alcantara',
+        'latitude'  => '12.28437610',
+        'longitude' => '121.97911810',
+    ],
+    [
+        'id'        => 154791,
+        'name'      => 'Banton',
+        'latitude'  => '12.95464490',
+        'longitude' => '121.82514510',
+    ],
+    [
+        'id'        => 82004,
+        'name'      => 'Cajidiocan',
+        'latitude'  => '12.40582770',
+        'longitude' => '122.63342860',
+    ],
+    [
+        'id'        => 154792,
+        'name'      => 'Calatrava',
+        'latitude'  => '12.63340510',
+        'longitude' => '121.98544590',
+    ],
+    [
+        'id'        => 154793,
+        'name'      => 'Concepcion',
+        'latitude'  => '12.92496680',
+        'longitude' => '121.66804690',
+    ],
+    [
+        'id'        => 82289,
+        'name'      => 'Corcuera',
+        'latitude'  => '12.80927000',
+        'longitude' => '122.01285030',
+    ],
+    [
+        'id'        => 82538,
+        'name'      => 'Ferrol',
+        'latitude'  => '12.34162780',
+        'longitude' => '121.90707460',
+    ],
+    [
+        'id'        => 83171,
+        'name'      => 'Looc',
+        'latitude'  => '12.26346170',
+        'longitude' => '121.91256550',
+    ],
+    [
+        'id'        => 83334,
+        'name'      => 'Magdiwang',
+        'latitude'  => '12.46606190',
+        'longitude' => '122.42987720',
+    ],
+    [
+        'id'        => 83845,
+        'name'      => 'Odiongan',
+        'latitude'  => '12.39759900',
+        'longitude' => '121.92472470',
+    ],
+    [
+        'id'        => 84352,
+        'name'      => 'Romblon',
+        'latitude'  => '12.57434520',
+        'longitude' => '122.19706140',
+    ],
+    [
+        'id'        => 154794,
+        'name'      => 'San Agustin',
+        'latitude'  => '12.55756780',
+        'longitude' => '122.03517860',
+    ],
+    [
+        'id'        => 154795,
+        'name'      => 'San Andres',
+        'latitude'  => '12.54035430',
+        'longitude' => '121.96214290',
+    ],
+    [
+        'id'        => 154796,
+        'name'      => 'San Fernando',
+        'latitude'  => '12.35757380',
+        'longitude' => '122.38115360',
+    ],
+    [
+        'id'        => 154797,
+        'name'      => 'San Jose',
+        'latitude'  => '12.06445510',
+        'longitude' => '121.89554110',
+    ],
+    [
+        'id'        => 154798,
+        'name'      => 'Santa Fe',
+        'latitude'  => '12.15366320',
+        'longitude' => '121.93132960',
+    ],
+    [
+        'id'        => 154799,
+        'name'      => 'Santa Maria',
+        'latitude'  => '12.40456960',
+        'longitude' => '122.04353480',
+    ],
+];

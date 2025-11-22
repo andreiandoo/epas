@@ -1,0 +1,17 @@
+<?php
+return [
+    'Al-Hasakah',
+    'Al-Raqqah',
+    'Aleppo',
+    'As-Suwayda',
+    'Damascus',
+    'Daraa',
+    'Deir ez-Zor',
+    'Hama',
+    'Homs',
+    'Idlib',
+    'Latakia',
+    'Quneitra',
+    'Rif Dimashq',
+    'Tartus',
+];
