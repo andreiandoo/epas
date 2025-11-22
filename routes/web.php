@@ -153,6 +153,15 @@ Route::get('/admin/logout', function () {
     return redirect('/');
 })->name('filament.admin.logout.get');
 
+// Legal pages
+Route::get('/termeni-si-conditii', function () {
+    return view('public.legal.terms');
+})->name('legal.terms');
+
+Route::get('/politica-confidentialitate', function () {
+    return view('public.legal.privacy');
+})->name('legal.privacy');
+
 // Admin Domain Management Routes
 Route::middleware(['web'])->prefix('admin')->group(function () {
     Route::post('/tenants/{tenantId}/domains', [DomainController::class, 'store'])->name('admin.tenants.domains.store');
