@@ -4,9 +4,10 @@ namespace App\Filament\Resources\Docs;
 
 use App\Filament\Resources\Docs\DocCategoryResource\Pages;
 use App\Models\DocCategory;
+use BackedEnum;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 
@@ -14,17 +15,17 @@ class DocCategoryResource extends Resource
 {
     protected static ?string $model = DocCategory::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-folder';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-folder';
 
-    protected static $navigationGroup = 'Documentation';
+    protected static \UnitEnum|string|null $navigationGroup = 'Documentation';
 
     protected static ?int $navigationSort = 1;
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\Section::make('Category Details')
                     ->schema([

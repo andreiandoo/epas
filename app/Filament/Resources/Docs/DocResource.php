@@ -5,9 +5,10 @@ namespace App\Filament\Resources\Docs;
 use App\Filament\Resources\Docs\DocResource\Pages;
 use App\Models\Doc;
 use App\Models\DocCategory;
+use BackedEnum;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -16,17 +17,17 @@ class DocResource extends Resource
 {
     protected static ?string $model = Doc::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static $navigationGroup = 'Documentation';
+    protected static \UnitEnum|string|null $navigationGroup = 'Documentation';
 
     protected static ?int $navigationSort = 2;
 
     protected static ?string $recordTitleAttribute = 'title';
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\Group::make()
                     ->schema([
