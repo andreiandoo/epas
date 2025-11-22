@@ -18,7 +18,7 @@ class DocResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
-    protected static ?string $navigationGroup = 'Documentation';
+    protected static $navigationGroup = 'Documentation';
 
     protected static ?int $navigationSort = 2;
 
