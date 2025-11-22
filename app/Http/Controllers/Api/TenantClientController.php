@@ -102,7 +102,6 @@ class TenantClientController extends Controller
         $offset = $request->query('offset', 0);
 
         $query = Event::where('tenant_id', $tenantId)
-            ->where('is_active', true)
             ->whereNull('cancelled_at')
             ->where(function ($q) {
                 $q->where('end_date', '>=', now())
@@ -111,6 +110,11 @@ class TenantClientController extends Controller
                          ->where('start_date', '>=', now());
                   });
             });
+
+        // Check if is_active column exists
+        if (\Schema::hasColumn('events', 'is_active')) {
+            $query->where('is_active', true);
+        }
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -157,7 +161,6 @@ class TenantClientController extends Controller
         $limit = $request->query('limit', 6);
 
         $query = Event::where('tenant_id', $tenantId)
-            ->where('is_active', true)
             ->whereNull('cancelled_at')
             ->where(function ($q) {
                 $q->where('end_date', '>=', now())
@@ -166,6 +169,11 @@ class TenantClientController extends Controller
                          ->where('start_date', '>=', now());
                   });
             });
+
+        // Check if is_active column exists
+        if (\Schema::hasColumn('events', 'is_active')) {
+            $query->where('is_active', true);
+        }
 
         // Check if is_featured column exists, otherwise just return latest events
         if (\Schema::hasColumn('events', 'is_featured')) {
@@ -224,8 +232,10 @@ class TenantClientController extends Controller
 
         // Get event types that have events for this tenant
         $types = EventType::whereHas('events', function ($q) use ($tenantId) {
-            $q->where('tenant_id', $tenantId)
-              ->where('is_active', true);
+            $q->where('tenant_id', $tenantId);
+            if (\Schema::hasColumn('events', 'is_active')) {
+                $q->where('is_active', true);
+            }
         })->get();
 
         return response()->json([
