@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Docs;
 use App\Filament\Resources\Docs\DocCategoryResource\Pages;
 use App\Models\DocCategory;
 use BackedEnum;
+use Filament\Forms\Components as FC;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components as SC;
 use Filament\Schemas\Schema;
@@ -29,39 +30,39 @@ class DocCategoryResource extends Resource
             ->schema([
                 SC\Section::make('Category Details')
                     ->schema([
-                        SC\TextInput::make('name')
+                        FC\TextInput::make('name')
                             ->required()
                             ->maxLength(255)
                             ->live(onBlur: true)
                             ->afterStateUpdated(fn ($state, callable $set) =>
                                 $set('slug', \Str::slug($state))),
 
-                        SC\TextInput::make('slug')
+                        FC\TextInput::make('slug')
                             ->required()
                             ->maxLength(255)
                             ->unique(ignoreRecord: true),
 
-                        SC\Textarea::make('description')
+                        FC\Textarea::make('description')
                             ->rows(3)
                             ->maxLength(500),
 
                         SC\Grid::make(2)
                             ->schema([
-                                SC\TextInput::make('icon')
+                                FC\TextInput::make('icon')
                                     ->placeholder('heroicon-o-document')
                                     ->helperText('Heroicon name'),
 
-                                SC\ColorPicker::make('color')
+                                FC\ColorPicker::make('color')
                                     ->default('#6366f1'),
                             ]),
 
                         SC\Grid::make(2)
                             ->schema([
-                                SC\TextInput::make('order')
+                                FC\TextInput::make('order')
                                     ->numeric()
                                     ->default(0),
 
-                                SC\Toggle::make('is_public')
+                                FC\Toggle::make('is_public')
                                     ->label('Public')
                                     ->helperText('Make this category visible to the public'),
                             ]),

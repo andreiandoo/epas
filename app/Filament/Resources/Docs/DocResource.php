@@ -6,6 +6,7 @@ use App\Filament\Resources\Docs\DocResource\Pages;
 use App\Models\Doc;
 use App\Models\DocCategory;
 use BackedEnum;
+use Filament\Forms\Components as FC;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components as SC;
 use Filament\Schemas\Schema;
@@ -33,24 +34,24 @@ class DocResource extends Resource
                     ->schema([
                         SC\Section::make('Content')
                             ->schema([
-                                SC\TextInput::make('title')
+                                FC\TextInput::make('title')
                                     ->required()
                                     ->maxLength(255)
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(fn ($state, callable $set) =>
                                         $set('slug', \Str::slug($state))),
 
-                                SC\TextInput::make('slug')
+                                FC\TextInput::make('slug')
                                     ->required()
                                     ->maxLength(255)
                                     ->unique(ignoreRecord: true),
 
-                                SC\Textarea::make('excerpt')
+                                FC\Textarea::make('excerpt')
                                     ->rows(2)
                                     ->maxLength(500)
                                     ->helperText('Brief description shown in listings'),
 
-                                SC\RichEditor::make('content')
+                                FC\RichEditor::make('content')
                                     ->required()
                                     ->columnSpanFull()
                                     ->fileAttachmentsDisk('public')
@@ -75,13 +76,13 @@ class DocResource extends Resource
 
                         SC\Section::make('Metadata')
                             ->schema([
-                                SC\TagsInput::make('tags')
+                                FC\TagsInput::make('tags')
                                     ->suggestions([
                                         'api', 'component', 'guide', 'tutorial',
                                         'configuration', 'setup', 'integration',
                                     ]),
 
-                                SC\KeyValue::make('metadata')
+                                FC\KeyValue::make('metadata')
                                     ->keyLabel('Property')
                                     ->valueLabel('Value')
                                     ->addable()
@@ -96,51 +97,51 @@ class DocResource extends Resource
                     ->schema([
                         SC\Section::make('Status')
                             ->schema([
-                                SC\Select::make('status')
+                                FC\Select::make('status')
                                     ->options(Doc::STATUSES)
                                     ->default('draft')
                                     ->required(),
 
-                                SC\Select::make('doc_category_id')
+                                FC\Select::make('doc_category_id')
                                     ->label('Category')
                                     ->options(DocCategory::pluck('name', 'id'))
                                     ->searchable()
                                     ->required(),
 
-                                SC\Select::make('type')
+                                FC\Select::make('type')
                                     ->options(Doc::TYPES)
                                     ->default('general')
                                     ->required(),
 
-                                SC\Select::make('parent_id')
+                                FC\Select::make('parent_id')
                                     ->label('Parent Document')
                                     ->options(Doc::pluck('title', 'id'))
                                     ->searchable()
                                     ->nullable(),
 
-                                SC\TextInput::make('version')
+                                FC\TextInput::make('version')
                                     ->default('1.0.0')
                                     ->required(),
                             ]),
 
                         SC\Section::make('Visibility')
                             ->schema([
-                                SC\Toggle::make('is_public')
+                                FC\Toggle::make('is_public')
                                     ->label('Public')
                                     ->helperText('Make visible to public'),
 
-                                SC\Toggle::make('is_featured')
+                                FC\Toggle::make('is_featured')
                                     ->label('Featured')
                                     ->helperText('Show on documentation homepage'),
 
-                                SC\TextInput::make('order')
+                                FC\TextInput::make('order')
                                     ->numeric()
                                     ->default(0),
 
-                                SC\TextInput::make('author')
+                                FC\TextInput::make('author')
                                     ->maxLength(255),
 
-                                SC\DateTimePicker::make('published_at')
+                                FC\DateTimePicker::make('published_at')
                                     ->label('Publish Date'),
                             ]),
                     ])
