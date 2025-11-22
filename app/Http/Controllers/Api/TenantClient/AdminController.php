@@ -874,4 +874,407 @@ class AdminController extends Controller
             ],
         ];
     }
+
+    /**
+     * Get payment processor settings
+     */
+    public function paymentSettings(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+        $settings = $tenant->settings['payments'] ?? [];
+
+        $processors = [
+            [
+                'id' => 'stripe',
+                'name' => 'Stripe',
+                'description' => 'Accept credit cards globally',
+                'logo' => '/images/processors/stripe.svg',
+                'fields' => [
+                    ['key' => 'public_key', 'label' => 'Publishable Key', 'type' => 'text', 'required' => true],
+                    ['key' => 'secret_key', 'label' => 'Secret Key', 'type' => 'password', 'required' => true],
+                    ['key' => 'webhook_secret', 'label' => 'Webhook Secret', 'type' => 'password', 'required' => false],
+                ],
+                'enabled' => !empty($settings['stripe']['enabled']),
+                'configured' => !empty($settings['stripe']['public_key']),
+                'values' => [
+                    'public_key' => $settings['stripe']['public_key'] ?? '',
+                    'secret_key' => !empty($settings['stripe']['secret_key']) ? '••••••••' : '',
+                    'webhook_secret' => !empty($settings['stripe']['webhook_secret']) ? '••••••••' : '',
+                ],
+            ],
+            [
+                'id' => 'netopia',
+                'name' => 'Netopia',
+                'description' => 'Popular Romanian payment processor',
+                'logo' => '/images/processors/netopia.svg',
+                'fields' => [
+                    ['key' => 'merchant_id', 'label' => 'Merchant ID', 'type' => 'text', 'required' => true],
+                    ['key' => 'public_key', 'label' => 'Public Key (PEM)', 'type' => 'textarea', 'required' => true],
+                    ['key' => 'private_key', 'label' => 'Private Key (PEM)', 'type' => 'textarea', 'required' => true],
+                ],
+                'enabled' => !empty($settings['netopia']['enabled']),
+                'configured' => !empty($settings['netopia']['merchant_id']),
+                'values' => [
+                    'merchant_id' => $settings['netopia']['merchant_id'] ?? '',
+                    'public_key' => !empty($settings['netopia']['public_key']) ? '[CONFIGURED]' : '',
+                    'private_key' => !empty($settings['netopia']['private_key']) ? '[CONFIGURED]' : '',
+                ],
+            ],
+            [
+                'id' => 'euplatesc',
+                'name' => 'EuPlatesc',
+                'description' => 'Romanian card payments',
+                'logo' => '/images/processors/euplatesc.svg',
+                'fields' => [
+                    ['key' => 'merchant_id', 'label' => 'Merchant ID', 'type' => 'text', 'required' => true],
+                    ['key' => 'secret_key', 'label' => 'Secret Key', 'type' => 'password', 'required' => true],
+                ],
+                'enabled' => !empty($settings['euplatesc']['enabled']),
+                'configured' => !empty($settings['euplatesc']['merchant_id']),
+                'values' => [
+                    'merchant_id' => $settings['euplatesc']['merchant_id'] ?? '',
+                    'secret_key' => !empty($settings['euplatesc']['secret_key']) ? '••••••••' : '',
+                ],
+            ],
+            [
+                'id' => 'payu',
+                'name' => 'PayU',
+                'description' => 'Multi-currency payment gateway',
+                'logo' => '/images/processors/payu.svg',
+                'fields' => [
+                    ['key' => 'merchant_id', 'label' => 'Merchant ID', 'type' => 'text', 'required' => true],
+                    ['key' => 'secret_key', 'label' => 'Secret Key', 'type' => 'password', 'required' => true],
+                ],
+                'enabled' => !empty($settings['payu']['enabled']),
+                'configured' => !empty($settings['payu']['merchant_id']),
+                'values' => [
+                    'merchant_id' => $settings['payu']['merchant_id'] ?? '',
+                    'secret_key' => !empty($settings['payu']['secret_key']) ? '••••••••' : '',
+                ],
+            ],
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => ['processors' => $processors],
+        ]);
+    }
+
+    /**
+     * Update payment processor settings
+     */
+    public function updatePaymentSettings(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $validated = $request->validate([
+            'processor' => 'required|string|in:stripe,netopia,euplatesc,payu',
+            'enabled' => 'required|boolean',
+            'settings' => 'required|array',
+        ]);
+
+        $settings = $tenant->settings ?? [];
+        $payments = $settings['payments'] ?? [];
+
+        $processorSettings = $validated['settings'];
+        $processorSettings['enabled'] = $validated['enabled'];
+
+        // Don't overwrite existing secrets with masked values
+        if (isset($payments[$validated['processor']])) {
+            foreach ($processorSettings as $key => $value) {
+                if ($value === '••••••••' || $value === '[CONFIGURED]') {
+                    $processorSettings[$key] = $payments[$validated['processor']][$key] ?? '';
+                }
+            }
+        }
+
+        $payments[$validated['processor']] = $processorSettings;
+        $settings['payments'] = $payments;
+        $tenant->settings = $settings;
+        $tenant->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment processor settings updated.',
+        ]);
+    }
+
+    /**
+     * Get site settings (name, tagline, etc.)
+     */
+    public function siteSettings(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+        $settings = $tenant->settings ?? [];
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'site_name' => $settings['site_name'] ?? $tenant->name,
+                'tagline' => $settings['tagline'] ?? '',
+                'logo_url' => $settings['logo_url'] ?? '',
+                'favicon_url' => $settings['favicon_url'] ?? '',
+                'contact_email' => $settings['contact_email'] ?? $tenant->email,
+                'contact_phone' => $settings['contact_phone'] ?? '',
+                'address' => $settings['address'] ?? '',
+                'social_links' => $settings['social_links'] ?? [
+                    'facebook' => '',
+                    'instagram' => '',
+                    'twitter' => '',
+                ],
+                'footer_text' => $settings['footer_text'] ?? '',
+            ],
+        ]);
+    }
+
+    /**
+     * Update site settings
+     */
+    public function updateSiteSettings(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $validated = $request->validate([
+            'site_name' => 'required|string|max:255',
+            'tagline' => 'nullable|string|max:500',
+            'logo_url' => 'nullable|url|max:500',
+            'favicon_url' => 'nullable|url|max:500',
+            'contact_email' => 'nullable|email|max:255',
+            'contact_phone' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:500',
+            'social_links' => 'nullable|array',
+            'social_links.facebook' => 'nullable|url',
+            'social_links.instagram' => 'nullable|url',
+            'social_links.twitter' => 'nullable|url',
+            'footer_text' => 'nullable|string|max:1000',
+        ]);
+
+        $settings = $tenant->settings ?? [];
+        foreach ($validated as $key => $value) {
+            $settings[$key] = $value;
+        }
+        $tenant->settings = $settings;
+        $tenant->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Site settings updated.',
+        ]);
+    }
+
+    /**
+     * Get tenant's subscribed microservices
+     */
+    public function microservices(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        // Get tenant's subscribed microservices
+        $subscriptions = $tenant->subscriptions()
+            ->with('microservice')
+            ->where('status', 'active')
+            ->get();
+
+        $microservices = $subscriptions->map(function ($sub) use ($tenant) {
+            $ms = $sub->microservice;
+            $config = $tenant->settings['microservices'][$ms->id] ?? [];
+
+            return [
+                'id' => $ms->id,
+                'name' => $ms->name,
+                'slug' => $ms->slug,
+                'description' => $ms->description,
+                'icon' => $ms->icon ?? 'puzzle',
+                'configured' => !empty($config),
+                'config_fields' => $this->getMicroserviceConfigFields($ms->slug),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => ['microservices' => $microservices],
+        ]);
+    }
+
+    /**
+     * Get microservice configuration
+     */
+    public function microserviceConfig(Request $request, int $microserviceId): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        // Verify tenant has this microservice
+        $subscription = $tenant->subscriptions()
+            ->with('microservice')
+            ->where('microservice_id', $microserviceId)
+            ->where('status', 'active')
+            ->first();
+
+        if (!$subscription) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Microservice not found or not subscribed.',
+            ], 404);
+        }
+
+        $ms = $subscription->microservice;
+        $config = $tenant->settings['microservices'][$ms->id] ?? [];
+        $fields = $this->getMicroserviceConfigFields($ms->slug);
+
+        // Populate field values
+        foreach ($fields as &$field) {
+            $value = $config[$field['key']] ?? '';
+            // Mask sensitive fields
+            if ($field['type'] === 'password' && !empty($value)) {
+                $value = '••••••••';
+            }
+            $field['value'] = $value;
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'microservice' => [
+                    'id' => $ms->id,
+                    'name' => $ms->name,
+                    'slug' => $ms->slug,
+                    'description' => $ms->description,
+                ],
+                'fields' => $fields,
+                'config' => $config,
+            ],
+        ]);
+    }
+
+    /**
+     * Update microservice configuration
+     */
+    public function updateMicroserviceConfig(Request $request, int $microserviceId): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        // Verify tenant has this microservice
+        $subscription = $tenant->subscriptions()
+            ->where('microservice_id', $microserviceId)
+            ->where('status', 'active')
+            ->first();
+
+        if (!$subscription) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Microservice not found or not subscribed.',
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'config' => 'required|array',
+        ]);
+
+        $settings = $tenant->settings ?? [];
+        $microservices = $settings['microservices'] ?? [];
+
+        // Don't overwrite masked values
+        $existingConfig = $microservices[$microserviceId] ?? [];
+        $newConfig = $validated['config'];
+
+        foreach ($newConfig as $key => $value) {
+            if ($value === '••••••••' && isset($existingConfig[$key])) {
+                $newConfig[$key] = $existingConfig[$key];
+            }
+        }
+
+        $microservices[$microserviceId] = $newConfig;
+        $settings['microservices'] = $microservices;
+        $tenant->settings = $settings;
+        $tenant->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Microservice configuration updated.',
+        ]);
+    }
+
+    /**
+     * Get configuration fields for a microservice
+     */
+    protected function getMicroserviceConfigFields(string $slug): array
+    {
+        $fieldDefinitions = [
+            'tracking-pixels' => [
+                ['key' => 'facebook_pixel_id', 'label' => 'Facebook Pixel ID', 'type' => 'text', 'required' => false, 'description' => 'Your Facebook Pixel ID for conversion tracking'],
+                ['key' => 'google_analytics_id', 'label' => 'Google Analytics ID', 'type' => 'text', 'required' => false, 'description' => 'GA4 Measurement ID (G-XXXXXXXXXX)'],
+                ['key' => 'google_tag_manager_id', 'label' => 'Google Tag Manager ID', 'type' => 'text', 'required' => false, 'description' => 'GTM Container ID (GTM-XXXXXXX)'],
+                ['key' => 'tiktok_pixel_id', 'label' => 'TikTok Pixel ID', 'type' => 'text', 'required' => false],
+                ['key' => 'custom_head_scripts', 'label' => 'Custom Head Scripts', 'type' => 'textarea', 'required' => false, 'description' => 'Additional scripts to add to <head>'],
+            ],
+            'analytics' => [
+                ['key' => 'mixpanel_token', 'label' => 'Mixpanel Token', 'type' => 'text', 'required' => false],
+                ['key' => 'amplitude_api_key', 'label' => 'Amplitude API Key', 'type' => 'password', 'required' => false],
+                ['key' => 'hotjar_site_id', 'label' => 'Hotjar Site ID', 'type' => 'text', 'required' => false],
+            ],
+            'whatsapp' => [
+                ['key' => 'phone_number', 'label' => 'WhatsApp Business Number', 'type' => 'text', 'required' => true, 'description' => 'Include country code (e.g., +40712345678)'],
+                ['key' => 'default_message', 'label' => 'Default Message', 'type' => 'textarea', 'required' => false, 'description' => 'Pre-filled message when customer clicks WhatsApp button'],
+                ['key' => 'business_account_id', 'label' => 'Business Account ID', 'type' => 'text', 'required' => false],
+                ['key' => 'api_token', 'label' => 'API Token', 'type' => 'password', 'required' => false, 'description' => 'For automated messages'],
+            ],
+            'affiliates' => [
+                ['key' => 'commission_rate', 'label' => 'Default Commission Rate (%)', 'type' => 'number', 'required' => true],
+                ['key' => 'cookie_duration', 'label' => 'Cookie Duration (days)', 'type' => 'number', 'required' => true],
+                ['key' => 'min_payout', 'label' => 'Minimum Payout Amount', 'type' => 'number', 'required' => true],
+                ['key' => 'payout_method', 'label' => 'Payout Method', 'type' => 'select', 'options' => ['bank_transfer', 'paypal'], 'required' => true],
+            ],
+            'crm' => [
+                ['key' => 'hubspot_api_key', 'label' => 'HubSpot API Key', 'type' => 'password', 'required' => false],
+                ['key' => 'salesforce_client_id', 'label' => 'Salesforce Client ID', 'type' => 'text', 'required' => false],
+                ['key' => 'salesforce_client_secret', 'label' => 'Salesforce Client Secret', 'type' => 'password', 'required' => false],
+                ['key' => 'mailchimp_api_key', 'label' => 'Mailchimp API Key', 'type' => 'password', 'required' => false],
+                ['key' => 'mailchimp_list_id', 'label' => 'Mailchimp List ID', 'type' => 'text', 'required' => false],
+            ],
+            'mobile-wallet' => [
+                ['key' => 'apple_pass_team_id', 'label' => 'Apple Team ID', 'type' => 'text', 'required' => false],
+                ['key' => 'apple_pass_certificate', 'label' => 'Apple Pass Certificate', 'type' => 'textarea', 'required' => false],
+                ['key' => 'google_pay_issuer_id', 'label' => 'Google Pay Issuer ID', 'type' => 'text', 'required' => false],
+                ['key' => 'google_pay_service_account', 'label' => 'Google Service Account JSON', 'type' => 'textarea', 'required' => false],
+            ],
+            'ticket-insurance' => [
+                ['key' => 'provider', 'label' => 'Insurance Provider', 'type' => 'select', 'options' => ['refundable', 'allianz', 'custom'], 'required' => true],
+                ['key' => 'api_key', 'label' => 'Provider API Key', 'type' => 'password', 'required' => false],
+                ['key' => 'default_rate', 'label' => 'Default Rate (%)', 'type' => 'number', 'required' => true],
+            ],
+            'invitations' => [
+                ['key' => 'smtp_host', 'label' => 'SMTP Host', 'type' => 'text', 'required' => false],
+                ['key' => 'smtp_port', 'label' => 'SMTP Port', 'type' => 'number', 'required' => false],
+                ['key' => 'smtp_username', 'label' => 'SMTP Username', 'type' => 'text', 'required' => false],
+                ['key' => 'smtp_password', 'label' => 'SMTP Password', 'type' => 'password', 'required' => false],
+                ['key' => 'from_email', 'label' => 'From Email', 'type' => 'email', 'required' => false],
+                ['key' => 'from_name', 'label' => 'From Name', 'type' => 'text', 'required' => false],
+            ],
+            'seating' => [
+                ['key' => 'auto_release_minutes', 'label' => 'Auto-release Reserved Seats (minutes)', 'type' => 'number', 'required' => false],
+                ['key' => 'allow_seat_selection', 'label' => 'Allow Seat Selection', 'type' => 'checkbox', 'required' => false],
+            ],
+            'door-sales' => [
+                ['key' => 'enable_cash', 'label' => 'Enable Cash Payments', 'type' => 'checkbox', 'required' => false],
+                ['key' => 'enable_card', 'label' => 'Enable Card Payments', 'type' => 'checkbox', 'required' => false],
+                ['key' => 'receipt_printer', 'label' => 'Receipt Printer Type', 'type' => 'select', 'options' => ['thermal', 'standard', 'none'], 'required' => false],
+            ],
+            'group-booking' => [
+                ['key' => 'min_group_size', 'label' => 'Minimum Group Size', 'type' => 'number', 'required' => true],
+                ['key' => 'max_group_size', 'label' => 'Maximum Group Size', 'type' => 'number', 'required' => true],
+                ['key' => 'discount_rate', 'label' => 'Group Discount (%)', 'type' => 'number', 'required' => false],
+            ],
+            'ticket-customizer' => [
+                ['key' => 'allow_custom_text', 'label' => 'Allow Custom Text', 'type' => 'checkbox', 'required' => false],
+                ['key' => 'allow_custom_image', 'label' => 'Allow Custom Image', 'type' => 'checkbox', 'required' => false],
+                ['key' => 'max_text_length', 'label' => 'Max Text Length', 'type' => 'number', 'required' => false],
+            ],
+            'promo-codes' => [
+                ['key' => 'allow_stacking', 'label' => 'Allow Code Stacking', 'type' => 'checkbox', 'required' => false],
+                ['key' => 'max_uses_per_customer', 'label' => 'Max Uses Per Customer', 'type' => 'number', 'required' => false],
+            ],
+        ];
+
+        return $fieldDefinitions[$slug] ?? [];
+    }
 }

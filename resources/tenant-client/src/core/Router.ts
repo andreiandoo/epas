@@ -51,6 +51,9 @@ export class Router {
         this.addRoute('/admin/pricing', this.renderAdminPricing.bind(this));
         this.addRoute('/admin/templates', this.renderAdminTemplates.bind(this));
         this.addRoute('/admin/settings', this.renderAdminSettings.bind(this));
+        this.addRoute('/admin/payments', this.renderAdminPayments.bind(this));
+        this.addRoute('/admin/services', this.renderAdminServices.bind(this));
+        this.addRoute('/admin/services/:id', this.renderAdminServiceConfig.bind(this));
     }
 
     addRoute(path: string, handler: RouteHandler): void {
@@ -368,6 +371,43 @@ export class Router {
                 <h1>Site Templates</h1>
                 <p style="color: #6b7280; margin-bottom: 1rem;">Choose a template for your public website</p>
                 <div id="admin-templates-list">Loading...</div>
+            </div>
+        `;
+    }
+
+    private renderAdminPayments(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="tixello-admin-payments">
+                <h1>Payment Processors</h1>
+                <p style="color: #6b7280; margin-bottom: 1rem;">Configure your payment gateway API keys</p>
+                <div id="admin-payments-list">Loading...</div>
+            </div>
+        `;
+    }
+
+    private renderAdminServices(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="tixello-admin-services">
+                <h1>Services</h1>
+                <p style="color: #6b7280; margin-bottom: 1rem;">Configure your subscribed microservices</p>
+                <div id="admin-services-list">Loading...</div>
+            </div>
+        `;
+    }
+
+    private renderAdminServiceConfig(params: Record<string, string>): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="tixello-admin-service-config">
+                <div id="admin-service-config-${params.id}">Loading...</div>
             </div>
         `;
     }

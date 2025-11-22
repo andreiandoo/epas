@@ -20,7 +20,10 @@ export class AdminModule {
         this.eventBus.on('route:admin-seating', () => this.loadSeating());
         this.eventBus.on('route:admin-pricing', () => this.loadPricing());
         this.eventBus.on('route:admin-templates', () => this.loadTemplates());
-        this.eventBus.on('route:admin-settings', () => this.loadSettings());
+        this.eventBus.on('route:admin-settings', () => this.loadSiteSettings());
+        this.eventBus.on('route:admin-payments', () => this.loadPayments());
+        this.eventBus.on('route:admin-services', () => this.loadServices());
+        this.eventBus.on('route:admin-service-config', (id: string) => this.loadServiceConfig(id));
 
         console.log('Admin module initialized');
     }
@@ -510,6 +513,320 @@ export class AdminModule {
             });
         } catch (error) {
             container.innerHTML = '<p class="text-red-500">Failed to load templates.</p>';
+        }
+    }
+
+    async loadPayments(): Promise<void> {
+        if (!this.apiClient) return;
+
+        const container = document.getElementById('admin-payments-list');
+        if (!container) return;
+
+        try {
+            const response = await this.apiClient.get('/admin/payments');
+            const { processors } = response.data.data;
+
+            container.innerHTML = `
+                <div style="display: grid; gap: 1.5rem;">
+                    ${processors.map((processor: any) => `
+                        <div class="tixello-card processor-card" data-processor-id="${processor.id}">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                                <div>
+                                    <h3 style="font-weight: 600; font-size: 1.25rem;">${processor.name}</h3>
+                                    <p style="font-size: 0.875rem; color: #6b7280;">${processor.description}</p>
+                                </div>
+                                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <input type="checkbox" class="processor-enabled" data-id="${processor.id}" ${processor.enabled ? 'checked' : ''}>
+                                    <span>Enabled</span>
+                                </label>
+                            </div>
+                            <div class="processor-fields" style="display: ${processor.enabled ? 'block' : 'none'};">
+                                ${processor.fields.map((field: any) => `
+                                    <div style="margin-bottom: 1rem;">
+                                        <label style="display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.25rem;">
+                                            ${field.label} ${field.required ? '<span style="color: #ef4444;">*</span>' : ''}
+                                        </label>
+                                        ${field.type === 'textarea' ?
+                                            `<textarea class="processor-field" data-processor="${processor.id}" data-key="${field.key}"
+                                                style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; min-height: 80px;"
+                                            >${processor.values[field.key] || ''}</textarea>` :
+                                            `<input type="${field.type === 'password' ? 'password' : 'text'}"
+                                                class="processor-field" data-processor="${processor.id}" data-key="${field.key}"
+                                                value="${processor.values[field.key] || ''}"
+                                                style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">`
+                                        }
+                                    </div>
+                                `).join('')}
+                                <button class="save-processor-btn tixello-btn" data-id="${processor.id}">Save Settings</button>
+                                ${processor.configured ? '<span style="margin-left: 1rem; color: #059669;">✓ Configured</span>' : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            // Bind enable/disable toggles
+            document.querySelectorAll('.processor-enabled').forEach(checkbox => {
+                checkbox.addEventListener('change', (e) => {
+                    const processorId = (e.target as HTMLInputElement).getAttribute('data-id');
+                    const card = document.querySelector(`[data-processor-id="${processorId}"]`);
+                    const fieldsDiv = card?.querySelector('.processor-fields') as HTMLElement;
+                    if (fieldsDiv) {
+                        fieldsDiv.style.display = (e.target as HTMLInputElement).checked ? 'block' : 'none';
+                    }
+                });
+            });
+
+            // Bind save buttons
+            document.querySelectorAll('.save-processor-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const processorId = (e.target as HTMLElement).getAttribute('data-id');
+                    const card = document.querySelector(`[data-processor-id="${processorId}"]`);
+                    const enabled = (card?.querySelector('.processor-enabled') as HTMLInputElement)?.checked;
+                    const settings: Record<string, string> = {};
+
+                    card?.querySelectorAll('.processor-field').forEach((field: Element) => {
+                        const key = field.getAttribute('data-key');
+                        if (key) {
+                            settings[key] = (field as HTMLInputElement | HTMLTextAreaElement).value;
+                        }
+                    });
+
+                    if (this.apiClient) {
+                        try {
+                            await this.apiClient.post('/admin/payments', {
+                                processor: processorId,
+                                enabled,
+                                settings
+                            });
+                            alert('Payment settings saved successfully');
+                            this.loadPayments();
+                        } catch (error) {
+                            alert('Failed to save payment settings');
+                        }
+                    }
+                });
+            });
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500">Failed to load payment processors.</p>';
+        }
+    }
+
+    async loadSiteSettings(): Promise<void> {
+        if (!this.apiClient) return;
+
+        const container = document.getElementById('admin-settings-form');
+        if (!container) return;
+
+        try {
+            const response = await this.apiClient.get('/admin/site-settings');
+            const settings = response.data.data;
+
+            container.innerHTML = `
+                <form id="site-settings-form" style="max-width: 600px;">
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Site Name</label>
+                        <input type="text" name="site_name" value="${settings.site_name || ''}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Tagline</label>
+                        <input type="text" name="tagline" value="${settings.tagline || ''}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Logo URL</label>
+                        <input type="url" name="logo_url" value="${settings.logo_url || ''}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Contact Email</label>
+                        <input type="email" name="contact_email" value="${settings.contact_email || ''}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Contact Phone</label>
+                        <input type="tel" name="contact_phone" value="${settings.contact_phone || ''}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Address</label>
+                        <textarea name="address" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">${settings.address || ''}</textarea>
+                    </div>
+                    <h3 style="font-weight: 600; margin-bottom: 1rem;">Social Links</h3>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">Facebook</label>
+                        <input type="url" name="social_facebook" value="${settings.social_links?.facebook || ''}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">Instagram</label>
+                        <input type="url" name="social_instagram" value="${settings.social_links?.instagram || ''}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; font-size: 0.875rem; margin-bottom: 0.25rem;">Twitter/X</label>
+                        <input type="url" name="social_twitter" value="${settings.social_links?.twitter || ''}"
+                            style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Footer Text</label>
+                        <textarea name="footer_text" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">${settings.footer_text || ''}</textarea>
+                    </div>
+                    <button type="submit" class="tixello-btn">Save Settings</button>
+                </form>
+            `;
+
+            document.getElementById('site-settings-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = e.target as HTMLFormElement;
+                const formData = new FormData(form);
+
+                const data = {
+                    site_name: formData.get('site_name'),
+                    tagline: formData.get('tagline'),
+                    logo_url: formData.get('logo_url'),
+                    contact_email: formData.get('contact_email'),
+                    contact_phone: formData.get('contact_phone'),
+                    address: formData.get('address'),
+                    social_links: {
+                        facebook: formData.get('social_facebook'),
+                        instagram: formData.get('social_instagram'),
+                        twitter: formData.get('social_twitter'),
+                    },
+                    footer_text: formData.get('footer_text'),
+                };
+
+                if (this.apiClient) {
+                    try {
+                        await this.apiClient.post('/admin/site-settings', data);
+                        alert('Site settings saved successfully');
+                    } catch (error) {
+                        alert('Failed to save site settings');
+                    }
+                }
+            });
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500">Failed to load site settings.</p>';
+        }
+    }
+
+    async loadServices(): Promise<void> {
+        if (!this.apiClient) return;
+
+        const container = document.getElementById('admin-services-list');
+        if (!container) return;
+
+        try {
+            const response = await this.apiClient.get('/admin/services');
+            const { microservices } = response.data.data;
+
+            if (microservices.length === 0) {
+                container.innerHTML = '<p style="color: #6b7280;">No active microservice subscriptions.</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+                    ${microservices.map((ms: any) => `
+                        <div class="tixello-card" style="cursor: pointer;" onclick="window.location.hash='/admin/services/${ms.id}'">
+                            <h3 style="font-weight: 600; font-size: 1.125rem; margin-bottom: 0.5rem;">${ms.name}</h3>
+                            <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 1rem;">${ms.description}</p>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                ${ms.configured ?
+                                    '<span style="color: #059669; font-size: 0.875rem;">✓ Configured</span>' :
+                                    '<span style="color: #f59e0b; font-size: 0.875rem;">⚠ Needs Configuration</span>'
+                                }
+                                <span style="color: #3b82f6; font-size: 0.875rem;">Configure →</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500">Failed to load services.</p>';
+        }
+    }
+
+    async loadServiceConfig(serviceId: string): Promise<void> {
+        if (!this.apiClient) return;
+
+        const container = document.getElementById(`admin-service-config-${serviceId}`);
+        if (!container) return;
+
+        try {
+            const response = await this.apiClient.get(`/admin/services/${serviceId}`);
+            const { microservice, fields } = response.data.data;
+
+            container.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+                    <a href="#/admin/services" style="color: #6b7280;">← Back to Services</a>
+                </div>
+                <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">${microservice.name}</h1>
+                <p style="color: #6b7280; margin-bottom: 1.5rem;">${microservice.description}</p>
+
+                ${fields.length === 0 ? '<p style="color: #6b7280;">No configuration required for this service.</p>' : `
+                    <div class="tixello-card" style="max-width: 600px;">
+                        <form id="service-config-form">
+                            ${fields.map((field: any) => `
+                                <div style="margin-bottom: 1rem;">
+                                    <label style="display: block; font-weight: 500; margin-bottom: 0.25rem;">
+                                        ${field.label} ${field.required ? '<span style="color: #ef4444;">*</span>' : ''}
+                                    </label>
+                                    ${field.description ? `<p style="font-size: 0.75rem; color: #6b7280; margin-bottom: 0.5rem;">${field.description}</p>` : ''}
+                                    ${this.renderConfigField(field)}
+                                </div>
+                            `).join('')}
+                            <button type="submit" class="tixello-btn">Save Configuration</button>
+                        </form>
+                    </div>
+                `}
+            `;
+
+            document.getElementById('service-config-form')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const form = e.target as HTMLFormElement;
+                const config: Record<string, any> = {};
+
+                fields.forEach((field: any) => {
+                    const input = form.querySelector(`[name="${field.key}"]`) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+                    if (input) {
+                        if (input.type === 'checkbox') {
+                            config[field.key] = (input as HTMLInputElement).checked;
+                        } else {
+                            config[field.key] = input.value;
+                        }
+                    }
+                });
+
+                if (this.apiClient) {
+                    try {
+                        await this.apiClient.post(`/admin/services/${serviceId}`, { config });
+                        alert('Configuration saved successfully');
+                    } catch (error) {
+                        alert('Failed to save configuration');
+                    }
+                }
+            });
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500">Failed to load service configuration.</p>';
+        }
+    }
+
+    private renderConfigField(field: any): string {
+        switch (field.type) {
+            case 'textarea':
+                return `<textarea name="${field.key}" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; min-height: 80px;">${field.value || ''}</textarea>`;
+            case 'select':
+                return `<select name="${field.key}" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                    ${field.options?.map((opt: string) => `<option value="${opt}" ${field.value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                </select>`;
+            case 'checkbox':
+                return `<input type="checkbox" name="${field.key}" ${field.value ? 'checked' : ''}>`;
+            case 'number':
+                return `<input type="number" name="${field.key}" value="${field.value || ''}" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">`;
+            default:
+                return `<input type="${field.type === 'password' ? 'password' : 'text'}" name="${field.key}" value="${field.value || ''}" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">`;
         }
     }
 
