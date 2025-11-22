@@ -78,8 +78,11 @@ class StripeService
                 'price_data' => [
                     'currency' => strtolower($this->settings->default_currency ?? 'ron'),
                     'product_data' => [
-                        'name' => $microservice->name,
-                        'description' => $microservice->short_description ?? $microservice->description,
+                        'name' => $microservice->getTranslation('name', app()->getLocale()) ?: $microservice->getTranslation('name', 'en'),
+                        'description' => $microservice->getTranslation('short_description', app()->getLocale())
+                            ?: $microservice->getTranslation('description', app()->getLocale())
+                            ?: $microservice->getTranslation('short_description', 'en')
+                            ?: $microservice->getTranslation('description', 'en'),
                     ],
                 ],
                 'quantity' => 1,
