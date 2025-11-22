@@ -8,14 +8,12 @@ use App\Models\Domain;
 use App\Models\Tenant;
 use App\Models\TenantPackage;
 use App\Services\PackageGeneratorService;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PackageController extends Controller
 {
-    use AuthorizesRequests;
     public function __construct(
         private PackageGeneratorService $packageGenerator
     ) {}
@@ -25,8 +23,6 @@ class PackageController extends Controller
      */
     public function download(Tenant $tenant, Domain $domain): StreamedResponse
     {
-        $this->authorize('update', $tenant);
-
         $package = $domain->packages()
             ->where('status', TenantPackage::STATUS_READY)
             ->latest()
@@ -54,8 +50,6 @@ class PackageController extends Controller
      */
     public function generate(Request $request, Tenant $tenant, Domain $domain)
     {
-        $this->authorize('update', $tenant);
-
         // Dispatch the job to generate the package
         GeneratePackageJob::dispatch($domain);
 
@@ -67,8 +61,6 @@ class PackageController extends Controller
      */
     public function regenerate(Request $request, Tenant $tenant, Domain $domain)
     {
-        $this->authorize('update', $tenant);
-
         // Invalidate existing packages
         $domain->packages()
             ->where('status', TenantPackage::STATUS_READY)
@@ -85,8 +77,6 @@ class PackageController extends Controller
      */
     public function instructions(Tenant $tenant, Domain $domain)
     {
-        $this->authorize('update', $tenant);
-
         $package = $domain->packages()
             ->where('status', TenantPackage::STATUS_READY)
             ->latest()
@@ -104,8 +94,6 @@ class PackageController extends Controller
      */
     public function downloadZip(Tenant $tenant, Domain $domain): StreamedResponse
     {
-        $this->authorize('update', $tenant);
-
         $package = $domain->packages()
             ->where('status', TenantPackage::STATUS_READY)
             ->latest()
