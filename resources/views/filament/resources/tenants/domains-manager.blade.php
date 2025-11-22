@@ -237,42 +237,45 @@
 
     <script>
         // Add Domain Form Handler
-        document.getElementById('add-domain-form').addEventListener('submit', function(e) {
-            e.preventDefault();
+        const addDomainForm = document.getElementById('add-domain-form');
+        if (addDomainForm) {
+            addDomainForm.addEventListener('submit', function(e) {
+                e.preventDefault();
 
-            const domainInput = document.getElementById('new-domain');
-            const isPrimaryCheckbox = document.getElementById('is-primary');
-            const domain = domainInput.value.trim();
+                const domainInput = document.getElementById('new-domain');
+                const isPrimaryCheckbox = document.getElementById('is-primary');
+                const domain = domainInput.value.trim();
 
-            if (!domain) {
-                alert('Please enter a domain name');
-                return;
-            }
-
-            fetch(`/admin/tenants/{{ $tenantId }}/domains`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify({
-                    domain: domain,
-                    is_primary: isPrimaryCheckbox.checked
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.message || 'Failed to add domain'));
+                if (!domain) {
+                    alert('Please enter a domain name');
+                    return;
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while adding the domain');
+
+                fetch(`/admin/tenants/{{ $tenantId }}/domains`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        domain: domain,
+                        is_primary: isPrimaryCheckbox.checked
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.message || 'Failed to add domain'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while adding the domain');
+                });
             });
-        });
+        }
 
         function toggleDomainActive(domainId, newStatus) {
             fetch(`/admin/domains/${domainId}/toggle-active`, {
