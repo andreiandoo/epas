@@ -14,6 +14,7 @@
                         <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Status</th>
                         <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Primary</th>
                         <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Added</th>
+                        <th class="text-left px-6 py-3 text-sm font-medium text-gray-500">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y">
@@ -42,6 +43,29 @@
                             </td>
                             <td class="px-6 py-4 text-sm text-gray-500">
                                 {{ $domain->created_at->format('M d, Y') }}
+                            </td>
+                            <td class="px-6 py-4">
+                                @php
+                                    $package = $domain->packages()->where('status', 'ready')->latest()->first();
+                                    $tenant = auth()->user()->tenant;
+                                @endphp
+                                @if($package)
+                                    <div class="flex items-center gap-2">
+                                        <a href="{{ route('admin.tenant.package.download', ['tenant' => $tenant->id, 'domain' => $domain->id]) }}"
+                                           class="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-indigo-100 text-indigo-700 hover:bg-indigo-200">
+                                            <x-heroicon-o-arrow-down-tray class="w-3 h-3 mr-1" />
+                                            Download
+                                        </a>
+                                        <a href="{{ route('admin.tenant.package.instructions', ['tenant' => $tenant->id, 'domain' => $domain->id]) }}"
+                                           target="_blank"
+                                           class="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-700 hover:bg-gray-200">
+                                            <x-heroicon-o-document-text class="w-3 h-3 mr-1" />
+                                            Instructions
+                                        </a>
+                                    </div>
+                                @else
+                                    <span class="text-xs text-gray-400">No package</span>
+                                @endif
                             </td>
                         </tr>
                     @endforeach
