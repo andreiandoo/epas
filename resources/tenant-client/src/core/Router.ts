@@ -33,11 +33,15 @@ export class Router {
         this.addRoute('/events/:slug', this.renderEventDetail.bind(this));
         this.addRoute('/cart', this.renderCart.bind(this));
         this.addRoute('/checkout', this.renderCheckout.bind(this));
+        this.addRoute('/thank-you/:orderNumber', this.renderThankYou.bind(this));
         this.addRoute('/login', this.renderLogin.bind(this));
         this.addRoute('/register', this.renderRegister.bind(this));
         this.addRoute('/account', this.renderAccount.bind(this));
         this.addRoute('/account/orders', this.renderOrders.bind(this));
+        this.addRoute('/account/orders/:id', this.renderOrderDetail.bind(this));
         this.addRoute('/account/tickets', this.renderTickets.bind(this));
+        this.addRoute('/account/events', this.renderMyEvents.bind(this));
+        this.addRoute('/account/profile', this.renderProfile.bind(this));
 
         // Admin routes
         this.addRoute('/admin', this.renderAdminDashboard.bind(this));
@@ -232,6 +236,57 @@ export class Router {
             <div class="tixello-tickets">
                 <h1>My Tickets</h1>
                 <div id="tickets-list">Loading tickets...</div>
+            </div>
+        `;
+    }
+
+    private renderOrderDetail(params: Record<string, string>): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="tixello-order-detail">
+                <a href="#/account/orders" style="color: #6b7280; margin-bottom: 1rem; display: inline-block;">← Back to Orders</a>
+                <div id="order-detail-${params.id}">Loading order details...</div>
+            </div>
+        `;
+    }
+
+    private renderMyEvents(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="tixello-my-events">
+                <h1>My Events</h1>
+                <p style="color: #6b7280; margin-bottom: 1.5rem;">Upcoming events you have tickets for</p>
+                <div id="my-events-list">Loading events...</div>
+            </div>
+        `;
+    }
+
+    private renderProfile(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="tixello-profile">
+                <h1>My Profile</h1>
+                <div id="profile-form">Loading profile...</div>
+            </div>
+        `;
+    }
+
+    private renderThankYou(params: Record<string, string>): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="tixello-thank-you" style="text-align: center; padding: 3rem 1rem;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">✓</div>
+                <h1 style="font-size: 2rem; margin-bottom: 1rem;">Thank You!</h1>
+                <p style="color: #6b7280; margin-bottom: 2rem;">Your order has been confirmed.</p>
+                <div id="order-confirmation-${params.orderNumber}">Loading order details...</div>
             </div>
         `;
     }
