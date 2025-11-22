@@ -2,7 +2,12 @@
 
 ## Overview
 
-A hybrid mobile app (WebView + native components) for tenants to manage events, validate tickets offline, and view real-time reports.
+A hybrid mobile app (WebView + native components) serving two user types:
+
+1. **Tenant Clients (Customers)**: Login to view their orders, tickets, and upcoming events
+2. **Tenant Admins/Editors**: Manage events, validate tickets offline, and view real-time reports
+
+The app provides a unified experience with role-based access to different features.
 
 ---
 
@@ -40,30 +45,219 @@ A hybrid mobile app (WebView + native components) for tenants to manage events, 
 
 ## Feature Breakdown
 
-### 1. Authentication & Tenant Access
+### 1. Dual Authentication System
 
-**Implementation:**
-- Use existing `/api/tenant-client/auth/login` endpoint
-- Store JWT/token in secure device storage (Keychain/Keystore)
-- Add biometric unlock (Face ID / Fingerprint)
-- Session refresh mechanism
+The app supports two distinct user types with different login flows.
+
+#### Login Screen UI:
+
+```
+┌─────────────────────────────────┐
+│                                 │
+│         [App Logo]              │
+│                                 │
+│   ┌─────────────────────────┐   │
+│   │ Email                   │   │
+│   └─────────────────────────┘   │
+│   ┌─────────────────────────┐   │
+│   │ Password                │   │
+│   └─────────────────────────┘   │
+│                                 │
+│   [ Login ]                     │
+│                                 │
+│   Forgot password?              │
+│   Don't have an account? Sign up│
+│                                 │
+│   ─────────── or ───────────    │
+│                                 │
+│   [ Login as Tenant Admin ]     │
+│                                 │
+└─────────────────────────────────┘
+```
+
+#### A. Customer Login (Default)
+
+For customers who purchased tickets on any tenant website.
+
+**Flow:**
+1. Customer enters email + password
+2. App authenticates against `/api/tenant-client/auth/login`
+3. Returns customer token + primary tenant info
+4. Customer sees their dashboard with orders/tickets
+
+**Existing API Used:**
+```php
+POST /api/tenant-client/auth/login
+POST /api/tenant-client/auth/register
+POST /api/tenant-client/auth/forgot-password
+GET /api/tenant-client/auth/me
+```
+
+#### B. Tenant Admin Login ("Login as Tenant Admin" button)
+
+For tenant owners, admins, and editors to manage their events.
+
+**Flow:**
+1. User taps "Login as Tenant Admin"
+2. Opens admin login form with three fields:
+   - Website URL (tenant domain, e.g., `events.mycompany.com`)
+   - Email
+   - Password
+3. App resolves tenant from domain, authenticates user
+4. Validates user has admin/editor role for that tenant
+5. Returns admin token with elevated permissions
+6. User sees admin dashboard with full management features
+
+**New Admin Login Form UI:**
+```
+┌─────────────────────────────────┐
+│                                 │
+│   ← Back                        │
+│                                 │
+│   Tenant Admin Login            │
+│                                 │
+│   ┌─────────────────────────┐   │
+│   │ Your website URL        │   │
+│   │ e.g., events.company.com│   │
+│   └─────────────────────────┘   │
+│   ┌─────────────────────────┐   │
+│   │ Email                   │   │
+│   └─────────────────────────┘   │
+│   ┌─────────────────────────┐   │
+│   │ Password                │   │
+│   └─────────────────────────┘   │
+│                                 │
+│   [ Login to Admin ]            │
+│                                 │
+└─────────────────────────────────┘
+```
 
 **New API Endpoints Needed:**
 ```php
-POST /api/mobile/auth/login          // Enhanced with device registration
-POST /api/mobile/auth/refresh        // Token refresh
-POST /api/mobile/auth/device         // Register device for push
-DELETE /api/mobile/auth/device       // Unregister device
+// Customer auth extensions
+POST /api/mobile/customer/login         // Enhanced with device registration
+POST /api/mobile/customer/refresh       // Token refresh
+POST /api/mobile/customer/device        // Register device for push
+DELETE /api/mobile/customer/device      // Unregister device
+
+// Admin auth (new)
+POST /api/mobile/admin/login            // Tenant admin login
+{
+    "domain": "events.company.com",
+    "email": "admin@company.com",
+    "password": "secret"
+}
+// Returns: token, user, tenant, permissions
+
+POST /api/mobile/admin/refresh          // Admin token refresh
+GET /api/mobile/admin/me                // Current admin user + tenant
+```
+
+**Backend Implementation:**
+```php
+class MobileAdminAuthController extends Controller
+{
+    public function login(Request $request)
+    {
+        $request->validate([
+            'domain' => 'required|string',
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        // Resolve tenant from domain
+        $tenant = Tenant::where('domain', $request->domain)
+            ->orWhereHas('domains', fn($q) => $q->where('domain', $request->domain))
+            ->first();
+
+        if (!$tenant) {
+            return response()->json(['error' => 'Tenant not found'], 404);
+        }
+
+        // Authenticate user
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json(['error' => 'Invalid credentials'], 401);
+        }
+
+        // Check user has access to this tenant (admin, editor, or tenant owner)
+        if (!$this->userCanAccessTenant($user, $tenant)) {
+            return response()->json(['error' => 'No access to this tenant'], 403);
+        }
+
+        // Generate token with tenant scope
+        $token = $user->createToken('mobile-admin', [
+            'tenant_id' => $tenant->id,
+            'role' => $this->getUserRoleForTenant($user, $tenant),
+        ]);
+
+        return response()->json([
+            'token' => $token->plainTextToken,
+            'user' => new UserResource($user),
+            'tenant' => new TenantResource($tenant),
+            'permissions' => $this->getPermissions($user, $tenant),
+        ]);
+    }
+
+    private function userCanAccessTenant(User $user, Tenant $tenant): bool
+    {
+        // Tenant owner
+        if ($user->tenant_id === $tenant->id) return true;
+
+        // Super admin
+        if ($user->hasRole('super-admin')) return true;
+
+        // Admin or editor for this tenant
+        return $user->hasAnyRole(['admin', 'editor']) &&
+               $user->tenants->contains($tenant->id);
+    }
+}
 ```
 
 **Security:**
 - Implement token refresh (current tokens don't expire)
 - Device-bound tokens
 - Remote logout capability
+- Role-based permissions in token claims
+- Biometric unlock (Face ID / Fingerprint) after initial login
 
 ---
 
-### 2. Events Dashboard
+### 2. Customer Dashboard (Tenant Clients)
+
+For customers who purchased tickets.
+
+**Features:**
+- View all orders across all tenant websites
+- View tickets with QR codes
+- See upcoming events for their tickets
+- Download tickets to Apple Wallet / Google Pay
+- Order history and receipts
+
+**Screens:**
+1. **My Tickets** - Active/upcoming tickets with event info
+2. **My Orders** - Order history with status
+3. **Event Details** - Event info for purchased tickets
+4. **Ticket Detail** - QR code, seat info, download to wallet
+
+**API Endpoints (existing + enhanced):**
+```php
+GET /api/mobile/customer/tickets        // All customer tickets
+GET /api/mobile/customer/orders         // Order history
+GET /api/mobile/customer/orders/{id}    // Order detail with tickets
+GET /api/mobile/customer/events         // Events for customer's tickets
+POST /api/mobile/customer/wallet/{ticketId}  // Generate wallet pass
+```
+
+**Implementation:**
+- Use existing `/api/tenant-client/auth/me` to get customer data
+- Extend with mobile-optimized endpoints
+- Support multiple tenants (customer may have bought from different events)
+
+---
+
+### 3. Admin Events Dashboard
 
 **Data to Display:**
 - Event list with status indicators (live, upcoming, past)
@@ -83,7 +277,7 @@ GET /api/mobile/events/{id}/performances  // For multi-performance events
 
 ---
 
-### 3. Tickets & Orders Management
+### 4. Admin Tickets & Orders Management
 
 **Data to Display:**
 - Order list with status, customer, total
@@ -106,7 +300,7 @@ GET /api/mobile/events/{id}/tickets       // All tickets for event
 
 ---
 
-### 4. QR Ticket Scanning & Validation
+### 5. QR Ticket Scanning & Validation (Admin Only)
 
 **This is the core feature requiring native implementation.**
 
@@ -224,7 +418,7 @@ class MobileScanController extends Controller
 
 ---
 
-### 5. Offline Mode
+### 6. Offline Mode (Admin Only)
 
 #### Local Database Schema (SQLite):
 
@@ -283,7 +477,7 @@ CREATE TABLE cached_events (
 
 ---
 
-### 6. Real-Time Reports & Analytics
+### 7. Real-Time Reports & Analytics (Admin Only)
 
 #### Dashboard Metrics:
 
@@ -340,19 +534,45 @@ event(new TicketCheckedIn($ticket));
 
 ## Implementation Phases
 
-### Phase 1: Foundation (Core MVP)
+### Phase 1: Foundation & Dual Auth (Core MVP)
 1. Project setup (React Native recommended)
-2. Authentication flow with secure storage
-3. WebView integration for admin panels
+2. Dual login system (customer + admin)
+3. Secure token storage
 4. Basic navigation structure
+5. Role-based screen routing
 
 **Deliverables:**
-- Login/logout
-- Events list (WebView)
-- Orders list (WebView)
-- Basic app shell
+- Customer login form (default)
+- "Login as Tenant Admin" flow with domain input
+- Basic app shell with role detection
+- Logout functionality
 
-### Phase 2: Native Scanner
+### Phase 2: Customer Dashboard
+1. Customer tickets list
+2. Customer orders list
+3. Ticket detail with QR code
+4. Event details for tickets
+5. Apple Wallet / Google Pay integration
+
+**Deliverables:**
+- My Tickets screen
+- My Orders screen
+- Ticket detail with QR display
+- Wallet pass download
+- Pull-to-refresh
+
+### Phase 3: Admin Dashboard & Events
+1. WebView integration for admin panels OR
+2. Native admin event list
+3. Quick stats for events
+4. Orders management
+
+**Deliverables:**
+- Admin events list with stats
+- Orders list (WebView or native)
+- Event summary view
+
+### Phase 4: Native QR Scanner (Admin)
 1. Camera permission handling
 2. QR code scanner implementation
 3. Online validation flow
@@ -364,7 +584,7 @@ event(new TicketCheckedIn($ticket));
 - Sound/haptic feedback
 - Scan history
 
-### Phase 3: Offline Capability
+### Phase 5: Offline Capability (Admin)
 1. SQLite database setup
 2. Ticket download mechanism
 3. Offline validation logic
@@ -377,7 +597,7 @@ event(new TicketCheckedIn($ticket));
 - Sync status indicators
 - Conflict handling
 
-### Phase 4: Real-Time Reports
+### Phase 6: Real-Time Reports (Admin)
 1. Reports API endpoints
 2. Dashboard UI components
 3. Charts and visualizations
@@ -390,11 +610,12 @@ event(new TicketCheckedIn($ticket));
 - Check-in analytics
 - Alert notifications
 
-### Phase 5: Polish & Release
+### Phase 7: Polish & Release
 1. Performance optimization
 2. Error handling & recovery
-3. App store preparation
-4. Documentation
+3. Biometric unlock
+4. App store preparation
+5. Documentation
 
 ---
 
@@ -405,37 +626,78 @@ event(new TicketCheckedIn($ticket));
 ```php
 // routes/api.php additions
 
-Route::prefix('mobile')->middleware(['auth:sanctum', 'tenant'])->group(function () {
+Route::prefix('mobile')->group(function () {
 
-    // Auth extensions
-    Route::post('/auth/refresh', [MobileAuthController::class, 'refresh']);
-    Route::post('/auth/device', [MobileAuthController::class, 'registerDevice']);
-    Route::delete('/auth/device', [MobileAuthController::class, 'unregisterDevice']);
+    // ═══════════════════════════════════════════════════════════════
+    // CUSTOMER (Tenant Client) Routes
+    // ═══════════════════════════════════════════════════════════════
 
-    // Events
-    Route::get('/events', [MobileEventController::class, 'index']);
-    Route::get('/events/{event}/summary', [MobileEventController::class, 'summary']);
-    Route::get('/events/{event}/performances', [MobileEventController::class, 'performances']);
+    Route::prefix('customer')->group(function () {
+        // Auth (public)
+        Route::post('/login', [MobileCustomerAuthController::class, 'login']);
+        Route::post('/register', [MobileCustomerAuthController::class, 'register']);
+        Route::post('/forgot-password', [MobileCustomerAuthController::class, 'forgotPassword']);
 
-    // Orders & Tickets
-    Route::get('/orders', [MobileOrderController::class, 'index']);
-    Route::get('/orders/{order}', [MobileOrderController::class, 'show']);
-    Route::get('/tickets/{code}', [MobileTicketController::class, 'show']);
-    Route::patch('/tickets/{code}/void', [MobileTicketController::class, 'void']);
-    Route::get('/events/{event}/tickets', [MobileTicketController::class, 'forEvent']);
+        // Authenticated customer routes
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('/refresh', [MobileCustomerAuthController::class, 'refresh']);
+            Route::post('/device', [MobileCustomerAuthController::class, 'registerDevice']);
+            Route::delete('/device', [MobileCustomerAuthController::class, 'unregisterDevice']);
+            Route::get('/me', [MobileCustomerAuthController::class, 'me']);
+            Route::post('/logout', [MobileCustomerAuthController::class, 'logout']);
 
-    // Scanning
-    Route::post('/scan/validate', [MobileScanController::class, 'validate']);
-    Route::post('/scan/lookup', [MobileScanController::class, 'lookup']);
-    Route::post('/scan/batch-sync', [MobileScanController::class, 'batchSync']);
-    Route::get('/scan/download/{event}', [MobileScanController::class, 'downloadEventTickets']);
+            // Customer dashboard
+            Route::get('/tickets', [MobileCustomerController::class, 'tickets']);
+            Route::get('/tickets/{code}', [MobileCustomerController::class, 'ticketDetail']);
+            Route::get('/orders', [MobileCustomerController::class, 'orders']);
+            Route::get('/orders/{id}', [MobileCustomerController::class, 'orderDetail']);
+            Route::get('/events', [MobileCustomerController::class, 'events']);
+            Route::post('/wallet/{ticketId}', [MobileCustomerController::class, 'generateWalletPass']);
+        });
+    });
 
-    // Reports
-    Route::get('/reports/event/{event}/summary', [MobileReportController::class, 'eventSummary']);
-    Route::get('/reports/event/{event}/live', [MobileReportController::class, 'liveAttendance']);
-    Route::get('/reports/event/{event}/sales', [MobileReportController::class, 'salesBreakdown']);
-    Route::get('/reports/event/{event}/checkins', [MobileReportController::class, 'checkInTimeline']);
-    Route::get('/reports/tenant/overview', [MobileReportController::class, 'tenantOverview']);
+    // ═══════════════════════════════════════════════════════════════
+    // ADMIN (Tenant Admin/Editor) Routes
+    // ═══════════════════════════════════════════════════════════════
+
+    Route::prefix('admin')->group(function () {
+        // Auth (public)
+        Route::post('/login', [MobileAdminAuthController::class, 'login']);
+
+        // Authenticated admin routes
+        Route::middleware(['auth:sanctum', 'tenant.admin'])->group(function () {
+            Route::post('/refresh', [MobileAdminAuthController::class, 'refresh']);
+            Route::post('/device', [MobileAdminAuthController::class, 'registerDevice']);
+            Route::delete('/device', [MobileAdminAuthController::class, 'unregisterDevice']);
+            Route::get('/me', [MobileAdminAuthController::class, 'me']);
+            Route::post('/logout', [MobileAdminAuthController::class, 'logout']);
+
+            // Events
+            Route::get('/events', [MobileEventController::class, 'index']);
+            Route::get('/events/{event}/summary', [MobileEventController::class, 'summary']);
+            Route::get('/events/{event}/performances', [MobileEventController::class, 'performances']);
+
+            // Orders & Tickets
+            Route::get('/orders', [MobileOrderController::class, 'index']);
+            Route::get('/orders/{order}', [MobileOrderController::class, 'show']);
+            Route::get('/tickets/{code}', [MobileTicketController::class, 'show']);
+            Route::patch('/tickets/{code}/void', [MobileTicketController::class, 'void']);
+            Route::get('/events/{event}/tickets', [MobileTicketController::class, 'forEvent']);
+
+            // Scanning
+            Route::post('/scan/validate', [MobileScanController::class, 'validate']);
+            Route::post('/scan/lookup', [MobileScanController::class, 'lookup']);
+            Route::post('/scan/batch-sync', [MobileScanController::class, 'batchSync']);
+            Route::get('/scan/download/{event}', [MobileScanController::class, 'downloadEventTickets']);
+
+            // Reports
+            Route::get('/reports/event/{event}/summary', [MobileReportController::class, 'eventSummary']);
+            Route::get('/reports/event/{event}/live', [MobileReportController::class, 'liveAttendance']);
+            Route::get('/reports/event/{event}/sales', [MobileReportController::class, 'salesBreakdown']);
+            Route::get('/reports/event/{event}/checkins', [MobileReportController::class, 'checkInTimeline']);
+            Route::get('/reports/tenant/overview', [MobileReportController::class, 'tenantOverview']);
+        });
+    });
 });
 ```
 
@@ -528,11 +790,13 @@ Schema::create('mobile_sync_logs', function (Blueprint $table) {
 
 | Phase | Description | Complexity |
 |-------|-------------|------------|
-| Phase 1 | Foundation | Medium |
-| Phase 2 | Native Scanner | Medium |
-| Phase 3 | Offline Mode | High |
-| Phase 4 | Reports | Medium |
-| Phase 5 | Polish | Low |
+| Phase 1 | Foundation & Dual Auth | Medium |
+| Phase 2 | Customer Dashboard | Medium |
+| Phase 3 | Admin Dashboard & Events | Medium |
+| Phase 4 | Native QR Scanner | Medium |
+| Phase 5 | Offline Mode | High |
+| Phase 6 | Reports | Medium |
+| Phase 7 | Polish | Low |
 
 ---
 
