@@ -18,34 +18,46 @@ class TenantClientCors
         }
 
         $originHost = parse_url($origin, PHP_URL_HOST);
+        $allowCors = false;
 
         // Allow localhost for development
         if (in_array($originHost, ['localhost', '127.0.0.1'])) {
-            return $this->addCorsHeaders($next($request), $origin);
-        }
+            $allowCors = true;
+        } else {
+            // Check if origin is a verified tenant domain
+            $domain = Domain::where('domain', $originHost)
+                ->where('is_active', true)
+                ->first();
 
-        // Check if origin is a verified tenant domain
-        $domain = Domain::where('domain', $originHost)
-            ->where('is_active', true)
-            ->first();
+            if (!$domain) {
+                // Check for subdomain match
+                $parts = explode('.', $originHost);
+                if (count($parts) > 2) {
+                    $baseDomain = implode('.', array_slice($parts, -2));
+                    $domain = Domain::where('domain', $baseDomain)
+                        ->where('is_active', true)
+                        ->first();
+                }
+            }
 
-        if (!$domain) {
-            // Check for subdomain match
-            $parts = explode('.', $originHost);
-            if (count($parts) > 2) {
-                $baseDomain = implode('.', array_slice($parts, -2));
-                $domain = Domain::where('domain', $baseDomain)
-                    ->where('is_active', true)
-                    ->first();
+            if ($domain) {
+                $allowCors = true;
             }
         }
 
-        if ($domain) {
-            return $this->addCorsHeaders($next($request), $origin);
+        // Execute request and get response
+        try {
+            $response = $next($request);
+        } catch (\Exception $e) {
+            $response = response()->json(['error' => 'Server error'], 500);
         }
 
-        // Origin not allowed
-        return $next($request);
+        // Add CORS headers even on error responses
+        if ($allowCors) {
+            return $this->addCorsHeaders($response, $origin);
+        }
+
+        return $response;
     }
 
     protected function addCorsHeaders(Response $response, string $origin): Response

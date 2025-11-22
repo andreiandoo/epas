@@ -156,9 +156,8 @@ class TenantClientController extends Controller
         $tenantId = $resolved['tenant']->id;
         $limit = $request->query('limit', 6);
 
-        $events = Event::where('tenant_id', $tenantId)
+        $query = Event::where('tenant_id', $tenantId)
             ->where('is_active', true)
-            ->where('is_featured', true)
             ->whereNull('cancelled_at')
             ->where(function ($q) {
                 $q->where('end_date', '>=', now())
@@ -166,8 +165,14 @@ class TenantClientController extends Controller
                       $q2->whereNull('end_date')
                          ->where('start_date', '>=', now());
                   });
-            })
-            ->with(['venue', 'eventType'])
+            });
+
+        // Check if is_featured column exists, otherwise just return latest events
+        if (\Schema::hasColumn('events', 'is_featured')) {
+            $query->where('is_featured', true);
+        }
+
+        $events = $query->with(['venue', 'eventType'])
             ->orderBy('start_date', 'asc')
             ->take($limit)
             ->get();
