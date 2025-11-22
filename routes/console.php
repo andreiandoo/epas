@@ -149,6 +149,16 @@ Schedule::call(function () {
     }
 })->everyFiveMinutes();
 
+// Services Status: Log service status for uptime tracking (every 5 minutes)
+Schedule::command('services:check-status')
+    ->everyFiveMinutes()
+    ->onSuccess(function () {
+        \Log::info('Services status check completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to check services status');
+    });
+
 // Cache: Warm up global caches (every hour)
 Schedule::call(function () {
     if (config('microservices.cache.enabled', true)) {
