@@ -101,14 +101,22 @@ class TenantClientController extends Controller
         $limit = $request->query('limit', 12);
         $offset = $request->query('offset', 0);
 
-        $query = Event::where('tenant_id', $tenantId)
-            ->where(function ($q) {
+        $query = Event::where('tenant_id', $tenantId);
+
+        // Check date columns exist before filtering
+        if (\Schema::hasColumn('events', 'end_date') && \Schema::hasColumn('events', 'start_date')) {
+            $query->where(function ($q) {
                 $q->where('end_date', '>=', now())
                   ->orWhere(function ($q2) {
                       $q2->whereNull('end_date')
                          ->where('start_date', '>=', now());
                   });
             });
+        } elseif (\Schema::hasColumn('events', 'start_date')) {
+            $query->where('start_date', '>=', now());
+        } elseif (\Schema::hasColumn('events', 'event_date')) {
+            $query->where('event_date', '>=', now());
+        }
 
         // Check if cancelled_at column exists
         if (\Schema::hasColumn('events', 'cancelled_at')) {
@@ -134,8 +142,17 @@ class TenantClientController extends Controller
         }
 
         $total = $query->count();
+
+        // Determine order column
+        $orderColumn = 'created_at';
+        if (\Schema::hasColumn('events', 'start_date')) {
+            $orderColumn = 'start_date';
+        } elseif (\Schema::hasColumn('events', 'event_date')) {
+            $orderColumn = 'event_date';
+        }
+
         $events = $query->with(['venue', 'eventType', 'artists'])
-            ->orderBy('start_date', 'asc')
+            ->orderBy($orderColumn, 'asc')
             ->skip($offset)
             ->take($limit)
             ->get();
@@ -164,14 +181,22 @@ class TenantClientController extends Controller
         $tenantId = $resolved['tenant']->id;
         $limit = $request->query('limit', 6);
 
-        $query = Event::where('tenant_id', $tenantId)
-            ->where(function ($q) {
+        $query = Event::where('tenant_id', $tenantId);
+
+        // Check date columns exist before filtering
+        if (\Schema::hasColumn('events', 'end_date') && \Schema::hasColumn('events', 'start_date')) {
+            $query->where(function ($q) {
                 $q->where('end_date', '>=', now())
                   ->orWhere(function ($q2) {
                       $q2->whereNull('end_date')
                          ->where('start_date', '>=', now());
                   });
             });
+        } elseif (\Schema::hasColumn('events', 'start_date')) {
+            $query->where('start_date', '>=', now());
+        } elseif (\Schema::hasColumn('events', 'event_date')) {
+            $query->where('event_date', '>=', now());
+        }
 
         // Check if cancelled_at column exists
         if (\Schema::hasColumn('events', 'cancelled_at')) {
@@ -188,8 +213,16 @@ class TenantClientController extends Controller
             $query->where('is_featured', true);
         }
 
+        // Determine order column
+        $orderColumn = 'created_at';
+        if (\Schema::hasColumn('events', 'start_date')) {
+            $orderColumn = 'start_date';
+        } elseif (\Schema::hasColumn('events', 'event_date')) {
+            $orderColumn = 'event_date';
+        }
+
         $events = $query->with(['venue', 'eventType'])
-            ->orderBy('start_date', 'asc')
+            ->orderBy($orderColumn, 'asc')
             ->take($limit)
             ->get();
 
