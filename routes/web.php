@@ -7,6 +7,7 @@ use App\Http\Controllers\Public\LocationController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\Admin\DomainController;
 use App\Http\Controllers\Admin\GlobalSearchController;
+use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\MicroserviceMarketplaceController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\TenantPaymentWebhookController;
@@ -144,6 +145,20 @@ Route::middleware(['web'])->prefix('admin')->group(function () {
     Route::post('/domains/{domainId}/toggle-confirmed', [DomainController::class, 'toggleConfirmed'])->name('admin.domains.toggle-confirmed');
     Route::post('/domains/{domainId}/toggle-suspended', [DomainController::class, 'toggleSuspended'])->name('admin.domains.toggle-suspended');
     Route::get('/tenants/{tenantId}/domains/{domain}/login-as-admin', [DomainController::class, 'loginAsAdmin'])->name('tenant.login-as-admin');
+});
+
+// Admin Package Management Routes
+Route::middleware(['web', 'auth'])->prefix('admin')->group(function () {
+    Route::get('/tenants/{tenant}/domains/{domain}/package/download', [PackageController::class, 'download'])
+        ->name('admin.tenant.package.download');
+    Route::get('/tenants/{tenant}/domains/{domain}/package/download-zip', [PackageController::class, 'downloadZip'])
+        ->name('admin.tenant.package.download-zip');
+    Route::post('/tenants/{tenant}/domains/{domain}/package/generate', [PackageController::class, 'generate'])
+        ->name('admin.tenant.package.generate');
+    Route::post('/tenants/{tenant}/domains/{domain}/package/regenerate', [PackageController::class, 'regenerate'])
+        ->name('admin.tenant.package.regenerate');
+    Route::get('/tenants/{tenant}/domains/{domain}/package/instructions', [PackageController::class, 'instructions'])
+        ->name('admin.tenant.package.instructions');
 });
 
 // Documentation Routes

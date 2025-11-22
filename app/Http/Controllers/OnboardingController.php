@@ -9,6 +9,7 @@ use App\Models\Microservice;
 use App\Models\EmailTemplate;
 use App\Models\EmailLog;
 use App\Models\Setting;
+use App\Jobs\GeneratePackageJob;
 use App\Services\AnafService;
 use App\Services\LocationService;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
@@ -280,6 +281,9 @@ class OnboardingController extends Controller
                     'verification_method' => 'dns_txt',
                     'status' => 'pending',
                 ]);
+
+                // Generate deployment package for this domain
+                GeneratePackageJob::dispatch($domain);
             }
 
             // Attach Microservices

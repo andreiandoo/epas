@@ -71,18 +71,37 @@ const encodedConfig = Buffer.from(JSON.stringify({
 // Inject configuration at the start
 content = `window.__TIXELLO_CONFIG__="${encodedConfig}";${content}`;
 
-// Add domain lock check
-const domainCheck = `
+// Add domain lock check and anti-tampering
+const securityWrapper = `
 (function(){
     var d="${config.domain}";
     var h=window.location.hostname;
-    if(h!=="localhost"&&h!=="127.0.0.1"&&h!==d&&!h.endsWith("."+d)){
+    if(h!=="localhost"&&h!=="127.0.0.1"&&h!==d&&h!=="www."+d&&!h.endsWith("."+d)){
+        console.error("Tixello: Domain mismatch");
+        document.body.innerHTML="<div style='padding:20px;text-align:center;'><h1>Invalid License</h1><p>This application is not licensed for this domain.</p></div>";
         throw new Error("Invalid domain");
     }
+    // Anti-tampering check
+    if(typeof window.__TIXELLO_TAMPER_CHECK__!=="undefined"){
+        throw new Error("Tampering detected");
+    }
+    window.__TIXELLO_TAMPER_CHECK__="${config.packageHash}";
 })();
 `;
 
-content = domainCheck + content;
+// Add header
+const header = \`/**
+ * Tixello Event Platform - Tenant Client
+ * Domain: \${config.domain}
+ * Version: \${config.version}
+ * Generated: \${new Date().toISOString()}
+ *
+ * This code is proprietary and confidential.
+ * Unauthorized copying or distribution is prohibited.
+ */
+\`;
+
+content = header + securityWrapper + content;
 
 // Ensure output directory exists
 const outputDir = dirname(outputPath);

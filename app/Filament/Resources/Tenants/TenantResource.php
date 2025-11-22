@@ -444,6 +444,25 @@ class TenantResource extends Resource
                         ->columnSpanFull(),
                 ])->collapsible(),
 
+            SC\Section::make('Deployment Packages')
+                ->description('Download deployment packages for each domain. These packages contain the tenant website code.')
+                ->schema([
+                    Forms\Components\Placeholder::make('packages_manager')
+                        ->label('')
+                        ->content(function ($record) {
+                            if (!$record) {
+                                return 'Save the tenant first to manage deployment packages.';
+                            }
+                            return new \Illuminate\Support\HtmlString(
+                                view('filament.resources.tenants.packages-manager', [
+                                    'tenant' => $record,
+                                ])->render()
+                            );
+                        }),
+                ])->collapsible()
+                ->visible(fn ($record) => $record !== null)
+                ->columnSpanFull(),
+
             SC\Section::make('Additional Settings')
                 ->schema([
                     Forms\Components\KeyValue::make('settings')
