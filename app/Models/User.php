@@ -24,6 +24,7 @@ class User extends Authenticatable implements FilamentUser
         'email',
         'password',
         'role',
+        'tenant_id',
     ];
 
     /**
@@ -69,10 +70,31 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
-     * Get the tenant associated with this user (if tenant role).
+     * Get the tenant this user owns (if tenant role).
      */
-    public function tenant(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function ownedTenant(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Tenant::class, 'owner_id');
+    }
+
+    /**
+     * Get the tenant this user belongs to (for editors).
+     */
+    public function belongsToTenant(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Tenant::class);
+    }
+
+    /**
+     * Get the tenant for this user (works for both tenant owners and editors).
+     */
+    public function getTenantAttribute(): ?Tenant
+    {
+        // First check if user belongs to a tenant (editor)
+        if ($this->tenant_id) {
+            return $this->belongsToTenant;
+        }
+        // Otherwise check if user owns a tenant (tenant role)
+        return $this->ownedTenant;
     }
 }
