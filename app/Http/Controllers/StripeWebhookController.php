@@ -86,6 +86,18 @@ class StripeWebhookController extends Controller
         $tenant = $result['tenant'];
         $microservices = $result['microservices'];
 
+        // Log activity
+        activity()
+            ->causedBy($tenant->owner)
+            ->performedOn($tenant)
+            ->withProperties([
+                'microservices' => $microservices->pluck('name')->toArray(),
+                'amount' => $result['amount_total'],
+                'currency' => $result['currency'],
+                'session_id' => $session->id,
+            ])
+            ->log('Purchased microservices');
+
         // Generate invoice
         $invoice = $this->generateInvoice($tenant, $microservices, $result);
 

@@ -324,7 +324,6 @@ class EventResource extends Resource
                     Forms\Components\Select::make('artists')
                         ->label('Artists')
                         ->relationship('artists', 'name')
-                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
                         ->multiple()
                         ->preload()
                         ->searchable(),
@@ -332,7 +331,6 @@ class EventResource extends Resource
                     Forms\Components\Select::make('tags')
                         ->label('Event tags')
                         ->relationship('tags', 'name')
-                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
                         ->multiple()
                         ->preload()
                         ->searchable(),
