@@ -39,22 +39,46 @@ class EventResource extends Resource
         $tenant = auth()->user()->tenant;
 
         return $schema->schema([
-            // BASICS
+            // Hidden tenant_id field
+            Forms\Components\Hidden::make('tenant_id')
+                ->default($tenant?->id),
+
+            // BASICS - EN/RO
             SC\Section::make('Event Details')
                 ->schema([
-                    Forms\Components\TextInput::make('title.en')
-                        ->label('Event title (EN)')
-                        ->required()
-                        ->maxLength(190)
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(function (string $state, SSet $set) {
-                            if ($state) $set('slug.en', Str::slug($state));
-                        }),
-                    Forms\Components\TextInput::make('slug.en')
-                        ->label('Slug (EN)')
-                        ->maxLength(190)
-                        ->rule('alpha_dash'),
-                ])->columns(2),
+                    SC\Tabs::make('Title Translations')
+                        ->tabs([
+                            SC\Tabs\Tab::make('English')
+                                ->schema([
+                                    Forms\Components\TextInput::make('title.en')
+                                        ->label('Event title (EN)')
+                                        ->required()
+                                        ->maxLength(190)
+                                        ->live(onBlur: true)
+                                        ->afterStateUpdated(function ($state, SSet $set) {
+                                            if ($state) $set('slug.en', Str::slug($state));
+                                        }),
+                                    Forms\Components\TextInput::make('slug.en')
+                                        ->label('Slug (EN)')
+                                        ->maxLength(190)
+                                        ->rule('alpha_dash'),
+                                ])->columns(2),
+                            SC\Tabs\Tab::make('Română')
+                                ->schema([
+                                    Forms\Components\TextInput::make('title.ro')
+                                        ->label('Titlu eveniment (RO)')
+                                        ->maxLength(190)
+                                        ->live(onBlur: true)
+                                        ->afterStateUpdated(function ($state, SSet $set) {
+                                            if ($state) $set('slug.ro', Str::slug($state));
+                                        }),
+                                    Forms\Components\TextInput::make('slug.ro')
+                                        ->label('Slug (RO)')
+                                        ->maxLength(190)
+                                        ->rule('alpha_dash'),
+                                ])->columns(2),
+                        ])->columnSpanFull(),
+                ]),
 
             // FLAGS
             SC\Section::make('Status Flags')
@@ -121,6 +145,7 @@ class EventResource extends Resource
                             'single_day' => 'Single day',
                             'range' => 'Range',
                             'multi_day' => 'Multiple days',
+                            'recurring' => 'Recurring',
                         ])
                         ->inline()
                         ->default('single_day')
@@ -193,6 +218,66 @@ class EventResource extends Resource
                         ->default([])
                         ->visible(fn (SGet $get) => $get('duration_mode') === 'multi_day')
                         ->columns(4),
+
+                    // Recurring
+                    SC\Group::make()
+                        ->visible(fn (SGet $get) => $get('duration_mode') === 'recurring')
+                        ->schema([
+                            SC\Grid::make(4)->schema([
+                                Forms\Components\DatePicker::make('recurring_start_date')
+                                    ->label('Initial date')
+                                    ->minDate(now()->startOfDay())
+                                    ->native(false)
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, SSet $set) {
+                                        if (!$state) { $set('recurring_weekday', null); return; }
+                                        $w = Carbon::parse($state)->dayOfWeekIso;
+                                        $set('recurring_weekday', $w);
+                                    }),
+                                Forms\Components\TextInput::make('recurring_weekday')
+                                    ->label('Weekday')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->formatStateUsing(function (SGet $get) {
+                                        $map = [1=>'Mon',2=>'Tue',3=>'Wed',4=>'Thu',5=>'Fri',6=>'Sat',7=>'Sun'];
+                                        return $map[$get('recurring_weekday')] ?? '';
+                                    }),
+                                Forms\Components\Select::make('recurring_frequency')
+                                    ->label('Recurrence')
+                                    ->options([
+                                        'weekly' => 'Weekly',
+                                        'monthly_nth' => 'Monthly (Nth weekday)',
+                                    ])
+                                    ->required()
+                                    ->live(),
+                                Forms\Components\TextInput::make('recurring_count')
+                                    ->label('Occurrences')
+                                    ->numeric()
+                                    ->minValue(1),
+                            ]),
+                            SC\Grid::make(2)
+                                ->visible(fn (SGet $get) => $get('recurring_frequency') === 'monthly_nth')
+                                ->schema([
+                                    Forms\Components\Select::make('recurring_week_of_month')
+                                        ->label('Week of month')
+                                        ->options([
+                                            1 => 'First', 2 => 'Second', 3 => 'Third', 4 => 'Fourth', -1 => 'Last',
+                                        ])
+                                        ->required(),
+                                ]),
+                            SC\Grid::make(3)->schema([
+                                Forms\Components\TimePicker::make('recurring_start_time')
+                                    ->label('Start time')
+                                    ->seconds(false)->native(true)
+                                    ->required(),
+                                Forms\Components\TimePicker::make('recurring_door_time')
+                                    ->label('Door time')
+                                    ->seconds(false)->native(true),
+                                Forms\Components\TimePicker::make('recurring_end_time')
+                                    ->label('End time')
+                                    ->seconds(false)->native(true),
+                            ]),
+                        ]),
                 ])->columns(1),
 
             // LOCATION & LINKS
@@ -255,18 +340,48 @@ class EventResource extends Resource
                         ->disk('public'),
                 ])->columns(2),
 
-            // CONTENT
+            // CONTENT - EN/RO
             SC\Section::make('Content')
                 ->schema([
-                    Forms\Components\Textarea::make('short_description.en')
-                        ->label('Short description (EN)')
-                        ->rows(3),
-                    Forms\Components\RichEditor::make('description.en')
-                        ->label('Description (EN)')
-                        ->columnSpanFull(),
-                    Forms\Components\RichEditor::make('ticket_terms.en')
-                        ->label('Ticket terms (EN)')
-                        ->columnSpanFull(),
+                    SC\Tabs::make('Content Translations')
+                        ->tabs([
+                            SC\Tabs\Tab::make('English')
+                                ->schema([
+                                    Forms\Components\Textarea::make('short_description.en')
+                                        ->label('Short description (EN)')
+                                        ->rows(3),
+                                    Forms\Components\RichEditor::make('description.en')
+                                        ->label('Description (EN)')
+                                        ->columnSpanFull(),
+                                    Forms\Components\RichEditor::make('ticket_terms.en')
+                                        ->label('Ticket terms (EN)')
+                                        ->columnSpanFull()
+                                        ->afterStateHydrated(function ($component, SGet $get) use ($tenant) {
+                                            // Auto-fill from tenant if empty
+                                            if (!$component->getState() && $tenant?->ticket_terms) {
+                                                $component->state($tenant->ticket_terms);
+                                            }
+                                        }),
+                                ]),
+                            SC\Tabs\Tab::make('Română')
+                                ->schema([
+                                    Forms\Components\Textarea::make('short_description.ro')
+                                        ->label('Descriere scurtă (RO)')
+                                        ->rows(3),
+                                    Forms\Components\RichEditor::make('description.ro')
+                                        ->label('Descriere (RO)')
+                                        ->columnSpanFull(),
+                                    Forms\Components\RichEditor::make('ticket_terms.ro')
+                                        ->label('Termeni bilete (RO)')
+                                        ->columnSpanFull()
+                                        ->afterStateHydrated(function ($component, SGet $get) use ($tenant) {
+                                            // Auto-fill from tenant if empty
+                                            if (!$component->getState() && $tenant?->ticket_terms) {
+                                                $component->state($tenant->ticket_terms);
+                                            }
+                                        }),
+                                ]),
+                        ])->columnSpanFull(),
                 ])->columns(1),
 
             // TAXONOMIES
@@ -355,14 +470,24 @@ class EventResource extends Resource
                         ->collapsed()
                         ->addActionLabel('Add ticket type')
                         ->itemLabel(fn (array $state) => $state['name'] ?? 'Ticket')
+                        ->columns(12)
                         ->schema([
                             Forms\Components\TextInput::make('name')
                                 ->label('Name')
+                                ->placeholder('e.g. Early Bird, Standard, VIP')
+                                ->datalist(['Early Bird','Standard','VIP','Backstage','Student','Senior','Child'])
                                 ->required()
-                                ->columnSpan(6),
+                                ->columnSpan(6)
+                                ->live(debounce: 400)
+                                ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                    if ($get('sku')) return;
+                                    $set('sku', Str::upper(Str::slug($state, '-')));
+                                }),
                             Forms\Components\TextInput::make('sku')
                                 ->label('SKU')
+                                ->placeholder('AUTO-GEN if left empty')
                                 ->columnSpan(6),
+
                             SC\Grid::make(4)->schema([
                                 Forms\Components\TextInput::make('currency')
                                     ->label('Currency')
@@ -371,53 +496,132 @@ class EventResource extends Resource
                                     ->dehydrated(true),
                                 Forms\Components\TextInput::make('price_max')
                                     ->label('Price')
-                                    ->numeric()
-                                    ->required(),
-                                Forms\Components\TextInput::make('price')
-                                    ->label('Sale price')
-                                    ->numeric(),
-                                Forms\Components\TextInput::make('discount_percent')
-                                    ->label('Discount %')
+                                    ->placeholder('e.g. 120.00')
                                     ->numeric()
                                     ->minValue(0)
-                                    ->maxValue(100),
+                                    ->required()
+                                    ->live(debounce: 300)
+                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                        $price = (float) $state;
+                                        $sale = $get('price');
+                                        $disc = $get('discount_percent');
+                                        if ($price > 0 && !$sale && is_numeric($disc)) {
+                                            $disc = max(0, min(100, (float)$disc));
+                                            $set('price', round($price * (1 - $disc/100), 2));
+                                        }
+                                        if ($price > 0 && $sale) {
+                                            $d = round((1 - ((float)$sale / $price)) * 100, 2);
+                                            $set('discount_percent', max(0, min(100, $d)));
+                                        }
+                                    }),
+                                Forms\Components\TextInput::make('price')
+                                    ->label('Sale price')
+                                    ->placeholder('leave empty if no sale')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->live(debounce: 300)
+                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                        $price = (float) ($get('price_max') ?: 0);
+                                        $sale = $state !== null && $state !== '' ? (float)$state : null;
+                                        if ($price > 0 && $sale) {
+                                            $d = round((1 - ($sale / $price)) * 100, 2);
+                                            $set('discount_percent', max(0, min(100, $d)));
+                                        } else {
+                                            $set('discount_percent', null);
+                                        }
+                                    }),
+                                Forms\Components\TextInput::make('discount_percent')
+                                    ->label('Discount %')
+                                    ->placeholder('e.g. 20')
+                                    ->numeric()
+                                    ->minValue(0)
+                                    ->maxValue(100)
+                                    ->live(debounce: 300)
+                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                        $price = (float) ($get('price_max') ?: 0);
+                                        if ($price <= 0) return;
+                                        if ($state === null || $state === '') {
+                                            $set('price', null);
+                                            return;
+                                        }
+                                        $disc = max(0, min(100, (float)$state));
+                                        $set('price', round($price * (1 - $disc/100), 2));
+                                    }),
                             ])->columnSpan(12),
+
                             SC\Grid::make(3)->schema([
                                 Forms\Components\TextInput::make('capacity')
                                     ->label('Capacity')
+                                    ->placeholder('e.g. 250')
                                     ->numeric()
+                                    ->minValue(0)
                                     ->required(),
                                 Forms\Components\DateTimePicker::make('sale_starts_at')
                                     ->label('Sale starts')
-                                    ->native(false),
+                                    ->native(false)
+                                    ->minDate(now()),
                                 Forms\Components\DateTimePicker::make('sale_ends_at')
                                     ->label('Sale ends')
                                     ->native(false),
                             ])->columnSpan(12),
-                            Forms\Components\Toggle::make('is_active')
-                                ->label('Active?')
-                                ->default(true)
-                                ->columnSpan(12),
 
                             // Bulk discounts
                             Forms\Components\Repeater::make('bulk_discounts')
                                 ->label('Bulk discounts')
+                                ->collapsed()
+                                ->addActionLabel('Add bulk rule')
+                                ->itemLabel(fn (array $state) => $state['rule_type'] ?? 'Rule')
+                                ->columns(12)
                                 ->schema([
+                                    Forms\Components\Select::make('rule_type')
+                                        ->label('Rule type')
+                                        ->options([
+                                            'buy_x_get_y' => 'Buy X get Y free',
+                                            'buy_x_percent_off' => 'Buy X tickets → % off',
+                                            'amount_off_per_ticket' => 'Amount off per ticket (min qty)',
+                                            'bundle_price' => 'Bundle price (X tickets for total)',
+                                        ])
+                                        ->required()
+                                        ->columnSpan(3)
+                                        ->live(),
+                                    Forms\Components\TextInput::make('buy_qty')
+                                        ->label('Buy X')
+                                        ->numeric()->minValue(1)
+                                        ->visible(fn ($get) => $get('rule_type') === 'buy_x_get_y')
+                                        ->columnSpan(3),
+                                    Forms\Components\TextInput::make('get_qty')
+                                        ->label('Get Y free')
+                                        ->numeric()->minValue(1)
+                                        ->visible(fn ($get) => $get('rule_type') === 'buy_x_get_y')
+                                        ->columnSpan(3),
                                     Forms\Components\TextInput::make('min_qty')
                                         ->label('Min qty')
-                                        ->numeric()
-                                        ->required(),
-                                    Forms\Components\TextInput::make('discount_percent')
-                                        ->label('Discount %')
-                                        ->numeric()
-                                        ->required(),
+                                        ->numeric()->minValue(1)
+                                        ->visible(fn ($get) => in_array($get('rule_type'), ['buy_x_percent_off','amount_off_per_ticket','bundle_price']))
+                                        ->columnSpan(3),
+                                    Forms\Components\TextInput::make('percent_off')
+                                        ->label('% off')
+                                        ->numeric()->minValue(1)->maxValue(100)
+                                        ->visible(fn ($get) => $get('rule_type') === 'buy_x_percent_off')
+                                        ->columnSpan(3),
+                                    Forms\Components\TextInput::make('amount_off')
+                                        ->label('Amount off')
+                                        ->numeric()->minValue(0.01)
+                                        ->visible(fn ($get) => $get('rule_type') === 'amount_off_per_ticket')
+                                        ->columnSpan(3),
+                                    Forms\Components\TextInput::make('bundle_total_price')
+                                        ->label('Bundle total')
+                                        ->numeric()->minValue(0.01)
+                                        ->visible(fn ($get) => $get('rule_type') === 'bundle_price')
+                                        ->columnSpan(3),
                                 ])
-                                ->columns(2)
-                                ->addActionLabel('Add discount tier')
-                                ->collapsed()
                                 ->columnSpan(12),
-                        ])
-                        ->columns(12),
+
+                            Forms\Components\Toggle::make('is_active')
+                                ->label('Active?')
+                                ->default(true)
+                                ->columnSpan(12),
+                        ]),
                 ])->collapsible(),
         ])->columns(1);
     }

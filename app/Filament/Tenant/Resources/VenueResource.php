@@ -8,9 +8,11 @@ use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
+use Filament\Schemas\Components\Utilities\Set as SSet;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 class VenueResource extends Resource
 {
@@ -27,33 +29,175 @@ class VenueResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->components([
-                SC\Section::make('Venue Details')
-                    ->schema([
-                        Forms\Components\TextInput::make('name')
-                            ->required()
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('slug')
-                            ->required()
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('address')
-                            ->maxLength(255),
-                        Forms\Components\TextInput::make('city')
-                            ->maxLength(100),
-                        Forms\Components\TextInput::make('country')
-                            ->maxLength(100),
-                        Forms\Components\TextInput::make('capacity')
-                            ->numeric(),
-                        Forms\Components\Textarea::make('description')
-                            ->rows(4),
-                        Forms\Components\FileUpload::make('featured_image')
-                            ->image()
-                            ->directory('venues'),
-                        Forms\Components\Toggle::make('is_active')
-                            ->default(true),
-                    ])->columns(2),
-            ]);
+        $tenant = auth()->user()->tenant;
+
+        return $schema->schema([
+            // Hidden tenant_id
+            Forms\Components\Hidden::make('tenant_id')
+                ->default($tenant?->id),
+
+            // NAME & SLUG - EN/RO
+            SC\Section::make('Venue Identity')
+                ->schema([
+                    SC\Tabs::make('Name Translations')
+                        ->tabs([
+                            SC\Tabs\Tab::make('English')
+                                ->schema([
+                                    Forms\Components\TextInput::make('name.en')
+                                        ->label('Venue name (EN)')
+                                        ->required()
+                                        ->maxLength(255)
+                                        ->live(onBlur: true)
+                                        ->afterStateUpdated(function ($state, SSet $set) {
+                                            if ($state) $set('slug', Str::slug($state));
+                                        }),
+                                ]),
+                            SC\Tabs\Tab::make('Română')
+                                ->schema([
+                                    Forms\Components\TextInput::make('name.ro')
+                                        ->label('Nume locație (RO)')
+                                        ->maxLength(255),
+                                ]),
+                        ])->columnSpanFull(),
+
+                    Forms\Components\TextInput::make('slug')
+                        ->label('Slug')
+                        ->required()
+                        ->maxLength(190)
+                        ->unique(ignoreRecord: true)
+                        ->rule('alpha_dash')
+                        ->placeholder('auto-generated-from-name'),
+                ])->columns(1),
+
+            // IMAGE & GALLERY
+            SC\Section::make('Media')
+                ->schema([
+                    Forms\Components\FileUpload::make('image_url')
+                        ->label('Main image')
+                        ->image()
+                        ->imagePreviewHeight('200')
+                        ->disk('public')
+                        ->directory('venues')
+                        ->visibility('public'),
+                    Forms\Components\FileUpload::make('gallery')
+                        ->label('Gallery')
+                        ->image()
+                        ->multiple()
+                        ->directory('venues/gallery')
+                        ->visibility('public')
+                        ->reorderable()
+                        ->columnSpanFull(),
+                ])->columns(2),
+
+            // LOCATION
+            SC\Section::make('Location')
+                ->schema([
+                    Forms\Components\TextInput::make('address')
+                        ->label('Address')
+                        ->maxLength(255)
+                        ->placeholder('Street and number'),
+                    Forms\Components\TextInput::make('city')
+                        ->label('City')
+                        ->maxLength(120)
+                        ->placeholder('e.g. București'),
+                    Forms\Components\TextInput::make('state')
+                        ->label('State/Region')
+                        ->maxLength(120)
+                        ->placeholder('e.g. Ilfov'),
+                    Forms\Components\TextInput::make('country')
+                        ->label('Country')
+                        ->maxLength(120)
+                        ->placeholder('e.g. RO'),
+                    Forms\Components\TextInput::make('lat')
+                        ->label('Latitude')
+                        ->numeric()
+                        ->step('0.0000001')
+                        ->placeholder('44.4268'),
+                    Forms\Components\TextInput::make('lng')
+                        ->label('Longitude')
+                        ->numeric()
+                        ->step('0.0000001')
+                        ->placeholder('26.1025'),
+                ])->columns(3),
+
+            // CAPACITY
+            SC\Section::make('Capacity')
+                ->schema([
+                    Forms\Components\TextInput::make('capacity_total')
+                        ->label('Total capacity')
+                        ->numeric()
+                        ->minValue(0)
+                        ->placeholder('e.g. 12000'),
+                    Forms\Components\TextInput::make('capacity_standing')
+                        ->label('Standing')
+                        ->numeric()
+                        ->minValue(0)
+                        ->placeholder('e.g. 8000'),
+                    Forms\Components\TextInput::make('capacity_seated')
+                        ->label('Seated')
+                        ->numeric()
+                        ->minValue(0)
+                        ->placeholder('e.g. 4000'),
+                ])->columns(3),
+
+            // CONTACT & LINKS
+            SC\Section::make('Contact & Links')
+                ->schema([
+                    Forms\Components\TextInput::make('phone')
+                        ->label('Phone')
+                        ->maxLength(64)
+                        ->placeholder('+40 ...')
+                        ->prefixIcon('heroicon-o-phone'),
+                    Forms\Components\TextInput::make('email')
+                        ->label('Email')
+                        ->email()
+                        ->placeholder('contact@example.com')
+                        ->prefixIcon('heroicon-o-envelope'),
+                    Forms\Components\TextInput::make('website_url')
+                        ->label('Website')
+                        ->url()
+                        ->placeholder('https://...')
+                        ->prefixIcon('heroicon-o-globe-alt'),
+                    Forms\Components\TextInput::make('facebook_url')
+                        ->label('Facebook')
+                        ->url()
+                        ->placeholder('https://facebook.com/...')
+                        ->prefixIcon('heroicon-o-link'),
+                    Forms\Components\TextInput::make('instagram_url')
+                        ->label('Instagram')
+                        ->url()
+                        ->placeholder('https://instagram.com/...')
+                        ->prefixIcon('heroicon-o-link'),
+                    Forms\Components\TextInput::make('tiktok_url')
+                        ->label('TikTok')
+                        ->url()
+                        ->placeholder('https://tiktok.com/@...')
+                        ->prefixIcon('heroicon-o-link'),
+                    Forms\Components\DatePicker::make('established_at')
+                        ->label('Established')
+                        ->native(false),
+                ])->columns(2),
+
+            // DESCRIPTION - EN/RO
+            SC\Section::make('Description')
+                ->schema([
+                    SC\Tabs::make('Description Translations')
+                        ->tabs([
+                            SC\Tabs\Tab::make('English')
+                                ->schema([
+                                    Forms\Components\RichEditor::make('description.en')
+                                        ->label('Description (EN)')
+                                        ->columnSpanFull(),
+                                ]),
+                            SC\Tabs\Tab::make('Română')
+                                ->schema([
+                                    Forms\Components\RichEditor::make('description.ro')
+                                        ->label('Descriere (RO)')
+                                        ->columnSpanFull(),
+                                ]),
+                        ])->columnSpanFull(),
+                ]),
+        ]);
     }
 
     public static function table(Table $table): Table
