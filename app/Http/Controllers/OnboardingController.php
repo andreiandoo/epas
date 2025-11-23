@@ -13,6 +13,8 @@ use App\Jobs\GeneratePackageJob;
 use App\Services\AnafService;
 use App\Services\LocationService;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
+use App\Services\ContractPdfService;
+use App\Mail\ContractMail;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Request;
@@ -313,6 +315,28 @@ class OnboardingController extends Controller
             } catch (\Exception $e) {
                 Log::error('Failed to send domain verification email', [
                     'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            // Generate and send contract (non-fatal - registration continues even if contract fails)
+            try {
+                $contractService = app(ContractPdfService::class);
+                $contractPath = $contractService->generate($tenant);
+
+                // Send contract email
+                Mail::to($tenant->contact_email)
+                    ->send(new ContractMail($tenant, $contractPath));
+
+                $tenant->update(['contract_sent_at' => now()]);
+
+                Log::info('Contract generated and sent', [
+                    'tenant_id' => $tenant->id,
+                    'contract_path' => $contractPath,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to generate or send contract', [
+                    'tenant_id' => $tenant->id,
                     'error' => $e->getMessage(),
                 ]);
             }

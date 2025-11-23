@@ -30,6 +30,9 @@ class Tenant extends Model
         'reg_com',
         'contract_number',
         'contract_file',
+        'contract_generated_at',
+        'contract_sent_at',
+        'contract_template_id',
         'bank_account',
         'bank_name',
         'address',
@@ -65,10 +68,17 @@ class Tenant extends Model
         'billing_starts_at' => 'datetime',
         'next_billing_date' => 'date',
         'onboarding_completed_at' => 'datetime',
+        'contract_generated_at' => 'datetime',
+        'contract_sent_at' => 'datetime',
         'commission_rate' => 'decimal:2',
         'vat_payer' => 'boolean',
         'onboarding_completed' => 'boolean',
     ];
+
+    public function contractTemplate(): BelongsTo
+    {
+        return $this->belongsTo(ContractTemplate::class);
+    }
 
     public function customers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
