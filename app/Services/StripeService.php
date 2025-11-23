@@ -73,10 +73,13 @@ class StripeService
             'microservice_ids' => implode(',', $microserviceIds),
         ];
 
+        // Use currency from first microservice (all should have same currency for Stripe)
+        $checkoutCurrency = strtolower($microservices->first()->currency ?? $this->settings->default_currency ?? 'eur');
+
         foreach ($microservices as $microservice) {
             $lineItem = [
                 'price_data' => [
-                    'currency' => strtolower($this->settings->default_currency ?? 'ron'),
+                    'currency' => $checkoutCurrency,
                     'product_data' => [
                         'name' => $microservice->getTranslation('name', app()->getLocale()) ?: $microservice->getTranslation('name', 'en'),
                         'description' => $microservice->getTranslation('short_description', app()->getLocale())

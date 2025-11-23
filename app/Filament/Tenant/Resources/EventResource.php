@@ -202,6 +202,7 @@ class EventResource extends Resource
                         ->label('Venue')
                         ->searchable()
                         ->preload()
+                        ->live()
                         ->relationship(
                             name: 'venue',
                             modifyQueryUsing: function (Builder $query) use ($tenant) {
@@ -212,6 +213,15 @@ class EventResource extends Resource
                             }
                         )
                         ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
+                        ->afterStateUpdated(function ($state, SSet $set) {
+                            if ($state) {
+                                $venue = Venue::find($state);
+                                if ($venue) {
+                                    $set('address', $venue->address ?? $venue->full_address ?? '');
+                                    $set('website_url', $venue->website ?? '');
+                                }
+                            }
+                        })
                         ->nullable(),
                     Forms\Components\TextInput::make('address')
                         ->label('Address')
