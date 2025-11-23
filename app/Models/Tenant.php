@@ -104,6 +104,33 @@ class Tenant extends Model
         return $this->hasOne(ContractVersion::class)->latestOfMany('version_number');
     }
 
+    public function customVariables(): HasMany
+    {
+        return $this->hasMany(TenantCustomVariable::class);
+    }
+
+    public function amendments(): HasMany
+    {
+        return $this->hasMany(ContractAmendment::class)->orderByDesc('created_at');
+    }
+
+    /**
+     * Get custom variable value by name
+     */
+    public function getCustomVariableValue(string $name): ?string
+    {
+        $variable = ContractCustomVariable::where('name', $name)->first();
+        if (!$variable) {
+            return null;
+        }
+
+        $tenantValue = $this->customVariables()
+            ->where('contract_custom_variable_id', $variable->id)
+            ->first();
+
+        return $tenantValue?->value ?? $variable->default_value;
+    }
+
     /**
      * Get contract status color for display
      */

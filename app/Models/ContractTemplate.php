@@ -212,6 +212,13 @@ class ContractTemplate extends Model
             '{{current_year}}' => now()->year,
         ];
 
+        // Add custom variables
+        $customVariables = ContractCustomVariable::where('is_active', true)->get();
+        foreach ($customVariables as $customVar) {
+            $value = $tenant->getCustomVariableValue($customVar->name);
+            $variables['{{' . $customVar->name . '}}'] = $value ?? $customVar->default_value ?? '';
+        }
+
         return str_replace(array_keys($variables), array_values($variables), $content);
     }
 
