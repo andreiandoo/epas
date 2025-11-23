@@ -202,14 +202,16 @@ class EventResource extends Resource
                         ->label('Venue')
                         ->searchable()
                         ->preload()
-                        ->options(function () use ($tenant) {
-                            return Venue::query()
-                                ->where(fn($q) => $q
+                        ->relationship(
+                            name: 'venue',
+                            modifyQueryUsing: function (Builder $query) use ($tenant) {
+                                $query->where(fn($q) => $q
                                     ->whereNull('tenant_id')
                                     ->orWhere('tenant_id', $tenant?->id))
-                                ->orderBy('name')
-                                ->pluck('name', 'id');
-                        })
+                                    ->orderBy('name');
+                            }
+                        )
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
                         ->nullable(),
                     Forms\Components\TextInput::make('address')
                         ->label('Address')
@@ -264,9 +266,9 @@ class EventResource extends Resource
                         ->label('Event types')
                         ->relationship(
                             name: 'eventTypes',
-                            titleAttribute: 'name',
                             modifyQueryUsing: fn (Builder $query) => $query->whereNotNull('parent_id')->orderBy('name')
                         )
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
                         ->multiple()
                         ->preload()
                         ->searchable()
@@ -298,7 +300,6 @@ class EventResource extends Resource
                         ->label('Event genres')
                         ->relationship(
                             name: 'eventGenres',
-                            titleAttribute: 'name',
                             modifyQueryUsing: function (Builder $query, SGet $get) {
                                 $typeIds = (array) ($get('eventTypes') ?? []);
                                 if (!$typeIds) {
@@ -313,6 +314,7 @@ class EventResource extends Resource
                                 })->orderBy('name');
                             }
                         )
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
                         ->multiple()
                         ->preload()
                         ->searchable()
@@ -322,6 +324,7 @@ class EventResource extends Resource
                     Forms\Components\Select::make('artists')
                         ->label('Artists')
                         ->relationship('artists', 'name')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
                         ->multiple()
                         ->preload()
                         ->searchable(),
@@ -329,6 +332,7 @@ class EventResource extends Resource
                     Forms\Components\Select::make('tags')
                         ->label('Event tags')
                         ->relationship('tags', 'name')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
                         ->multiple()
                         ->preload()
                         ->searchable(),
@@ -385,6 +389,24 @@ class EventResource extends Resource
                             Forms\Components\Toggle::make('is_active')
                                 ->label('Active?')
                                 ->default(true)
+                                ->columnSpan(12),
+
+                            // Bulk discounts
+                            Forms\Components\Repeater::make('bulk_discounts')
+                                ->label('Bulk discounts')
+                                ->schema([
+                                    Forms\Components\TextInput::make('min_qty')
+                                        ->label('Min qty')
+                                        ->numeric()
+                                        ->required(),
+                                    Forms\Components\TextInput::make('discount_percent')
+                                        ->label('Discount %')
+                                        ->numeric()
+                                        ->required(),
+                                ])
+                                ->columns(2)
+                                ->addActionLabel('Add discount tier')
+                                ->collapsed()
                                 ->columnSpan(12),
                         ])
                         ->columns(12),

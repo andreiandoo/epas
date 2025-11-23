@@ -118,7 +118,7 @@
 
             <!-- Actions -->
             <div class="flex flex-col sm:flex-row gap-4">
-                <a href="/admin"
+                <a href="/tenant"
                    class="flex-1 text-center bg-indigo-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-indigo-700 transition-colors">
                     Go to Dashboard
                 </a>
