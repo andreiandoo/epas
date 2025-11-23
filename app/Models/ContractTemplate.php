@@ -15,6 +15,7 @@ class ContractTemplate extends Model
         'content',
         'work_method',
         'plan',
+        'locale',
         'is_default',
         'is_active',
         'available_variables',
@@ -117,17 +118,33 @@ class ContractTemplate extends Model
      */
     public static function findForTenant(Tenant $tenant): ?self
     {
-        // First try to find exact match for work_method and plan
+        $locale = $tenant->locale ?? 'en';
+
+        // First try to find exact match for work_method, plan, and locale
         $template = static::where('is_active', true)
             ->where('work_method', $tenant->work_method)
             ->where('plan', $tenant->plan)
+            ->where('locale', $locale)
             ->first();
 
         if ($template) {
             return $template;
         }
 
-        // Try to find match for just work_method
+        // Try exact match without locale
+        $template = static::where('is_active', true)
+            ->where('work_method', $tenant->work_method)
+            ->where('plan', $tenant->plan)
+            ->where(function ($q) use ($locale) {
+                $q->where('locale', 'en')->orWhereNull('locale');
+            })
+            ->first();
+
+        if ($template) {
+            return $template;
+        }
+
+        // Try to find match for just work_method with locale
         $template = static::where('is_active', true)
             ->where('work_method', $tenant->work_method)
             ->whereNull('plan')

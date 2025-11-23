@@ -49,6 +49,16 @@
 
     <div class="content">
         {!! $emailContent !!}
+
+        @if(isset($signingUrl))
+        <div style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px; text-align: center;">
+            <p style="margin-bottom: 15px; font-weight: bold;">Review and Sign Your Contract Online</p>
+            <a href="{{ $signingUrl }}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-weight: bold;">View Contract</a>
+            @if(isset($signUrl))
+            <a href="{{ $signUrl }}" style="display: inline-block; padding: 12px 24px; background-color: #16a34a; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; margin-left: 10px;">Sign Now</a>
+            @endif
+        </div>
+        @endif
     </div>
 
     <div class="footer">

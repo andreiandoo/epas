@@ -69,6 +69,18 @@ class ContractTemplateResource extends Resource
                             ->placeholder('All plans')
                             ->helperText('Select a specific plan or leave empty for all'),
 
+                        Forms\Components\Select::make('locale')
+                            ->label('Language')
+                            ->options([
+                                'en' => 'English',
+                                'ro' => 'Romanian (Română)',
+                                'hu' => 'Hungarian (Magyar)',
+                                'de' => 'German (Deutsch)',
+                                'fr' => 'French (Français)',
+                            ])
+                            ->default('en')
+                            ->helperText('Template language - matched to tenant locale'),
+
                         Forms\Components\Toggle::make('is_default')
                             ->label('Default Template')
                             ->helperText('Use this template when no specific match is found')

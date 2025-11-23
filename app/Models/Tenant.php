@@ -33,6 +33,13 @@ class Tenant extends Model
         'contract_generated_at',
         'contract_sent_at',
         'contract_template_id',
+        'contract_status',
+        'contract_viewed_at',
+        'contract_signed_at',
+        'contract_signature_ip',
+        'contract_signature_data',
+        'contract_renewal_date',
+        'contract_auto_renew',
         'bank_account',
         'bank_name',
         'address',
@@ -70,6 +77,10 @@ class Tenant extends Model
         'onboarding_completed_at' => 'datetime',
         'contract_generated_at' => 'datetime',
         'contract_sent_at' => 'datetime',
+        'contract_viewed_at' => 'datetime',
+        'contract_signed_at' => 'datetime',
+        'contract_renewal_date' => 'date',
+        'contract_auto_renew' => 'boolean',
         'commission_rate' => 'decimal:2',
         'vat_payer' => 'boolean',
         'onboarding_completed' => 'boolean',
@@ -78,6 +89,46 @@ class Tenant extends Model
     public function contractTemplate(): BelongsTo
     {
         return $this->belongsTo(ContractTemplate::class);
+    }
+
+    public function contractVersions(): HasMany
+    {
+        return $this->hasMany(ContractVersion::class)->orderByDesc('version_number');
+    }
+
+    /**
+     * Get the latest contract version
+     */
+    public function latestContractVersion()
+    {
+        return $this->hasOne(ContractVersion::class)->latestOfMany('version_number');
+    }
+
+    /**
+     * Get contract status color for display
+     */
+    public function getContractStatusColor(): string
+    {
+        return match ($this->contract_status) {
+            'draft' => 'gray',
+            'generated' => 'info',
+            'sent' => 'warning',
+            'viewed' => 'primary',
+            'signed' => 'success',
+            default => 'gray',
+        };
+    }
+
+    /**
+     * Check if contract needs renewal
+     */
+    public function contractNeedsRenewal(): bool
+    {
+        if (!$this->contract_renewal_date) {
+            return false;
+        }
+
+        return $this->contract_renewal_date->isPast() || $this->contract_renewal_date->isToday();
     }
 
     public function customers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany

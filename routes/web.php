@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\DomainController;
 use App\Http\Controllers\Admin\GlobalSearchController;
 use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\ContractController;
+use App\Http\Controllers\ContractSigningController;
 use App\Http\Controllers\MicroserviceMarketplaceController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\TenantPaymentWebhookController;
@@ -196,6 +197,16 @@ Route::middleware(['web', 'auth'])->prefix('admin')->group(function () {
         ->name('admin.tenant.contract.preview');
     Route::get('/contract-templates/{template}/preview', [ContractController::class, 'previewTemplate'])
         ->name('admin.contract-template.preview');
+});
+
+// Public Contract Signing Routes (no auth required - token-based)
+Route::prefix('contract')->group(function () {
+    Route::get('/{token}', [ContractSigningController::class, 'view'])->name('contract.view');
+    Route::get('/{token}/pdf', [ContractSigningController::class, 'pdf'])->name('contract.pdf');
+    Route::get('/{token}/sign', [ContractSigningController::class, 'signPage'])->name('contract.sign');
+    Route::post('/{token}/sign', [ContractSigningController::class, 'sign'])->name('contract.sign.submit');
+    Route::get('/{token}/history', [ContractSigningController::class, 'history'])->name('contract.history');
+    Route::get('/{token}/version/{versionId}', [ContractSigningController::class, 'downloadVersion'])->name('contract.version.download');
 });
 
 // Documentation Routes (Legacy - Microservices)

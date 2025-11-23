@@ -480,22 +480,42 @@ class TenantResource extends Resource
 
                             // Contract status
                             if ($record->contract_file) {
-                                $html .= '<div class="flex items-center gap-2 text-green-600">';
-                                $html .= '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>';
-                                $html .= '<span class="font-medium">Contract Generated</span>';
+                                // Status badge
+                                $statusColors = [
+                                    'draft' => 'gray',
+                                    'generated' => 'blue',
+                                    'sent' => 'yellow',
+                                    'viewed' => 'purple',
+                                    'signed' => 'green',
+                                ];
+                                $statusColor = $statusColors[$record->contract_status] ?? 'gray';
+                                $html .= '<div class="flex items-center gap-2">';
+                                $html .= '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-' . $statusColor . '-100 text-' . $statusColor . '-800">' . ucfirst($record->contract_status) . '</span>';
+                                if ($record->contract_signed_at) {
+                                    $html .= '<span class="text-green-600 text-sm">✓ Signed</span>';
+                                }
                                 $html .= '</div>';
 
-                                $html .= '<div class="grid grid-cols-2 gap-4 text-sm">';
+                                $html .= '<div class="grid grid-cols-2 gap-4 text-sm mt-3">';
                                 $html .= '<div><strong>Contract Number:</strong> ' . ($record->contract_number ?? 'N/A') . '</div>';
-                                $html .= '<div><strong>Generated:</strong> ' . ($record->contract_generated_at ? $record->contract_generated_at->format('d.m.Y H:i') : 'N/A') . '</div>';
-                                $html .= '<div><strong>Sent to Email:</strong> ' . ($record->contract_sent_at ? $record->contract_sent_at->format('d.m.Y H:i') : 'Not sent') . '</div>';
                                 $html .= '<div><strong>Template:</strong> ' . ($record->contractTemplate?->name ?? 'Default') . '</div>';
+                                $html .= '<div><strong>Generated:</strong> ' . ($record->contract_generated_at ? $record->contract_generated_at->format('d.m.Y H:i') : 'N/A') . '</div>';
+                                $html .= '<div><strong>Sent:</strong> ' . ($record->contract_sent_at ? $record->contract_sent_at->format('d.m.Y H:i') : 'Not sent') . '</div>';
+                                if ($record->contract_viewed_at) {
+                                    $html .= '<div><strong>Viewed:</strong> ' . $record->contract_viewed_at->format('d.m.Y H:i') . '</div>';
+                                }
+                                if ($record->contract_signed_at) {
+                                    $html .= '<div><strong>Signed:</strong> ' . $record->contract_signed_at->format('d.m.Y H:i') . '</div>';
+                                }
+                                $html .= '<div><strong>Renewal Date:</strong> ' . ($record->contract_renewal_date ? $record->contract_renewal_date->format('d.m.Y') : 'Not set') . '</div>';
+                                $html .= '<div><strong>Auto Renew:</strong> ' . ($record->contract_auto_renew ? 'Yes' : 'No') . '</div>';
+                                $html .= '<div><strong>Versions:</strong> ' . $record->contractVersions()->count() . '</div>';
                                 $html .= '</div>';
 
                                 $html .= '<div class="flex gap-2 mt-4">';
                                 $html .= '<a href="' . route('admin.tenant.contract.download', $record) . '" class="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700" target="_blank">';
                                 $html .= '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>';
-                                $html .= 'Download Contract</a>';
+                                $html .= 'Download</a>';
                                 $html .= '<a href="' . route('admin.tenant.contract.preview', $record) . '" class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50" target="_blank">';
                                 $html .= '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>';
                                 $html .= 'Preview</a>';

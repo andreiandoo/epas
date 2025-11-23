@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Http\Controllers\ContractSigningController;
 use App\Models\EmailLog;
 use App\Models\EmailTemplate;
 use App\Models\Setting;
@@ -52,12 +53,16 @@ class ContractMail extends Mailable implements ShouldQueue
      */
     public function content(): Content
     {
+        $signingToken = ContractSigningController::generateToken($this->tenant);
+
         return new Content(
             view: 'emails.contract',
             with: [
                 'tenant' => $this->tenant,
                 'settings' => $this->settings,
                 'emailContent' => $this->getEmailContent(),
+                'signingUrl' => route('contract.view', $signingToken),
+                'signUrl' => route('contract.sign', $signingToken),
             ],
         );
     }

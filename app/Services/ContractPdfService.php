@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ContractTemplate;
+use App\Models\ContractVersion;
 use App\Models\Setting;
 use App\Models\Tenant;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -59,9 +60,52 @@ class ContractPdfService
             'contract_file' => $path,
             'contract_generated_at' => now(),
             'contract_template_id' => $template->id,
+            'contract_status' => 'generated',
+            'contract_renewal_date' => now()->addYear(),
         ]);
 
+        // Create version record
+        $this->createVersion($tenant, $template, $path);
+
         return $path;
+    }
+
+    /**
+     * Create a contract version record
+     */
+    protected function createVersion(Tenant $tenant, ContractTemplate $template, string $path): ContractVersion
+    {
+        // Get the next version number
+        $lastVersion = $tenant->contractVersions()->max('version_number') ?? 0;
+        $versionNumber = $lastVersion + 1;
+
+        // Create tenant data snapshot
+        $snapshot = [
+            'company_name' => $tenant->company_name,
+            'cui' => $tenant->cui,
+            'reg_com' => $tenant->reg_com,
+            'address' => $tenant->address,
+            'city' => $tenant->city,
+            'state' => $tenant->state,
+            'country' => $tenant->country,
+            'contact_first_name' => $tenant->contact_first_name,
+            'contact_last_name' => $tenant->contact_last_name,
+            'contact_email' => $tenant->contact_email,
+            'work_method' => $tenant->work_method,
+            'plan' => $tenant->plan,
+            'commission_rate' => $tenant->commission_rate,
+        ];
+
+        return ContractVersion::create([
+            'tenant_id' => $tenant->id,
+            'contract_template_id' => $template->id,
+            'version_number' => $versionNumber,
+            'contract_number' => $tenant->contract_number,
+            'file_path' => $path,
+            'status' => 'generated',
+            'generated_at' => now(),
+            'tenant_data_snapshot' => $snapshot,
+        ]);
     }
 
     /**
