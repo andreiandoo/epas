@@ -205,15 +205,8 @@ class PageResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_published')
                     ->label('Published'),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->actions([])
+            ->bulkActions([])
             ->defaultSort('menu_order');
     }
 

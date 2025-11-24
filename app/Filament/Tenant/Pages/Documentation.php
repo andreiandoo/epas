@@ -26,7 +26,7 @@ class Documentation extends Page
                 ->where('status', 'published')
                 ->orderBy('order');
         }])
-        ->where('is_active', true)
+        ->where('is_public', true)
         ->orderBy('order')
         ->get();
     }

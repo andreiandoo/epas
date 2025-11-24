@@ -2,14 +2,14 @@
 
 namespace App\Filament\Tenant\Pages;
 
-use App\Models\Tenant;
 use BackedEnum;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 
 class Profile extends Page
 {
@@ -17,6 +17,7 @@ class Profile extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-user-circle';
     protected static ?string $navigationLabel = 'Profile';
+    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 2;
     protected string $view = 'filament.tenant.pages.profile';
 
@@ -24,25 +25,16 @@ class Profile extends Page
 
     public function mount(): void
     {
-        $tenant = auth()->user()->tenant;
+        $user = auth()->user();
 
-        if ($tenant) {
+        if ($user) {
             $this->form->fill([
-                'name' => $tenant->name,
-                'public_name' => $tenant->public_name,
-                'company_name' => $tenant->company_name,
-                'cui' => $tenant->cui,
-                'reg_com' => $tenant->reg_com,
-                'address' => $tenant->address,
-                'city' => $tenant->city,
-                'state' => $tenant->state,
-                'country' => $tenant->country,
-                'postal_code' => $tenant->postal_code,
-                'contact_email' => $tenant->contact_email,
-                'contact_phone' => $tenant->contact_phone,
-                'website' => $tenant->website,
-                'bank_name' => $tenant->bank_name,
-                'bank_account' => $tenant->bank_account,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'position' => $user->position,
+                'avatar' => $user->avatar,
             ]);
         }
     }
@@ -51,81 +43,69 @@ class Profile extends Page
     {
         return $form
             ->schema([
-                SC\Section::make('Business Information')
+                SC\Section::make('Personal Information')
                     ->schema([
-                        Forms\Components\TextInput::make('name')
-                            ->label('Internal Name')
+                        Forms\Components\FileUpload::make('avatar')
+                            ->label('Profile Photo')
+                            ->image()
+                            ->avatar()
+                            ->directory('avatars')
+                            ->maxSize(2048)
+                            ->columnSpanFull(),
+
+                        Forms\Components\TextInput::make('first_name')
+                            ->label('First Name')
                             ->required()
                             ->maxLength(255),
 
-                        Forms\Components\TextInput::make('public_name')
-                            ->label('Public Display Name')
-                            ->maxLength(255)
-                            ->helperText('Name shown to customers'),
-
-                        Forms\Components\TextInput::make('company_name')
-                            ->label('Legal Company Name')
+                        Forms\Components\TextInput::make('last_name')
+                            ->label('Last Name')
+                            ->required()
                             ->maxLength(255),
 
-                        Forms\Components\TextInput::make('cui')
-                            ->label('CUI / VAT Number')
-                            ->maxLength(50),
-
-                        Forms\Components\TextInput::make('reg_com')
-                            ->label('Trade Register')
-                            ->maxLength(50),
-                    ])
-                    ->columns(2),
-
-                SC\Section::make('Address')
-                    ->schema([
-                        Forms\Components\TextInput::make('address')
-                            ->label('Street Address')
-                            ->maxLength(255)
-                            ->columnSpanFull(),
-
-                        Forms\Components\TextInput::make('city')
-                            ->maxLength(100),
-
-                        Forms\Components\TextInput::make('state')
-                            ->label('State / County')
-                            ->maxLength(100),
-
-                        Forms\Components\TextInput::make('country')
-                            ->maxLength(2)
-                            ->helperText('2-letter code (e.g., RO)'),
-
-                        Forms\Components\TextInput::make('postal_code')
-                            ->maxLength(20),
-                    ])
-                    ->columns(2),
-
-                SC\Section::make('Contact Information')
-                    ->schema([
-                        Forms\Components\TextInput::make('contact_email')
+                        Forms\Components\TextInput::make('email')
+                            ->label('Email')
                             ->email()
-                            ->maxLength(255),
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->helperText('Contact administrator to change email'),
 
-                        Forms\Components\TextInput::make('contact_phone')
+                        Forms\Components\TextInput::make('phone')
+                            ->label('Phone')
                             ->tel()
                             ->maxLength(50),
 
-                        Forms\Components\TextInput::make('website')
-                            ->url()
-                            ->maxLength(255),
+                        Forms\Components\TextInput::make('position')
+                            ->label('Position / Title')
+                            ->maxLength(255)
+                            ->helperText('Your role in the organization'),
                     ])
                     ->columns(2),
 
-                SC\Section::make('Bank Details')
+                SC\Section::make('Change Password')
+                    ->description('Leave blank to keep your current password')
                     ->schema([
-                        Forms\Components\TextInput::make('bank_name')
-                            ->maxLength(255),
+                        Forms\Components\TextInput::make('current_password')
+                            ->label('Current Password')
+                            ->password()
+                            ->revealable()
+                            ->currentPassword()
+                            ->requiredWith('new_password'),
 
-                        Forms\Components\TextInput::make('bank_account')
-                            ->label('IBAN')
-                            ->maxLength(50),
+                        Forms\Components\TextInput::make('new_password')
+                            ->label('New Password')
+                            ->password()
+                            ->revealable()
+                            ->rule(Password::default())
+                            ->confirmed(),
+
+                        Forms\Components\TextInput::make('new_password_confirmation')
+                            ->label('Confirm New Password')
+                            ->password()
+                            ->revealable()
+                            ->requiredWith('new_password'),
                     ])
-                    ->columns(2),
+                    ->columns(1),
             ])
             ->statePath('data');
     }
@@ -133,10 +113,23 @@ class Profile extends Page
     public function save(): void
     {
         $data = $this->form->getState();
-        $tenant = auth()->user()->tenant;
+        $user = auth()->user();
 
-        if ($tenant) {
-            $tenant->update($data);
+        if ($user) {
+            $updateData = [
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'phone' => $data['phone'],
+                'position' => $data['position'],
+                'avatar' => $data['avatar'],
+            ];
+
+            // Update password if provided
+            if (!empty($data['new_password'])) {
+                $updateData['password'] = Hash::make($data['new_password']);
+            }
+
+            $user->update($updateData);
 
             Notification::make()
                 ->success()

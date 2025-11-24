@@ -181,7 +181,7 @@ class PaymentConfig extends Page
                             ->content(fn () => $tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'stripe']) : '-')
                             ->helperText('Add this URL to your Stripe webhook settings'),
                     ])
-                    ->visible(fn (Forms\Get $get) => $get('payment_processor') === 'stripe')
+                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('payment_processor') === 'stripe')
                     ->columns(1),
 
                 // Netopia Configuration
@@ -211,7 +211,7 @@ class PaymentConfig extends Page
                             ->content(fn () => $tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'netopia']) : '-')
                             ->helperText('Add this URL to your Netopia account settings'),
                     ])
-                    ->visible(fn (Forms\Get $get) => $get('payment_processor') === 'netopia')
+                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('payment_processor') === 'netopia')
                     ->columns(1),
 
                 // Euplatesc Configuration
@@ -237,7 +237,7 @@ class PaymentConfig extends Page
                             ->content(fn () => $tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'euplatesc']) : '-')
                             ->helperText('Add this URL to your EuPlatesc account settings'),
                     ])
-                    ->visible(fn (Forms\Get $get) => $get('payment_processor') === 'euplatesc')
+                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('payment_processor') === 'euplatesc')
                     ->columns(1),
 
                 // PayU Configuration
@@ -263,7 +263,7 @@ class PaymentConfig extends Page
                             ->content(fn () => $tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'payu']) : '-')
                             ->helperText('Add this URL to your PayU account for IPN/IOS notifications'),
                     ])
-                    ->visible(fn (Forms\Get $get) => $get('payment_processor') === 'payu')
+                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('payment_processor') === 'payu')
                     ->columns(1),
 
                 SC\Section::make('Security Notes')

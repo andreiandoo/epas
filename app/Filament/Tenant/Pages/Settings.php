@@ -102,14 +102,24 @@ class Settings extends Page
                                     ->schema([
                                         Forms\Components\TextInput::make('company_name')
                                             ->label('Legal Company Name')
+                                            ->disabled()
                                             ->maxLength(255),
 
                                         Forms\Components\TextInput::make('cui')
                                             ->label('CUI / VAT Number')
+                                            ->disabled()
                                             ->maxLength(50),
 
                                         Forms\Components\TextInput::make('reg_com')
                                             ->label('Trade Register')
+                                            ->disabled()
+                                            ->maxLength(50),
+
+                                        Forms\Components\TextInput::make('bank_name')
+                                            ->maxLength(255),
+
+                                        Forms\Components\TextInput::make('bank_account')
+                                            ->label('IBAN')
                                             ->maxLength(50),
                                     ])->columns(3),
 
@@ -128,14 +138,14 @@ class Settings extends Page
                                             ->maxLength(100),
 
                                         Forms\Components\TextInput::make('country')
-                                            ->maxLength(2)
-                                            ->helperText('2-letter code (e.g., RO)'),
+                                            ->maxLength(100)
+                                            ->helperText('Full country name (e.g., Romania)'),
 
                                         Forms\Components\TextInput::make('postal_code')
                                             ->maxLength(20),
                                     ])->columns(2),
 
-                                SC\Section::make('Contact & Banking')
+                                SC\Section::make('Contact')
                                     ->schema([
                                         Forms\Components\TextInput::make('contact_email')
                                             ->email()
@@ -148,14 +158,7 @@ class Settings extends Page
                                         Forms\Components\TextInput::make('website')
                                             ->url()
                                             ->maxLength(255),
-
-                                        Forms\Components\TextInput::make('bank_name')
-                                            ->maxLength(255),
-
-                                        Forms\Components\TextInput::make('bank_account')
-                                            ->label('IBAN')
-                                            ->maxLength(50),
-                                    ])->columns(2),
+                                    ])->columns(3),
                             ]),
 
                         SC\Tabs\Tab::make('Personalization')
@@ -191,11 +194,17 @@ class Settings extends Page
                                             ->maxLength(255)
                                             ->helperText('Short tagline displayed on the site'),
 
-                                        Forms\Components\Textarea::make('ticket_terms')
+                                        Forms\Components\RichEditor::make('ticket_terms')
                                             ->label('Ticket Terms')
-                                            ->rows(4)
-                                            ->helperText('Terms displayed on tickets')
-                                            ->maxLength(1000),
+                                            ->toolbarButtons([
+                                                'bold',
+                                                'italic',
+                                                'underline',
+                                                'bulletList',
+                                                'orderedList',
+                                                'link',
+                                            ])
+                                            ->helperText('Terms displayed on tickets'),
                                     ]),
 
                                 SC\Section::make('Theme & Colors')
