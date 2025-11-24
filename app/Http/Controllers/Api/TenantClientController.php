@@ -114,18 +114,21 @@ class TenantClientController extends Controller
         $query = Event::where('tenant_id', $tenantId);
 
         // Check date columns exist before filtering
+        // Use today's date (not time) for comparison to include events starting today
+        $today = now()->startOfDay();
+
         if (\Schema::hasColumn('events', 'end_date') && \Schema::hasColumn('events', 'start_date')) {
-            $query->where(function ($q) {
-                $q->where('end_date', '>=', now())
-                  ->orWhere(function ($q2) {
+            $query->where(function ($q) use ($today) {
+                $q->where('end_date', '>=', $today)
+                  ->orWhere(function ($q2) use ($today) {
                       $q2->whereNull('end_date')
-                         ->where('start_date', '>=', now());
+                         ->where('start_date', '>=', $today);
                   });
             });
         } elseif (\Schema::hasColumn('events', 'start_date')) {
-            $query->where('start_date', '>=', now());
+            $query->where('start_date', '>=', $today);
         } elseif (\Schema::hasColumn('events', 'event_date')) {
-            $query->where('event_date', '>=', now());
+            $query->where('event_date', '>=', $today);
         }
 
         // Check if cancelled_at column exists
@@ -194,18 +197,21 @@ class TenantClientController extends Controller
         $query = Event::where('tenant_id', $tenantId);
 
         // Check date columns exist before filtering
+        // Use today's date (not time) for comparison to include events starting today
+        $today = now()->startOfDay();
+
         if (\Schema::hasColumn('events', 'end_date') && \Schema::hasColumn('events', 'start_date')) {
-            $query->where(function ($q) {
-                $q->where('end_date', '>=', now())
-                  ->orWhere(function ($q2) {
+            $query->where(function ($q) use ($today) {
+                $q->where('end_date', '>=', $today)
+                  ->orWhere(function ($q2) use ($today) {
                       $q2->whereNull('end_date')
-                         ->where('start_date', '>=', now());
+                         ->where('start_date', '>=', $today);
                   });
             });
         } elseif (\Schema::hasColumn('events', 'start_date')) {
-            $query->where('start_date', '>=', now());
+            $query->where('start_date', '>=', $today);
         } elseif (\Schema::hasColumn('events', 'event_date')) {
-            $query->where('event_date', '>=', now());
+            $query->where('event_date', '>=', $today);
         }
 
         // Check if cancelled_at column exists
