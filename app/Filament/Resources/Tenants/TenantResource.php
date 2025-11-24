@@ -28,7 +28,7 @@ class TenantResource extends Resource
                     Forms\Components\TextInput::make('name')
                         ->label('Name (Legal/Company Name)')
                         ->required()
-                        ->hintIcon('heroicon-o-briefcase', tooltip: 'Legal company name as registered'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Legal company name as registered'),
 
                     Forms\Components\TextInput::make('public_name')
                         ->label('Public Name')
@@ -38,7 +38,7 @@ class TenantResource extends Resource
                             if (! $state) return;
                             $set('slug', \Illuminate\Support\Str::slug($state));
                         })
-                        ->hintIcon('heroicon-o-globe-alt', tooltip: 'Name displayed publicly on event sites'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Name displayed publicly on event sites'),
 
                     Forms\Components\TextInput::make('slug')
                         ->label('Slug')
@@ -67,7 +67,7 @@ class TenantResource extends Resource
                             'premium' => 'Premium',
                         ])
                         ->nullable()
-                        ->hintIcon('heroicon-o-currency-dollar', tooltip: 'Client tier for billing/features'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Client tier for billing/features'),
 
                     Forms\Components\Select::make('plan')
                         ->label('Plan')
@@ -89,7 +89,7 @@ class TenantResource extends Resource
                         ])
                         ->default('ro')
                         ->required()
-                        ->hintIcon('heroicon-o-translate', tooltip: 'Default language for this tenant'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Default language for this tenant'),
                 ])->columns(2),
 
             SC\Section::make('Company Details')
