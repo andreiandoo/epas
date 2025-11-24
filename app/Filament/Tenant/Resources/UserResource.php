@@ -32,11 +32,21 @@ class UserResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
+        $tenant = auth()->user()->tenant;
+
         return $schema
-            ->components([
+            ->schema([
+                Forms\Components\Hidden::make('tenant_id')
+                    ->default($tenant?->id),
+
                 SC\Section::make('User Details')
                     ->schema([
-                        Forms\Components\TextInput::make('name')
+                        Forms\Components\TextInput::make('first_name')
+                            ->label('First Name')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('last_name')
+                            ->label('Last Name')
                             ->required()
                             ->maxLength(255),
                         Forms\Components\TextInput::make('email')
@@ -46,9 +56,17 @@ class UserResource extends Resource
                             ->unique(ignoreRecord: true),
                         Forms\Components\TextInput::make('password')
                             ->password()
+                            ->revealable()
                             ->required(fn (string $operation): bool => $operation === 'create')
                             ->dehydrateStateUsing(fn ($state) => $state ? Hash::make($state) : null)
                             ->dehydrated(fn ($state) => filled($state))
+                            ->maxLength(255)
+                            ->helperText(fn (string $operation): string => $operation === 'edit' ? 'Leave blank to keep current password' : ''),
+                        Forms\Components\TextInput::make('phone')
+                            ->tel()
+                            ->maxLength(50),
+                        Forms\Components\TextInput::make('position')
+                            ->label('Position/Title')
                             ->maxLength(255),
                         Forms\Components\Hidden::make('role')
                             ->default('editor'),
@@ -56,21 +74,36 @@ class UserResource extends Resource
             ]);
     }
 
+    public static function canCreate(): bool
+    {
+        return true;
+    }
+
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                Tables\Columns\TextColumn::make('first_name')
+                    ->label('First Name')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('last_name')
+                    ->label('Last Name')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('email')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('position')
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->filters([]);
+            ->filters([])
+            ->actions([])
+            ->bulkActions([]);
     }
 
     public static function getPages(): array
