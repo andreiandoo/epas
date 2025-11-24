@@ -91,7 +91,7 @@ class StripeWebhookController extends Controller
             ->causedBy($tenant->owner)
             ->performedOn($tenant)
             ->withProperties([
-                'microservices' => $microservices->pluck('name')->toArray(),
+                'microservices' => $microservices->map(fn ($ms) => $ms->getTranslation('name', 'en'))->toArray(),
                 'amount' => $result['amount_total'],
                 'currency' => $result['currency'],
                 'session_id' => $session->id,
@@ -127,7 +127,8 @@ class StripeWebhookController extends Controller
 
         // Build description
         $descriptions = $microservices->map(function ($ms) {
-            return "{$ms->name} ({$ms->pricing_model})";
+            $name = $ms->getTranslation('name', 'en');
+            return "{$name} ({$ms->pricing_model})";
         })->implode(', ');
 
         $invoice = Invoice::create([

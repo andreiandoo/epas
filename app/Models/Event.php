@@ -14,7 +14,7 @@ class Event extends Model
     use HasFactory;
     use Translatable;
 
-    public array $translatable = ['title', 'subtitle', 'short_description', 'description', 'slug'];
+    public array $translatable = ['title', 'subtitle', 'short_description', 'description', 'slug', 'ticket_terms'];
 
     protected $fillable = [
         'tenant_id',
@@ -58,6 +58,7 @@ class Event extends Model
         'short_description' => 'array',
         'description'       => 'array',
         'slug'              => 'array',
+        'ticket_terms'      => 'array',
 
         // date-only
         'event_date'        => 'date',

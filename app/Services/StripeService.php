@@ -77,6 +77,12 @@ class StripeService
         $checkoutCurrency = strtolower($microservices->first()->currency ?? $this->settings->default_currency ?? 'eur');
 
         foreach ($microservices as $microservice) {
+            // Validate price
+            $price = (float) $microservice->price;
+            if ($price <= 0) {
+                throw new \Exception("Microservice '{$microservice->getTranslation('name', 'en')}' has invalid price: {$price}");
+            }
+
             $lineItem = [
                 'price_data' => [
                     'currency' => $checkoutCurrency,
@@ -219,7 +225,7 @@ class StripeService
 
         return [
             'tenant' => $tenant,
-            'microservices' => $activatedServices,
+            'microservices' => collect($activatedServices),
             'session' => $session,
             'amount_total' => $session->amount_total / 100, // Convert from cents
             'currency' => strtoupper($session->currency),
