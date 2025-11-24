@@ -60,6 +60,7 @@ class TenantPanelProvider extends PanelProvider
 
             // Render hooks for custom layout elements
             ->renderHook('panels::sidebar.header', fn (): string => view('filament.components.sidebar-brand')->render())
-            ->renderHook('panels::topbar.end', fn (): string => view('filament.components.custom-topbar')->render());
+            ->renderHook('panels::topbar.end', fn (): string => view('filament.components.custom-topbar')->render())
+            ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.tenant-support-card')->render());
     }
 }

@@ -53,6 +53,8 @@ class Tenant extends Model
         'contact_email',
         'contact_phone',
         'contact_position',
+        'postal_code',
+        'website',
         // Payment processor
         'payment_processor',
         'payment_processor_mode',
@@ -205,6 +207,11 @@ class Tenant extends Model
     public function insurancePolicies(): HasMany
     {
         return $this->hasMany(InsurancePolicy::class);
+    }
+
+    public function pages(): HasMany
+    {
+        return $this->hasMany(TenantPage::class);
     }
 
     public function isActive(): bool
