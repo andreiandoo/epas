@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             //ArtistDeepDemoSeeder::class,
             VenueSeeder::class,
             DocumentationSeeder::class,
+            ContractTemplateSeeder::class,
         ]);
     }
 }

@@ -138,6 +138,7 @@ class EmailTemplateForm
             'trial_ending' => 'Trial Ending - Trial period ending soon',
             'subscription_renewed' => 'Subscription Renewed - Subscription renewal confirmation',
             'subscription_cancelled' => 'Subscription Cancelled - Cancellation confirmation',
+            'contract_generated' => 'Contract Generated - Tenant contract PDF sent after onboarding',
         ];
     }
 }

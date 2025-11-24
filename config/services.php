@@ -71,4 +71,10 @@ return [
         'api_key' => env('BREVO_API_KEY'),
     ],
 
+    'esignature' => [
+        'provider' => env('ESIGNATURE_PROVIDER', 'opensign'), // opensign, signrequest, boldsign
+        'api_key' => env('ESIGNATURE_API_KEY'),
+        'api_url' => env('ESIGNATURE_API_URL', 'https://api.opensignlabs.com/v1'),
+    ],
+
 ];

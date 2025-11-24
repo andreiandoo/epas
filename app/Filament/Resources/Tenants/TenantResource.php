@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Tenants;
 
 use App\Models\Tenant;
+use App\Models\ContractTemplate;
 use App\Services\LocationService;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -463,6 +464,195 @@ class TenantResource extends Resource
                         }),
                 ])->collapsible()
                 ->visible(fn ($record) => $record !== null)
+                ->columnSpanFull(),
+
+            SC\Section::make('Contract')
+                ->description('Automatically generated contract for this tenant')
+                ->schema([
+                    Forms\Components\Placeholder::make('contract_info')
+                        ->label('')
+                        ->content(function ($record) {
+                            if (!$record) {
+                                return 'Save the tenant first to generate a contract.';
+                            }
+
+                            $html = '<div class="space-y-4">';
+
+                            // Contract status
+                            if ($record->contract_file) {
+                                // Status badge
+                                $statusColors = [
+                                    'draft' => 'gray',
+                                    'generated' => 'blue',
+                                    'sent' => 'yellow',
+                                    'viewed' => 'purple',
+                                    'signed' => 'green',
+                                ];
+                                $statusColor = $statusColors[$record->contract_status] ?? 'gray';
+                                $html .= '<div class="flex items-center gap-2">';
+                                $html .= '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-' . $statusColor . '-100 text-' . $statusColor . '-800">' . ucfirst($record->contract_status) . '</span>';
+                                if ($record->contract_signed_at) {
+                                    $html .= '<span class="text-green-600 text-sm">✓ Signed</span>';
+                                }
+                                $html .= '</div>';
+
+                                $html .= '<div class="grid grid-cols-2 gap-4 text-sm mt-3">';
+                                $html .= '<div><strong>Contract Number:</strong> ' . ($record->contract_number ?? 'N/A') . '</div>';
+                                $html .= '<div><strong>Template:</strong> ' . ($record->contractTemplate?->name ?? 'Default') . '</div>';
+                                $html .= '<div><strong>Generated:</strong> ' . ($record->contract_generated_at ? $record->contract_generated_at->format('d.m.Y H:i') : 'N/A') . '</div>';
+                                $html .= '<div><strong>Sent:</strong> ' . ($record->contract_sent_at ? $record->contract_sent_at->format('d.m.Y H:i') : 'Not sent') . '</div>';
+                                if ($record->contract_viewed_at) {
+                                    $html .= '<div><strong>Viewed:</strong> ' . $record->contract_viewed_at->format('d.m.Y H:i') . '</div>';
+                                }
+                                if ($record->contract_signed_at) {
+                                    $html .= '<div><strong>Signed:</strong> ' . $record->contract_signed_at->format('d.m.Y H:i') . '</div>';
+                                }
+                                $html .= '<div><strong>Renewal Date:</strong> ' . ($record->contract_renewal_date ? $record->contract_renewal_date->format('d.m.Y') : 'Not set') . '</div>';
+                                $html .= '<div><strong>Auto Renew:</strong> ' . ($record->contract_auto_renew ? 'Yes' : 'No') . '</div>';
+                                $html .= '<div><strong>Versions:</strong> ' . $record->contractVersions()->count() . '</div>';
+                                $html .= '</div>';
+
+                                $html .= '<div class="flex gap-2 mt-4">';
+                                $html .= '<a href="' . route('admin.tenant.contract.download', $record) . '" class="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700" target="_blank">';
+                                $html .= '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>';
+                                $html .= 'Download</a>';
+                                $html .= '<a href="' . route('admin.tenant.contract.preview', $record) . '" class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50" target="_blank">';
+                                $html .= '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>';
+                                $html .= 'Preview</a>';
+                                $html .= '</div>';
+                            } else {
+                                $html .= '<div class="flex items-center gap-2 text-yellow-600">';
+                                $html .= '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>';
+                                $html .= '<span class="font-medium">No contract generated yet</span>';
+                                $html .= '</div>';
+                                $html .= '<p class="text-sm text-gray-500">Use the actions in the header to generate a contract for this tenant.</p>';
+                            }
+
+                            $html .= '</div>';
+
+                            return new \Illuminate\Support\HtmlString($html);
+                        }),
+                ])
+                ->collapsible()
+                ->visible(fn ($record) => $record !== null)
+                ->columnSpanFull(),
+
+            SC\Section::make('Custom Contract Variables')
+                ->description('Custom values used in contract template')
+                ->schema([
+                    Forms\Components\Placeholder::make('custom_variables_info')
+                        ->label('')
+                        ->content(function ($record) {
+                            if (!$record) {
+                                return 'Save the tenant first to set custom variables.';
+                            }
+
+                            $customVariables = \App\Models\ContractCustomVariable::where('is_active', true)
+                                ->orderBy('sort_order')
+                                ->get();
+
+                            if ($customVariables->isEmpty()) {
+                                return new \Illuminate\Support\HtmlString(
+                                    '<p class="text-sm text-gray-500">No custom variables defined. Create them in Settings → Contract Variables.</p>'
+                                );
+                            }
+
+                            $html = '<div class="space-y-4">';
+
+                            foreach ($customVariables as $variable) {
+                                $tenantValue = $record->customVariables()
+                                    ->where('contract_custom_variable_id', $variable->id)
+                                    ->first();
+
+                                $value = $tenantValue?->value ?? $variable->default_value ?? '';
+                                $isRequired = $variable->is_required ? '<span class="text-red-500">*</span>' : '';
+
+                                $html .= '<div class="grid grid-cols-3 gap-4 items-center">';
+                                $html .= '<div>';
+                                $html .= '<strong>' . e($variable->label) . '</strong> ' . $isRequired;
+                                $html .= '<br><code class="text-xs text-gray-500">{{' . e($variable->name) . '}}</code>';
+                                if ($variable->description) {
+                                    $html .= '<br><span class="text-xs text-gray-400">' . e($variable->description) . '</span>';
+                                }
+                                $html .= '</div>';
+                                $html .= '<div class="col-span-2 text-sm">' . (e($value) ?: '<em class="text-gray-400">Not set</em>') . '</div>';
+                                $html .= '</div>';
+                            }
+
+                            $html .= '</div>';
+
+                            return new \Illuminate\Support\HtmlString($html);
+                        }),
+
+                    Forms\Components\Repeater::make('customVariableValues')
+                        ->label('Edit Custom Variables')
+                        ->schema([
+                            Forms\Components\Hidden::make('contract_custom_variable_id'),
+                            Forms\Components\TextInput::make('value')
+                                ->label(fn ($get) => \App\Models\ContractCustomVariable::find($get('contract_custom_variable_id'))?->label ?? 'Value'),
+                        ])
+                        ->defaultItems(0)
+                        ->visible(false) // Hidden for now, we'll use actions instead
+                        ->columnSpanFull(),
+                ])
+                ->collapsible()
+                ->collapsed()
+                ->visible(fn ($record) => $record !== null)
+                ->columnSpanFull(),
+
+            SC\Section::make('Amendments')
+                ->description('Contract amendments and modifications')
+                ->schema([
+                    Forms\Components\Placeholder::make('amendments_info')
+                        ->label('')
+                        ->content(function ($record) {
+                            if (!$record) {
+                                return 'Save the tenant first to manage amendments.';
+                            }
+
+                            $amendments = $record->amendments;
+
+                            if ($amendments->isEmpty()) {
+                                return new \Illuminate\Support\HtmlString(
+                                    '<p class="text-sm text-gray-500">No amendments yet. Use the Contract menu to create an amendment.</p>'
+                                );
+                            }
+
+                            $html = '<div class="space-y-3">';
+
+                            foreach ($amendments as $amendment) {
+                                $statusColors = [
+                                    'draft' => 'gray',
+                                    'sent' => 'yellow',
+                                    'signed' => 'green',
+                                ];
+                                $color = $statusColors[$amendment->status] ?? 'gray';
+
+                                $html .= '<div class="p-3 border rounded-lg">';
+                                $html .= '<div class="flex justify-between items-start">';
+                                $html .= '<div>';
+                                $html .= '<strong>' . e($amendment->amendment_number) . '</strong>';
+                                $html .= '<span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-' . $color . '-100 text-' . $color . '-800">' . ucfirst($amendment->status) . '</span>';
+                                $html .= '<br><span class="text-sm">' . e($amendment->title) . '</span>';
+                                $html .= '<br><span class="text-xs text-gray-500">' . $amendment->created_at->format('d.m.Y H:i') . '</span>';
+                                $html .= '</div>';
+
+                                if ($amendment->file_path) {
+                                    $html .= '<a href="' . \Illuminate\Support\Facades\Storage::disk('public')->url($amendment->file_path) . '" class="text-sm text-primary-600 hover:text-primary-500" target="_blank">Download</a>';
+                                }
+
+                                $html .= '</div>';
+                                $html .= '</div>';
+                            }
+
+                            $html .= '</div>';
+
+                            return new \Illuminate\Support\HtmlString($html);
+                        }),
+                ])
+                ->collapsible()
+                ->collapsed()
+                ->visible(fn ($record) => $record !== null && $record->contract_file !== null)
                 ->columnSpanFull(),
 
             SC\Section::make('Additional Settings')
