@@ -283,8 +283,7 @@ class TenantResource extends Resource
                                 $set('plan', $planMap[$state]);
                             }
                         })
-                        ->hint('Sales method - automatically sets commission rate and plan')
-                        ->hintIcon('heroicon-o-information-circle'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Sales method - automatically sets commission rate and plan'),
 
                     Forms\Components\TextInput::make('commission_rate')
                         ->label('Commission Rate (%)')
@@ -297,8 +296,7 @@ class TenantResource extends Resource
                         ->required()
                         ->disabled()
                         ->dehydrated()
-                        ->hint('Automatically set based on Work Method')
-                        ->hintIcon('heroicon-o-information-circle'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Automatically set based on Work Method'),
 
                     Forms\Components\Select::make('commission_mode')
                         ->label('Commission Mode')
@@ -308,8 +306,7 @@ class TenantResource extends Resource
                         ])
                         ->default('included')
                         ->required()
-                        ->hint('How the Tixello commission is applied')
-                        ->hintIcon('heroicon-o-information-circle'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'How the Tixello commission is applied'),
 
                     Forms\Components\Select::make('estimated_monthly_tickets')
                         ->label('Estimated Monthly Tickets')

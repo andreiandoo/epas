@@ -646,8 +646,7 @@ class EventResource extends Resource
                                 ->orderBy('name')
                                 ->pluck('name', 'id');
                         })
-                        ->hint('Select a published seating layout for this event (if available)')
-                        ->hintIcon('heroicon-o-information-circle')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Select a published seating layout for this event (if available)')
                         ->nullable()
                         ->visible(fn (SGet $get) => $get('venue_id') !== null)
                         ->reactive(),

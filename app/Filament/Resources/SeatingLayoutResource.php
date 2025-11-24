@@ -98,8 +98,7 @@ class SeatingLayoutResource extends Resource
                             ->maxSize(10240)
                             ->preserveFilenames()
                             ->imagePreviewHeight('250')
-                            ->hint('Optional venue floor plan or background image (max 10MB, uploaded as-is without compression)')
-                            ->hintIcon('heroicon-o-information-circle')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Optional venue floor plan or background image (max 10MB, uploaded as-is without compression)')
                             ->columnSpanFull(),
                     ])
                     ->columns(2),

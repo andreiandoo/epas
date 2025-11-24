@@ -39,8 +39,7 @@ class VenueResource extends Resource
                     Forms\Components\TextInput::make('slug')
                         ->label('Slug')
                         ->placeholder('arena-nationala')
-                        ->hint('URL-friendly ID. Se auto-generează din nume; îl poți ajusta.')
-                        ->hintIcon('heroicon-o-information-circle')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'URL-friendly ID. Se auto-generează din nume; îl poți ajusta.')
                         ->maxLength(190)
                         ->unique(ignoreRecord: true)
                         ->afterStateUpdated(fn ($state, \Filament\Schemas\Components\Utilities\Set $set) =>
@@ -55,8 +54,7 @@ class VenueResource extends Resource
                         ->searchable()
                         ->preload()
                         ->nullable()
-                        ->hint('Poate fi gol, caz în care venue-ul e „public".')
-                        ->hintIcon('heroicon-o-information-circle'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Poate fi gol, caz în care venue-ul e „public".'),
                 ]),
             ])->columns(1),
 
@@ -71,8 +69,7 @@ class VenueResource extends Resource
                     ->visibility('public')
                     ->openable()
                     ->downloadable()
-                    ->hint('Trage & plasează o imagine sau alege un fișier.')
-                    ->hintIcon('heroicon-o-information-circle'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Trage & plasează o imagine sau alege un fișier.'),
 
                 Forms\Components\FileUpload::make('gallery')
                     ->label('Galerie imagini')
@@ -83,8 +80,7 @@ class VenueResource extends Resource
                     ->reorderable()
                     ->openable()
                     ->downloadable()
-                    ->hint('Poți uploada mai multe imagini care vor forma galeria venue-ului.')
-                    ->hintIcon('heroicon-o-information-circle')
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Poți uploada mai multe imagini care vor forma galeria venue-ului.')
                     ->columnSpanFull(),
             ]),
 
