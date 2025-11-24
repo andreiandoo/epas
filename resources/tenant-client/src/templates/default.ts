@@ -29,6 +29,12 @@ const defaultTemplate: TemplateConfig = {
     renderHeader: (config: TixelloConfig): string => {
         const logo = config.theme?.logo;
         const siteName = config.site?.title || 'Tixello';
+        const headerMenu = config.menus?.header || [];
+
+        // Generate header menu items
+        const menuItemsHtml = headerMenu.map(item =>
+            `<a href="${item.url}" class="text-gray-600 hover:text-primary transition">${item.title}</a>`
+        ).join('');
 
         return `
             <header class="bg-white shadow-sm border-b sticky top-0 z-50">
@@ -42,6 +48,7 @@ const defaultTemplate: TemplateConfig = {
                         </a>
                         <nav class="hidden md:flex items-center space-x-6">
                             <a href="/events" class="text-gray-600 hover:text-primary transition">Evenimente</a>
+                            ${menuItemsHtml}
                             <a href="/cart" class="text-gray-600 hover:text-primary transition">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
@@ -64,6 +71,12 @@ const defaultTemplate: TemplateConfig = {
         const siteName = config.site?.title || 'Tixello';
         const year = new Date().getFullYear();
         const social = config.social || {};
+        const footerMenu = config.menus?.footer || [];
+
+        // Generate footer menu items
+        const footerMenuHtml = footerMenu.map(item =>
+            `<li><a href="${item.url}" class="text-gray-600 hover:text-primary">${item.title}</a></li>`
+        ).join('');
 
         // Generate social icons HTML
         const socialIcons = [];
@@ -111,6 +124,7 @@ const defaultTemplate: TemplateConfig = {
                             <ul class="space-y-2 text-sm">
                                 <li><a href="/terms" class="text-gray-600 hover:text-primary">Termeni și condiții</a></li>
                                 <li><a href="/privacy" class="text-gray-600 hover:text-primary">Politica de confidențialitate</a></li>
+                                ${footerMenuHtml}
                             </ul>
                         </div>
                     </div>

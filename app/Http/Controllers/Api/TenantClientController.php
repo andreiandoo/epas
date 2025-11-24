@@ -7,6 +7,7 @@ use App\Models\Domain;
 use App\Models\Event;
 use App\Models\EventType;
 use App\Models\Tenant;
+use App\Models\TenantPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -97,6 +98,10 @@ class TenantClientController extends Controller
                 'terms_title' => $settings['legal']['terms_title'] ?? 'Terms & Conditions',
                 'privacy_title' => $settings['legal']['privacy_title'] ?? 'Privacy Policy',
             ],
+            'menus' => [
+                'header' => $this->getMenuPages($tenant, 'header'),
+                'footer' => $this->getMenuPages($tenant, 'footer'),
+            ],
             'modules' => $this->getEnabledModules($tenant),
             'tenant' => [
                 'id' => $tenant->id,
@@ -143,14 +148,18 @@ class TenantClientController extends Controller
             $query->where('event_date', '>=', $today);
         }
 
-        // Check if cancelled_at column exists
+        // Check if cancelled column exists
         if (\Schema::hasColumn('events', 'cancelled_at')) {
             $query->whereNull('cancelled_at');
+        } elseif (\Schema::hasColumn('events', 'is_cancelled')) {
+            $query->where('is_cancelled', false);
         }
 
-        // Check if is_active column exists
+        // Check if published/active column exists
         if (\Schema::hasColumn('events', 'is_active')) {
             $query->where('is_active', true);
+        } elseif (\Schema::hasColumn('events', 'is_published')) {
+            $query->where('is_published', true);
         }
 
         if ($search) {
@@ -226,14 +235,18 @@ class TenantClientController extends Controller
             $query->where('event_date', '>=', $today);
         }
 
-        // Check if cancelled_at column exists
+        // Check if cancelled column exists
         if (\Schema::hasColumn('events', 'cancelled_at')) {
             $query->whereNull('cancelled_at');
+        } elseif (\Schema::hasColumn('events', 'is_cancelled')) {
+            $query->where('is_cancelled', false);
         }
 
-        // Check if is_active column exists
+        // Check if published/active column exists
         if (\Schema::hasColumn('events', 'is_active')) {
             $query->where('is_active', true);
+        } elseif (\Schema::hasColumn('events', 'is_published')) {
+            $query->where('is_published', true);
         }
 
         // Check if is_featured column exists, otherwise just return latest events
@@ -440,6 +453,58 @@ class TenantClientController extends Controller
                 'content' => $content,
             ],
         ]);
+    }
+
+    /**
+     * Get single page by slug
+     */
+    public function page(Request $request, string $slug): JsonResponse
+    {
+        $resolved = $this->resolveTenant($request);
+
+        if (!$resolved) {
+            return response()->json(['error' => 'Tenant not found'], 404);
+        }
+
+        $tenant = $resolved['tenant'];
+        $locale = $request->query('locale', 'en');
+
+        $page = TenantPage::where('tenant_id', $tenant->id)
+            ->where('slug', $slug)
+            ->where('is_published', true)
+            ->first();
+
+        if (!$page) {
+            return response()->json(['error' => 'Page not found'], 404);
+        }
+
+        return response()->json([
+            'data' => [
+                'title' => $page->getTranslation('title', $locale) ?? $page->getTranslation('title', 'en'),
+                'content' => $page->getTranslation('content', $locale) ?? $page->getTranslation('content', 'en'),
+                'slug' => $page->slug,
+            ],
+        ]);
+    }
+
+    /**
+     * Get menu pages for a location
+     */
+    private function getMenuPages(Tenant $tenant, string $location): array
+    {
+        $locale = app()->getLocale();
+
+        return TenantPage::where('tenant_id', $tenant->id)
+            ->where('menu_location', $location)
+            ->where('is_published', true)
+            ->orderBy('menu_order')
+            ->get()
+            ->map(fn ($page) => [
+                'title' => $page->getTranslation('title', $locale) ?? $page->getTranslation('title', 'en'),
+                'slug' => $page->slug,
+                'url' => '/page/' . $page->slug,
+            ])
+            ->toArray();
     }
 
     /**

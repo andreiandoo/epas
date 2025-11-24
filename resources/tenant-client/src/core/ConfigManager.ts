@@ -7,8 +7,20 @@ export interface TixelloConfig {
     theme: ThemeConfig;
     site: SiteConfig;
     social: SocialConfig;
+    menus: MenusConfig;
     version: string;
     packageHash: string;
+}
+
+export interface MenusConfig {
+    header: MenuItem[];
+    footer: MenuItem[];
+}
+
+export interface MenuItem {
+    title: string;
+    slug: string;
+    url: string;
 }
 
 export interface SocialConfig {
@@ -96,7 +108,11 @@ export class ConfigManager {
                 tiktok: null,
                 linkedin: null,
             },
-            version: '1.1.0',
+            menus: {
+                header: [],
+                footer: [],
+            },
+            version: '1.2.0',
             packageHash: '',
         };
 
@@ -116,6 +132,9 @@ export class ConfigManager {
                 }
                 if (data.social) {
                     this.config.social = { ...this.config.social, ...data.social };
+                }
+                if (data.menus) {
+                    this.config.menus = data.menus;
                 }
             }
         } catch {

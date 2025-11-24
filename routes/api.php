@@ -63,6 +63,9 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::get('/pages/privacy', [TenantClientController::class, 'privacy'])
         ->name('api.tenant-client-public.pages.privacy');
 
+    Route::get('/pages/{slug}', [TenantClientController::class, 'page'])
+        ->name('api.tenant-client-public.pages.show');
+
     // Auth routes
     Route::post('/auth/register', [App\Http\Controllers\Api\TenantClientAuthController::class, 'register'])
         ->name('api.tenant-client-public.auth.register');
