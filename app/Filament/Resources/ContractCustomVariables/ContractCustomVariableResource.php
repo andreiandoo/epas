@@ -13,9 +13,9 @@ class ContractCustomVariableResource extends Resource
 {
     protected static ?string $model = ContractCustomVariable::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-variable';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-variable';
 
-    protected static ?string $navigationGroup = 'Settings';
+    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
 
     protected static ?string $navigationLabel = 'Contract Variables';
 

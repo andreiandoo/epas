@@ -19,7 +19,7 @@ class PaymentConfig extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-credit-card';
     protected static ?string $navigationLabel = 'Payment Processor';
-    protected static ?string $navigationGroup = 'Settings';
+    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 10;
     protected string $view = 'filament.tenant.pages.payment-config';
 
