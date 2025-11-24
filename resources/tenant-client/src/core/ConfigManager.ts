@@ -181,6 +181,15 @@ export class ConfigManager {
         root.style.setProperty('--tixello-secondary', theme.secondaryColor);
         root.style.setProperty('--tixello-font', theme.fontFamily);
 
+        // Generate darker version for hover states
+        const primaryDark = this.darkenColor(theme.primaryColor, 15);
+        const secondaryDark = this.darkenColor(theme.secondaryColor, 15);
+        root.style.setProperty('--tixello-primary-dark', primaryDark);
+        root.style.setProperty('--tixello-secondary-dark', secondaryDark);
+
+        // Inject utility CSS classes
+        this.injectThemeStyles(theme);
+
         // Update favicon if provided
         if (theme.favicon) {
             const favicon = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
@@ -193,6 +202,86 @@ export class ConfigManager {
                 document.head.appendChild(link);
             }
         }
+    }
+
+    private static darkenColor(color: string, percent: number): string {
+        // Convert hex to RGB, darken, convert back
+        const hex = color.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+
+        const darken = (value: number) => Math.max(0, Math.floor(value * (1 - percent / 100)));
+
+        const newR = darken(r).toString(16).padStart(2, '0');
+        const newG = darken(g).toString(16).padStart(2, '0');
+        const newB = darken(b).toString(16).padStart(2, '0');
+
+        return `#${newR}${newG}${newB}`;
+    }
+
+    private static injectThemeStyles(theme: ThemeConfig): void {
+        // Remove existing theme styles
+        const existingStyle = document.getElementById('tixello-theme-styles');
+        if (existingStyle) {
+            existingStyle.remove();
+        }
+
+        // Create style element with utility classes
+        const style = document.createElement('style');
+        style.id = 'tixello-theme-styles';
+        style.textContent = `
+            /* Primary color utilities */
+            .bg-primary { background-color: var(--tixello-primary) !important; }
+            .bg-primary-dark { background-color: var(--tixello-primary-dark) !important; }
+            .text-primary { color: var(--tixello-primary) !important; }
+            .border-primary { border-color: var(--tixello-primary) !important; }
+
+            /* Secondary color utilities */
+            .bg-secondary { background-color: var(--tixello-secondary) !important; }
+            .bg-secondary-dark { background-color: var(--tixello-secondary-dark) !important; }
+            .text-secondary { color: var(--tixello-secondary) !important; }
+            .border-secondary { border-color: var(--tixello-secondary) !important; }
+
+            /* Gradient utilities */
+            .from-primary { --tw-gradient-from: var(--tixello-primary); }
+            .to-secondary { --tw-gradient-to: var(--tixello-secondary); }
+
+            /* Button styles */
+            .btn-primary {
+                background-color: var(--tixello-primary);
+                color: white;
+                transition: background-color 0.2s;
+            }
+            .btn-primary:hover {
+                background-color: var(--tixello-primary-dark);
+            }
+
+            .btn-secondary {
+                background-color: var(--tixello-secondary);
+                color: white;
+                transition: background-color 0.2s;
+            }
+            .btn-secondary:hover {
+                background-color: var(--tixello-secondary-dark);
+            }
+
+            /* Hover utilities */
+            .hover\\:text-primary:hover { color: var(--tixello-primary) !important; }
+            .hover\\:bg-primary:hover { background-color: var(--tixello-primary) !important; }
+            .hover\\:bg-primary-dark:hover { background-color: var(--tixello-primary-dark) !important; }
+
+            /* Font family */
+            body {
+                font-family: var(--tixello-font), system-ui, sans-serif;
+            }
+
+            /* Ring color for focus states */
+            .focus\\:ring-primary:focus {
+                --tw-ring-color: var(--tixello-primary);
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     static get(): TixelloConfig {

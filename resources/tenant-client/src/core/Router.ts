@@ -1,4 +1,5 @@
 import { TixelloConfig } from './ConfigManager';
+import { TemplateManager } from '../templates';
 
 type RouteHandler = (params: Record<string, string>) => void | Promise<void>;
 
@@ -17,6 +18,7 @@ export class Router {
 
     constructor(config: TixelloConfig) {
         this.config = config;
+        TemplateManager.init(config);
         this.loadAuthState();
         this.setupDefaultRoutes();
     }
@@ -139,7 +141,7 @@ export class Router {
                     <h3 class="font-semibold text-gray-900 mb-1 line-clamp-2">${event.title}</h3>
                     <p class="text-sm text-gray-500 mb-2">${date}</p>
                     ${event.venue ? `<p class="text-sm text-gray-600 mb-2">${event.venue.name}${event.venue.city ? `, ${event.venue.city}` : ''}</p>` : ''}
-                    ${event.price_from ? `<p class="text-sm font-semibold text-blue-600">de la ${event.price_from} €</p>` : ''}
+                    ${event.price_from ? `<p class="text-sm font-semibold text-primary">de la ${event.price_from} €</p>` : ''}
                 </div>
             </a>
         `;
@@ -245,7 +247,7 @@ export class Router {
                     <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
                         Găsește și cumpără bilete pentru cele mai bune concerte, spectacole și experiențe
                     </p>
-                    <a href="/events" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition">
+                    <a href="/events" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-primary hover:bg-primary-dark transition">
                         Vezi toate evenimentele
                         <svg class="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
@@ -301,7 +303,7 @@ export class Router {
                 } else {
                     categoriesEl.innerHTML = categoriesData.data.map((cat: any) => `
                         <a href="/events?category=${cat.slug}" class="block p-4 bg-white rounded-lg shadow hover:shadow-md transition text-center">
-                            <div class="text-blue-600 mb-2">
+                            <div class="text-primary mb-2">
                                 <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                 </svg>
@@ -332,8 +334,8 @@ export class Router {
                     <div class="flex flex-col sm:flex-row gap-4">
                         <input type="search" id="event-search" placeholder="Caută evenimente..."
                                value="${currentSearch}"
-                               class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <select id="event-filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                               class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <select id="event-filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
                             <option value="">Toate categoriile</option>
                         </select>
                     </div>
@@ -553,7 +555,7 @@ export class Router {
                                                     <h3 class="font-semibold text-gray-900">${ticket.name}</h3>
                                                     ${ticket.description ? `<p class="text-sm text-gray-500">${ticket.description}</p>` : ''}
                                                 </div>
-                                                <span class="font-bold text-blue-600">${ticket.price} ${ticket.currency}</span>
+                                                <span class="font-bold text-primary">${ticket.price} ${ticket.currency}</span>
                                             </div>
                                             <div class="flex items-center justify-between mt-3">
                                                 <select class="ticket-qty px-3 py-1 border border-gray-300 rounded text-sm" data-ticket-id="${ticket.id}" data-price="${ticket.price}">
@@ -574,7 +576,7 @@ export class Router {
                                     </div>
                                 </div>
 
-                                <button id="add-to-cart-btn" class="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                                <button id="add-to-cart-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
                                     Adaugă în coș
                                 </button>
                             ` : `
@@ -644,7 +646,7 @@ export class Router {
                         <span class="text-lg font-medium text-gray-900">Total</span>
                         <span class="text-2xl font-bold text-gray-900" id="cart-total">$0.00</span>
                     </div>
-                    <a href="/checkout" class="block w-full text-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                    <a href="/checkout" class="block w-full text-center px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
                         Proceed to Checkout
                     </a>
                 </div>
@@ -664,8 +666,8 @@ export class Router {
                         <div class="bg-white rounded-lg shadow p-6">
                             <h2 class="text-lg font-semibold mb-4">Contact Information</h2>
                             <div class="space-y-4">
-                                <input type="email" placeholder="Email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-                                <input type="tel" placeholder="Phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                <input type="email" placeholder="Email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                                <input type="tel" placeholder="Phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
                             </div>
                         </div>
                         <div class="bg-white rounded-lg shadow p-6">
@@ -707,19 +709,19 @@ export class Router {
                         <div>
                             <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
                             <input type="email" id="email" required
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                         </div>
                         <div>
                             <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Parolă</label>
                             <input type="password" id="password" required
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                         </div>
-                        <button type="submit" id="login-btn" class="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                        <button type="submit" id="login-btn" class="w-full px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
                             Conectare
                         </button>
                     </form>
                     <p class="text-center text-gray-600">
-                        Nu ai cont? <a href="/register" class="text-blue-600 hover:text-blue-700 font-medium">Înregistrează-te</a>
+                        Nu ai cont? <a href="/register" class="text-primary hover:text-blue-700 font-medium">Înregistrează-te</a>
                     </p>
                 </div>
             </div>
@@ -776,40 +778,40 @@ export class Router {
                             <div>
                                 <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">Prenume</label>
                                 <input type="text" id="first_name" required
-                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
                             </div>
                             <div>
                                 <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">Nume</label>
                                 <input type="text" id="last_name" required
-                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
                             </div>
                         </div>
                         <div>
                             <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
                             <input type="email" id="email" required
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
                         </div>
                         <div>
                             <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Telefon (opțional)</label>
                             <input type="tel" id="phone"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
                         </div>
                         <div>
                             <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Parolă</label>
                             <input type="password" id="password" required minlength="8"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
                         </div>
                         <div>
                             <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Confirmă parola</label>
                             <input type="password" id="password_confirmation" required
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
                         </div>
-                        <button type="submit" id="register-btn" class="w-full px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                        <button type="submit" id="register-btn" class="w-full px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
                             Creează cont
                         </button>
                     </form>
                     <p class="text-center text-gray-600">
-                        Ai deja cont? <a href="/login" class="text-blue-600 hover:text-blue-700 font-medium">Conectează-te</a>
+                        Ai deja cont? <a href="/login" class="text-primary hover:text-blue-700 font-medium">Conectează-te</a>
                     </p>
                 </div>
             </div>
@@ -888,7 +890,7 @@ export class Router {
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <a href="/account/orders" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
-                        <div class="text-blue-600 mb-3">
+                        <div class="text-primary mb-3">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                             </svg>
@@ -897,7 +899,7 @@ export class Router {
                         <p class="text-gray-600 text-sm">Vezi istoricul comenzilor</p>
                     </a>
                     <a href="/account/tickets" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
-                        <div class="text-blue-600 mb-3">
+                        <div class="text-primary mb-3">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
                             </svg>
@@ -906,7 +908,7 @@ export class Router {
                         <p class="text-gray-600 text-sm">Accesează biletele tale</p>
                     </a>
                     <a href="/account/profile" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
-                        <div class="text-blue-600 mb-3">
+                        <div class="text-primary mb-3">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                             </svg>
@@ -1062,7 +1064,7 @@ export class Router {
                         <div class="bg-gray-200 h-4 w-3/4 rounded"></div>
                     </div>
                 </div>
-                <a href="/account/tickets" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                <a href="/account/tickets" class="inline-flex items-center px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
                     View My Tickets
                 </a>
             </div>
@@ -1149,7 +1151,7 @@ export class Router {
                     <h1 class="text-6xl font-bold text-gray-300 mb-4">404</h1>
                     <h2 class="text-2xl font-semibold text-gray-900 mb-2">Page Not Found</h2>
                     <p class="text-gray-600 mb-8">The page you're looking for doesn't exist.</p>
-                    <a href="/" class="inline-flex items-center px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition">
+                    <a href="/" class="inline-flex items-center px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
                         Go Home
                     </a>
                 </div>
