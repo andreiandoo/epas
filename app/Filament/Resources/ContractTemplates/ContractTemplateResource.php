@@ -57,7 +57,7 @@ class ContractTemplateResource extends Resource
                                 'reseller' => 'Reseller (3%)',
                             ])
                             ->placeholder('All work methods')
-                            ->helperText('Select a specific work method or leave empty for all'),
+                            ->hintIcon('heroicon-o-briefcase', tooltip: 'Select a specific work method or leave empty for all'),
 
                         Forms\Components\Select::make('plan')
                             ->label('Commission Plan')
@@ -67,7 +67,7 @@ class ContractTemplateResource extends Resource
                                 '3percent' => '3% Commission',
                             ])
                             ->placeholder('All plans')
-                            ->helperText('Select a specific plan or leave empty for all'),
+                            ->hintIcon('heroicon-o-currency-dollar', tooltip: 'Select a specific plan or leave empty for all'),
 
                         Forms\Components\Select::make('locale')
                             ->label('Language')
@@ -79,11 +79,11 @@ class ContractTemplateResource extends Resource
                                 'fr' => 'French (Français)',
                             ])
                             ->default('en')
-                            ->helperText('Template language - matched to tenant locale'),
+                            ->hintIcon('heroicon-o-translate', tooltip: 'Template language - matched to tenant locale'),
 
                         Forms\Components\Toggle::make('is_default')
                             ->label('Default Template')
-                            ->helperText('Use this template when no specific match is found')
+                            ->hintIcon('heroicon-o-check-circle', tooltip: 'If no specific template matches, this one will be used')
                             ->inline(false),
 
                         Forms\Components\Toggle::make('is_active')
@@ -127,7 +127,8 @@ class ContractTemplateResource extends Resource
                             ])
                             ->columnSpanFull()
                             ->helperText('Use the variables above to personalize the contract for each tenant.'),
-                    ]),
+                    ])
+                    ->columnSpanFull(),
             ]);
     }
 

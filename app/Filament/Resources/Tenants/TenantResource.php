@@ -28,7 +28,7 @@ class TenantResource extends Resource
                     Forms\Components\TextInput::make('name')
                         ->label('Name (Legal/Company Name)')
                         ->required()
-                        ->helperText('Legal company name as registered'),
+                        ->hintIcon('heroicon-o-briefcase', tooltip: 'Legal company name as registered'),
 
                     Forms\Components\TextInput::make('public_name')
                         ->label('Public Name')
@@ -38,7 +38,7 @@ class TenantResource extends Resource
                             if (! $state) return;
                             $set('slug', \Illuminate\Support\Str::slug($state));
                         })
-                        ->helperText('Display name (e.g., Teatrul Odeon while company is Wits Fits SRL)'),
+                        ->hintIcon('heroicon-o-globe-alt', tooltip: 'Name displayed publicly on event sites'),
 
                     Forms\Components\TextInput::make('slug')
                         ->label('Slug')
@@ -67,7 +67,7 @@ class TenantResource extends Resource
                             'premium' => 'Premium',
                         ])
                         ->nullable()
-                        ->helperText('Client tier for billing/features'),
+                        ->hintIcon('heroicon-o-currency-dollar', tooltip: 'Client tier for billing/features'),
 
                     Forms\Components\Select::make('plan')
                         ->label('Plan')
@@ -76,8 +76,7 @@ class TenantResource extends Resource
                             '2percent' => '2% - Mixed',
                             '3percent' => '3% - Reseller',
                         ])
-                        ->nullable()
-                        ->helperText('Commission plan based on work method'),
+                        ->nullable(),
 
                     Forms\Components\Select::make('locale')
                         ->label('Language / Locale')
@@ -90,7 +89,7 @@ class TenantResource extends Resource
                         ])
                         ->default('ro')
                         ->required()
-                        ->helperText('Default language for this tenant'),
+                        ->hintIcon('heroicon-o-translate', tooltip: 'Default language for this tenant'),
                 ])->columns(2),
 
             SC\Section::make('Company Details')
@@ -162,8 +161,7 @@ class TenantResource extends Resource
                             // Clear dependent fields when country changes
                             $set('state', null);
                             $set('city', null);
-                        })
-                        ->helperText('Select country'),
+                        }),
 
                     Forms\Components\Select::make('state')
                         ->label('State / County')
@@ -188,8 +186,7 @@ class TenantResource extends Resource
                             // Clear city when state changes
                             $set('city', null);
                         })
-                        ->disabled(fn (\Filament\Schemas\Components\Utilities\Get $get) => !$get('country'))
-                        ->helperText('Select state/county (Județ in Romania)'),
+                        ->disabled(fn (\Filament\Schemas\Components\Utilities\Get $get) => !$get('country')),
 
                     Forms\Components\Select::make('city')
                         ->label('City')
@@ -211,8 +208,7 @@ class TenantResource extends Resource
                             return $locationService->getCities($countryCode, $state);
                         })
                         ->searchable()
-                        ->disabled(fn (\Filament\Schemas\Components\Utilities\Get $get) => !$get('country') || !$get('state'))
-                        ->helperText('Select city'),
+                        ->disabled(fn (\Filament\Schemas\Components\Utilities\Get $get) => !$get('country') || !$get('state')),
                 ])->columns(3),
 
             SC\Section::make('Billing')
@@ -229,8 +225,7 @@ class TenantResource extends Resource
                             if ($state) {
                                 $set('due_at', \Carbon\Carbon::parse($state)->addDays($cycleDays));
                             }
-                        })
-                        ->helperText('When billing cycle begins (defaults to registration date)'),
+                        }),
 
                     Forms\Components\TextInput::make('billing_cycle_days')
                         ->label('Billing Cycle (days)')
@@ -244,16 +239,14 @@ class TenantResource extends Resource
                             if ($billingStart && $state) {
                                 $set('due_at', \Carbon\Carbon::parse($billingStart)->addDays($state));
                             }
-                        })
-                        ->helperText('Number of days between billing cycles'),
+                        }),
 
                     Forms\Components\DateTimePicker::make('due_at')
                         ->label('Next Billing Date')
                         ->native(false)
                         ->nullable()
                         ->disabled()
-                        ->dehydrated()
-                        ->helperText('Automatically calculated: Billing Start Date + Billing Cycle Days'),
+                        ->dehydrated(),
                 ])->columns(3),
 
             SC\Section::make('Commission Settings')
@@ -350,7 +343,6 @@ class TenantResource extends Resource
                         ->createOptionUsing(function (array $data) {
                             return \App\Models\User::create($data)->id;
                         })
-                        ->helperText('Select existing user or create new one')
                         ->columnSpanFull(),
 
                     Forms\Components\TextInput::make('contact_first_name')
@@ -376,9 +368,32 @@ class TenantResource extends Resource
 
                     Forms\Components\TextInput::make('contact_position')
                         ->label('Position in Company')
-                        ->maxLength(255)
-                        ->helperText('e.g., Manager, Director, Administrator'),
+                        ->maxLength(255),
                 ])->columns(2),
+
+            SC\Section::make('Ticket Terms & Conditions')
+                ->description('Terms and conditions that apply to all events for this tenant')
+                ->schema([
+                    Forms\Components\RichEditor::make('ticket_terms')
+                        ->label('Ticket Terms')
+                        ->toolbarButtons([
+                            'bold',
+                            'italic',
+                            'underline',
+                            'strike',
+                            'link',
+                            'bulletList',
+                            'orderedList',
+                            'h2',
+                            'h3',
+                            'blockquote',
+                            'undo',
+                            'redo',
+                        ])
+                        ->helperText('These terms will be auto-populated in all events for this tenant')
+                        ->columnSpanFull(),
+                ])->collapsible()
+                ->columnSpanFull(),
 
             SC\Section::make('Domains')
                 ->description('Websites associated with this tenant - manage domain status and access')
@@ -420,29 +435,6 @@ class TenantResource extends Resource
                         ->visible(fn ($record) => $record !== null),
                 ])->collapsible()
                 ->columnSpanFull(),
-
-            SC\Section::make('Ticket Terms & Conditions')
-                ->description('Terms and conditions that apply to all events for this tenant')
-                ->schema([
-                    Forms\Components\RichEditor::make('ticket_terms')
-                        ->label('Ticket Terms')
-                        ->toolbarButtons([
-                            'bold',
-                            'italic',
-                            'underline',
-                            'strike',
-                            'link',
-                            'bulletList',
-                            'orderedList',
-                            'h2',
-                            'h3',
-                            'blockquote',
-                            'undo',
-                            'redo',
-                        ])
-                        ->helperText('These terms will be auto-populated in all events for this tenant')
-                        ->columnSpanFull(),
-                ])->collapsible(),
 
             SC\Section::make('Deployment Packages')
                 ->description('Download deployment packages for each domain. These packages contain the tenant website code.')

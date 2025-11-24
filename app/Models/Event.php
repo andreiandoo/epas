@@ -18,6 +18,7 @@ class Event extends Model
 
     protected $fillable = [
         'tenant_id',
+        'venue_id',
         'commission_mode',
         'commission_rate',
         'title',

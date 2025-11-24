@@ -75,7 +75,7 @@ class PlatformCredentialResource extends Resource
                         ->revealable()
                         ->maxLength(255)
                         ->dehydrateStateUsing(fn ($state) => $state) // Will be encrypted by model
-                        ->helperText('Stored encrypted in database'),
+                        ->hintIcon('heroicon-o-lock-closed', tooltip: 'Password will be stored encrypted'),
                 ])->columns(3),
 
             SC\Section::make('Additional Information')
@@ -85,7 +85,8 @@ class PlatformCredentialResource extends Resource
                         ->rows(3)
                         ->columnSpanFull()
                         ->placeholder('Any additional notes about this account...'),
-                ]),
+                ])
+                ->columnSpanFull(),
         ]);
     }
 
