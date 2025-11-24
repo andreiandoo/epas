@@ -78,7 +78,7 @@ export class ConfigManager {
                 language: 'en',
                 template: 'default',
             },
-            version: '1.0.0',
+            version: '1.1.0',
             packageHash: '',
         };
 
@@ -129,7 +129,7 @@ export class ConfigManager {
                 language: 'en',
                 template: 'default',
             },
-            version: '1.0.0',
+            version: '1.1.0',
             packageHash: '',
         };
 
