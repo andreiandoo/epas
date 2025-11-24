@@ -148,18 +148,12 @@ class TenantClientController extends Controller
             $query->where('event_date', '>=', $today);
         }
 
-        // Check if cancelled column exists
-        if (\Schema::hasColumn('events', 'cancelled_at')) {
-            $query->whereNull('cancelled_at');
-        } elseif (\Schema::hasColumn('events', 'is_cancelled')) {
-            $query->where('is_cancelled', false);
-        }
-
-        // Check if published/active column exists
-        if (\Schema::hasColumn('events', 'is_active')) {
-            $query->where('is_active', true);
-        } elseif (\Schema::hasColumn('events', 'is_published')) {
-            $query->where('is_published', true);
+        // Check if cancelled - allow NULL or false
+        if (\Schema::hasColumn('events', 'is_cancelled')) {
+            $query->where(function ($q) {
+                $q->where('is_cancelled', 0)
+                  ->orWhereNull('is_cancelled');
+            });
         }
 
         if ($search) {
@@ -235,18 +229,12 @@ class TenantClientController extends Controller
             $query->where('event_date', '>=', $today);
         }
 
-        // Check if cancelled column exists
-        if (\Schema::hasColumn('events', 'cancelled_at')) {
-            $query->whereNull('cancelled_at');
-        } elseif (\Schema::hasColumn('events', 'is_cancelled')) {
-            $query->where('is_cancelled', false);
-        }
-
-        // Check if published/active column exists
-        if (\Schema::hasColumn('events', 'is_active')) {
-            $query->where('is_active', true);
-        } elseif (\Schema::hasColumn('events', 'is_published')) {
-            $query->where('is_published', true);
+        // Check if cancelled - allow NULL or false
+        if (\Schema::hasColumn('events', 'is_cancelled')) {
+            $query->where(function ($q) {
+                $q->where('is_cancelled', 0)
+                  ->orWhereNull('is_cancelled');
+            });
         }
 
         // Check if is_featured column exists, otherwise just return latest events
