@@ -2,6 +2,7 @@
 
 namespace App\Filament\Tenant\Pages;
 
+use App\Models\Microservice;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Notifications\Notification;
@@ -9,6 +10,7 @@ use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Illuminate\Support\Str;
+use Illuminate\Support\HtmlString;
 
 class Settings extends Page
 {
@@ -58,8 +60,33 @@ class Settings extends Page
                 // Legal Pages
                 'terms_content' => $settings['legal']['terms'] ?? '',
                 'privacy_content' => $settings['legal']['privacy'] ?? '',
+
+                // Payment Credentials
+                'stripe_public_key' => $tenant->payment_credentials['stripe']['public_key'] ?? '',
+                'stripe_secret_key' => $tenant->payment_credentials['stripe']['secret_key'] ?? '',
+                'stripe_webhook_secret' => $tenant->payment_credentials['stripe']['webhook_secret'] ?? '',
+                'netopia_merchant_id' => $tenant->payment_credentials['netopia']['merchant_id'] ?? '',
+                'netopia_public_key' => $tenant->payment_credentials['netopia']['public_key'] ?? '',
+                'netopia_private_key' => $tenant->payment_credentials['netopia']['private_key'] ?? '',
+                'payu_merchant' => $tenant->payment_credentials['payu']['merchant'] ?? '',
+                'payu_secret_key' => $tenant->payment_credentials['payu']['secret_key'] ?? '',
+                'euplatesc_merchant_id' => $tenant->payment_credentials['euplatesc']['merchant_id'] ?? '',
+                'euplatesc_key' => $tenant->payment_credentials['euplatesc']['key'] ?? '',
             ]);
         }
+    }
+
+    protected function getActivePaymentProcessor(): ?string
+    {
+        $tenant = auth()->user()->tenant;
+        if (!$tenant) return null;
+
+        $activeProcessor = $tenant->microservices()
+            ->whereIn('slug', ['payment-stripe', 'payment-netopia', 'payment-payu', 'payment-euplatesc'])
+            ->wherePivot('is_active', true)
+            ->first();
+
+        return $activeProcessor?->slug;
     }
 
     public function form(Schema $form): Schema
@@ -238,10 +265,135 @@ class Settings extends Page
                                             ->columnSpanFull(),
                                     ]),
                             ]),
+
+                        SC\Tabs\Tab::make('Payment Processor')
+                            ->icon('heroicon-o-credit-card')
+                            ->schema($this->getPaymentProcessorSchema()),
                     ])
                     ->columnSpanFull(),
             ])
             ->statePath('data');
+    }
+
+    protected function getPaymentProcessorSchema(): array
+    {
+        $activeProcessor = $this->getActivePaymentProcessor();
+
+        if (!$activeProcessor) {
+            return [
+                SC\Section::make('No Payment Processor Active')
+                    ->description('You need to activate a payment processor microservice first.')
+                    ->schema([
+                        Forms\Components\Placeholder::make('no_processor')
+                            ->content(new HtmlString(
+                                '<div class="text-amber-600">' .
+                                '<p>Go to <strong>Microservices</strong> to activate one of the following:</p>' .
+                                '<ul class="list-disc ml-5 mt-2">' .
+                                '<li>Stripe Integration</li>' .
+                                '<li>Netopia Integration</li>' .
+                                '<li>PayU Integration</li>' .
+                                '<li>Euplatesc Integration</li>' .
+                                '</ul>' .
+                                '<p class="mt-2 text-sm">Note: Only one payment processor can be active at a time.</p>' .
+                                '</div>'
+                            )),
+                    ]),
+            ];
+        }
+
+        return match ($activeProcessor) {
+            'payment-stripe' => $this->getStripeFields(),
+            'payment-netopia' => $this->getNetopiaFields(),
+            'payment-payu' => $this->getPayuFields(),
+            'payment-euplatesc' => $this->getEuplatescFields(),
+            default => [],
+        };
+    }
+
+    protected function getStripeFields(): array
+    {
+        return [
+            SC\Section::make('Stripe Configuration')
+                ->description('Enter your Stripe API keys. Find them at dashboard.stripe.com/apikeys')
+                ->schema([
+                    Forms\Components\TextInput::make('stripe_public_key')
+                        ->label('Publishable Key')
+                        ->placeholder('pk_live_...')
+                        ->maxLength(255),
+
+                    Forms\Components\TextInput::make('stripe_secret_key')
+                        ->label('Secret Key')
+                        ->password()
+                        ->placeholder('sk_live_...')
+                        ->maxLength(255),
+
+                    Forms\Components\TextInput::make('stripe_webhook_secret')
+                        ->label('Webhook Secret')
+                        ->password()
+                        ->placeholder('whsec_...')
+                        ->maxLength(255)
+                        ->helperText('Required for receiving payment confirmations'),
+                ])->columns(1),
+        ];
+    }
+
+    protected function getNetopiaFields(): array
+    {
+        return [
+            SC\Section::make('Netopia Configuration')
+                ->description('Enter your Netopia merchant credentials')
+                ->schema([
+                    Forms\Components\TextInput::make('netopia_merchant_id')
+                        ->label('Merchant ID')
+                        ->maxLength(255),
+
+                    Forms\Components\Textarea::make('netopia_public_key')
+                        ->label('Public Key (Certificate)')
+                        ->rows(4)
+                        ->helperText('Paste the contents of your public.cer file'),
+
+                    Forms\Components\Textarea::make('netopia_private_key')
+                        ->label('Private Key')
+                        ->rows(4)
+                        ->helperText('Paste the contents of your private.key file'),
+                ])->columns(1),
+        ];
+    }
+
+    protected function getPayuFields(): array
+    {
+        return [
+            SC\Section::make('PayU Configuration')
+                ->description('Enter your PayU merchant credentials')
+                ->schema([
+                    Forms\Components\TextInput::make('payu_merchant')
+                        ->label('Merchant Code')
+                        ->maxLength(255),
+
+                    Forms\Components\TextInput::make('payu_secret_key')
+                        ->label('Secret Key')
+                        ->password()
+                        ->maxLength(255),
+                ])->columns(1),
+        ];
+    }
+
+    protected function getEuplatescFields(): array
+    {
+        return [
+            SC\Section::make('Euplatesc Configuration')
+                ->description('Enter your Euplatesc merchant credentials')
+                ->schema([
+                    Forms\Components\TextInput::make('euplatesc_merchant_id')
+                        ->label('Merchant ID')
+                        ->maxLength(255),
+
+                    Forms\Components\TextInput::make('euplatesc_key')
+                        ->label('Key')
+                        ->password()
+                        ->maxLength(255),
+                ])->columns(1),
+        ];
     }
 
     public function save(): void
@@ -289,7 +441,31 @@ class Settings extends Page
             'privacy' => $data['privacy_content'],
         ];
 
-        $tenant->update(['settings' => $settings]);
+        // Update payment credentials
+        $paymentCredentials = $tenant->payment_credentials ?? [];
+        $paymentCredentials['stripe'] = [
+            'public_key' => $data['stripe_public_key'] ?? '',
+            'secret_key' => $data['stripe_secret_key'] ?? '',
+            'webhook_secret' => $data['stripe_webhook_secret'] ?? '',
+        ];
+        $paymentCredentials['netopia'] = [
+            'merchant_id' => $data['netopia_merchant_id'] ?? '',
+            'public_key' => $data['netopia_public_key'] ?? '',
+            'private_key' => $data['netopia_private_key'] ?? '',
+        ];
+        $paymentCredentials['payu'] = [
+            'merchant' => $data['payu_merchant'] ?? '',
+            'secret_key' => $data['payu_secret_key'] ?? '',
+        ];
+        $paymentCredentials['euplatesc'] = [
+            'merchant_id' => $data['euplatesc_merchant_id'] ?? '',
+            'key' => $data['euplatesc_key'] ?? '',
+        ];
+
+        $tenant->update([
+            'settings' => $settings,
+            'payment_credentials' => $paymentCredentials,
+        ]);
 
         Notification::make()
             ->success()

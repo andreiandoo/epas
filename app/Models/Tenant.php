@@ -72,6 +72,7 @@ class Tenant extends Model
 
     protected $casts = [
         'settings' => 'array',
+        'payment_credentials' => 'array',
         'features' => 'array',
         'due_at' => 'datetime',
         'billing_starts_at' => 'datetime',
