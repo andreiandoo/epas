@@ -5,6 +5,7 @@ export interface TixelloConfig {
     apiEndpoint: string;
     modules: string[];
     theme: ThemeConfig;
+    site: SiteConfig;
     version: string;
     packageHash: string;
 }
@@ -15,6 +16,14 @@ export interface ThemeConfig {
     logo: string | null;
     favicon: string | null;
     fontFamily: string;
+}
+
+export interface SiteConfig {
+    title: string;
+    description: string;
+    tagline: string;
+    language: string;
+    template: string;
 }
 
 export interface InitAttributesConfig {
@@ -62,6 +71,13 @@ export class ConfigManager {
                 favicon: null,
                 fontFamily: 'Inter',
             },
+            site: {
+                title: '',
+                description: '',
+                tagline: '',
+                language: 'en',
+                template: 'default',
+            },
             version: '1.0.0',
             packageHash: '',
         };
@@ -76,6 +92,9 @@ export class ConfigManager {
                 }
                 if (data.modules) {
                     this.config.modules = data.modules;
+                }
+                if (data.site) {
+                    this.config.site = { ...this.config.site, ...data.site };
                 }
             }
         } catch {
@@ -103,6 +122,13 @@ export class ConfigManager {
                 favicon: null,
                 fontFamily: 'Inter',
             },
+            site: {
+                title: '',
+                description: '',
+                tagline: '',
+                language: 'en',
+                template: 'default',
+            },
             version: '1.0.0',
             packageHash: '',
         };
@@ -117,6 +143,9 @@ export class ConfigManager {
                 }
                 if (data.modules) {
                     this.config.modules = data.modules;
+                }
+                if (data.site) {
+                    this.config.site = { ...this.config.site, ...data.site };
                 }
                 if (data.tenant) {
                     this.config.tenantId = data.tenant.id;

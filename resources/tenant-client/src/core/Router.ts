@@ -182,6 +182,8 @@ export class Router {
         this.addRoute('/account/tickets', this.renderTickets.bind(this));
         this.addRoute('/account/events', this.renderMyEvents.bind(this));
         this.addRoute('/account/profile', this.renderProfile.bind(this));
+        this.addRoute('/terms', this.renderTerms.bind(this));
+        this.addRoute('/privacy', this.renderPrivacy.bind(this));
     }
 
     addRoute(path: string, handler: RouteHandler): void {
@@ -1065,6 +1067,76 @@ export class Router {
                 </a>
             </div>
         `;
+    }
+
+    private async renderTerms(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="bg-gray-200 h-8 w-1/3 rounded"></div>
+                    <div class="bg-gray-200 h-4 w-full rounded"></div>
+                    <div class="bg-gray-200 h-4 w-full rounded"></div>
+                    <div class="bg-gray-200 h-4 w-2/3 rounded"></div>
+                </div>
+            </div>
+        `;
+
+        try {
+            const data = await this.fetchApi('/pages/terms');
+            content.innerHTML = `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-8">${data.data.title}</h1>
+                    <div class="prose max-w-none">
+                        ${data.data.content}
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            content.innerHTML = `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-8">Terms & Conditions</h1>
+                    <p class="text-gray-600">Terms page not available.</p>
+                </div>
+            `;
+        }
+    }
+
+    private async renderPrivacy(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="bg-gray-200 h-8 w-1/3 rounded"></div>
+                    <div class="bg-gray-200 h-4 w-full rounded"></div>
+                    <div class="bg-gray-200 h-4 w-full rounded"></div>
+                    <div class="bg-gray-200 h-4 w-2/3 rounded"></div>
+                </div>
+            </div>
+        `;
+
+        try {
+            const data = await this.fetchApi('/pages/privacy');
+            content.innerHTML = `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-8">${data.data.title}</h1>
+                    <div class="prose max-w-none">
+                        ${data.data.content}
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            content.innerHTML = `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-8">Privacy Policy</h1>
+                    <p class="text-gray-600">Privacy page not available.</p>
+                </div>
+            `;
+        }
     }
 
     private render404(): void {
