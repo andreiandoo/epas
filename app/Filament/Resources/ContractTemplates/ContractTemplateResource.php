@@ -190,25 +190,6 @@ class ContractTemplateResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_default')
                     ->label('Default'),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('duplicate')
-                    ->icon('heroicon-o-document-duplicate')
-                    ->color('gray')
-                    ->action(function (ContractTemplate $record) {
-                        $newTemplate = $record->replicate();
-                        $newTemplate->name = $record->name . ' (Copy)';
-                        $newTemplate->slug = $record->slug . '-copy-' . time();
-                        $newTemplate->is_default = false;
-                        $newTemplate->save();
-                    }),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
             ->defaultSort('name');
     }
 
