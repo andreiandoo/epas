@@ -288,22 +288,23 @@ class EventResource extends Resource
                         ->searchable()
                         ->preload()
                         ->live()
-                        ->relationship(
-                            name: 'venue',
-                            modifyQueryUsing: function (Builder $query) use ($tenant) {
-                                $query->where(fn($q) => $q
+                        ->options(function () use ($tenant) {
+                            return Venue::query()
+                                ->where(fn($q) => $q
                                     ->whereNull('tenant_id')
                                     ->orWhere('tenant_id', $tenant?->id))
-                                    ->orderBy('name');
-                            }
-                        )
-                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
+                                ->orderBy('name')
+                                ->get()
+                                ->mapWithKeys(fn ($venue) => [
+                                    $venue->id => $venue->getTranslation('name', app()->getLocale())
+                                ]);
+                        })
                         ->afterStateUpdated(function ($state, SSet $set) {
                             if ($state) {
                                 $venue = Venue::find($state);
                                 if ($venue) {
                                     $set('address', $venue->address ?? $venue->full_address ?? '');
-                                    $set('website_url', $venue->website ?? '');
+                                    $set('website_url', $venue->website_url ?? '');
                                 }
                             }
                         })
