@@ -5,8 +5,9 @@ namespace App\Filament\Resources\ContractTemplates;
 use App\Filament\Resources\ContractTemplates\Pages;
 use App\Models\ContractTemplate;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -23,11 +24,10 @@ class ContractTemplateResource extends Resource
 
     protected static ?int $navigationSort = 10;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Template Information')
+        return $schema->schema([
+                SC\Section::make('Template Information')
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->required()
@@ -46,7 +46,7 @@ class ContractTemplateResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Business Model Assignment')
+                SC\Section::make('Business Model Assignment')
                     ->description('Assign this template to specific business models. Leave empty to use as default.')
                     ->schema([
                         Forms\Components\Select::make('work_method')
@@ -93,7 +93,7 @@ class ContractTemplateResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Contract Content')
+                SC\Section::make('Contract Content')
                     ->schema([
                         Forms\Components\Placeholder::make('variables_help')
                             ->label('Available Variables')
