@@ -67,19 +67,29 @@ class TenantClientController extends Controller
 
         $settings = $tenant->settings ?? [];
 
+        $logo = $settings['branding']['logo'] ?? null;
+        $favicon = $settings['branding']['favicon'] ?? null;
+
         return response()->json([
             'theme' => [
                 'primaryColor' => $settings['theme']['primary_color'] ?? '#3B82F6',
                 'secondaryColor' => $settings['theme']['secondary_color'] ?? '#1E40AF',
-                'logo' => $settings['branding']['logo_url'] ?? null,
-                'favicon' => $settings['branding']['favicon_url'] ?? null,
+                'logo' => $logo ? asset('storage/' . $logo) : null,
+                'favicon' => $favicon ? asset('storage/' . $favicon) : null,
                 'fontFamily' => $settings['theme']['font_family'] ?? 'Inter',
+            ],
+            'site' => [
+                'title' => $settings['site_title'] ?? $tenant->public_name ?? $tenant->name,
+                'description' => $settings['site_description'] ?? '',
+                'tagline' => $settings['site_tagline'] ?? '',
+                'language' => $settings['site_language'] ?? 'en',
+                'template' => $settings['site_template'] ?? 'default',
             ],
             'modules' => $this->getEnabledModules($tenant),
             'tenant' => [
                 'id' => $tenant->id,
                 'name' => $tenant->public_name ?? $tenant->name,
-                'locale' => $tenant->locale ?? 'en',
+                'locale' => $settings['site_language'] ?? 'en',
             ],
         ]);
     }
@@ -355,6 +365,62 @@ class TenantClientController extends Controller
                 'name' => $genre->getTranslation('name', $locale),
                 'slug' => $genre->slug,
             ]),
+        ]);
+    }
+
+    /**
+     * Get terms page content
+     */
+    public function terms(Request $request): JsonResponse
+    {
+        $resolved = $this->resolveTenant($request);
+
+        if (!$resolved) {
+            return response()->json(['error' => 'Tenant not found'], 404);
+        }
+
+        $tenant = $resolved['tenant'];
+        $settings = $tenant->settings ?? [];
+
+        $content = $settings['legal']['terms'] ?? '';
+
+        if (empty($content)) {
+            return response()->json(['error' => 'Terms page not found'], 404);
+        }
+
+        return response()->json([
+            'data' => [
+                'title' => 'Terms & Conditions',
+                'content' => $content,
+            ],
+        ]);
+    }
+
+    /**
+     * Get privacy page content
+     */
+    public function privacy(Request $request): JsonResponse
+    {
+        $resolved = $this->resolveTenant($request);
+
+        if (!$resolved) {
+            return response()->json(['error' => 'Tenant not found'], 404);
+        }
+
+        $tenant = $resolved['tenant'];
+        $settings = $tenant->settings ?? [];
+
+        $content = $settings['legal']['privacy'] ?? '';
+
+        if (empty($content)) {
+            return response()->json(['error' => 'Privacy page not found'], 404);
+        }
+
+        return response()->json([
+            'data' => [
+                'title' => 'Privacy Policy',
+                'content' => $content,
+            ],
         ]);
     }
 

@@ -11,6 +11,9 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Assets\Css;
 use Filament\Support\Assets\Js;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Select;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -20,6 +23,22 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class TenantPanelProvider extends PanelProvider
 {
+    public function boot(): void
+    {
+        // Disable autocomplete on all form inputs
+        TextInput::configureUsing(function (TextInput $input): void {
+            $input->autocomplete(false);
+        });
+
+        Textarea::configureUsing(function (Textarea $input): void {
+            $input->autocomplete(false);
+        });
+
+        Select::configureUsing(function (Select $input): void {
+            $input->native(false); // Use custom select component
+        });
+    }
+
     public function panel(Panel $panel): Panel
     {
         return $panel

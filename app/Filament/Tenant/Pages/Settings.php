@@ -48,6 +48,8 @@ class Settings extends Page
                 'bank_account' => $tenant->bank_account,
 
                 // Personalization
+                'site_title' => $settings['site_title'] ?? $tenant->public_name ?? $tenant->name ?? '',
+                'site_language' => $settings['site_language'] ?? 'en',
                 'logo' => $settings['branding']['logo'] ?? null,
                 'favicon' => $settings['branding']['favicon'] ?? null,
                 'site_description' => $settings['site_description'] ?? '',
@@ -186,6 +188,22 @@ class Settings extends Page
 
                                 SC\Section::make('Site Information')
                                     ->schema([
+                                        Forms\Components\TextInput::make('site_title')
+                                            ->label('Site Title')
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->helperText('The name of your site displayed in browser tab and header'),
+
+                                        Forms\Components\Select::make('site_language')
+                                            ->label('Site Language')
+                                            ->options([
+                                                'en' => 'English',
+                                                'ro' => 'Romanian (Română)',
+                                            ])
+                                            ->default('en')
+                                            ->required()
+                                            ->helperText('Primary language for your public site'),
+
                                         Forms\Components\Textarea::make('site_description')
                                             ->label('Site Description')
                                             ->rows(3)
@@ -437,6 +455,8 @@ class Settings extends Page
 
         // Update settings JSON
         $settings = $tenant->settings ?? [];
+        $settings['site_title'] = $data['site_title'];
+        $settings['site_language'] = $data['site_language'];
         $settings['branding'] = [
             'logo' => $data['logo'],
             'favicon' => $data['favicon'],
