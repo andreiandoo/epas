@@ -6,8 +6,18 @@ export interface TixelloConfig {
     modules: string[];
     theme: ThemeConfig;
     site: SiteConfig;
+    social: SocialConfig;
     version: string;
     packageHash: string;
+}
+
+export interface SocialConfig {
+    facebook: string | null;
+    instagram: string | null;
+    twitter: string | null;
+    youtube: string | null;
+    tiktok: string | null;
+    linkedin: string | null;
 }
 
 export interface ThemeConfig {
@@ -78,6 +88,14 @@ export class ConfigManager {
                 language: 'en',
                 template: 'default',
             },
+            social: {
+                facebook: null,
+                instagram: null,
+                twitter: null,
+                youtube: null,
+                tiktok: null,
+                linkedin: null,
+            },
             version: '1.1.0',
             packageHash: '',
         };
@@ -95,6 +113,9 @@ export class ConfigManager {
                 }
                 if (data.site) {
                     this.config.site = { ...this.config.site, ...data.site };
+                }
+                if (data.social) {
+                    this.config.social = { ...this.config.social, ...data.social };
                 }
             }
         } catch {
@@ -146,6 +167,9 @@ export class ConfigManager {
                 }
                 if (data.site) {
                     this.config.site = { ...this.config.site, ...data.site };
+                }
+                if (data.social) {
+                    this.config.social = { ...this.config.social, ...data.social };
                 }
                 if (data.tenant) {
                     this.config.tenantId = data.tenant.id;

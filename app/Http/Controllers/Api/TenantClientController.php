@@ -85,6 +85,18 @@ class TenantClientController extends Controller
                 'language' => $settings['site_language'] ?? 'en',
                 'template' => $settings['site_template'] ?? 'default',
             ],
+            'social' => [
+                'facebook' => $settings['social']['facebook'] ?? null,
+                'instagram' => $settings['social']['instagram'] ?? null,
+                'twitter' => $settings['social']['twitter'] ?? null,
+                'youtube' => $settings['social']['youtube'] ?? null,
+                'tiktok' => $settings['social']['tiktok'] ?? null,
+                'linkedin' => $settings['social']['linkedin'] ?? null,
+            ],
+            'pages' => [
+                'terms_title' => $settings['legal']['terms_title'] ?? 'Terms & Conditions',
+                'privacy_title' => $settings['legal']['privacy_title'] ?? 'Privacy Policy',
+            ],
             'modules' => $this->getEnabledModules($tenant),
             'tenant' => [
                 'id' => $tenant->id,
@@ -396,7 +408,7 @@ class TenantClientController extends Controller
 
         return response()->json([
             'data' => [
-                'title' => 'Terms & Conditions',
+                'title' => $settings['legal']['terms_title'] ?? 'Terms & Conditions',
                 'content' => $content,
             ],
         ]);
@@ -424,7 +436,7 @@ class TenantClientController extends Controller
 
         return response()->json([
             'data' => [
-                'title' => 'Privacy Policy',
+                'title' => $settings['legal']['privacy_title'] ?? 'Privacy Policy',
                 'content' => $content,
             ],
         ]);

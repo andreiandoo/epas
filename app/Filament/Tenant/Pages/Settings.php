@@ -60,8 +60,18 @@ class Settings extends Page
                 'site_template' => $settings['site_template'] ?? 'default',
 
                 // Legal Pages
+                'terms_title' => $settings['legal']['terms_title'] ?? 'Terms & Conditions',
                 'terms_content' => $settings['legal']['terms'] ?? '',
+                'privacy_title' => $settings['legal']['privacy_title'] ?? 'Privacy Policy',
                 'privacy_content' => $settings['legal']['privacy'] ?? '',
+
+                // Social Links
+                'social_facebook' => $settings['social']['facebook'] ?? '',
+                'social_instagram' => $settings['social']['instagram'] ?? '',
+                'social_twitter' => $settings['social']['twitter'] ?? '',
+                'social_youtube' => $settings['social']['youtube'] ?? '',
+                'social_tiktok' => $settings['social']['tiktok'] ?? '',
+                'social_linkedin' => $settings['social']['linkedin'] ?? '',
 
                 // Payment Credentials
                 'stripe_public_key' => $tenant->payment_credentials['stripe']['public_key'] ?? '',
@@ -254,8 +264,14 @@ class Settings extends Page
                                 SC\Section::make('Terms & Conditions')
                                     ->description('Content displayed on your Terms & Conditions page')
                                     ->schema([
+                                        Forms\Components\TextInput::make('terms_title')
+                                            ->label('Page Title')
+                                            ->default('Terms & Conditions')
+                                            ->maxLength(255)
+                                            ->helperText('The title displayed on the Terms page'),
+
                                         Forms\Components\RichEditor::make('terms_content')
-                                            ->label('')
+                                            ->label('Content')
                                             ->toolbarButtons([
                                                 'bold',
                                                 'italic',
@@ -276,8 +292,14 @@ class Settings extends Page
                                 SC\Section::make('Privacy Policy')
                                     ->description('Content displayed on your Privacy Policy page')
                                     ->schema([
+                                        Forms\Components\TextInput::make('privacy_title')
+                                            ->label('Page Title')
+                                            ->default('Privacy Policy')
+                                            ->maxLength(255)
+                                            ->helperText('The title displayed on the Privacy page'),
+
                                         Forms\Components\RichEditor::make('privacy_content')
-                                            ->label('')
+                                            ->label('Content')
                                             ->toolbarButtons([
                                                 'bold',
                                                 'italic',
@@ -294,6 +316,50 @@ class Settings extends Page
                                             ])
                                             ->columnSpanFull(),
                                     ]),
+                            ]),
+
+                        SC\Tabs\Tab::make('Links')
+                            ->icon('heroicon-o-link')
+                            ->schema([
+                                SC\Section::make('Social Media Links')
+                                    ->description('Add links to your social media profiles. Icons will appear in the footer.')
+                                    ->schema([
+                                        Forms\Components\TextInput::make('social_facebook')
+                                            ->label('Facebook')
+                                            ->url()
+                                            ->placeholder('https://facebook.com/yourpage')
+                                            ->maxLength(255),
+
+                                        Forms\Components\TextInput::make('social_instagram')
+                                            ->label('Instagram')
+                                            ->url()
+                                            ->placeholder('https://instagram.com/yourprofile')
+                                            ->maxLength(255),
+
+                                        Forms\Components\TextInput::make('social_twitter')
+                                            ->label('Twitter / X')
+                                            ->url()
+                                            ->placeholder('https://twitter.com/yourhandle')
+                                            ->maxLength(255),
+
+                                        Forms\Components\TextInput::make('social_youtube')
+                                            ->label('YouTube')
+                                            ->url()
+                                            ->placeholder('https://youtube.com/@yourchannel')
+                                            ->maxLength(255),
+
+                                        Forms\Components\TextInput::make('social_tiktok')
+                                            ->label('TikTok')
+                                            ->url()
+                                            ->placeholder('https://tiktok.com/@yourprofile')
+                                            ->maxLength(255),
+
+                                        Forms\Components\TextInput::make('social_linkedin')
+                                            ->label('LinkedIn')
+                                            ->url()
+                                            ->placeholder('https://linkedin.com/company/yourcompany')
+                                            ->maxLength(255),
+                                    ])->columns(2),
                             ]),
 
                         SC\Tabs\Tab::make('Payment Processor')
@@ -469,8 +535,18 @@ class Settings extends Page
         ];
         $settings['site_template'] = $data['site_template'];
         $settings['legal'] = [
+            'terms_title' => $data['terms_title'] ?? 'Terms & Conditions',
             'terms' => $data['terms_content'],
+            'privacy_title' => $data['privacy_title'] ?? 'Privacy Policy',
             'privacy' => $data['privacy_content'],
+        ];
+        $settings['social'] = [
+            'facebook' => $data['social_facebook'] ?? '',
+            'instagram' => $data['social_instagram'] ?? '',
+            'twitter' => $data['social_twitter'] ?? '',
+            'youtube' => $data['social_youtube'] ?? '',
+            'tiktok' => $data['social_tiktok'] ?? '',
+            'linkedin' => $data['social_linkedin'] ?? '',
         ];
 
         // Update payment credentials
