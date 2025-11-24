@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Invoice;
 use App\Models\Microservice;
+use App\Models\Setting;
 use App\Models\Tenant;
 use App\Services\StripeService;
+use App\Mail\MicroservicePurchaseConfirmation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 
 class MicroserviceMarketplaceController extends Controller
 {
@@ -248,6 +252,14 @@ class MicroserviceMarketplaceController extends Controller
                 ->with('error', 'Your cart is empty');
         }
 
+        $microservices = Microservice::whereIn('id', $cart)->get();
+        $total = $microservices->sum('price');
+
+        // Handle free microservices directly (no Stripe needed)
+        if ($total <= 0) {
+            return $this->processFreeMicroservices($tenant, $microservices);
+        }
+
         try {
             $session = $this->stripeService->createCheckoutSession(
                 $tenant,
@@ -263,6 +275,108 @@ class MicroserviceMarketplaceController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to create checkout session: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Process free microservices without Stripe
+     */
+    protected function processFreeMicroservices(Tenant $tenant, $microservices)
+    {
+        $paymentProcessorSlugs = ['payment-stripe', 'payment-netopia', 'payment-payu', 'payment-euplatesc'];
+
+        foreach ($microservices as $microservice) {
+            // If this is a payment processor, deactivate any existing payment processors
+            if (in_array($microservice->slug, $paymentProcessorSlugs)) {
+                $tenant->microservices()
+                    ->whereIn('slug', $paymentProcessorSlugs)
+                    ->where('microservice_id', '!=', $microservice->id)
+                    ->each(function ($existingProcessor) use ($tenant) {
+                        $tenant->microservices()->updateExistingPivot($existingProcessor->id, [
+                            'is_active' => false,
+                        ]);
+                    });
+            }
+
+            // Check if already activated
+            if ($tenant->microservices()->where('microservice_id', $microservice->id)->exists()) {
+                $tenant->microservices()->updateExistingPivot($microservice->id, [
+                    'is_active' => true,
+                    'activated_at' => now(),
+                ]);
+            } else {
+                $tenant->microservices()->attach($microservice->id, [
+                    'is_active' => true,
+                    'activated_at' => now(),
+                    'configuration' => $this->stripeService->getDefaultConfiguration($microservice),
+                ]);
+            }
+        }
+
+        // Log activity
+        activity()
+            ->causedBy($tenant->owner)
+            ->performedOn($tenant)
+            ->withProperties([
+                'microservices' => $microservices->map(fn ($ms) => $ms->getTranslation('name', 'en'))->toArray(),
+                'amount' => 0,
+                'currency' => 'EUR',
+                'type' => 'free_activation',
+            ])
+            ->log('Activated free microservices');
+
+        // Generate invoice for free activation
+        $invoice = $this->generateFreeInvoice($tenant, $microservices);
+
+        // Send confirmation email
+        if ($tenant->owner && $tenant->owner->email) {
+            try {
+                Mail::to($tenant->owner->email)->send(
+                    new MicroservicePurchaseConfirmation($tenant, $microservices, $invoice)
+                );
+            } catch (\Exception $e) {
+                // Log but don't fail
+                \Log::error('Failed to send free microservice confirmation email', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // Clear cart
+        session()->forget('cart');
+
+        return redirect()->route('tenant.dashboard')
+            ->with('success', 'Free microservices activated successfully!');
+    }
+
+    /**
+     * Generate invoice for free microservice activation
+     */
+    protected function generateFreeInvoice(Tenant $tenant, $microservices): Invoice
+    {
+        $settings = Setting::current();
+
+        $descriptions = $microservices->map(function ($ms) {
+            $name = $ms->getTranslation('name', 'en');
+            return "{$name} ({$ms->pricing_model})";
+        })->implode(', ');
+
+        return Invoice::create([
+            'tenant_id' => $tenant->id,
+            'number' => $settings->getNextInvoiceNumber(),
+            'description' => "Free Microservice Activation: {$descriptions}",
+            'issue_date' => now(),
+            'due_date' => now(),
+            'subtotal' => 0,
+            'vat_rate' => 0,
+            'vat_amount' => 0,
+            'amount' => 0,
+            'currency' => 'EUR',
+            'status' => 'paid',
+            'meta' => [
+                'microservice_ids' => $microservices->pluck('id')->toArray(),
+                'payment_method' => 'free',
+            ],
+        ]);
     }
 
     /**

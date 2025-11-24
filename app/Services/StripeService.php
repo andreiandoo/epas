@@ -242,7 +242,7 @@ class StripeService
     /**
      * Get default configuration for a microservice
      */
-    protected function getDefaultConfiguration(Microservice $microservice): array
+    public function getDefaultConfiguration(Microservice $microservice): array
     {
         // Return default config based on microservice type
         if ($microservice->slug === 'affiliate-tracking') {

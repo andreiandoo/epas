@@ -22,7 +22,7 @@ class UserPolicy
 
     public function create(User $user): bool
     {
-        return $user->isAdmin() || $user->isSuperAdmin();
+        return $user->isAdmin() || $user->isSuperAdmin() || $user->isTenant();
     }
 
     public function update(User $user, User $record): bool
