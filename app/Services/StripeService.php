@@ -190,12 +190,25 @@ class StripeService
         }
 
         $activatedServices = [];
+        $paymentProcessorSlugs = ['payment-stripe', 'payment-netopia', 'payment-payu', 'payment-euplatesc'];
 
         foreach ($microserviceIds as $microserviceId) {
             $microservice = Microservice::find($microserviceId);
 
             if (!$microservice) {
                 continue;
+            }
+
+            // If this is a payment processor, deactivate any existing payment processors
+            if (in_array($microservice->slug, $paymentProcessorSlugs)) {
+                $tenant->microservices()
+                    ->whereIn('slug', $paymentProcessorSlugs)
+                    ->where('microservice_id', '!=', $microservice->id)
+                    ->each(function ($existingProcessor) use ($tenant) {
+                        $tenant->microservices()->updateExistingPivot($existingProcessor->id, [
+                            'is_active' => false,
+                        ]);
+                    });
             }
 
             // Check if already activated
