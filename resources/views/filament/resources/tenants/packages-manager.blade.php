@@ -148,13 +148,15 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             }
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Package generated successfully');
+                alert(data.message || 'Package generated successfully');
                 location.reload();
             } else {
                 alert('Error: ' + (data.message || 'Failed to generate package'));
@@ -175,13 +177,15 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             }
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Package regenerated successfully');
+                alert(data.message || 'Package regenerated successfully');
                 location.reload();
             } else {
                 alert('Error: ' + (data.message || 'Failed to regenerate package'));

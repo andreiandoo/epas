@@ -53,6 +53,14 @@ class PackageController extends Controller
         // Dispatch the job to generate the package
         GeneratePackageJob::dispatch($domain);
 
+        // Return JSON for AJAX requests, redirect otherwise
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Package generation started. Please refresh in a moment.',
+            ]);
+        }
+
         return redirect()->back()->with('success', 'Package generation started. Please refresh in a moment.');
     }
 
@@ -68,6 +76,14 @@ class PackageController extends Controller
 
         // Dispatch the job to generate a new package
         GeneratePackageJob::dispatch($domain);
+
+        // Return JSON for AJAX requests, redirect otherwise
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Package regeneration started. Please refresh in a moment.',
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Package regeneration started. Please refresh in a moment.');
     }
