@@ -96,7 +96,7 @@ class EventsController extends Controller
 
         // Category filter
         if ($category) {
-            $query->whereHas('eventType', function ($q) use ($category) {
+            $query->whereHas('eventTypes', function ($q) use ($category) {
                 $q->where('slug', $category);
             });
         }
@@ -109,7 +109,7 @@ class EventsController extends Controller
             $orderColumn = 'start_date';
         }
 
-        $events = $query->with(['venue', 'eventType', 'artists', 'ticketTypes'])
+        $events = $query->with(['venue', 'eventTypes', 'artists', 'ticketTypes'])
             ->orderBy($orderColumn, 'asc')
             ->skip(($page - 1) * $perPage)
             ->take($perPage)
@@ -133,9 +133,9 @@ class EventsController extends Controller
                             'name' => $event->venue->getTranslation('name', $locale),
                             'city' => $event->venue->city,
                         ] : null,
-                        'category' => $event->eventType ? [
-                            'name' => $event->eventType->getTranslation('name', $locale),
-                            'slug' => $event->eventType->slug,
+                        'category' => $event->eventTypes->first() ? [
+                            'name' => $event->eventTypes->first()->getTranslation('name', $locale),
+                            'slug' => $event->eventTypes->first()->slug,
                         ] : null,
                         'price_from' => $event->ticketTypes->min('price'),
                         'is_sold_out' => $event->is_sold_out ?? false,
@@ -166,7 +166,7 @@ class EventsController extends Controller
 
         $event = Event::where('tenant_id', $tenant->id)
             ->where('slug', $slug)
-            ->with(['venue', 'eventType', 'eventGenres', 'artists', 'ticketTypes'])
+            ->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'ticketTypes'])
             ->first();
 
         if (!$event) {
@@ -199,9 +199,9 @@ class EventsController extends Controller
                     'latitude' => $event->venue->latitude,
                     'longitude' => $event->venue->longitude,
                 ] : null,
-                'category' => $event->eventType ? [
-                    'name' => $event->eventType->getTranslation('name', $locale),
-                    'slug' => $event->eventType->slug,
+                'category' => $event->eventTypes->first() ? [
+                    'name' => $event->eventTypes->first()->getTranslation('name', $locale),
+                    'slug' => $event->eventTypes->first()->slug,
                 ] : null,
                 'genres' => $event->eventGenres->map(fn ($genre) => [
                     'name' => $genre->getTranslation('name', $locale),
