@@ -169,6 +169,18 @@ export class ConfigManager {
                 language: 'en',
                 template: 'default',
             },
+            social: {
+                facebook: null,
+                instagram: null,
+                twitter: null,
+                youtube: null,
+                tiktok: null,
+                linkedin: null,
+            },
+            menus: {
+                header: [],
+                footer: [],
+            },
             version: '1.1.0',
             packageHash: '',
         };
@@ -189,6 +201,9 @@ export class ConfigManager {
                 }
                 if (data.social) {
                     this.config.social = { ...this.config.social, ...data.social };
+                }
+                if (data.menus) {
+                    this.config.menus = data.menus;
                 }
                 if (data.tenant) {
                     this.config.tenantId = data.tenant.id;
