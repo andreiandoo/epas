@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class TicketType extends Model
 {
@@ -31,7 +31,7 @@ class TicketType extends Model
         'sales_end_at'   => 'datetime',
     ];
 
-    protected $appends = ['price', 'price_max', 'capacity', 'sale_starts_at', 'sale_ends_at', 'is_active', 'available_quantity'];
+    protected $appends = ['available_quantity'];
 
     public function event(): BelongsTo
     {
@@ -43,58 +43,66 @@ class TicketType extends Model
         return $this->hasMany(Ticket::class);
     }
 
-    // Accessor/Mutator for price_max (maps to price_cents)
-    protected function priceMax(): Attribute
+    // Getters
+    public function getPriceMaxAttribute()
     {
-        return Attribute::make(
-            get: fn () => $this->price_cents ? $this->price_cents / 100 : 0,
-            set: fn ($value) => ['price_cents' => $value ? (int)($value * 100) : 0]
-        );
+        return $this->price_cents ? $this->price_cents / 100 : 0;
     }
 
-    // Accessor/Mutator for price (read-only computed from price_cents - sale price placeholder)
-    protected function price(): Attribute
+    public function getPriceAttribute()
     {
-        return Attribute::make(
-            get: fn () => $this->price_cents ? $this->price_cents / 100 : 0,
-            set: fn ($value) => [] // Ignore sale price for now, use price_cents
-        );
+        return $this->price_cents ? $this->price_cents / 100 : 0;
     }
 
-    // Accessor/Mutator for capacity (maps to quota_total)
-    protected function capacity(): Attribute
+    public function getCapacityAttribute()
     {
-        return Attribute::make(
-            get: fn () => $this->quota_total,
-            set: fn ($value) => ['quota_total' => $value ?? 0]
-        );
+        return $this->quota_total;
     }
 
-    // Accessor/Mutator for sale_starts_at (maps to sales_start_at)
-    protected function saleStartsAt(): Attribute
+    public function getSaleStartsAtAttribute()
     {
-        return Attribute::make(
-            get: fn () => $this->sales_start_at,
-            set: fn ($value) => ['sales_start_at' => $value]
-        );
+        return $this->sales_start_at;
     }
 
-    // Accessor/Mutator for sale_ends_at (maps to sales_end_at)
-    protected function saleEndsAt(): Attribute
+    public function getSaleEndsAtAttribute()
     {
-        return Attribute::make(
-            get: fn () => $this->sales_end_at,
-            set: fn ($value) => ['sales_end_at' => $value]
-        );
+        return $this->sales_end_at;
     }
 
-    // Accessor/Mutator for is_active (maps to status)
-    protected function isActive(): Attribute
+    public function getIsActiveAttribute()
     {
-        return Attribute::make(
-            get: fn () => $this->status === 'active',
-            set: fn ($value) => ['status' => $value ? 'active' : 'hidden']
-        );
+        return $this->status === 'active';
+    }
+
+    // Setters
+    public function setPriceMaxAttribute($value)
+    {
+        $this->attributes['price_cents'] = $value ? (int)($value * 100) : 0;
+    }
+
+    public function setPriceAttribute($value)
+    {
+        // Ignore for now - we use price_max
+    }
+
+    public function setCapacityAttribute($value)
+    {
+        $this->attributes['quota_total'] = $value ?? 0;
+    }
+
+    public function setSaleStartsAtAttribute($value)
+    {
+        $this->attributes['sales_start_at'] = $value;
+    }
+
+    public function setSaleEndsAtAttribute($value)
+    {
+        $this->attributes['sales_end_at'] = $value;
+    }
+
+    public function setIsActiveAttribute($value)
+    {
+        $this->attributes['status'] = $value ? 'active' : 'hidden';
     }
 
     // Accessor for available_quantity (computed from quota_total - quota_sold)

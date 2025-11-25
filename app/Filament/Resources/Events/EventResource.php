@@ -579,7 +579,7 @@ class EventResource extends Resource
             SC\Section::make('Location & Links')
                 ->extraAttributes(['id'=>'location','data-ep-section'=>'','data-ep-id'=>'location','data-ep-label'=>'Location & Links','data-ep-icon'=>'map-pin'])
                 ->schema([
-                    Forms\Components\Select::make('venue')
+                    Forms\Components\Select::make('venue_id')
                         ->label('Venue')
                         ->searchable()
                         ->preload()
