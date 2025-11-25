@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\TenantClient;
 
 use App\Http\Controllers\Controller;
+use App\Models\Domain;
 use App\Models\Event;
+use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -11,11 +13,38 @@ use Illuminate\Support\Facades\Storage;
 class EventsController extends Controller
 {
     /**
+     * Resolve tenant from request (hostname preferred, ID fallback)
+     */
+    private function resolveTenant(Request $request): ?Tenant
+    {
+        $hostname = $request->query('hostname');
+        $tenantId = $request->query('tenant');
+
+        if ($hostname) {
+            $domain = Domain::where('domain', $hostname)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$domain) {
+                return null;
+            }
+
+            return $domain->tenant;
+        }
+
+        if ($tenantId) {
+            return Tenant::find($tenantId);
+        }
+
+        return null;
+    }
+
+    /**
      * List public events for the tenant
      */
     public function index(Request $request): JsonResponse
     {
-        $tenant = $request->attributes->get('tenant');
+        $tenant = $this->resolveTenant($request);
 
         if (!$tenant) {
             return response()->json([
@@ -126,7 +155,7 @@ class EventsController extends Controller
      */
     public function show(Request $request, string $slug): JsonResponse
     {
-        $tenant = $request->attributes->get('tenant');
+        $tenant = $this->resolveTenant($request);
 
         if (!$tenant) {
             return response()->json([
