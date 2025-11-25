@@ -67,12 +67,62 @@ export class ConfigManager {
         try {
             // Decrypt the configuration
             const decrypted = await this.decrypt(encryptedConfig);
-            this.config = JSON.parse(decrypted);
+            const baseConfig = JSON.parse(decrypted);
+
+            // Set base config with defaults for missing fields
+            this.config = {
+                ...baseConfig,
+                site: baseConfig.site || {
+                    title: '',
+                    description: '',
+                    tagline: '',
+                    language: 'en',
+                    template: 'default',
+                },
+                social: baseConfig.social || {
+                    facebook: null,
+                    instagram: null,
+                    twitter: null,
+                    youtube: null,
+                    tiktok: null,
+                    linkedin: null,
+                },
+                menus: baseConfig.menus || {
+                    header: [],
+                    footer: [],
+                },
+            };
+
+            // Fetch full config from API to get latest data
+            try {
+                const url = `${this.config.apiEndpoint}/config?hostname=${encodeURIComponent(this.config.domain)}`;
+                const response = await fetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.theme) {
+                        this.config.theme = { ...this.config.theme, ...data.theme };
+                    }
+                    if (data.modules) {
+                        this.config.modules = data.modules;
+                    }
+                    if (data.site) {
+                        this.config.site = { ...this.config.site, ...data.site };
+                    }
+                    if (data.social) {
+                        this.config.social = { ...this.config.social, ...data.social };
+                    }
+                    if (data.menus) {
+                        this.config.menus = data.menus;
+                    }
+                }
+            } catch {
+                // Use baked config if API fails
+            }
 
             // Apply theme
-            this.applyTheme(this.config!.theme);
+            this.applyTheme(this.config.theme);
 
-            return this.config!;
+            return this.config;
         } catch (error) {
             throw new Error('Failed to initialize configuration');
         }
