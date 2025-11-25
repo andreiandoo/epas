@@ -43,6 +43,23 @@ class TicketType extends Model
         return $this->hasMany(Ticket::class);
     }
 
+    /**
+     * Boot the model and add event listeners
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Transform data before saving
+        static::saving(function ($model) {
+            \Log::info('TicketType saving', [
+                'id' => $model->id,
+                'attributes' => $model->attributes,
+                'original' => $model->getOriginal(),
+            ]);
+        });
+    }
+
     // Getters
     public function getPriceMaxAttribute()
     {
