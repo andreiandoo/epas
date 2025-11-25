@@ -583,15 +583,17 @@ class EventResource extends Resource
                         ->label('Venue')
                         ->searchable()
                         ->preload()
-                        ->options(function (SGet $get) {
-                            $tenantId = $get('tenant_id');
-                            return Venue::query()
-                                ->when($tenantId, fn($q) => $q->where(fn($qq) => $qq
+                        ->relationship(
+                            name: 'venue',
+                            modifyQueryUsing: function (Builder $query, SGet $get) {
+                                $tenantId = $get('tenant_id');
+                                return $query->when($tenantId, fn($q) => $q->where(fn($qq) => $qq
                                     ->whereNull('tenant_id')
                                     ->orWhere('tenant_id', $tenantId)))
-                                ->orderBy('name')
-                                ->pluck('name', 'id');
-                        })
+                                    ->orderBy('name');
+                            }
+                        )
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'en'))
                         ->helperText('Afișează doar venue-uri fără owner sau ale Tenantului acestui eveniment.')
                         ->live()
                         ->nullable()
@@ -788,7 +790,6 @@ class EventResource extends Resource
                         ->label('Event genres')
                         ->relationship(
                             name: 'eventGenres',
-                            titleAttribute: 'name',
                             modifyQueryUsing: function (Builder $query, SGet $get) {
                                 $typeIds = (array) ($get('eventTypes') ?? []);
                                 if (! $typeIds) {
@@ -803,6 +804,7 @@ class EventResource extends Resource
                                 })->orderBy('name');
                             }
                         )
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'en'))
                         ->multiple()
                         ->preload()
                         ->searchable()
