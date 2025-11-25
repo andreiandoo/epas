@@ -31,7 +31,7 @@ class TicketType extends Model
         'sales_end_at'   => 'datetime',
     ];
 
-    protected $appends = ['price', 'price_max', 'capacity', 'sale_starts_at', 'sale_ends_at', 'is_active'];
+    protected $appends = ['price', 'price_max', 'capacity', 'sale_starts_at', 'sale_ends_at', 'is_active', 'available_quantity'];
 
     public function event(): BelongsTo
     {
@@ -94,6 +94,14 @@ class TicketType extends Model
         return Attribute::make(
             get: fn () => $this->status === 'active',
             set: fn ($value) => ['status' => $value ? 'active' : 'hidden']
+        );
+    }
+
+    // Accessor for available_quantity (computed from quota_total - quota_sold)
+    protected function availableQuantity(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => max(0, ($this->quota_total ?? 0) - ($this->quota_sold ?? 0))
         );
     }
 }
