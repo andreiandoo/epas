@@ -752,7 +752,7 @@ class EventResource extends Resource
                                 ->toArray();
                         })
                         ->getOptionLabelFromRecordUsing(fn ($record) =>
-                            ($record->__parent_name ? ($record->__parent_name . ' ▸ ') : '') . $record->name
+                            ($record->__parent_name ? ($record->__parent_name . ' ▸ ') : '') . $record->getTranslation('name', 'en')
                         )
                         ->multiple()
                         ->preload()
