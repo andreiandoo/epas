@@ -10,6 +10,7 @@ use App\Models\Tenant;
 use App\Models\TenantPage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class TenantClientController extends Controller
 {
@@ -75,8 +76,8 @@ class TenantClientController extends Controller
             'theme' => [
                 'primaryColor' => $settings['theme']['primary_color'] ?? '#3B82F6',
                 'secondaryColor' => $settings['theme']['secondary_color'] ?? '#1E40AF',
-                'logo' => $logo ? asset('storage/' . $logo) : null,
-                'favicon' => $favicon ? asset('storage/' . $favicon) : null,
+                'logo' => $logo ? Storage::disk('public')->url($logo) : null,
+                'favicon' => $favicon ? Storage::disk('public')->url($favicon) : null,
                 'fontFamily' => $settings['theme']['font_family'] ?? 'Inter',
             ],
             'site' => [
@@ -127,25 +128,28 @@ class TenantClientController extends Controller
         $category = $request->query('category');
         $limit = $request->query('limit', 12);
         $offset = $request->query('offset', 0);
+        $showAll = $request->query('show_all'); // Debug parameter
 
         $query = Event::where('tenant_id', $tenantId);
 
         // Check date columns exist before filtering
         // Use today's date (not time) for comparison to include events starting today
-        $today = now()->startOfDay();
+        if (!$showAll) {
+            $today = now()->startOfDay();
 
-        if (\Schema::hasColumn('events', 'end_date') && \Schema::hasColumn('events', 'start_date')) {
-            $query->where(function ($q) use ($today) {
-                $q->where('end_date', '>=', $today)
-                  ->orWhere(function ($q2) use ($today) {
-                      $q2->whereNull('end_date')
-                         ->where('start_date', '>=', $today);
-                  });
-            });
-        } elseif (\Schema::hasColumn('events', 'start_date')) {
-            $query->where('start_date', '>=', $today);
-        } elseif (\Schema::hasColumn('events', 'event_date')) {
-            $query->where('event_date', '>=', $today);
+            if (\Schema::hasColumn('events', 'end_date') && \Schema::hasColumn('events', 'start_date')) {
+                $query->where(function ($q) use ($today) {
+                    $q->where('end_date', '>=', $today)
+                      ->orWhere(function ($q2) use ($today) {
+                          $q2->whereNull('end_date')
+                             ->where('start_date', '>=', $today);
+                      });
+                });
+            } elseif (\Schema::hasColumn('events', 'start_date')) {
+                $query->where('start_date', '>=', $today);
+            } elseif (\Schema::hasColumn('events', 'event_date')) {
+                $query->where('event_date', '>=', $today);
+            }
         }
 
         // Check if cancelled - allow NULL or false
@@ -208,25 +212,28 @@ class TenantClientController extends Controller
 
         $tenantId = $resolved['tenant']->id;
         $limit = $request->query('limit', 6);
+        $showAll = $request->query('show_all'); // Debug parameter
 
         $query = Event::where('tenant_id', $tenantId);
 
         // Check date columns exist before filtering
         // Use today's date (not time) for comparison to include events starting today
-        $today = now()->startOfDay();
+        if (!$showAll) {
+            $today = now()->startOfDay();
 
-        if (\Schema::hasColumn('events', 'end_date') && \Schema::hasColumn('events', 'start_date')) {
-            $query->where(function ($q) use ($today) {
-                $q->where('end_date', '>=', $today)
-                  ->orWhere(function ($q2) use ($today) {
-                      $q2->whereNull('end_date')
-                         ->where('start_date', '>=', $today);
-                  });
-            });
-        } elseif (\Schema::hasColumn('events', 'start_date')) {
-            $query->where('start_date', '>=', $today);
-        } elseif (\Schema::hasColumn('events', 'event_date')) {
-            $query->where('event_date', '>=', $today);
+            if (\Schema::hasColumn('events', 'end_date') && \Schema::hasColumn('events', 'start_date')) {
+                $query->where(function ($q) use ($today) {
+                    $q->where('end_date', '>=', $today)
+                      ->orWhere(function ($q2) use ($today) {
+                          $q2->whereNull('end_date')
+                             ->where('start_date', '>=', $today);
+                      });
+                });
+            } elseif (\Schema::hasColumn('events', 'start_date')) {
+                $query->where('start_date', '>=', $today);
+            } elseif (\Schema::hasColumn('events', 'event_date')) {
+                $query->where('event_date', '>=', $today);
+            }
         }
 
         // Check if cancelled - allow NULL or false
@@ -330,7 +337,7 @@ class TenantClientController extends Controller
             'title' => $event->getTranslation('title', $locale),
             'slug' => $event->slug,
             'description' => $event->getTranslation('short_description', $locale) ?? substr(strip_tags($event->getTranslation('description', $locale) ?? ''), 0, 150),
-            'image' => $event->featured_image ? asset('storage/' . $event->featured_image) : null,
+            'image' => $event->featured_image ? Storage::disk('public')->url($event->featured_image) : null,
             'start_date' => $event->start_date?->toIso8601String(),
             'end_date' => $event->end_date?->toIso8601String(),
             'venue' => $event->venue ? [
@@ -361,7 +368,7 @@ class TenantClientController extends Controller
             'artists' => $event->artists->map(fn ($artist) => [
                 'id' => $artist->id,
                 'name' => $artist->name,
-                'image' => $artist->main_image ? asset('storage/' . $artist->main_image) : null,
+                'image' => $artist->main_image ? Storage::disk('public')->url($artist->main_image) : null,
             ]),
             'venue' => $event->venue ? [
                 'id' => $event->venue->id,
