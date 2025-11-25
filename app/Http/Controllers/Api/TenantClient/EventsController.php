@@ -137,6 +137,15 @@ class EventsController extends Controller
                             'name' => $event->eventTypes->first()->getTranslation('name', $locale),
                             'slug' => $event->eventTypes->first()->slug,
                         ] : null,
+                        'ticket_types' => $event->ticketTypes->map(fn ($type) => [
+                            'id' => $type->id,
+                            'name' => $type->name,
+                            'description' => $type->meta['description'][$locale] ?? $type->meta['description']['en'] ?? '',
+                            'price' => $type->price_max,
+                            'currency' => $type->currency ?? 'EUR',
+                            'available' => $type->available_quantity,
+                            'status' => $type->status,
+                        ]),
                         'price_from' => $event->ticketTypes->min('price_max'),
                         'is_sold_out' => $event->is_sold_out ?? false,
                     ];
