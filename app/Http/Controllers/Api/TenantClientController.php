@@ -337,19 +337,36 @@ class TenantClientController extends Controller
             'title' => $event->getTranslation('title', $locale),
             'slug' => $event->slug,
             'description' => $event->getTranslation('short_description', $locale) ?? substr(strip_tags($event->getTranslation('description', $locale) ?? ''), 0, 150),
-            'image' => $event->featured_image ? Storage::disk('public')->url($event->featured_image) : null,
+
+            // Status flags
+            'is_sold_out' => $event->is_sold_out ?? false,
+            'is_cancelled' => $event->is_cancelled ?? false,
+
+            // Schedule
+            'duration_mode' => $event->duration_mode,
             'start_date' => $event->start_date?->toIso8601String(),
+            'start_time' => $event->start_time,
             'end_date' => $event->end_date?->toIso8601String(),
+
+            // Location
             'venue' => $event->venue ? [
+                'id' => $event->venue->id,
                 'name' => $event->venue->getTranslation('name', $locale),
                 'city' => $event->venue->city,
             ] : null,
+
+            // Media
+            'poster_url' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
+            'hero_image_url' => $event->hero_image_url ? Storage::disk('public')->url($event->hero_image_url) : null,
+
+            // Category
             'category' => $event->eventTypes->first() ? [
                 'name' => $event->eventTypes->first()->getTranslation('name', $locale),
                 'slug' => $event->eventTypes->first()->slug,
             ] : null,
-            'price_from' => $event->ticketTypes->min('price'),
-            'is_sold_out' => $event->is_sold_out ?? false,
+
+            // Pricing
+            'price_from' => $event->ticketTypes->min('price_max'),
         ];
     }
 

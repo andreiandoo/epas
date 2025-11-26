@@ -29,7 +29,7 @@ class Event extends Model
         // flags
         'is_sold_out', 'is_cancelled', 'cancel_reason',
         'is_postponed', 'postponed_date', 'postponed_start_time', 'postponed_door_time', 'postponed_end_time', 'postponed_reason',
-        'door_sales_only', 'is_promoted', 'promoted_until',
+        'door_sales_only', 'is_promoted', 'promoted_until', 'is_featured',
 
         // single day
         'event_date', 'start_time', 'door_time', 'end_time',
@@ -74,6 +74,7 @@ class Event extends Model
         'is_postponed'      => 'bool',
         'door_sales_only'   => 'bool',
         'is_promoted'       => 'bool',
+        'is_featured'       => 'bool',
 
         // commission
         'commission_rate'   => 'decimal:2',
