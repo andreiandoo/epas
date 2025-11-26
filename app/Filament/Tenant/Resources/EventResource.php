@@ -530,10 +530,14 @@ class EventResource extends Resource
                                 Forms\Components\DateTimePicker::make('sales_start_at')
                                     ->label('Sale starts')
                                     ->native(false)
+                                    ->seconds(false)
+                                    ->displayFormat('Y-m-d H:i')
                                     ->minDate(now()),
                                 Forms\Components\DateTimePicker::make('sales_end_at')
                                     ->label('Sale ends')
-                                    ->native(false),
+                                    ->native(false)
+                                    ->seconds(false)
+                                    ->displayFormat('Y-m-d H:i'),
                             ])->columnSpan(12),
 
                             // Bulk discounts
