@@ -14,15 +14,16 @@ class TicketType extends Model
         'name',
         'sku',
         'description',
-        'price_cents',
         'currency',
-        'quota_total',
         'quota_sold',
-        'status',
-        'sales_start_at',
-        'sales_end_at',
         'bulk_discounts',
         'meta',
+        // Virtual fields (handled by mutators)
+        'price_max',
+        'capacity',
+        'is_active',
+        'sale_starts_at',
+        'sale_ends_at',
     ];
 
     protected $casts = [

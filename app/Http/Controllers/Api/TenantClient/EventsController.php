@@ -126,7 +126,7 @@ class EventsController extends Controller
                         'title' => $event->getTranslation('title', $locale),
                         'slug' => $event->slug,
                         'description' => $event->getTranslation('short_description', $locale) ?? substr(strip_tags($event->getTranslation('description', $locale) ?? ''), 0, 150),
-                        'image' => $event->featured_image ? Storage::disk('public')->url($event->featured_image) : null,
+                        'image' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
                         'start_date' => $event->start_date?->toIso8601String(),
                         'end_date' => $event->end_date?->toIso8601String(),
                         'venue' => $event->venue ? [
@@ -196,7 +196,7 @@ class EventsController extends Controller
                 'description' => $event->getTranslation('description', $locale),
                 'short_description' => $event->getTranslation('short_description', $locale),
                 'content' => $event->getTranslation('content', $locale),
-                'image' => $event->featured_image ? Storage::disk('public')->url($event->featured_image) : null,
+                'image' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
                 'gallery' => $event->gallery ?? [],
                 'start_date' => $event->start_date?->toIso8601String(),
                 'end_date' => $event->end_date?->toIso8601String(),
