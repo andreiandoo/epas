@@ -489,6 +489,12 @@ class EventResource extends Resource
                                 ->placeholder('AUTO-GEN if left empty')
                                 ->columnSpan(6),
 
+                            Forms\Components\Textarea::make('description')
+                                ->label('Description')
+                                ->placeholder('Optional ticket type description (e.g. "Includes backstage access and meet & greet")')
+                                ->rows(2)
+                                ->columnSpan(12),
+
                             SC\Grid::make(4)->schema([
                                 Forms\Components\TextInput::make('currency')
                                     ->label('Currency')
