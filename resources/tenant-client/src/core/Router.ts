@@ -203,6 +203,20 @@ export class Router {
         return this.currentUser;
     }
 
+    // Update cart badge in header
+    private updateCartBadge(): void {
+        const badge = document.getElementById('cart-badge');
+        if (badge) {
+            const count = CartService.getItemCount();
+            badge.textContent = count.toString();
+            if (count > 0) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+    }
+
     // API helper method
     private async fetchApi(endpoint: string, params: Record<string, string> = {}, options: RequestInit = {}): Promise<any> {
         const url = new URL(`${this.config.apiEndpoint}${endpoint}`);
@@ -1363,25 +1377,20 @@ export class Router {
                 const cart = CartService.getCart();
 
                 try {
-                    const response = await this.fetchApi('/orders', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            customer_name: formData.get('customer_name'),
-                            customer_email: formData.get('customer_email'),
-                            customer_phone: formData.get('customer_phone'),
-                            cart: cart.map(item => ({
-                                eventId: item.eventId,
-                                ticketTypeId: item.ticketTypeId,
-                                quantity: item.quantity,
-                            })),
-                        }),
+                    const response = await this.postApi('/orders', {
+                        customer_name: formData.get('customer_name'),
+                        customer_email: formData.get('customer_email'),
+                        customer_phone: formData.get('customer_phone'),
+                        cart: cart.map(item => ({
+                            eventId: item.eventId,
+                            ticketTypeId: item.ticketTypeId,
+                            quantity: item.quantity,
+                        })),
                     });
 
                     if (response.success) {
                         CartService.clearCart();
+                        this.updateCartBadge();
                         ToastNotification.show('✓ Comanda a fost plasată cu succes!', 'success');
                         this.navigate(`/order-success/${response.data.order_id}`);
                     } else {
