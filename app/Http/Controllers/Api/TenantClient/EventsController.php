@@ -142,8 +142,14 @@ class EventsController extends Controller
 
                         // Schedule
                         'duration_mode' => $event->duration_mode,
-                        'start_date' => $event->start_date?->toIso8601String(),
-                        'end_date' => $event->end_date?->toIso8601String(),
+                        'start_date' => $event->duration_mode === 'single_day' && $event->start_date && $event->start_time
+                            ? \Carbon\Carbon::parse($event->start_date->format('Y-m-d') . ' ' . $event->start_time)->toIso8601String()
+                            : $event->start_date?->toIso8601String(),
+                        'end_date' => $event->duration_mode === 'single_day' && $event->event_date && $event->end_time
+                            ? \Carbon\Carbon::parse($event->event_date->format('Y-m-d') . ' ' . $event->end_time)->toIso8601String()
+                            : ($event->duration_mode === 'range' && $event->end_date && $event->range_end_time
+                                ? \Carbon\Carbon::parse($event->end_date->format('Y-m-d') . ' ' . $event->range_end_time)->toIso8601String()
+                                : $event->end_date?->toIso8601String()),
                         'start_time' => $event->start_time,
                         'door_time' => $event->door_time,
                         'end_time' => $event->end_time,

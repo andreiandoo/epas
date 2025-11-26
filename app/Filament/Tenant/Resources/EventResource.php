@@ -527,11 +527,11 @@ class EventResource extends Resource
                                     ->numeric()
                                     ->minValue(0)
                                     ->required(),
-                                Forms\Components\DateTimePicker::make('sale_starts_at')
+                                Forms\Components\DateTimePicker::make('sales_start_at')
                                     ->label('Sale starts')
                                     ->native(false)
                                     ->minDate(now()),
-                                Forms\Components\DateTimePicker::make('sale_ends_at')
+                                Forms\Components\DateTimePicker::make('sales_end_at')
                                     ->label('Sale ends')
                                     ->native(false),
                             ])->columnSpan(12),

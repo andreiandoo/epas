@@ -18,12 +18,14 @@ class TicketType extends Model
         'quota_sold',
         'bulk_discounts',
         'meta',
+        // Real database columns
+        'sales_start_at',
+        'sales_end_at',
         // Virtual fields (handled by mutators)
         'price_max',
+        'price',
         'capacity',
         'is_active',
-        'sale_starts_at',
-        'sale_ends_at',
     ];
 
     protected $casts = [
@@ -36,10 +38,9 @@ class TicketType extends Model
     protected $appends = [
         'available_quantity',
         'price_max',
+        'price',
         'capacity',
         'is_active',
-        'sale_starts_at',
-        'sale_ends_at',
     ];
 
     public function event(): BelongsTo
@@ -77,22 +78,13 @@ class TicketType extends Model
 
     public function getPriceAttribute()
     {
-        return $this->price_cents ? $this->price_cents / 100 : 0;
+        // Return sale_price if set, otherwise null
+        return $this->sale_price_cents ? $this->sale_price_cents / 100 : null;
     }
 
     public function getCapacityAttribute()
     {
         return $this->quota_total;
-    }
-
-    public function getSaleStartsAtAttribute()
-    {
-        return $this->sales_start_at;
-    }
-
-    public function getSaleEndsAtAttribute()
-    {
-        return $this->sales_end_at;
     }
 
     public function getIsActiveAttribute()
@@ -108,22 +100,13 @@ class TicketType extends Model
 
     public function setPriceAttribute($value)
     {
-        // Ignore for now - we use price_max
+        // Save to sale_price_cents (can be null for no sale)
+        $this->attributes['sale_price_cents'] = $value ? (int)($value * 100) : null;
     }
 
     public function setCapacityAttribute($value)
     {
         $this->attributes['quota_total'] = $value ?? 0;
-    }
-
-    public function setSaleStartsAtAttribute($value)
-    {
-        $this->attributes['sales_start_at'] = $value;
-    }
-
-    public function setSaleEndsAtAttribute($value)
-    {
-        $this->attributes['sales_end_at'] = $value;
     }
 
     public function setIsActiveAttribute($value)
