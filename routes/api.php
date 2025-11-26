@@ -885,6 +885,16 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.checkout.insurance-quote');
     });
 
+    // Orders
+    Route::prefix('orders')->group(function () {
+        Route::post('/', [\App\Http\Controllers\Api\TenantClient\OrderController::class, 'store'])
+            ->name('api.tenant-client.orders.store');
+        Route::get('/{orderId}', [\App\Http\Controllers\Api\TenantClient\OrderController::class, 'show'])
+            ->name('api.tenant-client.orders.show');
+    });
+
+    
+
     // Admin (requires admin auth)
     Route::prefix('admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard'])

@@ -324,6 +324,7 @@ export class Router {
         this.addRoute('/event/:slug', this.renderEventDetail.bind(this));
         this.addRoute('/cart', this.renderCart.bind(this));
         this.addRoute('/checkout', this.renderCheckout.bind(this));
+        this.addRoute('/order-success/:orderId', this.renderOrderSuccess.bind(this));
         this.addRoute('/thank-you/:orderNumber', this.renderThankYou.bind(this));
         this.addRoute('/login', this.renderLogin.bind(this));
         this.addRoute('/register', this.renderRegister.bind(this));
@@ -1221,34 +1222,211 @@ export class Router {
         }
     }
 
-    private renderCheckout(): void {
+        private renderCheckout(): void {
         const content = this.getContentElement();
         if (!content) return;
 
+        const cart = CartService.getCart();
+        const totals = CartService.getTotal();
+
+        if (cart.length === 0) {
+            this.navigate('/cart');
+            return;
+        }
+
         content.innerHTML = `
-            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <h1 class="text-3xl font-bold text-gray-900 mb-8">Checkout</h1>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div id="checkout-form" class="space-y-6">
-                        <div class="bg-white rounded-lg shadow p-6">
-                            <h2 class="text-lg font-semibold mb-4">Contact Information</h2>
-                            <div class="space-y-4">
-                                <input type="email" placeholder="Email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
-                                <input type="tel" placeholder="Phone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-8">Finalizare comandă</h1>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2">
+                        <form id="checkout-form" class="space-y-6">
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Date personale</h2>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label for="customer_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Nume complet *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="customer_name"
+                                            name="customer_name"
+                                            required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder="Ion Popescu"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label for="customer_email" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Email *
+                                        </label>
+                                        <input
+                                            type="email"
+                                            id="customer_email"
+                                            name="customer_email"
+                                            required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder="ion@example.com"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label for="customer_phone" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Telefon
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            id="customer_phone"
+                                            name="customer_phone"
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder="0722123456"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Plată</h2>
+                                <p class="text-gray-600 mb-4">
+                                    Vei primi biletele pe email imediat după finalizarea comenzii.
+                                </p>
+                                <button
+                                    type="submit"
+                                    id="submit-order-btn"
+                                    class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                >
+                                    Plasează comanda
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-lg shadow p-6 sticky top-4">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Sumar comandă</h2>
+
+                            <div class="space-y-3 mb-4 pb-4 border-b">
+                                ${cart.map(item => {
+                                    const effectivePrice = item.salePrice || item.price;
+                                    const result = CartService.calculateBulkDiscount(item.quantity, effectivePrice, item.bulkDiscounts);
+                                    return `
+                                    <div class="flex justify-between text-sm">
+                                        <div>
+                                            <div class="font-medium">${item.eventTitle}</div>
+                                            <div class="text-gray-500">${item.ticketTypeName} × ${item.quantity}</div>
+                                        </div>
+                                        <div class="font-medium">${result.total.toFixed(2)} ${item.currency}</div>
+                                    </div>
+                                `}).join('')}
+                            </div>
+
+                            <div class="space-y-2 mb-4 pb-4 border-b">
+                                <div class="flex justify-between text-gray-600">
+                                    <span>Subtotal</span>
+                                    <span>${totals.subtotal.toFixed(2)} ${totals.currency}</span>
+                                </div>
+                                ${totals.discount > 0 ? `
+                                <div class="flex justify-between text-green-600">
+                                    <span>Discount</span>
+                                    <span>-${totals.discount.toFixed(2)} ${totals.currency}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+
+                            <div class="flex justify-between items-center">
+                                <span class="text-lg font-semibold">Total</span>
+                                <span class="text-2xl font-bold text-primary">${totals.total.toFixed(2)} ${totals.currency}</span>
                             </div>
                         </div>
-                        <div class="bg-white rounded-lg shadow p-6">
-                            <h2 class="text-lg font-semibold mb-4">Payment</h2>
-                            <div id="payment-element" class="animate-pulse bg-gray-200 h-32 rounded"></div>
-                        </div>
                     </div>
-                    <div id="checkout-summary" class="bg-gray-50 rounded-lg p-6 h-fit sticky top-4">
-                        <h2 class="text-lg font-semibold mb-4">Order Summary</h2>
-                        <div class="animate-pulse space-y-2">
-                            <div class="bg-gray-200 h-4 rounded"></div>
-                            <div class="bg-gray-200 h-4 rounded"></div>
-                        </div>
+                </div>
+            </div>
+        `;
+
+        this.setupCheckoutHandlers();
+    }
+
+    private setupCheckoutHandlers(): void {
+        const form = document.getElementById('checkout-form') as HTMLFormElement;
+        const submitBtn = document.getElementById('submit-order-btn') as HTMLButtonElement;
+
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.textContent = 'Se procesează...';
+                }
+
+                const formData = new FormData(form);
+                const cart = CartService.getCart();
+
+                try {
+                    const response = await this.fetchApi('/orders', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            customer_name: formData.get('customer_name'),
+                            customer_email: formData.get('customer_email'),
+                            customer_phone: formData.get('customer_phone'),
+                            cart: cart.map(item => ({
+                                eventId: item.eventId,
+                                ticketTypeId: item.ticketTypeId,
+                                quantity: item.quantity,
+                            })),
+                        }),
+                    });
+
+                    if (response.success) {
+                        CartService.clearCart();
+                        ToastNotification.show('✓ Comanda a fost plasată cu succes!', 'success');
+                        this.navigate(`/order-success/${response.data.order_id}`);
+                    } else {
+                        throw new Error(response.error || 'Eroare la plasarea comenzii');
+                    }
+                } catch (error: any) {
+                    ToastNotification.show(error.message || 'Eroare la plasarea comenzii', 'error');
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Plasează comanda';
+                    }
+                }
+            });
+        }
+    }
+
+
+
+    private async renderOrderSuccess(params: Record<string, string>): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        const orderId = params.orderId;
+
+        content.innerHTML = `
+            <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+                <div class="mb-8">
+                    <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
                     </div>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">Comanda plasată cu succes!</h1>
+                    <p class="text-gray-600 mb-4">
+                        Comanda ta # a fost înregistrată.
+                    </p>
+                    <p class="text-gray-600">
+                        Vei primi biletele pe email în câteva minute.
+                    </p>
+                </div>
+
+                <div class="space-y-3">
+                    <button onclick="window.tixelloRouter.navigate('/events')" class="w-full max-w-xs mx-auto block px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition">
+                        Înapoi la evenimente
+                    </button>
                 </div>
             </div>
         `;
