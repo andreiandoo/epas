@@ -168,7 +168,7 @@ class TenantClientController extends Controller
         }
 
         if ($category) {
-            $query->whereHas('eventType', function ($q) use ($category) {
+            $query->whereHas('eventTypes', function ($q) use ($category) {
                 $q->where('slug', $category);
             });
         }
@@ -183,7 +183,7 @@ class TenantClientController extends Controller
             $orderColumn = 'event_date';
         }
 
-        $events = $query->with(['venue', 'eventType', 'artists'])
+        $events = $query->with(['venue', 'eventTypes', 'artists'])
             ->orderBy($orderColumn, 'asc')
             ->skip($offset)
             ->take($limit)
@@ -257,7 +257,7 @@ class TenantClientController extends Controller
             $orderColumn = 'event_date';
         }
 
-        $events = $query->with(['venue', 'eventType'])
+        $events = $query->with(['venue', 'eventTypes'])
             ->orderBy($orderColumn, 'asc')
             ->take($limit)
             ->get();
@@ -282,7 +282,7 @@ class TenantClientController extends Controller
 
         $event = Event::where('tenant_id', $tenantId)
             ->where('slug', $slug)
-            ->with(['venue', 'eventType', 'eventGenres', 'artists', 'ticketTypes'])
+            ->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'ticketTypes'])
             ->first();
 
         if (!$event) {
@@ -344,9 +344,9 @@ class TenantClientController extends Controller
                 'name' => $event->venue->getTranslation('name', $locale),
                 'city' => $event->venue->city,
             ] : null,
-            'category' => $event->eventType ? [
-                'name' => $event->eventType->getTranslation('name', $locale),
-                'slug' => $event->eventType->slug,
+            'category' => $event->eventTypes->first() ? [
+                'name' => $event->eventTypes->first()->getTranslation('name', $locale),
+                'slug' => $event->eventTypes->first()->slug,
             ] : null,
             'price_from' => $event->ticketTypes->min('price'),
             'is_sold_out' => $event->is_sold_out ?? false,
