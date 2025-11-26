@@ -380,8 +380,8 @@ class TenantClientController extends Controller
         $basic = $this->formatEvent($event);
 
         return array_merge($basic, [
-            'content' => $event->getTranslation('content', $locale),
             'description' => $event->getTranslation('description', $locale),
+            'short_description' => $event->getTranslation('short_description', $locale),
             'gallery' => $event->gallery ?? [],
             'artists' => $event->artists->map(fn ($artist) => [
                 'id' => $artist->id,
