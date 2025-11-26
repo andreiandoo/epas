@@ -207,7 +207,7 @@ class PackageController extends Controller
             <div class="tixello-spinner"></div>
         </div>
     </div>
-    <script src="./tixello-loader.min.js"
+    <script src="/tixello-loader.min.js"
             data-api="{$apiEndpoint}"></script>
     <noscript>
         <div style="padding: 20px; text-align: center;">
