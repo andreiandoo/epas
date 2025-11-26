@@ -176,4 +176,32 @@ class Event extends Model
 
         return (float) ($this->tenant->commission_rate ?? 5.00);
     }
+
+    /**
+     * Get start date based on duration mode
+     */
+    public function getStartDateAttribute()
+    {
+        return match ($this->duration_mode) {
+            'single_day' => $this->event_date,
+            'range' => $this->range_start_date,
+            'multi_day' => isset($this->multi_slots[0]['date']) ? \Carbon\Carbon::parse($this->multi_slots[0]['date']) : null,
+            'recurring' => $this->recurring_start_date,
+            default => $this->event_date ?? $this->starts_at,
+        };
+    }
+
+    /**
+     * Get end date based on duration mode
+     */
+    public function getEndDateAttribute()
+    {
+        return match ($this->duration_mode) {
+            'range' => $this->range_end_date,
+            'multi_day' => isset($this->multi_slots) && count($this->multi_slots) > 0
+                ? \Carbon\Carbon::parse(end($this->multi_slots)['date'])
+                : null,
+            default => null,
+        };
+    }
 }

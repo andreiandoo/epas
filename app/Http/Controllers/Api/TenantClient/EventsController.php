@@ -140,7 +140,7 @@ class EventsController extends Controller
                         'ticket_types' => $event->ticketTypes->map(fn ($type) => [
                             'id' => $type->id,
                             'name' => $type->name,
-                            'description' => $type->meta['description'][$locale] ?? $type->meta['description']['en'] ?? '',
+                            'description' => $type->description ?? '',
                             'price' => $type->price_max,
                             'currency' => $type->currency ?? 'EUR',
                             'available' => $type->available_quantity,
@@ -224,7 +224,7 @@ class EventsController extends Controller
                 'ticket_types' => $event->ticketTypes->map(fn ($type) => [
                     'id' => $type->id,
                     'name' => $type->name,
-                    'description' => $type->meta['description'][$locale] ?? $type->meta['description']['en'] ?? '',
+                    'description' => $type->description ?? '',
                     'price' => $type->price_max,
                     'currency' => $type->currency ?? 'EUR',
                     'available' => $type->available_quantity,
