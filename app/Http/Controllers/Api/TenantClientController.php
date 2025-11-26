@@ -398,12 +398,17 @@ class TenantClientController extends Controller
             ] : null,
             'ticket_types' => $event->ticketTypes->map(fn ($type) => [
                 'id' => $type->id,
-                'name' => $type->getTranslation('name', $locale),
-                'description' => $type->getTranslation('description', $locale),
-                'price' => $type->price,
+                'name' => $type->name,
+                'description' => $type->description ?? '',
+                'sku' => $type->sku,
+                'price' => $type->price_max,
+                'sale_price' => $type->price ?? null,
+                'discount_percent' => $type->price && $type->price_max
+                    ? round((1 - ($type->price / $type->price_max)) * 100, 2)
+                    : null,
                 'currency' => $type->currency ?? 'EUR',
                 'available' => $type->available_quantity ?? 0,
-                'max_per_order' => $type->max_per_order ?? 10,
+                'status' => $type->status,
             ]),
             'genres' => $event->eventGenres->map(fn ($genre) => [
                 'name' => $genre->getTranslation('name', $locale),
