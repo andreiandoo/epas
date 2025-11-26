@@ -23,3 +23,7 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /public/admin/
+
+# Tenant client dependencies
+resources/tenant-client/node_modules/
+resources/tenant-client/package-lock.json
