@@ -33,7 +33,14 @@ class TicketType extends Model
         'sales_end_at'   => 'datetime',
     ];
 
-    protected $appends = ['available_quantity'];
+    protected $appends = [
+        'available_quantity',
+        'price_max',
+        'capacity',
+        'is_active',
+        'sale_starts_at',
+        'sale_ends_at',
+    ];
 
     public function event(): BelongsTo
     {

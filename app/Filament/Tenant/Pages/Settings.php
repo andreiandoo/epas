@@ -49,7 +49,8 @@ class Settings extends Page
 
                 // Personalization
                 'site_title' => $settings['site_title'] ?? $tenant->public_name ?? $tenant->name ?? '',
-                'site_language' => $settings['site_language'] ?? 'en',
+                // Language is set in Core Admin (Tenant Edit page, not here)
+                // 'site_language' => $settings['site_language'] ?? 'en',
                 'logo' => $settings['branding']['logo'] ?? null,
                 'favicon' => $settings['branding']['favicon'] ?? null,
                 'site_description' => $settings['site_description'] ?? '',
@@ -204,15 +205,16 @@ class Settings extends Page
                                             ->maxLength(255)
                                             ->helperText('The name of your site displayed in browser tab and header'),
 
-                                        Forms\Components\Select::make('site_language')
-                                            ->label('Site Language')
-                                            ->options([
-                                                'en' => 'English',
-                                                'ro' => 'Romanian (Română)',
-                                            ])
-                                            ->default('en')
-                                            ->required()
-                                            ->helperText('Primary language for your public site'),
+                                        // Language is set in Core Admin (Tenant Edit page)
+                                        // Forms\Components\Select::make('site_language')
+                                        //     ->label('Site Language')
+                                        //     ->options([
+                                        //         'en' => 'English',
+                                        //         'ro' => 'Romanian (Română)',
+                                        //     ])
+                                        //     ->default('en')
+                                        //     ->required()
+                                        //     ->helperText('Primary language for your public site'),
 
                                         Forms\Components\Textarea::make('site_description')
                                             ->label('Site Description')
@@ -522,7 +524,8 @@ class Settings extends Page
         // Update settings JSON
         $settings = $tenant->settings ?? [];
         $settings['site_title'] = $data['site_title'];
-        $settings['site_language'] = $data['site_language'];
+        // Language is set in Core Admin (Tenant Edit page)
+        // $settings['site_language'] = $data['site_language'];
         $settings['branding'] = [
             'logo' => $data['logo'],
             'favicon' => $data['favicon'],
