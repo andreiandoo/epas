@@ -183,7 +183,7 @@ class TenantClientController extends Controller
             $orderColumn = 'event_date';
         }
 
-        $events = $query->with(['venue', 'eventTypes', 'artists'])
+        $events = $query->with(['venue', 'eventTypes', 'artists', 'ticketTypes'])
             ->orderBy($orderColumn, 'asc')
             ->skip($offset)
             ->take($limit)
@@ -257,7 +257,7 @@ class TenantClientController extends Controller
             $orderColumn = 'event_date';
         }
 
-        $events = $query->with(['venue', 'eventTypes'])
+        $events = $query->with(['venue', 'eventTypes', 'ticketTypes'])
             ->orderBy($orderColumn, 'asc')
             ->take($limit)
             ->get();
