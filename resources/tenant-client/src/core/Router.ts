@@ -130,6 +130,30 @@ class CartService {
     }
 }
 
+
+class ToastNotification {
+    static show(message: string, type: 'success' | 'error' | 'info' = 'success'): void {
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white font-medium z-50 transform transition-all duration-300 translate-y-0 opacity-100`;
+
+        const colors = {
+            success: 'bg-green-600',
+            error: 'bg-red-600',
+            info: 'bg-blue-600'
+        };
+
+        toast.classList.add(colors[type]);
+        toast.textContent = message;
+
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add('translate-y-2', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+}
+
 export class Router {
     private routes: Route[] = [];
     private config: TixelloConfig;
@@ -1003,10 +1027,10 @@ export class Router {
                 });
 
                 if (hasItems) {
-                    alert('Biletele au fost adăugate în coș!');
+                    ToastNotification.show('✓ Biletele au fost adăugate în coș!', 'success');
                     this.navigate('/cart');
                 } else {
-                    alert('Te rog selectează cel puțin un bilet.');
+                    ToastNotification.show('Te rog selectează cel puțin un bilet.', 'error');
                 }
             });
         }
@@ -1016,24 +1040,185 @@ export class Router {
         const content = this.getContentElement();
         if (!content) return;
 
-        content.innerHTML = `
-            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <h1 class="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
-                <div id="cart-items" class="space-y-4 mb-8">
-                    <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
-                    <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+        const cart = CartService.getCart();
+        const totals = CartService.getTotal();
+
+        if (cart.length === 0) {
+            content.innerHTML = `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+                    <svg class="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                    </svg>
+                    <h1 class="text-2xl font-bold text-gray-900 mb-4">Coșul tău este gol</h1>
+                    <p class="text-gray-600 mb-8">Explorează evenimentele noastre și adaugă bilete în coș.</p>
+                    <button class="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition" onclick="window.tixelloRouter.navigate('/events')">
+                        Vezi evenimente
+                    </button>
                 </div>
-                <div id="cart-summary" class="bg-gray-50 rounded-lg p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <span class="text-lg font-medium text-gray-900">Total</span>
-                        <span class="text-2xl font-bold text-gray-900" id="cart-total">$0.00</span>
+            `;
+            return;
+        }
+
+        const cartItemsHtml = cart.map((item, index) => {
+            const effectivePrice = item.salePrice || item.price;
+            const result = CartService.calculateBulkDiscount(item.quantity, effectivePrice, item.bulkDiscounts);
+            const itemTotal = result.total;
+            const itemDiscount = result.discount;
+            const originalTotal = item.quantity * effectivePrice;
+            const dateFormatted = new Date(item.eventDate).toLocaleDateString('ro-RO', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+
+            return `
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-lg text-gray-900 mb-1">${item.eventTitle}</h3>
+                        <p class="text-sm text-gray-600">${item.ticketTypeName}</p>
+                        <p class="text-sm text-gray-500">${dateFormatted}</p>
                     </div>
-                    <a href="/checkout" class="block w-full text-center px-6 py-3 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
-                        Proceed to Checkout
-                    </a>
+                    <button class="remove-item-btn text-red-600 hover:text-red-700" data-event-id="${item.eventId}" data-ticket-id="${item.ticketTypeId}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <button class="cart-qty-minus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-event-id="${item.eventId}" data-ticket-id="${item.ticketTypeId}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                            </svg>
+                        </button>
+                        <span class="cart-qty-display w-12 text-center font-semibold">${item.quantity}</span>
+                        <button class="cart-qty-plus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-event-id="${item.eventId}" data-ticket-id="${item.ticketTypeId}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="text-right">
+                        ${itemDiscount > 0 ? `
+                            <div class="text-sm text-gray-500 line-through">${originalTotal.toFixed(2)} ${item.currency}</div>
+                            <div class="font-bold text-green-600">${itemTotal.toFixed(2)} ${item.currency}</div>
+                            <div class="text-xs text-green-600">-${itemDiscount.toFixed(2)} ${item.currency}</div>
+                        ` : `
+                            <div class="font-bold text-gray-900">${itemTotal.toFixed(2)} ${item.currency}</div>
+                        `}
+                    </div>
+                </div>
+            </div>
+        `}).join('');
+
+        content.innerHTML = `
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="flex justify-between items-center mb-8">
+                    <h1 class="text-3xl font-bold text-gray-900">Coșul meu</h1>
+                    <button id="clear-cart-btn" class="text-sm text-red-600 hover:text-red-700">Golește coșul</button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 space-y-4">
+                        ${cartItemsHtml}
+                    </div>
+
+                    <div class="lg:col-span-1">
+                        <div class="bg-white rounded-lg shadow p-6 sticky top-4">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Sumar comandă</h2>
+
+                            <div class="space-y-2 mb-4 pb-4 border-b">
+                                <div class="flex justify-between text-gray-600">
+                                    <span>Subtotal</span>
+                                    <span>${totals.subtotal.toFixed(2)} ${totals.currency}</span>
+                                </div>
+                                ${totals.discount > 0 ? `
+                                <div class="flex justify-between text-green-600">
+                                    <span>Discount bulk</span>
+                                    <span>-${totals.discount.toFixed(2)} ${totals.currency}</span>
+                                </div>
+                                ` : ''}
+                            </div>
+
+                            <div class="flex justify-between items-center mb-6">
+                                <span class="text-lg font-semibold">Total</span>
+                                <span class="text-2xl font-bold text-primary">${totals.total.toFixed(2)} ${totals.currency}</span>
+                            </div>
+
+                            <button id="checkout-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition">
+                                Finalizează comanda
+                            </button>
+
+                            <button onclick="window.tixelloRouter.navigate('/events')" class="w-full mt-3 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition">
+                                Continuă cumpărăturile
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
+
+        this.setupCartHandlers();
+    }
+
+    private setupCartHandlers(): void {
+        document.querySelectorAll('.remove-item-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const eventId = parseInt(target.dataset.eventId || '0');
+                const ticketId = parseInt(target.dataset.ticketId || '0');
+                CartService.removeItem(eventId, ticketId);
+                this.renderCart();
+            });
+        });
+
+        document.querySelectorAll('.cart-qty-plus').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const eventId = parseInt(target.dataset.eventId || '0');
+                const ticketId = parseInt(target.dataset.ticketId || '0');
+                const cart = CartService.getCart();
+                const item = cart.find(i => i.eventId === eventId && i.ticketTypeId === ticketId);
+                if (item) {
+                    CartService.updateQuantity(eventId, ticketId, item.quantity + 1);
+                    this.renderCart();
+                }
+            });
+        });
+
+        document.querySelectorAll('.cart-qty-minus').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const eventId = parseInt(target.dataset.eventId || '0');
+                const ticketId = parseInt(target.dataset.ticketId || '0');
+                const cart = CartService.getCart();
+                const item = cart.find(i => i.eventId === eventId && i.ticketTypeId === ticketId);
+                if (item && item.quantity > 1) {
+                    CartService.updateQuantity(eventId, ticketId, item.quantity - 1);
+                    this.renderCart();
+                }
+            });
+        });
+
+        const clearBtn = document.getElementById('clear-cart-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                if (confirm('Sigur vrei să golești coșul?')) {
+                    CartService.clearCart();
+                    this.renderCart();
+                }
+            });
+        }
+
+        const checkoutBtn = document.getElementById('checkout-btn');
+        if (checkoutBtn) {
+            checkoutBtn.addEventListener('click', () => {
+                this.navigate('/checkout');
+            });
+        }
     }
 
     private renderCheckout(): void {
