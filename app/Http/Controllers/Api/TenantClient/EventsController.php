@@ -263,7 +263,6 @@ class EventsController extends Controller
                 'slug' => $event->slug,
                 'description' => $event->getTranslation('description', $locale),
                 'short_description' => $event->getTranslation('short_description', $locale),
-                'content' => $event->getTranslation('content', $locale),
                 'image' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
                 'gallery' => $event->gallery ?? [],
                 'start_date' => $event->start_date?->toIso8601String(),
