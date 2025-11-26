@@ -44,7 +44,7 @@ class Event extends Model
         'poster_url', 'hero_image_url',
 
         // location & links
-        'venue', 'address', 'website_url', 'facebook_url', 'event_website_url',
+        'address', 'website_url', 'facebook_url', 'event_website_url',
 
         // content
         'short_description', 'description', 'ticket_terms',
