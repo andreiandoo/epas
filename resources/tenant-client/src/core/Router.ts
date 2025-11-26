@@ -124,11 +124,14 @@ export class Router {
             year: 'numeric'
         }) : '';
 
+        // Use poster_url or hero_image_url from new API
+        const imageUrl = event.poster_url || event.hero_image_url;
+
         return `
             <a href="/event/${event.slug}" class="block bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition group">
                 <div class="aspect-[16/9] bg-gray-200 relative overflow-hidden">
-                    ${event.image
-                        ? `<img src="${event.image}" alt="${event.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">`
+                    ${imageUrl
+                        ? `<img src="${imageUrl}" alt="${event.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">`
                         : `<div class="w-full h-full flex items-center justify-center text-gray-400">
                             <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -136,12 +139,13 @@ export class Router {
                           </div>`
                     }
                     ${event.is_sold_out ? `<span class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">SOLD OUT</span>` : ''}
+                    ${event.is_cancelled ? `<span class="absolute top-2 right-2 bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded">ANULAT</span>` : ''}
                 </div>
                 <div class="p-4">
                     <h3 class="font-semibold text-gray-900 mb-1 line-clamp-2">${event.title}</h3>
                     <p class="text-sm text-gray-500 mb-2">${date}</p>
                     ${event.venue ? `<p class="text-sm text-gray-600 mb-2">${event.venue.name}${event.venue.city ? `, ${event.venue.city}` : ''}</p>` : ''}
-                    ${event.price_from ? `<p class="text-sm font-semibold text-primary">de la ${event.price_from} €</p>` : ''}
+                    ${event.price_from ? `<p class="text-sm font-semibold text-primary">de la ${event.price_from} ${event.currency || '€'}</p>` : ''}
                 </div>
             </a>
         `;
@@ -282,27 +286,29 @@ export class Router {
         // Fetch and render featured events
         try {
             const [featuredData, categoriesData] = await Promise.all([
-                this.fetchApi('/events/featured'),
-                this.fetchApi('/categories')
+                this.fetchApi('/tenant-client/events/featured'),
+                this.fetchApi('/tenant-client/categories')
             ]);
 
             // Render featured events
             const featuredEl = document.getElementById('featured-events');
             if (featuredEl && featuredData.data) {
-                if (featuredData.data.length === 0) {
+                const events = featuredData.data.events || featuredData.data || [];
+                if (events.length === 0) {
                     featuredEl.innerHTML = `<p class="col-span-3 text-center text-gray-500">Nu există evenimente recomandate momentan.</p>`;
                 } else {
-                    featuredEl.innerHTML = featuredData.data.map((event: any) => this.renderEventCard(event)).join('');
+                    featuredEl.innerHTML = events.map((event: any) => this.renderEventCard(event)).join('');
                 }
             }
 
             // Render categories
             const categoriesEl = document.getElementById('categories');
             if (categoriesEl && categoriesData.data) {
-                if (categoriesData.data.length === 0) {
+                const categories = categoriesData.data.categories || categoriesData.data || [];
+                if (categories.length === 0) {
                     categoriesEl.innerHTML = `<p class="col-span-4 text-center text-gray-500">Nu există categorii disponibile.</p>`;
                 } else {
-                    categoriesEl.innerHTML = categoriesData.data.map((cat: any) => `
+                    categoriesEl.innerHTML = categories.map((cat: any) => `
                         <a href="/events?category=${cat.slug}" class="block p-4 bg-white rounded-lg shadow hover:shadow-md transition text-center">
                             <div class="text-primary mb-2">
                                 <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -359,14 +365,15 @@ export class Router {
             if (currentSearch) params.search = currentSearch;
 
             const [eventsData, categoriesData] = await Promise.all([
-                this.fetchApi('/events', params),
-                this.fetchApi('/categories')
+                this.fetchApi('/tenant-client/events', params),
+                this.fetchApi('/tenant-client/categories')
             ]);
 
             // Populate category filter
             const filterEl = document.getElementById('event-filter') as HTMLSelectElement;
             if (filterEl && categoriesData.data) {
-                categoriesData.data.forEach((cat: any) => {
+                const categories = categoriesData.data.categories || categoriesData.data || [];
+                categories.forEach((cat: any) => {
                     const option = document.createElement('option');
                     option.value = cat.slug;
                     option.textContent = cat.name;
@@ -402,7 +409,8 @@ export class Router {
             // Render events
             const eventsEl = document.getElementById('events-list');
             if (eventsEl && eventsData.data) {
-                if (eventsData.data.length === 0) {
+                const events = eventsData.data.events || eventsData.data || [];
+                if (events.length === 0) {
                     eventsEl.innerHTML = `
                         <div class="col-span-3 text-center py-12">
                             <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -412,7 +420,7 @@ export class Router {
                         </div>
                     `;
                 } else {
-                    eventsEl.innerHTML = eventsData.data.map((event: any) => this.renderEventCard(event)).join('');
+                    eventsEl.innerHTML = events.map((event: any) => this.renderEventCard(event)).join('');
                 }
             }
         } catch (error) {
@@ -457,7 +465,7 @@ export class Router {
 
         // Fetch event details
         try {
-            const eventData = await this.fetchApi(`/events/${params.slug}`);
+            const eventData = await this.fetchApi(`/tenant-client/events/${params.slug}`);
             const event = eventData.data;
 
             if (!event) {
@@ -472,23 +480,38 @@ export class Router {
                 year: 'numeric'
             }) : '';
 
-            const time = event.start_date ? new Date(event.start_date).toLocaleTimeString('ro-RO', {
+            const time = event.start_time || (event.start_date ? new Date(event.start_date).toLocaleTimeString('ro-RO', {
                 hour: '2-digit',
                 minute: '2-digit'
-            }) : '';
+            }) : '');
+
+            // Use poster_url or hero_image_url from new API
+            const imageUrl = event.poster_url || event.hero_image_url || event.image;
 
             const eventDetailEl = document.getElementById('event-detail');
             if (eventDetailEl) {
                 eventDetailEl.innerHTML = `
                     <div class="lg:col-span-2">
-                        ${event.image
-                            ? `<img src="${event.image}" alt="${event.title}" class="w-full h-96 object-cover rounded-lg mb-6">`
+                        ${imageUrl
+                            ? `<img src="${imageUrl}" alt="${event.title}" class="w-full h-96 object-cover rounded-lg mb-6">`
                             : `<div class="w-full h-96 bg-gray-200 rounded-lg mb-6 flex items-center justify-center">
                                 <svg class="w-24 h-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                 </svg>
                               </div>`
                         }
+
+                        ${event.is_cancelled ? `
+                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                            <strong>Eveniment anulat:</strong> ${event.cancel_reason || 'Acest eveniment a fost anulat.'}
+                        </div>
+                        ` : ''}
+
+                        ${event.is_postponed ? `
+                        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
+                            <strong>Eveniment amânat:</strong> ${event.postponed_reason || 'Acest eveniment a fost amânat.'}
+                        </div>
+                        ` : ''}
 
                         <h1 class="text-3xl font-bold text-gray-900 mb-4">${event.title}</h1>
 
@@ -517,6 +540,12 @@ export class Router {
                             </div>
                             ` : ''}
                         </div>
+
+                        ${event.short_description ? `
+                        <div class="mb-4">
+                            <p class="text-gray-700 text-lg">${event.short_description}</p>
+                        </div>
+                        ` : ''}
 
                         ${event.description ? `
                         <div class="prose max-w-none mb-8">
@@ -547,33 +576,57 @@ export class Router {
                         <div class="bg-white rounded-lg shadow-lg p-6 sticky top-24">
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Bilete</h2>
 
-                            ${event.ticket_types && event.ticket_types.length > 0 ? `
+                            ${event.is_sold_out || event.door_sales_only || event.is_cancelled ? `
+                                <div class="mb-4 p-4 rounded ${event.is_cancelled ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}">
+                                    <p class="text-sm ${event.is_cancelled ? 'text-red-700' : 'text-yellow-700'}">
+                                        ${event.is_cancelled ? 'Eveniment anulat' : event.is_sold_out ? 'Bilete epuizate' : 'Bilete disponibile doar la intrare'}
+                                    </p>
+                                </div>
+                            ` : ''}
+
+                            ${event.ticket_types && event.ticket_types.length > 0 && !event.is_cancelled && !event.door_sales_only ? `
                                 <div class="space-y-4 mb-6">
-                                    ${event.ticket_types.map((ticket: any) => `
-                                        <div class="border border-gray-200 rounded-lg p-4">
+                                    ${event.ticket_types.map((ticket: any) => {
+                                        const currency = ticket.currency || event.currency || 'EUR';
+                                        const available = ticket.available ?? 0;
+                                        const maxQty = Math.min(10, available);
+                                        return `
+                                        <div class="border border-gray-200 rounded-lg p-4 ${ticket.status !== 'active' ? 'opacity-50' : ''}">
                                             <div class="flex justify-between items-start mb-2">
                                                 <div>
                                                     <h3 class="font-semibold text-gray-900">${ticket.name}</h3>
                                                     ${ticket.description ? `<p class="text-sm text-gray-500">${ticket.description}</p>` : ''}
                                                 </div>
-                                                <span class="font-bold text-primary">${ticket.price} ${ticket.currency}</span>
+                                                <div class="text-right">
+                                                    ${ticket.sale_price ? `
+                                                        <div>
+                                                            <span class="line-through text-gray-400 text-sm">${ticket.price} ${currency}</span>
+                                                            <span class="font-bold text-red-600 block">${ticket.sale_price} ${currency}</span>
+                                                            ${ticket.discount_percent ? `<span class="text-xs text-red-600">-${ticket.discount_percent}%</span>` : ''}
+                                                        </div>
+                                                    ` : `
+                                                        <span class="font-bold text-primary">${ticket.price} ${currency}</span>
+                                                    `}
+                                                </div>
                                             </div>
+                                            ${ticket.status === 'active' && available > 0 ? `
                                             <div class="flex items-center justify-between mt-3">
-                                                <select class="ticket-qty px-3 py-1 border border-gray-300 rounded text-sm" data-ticket-id="${ticket.id}" data-price="${ticket.price}">
-                                                    ${Array.from({length: Math.min(ticket.max_per_order || 10, ticket.available || 10) + 1}, (_, i) =>
-                                                        `<option value="${i}">${i}</option>`
-                                                    ).join('')}
+                                                <select class="ticket-qty px-3 py-1 border border-gray-300 rounded text-sm" data-ticket-id="${ticket.id}" data-price="${ticket.sale_price || ticket.price}" data-currency="${currency}">
+                                                    ${Array.from({length: maxQty + 1}, (_, i) => `<option value="${i}">${i}</option>`).join('')}
                                                 </select>
-                                                <span class="text-sm text-gray-500">${ticket.available || 0} disponibile</span>
+                                                <span class="text-sm text-gray-500">${available} disponibile</span>
                                             </div>
+                                            ` : `
+                                                <p class="text-sm text-gray-500 mt-2">${ticket.status !== 'active' ? 'Indisponibil' : 'Stoc epuizat'}</p>
+                                            `}
                                         </div>
-                                    `).join('')}
+                                    `}).join('')}
                                 </div>
 
                                 <div class="border-t pt-4 mb-4">
                                     <div class="flex justify-between items-center text-lg font-bold">
                                         <span>Total</span>
-                                        <span id="cart-total-price">0 €</span>
+                                        <span id="cart-total-price">0 ${event.currency || 'EUR'}</span>
                                     </div>
                                 </div>
 
@@ -581,7 +634,7 @@ export class Router {
                                     Adaugă în coș
                                 </button>
                             ` : `
-                                <p class="text-gray-500 text-center py-4">Nu sunt bilete disponibile.</p>
+                                <p class="text-gray-500 text-center py-4">Nu sunt bilete disponibile pentru achiziție online.</p>
                             `}
                         </div>
                     </div>
@@ -604,17 +657,20 @@ export class Router {
         const updateTotal = () => {
             let total = 0;
             let hasSelection = false;
+            let currency = 'EUR';
 
             qtySelects.forEach((select) => {
                 const qty = parseInt((select as HTMLSelectElement).value);
                 const price = parseFloat((select as HTMLSelectElement).dataset.price || '0');
+                const ticketCurrency = (select as HTMLSelectElement).dataset.currency || 'EUR';
                 if (qty > 0) {
                     total += qty * price;
                     hasSelection = true;
+                    currency = ticketCurrency; // Use first selected ticket's currency
                 }
             });
 
-            if (totalEl) totalEl.textContent = `${total.toFixed(2)} €`;
+            if (totalEl) totalEl.textContent = `${total.toFixed(2)} ${currency}`;
             if (addBtn) (addBtn as HTMLButtonElement).disabled = !hasSelection;
         };
 
