@@ -109,7 +109,7 @@ class EventsController extends Controller
             $orderColumn = 'start_date';
         }
 
-        $events = $query->with(['venue', 'eventTypes', 'artists', 'ticketTypes'])
+        $events = $query->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'tags', 'ticketTypes'])
             ->orderBy($orderColumn, 'asc')
             ->skip(($page - 1) * $perPage)
             ->take($perPage)
@@ -125,29 +125,91 @@ class EventsController extends Controller
                         'id' => $event->id,
                         'title' => $event->getTranslation('title', $locale),
                         'slug' => $event->slug,
-                        'description' => $event->getTranslation('short_description', $locale) ?? substr(strip_tags($event->getTranslation('description', $locale) ?? ''), 0, 150),
-                        'image' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
+
+                        // Status Flags
+                        'is_sold_out' => $event->is_sold_out ?? false,
+                        'door_sales_only' => $event->door_sales_only ?? false,
+                        'is_cancelled' => $event->is_cancelled ?? false,
+                        'cancel_reason' => $event->cancel_reason,
+                        'is_postponed' => $event->is_postponed ?? false,
+                        'postponed_date' => $event->postponed_date?->toIso8601String(),
+                        'postponed_start_time' => $event->postponed_start_time,
+                        'postponed_door_time' => $event->postponed_door_time,
+                        'postponed_end_time' => $event->postponed_end_time,
+                        'postponed_reason' => $event->postponed_reason,
+                        'is_promoted' => $event->is_promoted ?? false,
+                        'promoted_until' => $event->promoted_until?->toIso8601String(),
+
+                        // Schedule
+                        'duration_mode' => $event->duration_mode,
                         'start_date' => $event->start_date?->toIso8601String(),
                         'end_date' => $event->end_date?->toIso8601String(),
+                        'start_time' => $event->start_time,
+                        'door_time' => $event->door_time,
+                        'end_time' => $event->end_time,
+
+                        // Location & Links
+                        'address' => $event->address,
+                        'website_url' => $event->website_url,
+                        'facebook_url' => $event->facebook_url,
+                        'event_website_url' => $event->event_website_url,
                         'venue' => $event->venue ? [
+                            'id' => $event->venue->id,
                             'name' => $event->venue->getTranslation('name', $locale),
                             'city' => $event->venue->city,
                         ] : null,
-                        'category' => $event->eventTypes->first() ? [
-                            'name' => $event->eventTypes->first()->getTranslation('name', $locale),
-                            'slug' => $event->eventTypes->first()->slug,
-                        ] : null,
+
+                        // Media
+                        'poster_url' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
+                        'hero_image_url' => $event->hero_image_url ? Storage::disk('public')->url($event->hero_image_url) : null,
+
+                        // Content
+                        'short_description' => $event->getTranslation('short_description', $locale),
+                        'description' => $event->getTranslation('description', $locale),
+                        'ticket_terms' => $event->getTranslation('ticket_terms', $locale),
+
+                        // Taxonomies & Relations
+                        'event_types' => $event->eventTypes->map(fn ($type) => [
+                            'id' => $type->id,
+                            'name' => $type->getTranslation('name', $locale),
+                            'slug' => $type->slug,
+                        ]),
+                        'event_genres' => $event->eventGenres->map(fn ($genre) => [
+                            'id' => $genre->id,
+                            'name' => $genre->getTranslation('name', $locale),
+                            'slug' => $genre->slug,
+                        ]),
+                        'artists' => $event->artists->map(fn ($artist) => [
+                            'id' => $artist->id,
+                            'name' => $artist->name,
+                            'image' => $artist->main_image ? Storage::disk('public')->url($artist->main_image) : null,
+                        ]),
+                        'tags' => $event->tags->map(fn ($tag) => [
+                            'id' => $tag->id,
+                            'name' => $tag->name,
+                            'slug' => $tag->slug,
+                        ]),
+
+                        // Tickets
                         'ticket_types' => $event->ticketTypes->map(fn ($type) => [
                             'id' => $type->id,
                             'name' => $type->name,
                             'description' => $type->description ?? '',
+                            'sku' => $type->sku,
                             'price' => $type->price_max,
+                            'sale_price' => $type->price ?? null,
+                            'discount_percent' => $type->price && $type->price_max
+                                ? round((1 - ($type->price / $type->price_max)) * 100, 2)
+                                : null,
                             'currency' => $type->currency ?? 'EUR',
                             'available' => $type->available_quantity,
+                            'capacity' => $type->quota_total,
                             'status' => $type->status,
+                            'sales_start_at' => $type->sales_start_at?->toIso8601String(),
+                            'sales_end_at' => $type->sales_end_at?->toIso8601String(),
+                            'bulk_discounts' => $type->bulk_discounts ?? [],
                         ]),
                         'price_from' => $event->ticketTypes->min('price_max'),
-                        'is_sold_out' => $event->is_sold_out ?? false,
                     ];
                 }),
                 'meta' => [
