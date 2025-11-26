@@ -38,46 +38,33 @@ class EventResource extends Resource
         $today = Carbon::today();
         $tenant = auth()->user()->tenant;
 
+        // Get tenant's language (check both 'language' and 'locale' columns)
+        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+
         return $schema->schema([
             // Hidden tenant_id field
             Forms\Components\Hidden::make('tenant_id')
                 ->default($tenant?->id),
 
-            // BASICS - EN/RO
+            // BASICS - Single Language based on Tenant setting
             SC\Section::make('Event Details')
                 ->schema([
-                    SC\Tabs::make('Title Translations')
-                        ->tabs([
-                            SC\Tabs\Tab::make('English')
-                                ->schema([
-                                    Forms\Components\TextInput::make('title.en')
-                                        ->label('Event title (EN)')
-                                        ->required()
-                                        ->maxLength(190)
-                                        ->live(onBlur: true)
-                                        ->afterStateUpdated(function ($state, SSet $set) {
-                                            if ($state) $set('slug.en', Str::slug($state));
-                                        }),
-                                    Forms\Components\TextInput::make('slug.en')
-                                        ->label('Slug (EN)')
-                                        ->maxLength(190)
-                                        ->rule('alpha_dash'),
-                                ])->columns(2),
-                            SC\Tabs\Tab::make('Română')
-                                ->schema([
-                                    Forms\Components\TextInput::make('title.ro')
-                                        ->label('Titlu eveniment (RO)')
-                                        ->maxLength(190)
-                                        ->live(onBlur: true)
-                                        ->afterStateUpdated(function ($state, SSet $set) {
-                                            if ($state) $set('slug.ro', Str::slug($state));
-                                        }),
-                                    Forms\Components\TextInput::make('slug.ro')
-                                        ->label('Slug (RO)')
-                                        ->maxLength(190)
-                                        ->rule('alpha_dash'),
-                                ])->columns(2),
-                        ])->columnSpanFull(),
+                    SC\Group::make()
+                        ->schema([
+                            Forms\Components\TextInput::make("title.{$tenantLanguage}")
+                                ->label($tenantLanguage === 'ro' ? 'Titlu eveniment' : 'Event title')
+                                ->required()
+                                ->maxLength(190)
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(function ($state, SSet $set) {
+                                    // Slug is NOT translatable - it's a plain string field
+                                    if ($state) $set('slug', Str::slug($state));
+                                }),
+                            Forms\Components\TextInput::make('slug')
+                                ->label('Slug')
+                                ->maxLength(190)
+                                ->rule('alpha_dash'),
+                        ])->columns(2)->columnSpanFull(),
                 ]),
 
             // FLAGS
@@ -341,48 +328,25 @@ class EventResource extends Resource
                         ->disk('public'),
                 ])->columns(2),
 
-            // CONTENT - EN/RO
+            // CONTENT - Single Language
             SC\Section::make('Content')
                 ->schema([
-                    SC\Tabs::make('Content Translations')
-                        ->tabs([
-                            SC\Tabs\Tab::make('English')
-                                ->schema([
-                                    Forms\Components\Textarea::make('short_description.en')
-                                        ->label('Short description (EN)')
-                                        ->rows(3),
-                                    Forms\Components\RichEditor::make('description.en')
-                                        ->label('Description (EN)')
-                                        ->columnSpanFull(),
-                                    Forms\Components\RichEditor::make('ticket_terms.en')
-                                        ->label('Ticket terms (EN)')
-                                        ->columnSpanFull()
-                                        ->afterStateHydrated(function ($component, SGet $get) use ($tenant) {
-                                            // Auto-fill from tenant if empty
-                                            if (!$component->getState() && $tenant?->ticket_terms) {
-                                                $component->state($tenant->ticket_terms);
-                                            }
-                                        }),
-                                ]),
-                            SC\Tabs\Tab::make('Română')
-                                ->schema([
-                                    Forms\Components\Textarea::make('short_description.ro')
-                                        ->label('Descriere scurtă (RO)')
-                                        ->rows(3),
-                                    Forms\Components\RichEditor::make('description.ro')
-                                        ->label('Descriere (RO)')
-                                        ->columnSpanFull(),
-                                    Forms\Components\RichEditor::make('ticket_terms.ro')
-                                        ->label('Termeni bilete (RO)')
-                                        ->columnSpanFull()
-                                        ->afterStateHydrated(function ($component, SGet $get) use ($tenant) {
-                                            // Auto-fill from tenant if empty
-                                            if (!$component->getState() && $tenant?->ticket_terms) {
-                                                $component->state($tenant->ticket_terms);
-                                            }
-                                        }),
-                                ]),
-                        ])->columnSpanFull(),
+                    Forms\Components\Textarea::make("short_description.{$tenantLanguage}")
+                        ->label($tenantLanguage === 'ro' ? 'Descriere scurtă' : 'Short description')
+                        ->rows(3)
+                        ->columnSpanFull(),
+                    Forms\Components\RichEditor::make("description.{$tenantLanguage}")
+                        ->label($tenantLanguage === 'ro' ? 'Descriere' : 'Description')
+                        ->columnSpanFull(),
+                    Forms\Components\RichEditor::make("ticket_terms.{$tenantLanguage}")
+                        ->label($tenantLanguage === 'ro' ? 'Termeni bilete' : 'Ticket terms')
+                        ->columnSpanFull()
+                        ->afterStateHydrated(function ($component, SGet $get) use ($tenant) {
+                            // Auto-fill from tenant if empty
+                            if (!$component->getState() && $tenant?->ticket_terms) {
+                                $component->state($tenant->ticket_terms);
+                            }
+                        }),
                 ])->columns(1),
 
             // TAXONOMIES
