@@ -367,6 +367,7 @@ class TenantClientController extends Controller
 
             // Pricing
             'price_from' => $event->ticketTypes->min('price_max'),
+            'currency' => $event->ticketTypes->first()?->currency ?? 'EUR',
         ];
     }
 
