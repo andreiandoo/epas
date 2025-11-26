@@ -11,7 +11,15 @@ class CreateEvent extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $data['tenant_id'] = auth()->user()->tenant?->id;
+        $tenant = auth()->user()->tenant;
+
+        $data['tenant_id'] = $tenant?->id;
+
+        // Auto-fill ticket_terms from tenant settings if empty
+        if (empty($data['ticket_terms']) && $tenant?->ticket_terms) {
+            $data['ticket_terms'] = $tenant->ticket_terms;
+        }
+
         return $data;
     }
 }
