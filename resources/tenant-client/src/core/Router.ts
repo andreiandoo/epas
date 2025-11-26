@@ -286,8 +286,8 @@ export class Router {
         // Fetch and render featured events
         try {
             const [featuredData, categoriesData] = await Promise.all([
-                this.fetchApi('/tenant-client/events/featured'),
-                this.fetchApi('/tenant-client/categories')
+                this.fetchApi('/events/featured'),
+                this.fetchApi('/categories')
             ]);
 
             // Render featured events
@@ -365,8 +365,8 @@ export class Router {
             if (currentSearch) params.search = currentSearch;
 
             const [eventsData, categoriesData] = await Promise.all([
-                this.fetchApi('/tenant-client/events', params),
-                this.fetchApi('/tenant-client/categories')
+                this.fetchApi('/events', params),
+                this.fetchApi('/categories')
             ]);
 
             // Populate category filter
@@ -465,7 +465,7 @@ export class Router {
 
         // Fetch event details
         try {
-            const eventData = await this.fetchApi(`/tenant-client/events/${params.slug}`);
+            const eventData = await this.fetchApi(`/events/${params.slug}`);
             const event = eventData.data;
 
             if (!event) {
