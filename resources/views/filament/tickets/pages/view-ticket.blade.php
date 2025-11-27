@@ -4,6 +4,7 @@
         $event = $ticket->ticketType?->event;
         $eventTitle = is_array($event?->title) ? ($event->title['en'] ?? $event->title['ro'] ?? reset($event->title)) : ($event?->title ?? '');
         $venue = $event?->venue;
+        $venueName = $venue ? ($venue->getTranslation('name', app()->getLocale()) ?? 'N/A') : 'N/A';
     @endphp
 
     {{-- Ticket Information Section --}}
@@ -139,7 +140,7 @@
             <div class="space-y-3">
                 <div>
                     <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Venue Name</p>
-                    <p class="text-sm text-gray-900 dark:text-white">{{ $venue->name }}</p>
+                    <p class="text-sm text-gray-900 dark:text-white">{{ $venueName }}</p>
                 </div>
 
                 @if($venue->address)
