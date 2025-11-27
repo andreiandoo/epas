@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\TenantClient\PackageController;
 use App\Http\Controllers\Api\TenantClient\BootstrapController;
 use App\Http\Controllers\Api\TenantClient\EventsController;
 use App\Http\Controllers\Api\TenantClient\AuthController;
+use App\Http\Controllers\Api\TenantClient\AccountController;
 use App\Http\Controllers\Api\TenantClient\CartController;
 use App\Http\Controllers\Api\TenantClient\CheckoutController;
 use App\Http\Controllers\Api\TenantClient\AdminController;
@@ -826,8 +827,24 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.auth.forgot-password');
         Route::post('/reset-password', [AuthController::class, 'resetPassword'])
             ->name('api.tenant-client.auth.reset-password');
+        Route::post('/verify-email', [AuthController::class, 'verifyEmail'])
+            ->name('api.tenant-client.auth.verify-email');
+        Route::post('/resend-verification', [AuthController::class, 'resendVerification'])
+            ->name('api.tenant-client.auth.resend-verification');
         Route::post('/super-login', [AuthController::class, 'superAdminLogin'])
             ->name('api.tenant-client.auth.super-login');
+    });
+
+    // Account (requires authentication)
+    Route::prefix('account')->group(function () {
+        Route::get('/orders', [AccountController::class, 'orders'])
+            ->name('api.tenant-client.account.orders');
+        Route::get('/tickets', [AccountController::class, 'tickets'])
+            ->name('api.tenant-client.account.tickets');
+        Route::get('/profile', [AccountController::class, 'profile'])
+            ->name('api.tenant-client.account.profile');
+        Route::put('/profile', [AccountController::class, 'updateProfile'])
+            ->name('api.tenant-client.account.update-profile');
     });
 
     // Events (public)

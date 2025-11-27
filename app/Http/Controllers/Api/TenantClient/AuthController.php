@@ -10,6 +10,7 @@ use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -88,6 +89,9 @@ class AuthController extends Controller
         // Also add to pivot table for multi-tenant support
         $customer->tenants()->attach($tenant->id);
 
+        // Send verification email
+        $this->sendVerificationEmail($customer, $tenant);
+
         // Generate token
         $token = Str::random(64);
 
@@ -107,9 +111,11 @@ class AuthController extends Controller
                     'id' => $customer->id,
                     'name' => $customer->full_name,
                     'email' => $customer->email,
+                    'email_verified' => false,
                     'role' => 'customer',
                 ],
             ],
+            'message' => 'Cont creat cu succes! Te rugăm să verifici email-ul pentru confirmare.',
         ]);
     }
 
@@ -336,5 +342,132 @@ class AuthController extends Controller
                 ],
             ],
         ]);
+    }
+
+    /**
+     * Verify email address
+     */
+    public function verifyEmail(Request $request): JsonResponse
+    {
+        $token = $request->input('token');
+
+        if (!$token) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token is required',
+            ], 400);
+        }
+
+        // Find customer by verification token in meta
+        $customer = Customer::whereRaw("JSON_EXTRACT(meta, '$.verification_token') = ?", [$token])
+            ->first();
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Token invalid sau expirat',
+            ], 404);
+        }
+
+        // Check if already verified
+        if ($customer->email_verified_at) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Email-ul este deja verificat',
+            ]);
+        }
+
+        // Verify email
+        $customer->email_verified_at = now();
+        $meta = $customer->meta ?? [];
+        unset($meta['verification_token']);
+        $customer->meta = $meta;
+        $customer->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Email verificat cu succes! Vă mulțumim.',
+        ]);
+    }
+
+    /**
+     * Resend verification email
+     */
+    public function resendVerification(Request $request): JsonResponse
+    {
+        $tenant = $this->resolveTenant($request);
+
+        if (!$tenant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tenant not found',
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $customer = Customer::where('email', $validated['email'])
+            ->where('tenant_id', $tenant->id)
+            ->first();
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cont negăsit',
+            ], 404);
+        }
+
+        if ($customer->email_verified_at) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Email-ul este deja verificat',
+            ]);
+        }
+
+        $this->sendVerificationEmail($customer, $tenant);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Email de verificare retrimis',
+        ]);
+    }
+
+    /**
+     * Send verification email
+     */
+    private function sendVerificationEmail(Customer $customer, Tenant $tenant): void
+    {
+        // Generate verification token
+        $token = Str::random(64);
+
+        // Store token in customer meta
+        $meta = $customer->meta ?? [];
+        $meta['verification_token'] = $token;
+        $customer->meta = $meta;
+        $customer->save();
+
+        // Get tenant's primary domain
+        $domain = $tenant->domains()->where('is_primary', true)->first();
+        $verificationUrl = $domain
+            ? "https://{$domain->domain}/verify-email?token={$token}"
+            : url("/verify-email?token={$token}");
+
+        // Send email
+        Mail::send([], [], function ($message) use ($customer, $tenant, $verificationUrl) {
+            $message->to($customer->email)
+                ->subject('Verifică-ți adresa de email - ' . ($tenant->public_name ?? $tenant->name))
+                ->html("
+                    <h2>Bine ai venit, {$customer->first_name}!</h2>
+                    <p>Îți mulțumim că te-ai înregistrat pe {$tenant->public_name ?? $tenant->name}.</p>
+                    <p>Pentru a-ți activa contul, te rugăm să verifici adresa de email făcând click pe linkul de mai jos:</p>
+                    <p><a href='{$verificationUrl}' style='background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;'>Verifică Email</a></p>
+                    <p>Sau copiază și lipește acest link în browser:</p>
+                    <p>{$verificationUrl}</p>
+                    <p>Dacă nu ai creat acest cont, te rugăm să ignori acest email.</p>
+                    <p>Cu drag,<br>Echipa {$tenant->public_name ?? $tenant->name}</p>
+                ");
+        });
     }
 }
