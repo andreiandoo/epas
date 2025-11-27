@@ -196,6 +196,8 @@ class Settings extends Page
                                             ->label('Logo')
                                             ->image()
                                             ->directory('tenant-branding')
+                                            ->disk('public')
+                                            ->visibility('public')
                                             ->maxSize(2048)
                                             ->helperText('Recommended: 200x60px, PNG or SVG'),
 
@@ -203,6 +205,8 @@ class Settings extends Page
                                             ->label('Favicon')
                                             ->image()
                                             ->directory('tenant-branding')
+                                            ->disk('public')
+                                            ->visibility('public')
                                             ->maxSize(512)
                                             ->helperText('Recommended: 32x32px or 64x64px, ICO or PNG'),
                                     ])->columns(2),
