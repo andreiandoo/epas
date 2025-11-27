@@ -7,10 +7,11 @@ use App\Models\Customer;
 use App\Models\CustomerToken;
 use App\Models\Domain;
 use App\Models\Tenant;
+use App\Services\TenantMailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -435,7 +436,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Send verification email
+     * Send verification email using tenant's mail configuration or core fallback
      */
     private function sendVerificationEmail(Customer $customer, Tenant $tenant): void
     {
@@ -454,9 +455,11 @@ class AuthController extends Controller
             ? "https://{$domain->domain}/verify-email?token={$token}"
             : url("/verify-email?token={$token}");
 
-        // Send email (don't block registration if mail fails)
+        // Send email using TenantMailService (handles tenant config + core fallback)
         try {
-            Mail::send([], [], function ($message) use ($customer, $tenant, $verificationUrl) {
+            $mailService = app(TenantMailService::class);
+
+            $mailService->send($tenant, function ($message) use ($customer, $tenant, $verificationUrl) {
                 $message->to($customer->email)
                     ->subject('Verifică-ți adresa de email - ' . ($tenant->public_name ?? $tenant->name))
                     ->html("
@@ -472,7 +475,7 @@ class AuthController extends Controller
             });
         } catch (\Exception $e) {
             // Log error but don't block registration
-            \Log::error('Failed to send verification email', [
+            Log::error('Failed to send verification email', [
                 'customer_id' => $customer->id,
                 'email' => $customer->email,
                 'tenant_id' => $tenant->id,
