@@ -11,7 +11,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class AccountController extends Controller
@@ -145,134 +144,6 @@ class AccountController extends Controller
         ]);
     }
 
-
-    /**
-     * Get customer's watchlist
-     */
-    public function getWatchlist(Request $request): JsonResponse
-    {
-        $customer = $this->getAuthenticatedCustomer($request);
-
-        if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthenticated',
-            ], 401);
-        }
-
-        $events = $customer->watchlist()
-            ->with(['venue', 'ticketTypes'])
-            ->where('status', 'published')
-            ->orderBy('event_date', 'asc')
-            ->get()
-            ->map(function ($event) {
-                return [
-                    'id' => $event->id,
-                    'title' => $event->getTranslation('title', app()->getLocale()),
-                    'slug' => $event->slug,
-                    'start_date' => $event->start_date,
-                    'start_time' => $event->start_time,
-                    'poster_url' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
-                    'venue' => $event->venue ? [
-                        'id' => $event->venue->id,
-                        'name' => $event->venue->getTranslation('name', app()->getLocale()),
-                        'city' => $event->venue->city,
-                    ] : null,
-                    'price_from' => $event->ticketTypes->min('price_max'),
-                    'currency' => $event->ticketTypes->first()->currency ?? 'EUR',
-                    'is_sold_out' => $event->ticketTypes->sum('quota_total') <= $event->ticketTypes->sum('quota_sold'),
-                ];
-            });
-
-        return response()->json([
-            'success' => true,
-            'data' => $events,
-        ]);
-    }
-
-    /**
-     * Add event to watchlist
-     */
-    public function addToWatchlist(Request $request, int $eventId): JsonResponse
-    {
-        $customer = $this->getAuthenticatedCustomer($request);
-
-        if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthenticated',
-            ], 401);
-        }
-
-        // Check if event exists
-        $event = \App\Models\Event::find($eventId);
-        if (!$event) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Evenimentul nu există',
-            ], 404);
-        }
-
-        // Check if already in watchlist
-        if ($customer->watchlist()->where('event_id', $eventId)->exists()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Evenimentul este deja în watchlist',
-            ], 409);
-        }
-
-        // Add to watchlist
-        $customer->watchlist()->attach($eventId);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Eveniment adăugat la watchlist',
-        ]);
-    }
-
-    /**
-     * Remove event from watchlist
-     */
-    public function removeFromWatchlist(Request $request, int $eventId): JsonResponse
-    {
-        $customer = $this->getAuthenticatedCustomer($request);
-
-        if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthenticated',
-            ], 401);
-        }
-
-        $customer->watchlist()->detach($eventId);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Eveniment șters din watchlist',
-        ]);
-    }
-
-    /**
-     * Check if event is in watchlist
-     */
-    public function checkWatchlist(Request $request, int $eventId): JsonResponse
-    {
-        $customer = $this->getAuthenticatedCustomer($request);
-
-        if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'in_watchlist' => false,
-            ]);
-        }
-
-        $inWatchlist = $customer->watchlist()->where('event_id', $eventId)->exists();
-
-        return response()->json([
-            'success' => true,
-            'in_watchlist' => $inWatchlist,
-        ]);
-    }
 
     /**
      * Helper: Get authenticated customer from bearer token
@@ -455,6 +326,22 @@ class AccountController extends Controller
         }
         if (array_key_exists('phone', $validated)) {
             $customer->phone = $validated['phone'];
+        }
+
+        if (isset($validated['city'])) {
+            $customer->city = $validated['city'];
+        }
+
+        if (isset($validated['country'])) {
+            $customer->country = $validated['country'];
+        }
+
+        if (isset($validated['date_of_birth'])) {
+            $customer->date_of_birth = $validated['date_of_birth'];
+            // Calculate age from date of birth
+            $dob = new \DateTime($validated['date_of_birth']);
+            $now = new \DateTime();
+            $customer->age = $dob->diff($now)->y;
         }
 
         // Update password if provided

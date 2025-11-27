@@ -1699,6 +1699,15 @@ export class Router {
                         <h3 class="text-lg font-semibold text-gray-900">Biletele mele</h3>
                         <p class="text-gray-600 text-sm">Accesează biletele tale</p>
                     </a>
+                    <a href="/account/watchlist" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
+                        <div class="text-primary mb-3">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">Evenimente favorite</h3>
+                        <p class="text-gray-600 text-sm">Vezi watchlist-ul tău</p>
+                    </a>
                     <a href="/account/profile" class="block p-6 bg-white rounded-lg shadow hover:shadow-md transition">
                         <div class="text-primary mb-3">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">

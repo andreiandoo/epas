@@ -845,6 +845,16 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.account.profile');
         Route::put('/profile', [AccountController::class, 'updateProfile'])
             ->name('api.tenant-client.account.update-profile');
+
+        // Watchlist routes
+        Route::get('/watchlist', [AccountController::class, 'getWatchlist'])
+            ->name('api.tenant-client.account.watchlist');
+        Route::post('/watchlist/{eventId}', [AccountController::class, 'addToWatchlist'])
+            ->name('api.tenant-client.account.watchlist.add');
+        Route::delete('/watchlist/{eventId}', [AccountController::class, 'removeFromWatchlist'])
+            ->name('api.tenant-client.account.watchlist.remove');
+        Route::get('/watchlist/{eventId}/check', [AccountController::class, 'checkWatchlist'])
+            ->name('api.tenant-client.account.watchlist.check');
     });
 
     // Events (public)
