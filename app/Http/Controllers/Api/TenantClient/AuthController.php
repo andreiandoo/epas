@@ -476,18 +476,21 @@ class AuthController extends Controller
         try {
             $mailService = app(TenantMailService::class);
 
-            $mailService->send($tenant, function ($message) use ($customer, $tenant, $verificationUrl) {
+            // Extract tenant name for use in email (avoid ?? operator in interpolated strings)
+            $tenantName = $tenant->public_name ?? $tenant->name;
+
+            $mailService->send($tenant, function ($message) use ($customer, $tenantName, $verificationUrl) {
                 $message->to($customer->email)
-                    ->subject('Verifică-ți adresa de email - ' . ($tenant->public_name ?? $tenant->name))
+                    ->subject('Verifică-ți adresa de email - ' . $tenantName)
                     ->html("
                         <h2>Bine ai venit, {$customer->first_name}!</h2>
-                        <p>Îți mulțumim că te-ai înregistrat pe {$tenant->public_name ?? $tenant->name}.</p>
+                        <p>Îți mulțumim că te-ai înregistrat pe {$tenantName}.</p>
                         <p>Pentru a-ți activa contul, te rugăm să verifici adresa de email făcând click pe linkul de mai jos:</p>
                         <p><a href='{$verificationUrl}' style='background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;'>Verifică Email</a></p>
                         <p>Sau copiază și lipește acest link în browser:</p>
                         <p>{$verificationUrl}</p>
                         <p>Dacă nu ai creat acest cont, te rugăm să ignori acest email.</p>
-                        <p>Cu drag,<br>Echipa {$tenant->public_name ?? $tenant->name}</p>
+                        <p>Cu drag,<br>Echipa {$tenantName}</p>
                     ");
             });
         } catch (\Exception $e) {
