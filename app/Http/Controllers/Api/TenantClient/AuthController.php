@@ -90,8 +90,16 @@ class AuthController extends Controller
         // Also add to pivot table for multi-tenant support
         $customer->tenants()->attach($tenant->id);
 
-        // Send verification email
-        $this->sendVerificationEmail($customer, $tenant);
+        // Send verification email (optional - don't block registration if email fails)
+        try {
+            $this->sendVerificationEmail($customer, $tenant);
+        } catch (\Exception $e) {
+            // Log but don't block registration
+            Log::warning('Registration succeeded but verification email failed', [
+                'customer_id' => $customer->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         // Generate token
         $token = Str::random(64);
@@ -427,11 +435,20 @@ class AuthController extends Controller
             ]);
         }
 
-        $this->sendVerificationEmail($customer, $tenant);
+        try {
+            $this->sendVerificationEmail($customer, $tenant);
+            $message = 'Email de verificare retrimis';
+        } catch (\Exception $e) {
+            Log::warning('Failed to resend verification email', [
+                'customer_id' => $customer->id,
+                'error' => $e->getMessage(),
+            ]);
+            $message = 'Eroare la trimiterea emailului. Vă rugăm să încercați mai târziu.';
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Email de verificare retrimis',
+            'message' => $message,
         ]);
     }
 

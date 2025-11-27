@@ -93,10 +93,11 @@ class TenantMailService
         } catch (\Exception $e) {
             Log::error('Failed to send email with core configuration', [
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
-            // Re-throw exception if even core mail fails
-            throw $e;
+            // Don't re-throw - let the caller decide how to handle failure
+            // Registration should succeed even if email fails
         }
     }
 
