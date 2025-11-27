@@ -74,6 +74,16 @@ class Settings extends Page
                 'social_tiktok' => $settings['social']['tiktok'] ?? '',
                 'social_linkedin' => $settings['social']['linkedin'] ?? '',
 
+                // Mail Settings
+                'mail_driver' => $settings['mail']['driver'] ?? '',
+                'mail_host' => $settings['mail']['host'] ?? '',
+                'mail_port' => $settings['mail']['port'] ?? '',
+                'mail_username' => $settings['mail']['username'] ?? '',
+                'mail_password' => '', // Never load password from DB for security
+                'mail_encryption' => $settings['mail']['encryption'] ?? '',
+                'mail_from_address' => $settings['mail']['from_address'] ?? '',
+                'mail_from_name' => $settings['mail']['from_name'] ?? '',
+
                 // Payment Credentials
                 'stripe_public_key' => $tenant->payment_credentials['stripe']['public_key'] ?? '',
                 'stripe_secret_key' => $tenant->payment_credentials['stripe']['secret_key'] ?? '',
@@ -364,6 +374,81 @@ class Settings extends Page
                                     ])->columns(2),
                             ]),
 
+
+                        SC\Tabs\Tab::make('Emails')
+                            ->icon('heroicon-o-envelope')
+                            ->schema([
+                                SC\Section::make('Email Configuration')
+                                    ->description('Configure custom SMTP settings for sending emails. Leave empty to use core mail (Brevo).')
+                                    ->schema([
+                                        Forms\Components\Select::make('mail_driver')
+                                            ->label('Mail Provider')
+                                            ->options([
+                                                'smtp' => 'SMTP (Generic)',
+                                                'gmail' => 'Gmail',
+                                                'outlook' => 'Microsoft 365 / Outlook',
+                                                'mailgun' => 'Mailgun',
+                                                'ses' => 'Amazon SES',
+                                                'postmark' => 'Postmark',
+                                                'sendgrid' => 'SendGrid',
+                                            ])
+                                            ->default('smtp')
+                                            ->placeholder('Select mail provider')
+                                            ->helperText('Select your email service provider'),
+
+                                        Forms\Components\TextInput::make('mail_host')
+                                            ->label('SMTP Host')
+                                            ->placeholder('smtp.gmail.com')
+                                            ->maxLength(255)
+                                            ->helperText('Your mail server hostname'),
+
+                                        Forms\Components\TextInput::make('mail_port')
+                                            ->label('SMTP Port')
+                                            ->numeric()
+                                            ->default(587)
+                                            ->placeholder('587')
+                                            ->helperText('Usually 587 for TLS, 465 for SSL'),
+
+                                        Forms\Components\TextInput::make('mail_username')
+                                            ->label('Username / Email')
+                                            ->email()
+                                            ->maxLength(255)
+                                            ->placeholder('your-email@example.com')
+                                            ->helperText('Your SMTP username or email address'),
+
+                                        Forms\Components\TextInput::make('mail_password')
+                                            ->label('Password / App Password')
+                                            ->password()
+                                            ->maxLength(255)
+                                            ->placeholder('••••••••')
+                                            ->helperText('For Gmail/Outlook, use App Password. Leave empty to keep existing password.')
+                                            ->dehydrated(fn ($state) => filled($state)),
+
+                                        Forms\Components\Select::make('mail_encryption')
+                                            ->label('Encryption')
+                                            ->options([
+                                                'tls' => 'TLS (Recommended)',
+                                                'ssl' => 'SSL',
+                                                null => 'None',
+                                            ])
+                                            ->default('tls')
+                                            ->placeholder('Select encryption')
+                                            ->helperText('Security protocol for mail connection'),
+
+                                        Forms\Components\TextInput::make('mail_from_address')
+                                            ->label('From Email Address')
+                                            ->email()
+                                            ->maxLength(255)
+                                            ->placeholder('noreply@yourdomain.com')
+                                            ->helperText('Email address shown as sender'),
+
+                                        Forms\Components\TextInput::make('mail_from_name')
+                                            ->label('From Name')
+                                            ->maxLength(255)
+                                            ->placeholder('Your Company Name')
+                                            ->helperText('Display name shown as sender'),
+                                    ])->columns(2),
+                            ]),
                         SC\Tabs\Tab::make('Payment Processor')
                             ->icon('heroicon-o-credit-card')
                             ->schema($this->getPaymentProcessorSchema()),
@@ -551,6 +636,34 @@ class Settings extends Page
             'tiktok' => $data['social_tiktok'] ?? '',
             'linkedin' => $data['social_linkedin'] ?? '',
         ];
+
+        // Update mail settings
+        $mailSettings = $settings['mail'] ?? [];
+        if (!empty($data['mail_driver'])) {
+            $mailSettings['driver'] = $data['mail_driver'];
+        }
+        if (!empty($data['mail_host'])) {
+            $mailSettings['host'] = $data['mail_host'];
+        }
+        if (!empty($data['mail_port'])) {
+            $mailSettings['port'] = $data['mail_port'];
+        }
+        if (!empty($data['mail_username'])) {
+            $mailSettings['username'] = $data['mail_username'];
+        }
+        if (!empty($data['mail_password'])) {
+            $mailSettings['password'] = encrypt($data['mail_password']);
+        }
+        if (isset($data['mail_encryption'])) {
+            $mailSettings['encryption'] = $data['mail_encryption'];
+        }
+        if (!empty($data['mail_from_address'])) {
+            $mailSettings['from_address'] = $data['mail_from_address'];
+        }
+        if (!empty($data['mail_from_name'])) {
+            $mailSettings['from_name'] = $data['mail_from_name'];
+        }
+        $settings['mail'] = $mailSettings;
 
         // Update payment credentials
         $paymentCredentials = $tenant->payment_credentials ?? [];
