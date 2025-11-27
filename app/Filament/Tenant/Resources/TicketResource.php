@@ -65,6 +65,9 @@ class TicketResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->actions([
+                Tables\Actions\ViewAction::make(),
+            ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
@@ -81,6 +84,7 @@ class TicketResource extends Resource
     {
         return [
             'index' => Pages\ListTickets::route('/'),
+            'view' => Pages\ViewTicket::route('/{record}'),
         ];
     }
 
