@@ -85,4 +85,11 @@ class Customer extends Authenticatable
     {
         return !$this->trashed();
     }
+
+    // Watchlist - events that customer is watching
+    public function watchlist(): BelongsToMany
+    {
+        return $this->belongsToMany(Event::class, 'customer_watchlist')
+            ->withTimestamps();
+    }
 }

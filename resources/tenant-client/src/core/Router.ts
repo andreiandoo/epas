@@ -362,6 +362,7 @@ export class Router {
         this.addRoute('/account/tickets', this.renderTickets.bind(this));
         this.addRoute('/account/events', this.renderMyEvents.bind(this));
         this.addRoute('/account/profile', this.renderProfile.bind(this));
+        this.addRoute('/account/watchlist', this.renderWatchlist.bind(this));
         this.addRoute('/terms', this.renderTerms.bind(this));
         this.addRoute('/privacy', this.renderPrivacy.bind(this));
         this.addRoute('/page/:slug', this.renderPage.bind(this));
@@ -872,6 +873,12 @@ export class Router {
 
                                 <button id="add-to-cart-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
                                     Adaugă în coș
+                                </button>
+                                <button id="watchlist-btn" class="w-full mt-3 py-3 border-2 border-primary text-primary font-semibold rounded-lg hover:bg-primary hover:text-white transition flex items-center justify-center gap-2" data-event-id="${event.id}">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                    </svg>
+                                    <span id="watchlist-btn-text">Adaugă la favorite</span>
                                 </button>
                             ` : `
                                 <p class="text-gray-500 text-center py-4">Nu sunt bilete disponibile pentru achiziție online.</p>
@@ -1918,7 +1925,122 @@ export class Router {
         `;
     }
 
-    private async renderProfile(): Promise<void> {
+    
+    private async renderWatchlist(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        try {
+            const data = await this.fetchApi('/account/watchlist');
+
+            const eventsHtml = data.data.length > 0 ? data.data.map((event: any) => `
+                <div class="bg-white rounded-lg shadow overflow-hidden">
+                    <div class="md:flex">
+                        <div class="md:w-48 h-48 md:h-auto">
+                            ${event.poster_url
+                                ? `<img src="${event.poster_url}" alt="${event.title}" class="w-full h-full object-cover">`
+                                : `<div class="w-full h-full bg-gray-200 flex items-center justify-center">
+                                    <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>`
+                            }
+                        </div>
+                        <div class="p-6 flex-1">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-900 mb-2">${event.title}</h3>
+                                    <div class="space-y-1 text-sm text-gray-600">
+                                        <p>
+                                            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            </svg>
+                                            ${new Date(event.start_date).toLocaleDateString('ro-RO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                            ${event.start_time ? ` • ${event.start_time}` : ''}
+                                        </p>
+                                        ${event.venue ? `
+                                            <p>
+                                                <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                </svg>
+                                                ${event.venue.name}${event.venue.city ? `, ${event.venue.city}` : ''}
+                                            </p>
+                                        ` : ''}
+                                        <p class="text-primary font-semibold">
+                                            ${event.is_sold_out ? 'Sold Out' : `De la ${event.price_from} ${event.currency}`}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button class="remove-watchlist-btn text-red-600 hover:text-red-700 p-2" data-event-id="${event.id}">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="mt-4 flex gap-3">
+                                <a href="/event/${event.slug}" class="inline-block px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition">
+                                    Vezi detalii
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('') : `
+                <div class="text-center py-16">
+                    <svg class="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    </svg>
+                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Niciun eveniment în watchlist</h2>
+                    <p class="text-gray-600 mb-6">Adaugă evenimente favorite pentru a le urmări</p>
+                    <a href="/events" class="inline-block px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition">
+                        Explorează evenimente
+                    </a>
+                </div>
+            `;
+
+            content.innerHTML = `
+                <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <div class="flex justify-between items-center mb-8">
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-900">Evenimente favorite</h1>
+                            <p class="text-gray-600">Evenimente pe care le urmărești</p>
+                        </div>
+                        <a href="/account" class="text-primary hover:text-primary-dark font-medium">← Înapoi la cont</a>
+                    </div>
+
+                    <div class="space-y-4">
+                        ${eventsHtml}
+                    </div>
+                </div>
+            `;
+
+            // Add event listeners for remove buttons
+            document.querySelectorAll('.remove-watchlist-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const target = e.currentTarget as HTMLElement;
+                    const eventId = target.dataset.eventId;
+
+                    if (confirm('Sigur vrei să ștergi acest eveniment din watchlist?')) {
+                        try {
+                            await this.deleteApi(`/account/watchlist/${eventId}`);
+                            ToastNotification.show('✓ Eveniment șters din watchlist', 'success');
+                            this.renderWatchlist();
+                        } catch (error) {
+                            ToastNotification.show('Eroare la ștergerea evenimentului', 'error');
+                        }
+                    }
+                });
+            });
+        } catch (error) {
+            content.innerHTML = `
+                <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
+                    <p class="text-red-600">Eroare la încărcarea watchlist-ului</p>
+                </div>
+            `;
+        }
+    }
+private async renderProfile(): Promise<void> {
         const content = this.getContentElement();
         if (!content) return;
 
