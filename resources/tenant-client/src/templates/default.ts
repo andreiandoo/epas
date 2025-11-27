@@ -55,7 +55,7 @@ const defaultTemplate: TemplateConfig = {
                                 </svg>
                                 <span id="cart-badge" class="absolute -top-2 -right-2 bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
                             </a>
-                            <a href="/login" class="btn-primary px-4 py-2 rounded-lg text-sm">Contul meu</a>
+                            <a href="/login" id="account-link" class="btn-primary px-4 py-2 rounded-lg text-sm">Contul meu</a>
                         </nav>
                         <button class="md:hidden p-2" id="mobile-menu-btn">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

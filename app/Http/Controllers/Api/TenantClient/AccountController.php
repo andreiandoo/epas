@@ -153,6 +153,10 @@ class AccountController extends Controller
                 'last_name' => $customer->last_name,
                 'email' => $customer->email,
                 'phone' => $customer->phone,
+                'city' => $customer->city,
+                'country' => $customer->country,
+                'date_of_birth' => $customer->date_of_birth?->format('Y-m-d'),
+                'age' => $customer->age,
             ],
         ]);
     }
@@ -175,6 +179,9 @@ class AccountController extends Controller
             'first_name' => 'sometimes|string|max:255',
             'last_name' => 'sometimes|string|max:255',
             'phone' => 'nullable|string|max:50',
+            'city' => 'nullable|string|max:255',
+            'country' => 'nullable|string|max:255',
+            'date_of_birth' => 'nullable|date',
             'current_password' => 'sometimes|required_with:new_password|string',
             'new_password' => 'sometimes|string|min:8|confirmed',
         ]);
@@ -211,6 +218,10 @@ class AccountController extends Controller
                 'last_name' => $customer->last_name,
                 'email' => $customer->email,
                 'phone' => $customer->phone,
+                'city' => $customer->city,
+                'country' => $customer->country,
+                'date_of_birth' => $customer->date_of_birth?->format('Y-m-d'),
+                'age' => $customer->age,
             ],
         ]);
     }

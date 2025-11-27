@@ -38,6 +38,7 @@ class Customer extends Authenticatable
     protected $casts = [
         'meta' => 'array',
         'email_verified_at' => 'datetime',
+        'date_of_birth' => 'date',
         'password' => 'hashed',
     ];
 
