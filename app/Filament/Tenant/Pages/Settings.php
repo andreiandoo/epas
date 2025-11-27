@@ -385,6 +385,7 @@ class Settings extends Page
                                             ->label('Mail Provider')
                                             ->options([
                                                 'smtp' => 'SMTP (Generic)',
+                                                'brevo' => 'Brevo',
                                                 'gmail' => 'Gmail',
                                                 'outlook' => 'Microsoft 365 / Outlook',
                                                 'mailgun' => 'Mailgun',
