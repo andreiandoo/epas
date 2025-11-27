@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\TenantClient;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\CustomerToken;
+use App\Models\Domain;
+use App\Models\Tenant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -14,11 +16,37 @@ use Illuminate\Validation\ValidationException;
 class AuthController extends Controller
 {
     /**
+     * Resolve tenant from request (hostname preferred, ID fallback)
+     */
+    private function resolveTenant(Request $request): ?Tenant
+    {
+        $hostname = $request->query('hostname');
+        $tenantId = $request->query('tenant');
+
+        if ($hostname) {
+            $domain = Domain::where('domain', $hostname)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$domain) {
+                return null;
+            }
+
+            return $domain->tenant;
+        }
+
+        if ($tenantId) {
+            return Tenant::find($tenantId);
+        }
+
+        return null;
+    }
+    /**
      * Register a new customer
      */
     public function register(Request $request): JsonResponse
     {
-        $tenant = $request->attributes->get('tenant');
+        $tenant = $this->resolveTenant($request);
 
         if (!$tenant) {
             return response()->json([
@@ -90,7 +118,7 @@ class AuthController extends Controller
      */
     public function login(Request $request): JsonResponse
     {
-        $tenant = $request->attributes->get('tenant');
+        $tenant = $this->resolveTenant($request);
 
         if (!$tenant) {
             return response()->json([
@@ -226,7 +254,14 @@ class AuthController extends Controller
      */
     public function forgotPassword(Request $request): JsonResponse
     {
-        $tenant = $request->attributes->get('tenant');
+        $tenant = $this->resolveTenant($request);
+
+        if (!$tenant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tenant not found',
+            ], 404);
+        }
 
         $validated = $request->validate([
             'email' => 'required|email',

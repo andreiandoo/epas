@@ -182,6 +182,10 @@ export class Router {
     }
 
     private saveAuthState(token: string, user: any): void {
+        if (!token || !user) {
+            console.error('Cannot save auth state: token or user is undefined', { token, user });
+            return;
+        }
         this.authToken = token;
         this.currentUser = user;
         localStorage.setItem('tixello_auth_token', token);
@@ -1501,9 +1505,15 @@ export class Router {
 
             try {
                 const result = await this.postApi('/auth/login', { email, password });
-                this.saveAuthState(result.data.token, result.data.user);
-                this.navigate('/account');
+                console.log('Login response:', result);
+                if (result.success && result.data) {
+                    this.saveAuthState(result.data.token, result.data.user);
+                    this.navigate('/account');
+                } else {
+                    throw new Error(result.message || 'Invalid response from server');
+                }
             } catch (error: any) {
+                console.error('Login error:', error);
                 if (errorEl) {
                     errorEl.textContent = error.message || 'Eroare la autentificare';
                     errorEl.classList.remove('hidden');
@@ -1609,10 +1619,16 @@ export class Router {
                     phone: phone || null,
                     password,
                 });
-                this.saveAuthState(result.data.token, result.data.user);
-                ToastNotification.show('✓ Cont creat cu succes!', 'success');
-                this.navigate('/account');
+                console.log('Register response:', result);
+                if (result.success && result.data) {
+                    this.saveAuthState(result.data.token, result.data.user);
+                    ToastNotification.show('✓ Cont creat cu succes!', 'success');
+                    this.navigate('/account');
+                } else {
+                    throw new Error(result.message || 'Invalid response from server');
+                }
             } catch (error: any) {
+                console.error('Register error:', error);
                 if (errorEl) {
                     errorEl.textContent = error.message || 'Eroare la înregistrare';
                     errorEl.classList.remove('hidden');
