@@ -1501,7 +1501,7 @@ export class Router {
 
             try {
                 const result = await this.postApi('/auth/login', { email, password });
-                this.saveAuthState(result.token, result.user);
+                this.saveAuthState(result.data.token, result.data.user);
                 this.navigate('/account');
             } catch (error: any) {
                 if (errorEl) {
@@ -1608,9 +1608,9 @@ export class Router {
                     email,
                     phone: phone || null,
                     password,
-                    password_confirmation,
                 });
-                this.saveAuthState(result.token, result.user);
+                this.saveAuthState(result.data.token, result.data.user);
+                ToastNotification.show('✓ Cont creat cu succes!', 'success');
                 this.navigate('/account');
             } catch (error: any) {
                 if (errorEl) {

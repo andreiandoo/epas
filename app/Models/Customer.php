@@ -78,4 +78,10 @@ class Customer extends Authenticatable
 
         return trim($first . ' ' . $last);
     }
+
+    // Check if customer is active (not soft deleted)
+    public function isActive(): bool
+    {
+        return !$this->trashed();
+    }
 }
