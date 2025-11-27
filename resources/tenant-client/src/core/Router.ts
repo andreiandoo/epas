@@ -1043,6 +1043,7 @@ export class Router {
 
                 if (hasItems) {
                     ToastNotification.show('✓ Biletele au fost adăugate în coș!', 'success');
+                    this.updateCartBadge();
                     this.navigate('/cart');
                 } else {
                     ToastNotification.show('Te rog selectează cel puțin un bilet.', 'error');
@@ -1186,6 +1187,7 @@ export class Router {
                 const eventId = parseInt(target.dataset.eventId || '0');
                 const ticketId = parseInt(target.dataset.ticketId || '0');
                 CartService.removeItem(eventId, ticketId);
+                this.updateCartBadge();
                 this.renderCart();
             });
         });
@@ -1199,6 +1201,7 @@ export class Router {
                 const item = cart.find(i => i.eventId === eventId && i.ticketTypeId === ticketId);
                 if (item) {
                     CartService.updateQuantity(eventId, ticketId, item.quantity + 1);
+                    this.updateCartBadge();
                     this.renderCart();
                 }
             });
@@ -1213,6 +1216,7 @@ export class Router {
                 const item = cart.find(i => i.eventId === eventId && i.ticketTypeId === ticketId);
                 if (item && item.quantity > 1) {
                     CartService.updateQuantity(eventId, ticketId, item.quantity - 1);
+                    this.updateCartBadge();
                     this.renderCart();
                 }
             });
@@ -1223,6 +1227,7 @@ export class Router {
             clearBtn.addEventListener('click', () => {
                 if (confirm('Sigur vrei să golești coșul?')) {
                     CartService.clearCart();
+                    this.updateCartBadge();
                     this.renderCart();
                 }
             });
