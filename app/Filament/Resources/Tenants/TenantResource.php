@@ -662,7 +662,7 @@ class TenantResource extends Resource
                         ->reactive()
                         ->helperText('Select your email service provider'),
 
-                    Forms\Components\Grid::make(2)->schema([
+                    SC\Grid::make(2)->schema([
                         Forms\Components\TextInput::make('settings.mail.host')
                             ->label('SMTP Host')
                             ->placeholder('smtp.gmail.com')
@@ -675,7 +675,7 @@ class TenantResource extends Resource
                             ->helperText('Usually 587 for TLS, 465 for SSL'),
                     ]),
 
-                    Forms\Components\Grid::make(2)->schema([
+                    SC\Grid::make(2)->schema([
                         Forms\Components\TextInput::make('settings.mail.username')
                             ->label('Username / Email')
                             ->email()
@@ -689,7 +689,7 @@ class TenantResource extends Resource
                             ->helperText('For Gmail/Outlook, use App Password'),
                     ]),
 
-                    Forms\Components\Grid::make(2)->schema([
+                    SC\Grid::make(2)->schema([
                         Forms\Components\Select::make('settings.mail.encryption')
                             ->label('Encryption')
                             ->options([
