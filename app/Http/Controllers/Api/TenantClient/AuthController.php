@@ -454,20 +454,30 @@ class AuthController extends Controller
             ? "https://{$domain->domain}/verify-email?token={$token}"
             : url("/verify-email?token={$token}");
 
-        // Send email
-        Mail::send([], [], function ($message) use ($customer, $tenant, $verificationUrl) {
-            $message->to($customer->email)
-                ->subject('Verifică-ți adresa de email - ' . ($tenant->public_name ?? $tenant->name))
-                ->html("
-                    <h2>Bine ai venit, {$customer->first_name}!</h2>
-                    <p>Îți mulțumim că te-ai înregistrat pe {$tenant->public_name ?? $tenant->name}.</p>
-                    <p>Pentru a-ți activa contul, te rugăm să verifici adresa de email făcând click pe linkul de mai jos:</p>
-                    <p><a href='{$verificationUrl}' style='background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;'>Verifică Email</a></p>
-                    <p>Sau copiază și lipește acest link în browser:</p>
-                    <p>{$verificationUrl}</p>
-                    <p>Dacă nu ai creat acest cont, te rugăm să ignori acest email.</p>
-                    <p>Cu drag,<br>Echipa {$tenant->public_name ?? $tenant->name}</p>
-                ");
-        });
+        // Send email (don't block registration if mail fails)
+        try {
+            Mail::send([], [], function ($message) use ($customer, $tenant, $verificationUrl) {
+                $message->to($customer->email)
+                    ->subject('Verifică-ți adresa de email - ' . ($tenant->public_name ?? $tenant->name))
+                    ->html("
+                        <h2>Bine ai venit, {$customer->first_name}!</h2>
+                        <p>Îți mulțumim că te-ai înregistrat pe {$tenant->public_name ?? $tenant->name}.</p>
+                        <p>Pentru a-ți activa contul, te rugăm să verifici adresa de email făcând click pe linkul de mai jos:</p>
+                        <p><a href='{$verificationUrl}' style='background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;'>Verifică Email</a></p>
+                        <p>Sau copiază și lipește acest link în browser:</p>
+                        <p>{$verificationUrl}</p>
+                        <p>Dacă nu ai creat acest cont, te rugăm să ignori acest email.</p>
+                        <p>Cu drag,<br>Echipa {$tenant->public_name ?? $tenant->name}</p>
+                    ");
+            });
+        } catch (\Exception $e) {
+            // Log error but don't block registration
+            \Log::error('Failed to send verification email', [
+                'customer_id' => $customer->id,
+                'email' => $customer->email,
+                'tenant_id' => $tenant->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
