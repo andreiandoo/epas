@@ -33,7 +33,7 @@ class AccountController extends Controller
         $events = $customer->watchlist()
             ->with(['venue', 'ticketTypes'])
             ->where('status', 'published')
-            ->orderBy('event_date', 'asc')
+            ->orderBy('start_date', 'asc')
             ->get()
             ->map(function ($event) {
                 return [
@@ -370,6 +370,32 @@ class AccountController extends Controller
                 'date_of_birth' => $customer->date_of_birth?->format('Y-m-d'),
                 'age' => $customer->age,
             ],
+        ]);
+    }
+
+    /**
+     * Delete customer account
+     */
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $customer = $this->getAuthenticatedCustomer($request);
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        // Delete all customer tokens
+        CustomerToken::where('customer_id', $customer->id)->delete();
+
+        // Soft delete customer
+        $customer->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Cont șters cu succes',
         ]);
     }
 

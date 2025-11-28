@@ -1071,6 +1071,72 @@ export class Router {
                 }
             });
         }
+
+        // Setup watchlist button handler
+        const watchlistBtn = document.getElementById('watchlist-btn');
+        if (watchlistBtn) {
+            // Check if event is in watchlist on page load
+            const checkWatchlist = async () => {
+                if (!this.isAuthenticated()) return;
+
+                try {
+                    const eventId = watchlistBtn.dataset.eventId;
+                    const data = await this.fetchApi(`/account/watchlist/${eventId}/check`);
+                    const btnText = document.getElementById('watchlist-btn-text');
+
+                    if (data.in_watchlist) {
+                        if (btnText) btnText.textContent = 'În watchlist';
+                        watchlistBtn.classList.add('bg-primary', 'text-white');
+                        watchlistBtn.classList.remove('text-primary');
+                    } else {
+                        if (btnText) btnText.textContent = 'Adaugă la favorite';
+                        watchlistBtn.classList.remove('bg-primary', 'text-white');
+                        watchlistBtn.classList.add('text-primary');
+                    }
+                } catch (error) {
+                    // Silent fail if not authenticated
+                }
+            };
+
+            checkWatchlist();
+
+            watchlistBtn.addEventListener('click', async () => {
+                if (!this.isAuthenticated()) {
+                    this.navigate('/login');
+                    return;
+                }
+
+                const eventId = watchlistBtn.dataset.eventId;
+                const btnText = document.getElementById('watchlist-btn-text');
+
+                try {
+                    // Check current status
+                    const checkData = await this.fetchApi(`/account/watchlist/${eventId}/check`);
+
+                    if (checkData.in_watchlist) {
+                        // Remove from watchlist
+                        await this.deleteApi(`/account/watchlist/${eventId}`);
+                        if (btnText) btnText.textContent = 'Adaugă la favorite';
+                        watchlistBtn.classList.remove('bg-primary', 'text-white');
+                        watchlistBtn.classList.add('text-primary');
+                        ToastNotification.show('✓ Eveniment șters din watchlist', 'success');
+                    } else {
+                        // Add to watchlist
+                        await this.postApi(`/account/watchlist/${eventId}`, {});
+                        if (btnText) btnText.textContent = 'În watchlist';
+                        watchlistBtn.classList.add('bg-primary', 'text-white');
+                        watchlistBtn.classList.remove('text-primary');
+                        ToastNotification.show('✓ Eveniment adăugat la watchlist', 'success');
+                    }
+                } catch (error: any) {
+                    if (error.message?.includes('deja în watchlist')) {
+                        ToastNotification.show('Evenimentul este deja în watchlist', 'info');
+                    } else {
+                        ToastNotification.show('Eroare la actualizarea watchlist-ului', 'error');
+                    }
+                }
+            });
+        }
     }
 
     private renderCart(): void {
@@ -2107,6 +2173,24 @@ private async renderProfile(): Promise<void> {
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                         </div>
 
+                        <div>
+                            <label for="city" class="block text-sm font-medium text-gray-700 mb-2">Oraș</label>
+                            <input type="text" id="city" name="city" value="${profile.city || ''}"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+
+                        <div>
+                            <label for="country" class="block text-sm font-medium text-gray-700 mb-2">Țară</label>
+                            <input type="text" id="country" name="country" value="${profile.country || ''}"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+
+                        <div>
+                            <label for="date_of_birth" class="block text-sm font-medium text-gray-700 mb-2">Data Nașterii</label>
+                            <input type="date" id="date_of_birth" name="date_of_birth" value="${profile.date_of_birth || ''}"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+
                         <div class="border-t pt-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-4">Schimbă Parola</h3>
 
@@ -2134,6 +2218,14 @@ private async renderProfile(): Promise<void> {
                         <button type="submit" class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-blue-700 transition">
                             Salvează Modificările
                         </button>
+
+                        <div class="border-t pt-6 mt-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">Zona Periculoasă</h3>
+                            <p class="text-sm text-gray-600 mb-4">Odată ce îți ștergi contul, nu mai există cale de întoarcere. Te rog fii sigur.</p>
+                            <button type="button" id="delete-account-btn" class="w-full bg-red-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-red-700 transition">
+                                Șterge Contul
+                            </button>
+                        </div>
                     </form>
                 `;
 
@@ -2176,6 +2268,27 @@ private async renderProfile(): Promise<void> {
                                     </div>
                                 `;
                             }
+                        }
+                    });
+                }
+
+                // Handle delete account
+                const deleteBtn = document.getElementById('delete-account-btn');
+                if (deleteBtn) {
+                    deleteBtn.addEventListener('click', async () => {
+                        const confirmation1 = confirm('Ești absolut sigur că vrei să îți ștergi contul? Această acțiune NU poate fi anulată!');
+                        if (!confirmation1) return;
+
+                        const confirmation2 = confirm('Confirmă din nou: Toate datele tale, comenzile și biletele vor fi șterse permanent. Vrei să continui?');
+                        if (!confirmation2) return;
+
+                        try {
+                            await this.deleteApi('/account/delete');
+                            alert('Contul tău a fost șters cu succes.');
+                            this.clearAuthState();
+                            this.navigate('/');
+                        } catch (error: any) {
+                            alert(error.message || 'Eroare la ștergerea contului');
                         }
                     });
                 }

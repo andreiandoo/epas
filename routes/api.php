@@ -855,6 +855,10 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.account.watchlist.remove');
         Route::get('/watchlist/{eventId}/check', [AccountController::class, 'checkWatchlist'])
             ->name('api.tenant-client.account.watchlist.check');
+
+        // Delete account
+        Route::delete('/delete', [AccountController::class, 'deleteAccount'])
+            ->name('api.tenant-client.account.delete');
     });
 
     // Events (public)
