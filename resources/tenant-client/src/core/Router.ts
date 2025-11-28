@@ -696,6 +696,24 @@ export class Router {
 
                         <h1 class="text-3xl font-bold text-gray-900 mb-4">${event.title}</h1>
 
+                        <!-- Countdown Timer -->
+                        <div id="event-countdown-${event.id}" class="bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg p-4 mb-6 shadow-lg">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center">
+                                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span class="font-medium">Timp rămas:</span>
+                                </div>
+                                <div class="countdown-display text-lg font-bold">
+                                    <span class="countdown-days">--</span>z
+                                    <span class="countdown-hours">--</span>h
+                                    <span class="countdown-minutes">--</span>m
+                                    <span class="countdown-seconds">--</span>s
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="flex flex-wrap gap-4 mb-6 text-gray-600">
                             <div class="flex items-center">
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -889,6 +907,67 @@ export class Router {
                         </div>
                     </div>
                 `;
+
+                // Initialize countdown timer
+                if (event.start_date) {
+                    const countdownEl = document.getElementById(`event-countdown-${event.id}`);
+                    if (countdownEl) {
+                        const updateCountdown = () => {
+                            // Parse event date and time
+                            const eventDateTime = new Date(event.start_date);
+                            if (event.start_time) {
+                                const [hours, minutes] = event.start_time.split(':');
+                                eventDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                            }
+
+                            const now = new Date();
+                            const diff = eventDateTime.getTime() - now.getTime();
+
+                            if (diff <= 0) {
+                                // Event has started or passed
+                                countdownEl.innerHTML = `
+                                    <div class="flex items-center justify-center">
+                                        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                        <span class="font-medium">Evenimentul a început!</span>
+                                    </div>
+                                `;
+                                return true; // Stop interval
+                            }
+
+                            // Calculate time units
+                            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                            // Update display
+                            const daysEl = countdownEl.querySelector('.countdown-days');
+                            const hoursEl = countdownEl.querySelector('.countdown-hours');
+                            const minutesEl = countdownEl.querySelector('.countdown-minutes');
+                            const secondsEl = countdownEl.querySelector('.countdown-seconds');
+
+                            if (daysEl) daysEl.textContent = days.toString().padStart(2, '0');
+                            if (hoursEl) hoursEl.textContent = hours.toString().padStart(2, '0');
+                            if (minutesEl) minutesEl.textContent = minutes.toString().padStart(2, '0');
+                            if (secondsEl) secondsEl.textContent = seconds.toString().padStart(2, '0');
+
+                            return false; // Continue interval
+                        };
+
+                        // Initial update
+                        updateCountdown();
+
+                        // Update every second
+                        const intervalId = setInterval(() => {
+                            const shouldStop = updateCountdown();
+                            if (shouldStop) {
+                                clearInterval(intervalId);
+                            }
+                        }, 1000);
+                    }
+                }
 
                 // Setup ticket quantity handlers
                 this.setupTicketHandlers();
