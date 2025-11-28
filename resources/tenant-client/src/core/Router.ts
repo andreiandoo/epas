@@ -2026,24 +2026,42 @@ export class Router {
                     ticketsListEl.innerHTML = tickets.map((ticket: any) => `
                         <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
                             <div class="flex justify-between items-start mb-4">
-                                <div>
-                                    <h3 class="text-lg font-semibold text-gray-900">${ticket.event_name}</h3>
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">${ticket.event_name}</h3>
                                     <p class="text-sm text-gray-600">${ticket.ticket_type}</p>
+                                    ${ticket.beneficiary ? `
+                                        <div class="mt-2 pt-2 border-t border-gray-100">
+                                            <p class="text-xs text-gray-500 mb-1">Beneficiar:</p>
+                                            <p class="text-sm font-medium text-gray-900">👤 ${ticket.beneficiary.name}</p>
+                                            ${ticket.beneficiary.email ? `<p class="text-xs text-gray-600 mt-0.5">✉️ ${ticket.beneficiary.email}</p>` : ''}
+                                            ${ticket.beneficiary.phone ? `<p class="text-xs text-gray-600 mt-0.5">📱 ${ticket.beneficiary.phone}</p>` : ''}
+                                        </div>
+                                    ` : ''}
                                 </div>
-                                <span class="inline-block px-3 py-1 text-xs font-medium rounded-full ${
-                                    ticket.status === 'valid' ? 'bg-green-100 text-green-800' :
-                                    ticket.status === 'used' ? 'bg-gray-100 text-gray-800' :
-                                    'bg-red-100 text-red-800'
+                                <span class="inline-block px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap ml-3 ${
+                                    ticket.status === 'valid' || ticket.status === 'pending' ? 'bg-green-100 text-green-800' :
+                                    ticket.status === 'used' ? 'bg-blue-100 text-blue-800' :
+                                    ticket.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
                                 }">
                                     ${ticket.status_label}
                                 </span>
                             </div>
-                            ${ticket.date ? `<p class="text-sm text-gray-600 mb-2">📅 ${new Date(ticket.date).toLocaleDateString('ro-RO')}</p>` : ''}
-                            ${ticket.venue ? `<p class="text-sm text-gray-600 mb-2">📍 ${ticket.venue}</p>` : ''}
-                            ${ticket.seat_label ? `<p class="text-sm text-gray-600 mb-4">💺 ${ticket.seat_label}</p>` : '<div class="mb-4"></div>'}
-                            <div class="border-t pt-4 text-center">
-                                <img src="${ticket.qr_code}" alt="QR Code" class="w-32 h-32 mx-auto mb-2">
-                                <p class="text-xs text-gray-500">${ticket.code}</p>
+                            <div class="space-y-2 mb-4">
+                                ${ticket.date ? `<p class="text-sm text-gray-600">${new Date(ticket.date).toLocaleDateString('ro-RO', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}</p>` : ''}
+                                ${ticket.venue ? `<p class="text-sm text-gray-600">📍 ${ticket.venue}</p>` : ''}
+                                ${ticket.seat_label ? `<p class="text-sm text-gray-600">💺 Loc: ${ticket.seat_label}</p>` : ''}
+                            </div>
+                            <div class="border-t pt-4">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-3">
+                                        <img src="${ticket.qr_code}" alt="QR Code" class="w-20 h-20 border border-gray-200 rounded">
+                                        <div>
+                                            <p class="text-xs text-gray-500 mb-1">Cod bilet:</p>
+                                            <p class="text-sm font-mono font-semibold text-gray-900">${ticket.code}</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     `).join('');
