@@ -104,7 +104,7 @@ class PublicDataController extends Controller
             'tenant:id,name,public_name,website',
             'eventTypes:id,name',
             'eventGenres:id,name',
-            'artists:id,name,slug,image',
+            'artists:id,name,slug,main_image_url',
             'tags:id,name',
             'ticketTypes'
         ])->limit(100)->get();
@@ -165,7 +165,7 @@ class PublicDataController extends Controller
                     'id' => $artist->id,
                     'name' => $artist->name,
                     'slug' => $artist->slug,
-                    'image' => $artist->image,
+                    'image' => $artist->main_image_url,
                 ])->toArray(),
                 'tags' => $event->tags->map(fn($tag) => [
                     'id' => $tag->id,
