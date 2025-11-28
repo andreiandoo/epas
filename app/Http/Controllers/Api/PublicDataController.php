@@ -96,11 +96,11 @@ class PublicDataController extends Controller
         $query = Event::query();
 
         if ($request->has('upcoming')) {
-            $query->where('start_date', '>=', now());
+            $query->where('event_date', '>=', now());
         }
 
         $events = $query->select([
-            'id', 'title', 'slug', 'start_date', 'end_date',
+            'id', 'title', 'slug', 'event_date', 'start_time', 'end_time',
             'venue_id', 'tenant_id', 'created_at'
         ])->with(['venue:id,name,slug', 'tenant:id,name,public_name'])
           ->limit(100)
