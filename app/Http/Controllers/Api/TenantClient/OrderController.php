@@ -28,6 +28,10 @@ class OrderController extends Controller
             'cart.*.eventId' => 'required|integer',
             'cart.*.ticketTypeId' => 'required|integer',
             'cart.*.quantity' => 'required|integer|min:1',
+            'beneficiaries' => 'nullable|array',
+            'beneficiaries.*.name' => 'required|string|max:255',
+            'beneficiaries.*.email' => 'nullable|email|max:255',
+            'beneficiaries.*.phone' => 'nullable|string|max:50',
         ]);
 
         // Resolve tenant from hostname
@@ -100,18 +104,36 @@ class OrderController extends Controller
                         'customer_name' => $validated['customer_name'],
                         'customer_phone' => $validated['customer_phone'] ?? null,
                         'items' => $orderItems,
+                        'beneficiaries' => $validated['beneficiaries'] ?? null,
                     ],
                 ]);
 
-                // Create tickets
+                // Create tickets and assign beneficiaries
+                $beneficiaries = $validated['beneficiaries'] ?? [];
+                $beneficiaryIndex = 0;
+                
                 foreach ($orderItems as $item) {
                     for ($i = 0; $i < $item['quantity']; $i++) {
+                        $ticketMeta = [];
+                        
+                        // Assign beneficiary if available
+                        if (isset($beneficiaries[$beneficiaryIndex])) {
+                            $ticketMeta['beneficiary'] = [
+                                'name' => $beneficiaries[$beneficiaryIndex]['name'],
+                                'email' => $beneficiaries[$beneficiaryIndex]['email'] ?? null,
+                                'phone' => $beneficiaries[$beneficiaryIndex]['phone'] ?? null,
+                            ];
+                        }
+                        
                         Ticket::create([
                             'order_id' => $order->id,
                             'ticket_type_id' => $item['ticket_type_id'],
                             'code' => $this->generateTicketCode(),
                             'status' => 'pending',
+                            'meta' => $ticketMeta,
                         ]);
+                        
+                        $beneficiaryIndex++;
                     }
                 }
 
