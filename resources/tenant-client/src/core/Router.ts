@@ -666,8 +666,8 @@ export class Router {
                 minute: '2-digit'
             }) : '');
 
-            // Use poster_url or hero_image_url from new API
-            const imageUrl = event.poster_url || event.hero_image_url || event.image;
+            // Use hero_image_url first, then fallback to poster_url
+            const imageUrl = event.hero_image_url || event.poster_url || event.image;
 
             const eventDetailEl = document.getElementById('event-detail');
             if (eventDetailEl) {
@@ -681,6 +681,40 @@ export class Router {
                                 </svg>
                               </div>`
                         }
+
+                        <!-- Countdown Timer -->
+                        <div id="event-countdown"
+                             class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg shadow-md p-6 mb-6"
+                             data-event-date="${event.start_date || ''}"
+                             data-event-time="${event.start_time || ''}">
+                            <div class="text-center">
+                                <p class="text-sm text-gray-600 mb-2">Evenimentul începe în</p>
+                                <div id="countdown-display" class="flex justify-center gap-4 text-center">
+                                    <div class="countdown-unit">
+                                        <div class="text-3xl font-bold text-blue-600" id="countdown-days">0</div>
+                                        <div class="text-xs text-gray-500 uppercase">Zile</div>
+                                    </div>
+                                    <div class="text-3xl font-bold text-gray-400">:</div>
+                                    <div class="countdown-unit">
+                                        <div class="text-3xl font-bold text-blue-600" id="countdown-hours">0</div>
+                                        <div class="text-xs text-gray-500 uppercase">Ore</div>
+                                    </div>
+                                    <div class="text-3xl font-bold text-gray-400">:</div>
+                                    <div class="countdown-unit">
+                                        <div class="text-3xl font-bold text-blue-600" id="countdown-minutes">0</div>
+                                        <div class="text-xs text-gray-500 uppercase">Minute</div>
+                                    </div>
+                                    <div class="text-3xl font-bold text-gray-400">:</div>
+                                    <div class="countdown-unit">
+                                        <div class="text-3xl font-bold text-blue-600" id="countdown-seconds">0</div>
+                                        <div class="text-xs text-gray-500 uppercase">Secunde</div>
+                                    </div>
+                                </div>
+                                <div id="countdown-ended" class="hidden">
+                                    <p class="text-2xl font-bold text-green-600">🎉 Evenimentul a început!</p>
+                                </div>
+                            </div>
+                        </div>
 
                         ${event.is_cancelled ? `
                         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -892,6 +926,61 @@ export class Router {
 
                 // Setup ticket quantity handlers
                 this.setupTicketHandlers();
+
+                // Setup countdown timer
+                const countdownEl = document.getElementById('event-countdown');
+                if (countdownEl) {
+                    const eventDate = countdownEl.dataset.eventDate || '';
+                    const eventTime = countdownEl.dataset.eventTime || '00:00';
+
+                    if (eventDate) {
+                        const targetDate = new Date(eventDate + 'T' + eventTime);
+
+                        const updateCountdown = () => {
+                            const now = new Date().getTime();
+                            const distance = targetDate.getTime() - now;
+
+                            if (distance < 0) {
+                                // Event has started
+                                const displayEl = document.getElementById('countdown-display');
+                                const endedEl = document.getElementById('countdown-ended');
+                                if (displayEl) displayEl.classList.add('hidden');
+                                if (endedEl) endedEl.classList.remove('hidden');
+                                return true; // Stop interval
+                            }
+
+                            // Calculate time units
+                            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                            // Update DOM
+                            const daysEl = document.getElementById('countdown-days');
+                            const hoursEl = document.getElementById('countdown-hours');
+                            const minutesEl = document.getElementById('countdown-minutes');
+                            const secondsEl = document.getElementById('countdown-seconds');
+
+                            if (daysEl) daysEl.textContent = String(days);
+                            if (hoursEl) hoursEl.textContent = String(hours).padStart(2, '0');
+                            if (minutesEl) minutesEl.textContent = String(minutes).padStart(2, '0');
+                            if (secondsEl) secondsEl.textContent = String(seconds).padStart(2, '0');
+
+                            return false; // Continue interval
+                        };
+
+                        // Initial update
+                        updateCountdown();
+
+                        // Update every second
+                        const intervalId = setInterval(() => {
+                            const shouldStop = updateCountdown();
+                            if (shouldStop) {
+                                clearInterval(intervalId);
+                            }
+                        }, 1000);
+                    }
+                }
             }
         } catch (error) {
             console.error('Failed to load event:', error);
