@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         Schema::create('customer_watchlist', function (Blueprint $table) {
@@ -14,13 +17,18 @@ return new class extends Migration
             $table->foreignId('event_id')->constrained('events')->onDelete('cascade');
             $table->timestamps();
 
-            // Prevent duplicate entries
+            // Ensure a customer can only add an event once
             $table->unique(['customer_id', 'event_id']);
+
+            // Indexes for performance
             $table->index('customer_id');
             $table->index('event_id');
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         Schema::dropIfExists('customer_watchlist');

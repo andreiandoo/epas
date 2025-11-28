@@ -343,6 +343,9 @@ export class Router {
 
         // Handle initial route
         this.handleRoute();
+
+        // Update cart badge on page load
+        this.updateCartBadge();
     }
 
     private setupDefaultRoutes(): void {
