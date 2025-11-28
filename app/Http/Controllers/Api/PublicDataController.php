@@ -101,7 +101,7 @@ class PublicDataController extends Controller
 
         $events = $query->with([
             'venue:id,name,slug,address,city,lat as latitude,lng as longitude',
-            'tenant:id,name,public_name,website_url',
+            'tenant:id,name,public_name,website',
             'eventTypes:id,name',
             'eventGenres:id,name',
             'artists:id,name,slug,image',
@@ -151,7 +151,7 @@ class PublicDataController extends Controller
                     'id' => $event->tenant->id,
                     'name' => $event->tenant->name,
                     'public_name' => $event->tenant->public_name,
-                    'website_url' => $event->tenant->website_url,
+                    'website' => $event->tenant->website,
                 ] : null,
                 'event_types' => $event->eventTypes->map(fn($type) => [
                     'id' => $type->id,
