@@ -1331,7 +1331,7 @@ export class Router {
         }
     }
 
-        private renderCheckout(): void {
+        private async renderCheckout(): Promise<void> {
         const content = this.getContentElement();
         if (!content) return;
 
@@ -1342,6 +1342,24 @@ export class Router {
             this.navigate('/cart');
             return;
         }
+
+        // Fetch user profile if logged in
+        let userData: any = null;
+        if (this.authToken) {
+            try {
+                const profileResponse = await this.fetchApi('/account/profile');
+                if (profileResponse.success) {
+                    userData = profileResponse.data;
+                }
+            } catch (error) {
+                console.log('Could not fetch user profile:', error);
+            }
+        }
+
+        // Prepare pre-filled values
+        const customerName = userData ? `${userData.first_name || ''} ${userData.last_name || ''}`.trim() : '';
+        const customerEmail = userData?.email || '';
+        const customerPhone = userData?.phone || '';
 
         content.innerHTML = `
             <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -1364,6 +1382,8 @@ export class Router {
                                             required
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                             placeholder="Ion Popescu"
+                                            value="${customerName}"
+                                            value="${customerName}"
                                         >
                                     </div>
                                     <div>
@@ -1377,6 +1397,8 @@ export class Router {
                                             required
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                             placeholder="ion@example.com"
+                                            value="${customerEmail}"
+                                            value="${customerEmail}"
                                         >
                                     </div>
                                     <div>
@@ -1389,6 +1411,8 @@ export class Router {
                                             name="customer_phone"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                             placeholder="0722123456"
+                                            value="${customerPhone}"
+                                            value="${customerPhone}"
                                         >
                                     </div>
                                 </div>
