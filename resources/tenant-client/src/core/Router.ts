@@ -2062,9 +2062,49 @@ export class Router {
                                         </div>
                                     </div>
                                 </div>
+                                <button
+                                    class="view-ticket-btn mt-4 w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
+                                    data-ticket-id="${ticket.id}"
+                                    data-ticket-code="${ticket.code}"
+                                    data-ticket-qr="${ticket.qr_code}"
+                                    data-event-name="${ticket.event_name || ''}"
+                                    data-ticket-type="${ticket.ticket_type || ''}"
+                                    data-date="${ticket.date || ''}"
+                                    data-venue="${ticket.venue || ''}"
+                                    data-seat="${ticket.seat_label || ''}"
+                                    data-status="${ticket.status || ''}"
+                                    data-status-label="${ticket.status_label || ''}"
+                                    data-beneficiary-name="${ticket.beneficiary?.name || ''}"
+                                    data-beneficiary-email="${ticket.beneficiary?.email || ''}">
+                                    Vezi Detalii Bilet
+                                </button>
                             </div>
                         </div>
                     `).join('');
+
+                    // Attach event listeners to ticket detail buttons
+                    document.querySelectorAll('.view-ticket-btn').forEach(button => {
+                        button.addEventListener('click', (e) => {
+                            const btn = e.currentTarget as HTMLElement;
+                            const ticketData = {
+                                id: btn.dataset.ticketId || '',
+                                code: btn.dataset.ticketCode || '',
+                                qr_code: btn.dataset.ticketQr || '',
+                                event_name: btn.dataset.eventName || '',
+                                ticket_type: btn.dataset.ticketType || '',
+                                date: btn.dataset.date || '',
+                                venue: btn.dataset.venue || '',
+                                seat_label: btn.dataset.seat || '',
+                                status: btn.dataset.status || '',
+                                status_label: btn.dataset.statusLabel || '',
+                                beneficiary: {
+                                    name: btn.dataset.beneficiaryName || '',
+                                    email: btn.dataset.beneficiaryEmail || ''
+                                }
+                            };
+                            this.showTicketDetailModal(ticketData);
+                        });
+                    });
                 } else {
                     ticketsListEl.innerHTML = `
                         <div class="col-span-2 bg-white rounded-lg shadow p-8 text-center">
@@ -2581,5 +2621,147 @@ private async renderProfile(): Promise<void> {
                 </div>
             </div>
         `;
+    }
+
+    private showTicketDetailModal(ticket: any): void {
+        // Create modal backdrop
+        const modalHTML = `
+            <div id="ticket-modal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                    <!-- Backdrop -->
+                    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+                    <!-- Modal Panel -->
+                    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                            <!-- Close button -->
+                            <button id="close-modal" class="absolute top-4 right-4 text-gray-400 hover:text-gray-500">
+                                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+
+                            <!-- Modal content -->
+                            <div class="sm:flex sm:items-start">
+                                <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">
+                                        Detalii Bilet
+                                    </h3>
+
+                                    <!-- Event Info -->
+                                    <div class="mb-4">
+                                        <h4 class="text-xl font-semibold text-gray-900 mb-1">${ticket.event_name}</h4>
+                                        <p class="text-sm text-gray-600">${ticket.ticket_type}</p>
+                                    </div>
+
+                                    <!-- Status Badge -->
+                                    <div class="mb-4">
+                                        <span class="inline-block px-3 py-1 text-sm font-medium rounded-full ${
+                                            ticket.status === 'valid' || ticket.status === 'pending' ? 'bg-green-100 text-green-800' :
+                                            ticket.status === 'used' ? 'bg-blue-100 text-blue-800' :
+                                            ticket.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                            'bg-gray-100 text-gray-800'
+                                        }">
+                                            ${ticket.status_label}
+                                        </span>
+                                    </div>
+
+                                    <!-- Event Details -->
+                                    <div class="space-y-2 mb-4">
+                                        ${ticket.date ? `<p class="text-sm text-gray-700"><strong>Dată:</strong> ${new Date(ticket.date).toLocaleDateString('ro-RO', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}</p>` : ''}
+                                        ${ticket.venue ? `<p class="text-sm text-gray-700"><strong>Locație:</strong> ${ticket.venue}</p>` : ''}
+                                        ${ticket.seat_label ? `<p class="text-sm text-gray-700"><strong>Loc:</strong> ${ticket.seat_label}</p>` : ''}
+                                    </div>
+
+                                    <!-- Beneficiary Info -->
+                                    ${ticket.beneficiary && ticket.beneficiary.name ? `
+                                        <div class="border-t pt-3 mb-4">
+                                            <p class="text-xs text-gray-500 mb-1">Beneficiar:</p>
+                                            <p class="text-sm font-medium text-gray-900">${ticket.beneficiary.name}</p>
+                                            ${ticket.beneficiary.email ? `<p class="text-xs text-gray-600">${ticket.beneficiary.email}</p>` : ''}
+                                        </div>
+                                    ` : ''}
+
+                                    <!-- QR Code -->
+                                    <div class="border-t pt-4">
+                                        <div class="flex flex-col items-center">
+                                            <img src="${ticket.qr_code}" alt="QR Code" class="w-48 h-48 border-2 border-gray-300 rounded-lg mb-3">
+                                            <div class="text-center">
+                                                <p class="text-xs text-gray-500 mb-1">Cod bilet:</p>
+                                                <p class="text-lg font-mono font-bold text-gray-900">${ticket.code}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Download/Print Buttons -->
+                                    <div class="flex space-x-2 mt-6">
+                                        <button id="download-ticket" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium">
+                                            Descarcă Bilet
+                                        </button>
+                                        <button id="print-ticket" class="flex-1 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition font-medium">
+                                            Printează
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Append modal to body
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Attach close handlers
+        const modal = document.getElementById('ticket-modal');
+        const closeBtn = document.getElementById('close-modal');
+        const backdrop = modal?.querySelector('.bg-gray-500');
+
+        const closeModal = () => {
+            modal?.remove();
+        };
+
+        closeBtn?.addEventListener('click', closeModal);
+        backdrop?.addEventListener('click', closeModal);
+
+        // Download button handler
+        document.getElementById('download-ticket')?.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.href = ticket.qr_code;
+            link.download = `bilet-${ticket.code}.png`;
+            link.click();
+        });
+
+        // Print button handler
+        document.getElementById('print-ticket')?.addEventListener('click', () => {
+            const printWindow = window.open('', '_blank');
+            if (printWindow) {
+                printWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>Bilet ${ticket.code}</title>
+                            <style>
+                                body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+                                img { max-width: 300px; margin: 20px 0; }
+                                .code { font-size: 18px; font-weight: bold; margin: 10px 0; }
+                            </style>
+                        </head>
+                        <body>
+                            <h1>${ticket.event_name}</h1>
+                            <p>${ticket.ticket_type}</p>
+                            ${ticket.date ? `<p>${new Date(ticket.date).toLocaleDateString('ro-RO', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}</p>` : ''}
+                            ${ticket.venue ? `<p>${ticket.venue}</p>` : ''}
+                            ${ticket.seat_label ? `<p>Loc: ${ticket.seat_label}</p>` : ''}
+                            <img src="${ticket.qr_code}" alt="QR Code">
+                            <p class="code">Cod: ${ticket.code}</p>
+                            ${ticket.beneficiary && ticket.beneficiary.name ? `<p>Beneficiar: ${ticket.beneficiary.name}</p>` : ''}
+                        </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                printWindow.print();
+            }
+        });
     }
 }
