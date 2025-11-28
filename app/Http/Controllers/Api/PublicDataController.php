@@ -102,6 +102,11 @@ class PublicDataController extends Controller
         $events = $query->with([
             'venue:id,name,slug,address,city,lat as latitude,lng as longitude',
             'tenant:id,name,public_name,website',
+            'tenant.domains' => function ($query) {
+                $query->where('is_primary', true)
+                      ->where('is_active', true)
+                      ->select('id', 'tenant_id', 'domain');
+            },
             'eventTypes:id,name',
             'eventGenres:id,name',
             'artists:id,name,slug,main_image_url',
@@ -151,7 +156,12 @@ class PublicDataController extends Controller
                     'id' => $event->tenant->id,
                     'name' => $event->tenant->name,
                     'public_name' => $event->tenant->public_name,
-                    'website' => $event->tenant->website,
+                    'website' => $event->tenant->domains->first()
+                        ? 'https://' . $event->tenant->domains->first()->domain
+                        : $event->tenant->website,
+                    'event_url' => $event->tenant->domains->first()
+                        ? 'https://' . $event->tenant->domains->first()->domain . '/event/' . $event->slug
+                        : null,
                 ] : null,
                 'event_types' => $event->eventTypes->map(fn($type) => [
                     'id' => $type->id,
