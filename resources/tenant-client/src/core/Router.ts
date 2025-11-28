@@ -1483,6 +1483,79 @@ export class Router {
         const form = document.getElementById('checkout-form') as HTMLFormElement;
         const submitBtn = document.getElementById('submit-order-btn') as HTMLButtonElement;
 
+        // Handle beneficiaries checkbox toggle
+        const beneficiariesCheckbox = document.getElementById('different_beneficiaries') as HTMLInputElement;
+        const beneficiariesSection = document.getElementById('beneficiaries-section');
+        const beneficiariesContainer = document.getElementById('beneficiaries-container');
+        const cart = CartService.getCart();
+        const totalTickets = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+        if (beneficiariesCheckbox && beneficiariesSection && beneficiariesContainer) {
+            beneficiariesCheckbox.addEventListener('change', () => {
+                if (beneficiariesCheckbox.checked) {
+                    beneficiariesSection.classList.remove('hidden');
+
+                    // Generate beneficiary fields
+                    const customerName = (document.getElementById('customer_name') as HTMLInputElement)?.value || '';
+                    const customerEmail = (document.getElementById('customer_email') as HTMLInputElement)?.value || '';
+                    const customerPhone = (document.getElementById('customer_phone') as HTMLInputElement)?.value || '';
+
+                    let html = '';
+                    for (let i = 0; i < totalTickets; i++) {
+                        const isFirst = i === 0;
+                        html += `
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-medium text-gray-900 mb-3">Bilet ${i + 1}</h4>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Nume complet *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="beneficiary_${i}_name"
+                                            required
+                                            value="${isFirst ? customerName : ''}"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                                            placeholder="Nume complet"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Email (optional)
+                                        </label>
+                                        <input
+                                            type="email"
+                                            name="beneficiary_${i}_email"
+                                            value="${isFirst ? customerEmail : ''}"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                                            placeholder="email@example.com"
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                                            Telefon (optional)
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            name="beneficiary_${i}_phone"
+                                            value="${isFirst ? customerPhone : ''}"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                                            placeholder="0722123456"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    beneficiariesContainer.innerHTML = html;
+                } else {
+                    beneficiariesSection.classList.add('hidden');
+                    beneficiariesContainer.innerHTML = '';
+                }
+            });
+        }
+
         if (form) {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -1495,6 +1568,20 @@ export class Router {
                 const formData = new FormData(form);
                 const cart = CartService.getCart();
 
+                // Collect beneficiaries data if checkbox is checked
+                const beneficiariesData: any[] = [];
+                const beneficiariesCheckbox = document.getElementById('different_beneficiaries') as HTMLInputElement;
+                if (beneficiariesCheckbox?.checked) {
+                    const totalTickets = cart.reduce((sum, item) => sum + item.quantity, 0);
+                    for (let i = 0; i < totalTickets; i++) {
+                        beneficiariesData.push({
+                            name: formData.get(`beneficiary_${i}_name`),
+                            email: formData.get(`beneficiary_${i}_email`) || null,
+                            phone: formData.get(`beneficiary_${i}_phone`) || null,
+                        });
+                    }
+                }
+
                 try {
                     const response = await this.postApi('/orders', {
                         customer_name: formData.get('customer_name'),
@@ -1505,6 +1592,7 @@ export class Router {
                             ticketTypeId: item.ticketTypeId,
                             quantity: item.quantity,
                         })),
+                        beneficiaries: beneficiariesData.length > 0 ? beneficiariesData : null,
                     });
 
                     if (response.success) {
