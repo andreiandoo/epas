@@ -33,14 +33,14 @@ class AccountController extends Controller
         $events = $customer->watchlist()
             ->with(['venue', 'ticketTypes'])
             ->where('status', 'published')
-            ->orderBy('start_date', 'asc')
+            ->orderBy('event_date', 'asc')
             ->get()
             ->map(function ($event) {
                 return [
                     'id' => $event->id,
                     'title' => $event->getTranslation('title', app()->getLocale()),
                     'slug' => $event->slug,
-                    'start_date' => $event->start_date,
+                    'start_date' => $event->event_date,
                     'start_time' => $event->start_time,
                     'poster_url' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
                     'venue' => $event->venue ? [
