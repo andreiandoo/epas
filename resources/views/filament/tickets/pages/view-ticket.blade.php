@@ -117,9 +117,17 @@
                     <div>
                         <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Tenant</p>
                         <p class="text-sm text-gray-900 dark:text-white">
-                            <a href="{{ \App\Filament\Resources\Tenants\TenantResource::getUrl('edit', ['record' => $ticket->order->tenant]) }}" class="text-primary-600 hover:underline">
+                            @php
+                                $isAdminPanel = filament()->getCurrentPanel()->getId() === 'admin';
+                            @endphp
+
+                            @if($isAdminPanel)
+                                <a href="{{ \App\Filament\Resources\Tenants\TenantResource::getUrl('edit', ['record' => $ticket->order->tenant]) }}" class="text-primary-600 hover:underline">
+                                    {{ $ticket->order->tenant->name }}
+                                </a>
+                            @else
                                 {{ $ticket->order->tenant->name }}
-                            </a>
+                            @endif
                         </p>
                     </div>
                 @endif
