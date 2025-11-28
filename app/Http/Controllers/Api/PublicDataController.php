@@ -99,14 +99,101 @@ class PublicDataController extends Controller
             $query->where('event_date', '>=', now());
         }
 
-        $events = $query->select([
-            'id', 'title', 'slug', 'event_date', 'start_time', 'end_time',
-            'venue_id', 'tenant_id', 'created_at'
-        ])->with(['venue:id,name,slug', 'tenant:id,name,public_name'])
-          ->limit(100)
-          ->get();
+        $events = $query->with([
+            'venue:id,name,slug,address,city,lat as latitude,lng as longitude',
+            'tenant:id,name,public_name,website_url',
+            'eventTypes:id,name',
+            'eventGenres:id,name',
+            'artists:id,name,slug,image',
+            'tags:id,name',
+            'ticketTypes'
+        ])->limit(100)->get();
 
-        return response()->json($events);
+        $formattedEvents = $events->map(function ($event) {
+            return [
+                'id' => $event->id,
+                'title' => $event->getTranslation('title', 'en'),
+                'slug' => $event->slug,
+                'is_sold_out' => $event->is_sold_out ?? false,
+                'door_sales_only' => $event->door_sales_only ?? false,
+                'is_cancelled' => $event->is_cancelled ?? false,
+                'cancel_reason' => $event->cancel_reason,
+                'is_postponed' => $event->is_postponed ?? false,
+                'postponed_date' => $event->postponed_date,
+                'postponed_start_time' => $event->postponed_start_time,
+                'postponed_door_time' => $event->postponed_door_time,
+                'postponed_end_time' => $event->postponed_end_time,
+                'postponed_reason' => $event->postponed_reason,
+                'duration_mode' => $event->duration_mode,
+                'start_date' => $event->event_date,
+                'end_date' => $event->end_date,
+                'start_time' => $event->start_time,
+                'door_time' => $event->door_time,
+                'end_time' => $event->end_time,
+                'address' => $event->address,
+                'website_url' => $event->website_url,
+                'facebook_url' => $event->facebook_url,
+                'event_website_url' => $event->event_website_url,
+                'poster_url' => $event->poster_url,
+                'hero_image_url' => $event->hero_image_url,
+                'short_description' => $event->getTranslation('short_description', 'en'),
+                'description' => $event->getTranslation('description', 'en'),
+                'venue' => $event->venue ? [
+                    'id' => $event->venue->id,
+                    'name' => $event->venue->getTranslation('name', 'en'),
+                    'slug' => $event->venue->slug,
+                    'address' => $event->venue->address,
+                    'city' => $event->venue->city,
+                    'latitude' => $event->venue->latitude,
+                    'longitude' => $event->venue->longitude,
+                ] : null,
+                'tenant' => $event->tenant ? [
+                    'id' => $event->tenant->id,
+                    'name' => $event->tenant->name,
+                    'public_name' => $event->tenant->public_name,
+                    'website_url' => $event->tenant->website_url,
+                ] : null,
+                'event_types' => $event->eventTypes->map(fn($type) => [
+                    'id' => $type->id,
+                    'name' => $type->getTranslation('name', 'en'),
+                ])->toArray(),
+                'event_genres' => $event->eventGenres->map(fn($genre) => [
+                    'id' => $genre->id,
+                    'name' => $genre->getTranslation('name', 'en'),
+                ])->toArray(),
+                'artists' => $event->artists->map(fn($artist) => [
+                    'id' => $artist->id,
+                    'name' => $artist->name,
+                    'slug' => $artist->slug,
+                    'image' => $artist->image,
+                ])->toArray(),
+                'tags' => $event->tags->map(fn($tag) => [
+                    'id' => $tag->id,
+                    'name' => $tag->getTranslation('name', 'en'),
+                ])->toArray(),
+                'ticket_types' => $event->ticketTypes->map(fn($ticket) => [
+                    'id' => $ticket->id,
+                    'name' => $ticket->name,
+                    'description' => $ticket->description,
+                    'sku' => $ticket->sku,
+                    'price' => $ticket->price_cents / 100,
+                    'sale_price' => $ticket->sale_price_cents ? $ticket->sale_price_cents / 100 : null,
+                    'discount_percent' => $ticket->sale_price_cents && $ticket->price_cents > 0
+                        ? round((($ticket->price_cents - $ticket->sale_price_cents) / $ticket->price_cents) * 100)
+                        : null,
+                    'currency' => $ticket->currency,
+                    'available' => max(0, ($ticket->quota_total ?? 0) - ($ticket->quota_sold ?? 0)),
+                    'capacity' => $ticket->quota_total,
+                    'status' => $ticket->status,
+                    'sales_start_at' => $ticket->sales_start_at,
+                    'sales_end_at' => $ticket->sales_end_at,
+                    'bulk_discounts' => $ticket->bulk_discounts ?? [],
+                ])->toArray(),
+                'price_from' => $event->ticketTypes->min(fn($t) => $t->sale_price_cents ?? $t->price_cents) / 100,
+            ];
+        });
+
+        return response()->json($formattedEvents);
     }
 
     public function event(string $slug): JsonResponse
