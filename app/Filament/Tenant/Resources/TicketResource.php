@@ -65,9 +65,6 @@ class TicketResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-            ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
