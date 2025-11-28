@@ -682,6 +682,8 @@ export class Router {
                               </div>`
                         }
 
+                        <div id="countdown-container" data-event-date="${event.start_date || event.event_date || ''}" data-event-time="${event.start_time || ''}" data-is-cancelled="${event.is_cancelled || false}" data-is-postponed="${event.is_postponed || false}"></div>
+
                         ${event.is_cancelled ? `
                         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                             <strong>Eveniment anulat:</strong> ${event.cancel_reason || 'Acest eveniment a fost anulat.'}
@@ -892,6 +894,9 @@ export class Router {
 
                 // Setup ticket quantity handlers
                 this.setupTicketHandlers();
+
+                // Initialize countdown timer
+                this.initCountdown();
             }
         } catch (error) {
             console.error('Failed to load event:', error);
@@ -2763,5 +2768,94 @@ private async renderProfile(): Promise<void> {
                 printWindow.print();
             }
         });
+    }
+
+    private initCountdown(): void {
+        const container = document.getElementById('countdown-container');
+        if (!container) return;
+
+        const eventDate = container.dataset.eventDate;
+        const eventTime = container.dataset.eventTime;
+        const isCancelled = container.dataset.isCancelled === 'true';
+        const isPostponed = container.dataset.isPostponed === 'true';
+
+        // Don't show countdown for cancelled or postponed events
+        if (isCancelled || isPostponed || !eventDate) {
+            container.style.display = 'none';
+            return;
+        }
+
+        // Parse event datetime
+        let eventDateTime: Date;
+        try {
+            const dateTimeStr = eventTime ? `${eventDate} ${eventTime}` : eventDate;
+            eventDateTime = new Date(dateTimeStr);
+
+            if (isNaN(eventDateTime.getTime())) {
+                container.style.display = 'none';
+                return;
+            }
+        } catch (e) {
+            container.style.display = 'none';
+            return;
+        }
+
+        // Create countdown elements
+        const wrapper = document.createElement('div');
+        wrapper.className = 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg shadow-lg p-6 mb-6';
+
+        const title = document.createElement('h3');
+        title.className = 'text-lg font-semibold mb-3 text-center';
+        title.textContent = 'Începe în:';
+
+        const timeDisplay = document.createElement('div');
+        timeDisplay.className = 'flex justify-center gap-4 text-center';
+        timeDisplay.id = 'countdown-display';
+
+        wrapper.appendChild(title);
+        wrapper.appendChild(timeDisplay);
+        container.appendChild(wrapper);
+
+        // Update countdown
+        const updateCountdown = () => {
+            const now = new Date().getTime();
+            const distance = eventDateTime.getTime() - now;
+
+            if (distance < 0) {
+                title.textContent = 'Evenimentul a început!';
+                timeDisplay.innerHTML = '';
+                return;
+            }
+
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            timeDisplay.innerHTML = `
+                <div class="flex flex-col">
+                    <span class="text-3xl font-bold">${days}</span>
+                    <span class="text-sm">zile</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-3xl font-bold">${hours}</span>
+                    <span class="text-sm">ore</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-3xl font-bold">${minutes}</span>
+                    <span class="text-sm">minute</span>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-3xl font-bold">${seconds}</span>
+                    <span class="text-sm">secunde</span>
+                </div>
+            `;
+        };
+
+        // Initial update
+        updateCountdown();
+
+        // Update every second
+        setInterval(updateCountdown, 1000);
     }
 }
