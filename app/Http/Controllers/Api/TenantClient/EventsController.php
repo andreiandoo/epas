@@ -209,7 +209,7 @@ class EventsController extends Controller
                             'discount_percent' => $type->price && $type->price_max
                                 ? round((1 - ($type->price / $type->price_max)) * 100, 2)
                                 : null,
-                            'currency' => $type->currency ?? 'EUR',
+                            'currency' => $type->currency ?? 'RON',
                             'available' => $type->available_quantity,
                             'capacity' => $type->quota_total,
                             'status' => $type->status,
@@ -282,8 +282,14 @@ class EventsController extends Controller
                 'is_promoted' => $event->is_promoted ?? false,
                 'promoted_until' => $event->promoted_until?->toIso8601String(),
                 'duration_mode' => $event->duration_mode,
-                'start_date' => $event->start_date?->toIso8601String(),
-                'end_date' => $event->end_date?->toIso8601String(),
+                'start_date' => $event->duration_mode === 'single_day' && $event->start_date && $event->start_time
+                    ? \Carbon\Carbon::parse($event->start_date->format('Y-m-d') . ' ' . $event->start_time)->toIso8601String()
+                    : $event->start_date?->toIso8601String(),
+                'end_date' => $event->duration_mode === 'single_day' && $event->start_date && $event->end_time
+                    ? \Carbon\Carbon::parse($event->start_date->format('Y-m-d') . ' ' . $event->end_time)->toIso8601String()
+                    : ($event->duration_mode === 'range' && $event->end_date && $event->range_end_time
+                        ? \Carbon\Carbon::parse($event->end_date->format('Y-m-d') . ' ' . $event->range_end_time)->toIso8601String()
+                        : $event->end_date?->toIso8601String()),
                 'start_time' => $event->start_time,
                 'door_time' => $event->door_time,
                 'end_time' => $event->end_time,
@@ -371,7 +377,7 @@ class EventsController extends Controller
                         'discount_percent' => $type->price && $type->price_max
                             ? round((1 - ($type->price / $type->price_max)) * 100, 2)
                             : null,
-                        'currency' => $type->currency ?? 'EUR',
+                        'currency' => $type->currency ?? 'RON',
                         'available' => $type->available_quantity,
                         'capacity' => $type->capacity,
                         'status' => $type->status,

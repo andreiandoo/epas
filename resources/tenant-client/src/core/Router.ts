@@ -113,7 +113,7 @@ class CartService {
         const cart = this.getCart();
         let subtotal = 0;
         let totalDiscount = 0;
-        let currency = 'EUR';
+        let currency = 'RON';
 
         for (const item of cart) {
             // Use finalPrice if available (includes commission), otherwise fall back to salePrice/price
@@ -324,7 +324,7 @@ export class Router {
                     <h3 class="font-semibold text-gray-900 mb-1 line-clamp-2">${event.title}</h3>
                     <p class="text-sm text-gray-500 mb-2">${date}</p>
                     ${event.venue ? `<p class="text-sm text-gray-600 mb-2">${event.venue.name}${event.venue.city ? `, ${event.venue.city}` : ''}</p>` : ''}
-                    ${event.price_from ? `<p class="text-sm font-semibold text-primary">de la ${event.price_from} ${event.currency || '€'}</p>` : ''}
+                    ${event.price_from ? `<p class="text-sm font-semibold text-primary">de la ${event.price_from} ${event.currency || 'RON'}</p>` : ''}
                 </div>
             </a>
         `;
@@ -749,12 +749,6 @@ export class Router {
                             ` : ''}
                         </div>
 
-                        ${event.short_description ? `
-                        <div class="mb-4">
-                            <p class="text-gray-700 text-lg">${event.short_description}</p>
-                        </div>
-                        ` : ''}
-
                         ${event.description ? `
                         <div class="prose max-w-none mb-8">
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Descriere</h2>
@@ -894,7 +888,7 @@ export class Router {
                             ${event.ticket_types && event.ticket_types.length > 0 && !event.is_cancelled && !event.door_sales_only ? `
                                 <div class="space-y-4 mb-6">
                                     ${event.ticket_types.map((ticket: any) => {
-                                        const currency = ticket.currency || event.currency || 'EUR';
+                                        const currency = ticket.currency || event.currency || 'RON';
                                         const available = ticket.available ?? 0;
                                         const maxQty = Math.min(10, available);
                                         const commissionInfo = event.commission;
@@ -982,7 +976,7 @@ export class Router {
                                 <div class="border-t pt-4 mb-4">
                                     <div class="flex justify-between items-center text-lg font-bold">
                                         <span>Total</span>
-                                        <span id="cart-total-price">0 ${event.currency || 'EUR'}</span>
+                                        <span id="cart-total-price">0 ${event.currency || 'RON'}</span>
                                     </div>
                                 </div>
 
@@ -1084,14 +1078,14 @@ export class Router {
             let total = 0;
             let totalDiscount = 0;
             let hasSelection = false;
-            let currency = 'EUR';
+            let currency = 'RON';
             let discountInfos: string[] = [];
 
             qtyDisplays.forEach((display) => {
                 const ticketId = (display as HTMLElement).dataset.ticketId || '';
                 const qty = quantities[ticketId] || 0;
                 const price = parseFloat((display as HTMLElement).dataset.price || '0');
-                const ticketCurrency = (display as HTMLElement).dataset.currency || 'EUR';
+                const ticketCurrency = (display as HTMLElement).dataset.currency || 'RON';
                 const discounts = ticketBulkDiscounts[ticketId] || [];
 
                 if (qty > 0) {
@@ -1177,7 +1171,7 @@ export class Router {
                                 finalPrice: ticketType.final_price || ticketType.sale_price || ticketType.price,
                                 commissionAmount: ticketType.commission_amount || 0,
                                 quantity: qty,
-                                currency: ticketType.currency || 'EUR',
+                                currency: ticketType.currency || 'RON',
                                 bulkDiscounts: ticketType.bulk_discounts || []
                             });
                             hasItems = true;
@@ -1840,7 +1834,7 @@ export class Router {
                     </div>
                     <h1 class="text-3xl font-bold text-gray-900 mb-2">Comanda plasată cu succes!</h1>
                     <p class="text-gray-600 mb-4">
-                        Comanda ta # a fost înregistrată.
+                        Comanda ta <strong>#${orderId}</strong> a fost înregistrată.
                     </p>
                     <p class="text-gray-600">
                         Vei primi biletele pe email în câteva minute.
@@ -2345,7 +2339,7 @@ export class Router {
         }
     }
 
-    private renderOrderDetail(params: Record<string, string>): void {
+    private async renderOrderDetail(params: Record<string, string>): Promise<void> {
         const content = this.getContentElement();
         if (!content) return;
 
@@ -2355,9 +2349,9 @@ export class Router {
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
-                    Back to Orders
+                    Înapoi la Comenzi
                 </a>
-                <div id="order-detail-${params.id}">
+                <div id="order-detail-container">
                     <div class="animate-pulse space-y-4">
                         <div class="bg-gray-200 h-8 w-1/3 rounded"></div>
                         <div class="bg-gray-200 h-48 rounded-lg"></div>
@@ -2365,6 +2359,100 @@ export class Router {
                 </div>
             </div>
         `;
+
+        try {
+            const response = await this.fetchApi(`/account/orders/${params.id}`);
+            const order = response.data;
+
+            const containerEl = document.getElementById('order-detail-container');
+            if (containerEl) {
+                containerEl.innerHTML = `
+                    <h1 class="text-3xl font-bold text-gray-900 mb-6">Comanda #${order.order_number}</h1>
+
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <div>
+                                <p class="text-sm text-gray-500">Status</p>
+                                <span class="inline-block px-3 py-1 text-xs font-medium rounded-full ${
+                                    order.status === 'paid' ? 'bg-green-100 text-green-800' :
+                                    order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
+                                }">
+                                    ${order.status_label || order.status}
+                                </span>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Data comenzii</p>
+                                <p class="font-medium text-gray-900">${order.date}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Metodă plată</p>
+                                <p class="font-medium text-gray-900">${order.payment_method || '-'}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Total</p>
+                                <p class="font-bold text-lg text-primary">${order.total} ${order.currency || 'RON'}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Bilete</h2>
+                    <div class="space-y-4">
+                        ${order.tickets.map((ticket: any) => `
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <h3 class="font-semibold text-gray-900">${ticket.event_name}</h3>
+                                        <p class="text-sm text-gray-600">${ticket.ticket_type} ${ticket.quantity > 1 ? `(×${ticket.quantity})` : ''}</p>
+                                        ${ticket.beneficiary ? `
+                                            <p class="text-sm text-gray-600 mt-2">👤 Beneficiar: ${ticket.beneficiary.name || ticket.beneficiary}</p>
+                                        ` : ''}
+                                        ${ticket.seat_label ? `<p class="text-sm text-gray-600">💺 Loc: ${ticket.seat_label}</p>` : ''}
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-medium">${ticket.price} ${order.currency || 'RON'}</p>
+                                        ${ticket.code ? `<p class="text-xs text-gray-500 font-mono">${ticket.code}</p>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    ${order.billing_info ? `
+                        <h2 class="text-xl font-semibold text-gray-900 mt-8 mb-4">Informații facturare</h2>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-gray-500">Nume</p>
+                                    <p class="font-medium">${order.billing_info.name || '-'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Email</p>
+                                    <p class="font-medium">${order.billing_info.email || '-'}</p>
+                                </div>
+                                ${order.billing_info.phone ? `
+                                    <div>
+                                        <p class="text-sm text-gray-500">Telefon</p>
+                                        <p class="font-medium">${order.billing_info.phone}</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading order:', error);
+            const containerEl = document.getElementById('order-detail-container');
+            if (containerEl) {
+                containerEl.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                        <p class="text-red-700">Eroare la încărcarea comenzii</p>
+                    </div>
+                `;
+            }
+        }
     }
 
     private renderMyEvents(): void {
@@ -2997,17 +3085,29 @@ private async renderProfile(): Promise<void> {
             return;
         }
 
-        // Parse event datetime
+        // Parse event datetime - handles ISO 8601 format (includes time) or date-only formats
         let eventDateTime: Date;
         try {
-            const dateTimeStr = eventTime ? `${eventDate} ${eventTime}` : eventDate;
-            eventDateTime = new Date(dateTimeStr);
+            // Try parsing eventDate directly first (it may already include time in ISO 8601 format)
+            eventDateTime = new Date(eventDate);
+
+            // Check if we got a valid date with a meaningful time (not midnight unless midnight is the actual event time)
+            const hasTimeInDate = eventDate.includes('T') || eventDate.includes(' ');
+
+            // If eventDate is date-only and we have a separate eventTime, combine them
+            if (!hasTimeInDate && eventTime && eventTime.match(/^\d{2}:\d{2}/)) {
+                // eventDate is like "2024-03-15", eventTime is like "19:00"
+                const dateOnly = eventDate.split('T')[0]; // Handle any potential timezone suffix
+                eventDateTime = new Date(`${dateOnly}T${eventTime}`);
+            }
 
             if (isNaN(eventDateTime.getTime())) {
+                console.warn('Countdown: Invalid date', { eventDate, eventTime });
                 container.style.display = 'none';
                 return;
             }
         } catch (e) {
+            console.warn('Countdown: Date parsing error', e);
             container.style.display = 'none';
             return;
         }
