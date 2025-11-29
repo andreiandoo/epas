@@ -1,5 +1,5 @@
 @php
-    $tickets = $getRecord()->tickets->load(['ticketType.event']);
+    $tickets = $record->tickets->load(['ticketType.event']);
     $groupedTickets = $tickets->groupBy('ticket_type_id');
 @endphp
 
