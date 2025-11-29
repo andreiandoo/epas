@@ -5,6 +5,8 @@ namespace App\Filament\Tenant\Resources;
 use App\Filament\Tenant\Resources\OrderResource\Pages;
 use App\Models\Order;
 use Filament\Forms;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components as IC;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
@@ -26,20 +28,20 @@ class OrderResource extends Resource
         return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
     }
 
-    public static function infolist(Schema $schema): Schema
+    public static function infolist(Infolist $infolist): Infolist
     {
-        return $schema
-            ->components([
-                SC\Section::make('Detalii comandă')
+        return $infolist
+            ->schema([
+                IC\Section::make('Detalii comandă')
                     ->icon('heroicon-o-shopping-cart')
                     ->columns(3)
                     ->schema([
-                        SC\TextEntry::make('order_number')
+                        IC\TextEntry::make('order_number')
                             ->label('Număr comandă')
                             ->formatStateUsing(fn ($record) => '#' . str_pad($record->id, 6, '0', STR_PAD_LEFT))
                             ->weight('bold')
                             ->size('lg'),
-                        SC\TextEntry::make('status')
+                        IC\TextEntry::make('status')
                             ->label('Status')
                             ->badge()
                             ->color(fn (string $state): string => match ($state) {
@@ -57,58 +59,58 @@ class OrderResource extends Resource
                                 'refunded' => 'Rambursată',
                                 default => ucfirst($state),
                             }),
-                        SC\TextEntry::make('total_cents')
+                        IC\TextEntry::make('total_cents')
                             ->label('Total')
                             ->formatStateUsing(fn ($state, $record) => number_format($state / 100, 2) . ' ' . ($record->tickets->first()?->ticketType?->currency ?? 'RON'))
                             ->weight('bold')
                             ->size('lg'),
-                        SC\TextEntry::make('created_at')
+                        IC\TextEntry::make('created_at')
                             ->label('Data comenzii')
                             ->dateTime('d M Y H:i'),
-                        SC\TextEntry::make('meta.payment_method')
+                        IC\TextEntry::make('meta.payment_method')
                             ->label('Metodă plată')
                             ->default('Card'),
-                        SC\TextEntry::make('updated_at')
+                        IC\TextEntry::make('updated_at')
                             ->label('Ultima actualizare')
                             ->dateTime('d M Y H:i'),
                     ]),
 
-                SC\Section::make('Client')
+                IC\Section::make('Client')
                     ->icon('heroicon-o-user')
                     ->columns(3)
                     ->schema([
-                        SC\TextEntry::make('meta.customer_name')
+                        IC\TextEntry::make('meta.customer_name')
                             ->label('Nume')
                             ->default('N/A'),
-                        SC\TextEntry::make('customer_email')
+                        IC\TextEntry::make('customer_email')
                             ->label('Email')
                             ->url(fn ($state) => "mailto:{$state}")
                             ->color('primary'),
-                        SC\TextEntry::make('meta.customer_phone')
+                        IC\TextEntry::make('meta.customer_phone')
                             ->label('Telefon')
                             ->url(fn ($state) => $state ? "tel:{$state}" : null)
                             ->default('N/A'),
                     ]),
 
-                SC\Section::make('Bilete comandate')
+                IC\Section::make('Bilete comandate')
                     ->icon('heroicon-o-ticket')
                     ->schema([
-                        SC\TextEntry::make('tickets_count')
+                        IC\TextEntry::make('tickets_count')
                             ->label('Total bilete')
                             ->formatStateUsing(function ($record) {
                                 $count = $record->tickets->count();
                                 return $count . ' bilet' . ($count > 1 ? 'e' : '');
                             }),
-                        SC\ViewEntry::make('tickets_list')
+                        IC\ViewEntry::make('tickets_list')
                             ->label('')
                             ->view('filament.tenant.resources.order-resource.tickets-list'),
                     ]),
 
-                SC\Section::make('Beneficiari')
+                IC\Section::make('Beneficiari')
                     ->icon('heroicon-o-users')
                     ->visible(fn ($record) => !empty($record->meta['beneficiaries']))
                     ->schema([
-                        SC\ViewEntry::make('beneficiaries_list')
+                        IC\ViewEntry::make('beneficiaries_list')
                             ->label('')
                             ->view('filament.tenant.resources.order-resource.beneficiaries-list'),
                     ]),

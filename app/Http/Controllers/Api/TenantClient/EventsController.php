@@ -370,8 +370,23 @@ class EventsController extends Controller
                     'facebook_followers' => $artist->facebook_followers ?? $artist->followers_facebook,
                     'instagram_followers' => $artist->instagram_followers ?? $artist->followers_instagram,
                     'tiktok_followers' => $artist->tiktok_followers ?? $artist->followers_tiktok,
-                    // YouTube Videos
-                    'youtube_videos' => $artist->youtube_videos ?? [],
+                    // YouTube Videos - parse URLs to extract video IDs
+                    'youtube_videos' => collect($artist->youtube_videos ?? [])->map(function ($video) {
+                        $url = is_array($video) ? ($video['url'] ?? null) : $video;
+                        if (!$url) return null;
+
+                        // Extract video ID from YouTube URL
+                        $videoId = null;
+                        if (preg_match('/(?:youtube\.com\/(?:watch\?v=|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/', $url, $matches)) {
+                            $videoId = $matches[1];
+                        }
+
+                        return $videoId ? [
+                            'video_id' => $videoId,
+                            'url' => $url,
+                            'title' => is_array($video) ? ($video['title'] ?? null) : null,
+                        ] : null;
+                    })->filter()->values()->toArray(),
                     // Types and Genres
                     'artist_types' => $artist->artistTypes->map(fn ($type) => [
                         'id' => $type->id,

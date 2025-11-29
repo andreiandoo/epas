@@ -1041,7 +1041,7 @@ export class Router {
                                 </div>
                             ` : ''}
 
-                            ${event.ticket_types && event.ticket_types.length > 0 && !event.is_cancelled && !event.door_sales_only ? `
+                            ${event.ticket_types && event.ticket_types.length > 0 && !event.is_cancelled && !event.door_sales_only && !event.is_sold_out ? `
                                 <div class="space-y-4 mb-6">
                                     ${event.ticket_types.map((ticket: any) => {
                                         const currency = ticket.currency || event.currency || 'RON';
