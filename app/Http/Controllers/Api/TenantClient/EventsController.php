@@ -345,11 +345,44 @@ class EventsController extends Controller
                     'name' => $genre->getTranslation('name', $locale),
                     'slug' => $genre->slug,
                 ]),
-                'artists' => $event->artists->map(fn ($artist) => [
+                'artists' => $event->artists->load(['artistTypes', 'artistGenres'])->map(fn ($artist) => [
                     'id' => $artist->id,
                     'name' => $artist->name,
                     'slug' => $artist->slug ?? null,
+                    'bio' => $artist->getTranslation('bio_html', $locale),
                     'image' => $artist->main_image ? Storage::disk('public')->url($artist->main_image) : null,
+                    'portrait' => $artist->portrait_url ? Storage::disk('public')->url($artist->portrait_url) : null,
+                    'city' => $artist->city,
+                    'country' => $artist->country,
+                    // Social Links
+                    'website' => $artist->website,
+                    'facebook_url' => $artist->facebook_url,
+                    'instagram_url' => $artist->instagram_url,
+                    'youtube_url' => $artist->youtube_url,
+                    'spotify_url' => $artist->spotify_url,
+                    'tiktok_url' => $artist->tiktok_url,
+                    // Social Stats
+                    'youtube_subscribers' => $artist->youtube_followers ?? $artist->followers_youtube,
+                    'youtube_total_views' => $artist->youtube_total_views,
+                    'spotify_followers' => $artist->spotify_followers,
+                    'spotify_popularity' => $artist->spotify_popularity,
+                    'spotify_monthly_listeners' => $artist->spotify_monthly_listeners,
+                    'facebook_followers' => $artist->facebook_followers ?? $artist->followers_facebook,
+                    'instagram_followers' => $artist->instagram_followers ?? $artist->followers_instagram,
+                    'tiktok_followers' => $artist->tiktok_followers ?? $artist->followers_tiktok,
+                    // YouTube Videos
+                    'youtube_videos' => $artist->youtube_videos ?? [],
+                    // Types and Genres
+                    'artist_types' => $artist->artistTypes->map(fn ($type) => [
+                        'id' => $type->id,
+                        'name' => $type->getTranslation('name', $locale),
+                        'slug' => $type->slug,
+                    ]),
+                    'artist_genres' => $artist->artistGenres->map(fn ($genre) => [
+                        'id' => $genre->id,
+                        'name' => $genre->getTranslation('name', $locale),
+                        'slug' => $genre->slug,
+                    ]),
                 ]),
                 'tags' => $event->tags->map(fn ($tag) => [
                     'id' => $tag->id,
