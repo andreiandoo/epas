@@ -1,5 +1,5 @@
 @php
-    $beneficiaries = $getRecord()->meta['beneficiaries'] ?? [];
+    $beneficiaries = $record->meta['beneficiaries'] ?? [];
 @endphp
 
 @if(!empty($beneficiaries))
