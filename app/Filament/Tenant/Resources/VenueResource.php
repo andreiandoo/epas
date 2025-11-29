@@ -87,6 +87,34 @@ class VenueResource extends Resource
                         ->visibility('public')
                         ->reorderable()
                         ->columnSpanFull(),
+
+                    // Video field
+                    SC\Grid::make(2)->schema([
+                        Forms\Components\Select::make('video_type')
+                            ->label('Video Type')
+                            ->options([
+                                'youtube' => 'YouTube Link',
+                                'upload' => 'Upload Video',
+                            ])
+                            ->placeholder('No video')
+                            ->live()
+                            ->nullable(),
+                        Forms\Components\TextInput::make('video_url')
+                            ->label('YouTube URL')
+                            ->url()
+                            ->placeholder('https://www.youtube.com/watch?v=...')
+                            ->prefixIcon('heroicon-o-play')
+                            ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'youtube'),
+                    ])->columnSpanFull(),
+                    Forms\Components\FileUpload::make('video_url')
+                        ->label('Upload Video')
+                        ->acceptedFileTypes(['video/mp4', 'video/webm', 'video/ogg'])
+                        ->disk('public')
+                        ->directory('venues/videos')
+                        ->visibility('public')
+                        ->maxSize(102400) // 100MB
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'upload')
+                        ->columnSpanFull(),
                 ])->columns(2),
 
             // LOCATION
@@ -118,6 +146,12 @@ class VenueResource extends Resource
                         ->numeric()
                         ->step('0.0000001')
                         ->placeholder('26.1025'),
+                    Forms\Components\TextInput::make('google_maps_url')
+                        ->label('Google Maps Link')
+                        ->url()
+                        ->placeholder('https://maps.google.com/...')
+                        ->prefixIcon('heroicon-o-map')
+                        ->columnSpanFull(),
                 ])->columns(3),
 
             // CAPACITY
@@ -144,14 +178,24 @@ class VenueResource extends Resource
             SC\Section::make('Contact & Links')
                 ->schema([
                     Forms\Components\TextInput::make('phone')
-                        ->label('Phone')
+                        ->label('Phone 1')
+                        ->maxLength(64)
+                        ->placeholder('+40 ...')
+                        ->prefixIcon('heroicon-o-phone'),
+                    Forms\Components\TextInput::make('phone2')
+                        ->label('Phone 2')
                         ->maxLength(64)
                         ->placeholder('+40 ...')
                         ->prefixIcon('heroicon-o-phone'),
                     Forms\Components\TextInput::make('email')
-                        ->label('Email')
+                        ->label('Email 1')
                         ->email()
                         ->placeholder('contact@example.com')
+                        ->prefixIcon('heroicon-o-envelope'),
+                    Forms\Components\TextInput::make('email2')
+                        ->label('Email 2')
+                        ->email()
+                        ->placeholder('reservations@example.com')
                         ->prefixIcon('heroicon-o-envelope'),
                     Forms\Components\TextInput::make('website_url')
                         ->label('Website')

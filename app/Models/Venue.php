@@ -19,10 +19,11 @@ class Venue extends Model
 
     protected $fillable = [
         'tenant_id','name','slug','address','city','state','country',
-        'website_url','phone','email',
+        'website_url','phone','phone2','email','email2',
         'facebook_url','instagram_url','tiktok_url',
-        'image_url','gallery','capacity','capacity_total','capacity_standing','capacity_seated',
-        'lat','lng','established_at','description','meta',
+        'image_url','video_type','video_url','gallery',
+        'capacity','capacity_total','capacity_standing','capacity_seated',
+        'lat','lng','google_maps_url','established_at','description','meta',
     ];
 
     protected $casts = [

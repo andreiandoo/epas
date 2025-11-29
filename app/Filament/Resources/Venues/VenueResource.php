@@ -82,6 +82,34 @@ class VenueResource extends Resource
                     ->downloadable()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Poți uploada mai multe imagini care vor forma galeria venue-ului.')
                     ->columnSpanFull(),
+
+                // Video field
+                SC\Grid::make(2)->schema([
+                    Forms\Components\Select::make('video_type')
+                        ->label('Video Type')
+                        ->options([
+                            'youtube' => 'YouTube Link',
+                            'upload' => 'Upload Video',
+                        ])
+                        ->placeholder('No video')
+                        ->live()
+                        ->nullable(),
+                    Forms\Components\TextInput::make('video_url')
+                        ->label('YouTube URL')
+                        ->url()
+                        ->placeholder('https://www.youtube.com/watch?v=...')
+                        ->prefixIcon('heroicon-o-play')
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'youtube'),
+                ])->columnSpanFull(),
+                Forms\Components\FileUpload::make('video_url')
+                    ->label('Upload Video')
+                    ->acceptedFileTypes(['video/mp4', 'video/webm', 'video/ogg'])
+                    ->disk('public')
+                    ->directory('venues/videos')
+                    ->visibility('public')
+                    ->maxSize(102400) // 100MB
+                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'upload')
+                    ->columnSpanFull(),
             ]),
 
             SC\Section::make('Location')->schema([
@@ -107,6 +135,12 @@ class VenueResource extends Resource
                 Forms\Components\TextInput::make('lng')
                     ->label('Longitudine')->numeric()->step('0.0000001')
                     ->placeholder('26.1025'),
+                Forms\Components\TextInput::make('google_maps_url')
+                    ->label('Google Maps Link')
+                    ->url()
+                    ->placeholder('https://maps.google.com/...')
+                    ->prefixIcon('heroicon-o-map')
+                    ->columnSpanFull(),
                 SC\Actions::make([
                     Actions\Action::make('geocode')
                         ->label('Auto-detect coordinates')
@@ -190,8 +224,10 @@ class VenueResource extends Resource
             ])->columns(3),
 
             SC\Section::make('Contact & Links')->schema([
-                Forms\Components\TextInput::make('phone')->label('Telefon')->maxLength(64)->placeholder('+40 ...')->prefixIcon('heroicon-o-phone'),
-                Forms\Components\TextInput::make('email')->label('Email')->email()->placeholder('contact@exemplu.ro')->prefixIcon('heroicon-o-envelope'),
+                Forms\Components\TextInput::make('phone')->label('Telefon 1')->maxLength(64)->placeholder('+40 ...')->prefixIcon('heroicon-o-phone'),
+                Forms\Components\TextInput::make('phone2')->label('Telefon 2')->maxLength(64)->placeholder('+40 ...')->prefixIcon('heroicon-o-phone'),
+                Forms\Components\TextInput::make('email')->label('Email 1')->email()->placeholder('contact@exemplu.ro')->prefixIcon('heroicon-o-envelope'),
+                Forms\Components\TextInput::make('email2')->label('Email 2')->email()->placeholder('rezervari@exemplu.ro')->prefixIcon('heroicon-o-envelope'),
                 Forms\Components\TextInput::make('website_url')->label('Website')->url()->placeholder('https://...')->prefixIcon('heroicon-o-globe-alt'),
                 Forms\Components\TextInput::make('facebook_url')->label('Facebook')->url()->placeholder('https://facebook.com/...')->prefixIcon('heroicon-o-link'),
                 Forms\Components\TextInput::make('instagram_url')->label('Instagram')->url()->placeholder('https://instagram.com/...')->prefixIcon('heroicon-o-link'),
