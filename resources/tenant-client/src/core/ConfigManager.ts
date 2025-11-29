@@ -38,6 +38,79 @@ export interface ThemeConfig {
     logo: string | null;
     favicon: string | null;
     fontFamily: string;
+    // Extended theme config for visual editor
+    colors?: ThemeColors;
+    typography?: ThemeTypography;
+    spacing?: ThemeSpacing;
+    borders?: ThemeBorders;
+    shadows?: ThemeShadows;
+    header?: ThemeHeader;
+    buttons?: ThemeButtons;
+}
+
+export interface ThemeColors {
+    primary: string;
+    primaryHover: string;
+    secondary: string;
+    secondaryHover: string;
+    accent: string;
+    background: string;
+    surface: string;
+    text: string;
+    textMuted: string;
+    border: string;
+    success: string;
+    warning: string;
+    error: string;
+}
+
+export interface ThemeTypography {
+    fontFamily: string;
+    headingFont: string;
+    baseFontSize: string;
+    headingWeight: string;
+    bodyWeight: string;
+    lineHeight: string;
+}
+
+export interface ThemeSpacing {
+    containerWidth: string;
+    sectionPadding: string;
+    cardPadding: string;
+    gridGap: string;
+}
+
+export interface ThemeBorders {
+    radius: string;
+    radiusLg: string;
+    width: string;
+}
+
+export interface ThemeShadows {
+    card: string;
+    cardHover: string;
+    button: string;
+    dropdown: string;
+}
+
+export interface ThemeHeader {
+    background: string;
+    textColor: string;
+    height: string;
+    sticky: boolean;
+    logoMaxHeight: string;
+}
+
+export interface ThemeButtons {
+    primaryBg: string;
+    primaryText: string;
+    primaryHoverBg: string;
+    secondaryBg: string;
+    secondaryText: string;
+    secondaryHoverBg: string;
+    borderRadius: string;
+    paddingX: string;
+    paddingY: string;
 }
 
 export interface SiteConfig {
@@ -283,8 +356,9 @@ export class ConfigManager {
     }
 
     private static applyTheme(theme: ThemeConfig): void {
-        // Set CSS custom properties
         const root = document.documentElement;
+
+        // Basic theme properties (backwards compatible)
         root.style.setProperty('--tixello-primary', theme.primaryColor);
         root.style.setProperty('--tixello-secondary', theme.secondaryColor);
         root.style.setProperty('--tixello-font', theme.fontFamily);
@@ -294,6 +368,77 @@ export class ConfigManager {
         const secondaryDark = this.darkenColor(theme.secondaryColor, 15);
         root.style.setProperty('--tixello-primary-dark', primaryDark);
         root.style.setProperty('--tixello-secondary-dark', secondaryDark);
+
+        // Extended colors
+        if (theme.colors) {
+            root.style.setProperty('--theme-primary', theme.colors.primary);
+            root.style.setProperty('--theme-primary-hover', theme.colors.primaryHover);
+            root.style.setProperty('--theme-secondary', theme.colors.secondary);
+            root.style.setProperty('--theme-secondary-hover', theme.colors.secondaryHover);
+            root.style.setProperty('--theme-accent', theme.colors.accent);
+            root.style.setProperty('--theme-background', theme.colors.background);
+            root.style.setProperty('--theme-surface', theme.colors.surface);
+            root.style.setProperty('--theme-text', theme.colors.text);
+            root.style.setProperty('--theme-text-muted', theme.colors.textMuted);
+            root.style.setProperty('--theme-border', theme.colors.border);
+            root.style.setProperty('--theme-success', theme.colors.success);
+            root.style.setProperty('--theme-warning', theme.colors.warning);
+            root.style.setProperty('--theme-error', theme.colors.error);
+        }
+
+        // Typography
+        if (theme.typography) {
+            root.style.setProperty('--theme-font-family', theme.typography.fontFamily);
+            root.style.setProperty('--theme-heading-font', theme.typography.headingFont);
+            root.style.setProperty('--theme-font-size-base', theme.typography.baseFontSize);
+            root.style.setProperty('--theme-heading-weight', theme.typography.headingWeight);
+            root.style.setProperty('--theme-body-weight', theme.typography.bodyWeight);
+            root.style.setProperty('--theme-line-height', theme.typography.lineHeight);
+        }
+
+        // Spacing
+        if (theme.spacing) {
+            root.style.setProperty('--theme-container-width', theme.spacing.containerWidth);
+            root.style.setProperty('--theme-section-padding', theme.spacing.sectionPadding);
+            root.style.setProperty('--theme-card-padding', theme.spacing.cardPadding);
+            root.style.setProperty('--theme-grid-gap', theme.spacing.gridGap);
+        }
+
+        // Borders
+        if (theme.borders) {
+            root.style.setProperty('--theme-border-radius', theme.borders.radius);
+            root.style.setProperty('--theme-border-radius-lg', theme.borders.radiusLg);
+            root.style.setProperty('--theme-border-width', theme.borders.width);
+        }
+
+        // Shadows
+        if (theme.shadows) {
+            root.style.setProperty('--theme-shadow-card', theme.shadows.card);
+            root.style.setProperty('--theme-shadow-card-hover', theme.shadows.cardHover);
+            root.style.setProperty('--theme-shadow-button', theme.shadows.button);
+            root.style.setProperty('--theme-shadow-dropdown', theme.shadows.dropdown);
+        }
+
+        // Header
+        if (theme.header) {
+            root.style.setProperty('--theme-header-bg', theme.header.background);
+            root.style.setProperty('--theme-header-text', theme.header.textColor);
+            root.style.setProperty('--theme-header-height', theme.header.height);
+            root.style.setProperty('--theme-logo-max-height', theme.header.logoMaxHeight);
+        }
+
+        // Buttons
+        if (theme.buttons) {
+            root.style.setProperty('--theme-btn-primary-bg', theme.buttons.primaryBg);
+            root.style.setProperty('--theme-btn-primary-text', theme.buttons.primaryText);
+            root.style.setProperty('--theme-btn-primary-hover', theme.buttons.primaryHoverBg);
+            root.style.setProperty('--theme-btn-secondary-bg', theme.buttons.secondaryBg);
+            root.style.setProperty('--theme-btn-secondary-text', theme.buttons.secondaryText);
+            root.style.setProperty('--theme-btn-secondary-hover', theme.buttons.secondaryHoverBg);
+            root.style.setProperty('--theme-btn-radius', theme.buttons.borderRadius);
+            root.style.setProperty('--theme-btn-padding-x', theme.buttons.paddingX);
+            root.style.setProperty('--theme-btn-padding-y', theme.buttons.paddingY);
+        }
 
         // Inject utility CSS classes
         this.injectThemeStyles(theme);
@@ -405,5 +550,47 @@ export class ConfigManager {
 
     static hasModule(module: string): boolean {
         return this.get().modules.includes(module);
+    }
+
+    /**
+     * Update theme configuration in real-time (for preview mode)
+     */
+    static updateTheme(partialTheme: Partial<ThemeConfig>): void {
+        if (!this.config) {
+            console.warn('[ConfigManager] Cannot update theme: config not initialized');
+            return;
+        }
+
+        // Deep merge the theme
+        this.config.theme = this.deepMerge(this.config.theme, partialTheme) as ThemeConfig;
+
+        // Re-apply the theme
+        this.applyTheme(this.config.theme);
+
+        console.log('[ConfigManager] Theme updated:', partialTheme);
+    }
+
+    /**
+     * Deep merge two objects
+     */
+    private static deepMerge(target: any, source: any): any {
+        const result = { ...target };
+
+        for (const key in source) {
+            if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                result[key] = this.deepMerge(target[key] || {}, source[key]);
+            } else {
+                result[key] = source[key];
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Get current theme config
+     */
+    static getTheme(): ThemeConfig {
+        return this.get().theme;
     }
 }

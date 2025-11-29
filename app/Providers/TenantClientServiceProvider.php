@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Http\Middleware\TenantClientCors;
 use App\Http\Middleware\VerifyTenantClientRequest;
+use App\PageBuilder\BlockRegistry;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Routing\Router;
 
@@ -24,5 +25,8 @@ class TenantClientServiceProvider extends ServiceProvider
 
         // Add CORS middleware to tenant-client routes
         $router->pushMiddlewareToGroup('api', TenantClientCors::class);
+
+        // Register page builder blocks
+        BlockRegistry::registerDefaults();
     }
 }

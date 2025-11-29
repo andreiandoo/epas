@@ -1,5 +1,7 @@
 import { TixelloConfig } from './ConfigManager';
 import { TemplateManager } from '../templates';
+import { PageBuilderModule, PageLayout } from '../modules/PageBuilderModule';
+import { PreviewMode } from './PreviewMode';
 
 type RouteHandler = (params: Record<string, string>) => void | Promise<void>;
 
@@ -420,6 +422,27 @@ export class Router {
         const content = this.getContentElement();
         if (!content) return;
 
+        // Check if there's a page builder layout for the home page
+        try {
+            const pageData = await this.fetchApi('/pages/home');
+            if (pageData.success && pageData.data?.page_type === 'builder' && pageData.data?.layout?.blocks) {
+                // Use PageBuilder to render the home page
+                content.innerHTML = `<div id="page-content"></div>`;
+                PageBuilderModule.updateLayout(pageData.data.layout as PageLayout, 'page-content');
+
+                // Register for preview mode updates
+                if (PreviewMode.isActive()) {
+                    PreviewMode.onLayoutUpdate((layout) => {
+                        PageBuilderModule.updateLayout(layout as PageLayout, 'page-content');
+                    });
+                }
+                return;
+            }
+        } catch {
+            // Fall back to default home page
+        }
+
+        // Default home page (backwards compatible)
         content.innerHTML = `
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <!-- Hero Section -->
@@ -2597,6 +2620,22 @@ private async renderProfile(): Promise<void> {
 
         try {
             const data = await this.fetchApi(`/pages/${params.slug}`);
+
+            // Check if page uses page builder
+            if (data.data.page_type === 'builder' && data.data.layout?.blocks) {
+                content.innerHTML = `<div id="page-content"></div>`;
+                PageBuilderModule.updateLayout(data.data.layout as PageLayout, 'page-content');
+
+                // Register for preview mode updates
+                if (PreviewMode.isActive()) {
+                    PreviewMode.onLayoutUpdate((layout) => {
+                        PageBuilderModule.updateLayout(layout as PageLayout, 'page-content');
+                    });
+                }
+                return;
+            }
+
+            // Standard content page
             content.innerHTML = `
                 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <h1 class="text-3xl font-bold text-gray-900 mb-8">${data.data.title}</h1>

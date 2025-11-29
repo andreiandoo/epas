@@ -24,6 +24,8 @@ use App\Http\Controllers\Api\TenantClient\AccountController;
 use App\Http\Controllers\Api\TenantClient\CartController;
 use App\Http\Controllers\Api\TenantClient\CheckoutController;
 use App\Http\Controllers\Api\TenantClient\AdminController;
+use App\Http\Controllers\Api\TenantClient\ThemeController;
+use App\Http\Controllers\Api\TenantClient\PagesController;
 use App\Http\Controllers\Api\DocSearchController;
 use App\Http\Controllers\Api\TenantClientController;
 
@@ -66,6 +68,20 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
 
     Route::get('/pages/{slug}', [TenantClientController::class, 'page'])
         ->name('api.tenant-client-public.pages.show');
+
+    // Theme API
+    Route::get('/theme', [ThemeController::class, 'show'])
+        ->name('api.tenant-client-public.theme');
+    Route::get('/theme/fonts', [ThemeController::class, 'fonts'])
+        ->name('api.tenant-client-public.theme.fonts');
+
+    // Pages API (page builder)
+    Route::get('/builder/pages', [PagesController::class, 'index'])
+        ->name('api.tenant-client-public.builder.pages');
+    Route::get('/builder/pages/{slug}', [PagesController::class, 'show'])
+        ->name('api.tenant-client-public.builder.pages.show');
+    Route::get('/builder/blocks', [PagesController::class, 'blocks'])
+        ->name('api.tenant-client-public.builder.blocks');
 });
 
 /*
@@ -941,6 +957,18 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.admin.settings');
         Route::put('/settings', [AdminController::class, 'updateSettings'])
             ->name('api.tenant-client.admin.settings.update');
+
+        // Theme management
+        Route::put('/theme', [ThemeController::class, 'update'])
+            ->name('api.tenant-client.admin.theme.update');
+
+        // Page builder management
+        Route::post('/pages', [PagesController::class, 'store'])
+            ->name('api.tenant-client.admin.pages.store');
+        Route::put('/pages/{id}', [PagesController::class, 'update'])
+            ->name('api.tenant-client.admin.pages.update');
+        Route::delete('/pages/{id}', [PagesController::class, 'destroy'])
+            ->name('api.tenant-client.admin.pages.destroy');
     });
 });
 

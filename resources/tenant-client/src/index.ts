@@ -9,6 +9,9 @@ import { ApiClient } from './core/ApiClient';
 import { Router } from './core/Router';
 import { AuthManager } from './core/AuthManager';
 import { SecurityGuard } from './core/SecurityGuard';
+import { PreviewMode } from './core/PreviewMode';
+import { FontLoader } from './core/FontLoader';
+import { PageBuilderModule } from './modules/PageBuilderModule';
 
 declare global {
     interface Window {
@@ -48,6 +51,26 @@ SecurityGuard.init();
         // Verify domain binding
         if (!SecurityGuard.verifyDomain(config.domain)) {
             throw new Error('Domain verification failed');
+        }
+
+        // Initialize preview mode (for live editor in admin)
+        const isPreview = PreviewMode.init();
+        if (isPreview) {
+            console.log('Preview mode active');
+        }
+
+        // Initialize PageBuilder module
+        PageBuilderModule.init(config);
+
+        // Preload common fonts
+        FontLoader.preloadCommon();
+
+        // Load theme fonts if configured
+        if (config.theme?.typography?.fontFamily) {
+            FontLoader.load(config.theme.typography.fontFamily.toLowerCase().replace(/ /g, '-')).catch(() => {});
+        }
+        if (config.theme?.typography?.headingFont) {
+            FontLoader.load(config.theme.typography.headingFont.toLowerCase().replace(/ /g, '-')).catch(() => {});
         }
 
         // Initialize API client
