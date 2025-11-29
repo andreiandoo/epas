@@ -52,18 +52,17 @@ class TicketResource extends Resource
                 Tables\Columns\TextColumn::make('beneficiary_name')
                     ->label('Beneficiar')
                     ->getStateUsing(function ($record) {
-                        // Check if ticket has beneficiary in meta
+                        // Check if ticket has beneficiary in meta (stored as meta.beneficiary.name)
                         $meta = $record->meta ?? [];
+                        if (!empty($meta['beneficiary']['name'])) {
+                            return $meta['beneficiary']['name'];
+                        }
+                        // Also check for legacy format (beneficiary_name directly)
                         if (!empty($meta['beneficiary_name'])) {
                             return $meta['beneficiary_name'];
                         }
-                        // Fall back to order beneficiaries
+                        // Fall back to customer name from order
                         $orderMeta = $record->order?->meta ?? [];
-                        $beneficiaries = $orderMeta['beneficiaries'] ?? [];
-                        if (!empty($beneficiaries) && isset($beneficiaries[$record->ticket_index ?? 0])) {
-                            return $beneficiaries[$record->ticket_index ?? 0]['name'] ?? null;
-                        }
-                        // Fall back to customer name
                         return $orderMeta['customer_name'] ?? $record->order?->customer?->full_name ?? '-';
                     })
                     ->searchable(query: function ($query, $search) {

@@ -763,9 +763,9 @@ export class Router {
                         </div>
 
                         ${event.description ? `
-                        <div class="prose max-w-none mb-8">
+                        <div class="mb-8">
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Descriere</h2>
-                            <div class="text-gray-700">${event.description}</div>
+                            <div class="prose prose-gray max-w-none text-gray-700 [&>p]:mb-4 [&>ul]:mb-4 [&>ol]:mb-4 [&>p:last-child]:mb-0">${event.description}</div>
                         </div>
                         ` : ''}
 
@@ -1478,12 +1478,20 @@ export class Router {
         }
 
         const cartItemsHtml = cart.map((item, index) => {
-            // Use finalPrice (includes commission) if available, otherwise fall back
-            const effectivePrice = item.finalPrice || item.salePrice || item.price;
-            const result = CartService.calculateBulkDiscount(item.quantity, effectivePrice, item.bulkDiscounts);
-            const itemTotal = result.total;
+            // Use sale price if available, otherwise base price (same as getTotal)
+            const ticketPrice = item.salePrice || item.price;
+            const result = CartService.calculateBulkDiscount(item.quantity, ticketPrice, item.bulkDiscounts);
+            let itemTotal = result.total;
             const itemDiscount = result.discount;
-            const originalTotal = item.quantity * effectivePrice;
+            let originalTotal = item.quantity * ticketPrice;
+
+            // Add commission if applicable (from BASE price, not affected by discounts/sale price)
+            let itemCommission = 0;
+            if (item.hasCommissionOnTop && item.commissionRate > 0) {
+                itemCommission = item.quantity * item.price * (item.commissionRate / 100);
+                itemTotal += itemCommission;
+                originalTotal += itemCommission;
+            }
             const dateFormatted = new Date(item.eventDate).toLocaleDateString('ro-RO', {
                 weekday: 'long',
                 day: 'numeric',
@@ -1837,16 +1845,22 @@ export class Router {
 
                             <div class="space-y-3 mb-4 pb-4 border-b">
                                 ${cart.map(item => {
-                                    // Use finalPrice (includes commission) if available
-                                    const effectivePrice = item.finalPrice || item.salePrice || item.price;
-                                    const result = CartService.calculateBulkDiscount(item.quantity, effectivePrice, item.bulkDiscounts);
+                                    // Use sale price if available, otherwise base price (same as getTotal)
+                                    const ticketPrice = item.salePrice || item.price;
+                                    const result = CartService.calculateBulkDiscount(item.quantity, ticketPrice, item.bulkDiscounts);
+                                    let itemTotal = result.total;
+                                    // Add commission if applicable (from BASE price)
+                                    if (item.hasCommissionOnTop && item.commissionRate > 0) {
+                                        const commission = item.quantity * item.price * (item.commissionRate / 100);
+                                        itemTotal += commission;
+                                    }
                                     return `
                                     <div class="flex justify-between text-sm">
                                         <div>
                                             <div class="font-medium">${item.eventTitle}</div>
                                             <div class="text-gray-500">${item.ticketTypeName} × ${item.quantity}</div>
                                         </div>
-                                        <div class="font-medium">${result.total.toFixed(2)} ${item.currency}</div>
+                                        <div class="font-medium">${itemTotal.toFixed(2)} ${item.currency}</div>
                                     </div>
                                 `}).join('')}
                             </div>

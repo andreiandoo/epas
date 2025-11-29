@@ -839,6 +839,8 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
     Route::prefix('account')->group(function () {
         Route::get('/orders', [AccountController::class, 'orders'])
             ->name('api.tenant-client.account.orders');
+        Route::get('/orders/{orderId}', [AccountController::class, 'orderDetail'])
+            ->name('api.tenant-client.account.orders.detail');
         Route::get('/tickets', [AccountController::class, 'tickets'])
             ->name('api.tenant-client.account.tickets');
         Route::get('/profile', [AccountController::class, 'profile'])
