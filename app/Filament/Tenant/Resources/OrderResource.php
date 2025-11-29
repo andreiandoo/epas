@@ -5,7 +5,6 @@ namespace App\Filament\Tenant\Resources;
 use App\Filament\Tenant\Resources\OrderResource\Pages;
 use App\Models\Order;
 use Filament\Forms;
-use Filament\Infolists\Infolist;
 use Filament\Infolists\Components as IC;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -28,10 +27,10 @@ class OrderResource extends Resource
         return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Schema $schema): Schema
     {
-        return $infolist
-            ->schema([
+        return $schema
+            ->components([
                 IC\Section::make('Detalii comandă')
                     ->icon('heroicon-o-shopping-cart')
                     ->columns(3)
