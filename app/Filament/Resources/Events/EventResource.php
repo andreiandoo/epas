@@ -1072,7 +1072,9 @@ class EventResource extends Resource
                         ->label('Ticket types')
                         ->collapsed()
                         ->addActionLabel('Add ticket type')
-                        ->itemLabel(fn (array $state) => $state['name'] ?? 'Ticket')
+                        ->itemLabel(fn (array $state) => ($state['is_active'] ?? true)
+                            ? '✓ ' . ($state['name'] ?? 'Ticket')
+                            : '○ ' . ($state['name'] ?? 'Ticket'))
                         ->columns(12) // tot item-ul pe un grid de 12 col pentru control fin
                         ->schema([
                             Forms\Components\TextInput::make('name')
@@ -1328,6 +1330,7 @@ class EventResource extends Resource
                             Forms\Components\Toggle::make('is_active')
                                 ->label('Active?')
                                 ->default(true)
+                                ->live()
                                 ->columnSpan(12),
                         ]),
                 ])

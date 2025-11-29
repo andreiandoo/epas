@@ -73,18 +73,59 @@ class EventResource extends Resource
                     SC\Grid::make(5)->schema([
                         Forms\Components\Toggle::make('is_sold_out')
                             ->label('Sold out')
-                            ->live(),
+                            ->onIcon('heroicon-m-lock-closed')
+                            ->offIcon('heroicon-m-lock-open')
+                            ->live()
+                            ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                if ($state) {
+                                    if ($get('is_cancelled')) $set('is_cancelled', false);
+                                }
+                            })
+                            ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
                         Forms\Components\Toggle::make('door_sales_only')
-                            ->label('Door sales only'),
+                            ->label('Door sales only')
+                            ->onIcon('heroicon-m-key')
+                            ->offIcon('heroicon-m-key')
+                            ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
                         Forms\Components\Toggle::make('is_cancelled')
                             ->label('Cancelled')
-                            ->live(),
+                            ->onIcon('heroicon-m-x-circle')
+                            ->offIcon('heroicon-m-x-circle')
+                            ->live()
+                            ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                if ($state) {
+                                    if ($get('is_postponed')) $set('is_postponed', false);
+                                    if ($get('is_sold_out'))  $set('is_sold_out', false);
+                                    if ($get('is_promoted'))  $set('is_promoted', false);
+                                    $set('promoted_until', null);
+                                }
+                            }),
                         Forms\Components\Toggle::make('is_postponed')
                             ->label('Postponed')
-                            ->live(),
+                            ->onIcon('heroicon-m-clock')
+                            ->offIcon('heroicon-m-clock')
+                            ->live()
+                            ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                if ($state) {
+                                    if ($get('is_cancelled')) $set('is_cancelled', false);
+                                } else {
+                                    $set('postponed_date', null);
+                                    $set('postponed_start_time', null);
+                                    $set('postponed_door_time', null);
+                                    $set('postponed_end_time', null);
+                                    $set('postponed_reason', null);
+                                }
+                            })
+                            ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
                         Forms\Components\Toggle::make('is_promoted')
                             ->label('Promoted')
-                            ->live(),
+                            ->onIcon('heroicon-m-sparkles')
+                            ->offIcon('heroicon-m-sparkles')
+                            ->live()
+                            ->afterStateUpdated(function ($state, SSet $set) {
+                                if (!$state) $set('promoted_until', null);
+                            })
+                            ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
                     ]),
 
                     Forms\Components\Textarea::make('cancel_reason')
@@ -429,12 +470,54 @@ class EventResource extends Resource
             // TICKETS
             SC\Section::make('Tickets')
                 ->schema([
+                    // Commission Mode for event
+                    SC\Grid::make(2)->schema([
+                        Forms\Components\Select::make('commission_mode')
+                            ->label('Commission Mode')
+                            ->options([
+                                'included' => 'Include commission in ticket price (you receive less)',
+                                'added_on_top' => 'Add commission on top (customer pays more)',
+                            ])
+                            ->placeholder('Use default from contract')
+                            ->helperText(function () use ($tenant) {
+                                $mode = $tenant->commission_mode ?? 'included';
+                                $rate = $tenant->commission_rate ?? 5.00;
+                                $modeText = $mode === 'included'
+                                    ? 'included in price'
+                                    : 'added on top';
+                                return "Your default: {$rate}% {$modeText}. Leave empty to use this default.";
+                            })
+                            ->live()
+                            ->nullable(),
+
+                        Forms\Components\Placeholder::make('commission_example')
+                            ->label('Example (100 RON ticket)')
+                            ->live()
+                            ->content(function (SGet $get) use ($tenant) {
+                                $eventMode = $get('commission_mode');
+                                $mode = $eventMode ?: ($tenant->commission_mode ?? 'included');
+                                $rate = $tenant->commission_rate ?? 5.00;
+                                $ticketPrice = 100;
+                                $commission = round($ticketPrice * ($rate / 100), 2);
+
+                                if ($mode === 'included') {
+                                    $revenue = $ticketPrice - $commission;
+                                    return "Customer pays: **{$ticketPrice} RON** → You receive: **{$revenue} RON** (commission: {$commission} RON)";
+                                } else {
+                                    $total = $ticketPrice + $commission;
+                                    return "Customer pays: **{$total} RON** → You receive: **{$ticketPrice} RON** (commission: {$commission} RON)";
+                                }
+                            }),
+                    ]),
+
                     Forms\Components\Repeater::make('ticketTypes')
                         ->relationship()
                         ->label('Ticket types')
                         ->collapsed()
                         ->addActionLabel('Add ticket type')
-                        ->itemLabel(fn (array $state) => $state['name'] ?? 'Ticket')
+                        ->itemLabel(fn (array $state) => ($state['is_active'] ?? true)
+                            ? '✓ ' . ($state['name'] ?? 'Ticket')
+                            : '○ ' . ($state['name'] ?? 'Ticket'))
                         ->columns(12)
                         ->schema([
                             Forms\Components\TextInput::make('name')
@@ -520,6 +603,32 @@ class EventResource extends Resource
                                     }),
                             ])->columnSpan(12),
 
+                            // Commission calculation for this ticket
+                            Forms\Components\Placeholder::make('ticket_commission_calc')
+                                ->label('💰 Price with Commission')
+                                ->live()
+                                ->content(function (SGet $get) use ($tenant) {
+                                    $price = (float) ($get('price') ?: $get('price_max') ?: 0);
+                                    if ($price <= 0) {
+                                        return 'Enter a price to see commission calculation.';
+                                    }
+
+                                    $eventMode = $get('../../commission_mode');
+                                    $mode = $eventMode ?: ($tenant->commission_mode ?? 'included');
+                                    $rate = $tenant->commission_rate ?? 5.00;
+                                    $commission = round($price * ($rate / 100), 2);
+                                    $currency = $get('currency') ?: 'RON';
+
+                                    if ($mode === 'included') {
+                                        $revenue = round($price - $commission, 2);
+                                        return "Customer pays: **{$price} {$currency}** → You receive: **{$revenue} {$currency}** (Tixello commission: {$commission} {$currency})";
+                                    } else {
+                                        $total = round($price + $commission, 2);
+                                        return "Customer pays: **{$total} {$currency}** → You receive: **{$price} {$currency}** (Tixello commission: {$commission} {$currency})";
+                                    }
+                                })
+                                ->columnSpan(12),
+
                             SC\Grid::make(3)->schema([
                                 Forms\Components\TextInput::make('capacity')
                                     ->label('Capacity')
@@ -595,9 +704,184 @@ class EventResource extends Resource
                             Forms\Components\Toggle::make('is_active')
                                 ->label('Active?')
                                 ->default(true)
+                                ->live()
                                 ->columnSpan(12),
                         ]),
                 ])->collapsible(),
+
+            // SEO Section
+            SC\Section::make('SEO')
+                ->collapsed()
+                ->schema([
+                    Forms\Components\Select::make('seo_presets')
+                        ->label('Add SEO keys from template')
+                        ->multiple()
+                        ->dehydrated(false)
+                        ->options([
+                            'core'        => 'Core (title/description/canonical/robots)',
+                            'intl'        => 'International (hreflang, og:locale)',
+                            'open_graph'  => 'Open Graph (og:*)',
+                            'article'     => 'OG Article extras',
+                            'product'     => 'OG Product extras',
+                            'twitter'     => 'Twitter Cards',
+                            'jsonld'      => 'Structured Data (JSON-LD)',
+                            'robots_adv'  => 'Robots advanced',
+                            'verify'      => 'Verification (Google/Bing/etc.)',
+                            'feeds'       => 'Feeds (RSS/Atom/oEmbed)',
+                        ])
+                        ->helperText('Select templates to add keys. Values will be pre-filled from event data where available.')
+                        ->live()
+                        ->afterStateUpdated(function ($state, SSet $set, SGet $get) use ($tenantLanguage, $tenant) {
+                            $seo = (array) ($get('seo') ?? []);
+
+                            // Get event data for auto-fill
+                            $title = $get("title.{$tenantLanguage}") ?? '';
+                            $description = $get("short_description.{$tenantLanguage}") ?? $get("description.{$tenantLanguage}") ?? '';
+                            $shortDesc = strip_tags($description);
+                            if (strlen($shortDesc) > 160) {
+                                $shortDesc = substr($shortDesc, 0, 157) . '...';
+                            }
+                            $posterUrl = $get('poster_url') ?? '';
+                            $heroUrl = $get('hero_image_url') ?? '';
+                            $imageUrl = $posterUrl ?: $heroUrl;
+                            $eventDate = $get('event_date') ?? '';
+                            $startTime = $get('start_time') ?? '';
+                            $endTime = $get('end_time') ?? '';
+                            $venueName = '';
+                            $venueAddress = '';
+
+                            // Try to get venue info
+                            $venueId = $get('venue_id');
+                            if ($venueId) {
+                                $venue = \App\Models\Venue::find($venueId);
+                                if ($venue) {
+                                    $venueName = $venue->getTranslation('name', $tenantLanguage) ?? $venue->name ?? '';
+                                    $venueAddress = $venue->address ?? '';
+                                }
+                            }
+
+                            $templates = [
+                                'core' => [
+                                    'meta_title'       => $title,
+                                    'meta_description' => $shortDesc,
+                                    'canonical_url'    => '',
+                                    'robots'           => 'index,follow',
+                                    'viewport'         => 'width=device-width, initial-scale=1',
+                                    'referrer'         => 'no-referrer-when-downgrade',
+                                ],
+                                'intl' => [
+                                    'og:locale'        => $tenantLanguage === 'ro' ? 'ro_RO' : 'en_US',
+                                    'hreflang_map'     => '[]',
+                                ],
+                                'open_graph' => [
+                                    'og:title'         => $title,
+                                    'og:description'   => $shortDesc,
+                                    'og:type'          => 'event',
+                                    'og:url'           => '',
+                                    'og:image'         => $imageUrl,
+                                    'og:image:alt'     => $title,
+                                    'og:image:width'   => '',
+                                    'og:image:height'  => '',
+                                    'og:site_name'     => $tenant?->public_name ?? $tenant?->name ?? '',
+                                ],
+                                'article' => [
+                                    'article:author'         => $tenant?->public_name ?? '',
+                                    'article:section'        => 'Events',
+                                    'article:tag'            => '',
+                                    'article:published_time' => '',
+                                    'article:modified_time'  => '',
+                                ],
+                                'product' => [
+                                    'product:price:amount'   => '',
+                                    'product:price:currency' => $tenant?->currency ?? 'RON',
+                                    'product:availability'   => 'instock',
+                                ],
+                                'twitter' => [
+                                    'twitter:card'        => 'summary_large_image',
+                                    'twitter:title'       => $title,
+                                    'twitter:description' => $shortDesc,
+                                    'twitter:image'       => $imageUrl,
+                                    'twitter:site'        => '',
+                                    'twitter:creator'     => '',
+                                    'twitter:player'        => '',
+                                    'twitter:player:width'  => '',
+                                    'twitter:player:height' => '',
+                                ],
+                                'jsonld' => [
+                                    'structured_data' => json_encode([
+                                        '@context' => 'https://schema.org',
+                                        '@type'    => 'Event',
+                                        'name'     => $title,
+                                        'description' => $shortDesc,
+                                        'image'    => $imageUrl,
+                                        'startDate'=> $eventDate && $startTime ? "{$eventDate}T{$startTime}" : $eventDate,
+                                        'endDate'  => $eventDate && $endTime ? "{$eventDate}T{$endTime}" : '',
+                                        'location' => [
+                                            '@type'   => 'Place',
+                                            'name'    => $venueName,
+                                            'address' => $venueAddress,
+                                        ],
+                                        'organizer' => [
+                                            '@type' => 'Organization',
+                                            'name'  => $tenant?->public_name ?? $tenant?->name ?? '',
+                                            'url'   => '',
+                                        ],
+                                        'url'     => '',
+                                    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+                                ],
+                                'robots_adv' => [
+                                    'max-snippet'       => '-1',
+                                    'max-image-preview' => 'large',
+                                    'max-video-preview' => '-1',
+                                    'noarchive'         => '',
+                                    'nosnippet'         => '',
+                                    'noimageindex'      => '',
+                                    'indexifembedded'   => '',
+                                    'googlebot'         => '',
+                                    'bingbot'           => '',
+                                ],
+                                'verify' => [
+                                    'google-site-verification'     => '',
+                                    'msvalidate.01'                 => '',
+                                    'p:domain_verify'               => '',
+                                    'yandex-verification'           => '',
+                                    'ahrefs-site-verification'      => '',
+                                    'facebook-domain-verification'  => '',
+                                ],
+                                'feeds' => [
+                                    'rss_url'         => '',
+                                    'atom_url'        => '',
+                                    'oembed_json'     => '',
+                                    'oembed_xml'      => '',
+                                ],
+                            ];
+
+                            foreach ((array) $state as $group) {
+                                foreach (($templates[$group] ?? []) as $k => $v) {
+                                    if (! array_key_exists($k, $seo)) {
+                                        $seo[$k] = $v;
+                                    }
+                                }
+                            }
+
+                            $set('seo', $seo);
+                        }),
+
+                    Forms\Components\KeyValue::make('seo')
+                        ->keyLabel('Meta key')
+                        ->valueLabel('Meta value')
+                        ->addable()
+                        ->deletable()
+                        ->reorderable()
+                        ->columnSpanFull()
+                        ->default([
+                            'meta_title'       => '',
+                            'meta_description' => '',
+                            'canonical_url'    => '',
+                            'robots'           => 'index,follow',
+                        ])
+                        ->helperText('Add custom SEO meta tags. Use templates above to quickly add common sets.'),
+                ]),
         ])->columns(1);
     }
 
