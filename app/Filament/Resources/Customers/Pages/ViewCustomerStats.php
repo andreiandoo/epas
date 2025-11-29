@@ -48,9 +48,9 @@ class ViewCustomerStats extends ViewRecord
                 ->count('e.id'),
         ];
 
-        // Monthly orders (YYYY-MM)
+        // Monthly orders (YYYY-MM) - using DATE_FORMAT for MySQL
         $this->monthlyOrders = Order::query()
-            ->selectRaw("to_char(created_at, 'YYYY-MM') as month, COUNT(*) as cnt")
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as cnt")
             ->where('customer_id', $customer->id)
             ->groupBy('month')
             ->orderBy('month')

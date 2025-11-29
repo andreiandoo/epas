@@ -23,6 +23,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\BulkAction;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -530,6 +532,66 @@ class ArtistResource extends Resource
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
+                    BulkAction::make('activate')
+                        ->label('Activate')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->action(fn (Collection $records) => $records->each->update(['is_active' => true]))
+                        ->deselectRecordsAfterCompletion()
+                        ->requiresConfirmation(),
+                    BulkAction::make('deactivate')
+                        ->label('Deactivate')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->action(fn (Collection $records) => $records->each->update(['is_active' => false]))
+                        ->deselectRecordsAfterCompletion()
+                        ->requiresConfirmation(),
+                    BulkAction::make('assignTypes')
+                        ->label('Assign Types')
+                        ->icon('heroicon-o-tag')
+                        ->form([
+                            Forms\Components\Select::make('artist_types')
+                                ->label('Artist Types')
+                                ->multiple()
+                                ->options(ArtistType::all()->pluck('name', 'id')->map(fn ($name) => is_array($name) ? ($name['en'] ?? $name['ro'] ?? reset($name)) : $name))
+                                ->required(),
+                            Forms\Components\Toggle::make('replace')
+                                ->label('Replace existing (otherwise append)')
+                                ->default(false),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            foreach ($records as $artist) {
+                                if ($data['replace']) {
+                                    $artist->artistTypes()->sync($data['artist_types']);
+                                } else {
+                                    $artist->artistTypes()->syncWithoutDetaching($data['artist_types']);
+                                }
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                    BulkAction::make('assignGenres')
+                        ->label('Assign Genres')
+                        ->icon('heroicon-o-musical-note')
+                        ->form([
+                            Forms\Components\Select::make('artist_genres')
+                                ->label('Artist Genres')
+                                ->multiple()
+                                ->options(ArtistGenre::all()->pluck('name', 'id')->map(fn ($name) => is_array($name) ? ($name['en'] ?? $name['ro'] ?? reset($name)) : $name))
+                                ->required(),
+                            Forms\Components\Toggle::make('replace')
+                                ->label('Replace existing (otherwise append)')
+                                ->default(false),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            foreach ($records as $artist) {
+                                if ($data['replace']) {
+                                    $artist->artistGenres()->sync($data['artist_genres']);
+                                } else {
+                                    $artist->artistGenres()->syncWithoutDetaching($data['artist_genres']);
+                                }
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ]);
     }
