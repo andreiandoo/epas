@@ -7,6 +7,8 @@ use App\Filament\Forms\Components\TranslatableField;
 use App\Models\Venue;
 use BackedEnum;
 use Filament\Actions;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
@@ -295,7 +297,12 @@ class VenueResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->recordUrl(null)       // ⟵ IMPORTANT: previne linkul implicit spre `view` fără record
             ->actions([])
-            ->bulkActions([]);
+            ->bulkActions([])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
+            ]);
     }
 
     public static function getRelations(): array
