@@ -803,14 +803,26 @@ export class Router {
                                         const currency = ticket.currency || event.currency || 'EUR';
                                         const available = ticket.available ?? 0;
                                         const maxQty = Math.min(10, available);
+                                        const commissionInfo = event.commission;
+                                        const hasCommissionOnTop = commissionInfo?.is_added_on_top && ticket.commission_amount > 0;
                                         return `
                                         <div class="border border-gray-200 rounded-lg p-4 ${ticket.status !== 'active' ? 'opacity-50' : ''}">
                                             <div class="flex justify-between items-start mb-2">
-                                                <div>
+                                                <div class="flex items-center gap-2">
                                                     <h3 class="font-semibold text-gray-900">${ticket.name}</h3>
-                                                    ${ticket.description ? `<p class="text-sm text-gray-500">${ticket.description}</p>` : ''}
+                                                    ${hasCommissionOnTop ? `
+                                                    <div class="relative group">
+                                                        <svg class="w-4 h-4 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                        </svg>
+                                                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                                            Prețul include comision Tixello de ${ticket.commission_amount} ${currency}
+                                                        </div>
+                                                    </div>
+                                                    ` : ''}
                                                 </div>
                                             </div>
+                                            ${ticket.description ? `<p class="text-sm text-gray-500 mb-2">${ticket.description}</p>` : ''}
                                             ${ticket.bulk_discounts && ticket.bulk_discounts.length > 0 ? `
                                             <div class="mt-2 space-y-1">
                                                 ${ticket.bulk_discounts.map((discount: any) => {
@@ -834,7 +846,11 @@ export class Router {
                                             <div class="flex justify-between items-start">
                                                 <div></div>
                                                 <div class="text-right">
-                                                    ${ticket.sale_price ? `
+                                                    ${hasCommissionOnTop ? `
+                                                        <div>
+                                                            <span class="font-bold text-primary">${ticket.final_price} ${currency}</span>
+                                                        </div>
+                                                    ` : ticket.sale_price ? `
                                                         <div>
                                                             <span class="line-through text-gray-400 text-sm">${ticket.price} ${currency}</span>
                                                             <span class="font-bold text-red-600 block">${ticket.sale_price} ${currency}</span>
@@ -885,6 +901,9 @@ export class Router {
                                     </svg>
                                     <span id="watchlist-btn-text">Adaugă la favorite</span>
                                 </button>
+                                <p class="text-center text-xs text-gray-400 mt-4">
+                                    Ticketing system powered by <a href="https://tixello.com" target="_blank" class="text-primary hover:underline">Tixello</a>
+                                </p>
                             ` : `
                                 <p class="text-gray-500 text-center py-4">Nu sunt bilete disponibile pentru achiziție online.</p>
                             `}
@@ -1266,6 +1285,10 @@ export class Router {
                             <button onclick="window.tixelloRouter.navigate('/events')" class="w-full mt-3 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition">
                                 Continuă cumpărăturile
                             </button>
+
+                            <p class="text-center text-xs text-gray-400 mt-4">
+                                Ticketing system powered by <a href="https://tixello.com" target="_blank" class="text-primary hover:underline">Tixello</a>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -1424,6 +1447,49 @@ export class Router {
                             </div>
 
                             <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Acorduri</h2>
+                                <div class="space-y-3 mb-6">
+                                    <div class="flex items-start">
+                                        <input
+                                            type="checkbox"
+                                            id="agree_terms"
+                                            name="agree_terms"
+                                            required
+                                            class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                        >
+                                        <label for="agree_terms" class="ml-2 text-sm text-gray-700">
+                                            Sunt de acord cu <a href="/terms" target="_blank" class="text-primary hover:underline">Termenii și Condițiile</a> *
+                                        </label>
+                                    </div>
+                                    <div class="flex items-start">
+                                        <input
+                                            type="checkbox"
+                                            id="agree_privacy"
+                                            name="agree_privacy"
+                                            required
+                                            class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                        >
+                                        <label for="agree_privacy" class="ml-2 text-sm text-gray-700">
+                                            Sunt de acord cu <a href="/privacy" target="_blank" class="text-primary hover:underline">Politica de Confidențialitate</a> și procesarea datelor personale *
+                                        </label>
+                                    </div>
+                                    ${!this.authToken ? `
+                                    <div class="flex items-start">
+                                        <input
+                                            type="checkbox"
+                                            id="create_account"
+                                            name="create_account"
+                                            class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                        >
+                                        <label for="create_account" class="ml-2 text-sm text-gray-700">
+                                            Doresc să îmi creez un cont automat pentru comenzi viitoare
+                                        </label>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-6">
                                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Plată</h2>
                                 <p class="text-gray-600 mb-4">
                                     Vei primi biletele pe email imediat după finalizarea comenzii.
@@ -1435,6 +1501,9 @@ export class Router {
                                 >
                                     Plasează comanda
                                 </button>
+                                <p class="text-center text-xs text-gray-400 mt-4">
+                                    Ticketing system powered by <a href="https://tixello.com" target="_blank" class="text-primary hover:underline">Tixello</a>
+                                </p>
                             </div>
                         </form>
                     </div>
@@ -1587,11 +1656,19 @@ export class Router {
                     }
                 }
 
+                // Get checkbox values
+                const agreeTerms = (document.getElementById('agree_terms') as HTMLInputElement)?.checked ?? false;
+                const agreePrivacy = (document.getElementById('agree_privacy') as HTMLInputElement)?.checked ?? false;
+                const createAccount = (document.getElementById('create_account') as HTMLInputElement)?.checked ?? false;
+
                 try {
                     const response = await this.postApi('/orders', {
                         customer_name: formData.get('customer_name'),
                         customer_email: formData.get('customer_email'),
                         customer_phone: formData.get('customer_phone'),
+                        agree_terms: agreeTerms,
+                        agree_privacy: agreePrivacy,
+                        create_account: createAccount,
                         cart: cart.map(item => ({
                             eventId: item.eventId,
                             ticketTypeId: item.ticketTypeId,

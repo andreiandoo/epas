@@ -245,7 +245,7 @@ class EventsController extends Controller
 
         $event = Event::where('tenant_id', $tenant->id)
             ->where('slug', $slug)
-            ->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'ticketTypes'])
+            ->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'ticketTypes', 'tags'])
             ->first();
 
         if (!$event) {
@@ -256,6 +256,10 @@ class EventsController extends Controller
         }
 
         $locale = $request->query('locale', 'en');
+
+        // Commission info
+        $commissionMode = $event->getEffectiveCommissionMode();
+        $commissionRate = $event->getEffectiveCommissionRate();
 
         return response()->json([
             'success' => true,
@@ -287,21 +291,44 @@ class EventsController extends Controller
                 'website_url' => $event->website_url,
                 'facebook_url' => $event->facebook_url,
                 'event_website_url' => $event->event_website_url,
+
+                // Enhanced venue data
                 'venue' => $event->venue ? [
                     'id' => $event->venue->id,
                     'name' => $event->venue->getTranslation('name', $locale),
                     'slug' => $event->venue->slug ?? null,
                     'address' => $event->venue->address,
                     'city' => $event->venue->city,
-                    'latitude' => $event->venue->latitude,
-                    'longitude' => $event->venue->longitude,
+                    'state' => $event->venue->state,
+                    'country' => $event->venue->country,
+                    'latitude' => $event->venue->lat,
+                    'longitude' => $event->venue->lng,
+                    'google_maps_url' => $event->venue->google_maps_url,
+                    'phone' => $event->venue->phone,
+                    'phone2' => $event->venue->phone2,
+                    'email' => $event->venue->email,
+                    'email2' => $event->venue->email2,
+                    'website_url' => $event->venue->website_url,
+                    'image_url' => $event->venue->image_url ? Storage::disk('public')->url($event->venue->image_url) : null,
                 ] : null,
+
                 'poster_url' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
                 'hero_image_url' => $event->hero_image_url ? Storage::disk('public')->url($event->hero_image_url) : null,
                 'short_description' => $event->getTranslation('short_description', $locale),
                 'description' => $event->getTranslation('description', $locale),
                 'ticket_terms' => $event->getTranslation('ticket_terms', $locale),
                 'gallery' => $event->gallery ?? [],
+
+                // Commission info
+                'commission' => [
+                    'mode' => $commissionMode, // 'included' or 'added_on_top'
+                    'rate' => $commissionRate, // percentage (e.g., 5.00 means 5%)
+                    'is_added_on_top' => $commissionMode === 'added_on_top',
+                ],
+
+                // SEO data
+                'seo' => $event->seo ?? [],
+
                 'event_types' => $event->eventTypes->map(fn ($type) => [
                     'id' => $type->id,
                     'name' => $type->getTranslation('name', $locale),
@@ -323,24 +350,39 @@ class EventsController extends Controller
                     'name' => $tag->getTranslation('name', $locale),
                     'slug' => $tag->slug,
                 ]) ?? [],
-                'ticket_types' => $event->ticketTypes->map(fn ($type) => [
-                    'id' => $type->id,
-                    'name' => $type->name,
-                    'description' => $type->description ?? '',
-                    'sku' => $type->sku,
-                    'price' => $type->price_max,
-                    'sale_price' => $type->price ?? null,
-                    'discount_percent' => $type->price && $type->price_max
-                        ? round((1 - ($type->price / $type->price_max)) * 100, 2)
-                        : null,
-                    'currency' => $type->currency ?? 'EUR',
-                    'available' => $type->available_quantity,
-                    'capacity' => $type->capacity,
-                    'status' => $type->status,
-                    'sales_start_at' => $type->sales_start_at?->toIso8601String(),
-                    'sales_end_at' => $type->sales_end_at?->toIso8601String(),
-                    'bulk_discounts' => $type->bulk_discounts ?? [],
-                ]),
+
+                // Ticket types with commission calculation
+                'ticket_types' => $event->ticketTypes->map(function ($type) use ($commissionMode, $commissionRate) {
+                    $basePrice = $type->price ?? $type->price_max;
+                    $commissionAmount = $commissionMode === 'added_on_top' && $basePrice
+                        ? round($basePrice * ($commissionRate / 100), 2)
+                        : 0;
+                    $finalPrice = $commissionMode === 'added_on_top' && $basePrice
+                        ? round($basePrice + $commissionAmount, 2)
+                        : $basePrice;
+
+                    return [
+                        'id' => $type->id,
+                        'name' => $type->name,
+                        'description' => $type->description ?? '',
+                        'sku' => $type->sku,
+                        'price' => $type->price_max,
+                        'sale_price' => $type->price ?? null,
+                        'discount_percent' => $type->price && $type->price_max
+                            ? round((1 - ($type->price / $type->price_max)) * 100, 2)
+                            : null,
+                        'currency' => $type->currency ?? 'EUR',
+                        'available' => $type->available_quantity,
+                        'capacity' => $type->capacity,
+                        'status' => $type->status,
+                        'sales_start_at' => $type->sales_start_at?->toIso8601String(),
+                        'sales_end_at' => $type->sales_end_at?->toIso8601String(),
+                        'bulk_discounts' => $type->bulk_discounts ?? [],
+                        // Commission details per ticket
+                        'commission_amount' => $commissionAmount,
+                        'final_price' => $finalPrice, // Price customer pays (with commission if added_on_top)
+                    ];
+                }),
                 'price_from' => $event->ticketTypes->min('price_max'),
             ],
         ]);
