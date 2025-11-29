@@ -294,15 +294,8 @@ class VenueResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->recordUrl(null)       // ⟵ IMPORTANT: previne linkul implicit spre `view` fără record
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
+            ->actions([])
+            ->bulkActions([]);
     }
 
     public static function getRelations(): array
