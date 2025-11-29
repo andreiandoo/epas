@@ -36,9 +36,10 @@ class PublicDataController extends Controller
             $query->where('country', $request->get('country'));
         }
 
-        $venues = $query->limit($request->get('limit', 100))->get();
+        $perPage = min((int) $request->get('per_page', 50), 500);
+        $paginator = $query->paginate($perPage);
 
-        $formattedVenues = $venues->map(function ($venue) {
+        $formattedVenues = collect($paginator->items())->map(function ($venue) {
             return [
                 'id' => $venue->id,
                 'name' => $venue->getTranslation('name', 'en'),
@@ -85,7 +86,19 @@ class PublicDataController extends Controller
             ];
         });
 
-        return response()->json($formattedVenues);
+        return response()->json([
+            'data' => $formattedVenues,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
+                'next_page_url' => $paginator->nextPageUrl(),
+                'prev_page_url' => $paginator->previousPageUrl(),
+            ],
+        ]);
     }
 
     public function venue(string $slug): JsonResponse
@@ -168,12 +181,12 @@ class PublicDataController extends Controller
             $query->where('city', $request->get('city'));
         }
 
-        $artists = $query
+        $perPage = min((int) $request->get('per_page', 50), 500);
+        $paginator = $query
             ->with(['artistTypes', 'artistGenres'])
-            ->limit($request->get('limit', 100))
-            ->get();
+            ->paginate($perPage);
 
-        $formattedArtists = $artists->map(function ($artist) {
+        $formattedArtists = collect($paginator->items())->map(function ($artist) {
             return [
                 'id' => $artist->id,
                 'name' => $artist->name,
@@ -248,7 +261,19 @@ class PublicDataController extends Controller
             ];
         });
 
-        return response()->json($formattedArtists);
+        return response()->json([
+            'data' => $formattedArtists,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
+                'next_page_url' => $paginator->nextPageUrl(),
+                'prev_page_url' => $paginator->previousPageUrl(),
+            ],
+        ]);
     }
 
     public function artist(string $slug): JsonResponse
@@ -377,7 +402,8 @@ class PublicDataController extends Controller
             $query->where('event_date', '>=', now());
         }
 
-        $events = $query->with([
+        $perPage = min((int) $request->get('per_page', 50), 500);
+        $paginator = $query->with([
             'venue:id,name,slug,address,city,lat as latitude,lng as longitude',
             'tenant:id,name,public_name,website',
             'tenant.domains' => function ($query) {
@@ -390,9 +416,9 @@ class PublicDataController extends Controller
             'artists:id,name,slug,main_image_url',
             'tags:id,name',
             'ticketTypes'
-        ])->limit(100)->get();
+        ])->paginate($perPage);
 
-        $formattedEvents = $events->map(function ($event) {
+        $formattedEvents = collect($paginator->items())->map(function ($event) {
             return [
                 'id' => $event->id,
                 'title' => $event->getTranslation('title', 'en'),
@@ -483,7 +509,19 @@ class PublicDataController extends Controller
             ];
         });
 
-        return response()->json($formattedEvents);
+        return response()->json([
+            'data' => $formattedEvents,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
+                'next_page_url' => $paginator->nextPageUrl(),
+                'prev_page_url' => $paginator->previousPageUrl(),
+            ],
+        ]);
     }
 
     public function event(string $slug): JsonResponse
