@@ -22,7 +22,7 @@ class PublicDataController extends Controller
             'events' => Event::count(),
             'venues' => Venue::count(),
             'artists' => Artist::count(),
-            'tenants' => Tenant::where('is_active', true)->count(),
+            'tenants' => Tenant::where('status', 'active')->count(),
         ]);
     }
 
@@ -31,7 +31,7 @@ class PublicDataController extends Controller
         return response()->json([
             'tickets_sold' => Ticket::count(),
             'customers' => Customer::count(),
-            'tenants' => Tenant::where('is_active', true)->count(),
+            'tenants' => Tenant::where('status', 'active')->count(),
             'venues' => Venue::count(),
             'events' => Event::count(),
             'artists' => Artist::count(),
