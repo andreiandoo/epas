@@ -125,10 +125,21 @@ class PackageController extends Controller
         $zip = new \ZipArchive();
         $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
 
-        // Add the main loader script
-        if ($package->file_path && Storage::exists($package->file_path)) {
-            $zip->addFromString('tixello-loader.min.js', Storage::get($package->file_path));
+        // Add the main loader script - MUST exist
+        if (!$package->file_path) {
+            abort(500, 'Package file path is not set. Please regenerate the package.');
         }
+
+        if (!Storage::exists($package->file_path)) {
+            \Log::error('Package file not found in storage', [
+                'package_id' => $package->id,
+                'file_path' => $package->file_path,
+                'full_path' => Storage::path($package->file_path),
+            ]);
+            abort(500, 'Package file not found in storage: ' . $package->file_path . '. Please regenerate the package.');
+        }
+
+        $zip->addFromString('tixello-loader.min.js', Storage::get($package->file_path));
 
         // Add index.html template
         $indexHtml = $this->generateIndexHtml($tenant, $domain, $package);
