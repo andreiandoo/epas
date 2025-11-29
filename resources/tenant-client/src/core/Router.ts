@@ -20,6 +20,8 @@ interface CartItem {
     ticketTypeName: string;
     price: number;
     salePrice: number | null;
+    finalPrice: number;  // Price including commission if applicable
+    commissionAmount: number;  // Commission amount added on top
     quantity: number;
     currency: string;
     bulkDiscounts: any[];
@@ -114,7 +116,8 @@ class CartService {
         let currency = 'EUR';
 
         for (const item of cart) {
-            const itemPrice = item.salePrice || item.price;
+            // Use finalPrice if available (includes commission), otherwise fall back to salePrice/price
+            const itemPrice = item.finalPrice || item.salePrice || item.price;
             const result = this.calculateBulkDiscount(item.quantity, itemPrice, item.bulkDiscounts);
             subtotal += item.quantity * itemPrice;
             totalDiscount += result.discount;
@@ -291,7 +294,9 @@ export class Router {
 
     // Event card HTML generator
     private renderEventCard(event: any): string {
-        const date = event.start_date ? new Date(event.start_date).toLocaleDateString('ro-RO', {
+        // Use postponed date if event is postponed
+        const displayDate = event.is_postponed && event.postponed_date ? event.postponed_date : event.start_date;
+        const date = displayDate ? new Date(displayDate).toLocaleDateString('ro-RO', {
             day: 'numeric',
             month: 'short',
             year: 'numeric'
@@ -313,6 +318,7 @@ export class Router {
                     }
                     ${event.is_sold_out ? `<span class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">SOLD OUT</span>` : ''}
                     ${event.is_cancelled ? `<span class="absolute top-2 right-2 bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded">ANULAT</span>` : ''}
+                    ${event.is_postponed && !event.is_cancelled ? `<span class="absolute top-2 right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">AMÂNAT</span>` : ''}
                 </div>
                 <div class="p-4">
                     <h3 class="font-semibold text-gray-900 mb-1 line-clamp-2">${event.title}</h3>
@@ -654,14 +660,21 @@ export class Router {
             // Store event data globally for cart functionality
             (window as any).currentEventData = event;
 
-            const date = event.start_date ? new Date(event.start_date).toLocaleDateString('ro-RO', {
+            // Use postponed date/time if event is postponed
+            const isPostponed = event.is_postponed === true;
+            const displayDate = isPostponed && event.postponed_date ? event.postponed_date : event.start_date;
+            const displayStartTime = isPostponed && event.postponed_start_time ? event.postponed_start_time : event.start_time;
+            const displayDoorTime = isPostponed && event.postponed_door_time ? event.postponed_door_time : event.door_time;
+            const displayEndTime = isPostponed && event.postponed_end_time ? event.postponed_end_time : event.end_time;
+
+            const date = displayDate ? new Date(displayDate).toLocaleDateString('ro-RO', {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric'
             }) : '';
 
-            const time = event.start_time || (event.start_date ? new Date(event.start_date).toLocaleTimeString('ro-RO', {
+            const time = displayStartTime || (displayDate ? new Date(displayDate).toLocaleTimeString('ro-RO', {
                 hour: '2-digit',
                 minute: '2-digit'
             }) : '');
@@ -682,7 +695,7 @@ export class Router {
                               </div>`
                         }
 
-                        <div id="countdown-container" data-event-date="${event.start_date || event.event_date || ''}" data-event-time="${event.start_time || ''}" data-is-cancelled="${event.is_cancelled || false}" data-is-postponed="${event.is_postponed || false}"></div>
+                        <div id="countdown-container" data-event-date="${displayDate || ''}" data-event-time="${displayStartTime || ''}" data-is-cancelled="${event.is_cancelled || false}" data-is-postponed="${event.is_postponed || false}"></div>
 
                         ${event.is_cancelled ? `
                         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -690,9 +703,9 @@ export class Router {
                         </div>
                         ` : ''}
 
-                        ${event.is_postponed ? `
+                        ${isPostponed ? `
                         <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-                            <strong>Eveniment amânat:</strong> ${event.postponed_reason || 'Acest eveniment a fost amânat.'}
+                            <strong>Eveniment amânat${event.postponed_date ? ` pentru ${date}${displayStartTime ? ` ora ${displayStartTime}` : ''}` : ''}:</strong> ${event.postponed_reason || 'Acest eveniment a fost amânat.'}
                         </div>
                         ` : ''}
 
@@ -780,6 +793,87 @@ export class Router {
                                         <span class="font-medium">${artist.name}</span>
                                     </a>
                                 `).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${event.venue ? `
+                        <div class="mb-8">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Locație</h2>
+                            <div class="bg-gray-50 rounded-lg overflow-hidden">
+                                ${event.venue.image_url ? `
+                                <img src="${event.venue.image_url}" alt="${event.venue.name}" class="w-full h-48 object-cover">
+                                ` : ''}
+                                <div class="p-4">
+                                    <h3 class="font-semibold text-lg text-gray-900 mb-2">${event.venue.name}</h3>
+
+                                    ${event.venue.address || event.venue.city || event.venue.state || event.venue.country ? `
+                                    <div class="flex items-start mb-3">
+                                        <svg class="w-5 h-5 text-gray-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                        <div class="text-gray-600">
+                                            ${event.venue.address ? `<div>${event.venue.address}</div>` : ''}
+                                            ${event.venue.city || event.venue.state || event.venue.country ? `
+                                            <div>${[event.venue.city, event.venue.state, event.venue.country].filter(Boolean).join(', ')}</div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                    ` : ''}
+
+                                    ${event.venue.phone || event.venue.phone2 ? `
+                                    <div class="flex items-center mb-3">
+                                        <svg class="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                        </svg>
+                                        <div class="text-gray-600">
+                                            ${event.venue.phone ? `<a href="tel:${event.venue.phone}" class="hover:text-primary">${event.venue.phone}</a>` : ''}
+                                            ${event.venue.phone && event.venue.phone2 ? ' / ' : ''}
+                                            ${event.venue.phone2 ? `<a href="tel:${event.venue.phone2}" class="hover:text-primary">${event.venue.phone2}</a>` : ''}
+                                        </div>
+                                    </div>
+                                    ` : ''}
+
+                                    ${event.venue.email || event.venue.email2 ? `
+                                    <div class="flex items-center mb-3">
+                                        <svg class="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                        </svg>
+                                        <div class="text-gray-600">
+                                            ${event.venue.email ? `<a href="mailto:${event.venue.email}" class="hover:text-primary">${event.venue.email}</a>` : ''}
+                                            ${event.venue.email && event.venue.email2 ? ' / ' : ''}
+                                            ${event.venue.email2 ? `<a href="mailto:${event.venue.email2}" class="hover:text-primary">${event.venue.email2}</a>` : ''}
+                                        </div>
+                                    </div>
+                                    ` : ''}
+
+                                    <div class="flex flex-wrap gap-3 mt-4">
+                                        ${event.venue.website_url ? `
+                                        <a href="${event.venue.website_url}" target="_blank" class="inline-flex items-center px-3 py-1.5 bg-gray-200 hover:bg-gray-300 rounded text-sm text-gray-700 transition">
+                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                                            </svg>
+                                            Website
+                                        </a>
+                                        ` : ''}
+                                        ${event.venue.google_maps_url ? `
+                                        <a href="${event.venue.google_maps_url}" target="_blank" class="inline-flex items-center px-3 py-1.5 bg-blue-100 hover:bg-blue-200 rounded text-sm text-blue-700 transition">
+                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                                            </svg>
+                                            Google Maps
+                                        </a>
+                                        ` : event.venue.latitude && event.venue.longitude ? `
+                                        <a href="https://www.google.com/maps?q=${event.venue.latitude},${event.venue.longitude}" target="_blank" class="inline-flex items-center px-3 py-1.5 bg-blue-100 hover:bg-blue-200 rounded text-sm text-blue-700 transition">
+                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                                            </svg>
+                                            Google Maps
+                                        </a>
+                                        ` : ''}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         ` : ''}
@@ -1080,6 +1174,8 @@ export class Router {
                                 ticketTypeName: ticketType.name,
                                 price: ticketType.price,
                                 salePrice: ticketType.sale_price,
+                                finalPrice: ticketType.final_price || ticketType.sale_price || ticketType.price,
+                                commissionAmount: ticketType.commission_amount || 0,
                                 quantity: qty,
                                 currency: ticketType.currency || 'EUR',
                                 bulkDiscounts: ticketType.bulk_discounts || []
@@ -1190,7 +1286,8 @@ export class Router {
         }
 
         const cartItemsHtml = cart.map((item, index) => {
-            const effectivePrice = item.salePrice || item.price;
+            // Use finalPrice (includes commission) if available, otherwise fall back
+            const effectivePrice = item.finalPrice || item.salePrice || item.price;
             const result = CartService.calculateBulkDiscount(item.quantity, effectivePrice, item.bulkDiscounts);
             const itemTotal = result.total;
             const itemDiscount = result.discount;
@@ -1447,6 +1544,34 @@ export class Router {
                             </div>
 
                             <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Beneficiari bilete</h2>
+                                <p class="text-sm text-gray-600 mb-4">
+                                    Implicit, toate biletele vor fi pe numele tău. Poți specifica beneficiari diferiți pentru fiecare bilet.
+                                </p>
+                                <div class="flex items-start mb-4">
+                                    <input
+                                        type="checkbox"
+                                        id="different_beneficiaries"
+                                        name="different_beneficiaries"
+                                        class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                    >
+                                    <label for="different_beneficiaries" class="ml-2 text-sm text-gray-700">
+                                        Doresc să specific beneficiari diferiți pentru fiecare bilet
+                                    </label>
+                                </div>
+                                <div id="beneficiaries-section" class="hidden">
+                                    <div class="border-t pt-4">
+                                        <p class="text-sm text-gray-600 mb-4">
+                                            Completează datele pentru fiecare bilet. Primul bilet va fi pre-completat cu datele tale.
+                                        </p>
+                                        <div id="beneficiaries-container" class="space-y-4">
+                                            <!-- Beneficiary fields will be generated dynamically -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-6">
                                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Acorduri</h2>
                                 <div class="space-y-3 mb-6">
                                     <div class="flex items-start">
@@ -1514,7 +1639,8 @@ export class Router {
 
                             <div class="space-y-3 mb-4 pb-4 border-b">
                                 ${cart.map(item => {
-                                    const effectivePrice = item.salePrice || item.price;
+                                    // Use finalPrice (includes commission) if available
+                                    const effectivePrice = item.finalPrice || item.salePrice || item.price;
                                     const result = CartService.calculateBulkDiscount(item.quantity, effectivePrice, item.bulkDiscounts);
                                     return `
                                     <div class="flex justify-between text-sm">
@@ -2026,7 +2152,7 @@ export class Router {
             if (ordersListEl) {
                 if (orders && orders.length > 0) {
                     ordersListEl.innerHTML = orders.map((order: any) => `
-                        <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+                        <a href="/account/orders/${order.id}" class="block bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
                             <div class="flex justify-between items-start mb-4">
                                 <div>
                                     <h3 class="text-lg font-semibold text-gray-900">${order.order_number}</h3>
@@ -2048,11 +2174,19 @@ export class Router {
                                 <p class="text-sm text-gray-600 mb-2">${order.items_count} bilet${order.items_count > 1 ? 'e' : ''}</p>
                                 <div class="space-y-1">
                                     ${order.tickets.map((ticket: any) => `
-                                        <p class="text-sm text-gray-700">• ${ticket.event_name} - ${ticket.ticket_type}</p>
+                                        <p class="text-sm text-gray-700">• ${ticket.event_name} - ${ticket.ticket_type} ${ticket.quantity > 1 ? `(×${ticket.quantity})` : ''}</p>
                                     `).join('')}
                                 </div>
                             </div>
-                        </div>
+                            <div class="mt-4 pt-4 border-t flex justify-end">
+                                <span class="text-sm text-primary hover:text-primary-dark font-medium inline-flex items-center">
+                                    Vezi detalii
+                                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </a>
                     `).join('');
                 } else {
                     ordersListEl.innerHTML = `
@@ -2856,8 +2990,9 @@ private async renderProfile(): Promise<void> {
         const isCancelled = container.dataset.isCancelled === 'true';
         const isPostponed = container.dataset.isPostponed === 'true';
 
-        // Don't show countdown for cancelled or postponed events
-        if (isCancelled || isPostponed || !eventDate) {
+        // Don't show countdown for cancelled events or if no date available
+        // For postponed events, we show countdown to the NEW date (already passed in eventDate)
+        if (isCancelled || !eventDate) {
             container.style.display = 'none';
             return;
         }
@@ -2883,7 +3018,7 @@ private async renderProfile(): Promise<void> {
 
         const title = document.createElement('h3');
         title.className = 'text-lg font-semibold mb-3 text-center';
-        title.textContent = 'Începe în:';
+        title.textContent = isPostponed ? 'Noua dată - Începe în:' : 'Începe în:';
 
         const timeDisplay = document.createElement('div');
         timeDisplay.className = 'flex justify-center gap-4 text-center';

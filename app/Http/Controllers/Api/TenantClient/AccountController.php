@@ -190,23 +190,30 @@ class AccountController extends Controller
             ->get();
 
         $formattedOrders = $orders->map(function ($order) {
+            // Group tickets by event and ticket type
+            $groupedTickets = $order->tickets->groupBy(function ($ticket) {
+                return $ticket->ticket_type_id;
+            })->map(function ($tickets) {
+                $first = $tickets->first();
+                $event = $first->ticketType?->event;
+                return [
+                    'event_name' => $event?->getTranslation('title', 'ro') ?? 'Unknown Event',
+                    'event_slug' => $event?->slug,
+                    'ticket_type' => $first->ticketType?->name ?? 'Unknown Type',
+                    'quantity' => $tickets->count(),
+                ];
+            })->values();
+
             return [
                 'id' => $order->id,
                 'order_number' => '#' . str_pad($order->id, 6, '0', STR_PAD_LEFT),
                 'date' => $order->created_at->format('d M Y'),
                 'total' => number_format($order->total_cents / 100, 2),
-                'currency' => 'EUR',
+                'currency' => $order->tickets->first()?->ticketType?->currency ?? 'EUR',
                 'status' => $order->status,
                 'status_label' => $this->getStatusLabel($order->status),
                 'items_count' => $order->tickets->count(),
-                'tickets' => $order->tickets->map(function ($ticket) {
-                    $event = $ticket->ticketType?->event;
-                    return [
-                        'event_name' => $event?->getTranslation('title', 'ro') ?? 'Unknown Event',
-                        'ticket_type' => $ticket->ticketType?->name ?? 'Unknown Type',
-                        'quantity' => 1,
-                    ];
-                }),
+                'tickets' => $groupedTickets,
             ];
         });
 
