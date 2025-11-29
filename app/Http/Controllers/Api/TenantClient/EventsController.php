@@ -391,14 +391,16 @@ class EventsController extends Controller
                 ]) ?? [],
 
                 // Ticket types with commission calculation
+                // Commission is ALWAYS calculated from BASE price (price_max), not discounted price
                 'ticket_types' => $event->ticketTypes->map(function ($type) use ($commissionMode, $commissionRate) {
-                    $basePrice = $type->price ?? $type->price_max;
+                    $basePrice = $type->price_max; // Always use base price for commission
+                    $effectivePrice = $type->price ?? $type->price_max; // Sale price or base price
                     $commissionAmount = $commissionMode === 'added_on_top' && $basePrice
                         ? round($basePrice * ($commissionRate / 100), 2)
                         : 0;
-                    $finalPrice = $commissionMode === 'added_on_top' && $basePrice
-                        ? round($basePrice + $commissionAmount, 2)
-                        : $basePrice;
+                    $finalPrice = $commissionMode === 'added_on_top' && $effectivePrice
+                        ? round($effectivePrice + $commissionAmount, 2)
+                        : $effectivePrice;
 
                     return [
                         'id' => $type->id,

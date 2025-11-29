@@ -18,10 +18,12 @@ interface CartItem {
     eventDate: string;
     ticketTypeId: number;
     ticketTypeName: string;
-    price: number;
-    salePrice: number | null;
-    finalPrice: number;  // Price including commission if applicable
-    commissionAmount: number;  // Commission amount added on top
+    price: number;          // Base price (original price)
+    salePrice: number | null;  // Sale price (discounted price if any)
+    finalPrice: number;     // Price including commission if applicable
+    commissionAmount: number;  // Commission amount per ticket (calculated from base price)
+    commissionRate: number;    // Commission rate percentage
+    hasCommissionOnTop: boolean;  // Whether commission is added on top
     quantity: number;
     currency: string;
     bulkDiscounts: any[];
@@ -109,26 +111,37 @@ class CartService {
         return { total: bestTotal, discount: bestDiscount };
     }
 
-    static getTotal(): { subtotal: number; discount: number; total: number; currency: string } {
+    static getTotal(): { subtotal: number; discount: number; commission: number; total: number; currency: string; hasCommission: boolean } {
         const cart = this.getCart();
         let subtotal = 0;
         let totalDiscount = 0;
+        let totalCommission = 0;
+        let hasCommission = false;
         let currency = 'RON';
 
         for (const item of cart) {
-            // Use finalPrice if available (includes commission), otherwise fall back to salePrice/price
-            const itemPrice = item.finalPrice || item.salePrice || item.price;
+            // Use salePrice if available, otherwise base price (NOT finalPrice which includes commission)
+            const itemPrice = item.salePrice || item.price;
             const result = this.calculateBulkDiscount(item.quantity, itemPrice, item.bulkDiscounts);
-            subtotal += item.quantity * itemPrice;
+            subtotal += result.total;  // This is already the discounted total
             totalDiscount += result.discount;
             currency = item.currency;
+
+            // Calculate commission from BASE price × quantity (not affected by discounts)
+            if (item.hasCommissionOnTop && item.commissionRate > 0) {
+                const commission = item.quantity * item.price * (item.commissionRate / 100);
+                totalCommission += commission;
+                hasCommission = true;
+            }
         }
 
         return {
-            subtotal,
+            subtotal: subtotal + totalDiscount, // Original subtotal before discount
             discount: totalDiscount,
-            total: subtotal - totalDiscount,
-            currency
+            commission: totalCommission,
+            total: subtotal + totalCommission,  // subtotal already has discount applied, add commission
+            currency,
+            hasCommission
         };
     }
 }
@@ -1079,7 +1092,14 @@ export class Router {
                                                 <div class="text-right">
                                                     ${hasCommissionOnTop ? `
                                                         <div>
-                                                            <span class="font-bold text-primary">${ticket.final_price} ${currency}</span>
+                                                            ${ticket.sale_price ? `
+                                                                <span class="line-through text-gray-400 text-sm">${ticket.price} ${currency}</span>
+                                                                <span class="font-bold text-primary block">${(parseFloat(ticket.sale_price) + parseFloat(ticket.commission_amount || 0)).toFixed(2)} ${currency}</span>
+                                                                <span class="text-xs text-gray-500">(${ticket.sale_price} + ${ticket.commission_amount} comision)</span>
+                                                            ` : `
+                                                                <span class="font-bold text-primary">${(parseFloat(ticket.price) + parseFloat(ticket.commission_amount || 0)).toFixed(2)} ${currency}</span>
+                                                                <span class="text-xs text-gray-500 block">(${ticket.price} + ${ticket.commission_amount} comision)</span>
+                                                            `}
                                                         </div>
                                                     ` : ticket.sale_price ? `
                                                         <div>
@@ -1332,6 +1352,8 @@ export class Router {
 
                     if (qty > 0 && eventData) {
                         const ticketType = eventData.ticket_types.find((t: any) => t.id === ticketId);
+                        const commissionInfo = eventData.commission;
+                        const hasCommissionOnTop = commissionInfo?.is_added_on_top && ticketType.commission_amount > 0;
                         if (ticketType) {
                             CartService.addItem({
                                 eventId: eventData.id,
@@ -1340,10 +1362,12 @@ export class Router {
                                 eventDate: eventData.start_date,
                                 ticketTypeId: ticketType.id,
                                 ticketTypeName: ticketType.name,
-                                price: ticketType.price,
-                                salePrice: ticketType.sale_price,
+                                price: ticketType.price,  // Base price
+                                salePrice: ticketType.sale_price,  // Discounted price
                                 finalPrice: ticketType.final_price || ticketType.sale_price || ticketType.price,
                                 commissionAmount: ticketType.commission_amount || 0,
+                                commissionRate: commissionInfo?.rate || 0,
+                                hasCommissionOnTop: hasCommissionOnTop,
                                 quantity: qty,
                                 currency: ticketType.currency || 'RON',
                                 bulkDiscounts: ticketType.bulk_discounts || []
@@ -1445,9 +1469,9 @@ export class Router {
                     </svg>
                     <h1 class="text-2xl font-bold text-gray-900 mb-4">Coșul tău este gol</h1>
                     <p class="text-gray-600 mb-8">Explorează evenimentele noastre și adaugă bilete în coș.</p>
-                    <button class="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition" onclick="window.tixelloRouter.navigate('/events')">
+                    <a href="/events" class="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition inline-block">
                         Vezi evenimente
-                    </button>
+                    </a>
                 </div>
             `;
             return;
@@ -1527,13 +1551,19 @@ export class Router {
 
                             <div class="space-y-2 mb-4 pb-4 border-b">
                                 <div class="flex justify-between text-gray-600">
-                                    <span>Subtotal</span>
+                                    <span>Subtotal bilete</span>
                                     <span>${totals.subtotal.toFixed(2)} ${totals.currency}</span>
                                 </div>
                                 ${totals.discount > 0 ? `
                                 <div class="flex justify-between text-green-600">
                                     <span>Discount bulk</span>
                                     <span>-${totals.discount.toFixed(2)} ${totals.currency}</span>
+                                </div>
+                                ` : ''}
+                                ${totals.hasCommission ? `
+                                <div class="flex justify-between text-gray-600">
+                                    <span>Comision Tixello</span>
+                                    <span>+${totals.commission.toFixed(2)} ${totals.currency}</span>
                                 </div>
                                 ` : ''}
                             </div>
@@ -1547,9 +1577,9 @@ export class Router {
                                 Finalizează comanda
                             </button>
 
-                            <button onclick="window.tixelloRouter.navigate('/events')" class="w-full mt-3 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition">
+                            <a href="/events" class="w-full mt-3 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition block text-center">
                                 Continuă cumpărăturile
-                            </button>
+                            </a>
 
                             <p class="text-center text-xs text-gray-400 mt-4">
                                 Ticketing system powered by <a href="https://tixello.com" target="_blank" class="text-primary hover:underline">Tixello</a>
@@ -1823,13 +1853,19 @@ export class Router {
 
                             <div class="space-y-2 mb-4 pb-4 border-b">
                                 <div class="flex justify-between text-gray-600">
-                                    <span>Subtotal</span>
+                                    <span>Subtotal bilete</span>
                                     <span>${totals.subtotal.toFixed(2)} ${totals.currency}</span>
                                 </div>
                                 ${totals.discount > 0 ? `
                                 <div class="flex justify-between text-green-600">
                                     <span>Discount</span>
                                     <span>-${totals.discount.toFixed(2)} ${totals.currency}</span>
+                                </div>
+                                ` : ''}
+                                ${totals.hasCommission ? `
+                                <div class="flex justify-between text-gray-600">
+                                    <span>Comision Tixello</span>
+                                    <span>+${totals.commission.toFixed(2)} ${totals.currency}</span>
                                 </div>
                                 ` : ''}
                             </div>
@@ -2016,9 +2052,9 @@ export class Router {
                 </div>
 
                 <div class="space-y-3">
-                    <button onclick="window.tixelloRouter.navigate('/events')" class="w-full max-w-xs mx-auto block px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition">
+                    <a href="/events" class="w-full max-w-xs mx-auto block px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition text-center">
                         Înapoi la evenimente
-                    </button>
+                    </a>
                 </div>
             </div>
         `;
