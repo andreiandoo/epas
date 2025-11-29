@@ -305,6 +305,33 @@ export class Router {
         return result;
     }
 
+    // DELETE helper
+    private async deleteApi(endpoint: string): Promise<any> {
+        const url = new URL(`${this.config.apiEndpoint}${endpoint}`);
+        url.searchParams.set('hostname', window.location.hostname);
+
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+        };
+
+        if (this.authToken) {
+            (headers as Record<string, string>)['Authorization'] = `Bearer ${this.authToken}`;
+        }
+
+        const response = await fetch(url.toString(), {
+            method: 'DELETE',
+            headers,
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || result.error || 'Request failed');
+        }
+
+        return result;
+    }
+
     // Event card HTML generator
     private renderEventCard(event: any): string {
         // Use postponed date if event is postponed
@@ -2457,64 +2484,54 @@ export class Router {
             const ticketsListEl = document.getElementById('tickets-list');
             if (ticketsListEl) {
                 if (tickets && tickets.length > 0) {
-                    ticketsListEl.innerHTML = tickets.map((ticket: any) => `
-                        <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="flex-1">
-                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">${ticket.event_name}</h3>
-                                    <p class="text-sm text-gray-600">${ticket.ticket_type}</p>
-                                    ${ticket.beneficiary ? `
-                                        <div class="mt-2 pt-2 border-t border-gray-100">
-                                            <p class="text-xs text-gray-500 mb-1">Beneficiar:</p>
-                                            <p class="text-sm font-medium text-gray-900">👤 ${ticket.beneficiary.name}</p>
-                                            ${ticket.beneficiary.email ? `<p class="text-xs text-gray-600 mt-0.5">✉️ ${ticket.beneficiary.email}</p>` : ''}
-                                            ${ticket.beneficiary.phone ? `<p class="text-xs text-gray-600 mt-0.5">📱 ${ticket.beneficiary.phone}</p>` : ''}
+                    ticketsListEl.innerHTML = `
+                        <div class="bg-white rounded-lg shadow overflow-hidden col-span-2">
+                            <div class="divide-y divide-gray-100">
+                                ${tickets.map((ticket: any) => `
+                                    <div class="p-4 hover:bg-gray-50 transition flex items-center gap-4">
+                                        <img src="${ticket.qr_code}" alt="QR" class="w-16 h-16 border border-gray-200 rounded flex-shrink-0">
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <h3 class="font-semibold text-gray-900 truncate">${ticket.event_name}</h3>
+                                                <span class="inline-block px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap flex-shrink-0 ${
+                                                    ticket.status === 'valid' || ticket.status === 'pending' ? 'bg-green-100 text-green-700' :
+                                                    ticket.status === 'used' ? 'bg-blue-100 text-blue-700' :
+                                                    ticket.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                    'bg-gray-100 text-gray-700'
+                                                }">${ticket.status_label}</span>
+                                            </div>
+                                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
+                                                <span>${ticket.ticket_type}</span>
+                                                ${ticket.date ? `<span>${new Date(ticket.date).toLocaleDateString('ro-RO', {day: 'numeric', month: 'short', year: 'numeric'})}</span>` : ''}
+                                                ${ticket.venue ? `<span>📍 ${ticket.venue}</span>` : ''}
+                                                ${ticket.seat_label ? `<span>💺 ${ticket.seat_label}</span>` : ''}
+                                            </div>
+                                            ${ticket.beneficiary?.name ? `
+                                                <p class="text-sm text-gray-600 mt-1">👤 ${ticket.beneficiary.name}</p>
+                                            ` : ''}
+                                            <p class="text-xs text-gray-400 font-mono mt-1">${ticket.code}</p>
                                         </div>
-                                    ` : ''}
-                                </div>
-                                <span class="inline-block px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap ml-3 ${
-                                    ticket.status === 'valid' || ticket.status === 'pending' ? 'bg-green-100 text-green-800' :
-                                    ticket.status === 'used' ? 'bg-blue-100 text-blue-800' :
-                                    ticket.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                    'bg-gray-100 text-gray-800'
-                                }">
-                                    ${ticket.status_label}
-                                </span>
-                            </div>
-                            <div class="space-y-2 mb-4">
-                                ${ticket.date ? `<p class="text-sm text-gray-600">${new Date(ticket.date).toLocaleDateString('ro-RO', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}</p>` : ''}
-                                ${ticket.venue ? `<p class="text-sm text-gray-600">📍 ${ticket.venue}</p>` : ''}
-                                ${ticket.seat_label ? `<p class="text-sm text-gray-600">💺 Loc: ${ticket.seat_label}</p>` : ''}
-                            </div>
-                            <div class="border-t pt-4">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center space-x-3">
-                                        <img src="${ticket.qr_code}" alt="QR Code" class="w-20 h-20 border border-gray-200 rounded">
-                                        <div>
-                                            <p class="text-xs text-gray-500 mb-1">Cod bilet:</p>
-                                            <p class="text-sm font-mono font-semibold text-gray-900">${ticket.code}</p>
-                                        </div>
+                                        <button
+                                            class="view-ticket-btn flex-shrink-0 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition text-sm font-medium"
+                                            data-ticket-id="${ticket.id}"
+                                            data-ticket-code="${ticket.code}"
+                                            data-ticket-qr="${ticket.qr_code}"
+                                            data-event-name="${ticket.event_name || ''}"
+                                            data-ticket-type="${ticket.ticket_type || ''}"
+                                            data-date="${ticket.date || ''}"
+                                            data-venue="${ticket.venue || ''}"
+                                            data-seat="${ticket.seat_label || ''}"
+                                            data-status="${ticket.status || ''}"
+                                            data-status-label="${ticket.status_label || ''}"
+                                            data-beneficiary-name="${ticket.beneficiary?.name || ''}"
+                                            data-beneficiary-email="${ticket.beneficiary?.email || ''}">
+                                            Detalii
+                                        </button>
                                     </div>
-                                </div>
-                                <button
-                                    class="view-ticket-btn mt-4 w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
-                                    data-ticket-id="${ticket.id}"
-                                    data-ticket-code="${ticket.code}"
-                                    data-ticket-qr="${ticket.qr_code}"
-                                    data-event-name="${ticket.event_name || ''}"
-                                    data-ticket-type="${ticket.ticket_type || ''}"
-                                    data-date="${ticket.date || ''}"
-                                    data-venue="${ticket.venue || ''}"
-                                    data-seat="${ticket.seat_label || ''}"
-                                    data-status="${ticket.status || ''}"
-                                    data-status-label="${ticket.status_label || ''}"
-                                    data-beneficiary-name="${ticket.beneficiary?.name || ''}"
-                                    data-beneficiary-email="${ticket.beneficiary?.email || ''}">
-                                    Vezi Detalii Bilet
-                                </button>
+                                `).join('')}
                             </div>
                         </div>
-                    `).join('');
+                    `;
 
                     // Attach event listeners to ticket detail buttons
                     document.querySelectorAll('.view-ticket-btn').forEach(button => {
@@ -2591,7 +2608,7 @@ export class Router {
             const containerEl = document.getElementById('order-detail-container');
             if (containerEl) {
                 containerEl.innerHTML = `
-                    <h1 class="text-3xl font-bold text-gray-900 mb-6">Comanda #${order.order_number}</h1>
+                    <h1 class="text-3xl font-bold text-gray-900 mb-6">Comanda ${order.order_number}</h1>
 
                     <div class="bg-white rounded-lg shadow p-6 mb-6">
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -2612,7 +2629,7 @@ export class Router {
                             </div>
                             <div>
                                 <p class="text-sm text-gray-500">Metodă plată</p>
-                                <p class="font-medium text-gray-900">${order.payment_method || '-'}</p>
+                                <p class="font-medium text-gray-900">${order.meta?.payment_method || 'Card'}</p>
                             </div>
                             <div>
                                 <p class="text-sm text-gray-500">Total</p>
@@ -2621,46 +2638,54 @@ export class Router {
                         </div>
                     </div>
 
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Bilete</h2>
-                    <div class="space-y-4">
-                        ${order.tickets.map((ticket: any) => `
-                            <div class="bg-white rounded-lg shadow p-6">
-                                <div class="flex justify-between items-start">
-                                    <div class="flex-1">
-                                        <h3 class="font-semibold text-gray-900">${ticket.event_name}</h3>
-                                        <p class="text-sm text-gray-600">${ticket.ticket_type} ${ticket.quantity > 1 ? `(×${ticket.quantity})` : ''}</p>
-                                        ${ticket.beneficiary ? `
-                                            <p class="text-sm text-gray-600 mt-2">👤 Beneficiar: ${ticket.beneficiary.name || ticket.beneficiary}</p>
-                                        ` : ''}
-                                        ${ticket.seat_label ? `<p class="text-sm text-gray-600">💺 Loc: ${ticket.seat_label}</p>` : ''}
-                                    </div>
-                                    <div class="text-right">
-                                        <p class="font-medium">${ticket.price} ${order.currency || 'RON'}</p>
-                                        ${ticket.code ? `<p class="text-xs text-gray-500 font-mono">${ticket.code}</p>` : ''}
-                                    </div>
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Bilete (${order.items_count})</h2>
+                    <div class="space-y-6">
+                        ${(order.events || []).map((eventGroup: any) => `
+                            <div class="bg-white rounded-lg shadow overflow-hidden">
+                                <div class="bg-gray-50 p-4 border-b">
+                                    <h3 class="font-semibold text-gray-900">${eventGroup.event?.title || 'Eveniment'}</h3>
+                                    ${eventGroup.venue ? `
+                                        <p class="text-sm text-gray-600">${eventGroup.venue.name}${eventGroup.venue.city ? `, ${eventGroup.venue.city}` : ''}</p>
+                                    ` : ''}
+                                    ${eventGroup.event?.date ? `
+                                        <p class="text-sm text-gray-500">${new Date(eventGroup.event.date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' })}${eventGroup.event.time ? ` • ${eventGroup.event.time}` : ''}</p>
+                                    ` : ''}
+                                </div>
+                                <div class="divide-y">
+                                    ${(eventGroup.tickets || []).map((ticket: any) => `
+                                        <div class="p-4 flex justify-between items-center">
+                                            <div class="flex-1">
+                                                <p class="font-medium text-gray-900">${ticket.ticket_type}</p>
+                                                ${ticket.seat_label ? `<p class="text-sm text-gray-600">💺 Loc: ${ticket.seat_label}</p>` : ''}
+                                                <p class="text-xs text-gray-500 font-mono mt-1">${ticket.code}</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <span class="inline-block px-2 py-1 text-xs rounded-full ${
+                                                    ticket.status === 'valid' ? 'bg-green-100 text-green-700' :
+                                                    ticket.status === 'used' ? 'bg-gray-100 text-gray-700' :
+                                                    'bg-red-100 text-red-700'
+                                                }">${ticket.status_label || ticket.status}</span>
+                                                ${ticket.price ? `<p class="font-medium mt-1">${ticket.price} ${ticket.currency || order.currency || 'RON'}</p>` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
                                 </div>
                             </div>
                         `).join('')}
                     </div>
 
-                    ${order.billing_info ? `
-                        <h2 class="text-xl font-semibold text-gray-900 mt-8 mb-4">Informații facturare</h2>
+                    ${order.meta ? `
+                        <h2 class="text-xl font-semibold text-gray-900 mt-8 mb-4">Informații client</h2>
                         <div class="bg-white rounded-lg shadow p-6">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <p class="text-sm text-gray-500">Nume</p>
-                                    <p class="font-medium">${order.billing_info.name || '-'}</p>
+                                    <p class="font-medium">${order.meta.customer_name || '-'}</p>
                                 </div>
                                 <div>
                                     <p class="text-sm text-gray-500">Email</p>
-                                    <p class="font-medium">${order.billing_info.email || '-'}</p>
+                                    <p class="font-medium">${order.meta.customer_email || '-'}</p>
                                 </div>
-                                ${order.billing_info.phone ? `
-                                    <div>
-                                        <p class="text-sm text-gray-500">Telefon</p>
-                                        <p class="font-medium">${order.billing_info.phone}</p>
-                                    </div>
-                                ` : ''}
                             </div>
                         </div>
                     ` : ''}

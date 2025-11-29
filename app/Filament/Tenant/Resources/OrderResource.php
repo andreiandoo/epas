@@ -5,7 +5,6 @@ namespace App\Filament\Tenant\Resources;
 use App\Filament\Tenant\Resources\OrderResource\Pages;
 use App\Models\Order;
 use Filament\Forms;
-use Filament\Infolists\Components as IC;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
@@ -31,87 +30,82 @@ class OrderResource extends Resource
     {
         return $schema
             ->components([
-                IC\Section::make('Detalii comandă')
+                SC\Section::make('Detalii comandă')
                     ->icon('heroicon-o-shopping-cart')
                     ->columns(3)
                     ->schema([
-                        IC\TextEntry::make('order_number')
+                        Forms\Components\Placeholder::make('order_number')
                             ->label('Număr comandă')
-                            ->formatStateUsing(fn ($record) => '#' . str_pad($record->id, 6, '0', STR_PAD_LEFT))
-                            ->weight('bold')
-                            ->size('lg'),
-                        IC\TextEntry::make('status')
+                            ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold">#' . str_pad($record->id, 6, '0', STR_PAD_LEFT) . '</span>')),
+                        Forms\Components\Placeholder::make('status')
                             ->label('Status')
-                            ->badge()
-                            ->color(fn (string $state): string => match ($state) {
-                                'pending' => 'warning',
-                                'paid', 'confirmed' => 'success',
-                                'cancelled' => 'danger',
-                                'refunded' => 'gray',
-                                default => 'gray',
-                            })
-                            ->formatStateUsing(fn (string $state): string => match ($state) {
+                            ->content(fn ($record) => new HtmlString('<span class="px-2 py-1 rounded text-sm font-medium ' . match ($record->status) {
+                                'pending' => 'bg-warning-100 text-warning-700',
+                                'paid', 'confirmed' => 'bg-success-100 text-success-700',
+                                'cancelled' => 'bg-danger-100 text-danger-700',
+                                default => 'bg-gray-100 text-gray-700',
+                            } . '">' . match ($record->status) {
                                 'pending' => 'În așteptare',
                                 'paid' => 'Plătită',
                                 'confirmed' => 'Confirmată',
                                 'cancelled' => 'Anulată',
                                 'refunded' => 'Rambursată',
-                                default => ucfirst($state),
-                            }),
-                        IC\TextEntry::make('total_cents')
+                                default => ucfirst($record->status),
+                            } . '</span>')),
+                        Forms\Components\Placeholder::make('total_cents')
                             ->label('Total')
-                            ->formatStateUsing(fn ($state, $record) => number_format($state / 100, 2) . ' ' . ($record->tickets->first()?->ticketType?->currency ?? 'RON'))
-                            ->weight('bold')
-                            ->size('lg'),
-                        IC\TextEntry::make('created_at')
+                            ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold">' . number_format($record->total_cents / 100, 2) . ' ' . ($record->tickets->first()?->ticketType?->currency ?? 'RON') . '</span>')),
+                        Forms\Components\Placeholder::make('created_at')
                             ->label('Data comenzii')
-                            ->dateTime('d M Y H:i'),
-                        IC\TextEntry::make('meta.payment_method')
+                            ->content(fn ($record) => $record->created_at?->format('d M Y H:i')),
+                        Forms\Components\Placeholder::make('payment_method')
                             ->label('Metodă plată')
-                            ->default('Card'),
-                        IC\TextEntry::make('updated_at')
+                            ->content(fn ($record) => $record->meta['payment_method'] ?? 'Card'),
+                        Forms\Components\Placeholder::make('updated_at')
                             ->label('Ultima actualizare')
-                            ->dateTime('d M Y H:i'),
+                            ->content(fn ($record) => $record->updated_at?->format('d M Y H:i')),
                     ]),
 
-                IC\Section::make('Client')
+                SC\Section::make('Client')
                     ->icon('heroicon-o-user')
                     ->columns(3)
                     ->schema([
-                        IC\TextEntry::make('meta.customer_name')
+                        Forms\Components\Placeholder::make('customer_name')
                             ->label('Nume')
-                            ->default('N/A'),
-                        IC\TextEntry::make('customer_email')
+                            ->content(fn ($record) => $record->meta['customer_name'] ?? 'N/A'),
+                        Forms\Components\Placeholder::make('customer_email')
                             ->label('Email')
-                            ->url(fn ($state) => "mailto:{$state}")
-                            ->color('primary'),
-                        IC\TextEntry::make('meta.customer_phone')
+                            ->content(fn ($record) => new HtmlString('<a href="mailto:' . $record->customer_email . '" class="text-primary-600 hover:underline">' . $record->customer_email . '</a>')),
+                        Forms\Components\Placeholder::make('customer_phone')
                             ->label('Telefon')
-                            ->url(fn ($state) => $state ? "tel:{$state}" : null)
-                            ->default('N/A'),
+                            ->content(fn ($record) => $record->meta['customer_phone'] ?? 'N/A'),
                     ]),
 
-                IC\Section::make('Bilete comandate')
+                SC\Section::make('Bilete comandate')
                     ->icon('heroicon-o-ticket')
                     ->schema([
-                        IC\TextEntry::make('tickets_count')
+                        Forms\Components\Placeholder::make('tickets_count')
                             ->label('Total bilete')
-                            ->formatStateUsing(function ($record) {
+                            ->content(function ($record) {
                                 $count = $record->tickets->count();
                                 return $count . ' bilet' . ($count > 1 ? 'e' : '');
                             }),
-                        IC\ViewEntry::make('tickets_list')
+                        Forms\Components\Placeholder::make('tickets_list')
                             ->label('')
-                            ->view('filament.tenant.resources.order-resource.tickets-list'),
+                            ->content(fn ($record) => new HtmlString(
+                                view('filament.tenant.resources.order-resource.tickets-list', ['record' => $record])->render()
+                            )),
                     ]),
 
-                IC\Section::make('Beneficiari')
+                SC\Section::make('Beneficiari')
                     ->icon('heroicon-o-users')
                     ->visible(fn ($record) => !empty($record->meta['beneficiaries']))
                     ->schema([
-                        IC\ViewEntry::make('beneficiaries_list')
+                        Forms\Components\Placeholder::make('beneficiaries_list')
                             ->label('')
-                            ->view('filament.tenant.resources.order-resource.beneficiaries-list'),
+                            ->content(fn ($record) => new HtmlString(
+                                view('filament.tenant.resources.order-resource.beneficiaries-list', ['record' => $record])->render()
+                            )),
                     ]),
             ]);
     }
