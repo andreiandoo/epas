@@ -8,39 +8,40 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     * Extend URL columns to 2048 characters to accommodate longer URLs like embed URLs
+     * Change URL columns to TEXT to accommodate longer URLs like embed URLs
+     * Using TEXT instead of VARCHAR(2048) to avoid MySQL row size limits
      */
     public function up(): void
     {
         // Venues table
         Schema::table('venues', function (Blueprint $table) {
-            $table->string('website_url', 2048)->nullable()->change();
-            $table->string('facebook_url', 2048)->nullable()->change();
-            $table->string('instagram_url', 2048)->nullable()->change();
-            $table->string('tiktok_url', 2048)->nullable()->change();
-            $table->string('video_url', 2048)->nullable()->change();
-            $table->string('google_maps_url', 2048)->nullable()->change();
-            $table->string('image_url', 2048)->nullable()->change();
+            $table->text('website_url')->nullable()->change();
+            $table->text('facebook_url')->nullable()->change();
+            $table->text('instagram_url')->nullable()->change();
+            $table->text('tiktok_url')->nullable()->change();
+            $table->text('video_url')->nullable()->change();
+            $table->text('google_maps_url')->nullable()->change();
+            $table->text('image_url')->nullable()->change();
         });
 
         // Artists table
         Schema::table('artists', function (Blueprint $table) {
-            $table->string('website', 2048)->nullable()->change();
-            $table->string('facebook_url', 2048)->nullable()->change();
-            $table->string('instagram_url', 2048)->nullable()->change();
-            $table->string('tiktok_url', 2048)->nullable()->change();
-            $table->string('youtube_url', 2048)->nullable()->change();
-            $table->string('spotify_url', 2048)->nullable()->change();
-            $table->string('image_url', 2048)->nullable()->change();
+            $table->text('website')->nullable()->change();
+            $table->text('facebook_url')->nullable()->change();
+            $table->text('instagram_url')->nullable()->change();
+            $table->text('tiktok_url')->nullable()->change();
+            $table->text('youtube_url')->nullable()->change();
+            $table->text('spotify_url')->nullable()->change();
+            $table->text('image_url')->nullable()->change();
         });
 
         // Events table
         Schema::table('events', function (Blueprint $table) {
-            $table->string('website_url', 2048)->nullable()->change();
-            $table->string('facebook_url', 2048)->nullable()->change();
-            $table->string('poster_url', 2048)->nullable()->change();
-            $table->string('hero_image_url', 2048)->nullable()->change();
-            $table->string('video_url', 2048)->nullable()->change();
+            $table->text('website_url')->nullable()->change();
+            $table->text('facebook_url')->nullable()->change();
+            $table->text('poster_url')->nullable()->change();
+            $table->text('hero_image_url')->nullable()->change();
+            $table->text('video_url')->nullable()->change();
         });
     }
 
