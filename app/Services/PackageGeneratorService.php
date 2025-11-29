@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Domain;
 use App\Models\Tenant;
 use App\Models\TenantPackage;
-use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -74,17 +73,18 @@ class PackageGeneratorService
 
     protected function buildPackage(TenantPackage $package): array
     {
-        // Ensure output directory exists
-        if (!is_dir($this->outputPath)) {
-            mkdir($this->outputPath, 0755, true);
+        // Use pre-built file instead of running Vite build (much faster: ~2s vs ~4min)
+        $preBuiltFile = $this->buildPath . '/dist/tixello-loader.iife.js';
+
+        if (!file_exists($preBuiltFile)) {
+            throw new \RuntimeException('Pre-built loader not found. Run "npm run build" in resources/tenant-client first.');
         }
 
-        $packageDir = $this->outputPath . '/' . $package->package_hash;
-        mkdir($packageDir, 0755, true);
+        // Read the pre-built file
+        $baseContent = file_get_contents($preBuiltFile);
 
-        // Write tenant configuration for build
-        $configPath = $packageDir . '/tenant-config.json';
-        file_put_contents($configPath, json_encode([
+        // Prepare tenant configuration
+        $config = [
             'tenantId' => $package->tenant_id,
             'domainId' => $package->domain_id,
             'domain' => $package->domain->domain,
@@ -93,41 +93,59 @@ class PackageGeneratorService
             'theme' => $package->theme_config,
             'version' => $package->version,
             'packageHash' => $package->package_hash,
-        ], JSON_PRETTY_PRINT));
+        ];
 
-        // Run the build process
-        $outputFile = $packageDir . '/tixello-loader.min.js';
+        $encodedConfig = base64_encode(json_encode($config));
+        $domain = $package->domain->domain;
 
-        $result = Process::timeout(300)->run([
-            'node',
-            base_path('scripts/build-tenant-package.js'),
-            '--config', $configPath,
-            '--output', $outputFile,
-            '--obfuscate', config('tenant-package.obfuscation.enabled', true) ? 'true' : 'false',
-        ]);
+        // Build the final package with injected config and security
+        $header = "/**
+ * Tixello Event Platform - Tenant Client
+ * Domain: {$domain}
+ * Version: {$package->version}
+ * Generated: " . now()->toIso8601String() . "
+ *
+ * This code is proprietary and confidential.
+ * Unauthorized copying or distribution is prohibited.
+ */
+";
 
-        if (!$result->successful()) {
-            throw new \RuntimeException('Build failed: ' . $result->errorOutput());
-        }
+        $securityWrapper = "
+(function(){
+    var d=\"{$domain}\";
+    var h=window.location.hostname;
+    if(h!==\"localhost\"&&h!==\"127.0.0.1\"&&h!==d&&h!==\"www.\"+d&&!h.endsWith(\".\"+d)){
+        console.error(\"Tixello: Domain mismatch\");
+        document.body.innerHTML=\"<div style='padding:20px;text-align:center;'><h1>Invalid License</h1><p>This application is not licensed for this domain.</p></div>\";
+        throw new Error(\"Invalid domain\");
+    }
+    if(typeof window.__TIXELLO_TAMPER_CHECK__!==\"undefined\"){
+        throw new Error(\"Tampering detected\");
+    }
+    window.__TIXELLO_TAMPER_CHECK__=\"{$package->package_hash}\";
+})();
+";
 
-        if (!file_exists($outputFile)) {
-            throw new \RuntimeException('Build output file not found');
-        }
+        $configInjection = "window.__TIXELLO_CONFIG__=\"{$encodedConfig}\";";
+
+        $content = $header . $securityWrapper . $configInjection . $baseContent;
 
         // Calculate integrity hash (SRI)
-        $fileContent = file_get_contents($outputFile);
-        $integrityHash = 'sha384-' . base64_encode(hash('sha384', $fileContent, true));
+        $integrityHash = 'sha384-' . base64_encode(hash('sha384', $content, true));
 
-        // Move to storage
+        // Save to storage
         $storagePath = 'packages/' . $package->package_hash . '/tixello-loader.min.js';
-        Storage::put($storagePath, $fileContent);
+        Storage::put($storagePath, $content);
 
-        // Cleanup build directory
-        $this->cleanupBuildDirectory($packageDir);
+        Log::info('Package built from pre-compiled loader', [
+            'domain' => $domain,
+            'base_size' => strlen($baseContent),
+            'final_size' => strlen($content),
+        ]);
 
         return [
             'file_path' => $storagePath,
-            'file_size' => strlen($fileContent),
+            'file_size' => strlen($content),
             'integrity_hash' => $integrityHash,
         ];
     }
