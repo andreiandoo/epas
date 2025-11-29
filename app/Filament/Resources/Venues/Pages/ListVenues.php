@@ -28,7 +28,7 @@ class ListVenues extends ListRecords
                         ->label('CSV File')
                         ->acceptedFileTypes(['text/csv', 'application/csv', 'text/plain'])
                         ->required()
-                        ->helperText('Upload a CSV file with venue data. See documentation for format.')
+                        ->helperText('CSV columns: name (required), slug, address, city, state, country, website_url, phone, phone2, email, email2, facebook_url, instagram_url, tiktok_url, image_url, video_type (youtube/vimeo), video_url, capacity, capacity_total, capacity_standing, capacity_seated, lat, lng, google_maps_url, established_at (YYYY-MM-DD), description')
                         ->disk('local')
                         ->directory('imports'),
                 ])
