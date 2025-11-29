@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Artist;
+use App\Models\Customer;
 use App\Models\Event;
 use App\Models\Tenant;
+use App\Models\Ticket;
 use App\Models\Venue;
 use App\Services\SpotifyService;
 use App\Services\YouTubeService;
@@ -21,6 +23,18 @@ class PublicDataController extends Controller
             'venues' => Venue::count(),
             'artists' => Artist::count(),
             'tenants' => Tenant::where('is_active', true)->count(),
+        ]);
+    }
+
+    public function data(): JsonResponse
+    {
+        return response()->json([
+            'tickets_sold' => Ticket::count(),
+            'customers' => Customer::count(),
+            'tenants' => Tenant::where('is_active', true)->count(),
+            'venues' => Venue::count(),
+            'events' => Event::count(),
+            'artists' => Artist::count(),
         ]);
     }
 
