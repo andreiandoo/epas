@@ -132,7 +132,9 @@ class EventsController extends Controller
                         'is_cancelled' => $event->is_cancelled ?? false,
                         'cancel_reason' => $event->cancel_reason,
                         'is_postponed' => $event->is_postponed ?? false,
-                        'postponed_date' => $event->postponed_date?->toIso8601String(),
+                        'postponed_date' => $event->postponed_date && $event->postponed_start_time
+                            ? \Carbon\Carbon::parse($event->postponed_date->format('Y-m-d') . ' ' . $event->postponed_start_time)->toIso8601String()
+                            : $event->postponed_date?->toIso8601String(),
                         'postponed_start_time' => $event->postponed_start_time,
                         'postponed_door_time' => $event->postponed_door_time,
                         'postponed_end_time' => $event->postponed_end_time,
@@ -266,7 +268,9 @@ class EventsController extends Controller
                 'is_cancelled' => $event->is_cancelled ?? false,
                 'cancel_reason' => $event->cancel_reason,
                 'is_postponed' => $event->is_postponed ?? false,
-                'postponed_date' => $event->postponed_date?->toIso8601String(),
+                'postponed_date' => $event->postponed_date && $event->postponed_start_time
+                    ? \Carbon\Carbon::parse($event->postponed_date->format('Y-m-d') . ' ' . $event->postponed_start_time)->toIso8601String()
+                    : $event->postponed_date?->toIso8601String(),
                 'postponed_start_time' => $event->postponed_start_time,
                 'postponed_door_time' => $event->postponed_door_time,
                 'postponed_end_time' => $event->postponed_end_time,

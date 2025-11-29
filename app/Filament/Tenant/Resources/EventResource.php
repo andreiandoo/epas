@@ -382,12 +382,7 @@ class EventResource extends Resource
                     Forms\Components\RichEditor::make("ticket_terms.{$tenantLanguage}")
                         ->label($tenantLanguage === 'ro' ? 'Termeni bilete' : 'Ticket terms')
                         ->columnSpanFull()
-                        ->afterStateHydrated(function ($component, SGet $get) use ($tenant) {
-                            // Auto-fill from tenant if empty
-                            if (!$component->getState() && $tenant?->ticket_terms) {
-                                $component->state($tenant->ticket_terms);
-                            }
-                        }),
+                        ->default($tenant?->ticket_terms ?? null),
                 ])->columns(1),
 
             // TAXONOMIES
@@ -736,6 +731,7 @@ class EventResource extends Resource
 
                             // Get event data for auto-fill
                             $title = $get("title.{$tenantLanguage}") ?? '';
+                            $slug = $get('slug') ?? '';
                             $description = $get("short_description.{$tenantLanguage}") ?? $get("description.{$tenantLanguage}") ?? '';
                             $shortDesc = strip_tags($description);
                             if (strlen($shortDesc) > 160) {
@@ -760,11 +756,38 @@ class EventResource extends Resource
                                 }
                             }
 
+                            // Get tenant's primary domain for absolute URLs
+                            $primaryDomain = $tenant?->domains()
+                                ->where('is_primary', true)
+                                ->where('is_active', true)
+                                ->first();
+                            $baseUrl = $primaryDomain
+                                ? 'https://' . $primaryDomain->domain
+                                : ($tenant?->website ?? '');
+
+                            // Build absolute event URL
+                            $eventUrl = $baseUrl && $slug ? "{$baseUrl}/event/{$slug}" : '';
+
+                            // Build absolute image URL
+                            $absoluteImageUrl = '';
+                            if ($imageUrl) {
+                                // If it's already an absolute URL, use as-is
+                                if (str_starts_with($imageUrl, 'http://') || str_starts_with($imageUrl, 'https://')) {
+                                    $absoluteImageUrl = $imageUrl;
+                                } else {
+                                    // Build absolute URL using storage
+                                    $absoluteImageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($imageUrl);
+                                }
+                            }
+
+                            // Current timestamp for article times
+                            $now = now()->toIso8601String();
+
                             $templates = [
                                 'core' => [
                                     'meta_title'       => $title,
                                     'meta_description' => $shortDesc,
-                                    'canonical_url'    => '',
+                                    'canonical_url'    => $eventUrl,
                                     'robots'           => 'index,follow',
                                     'viewport'         => 'width=device-width, initial-scale=1',
                                     'referrer'         => 'no-referrer-when-downgrade',
@@ -777,19 +800,19 @@ class EventResource extends Resource
                                     'og:title'         => $title,
                                     'og:description'   => $shortDesc,
                                     'og:type'          => 'event',
-                                    'og:url'           => '',
-                                    'og:image'         => $imageUrl,
+                                    'og:url'           => $eventUrl,
+                                    'og:image'         => $absoluteImageUrl,
                                     'og:image:alt'     => $title,
-                                    'og:image:width'   => '',
-                                    'og:image:height'  => '',
+                                    'og:image:width'   => '1200',
+                                    'og:image:height'  => '630',
                                     'og:site_name'     => $tenant?->public_name ?? $tenant?->name ?? '',
                                 ],
                                 'article' => [
                                     'article:author'         => $tenant?->public_name ?? '',
                                     'article:section'        => 'Events',
                                     'article:tag'            => '',
-                                    'article:published_time' => '',
-                                    'article:modified_time'  => '',
+                                    'article:published_time' => $now,
+                                    'article:modified_time'  => $now,
                                 ],
                                 'product' => [
                                     'product:price:amount'   => '',
@@ -800,7 +823,7 @@ class EventResource extends Resource
                                     'twitter:card'        => 'summary_large_image',
                                     'twitter:title'       => $title,
                                     'twitter:description' => $shortDesc,
-                                    'twitter:image'       => $imageUrl,
+                                    'twitter:image'       => $absoluteImageUrl,
                                     'twitter:site'        => '',
                                     'twitter:creator'     => '',
                                     'twitter:player'        => '',
@@ -813,7 +836,7 @@ class EventResource extends Resource
                                         '@type'    => 'Event',
                                         'name'     => $title,
                                         'description' => $shortDesc,
-                                        'image'    => $imageUrl,
+                                        'image'    => $absoluteImageUrl,
                                         'startDate'=> $eventDate && $startTime ? "{$eventDate}T{$startTime}" : $eventDate,
                                         'endDate'  => $eventDate && $endTime ? "{$eventDate}T{$endTime}" : '',
                                         'location' => [
@@ -824,9 +847,9 @@ class EventResource extends Resource
                                         'organizer' => [
                                             '@type' => 'Organization',
                                             'name'  => $tenant?->public_name ?? $tenant?->name ?? '',
-                                            'url'   => '',
+                                            'url'   => $baseUrl,
                                         ],
-                                        'url'     => '',
+                                        'url'     => $eventUrl,
                                     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
                                 ],
                                 'robots_adv' => [
@@ -849,10 +872,10 @@ class EventResource extends Resource
                                     'facebook-domain-verification'  => '',
                                 ],
                                 'feeds' => [
-                                    'rss_url'         => '',
-                                    'atom_url'        => '',
-                                    'oembed_json'     => '',
-                                    'oembed_xml'      => '',
+                                    'rss_url'         => $baseUrl ? "{$baseUrl}/feed/rss" : '',
+                                    'atom_url'        => $baseUrl ? "{$baseUrl}/feed/atom" : '',
+                                    'oembed_json'     => $eventUrl ? "{$eventUrl}/oembed.json" : '',
+                                    'oembed_xml'      => $eventUrl ? "{$eventUrl}/oembed.xml" : '',
                                 ],
                             ];
 
