@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -14,35 +15,34 @@ return new class extends Migration
     public function up(): void
     {
         // Venues table
-        Schema::table('venues', function (Blueprint $table) {
-            $table->text('website_url')->nullable()->change();
-            $table->text('facebook_url')->nullable()->change();
-            $table->text('instagram_url')->nullable()->change();
-            $table->text('tiktok_url')->nullable()->change();
-            $table->text('video_url')->nullable()->change();
-            $table->text('google_maps_url')->nullable()->change();
-            $table->text('image_url')->nullable()->change();
-        });
+        $this->changeColumnToText('venues', [
+            'website_url', 'facebook_url', 'instagram_url', 'tiktok_url',
+            'video_url', 'google_maps_url', 'image_url'
+        ]);
 
         // Artists table
-        Schema::table('artists', function (Blueprint $table) {
-            $table->text('website')->nullable()->change();
-            $table->text('facebook_url')->nullable()->change();
-            $table->text('instagram_url')->nullable()->change();
-            $table->text('tiktok_url')->nullable()->change();
-            $table->text('youtube_url')->nullable()->change();
-            $table->text('spotify_url')->nullable()->change();
-            $table->text('image_url')->nullable()->change();
-        });
+        $this->changeColumnToText('artists', [
+            'website', 'facebook_url', 'instagram_url', 'tiktok_url',
+            'youtube_url', 'spotify_url', 'main_image_url', 'logo_url',
+            'portrait_url', 'manager_website', 'agent_website'
+        ]);
 
         // Events table
-        Schema::table('events', function (Blueprint $table) {
-            $table->text('website_url')->nullable()->change();
-            $table->text('facebook_url')->nullable()->change();
-            $table->text('poster_url')->nullable()->change();
-            $table->text('hero_image_url')->nullable()->change();
-            $table->text('video_url')->nullable()->change();
-        });
+        $this->changeColumnToText('events', [
+            'website_url', 'facebook_url', 'poster_url', 'hero_image_url', 'video_url'
+        ]);
+    }
+
+    /**
+     * Change columns to TEXT type if they exist
+     */
+    private function changeColumnToText(string $table, array $columns): void
+    {
+        foreach ($columns as $column) {
+            if (Schema::hasColumn($table, $column)) {
+                DB::statement("ALTER TABLE `{$table}` MODIFY `{$column}` TEXT NULL");
+            }
+        }
     }
 
     /**
