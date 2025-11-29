@@ -50,8 +50,12 @@ class ImportVenuesCommand extends Command
                 continue;
             }
 
+            // Translatable fields need to be stored as JSON with locale keys
+            $name = !empty($data['name']) ? ['en' => $data['name'], 'ro' => $data['name']] : null;
+            $description = !empty($data['description']) ? ['en' => $data['description'], 'ro' => $data['description']] : null;
+
             Venue::create([
-                'name' => $data['name'],
+                'name' => $name,
                 'slug' => $slug,
                 'address' => !empty($data['address']) ? $data['address'] : null,
                 'city' => !empty($data['city']) ? $data['city'] : null,
@@ -76,7 +80,7 @@ class ImportVenuesCommand extends Command
                 'lng' => !empty($data['lng']) ? $data['lng'] : null,
                 'google_maps_url' => !empty($data['google_maps_url']) ? $data['google_maps_url'] : null,
                 'established_at' => !empty($data['established_at']) ? $data['established_at'] : null,
-                'description' => !empty($data['description']) ? $data['description'] : null,
+                'description' => $description,
             ]);
 
             $imported++;

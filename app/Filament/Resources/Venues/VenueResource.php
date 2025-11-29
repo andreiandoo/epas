@@ -245,9 +245,12 @@ class VenueResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name.en')
+                Tables\Columns\TextColumn::make('name')
                     ->label('Nume')
-                    ->searchable()
+                    ->formatStateUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?: ($record->name['en'] ?? $record->name ?? '-'))
+                    ->searchable(query: function ($query, string $search) {
+                        return $query->where('name', 'like', "%{$search}%");
+                    })
                     ->sortable()
                     ->url(fn ($record) => static::getUrl('view', ['record' => $record->slug])),
 
@@ -291,8 +294,15 @@ class VenueResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->recordUrl(null)       // ⟵ IMPORTANT: previne linkul implicit spre `view` fără record
-            ->actions([])
-            ->bulkActions([]);
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ]);
     }
 
     public static function getRelations(): array
