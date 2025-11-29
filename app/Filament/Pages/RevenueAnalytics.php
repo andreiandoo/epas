@@ -154,7 +154,7 @@ class RevenueAnalytics extends Page
 
         foreach ($microservices as $microservice) {
             $activeCount = $microservice->tenants()
-                ->wherePivot('is_active', true)
+                ->wherePivot('status', 'active')
                 ->count();
 
             $isRecurring = in_array($microservice->billing_cycle, ['monthly', 'yearly']);

@@ -7,6 +7,8 @@ use Filament\Tables;
 use Filament\Forms;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 
 class OrdersTable
 {
@@ -109,6 +111,11 @@ class OrdersTable
                     }),
             ])
             ->actions([])
-            ->bulkActions([]);
+            ->bulkActions([])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
+            ]);
     }
 }

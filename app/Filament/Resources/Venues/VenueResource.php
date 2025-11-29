@@ -249,7 +249,7 @@ class VenueResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nume')
-                    ->formatStateUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?: ($record->name['en'] ?? $record->name ?? '-'))
+                    ->formatStateUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en') ?: '-')
                     ->searchable(query: function ($query, string $search) {
                         return $query->where('name', 'like', "%{$search}%");
                     })
