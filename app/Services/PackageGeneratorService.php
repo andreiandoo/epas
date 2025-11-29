@@ -133,9 +133,9 @@ class PackageGeneratorService
         // Calculate integrity hash (SRI)
         $integrityHash = 'sha384-' . base64_encode(hash('sha384', $content, true));
 
-        // Save to storage
+        // Save to storage with explicit permissions
         $storagePath = 'packages/' . $package->package_hash . '/tixello-loader.min.js';
-        Storage::put($storagePath, $content);
+        Storage::disk('local')->put($storagePath, $content, ['visibility' => 'public']);
 
         Log::info('Package built from pre-compiled loader', [
             'domain' => $domain,
