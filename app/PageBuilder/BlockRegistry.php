@@ -2,20 +2,32 @@
 
 namespace App\PageBuilder;
 
+use App\PageBuilder\Blocks\AccordionBlock;
+use App\PageBuilder\Blocks\AlertBannerBlock;
 use App\PageBuilder\Blocks\BaseBlock;
+use App\PageBuilder\Blocks\ButtonBlock;
 use App\PageBuilder\Blocks\CategoryNavBlock;
+use App\PageBuilder\Blocks\CountdownBlock;
 use App\PageBuilder\Blocks\CtaBannerBlock;
 use App\PageBuilder\Blocks\CustomHtmlBlock;
 use App\PageBuilder\Blocks\DividerBlock;
 use App\PageBuilder\Blocks\EventGridBlock;
+use App\PageBuilder\Blocks\EventListBlock;
 use App\PageBuilder\Blocks\FeaturedEventBlock;
 use App\PageBuilder\Blocks\HeroBlock;
+use App\PageBuilder\Blocks\ImageBlock;
+use App\PageBuilder\Blocks\ImageGalleryBlock;
+use App\PageBuilder\Blocks\MapBlock;
 use App\PageBuilder\Blocks\NewsletterBlock;
 use App\PageBuilder\Blocks\PartnersBlock;
+use App\PageBuilder\Blocks\SliderBlock;
+use App\PageBuilder\Blocks\SocialLinksBlock;
 use App\PageBuilder\Blocks\SpacerBlock;
+use App\PageBuilder\Blocks\StatsCounterBlock;
 use App\PageBuilder\Blocks\TestimonialsBlock;
 use App\PageBuilder\Blocks\TextContentBlock;
 use App\PageBuilder\Blocks\TextImageBlock;
+use App\PageBuilder\Blocks\VideoBlock;
 
 class BlockRegistry
 {
@@ -64,18 +76,43 @@ class BlockRegistry
      */
     public static function registerDefaults(): void
     {
+        // Layout blocks
         static::register(HeroBlock::class);
-        static::register(EventGridBlock::class);
-        static::register(FeaturedEventBlock::class);
-        static::register(CategoryNavBlock::class);
-        static::register(TextContentBlock::class);
-        static::register(TextImageBlock::class);
-        static::register(CtaBannerBlock::class);
-        static::register(NewsletterBlock::class);
-        static::register(TestimonialsBlock::class);
-        static::register(PartnersBlock::class);
+        static::register(SliderBlock::class);
         static::register(SpacerBlock::class);
         static::register(DividerBlock::class);
+
+        // Events blocks
+        static::register(EventGridBlock::class);
+        static::register(EventListBlock::class);
+        static::register(FeaturedEventBlock::class);
+        static::register(CountdownBlock::class);
+
+        // Content blocks
+        static::register(TextContentBlock::class);
+        static::register(TextImageBlock::class);
+        static::register(ImageBlock::class);
+        static::register(VideoBlock::class);
+        static::register(ImageGalleryBlock::class);
+        static::register(StatsCounterBlock::class);
+        static::register(AccordionBlock::class);
+        static::register(MapBlock::class);
+
+        // Navigation blocks
+        static::register(CategoryNavBlock::class);
+        static::register(ButtonBlock::class);
+        static::register(SocialLinksBlock::class);
+
+        // Marketing blocks
+        static::register(CtaBannerBlock::class);
+        static::register(NewsletterBlock::class);
+        static::register(AlertBannerBlock::class);
+
+        // Social proof blocks
+        static::register(TestimonialsBlock::class);
+        static::register(PartnersBlock::class);
+
+        // Advanced blocks
         static::register(CustomHtmlBlock::class);
     }
 
