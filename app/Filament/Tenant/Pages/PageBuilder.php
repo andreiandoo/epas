@@ -22,7 +22,7 @@ class PageBuilder extends Page
     protected static ?string $navigationLabel = 'Page Builder';
     protected static \UnitEnum|string|null $navigationGroup = 'Website';
     protected static ?int $navigationSort = 2;
-    protected static string $view = 'filament.tenant.pages.page-builder';
+    protected static ?string $view = 'filament.tenant.pages.page-builder';
 
     public const MICROSERVICE_SLUG = 'website-visual-editor';
 
