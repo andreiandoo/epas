@@ -146,61 +146,49 @@
         {{-- Preview Panel --}}
         <div class="flex-1 bg-gray-100 dark:bg-gray-900 rounded-xl overflow-hidden flex flex-col">
             {{-- Preview Header --}}
-            <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex items-center gap-4">
-                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Preview:</span>
+            <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
+                <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Preview</span>
 
-                <div class="flex gap-1">
-                    <button
-                        @click="viewport = 'desktop'"
-                        :class="viewport === 'desktop' ? 'bg-primary-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
-                        class="p-2 rounded-lg transition"
+                @if($previewUrl && $currentPageSlug)
+                    <a
+                        href="{{ $previewUrl }}/{{ $currentPageSlug === 'home' ? '' : $currentPageSlug }}"
+                        target="_blank"
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition"
                     >
-                        <x-heroicon-o-computer-desktop class="w-5 h-5" />
-                    </button>
-                    <button
-                        @click="viewport = 'tablet'"
-                        :class="viewport === 'tablet' ? 'bg-primary-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
-                        class="p-2 rounded-lg transition"
-                    >
-                        <x-heroicon-o-device-tablet class="w-5 h-5" />
-                    </button>
-                    <button
-                        @click="viewport = 'mobile'"
-                        :class="viewport === 'mobile' ? 'bg-primary-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
-                        class="p-2 rounded-lg transition"
-                    >
-                        <x-heroicon-o-device-phone-mobile class="w-5 h-5" />
-                    </button>
-                </div>
+                        <x-heroicon-o-arrow-top-right-on-square class="w-4 h-4" />
+                        Open Website
+                    </a>
+                @endif
+            </div>
 
-                <div class="ml-auto flex items-center gap-2">
-                    @if($previewUrl && $currentPageSlug)
+            {{-- Preview Content --}}
+            <div class="flex-1 flex items-center justify-center p-8">
+                @if($previewUrl && $currentPageSlug)
+                    <div class="text-center max-w-md">
+                        <div class="w-20 h-20 mx-auto mb-6 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                            <x-heroicon-o-globe-alt class="w-10 h-10 text-primary-600" />
+                        </div>
+                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Live Preview</h3>
+                        <p class="text-gray-500 dark:text-gray-400 mb-6">
+                            Changes are saved automatically. Click the button above to preview your website in a new tab.
+                        </p>
                         <a
                             href="{{ $previewUrl }}/{{ $currentPageSlug === 'home' ? '' : $currentPageSlug }}"
                             target="_blank"
-                            class="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
+                            class="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition"
                         >
-                            <x-heroicon-o-arrow-top-right-on-square class="w-4 h-4" />
-                            Open in new tab
+                            <x-heroicon-o-eye class="w-5 h-5" />
+                            Preview Page
                         </a>
-                    @endif
-                </div>
-            </div>
-
-            {{-- Preview Frame --}}
-            <div class="flex-1 p-4 flex items-start justify-center overflow-auto">
-                @if($previewUrl && $currentPageSlug)
-                    <iframe
-                        x-ref="previewFrame"
-                        :src="getPreviewUrl()"
-                        :style="getViewportStyle()"
-                        @load="onIframeLoad"
-                        class="bg-white rounded-lg shadow-xl transition-all duration-300"
-                    ></iframe>
+                        <p class="text-xs text-gray-400 mt-4">
+                            URL: {{ $previewUrl }}/{{ $currentPageSlug === 'home' ? '' : $currentPageSlug }}
+                        </p>
+                    </div>
                 @else
-                    <div class="flex flex-col items-center justify-center h-full text-gray-500">
-                        <x-heroicon-o-document class="w-16 h-16 mb-4" />
+                    <div class="text-center text-gray-500">
+                        <x-heroicon-o-document class="w-16 h-16 mx-auto mb-4 text-gray-300" />
                         <p class="text-lg font-medium">Select a page to edit</p>
+                        <p class="text-sm mt-1">Choose a page from the sidebar to start building</p>
                     </div>
                 @endif
             </div>
@@ -216,32 +204,43 @@
             x-transition:leave="transition ease-in duration-150"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
-            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
             @click.self="showBlockPicker = false"
+            @keydown.escape.window="showBlockPicker = false"
         >
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-[700px] max-h-[80vh] overflow-hidden">
-                <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                    <h3 class="font-semibold text-lg text-gray-900 dark:text-white">Add Block</h3>
-                    <button @click="showBlockPicker = false" class="text-gray-400 hover:text-gray-600">
-                        <x-heroicon-o-x-mark class="w-6 h-6" />
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
+                {{-- Modal Header --}}
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+                    <div>
+                        <h3 class="font-semibold text-lg text-gray-900 dark:text-white">Add Block</h3>
+                        <p class="text-sm text-gray-500">Choose a block to add to your page</p>
+                    </div>
+                    <button @click="showBlockPicker = false" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition">
+                        <x-heroicon-o-x-mark class="w-5 h-5" />
                     </button>
                 </div>
 
-                <div class="p-4 overflow-y-auto max-h-[60vh]">
+                {{-- Modal Body - Scrollable --}}
+                <div class="flex-1 overflow-y-auto p-4">
                     <template x-for="(category, categoryKey) in availableBlocks.blocks" :key="categoryKey">
-                        <div class="mb-6" x-show="category.blocks.length > 0">
-                            <h4 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3" x-text="category.name"></h4>
-                            <div class="grid grid-cols-3 gap-3">
+                        <div class="mb-6" x-show="category.blocks && category.blocks.length > 0">
+                            <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                <span x-text="category.name"></span>
+                                <span class="text-gray-300" x-text="'(' + category.blocks.length + ')'"></span>
+                            </h4>
+                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                                 <template x-for="block in category.blocks" :key="block.type">
                                     <button
                                         @click="addBlock(block.type)"
-                                        class="p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-left transition group"
+                                        class="p-3 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 text-left transition group"
                                     >
-                                        <div class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/30 flex items-center justify-center mb-2 transition">
-                                            <x-heroicon-o-cube class="w-5 h-5 text-gray-500 group-hover:text-primary-600" />
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <div class="w-8 h-8 rounded bg-gray-100 dark:bg-gray-700 group-hover:bg-primary-100 dark:group-hover:bg-primary-900/30 flex items-center justify-center transition flex-shrink-0">
+                                                <x-heroicon-o-cube class="w-4 h-4 text-gray-500 group-hover:text-primary-600" />
+                                            </div>
+                                            <span class="font-medium text-sm text-gray-900 dark:text-white truncate" x-text="block.name"></span>
                                         </div>
-                                        <div class="font-medium text-sm text-gray-900 dark:text-white" x-text="block.name"></div>
-                                        <div class="text-xs text-gray-500 mt-1 line-clamp-2" x-text="block.description"></div>
+                                        <p class="text-xs text-gray-500 line-clamp-1 ml-10" x-text="block.description"></p>
                                     </button>
                                 </template>
                             </div>
@@ -303,19 +302,10 @@
                 previewUrl: previewUrl,
                 currentPageSlug: currentPageSlug,
                 showBlockPicker: false,
-                viewport: 'desktop',
-                iframe: null,
                 sortable: null,
 
                 init() {
                     this.initSortable();
-
-                    // Listen for layout changes from Livewire
-                    Livewire.on('layout-changed', (data) => {
-                        if (data && data.layout) {
-                            this.syncPreview(data.layout);
-                        }
-                    });
                 },
 
                 initSortable() {
@@ -334,36 +324,9 @@
                     });
                 },
 
-                getPreviewUrl() {
-                    const slug = this.currentPageSlug === 'home' ? '' : this.currentPageSlug;
-                    return this.previewUrl + '/' + slug + '?preview=1';
-                },
-
-                getViewportStyle() {
-                    const sizes = {
-                        desktop: { width: '100%', maxWidth: '100%', height: '100%' },
-                        tablet: { width: '768px', maxWidth: '768px', height: '100%' },
-                        mobile: { width: '375px', maxWidth: '375px', height: '100%' },
-                    };
-                    return sizes[this.viewport];
-                },
-
-                onIframeLoad(event) {
-                    this.iframe = event.target.contentWindow;
-                },
-
-                syncPreview(layout) {
-                    if (this.iframe) {
-                        this.iframe.postMessage({
-                            type: 'LAYOUT_UPDATE',
-                            layout: layout
-                        }, '*');
-                    }
-                },
-
                 addBlock(type) {
-                    @this.addBlock(type);
                     this.showBlockPicker = false;
+                    @this.addBlock(type);
                 },
             }));
         });

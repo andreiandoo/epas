@@ -11,6 +11,7 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components as SC;
 use Livewire\Attributes\On;
 
 class ThemeEditor extends Page implements HasForms
@@ -83,12 +84,12 @@ class ThemeEditor extends Page implements HasForms
     {
         return $form
             ->schema([
-                Forms\Components\Tabs::make('Theme Settings')
+                SC\Tabs::make('Theme Settings')
                     ->tabs([
-                        Forms\Components\Tabs\Tab::make('Colors')
+                        SC\Tabs\Tab::make('Colors')
                             ->icon('heroicon-o-swatch')
                             ->schema([
-                                Forms\Components\Section::make('Brand Colors')
+                                SC\Section::make('Brand Colors')
                                     ->description('Define your brand\'s primary and secondary colors')
                                     ->schema([
                                         Forms\Components\ColorPicker::make('colors.primary')
@@ -117,7 +118,7 @@ class ThemeEditor extends Page implements HasForms
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(3),
 
-                                Forms\Components\Section::make('Background Colors')
+                                SC\Section::make('Background Colors')
                                     ->schema([
                                         Forms\Components\ColorPicker::make('colors.background')
                                             ->label('Main Background')
@@ -135,7 +136,7 @@ class ThemeEditor extends Page implements HasForms
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(3),
 
-                                Forms\Components\Section::make('Text Colors')
+                                SC\Section::make('Text Colors')
                                     ->schema([
                                         Forms\Components\ColorPicker::make('colors.text')
                                             ->label('Main Text')
@@ -158,7 +159,7 @@ class ThemeEditor extends Page implements HasForms
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(4),
 
-                                Forms\Components\Section::make('Status Colors')
+                                SC\Section::make('Status Colors')
                                     ->schema([
                                         Forms\Components\ColorPicker::make('colors.success')
                                             ->label('Success')
@@ -177,10 +178,10 @@ class ThemeEditor extends Page implements HasForms
                                     ])->columns(3),
                             ]),
 
-                        Forms\Components\Tabs\Tab::make('Typography')
+                        SC\Tabs\Tab::make('Typography')
                             ->icon('heroicon-o-language')
                             ->schema([
-                                Forms\Components\Section::make('Font Families')
+                                SC\Section::make('Font Families')
                                     ->schema([
                                         Forms\Components\Select::make('typography.fontFamily')
                                             ->label('Body Font')
@@ -197,7 +198,7 @@ class ThemeEditor extends Page implements HasForms
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(2),
 
-                                Forms\Components\Section::make('Base Typography')
+                                SC\Section::make('Base Typography')
                                     ->schema([
                                         Forms\Components\Select::make('typography.baseFontSize')
                                             ->label('Base Font Size')
@@ -224,9 +225,9 @@ class ThemeEditor extends Page implements HasForms
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(2),
 
-                                Forms\Components\Section::make('Heading Sizes')
+                                SC\Section::make('Heading Sizes')
                                     ->schema([
-                                        Forms\Components\Grid::make(3)->schema([
+                                        SC\Grid::make(3)->schema([
                                             Forms\Components\TextInput::make('typography.headings.h1.size')
                                                 ->label('H1 Size')
                                                 ->placeholder('3rem'),
@@ -246,7 +247,7 @@ class ThemeEditor extends Page implements HasForms
                                                 ->placeholder('1.2'),
                                         ]),
 
-                                        Forms\Components\Grid::make(3)->schema([
+                                        SC\Grid::make(3)->schema([
                                             Forms\Components\TextInput::make('typography.headings.h2.size')
                                                 ->label('H2 Size')
                                                 ->placeholder('2.25rem'),
@@ -268,10 +269,10 @@ class ThemeEditor extends Page implements HasForms
                                     ]),
                             ]),
 
-                        Forms\Components\Tabs\Tab::make('Layout')
+                        SC\Tabs\Tab::make('Layout')
                             ->icon('heroicon-o-squares-2x2')
                             ->schema([
-                                Forms\Components\Section::make('Spacing')
+                                SC\Section::make('Spacing')
                                     ->schema([
                                         Forms\Components\Select::make('spacing.containerMaxWidth')
                                             ->label('Container Max Width')
@@ -308,7 +309,7 @@ class ThemeEditor extends Page implements HasForms
                                             ->afterStateUpdated(fn () => $this->dispatch('theme-changed', theme: $this->getThemeData())),
                                     ])->columns(3),
 
-                                Forms\Components\Section::make('Border Radius')
+                                SC\Section::make('Border Radius')
                                     ->schema([
                                         Forms\Components\Select::make('borders.radius')
                                             ->label('Default Radius')
@@ -346,10 +347,10 @@ class ThemeEditor extends Page implements HasForms
                                     ])->columns(3),
                             ]),
 
-                        Forms\Components\Tabs\Tab::make('Header')
+                        SC\Tabs\Tab::make('Header')
                             ->icon('heroicon-o-bars-3')
                             ->schema([
-                                Forms\Components\Section::make('Header Style')
+                                SC\Section::make('Header Style')
                                     ->schema([
                                         Forms\Components\Select::make('header.style')
                                             ->label('Header Style')
@@ -380,10 +381,10 @@ class ThemeEditor extends Page implements HasForms
                                     ])->columns(3),
                             ]),
 
-                        Forms\Components\Tabs\Tab::make('Buttons')
+                        SC\Tabs\Tab::make('Buttons')
                             ->icon('heroicon-o-cursor-arrow-rays')
                             ->schema([
-                                Forms\Components\Section::make('Button Style')
+                                SC\Section::make('Button Style')
                                     ->schema([
                                         Forms\Components\Select::make('buttons.paddingX')
                                             ->label('Horizontal Padding')
