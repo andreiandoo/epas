@@ -12,6 +12,23 @@ use Illuminate\Http\Request;
 
 class PagesController extends Controller
 {
+    public const MICROSERVICE_SLUG = 'website-visual-editor';
+
+    /**
+     * Check if tenant has the required microservice
+     */
+    private function checkMicroservice(Tenant $tenant): ?JsonResponse
+    {
+        if (!$tenant->hasMicroservice(self::MICROSERVICE_SLUG)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Website Visual Editor microservice is required for this feature',
+                'code' => 'MICROSERVICE_REQUIRED',
+            ], 403);
+        }
+
+        return null;
+    }
     /**
      * Get page by slug for public display
      */
@@ -59,7 +76,7 @@ class PagesController extends Controller
     }
 
     /**
-     * List all pages (admin only)
+     * List all pages (admin only, requires microservice)
      */
     public function index(Request $request): JsonResponse
     {
@@ -70,6 +87,11 @@ class PagesController extends Controller
                 'success' => false,
                 'message' => 'Unauthorized',
             ], 401);
+        }
+
+        // Check microservice access
+        if ($error = $this->checkMicroservice($tenant)) {
+            return $error;
         }
 
         $pages = TenantPage::where('tenant_id', $tenant->id)
@@ -96,7 +118,7 @@ class PagesController extends Controller
     }
 
     /**
-     * Update page layout (admin only)
+     * Update page layout (admin only, requires microservice)
      */
     public function update(Request $request, string $slug): JsonResponse
     {
@@ -107,6 +129,11 @@ class PagesController extends Controller
                 'success' => false,
                 'message' => 'Unauthorized',
             ], 401);
+        }
+
+        // Check microservice access
+        if ($error = $this->checkMicroservice($tenant)) {
+            return $error;
         }
 
         $page = TenantPage::where('tenant_id', $tenant->id)
@@ -160,7 +187,7 @@ class PagesController extends Controller
     }
 
     /**
-     * Create a new page (admin only)
+     * Create a new page (admin only, requires microservice)
      */
     public function store(Request $request): JsonResponse
     {
@@ -171,6 +198,11 @@ class PagesController extends Controller
                 'success' => false,
                 'message' => 'Unauthorized',
             ], 401);
+        }
+
+        // Check microservice access
+        if ($error = $this->checkMicroservice($tenant)) {
+            return $error;
         }
 
         $validated = $request->validate([
@@ -213,7 +245,7 @@ class PagesController extends Controller
     }
 
     /**
-     * Delete a page (admin only, non-system pages only)
+     * Delete a page (admin only, non-system pages only, requires microservice)
      */
     public function destroy(Request $request, string $slug): JsonResponse
     {
@@ -224,6 +256,11 @@ class PagesController extends Controller
                 'success' => false,
                 'message' => 'Unauthorized',
             ], 401);
+        }
+
+        // Check microservice access
+        if ($error = $this->checkMicroservice($tenant)) {
+            return $error;
         }
 
         $page = TenantPage::where('tenant_id', $tenant->id)

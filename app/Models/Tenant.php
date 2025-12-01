@@ -312,4 +312,28 @@ class Tenant extends Model
     {
         return $this->tenantMicroservices()->where('is_active', true)->get();
     }
+
+    /**
+     * Check if tenant has an active microservice by slug
+     */
+    public function hasMicroservice(string $slug): bool
+    {
+        return $this->microservices()
+            ->where('slug', $slug)
+            ->wherePivot('is_active', true)
+            ->exists();
+    }
+
+    /**
+     * Get microservice configuration by slug
+     */
+    public function getMicroserviceConfig(string $slug): ?array
+    {
+        $microservice = $this->microservices()
+            ->where('slug', $slug)
+            ->wherePivot('is_active', true)
+            ->first();
+
+        return $microservice?->pivot?->configuration;
+    }
 }

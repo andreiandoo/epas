@@ -24,6 +24,8 @@ class PageBuilder extends Page
     protected static ?int $navigationSort = 2;
     protected static string $view = 'filament.tenant.pages.page-builder';
 
+    public const MICROSERVICE_SLUG = 'website-visual-editor';
+
     public ?int $currentPageId = null;
     public ?string $currentPageSlug = null;
     public array $blocks = [];
@@ -36,11 +38,38 @@ class PageBuilder extends Page
     public ?string $editingBlockType = null;
     public string $contentLanguage = 'en';
 
+    /**
+     * Check if the current user can access this page
+     */
+    public static function canAccess(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+
+        if (!$tenant) {
+            return false;
+        }
+
+        return $tenant->hasMicroservice(self::MICROSERVICE_SLUG);
+    }
+
     public function mount(): void
     {
         $tenant = auth()->user()->tenant;
 
         if (!$tenant) {
+            return;
+        }
+
+        // Check microservice access
+        if (!$tenant->hasMicroservice(self::MICROSERVICE_SLUG)) {
+            Notification::make()
+                ->warning()
+                ->title('Feature not available')
+                ->body('Please purchase the Website Visual Editor to access this feature.')
+                ->persistent()
+                ->send();
+
+            $this->redirect(route('filament.tenant.pages.dashboard'));
             return;
         }
 

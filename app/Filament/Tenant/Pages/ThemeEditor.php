@@ -22,14 +22,43 @@ class ThemeEditor extends Page
     protected static ?int $navigationSort = 1;
     protected static string $view = 'filament.tenant.pages.theme-editor';
 
+    public const MICROSERVICE_SLUG = 'website-visual-editor';
+
     public ?array $data = [];
     public string $previewUrl = '';
+
+    /**
+     * Check if the current user can access this page
+     */
+    public static function canAccess(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+
+        if (!$tenant) {
+            return false;
+        }
+
+        return $tenant->hasMicroservice(self::MICROSERVICE_SLUG);
+    }
 
     public function mount(): void
     {
         $tenant = auth()->user()->tenant;
 
         if (!$tenant) {
+            return;
+        }
+
+        // Check microservice access
+        if (!$tenant->hasMicroservice(self::MICROSERVICE_SLUG)) {
+            Notification::make()
+                ->warning()
+                ->title('Feature not available')
+                ->body('Please purchase the Website Visual Editor to access this feature.')
+                ->persistent()
+                ->send();
+
+            $this->redirect(route('filament.tenant.pages.dashboard'));
             return;
         }
 

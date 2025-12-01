@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 
 class ThemeController extends Controller
 {
+    public const MICROSERVICE_SLUG = 'website-visual-editor';
     /**
      * Get theme configuration for a tenant
      */
@@ -45,7 +46,7 @@ class ThemeController extends Controller
     }
 
     /**
-     * Update theme configuration (admin only)
+     * Update theme configuration (admin only, requires microservice)
      */
     public function update(Request $request): JsonResponse
     {
@@ -56,6 +57,15 @@ class ThemeController extends Controller
                 'success' => false,
                 'message' => 'Unauthorized',
             ], 401);
+        }
+
+        // Check microservice access
+        if (!$tenant->hasMicroservice(self::MICROSERVICE_SLUG)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Website Visual Editor microservice is required for this feature',
+                'code' => 'MICROSERVICE_REQUIRED',
+            ], 403);
         }
 
         $validated = $request->validate([
