@@ -267,10 +267,10 @@ class MicroserviceResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListMicroservices::route('/'),
-            'create' => Pages\CreateMicroservice::route('/create'),
-            'edit' => Pages\EditMicroservice::route('/{record}/edit'),
-            'tenants' => Pages\ViewMicroserviceTenants::route('/{record}/tenants'),
+            'index' => MicroserviceResource\Pages\ListMicroservices::route('/'),
+            'create' => MicroserviceResource\Pages\CreateMicroservice::route('/create'),
+            'edit' => MicroserviceResource\Pages\EditMicroservice::route('/{record}/edit'),
+            'tenants' => MicroserviceResource\Pages\ViewMicroserviceTenants::route('/{record}/tenants'),
         ];
     }
 }

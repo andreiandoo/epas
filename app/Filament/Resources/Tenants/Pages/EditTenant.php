@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Tenants\Pages;
 use App\Filament\Resources\Tenants\TenantResource;
 use App\Models\ContractAmendment;
 use App\Models\ContractTemplate;
+use App\Models\Microservice;
 use App\Services\ContractPdfService;
 use App\Mail\ContractMail;
 use Filament\Resources\Pages\EditRecord;
@@ -19,6 +20,55 @@ use App\Services\ESignatureService;
 class EditTenant extends EditRecord
 {
     protected static string $resource = TenantResource::class;
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        // Remove microservice_ids from form data as we handle it separately
+        unset($data['microservice_ids']);
+
+        return $data;
+    }
+
+    protected function afterSave(): void
+    {
+        // Handle microservices sync
+        $selectedIds = $this->data['microservice_ids'] ?? [];
+
+        // Get currently active microservice IDs
+        $currentActiveIds = $this->record->microservices()
+            ->wherePivot('is_active', true)
+            ->pluck('microservice_id')
+            ->toArray();
+
+        // Deactivate removed microservices
+        $toDeactivate = array_diff($currentActiveIds, $selectedIds);
+        foreach ($toDeactivate as $microserviceId) {
+            $this->record->microservices()->updateExistingPivot($microserviceId, [
+                'is_active' => false,
+            ]);
+        }
+
+        // Activate new microservices
+        $toActivate = array_diff($selectedIds, $currentActiveIds);
+        foreach ($toActivate as $microserviceId) {
+            // Check if relationship already exists
+            $existing = $this->record->microservices()->where('microservice_id', $microserviceId)->first();
+
+            if ($existing) {
+                // Reactivate existing relationship
+                $this->record->microservices()->updateExistingPivot($microserviceId, [
+                    'is_active' => true,
+                    'activated_at' => now(),
+                ]);
+            } else {
+                // Create new relationship
+                $this->record->microservices()->attach($microserviceId, [
+                    'is_active' => true,
+                    'activated_at' => now(),
+                ]);
+            }
+        }
+    }
 
     protected function getHeaderActions(): array
     {
