@@ -26,6 +26,9 @@ class RevenueAnalytics extends Page
     public array $microserviceBreakdown = [];
     public array $chartData = [];
     public array $filteredRevenue = [];
+    public array $saasMetrics = [];
+    public array $unitEconomics = [];
+    public array $financialHealth = [];
 
     #[Url]
     public ?string $startDate = null;
@@ -142,6 +145,15 @@ class RevenueAnalytics extends Page
 
         // === CHART DATA ===
         $this->prepareChartData();
+
+        // === ADVANCED SAAS METRICS ===
+        $this->calculateSaasMetrics($mrr, $lastMonthMRR, $mrrGrowth);
+
+        // === UNIT ECONOMICS ===
+        $this->calculateUnitEconomics($mrr);
+
+        // === FINANCIAL HEALTH ===
+        $this->calculateFinancialHealth($mrr, $arr, $monthlyCosts, $netProfit);
     }
 
     protected function calculateMicroserviceBreakdown(): array
@@ -278,5 +290,220 @@ class RevenueAnalytics extends Page
     public static function getNavigationBadge(): ?string
     {
         return null;
+    }
+
+    /**
+     * Calculate SaaS health metrics: NRR, Churn, Retention, Growth
+     */
+    protected function calculateSaasMetrics(float $currentMRR, float $lastMonthMRR, float $mrrGrowth): void
+    {
+        // Get tenant churn data
+        $currentMonthStart = now()->startOfMonth();
+        $lastMonthStart = now()->subMonth()->startOfMonth();
+        $lastMonthEnd = now()->subMonth()->endOfMonth();
+
+        // Count tenants at start of last month vs now
+        $tenantsStartOfLastMonth = Tenant::where('created_at', '<', $lastMonthStart)
+            ->where(function ($q) use ($lastMonthStart) {
+                $q->where('status', 'active')
+                    ->orWhere('updated_at', '>=', $lastMonthStart);
+            })
+            ->count();
+
+        $tenantsStartOfThisMonth = Tenant::where('created_at', '<', $currentMonthStart)
+            ->where('status', 'active')
+            ->count();
+
+        // Churned tenants (became inactive this month)
+        $churnedTenants = Tenant::where('status', '!=', 'active')
+            ->whereBetween('updated_at', [$currentMonthStart, now()])
+            ->where('created_at', '<', $currentMonthStart)
+            ->count();
+
+        // New tenants acquired this month
+        $newTenants = Tenant::where('status', 'active')
+            ->whereBetween('created_at', [$currentMonthStart, now()])
+            ->count();
+
+        // Churn Rate: (Lost Tenants / Starting Tenants) × 100
+        $churnRate = $tenantsStartOfThisMonth > 0
+            ? ($churnedTenants / $tenantsStartOfThisMonth) * 100
+            : 0;
+
+        // Retention Rate: 100% - Churn Rate
+        $retentionRate = 100 - $churnRate;
+
+        // Growth Rate (MoM): Already calculated as mrrGrowth
+        $growthRate = $mrrGrowth;
+
+        // Net Revenue Retention (NRR): (MRR_end - churn + expansion) / MRR_start × 100
+        // Simplified: current MRR from existing customers / starting MRR
+        $expansionMRR = max(0, $currentMRR - $lastMonthMRR); // Revenue increase from existing
+        $contractionMRR = max(0, $lastMonthMRR - $currentMRR); // Revenue decrease
+        $churnMRR = $churnedTenants > 0 && $tenantsStartOfThisMonth > 0
+            ? ($churnedTenants / $tenantsStartOfThisMonth) * $lastMonthMRR
+            : 0;
+
+        $nrr = $lastMonthMRR > 0
+            ? (($lastMonthMRR + $expansionMRR - $contractionMRR - $churnMRR) / $lastMonthMRR) * 100
+            : 100;
+
+        // Stickiness: DAU / MAU × 100 (using order activity as proxy)
+        $monthlyActiveTenantsWithOrders = Order::where('status', 'completed')
+            ->whereBetween('created_at', [$currentMonthStart, now()])
+            ->distinct('tenant_id')
+            ->count('tenant_id');
+
+        $dailyActiveTenantsWithOrders = Order::where('status', 'completed')
+            ->whereDate('created_at', now())
+            ->distinct('tenant_id')
+            ->count('tenant_id');
+
+        $stickiness = $monthlyActiveTenantsWithOrders > 0
+            ? ($dailyActiveTenantsWithOrders / $monthlyActiveTenantsWithOrders) * 100
+            : 0;
+
+        $this->saasMetrics = [
+            'nrr' => round($nrr, 1),
+            'churn_rate' => round($churnRate, 2),
+            'retention_rate' => round($retentionRate, 2),
+            'growth_rate' => round($growthRate, 2),
+            'stickiness' => round($stickiness, 1),
+            'churned_tenants' => $churnedTenants,
+            'new_tenants' => $newTenants,
+            'tenants_start_of_month' => $tenantsStartOfThisMonth,
+        ];
+    }
+
+    /**
+     * Calculate unit economics: LTV, CAC, LTV:CAC ratio
+     */
+    protected function calculateUnitEconomics(float $mrr): void
+    {
+        $activeTenants = Tenant::where('status', 'active')->count();
+
+        // Average Revenue Per User (ARPU)
+        $arpu = $activeTenants > 0 ? $mrr / $activeTenants : 0;
+
+        // Average Tenant Lifespan (months) - based on churn rate
+        $churnRate = $this->saasMetrics['churn_rate'] ?? 5; // Default 5% if not calculated
+        $avgLifespanMonths = $churnRate > 0 ? 100 / $churnRate : 24; // Cap at 24 months if no churn
+
+        // Lifetime Value (LTV) = ARPU × Average Lifespan
+        $ltv = $arpu * min($avgLifespanMonths, 60); // Cap at 60 months
+
+        // Customer Acquisition Cost (CAC)
+        // Get marketing costs from platform costs
+        $marketingCosts = PlatformCost::active()
+            ->where('category', 'marketing')
+            ->get()
+            ->sum(fn ($cost) => $cost->monthly_amount);
+
+        // New tenants this month
+        $newTenantsThisMonth = Tenant::where('status', 'active')
+            ->whereBetween('created_at', [now()->startOfMonth(), now()])
+            ->count();
+
+        // CAC = Total Marketing Costs / New Customers Acquired
+        $cac = $newTenantsThisMonth > 0 ? $marketingCosts / $newTenantsThisMonth : $marketingCosts;
+
+        // LTV:CAC Ratio
+        $ltvCacRatio = $cac > 0 ? $ltv / $cac : 0;
+
+        $this->unitEconomics = [
+            'ltv' => round($ltv, 2),
+            'cac' => round($cac, 2),
+            'ltv_cac_ratio' => round($ltvCacRatio, 2),
+            'arpu' => round($arpu, 2),
+            'avg_lifespan_months' => round(min($avgLifespanMonths, 60), 1),
+            'marketing_costs' => round($marketingCosts, 2),
+            'new_tenants_this_month' => $newTenantsThisMonth,
+        ];
+    }
+
+    /**
+     * Calculate financial health: EBITDA, Burn Multiple, Operating Cash Flow, Runway
+     */
+    protected function calculateFinancialHealth(float $mrr, float $arr, float $monthlyCosts, float $netProfit): void
+    {
+        // Get all costs by category
+        $allCosts = PlatformCost::active()->get();
+        $totalMonthlyCosts = $allCosts->sum(fn ($cost) => $cost->monthly_amount);
+
+        // Operating costs (exclude one-time costs)
+        $operatingCosts = PlatformCost::active()->recurring()->get()
+            ->sum(fn ($cost) => $cost->monthly_amount);
+
+        // EBITDA (Earnings Before Interest, Taxes, Depreciation, Amortization)
+        // Simplified: Revenue - Operating Expenses
+        $ebitda = $mrr - $operatingCosts;
+
+        // Monthly burn rate (if losing money)
+        $monthlyBurn = max(0, $totalMonthlyCosts - $mrr);
+
+        // Net New ARR (growth in ARR from last month)
+        $lastMonthMRR = $this->metrics['mrr'] ?? $mrr;
+        $mrrGrowth = $this->metrics['mrr_growth'] ?? 0;
+        $netNewARR = ($mrr * ($mrrGrowth / 100)) * 12;
+
+        // Burn Multiple = Net Burn / Net New ARR
+        // Lower is better (< 1 is excellent, < 2 is good)
+        $burnMultiple = $netNewARR > 0 ? ($monthlyBurn * 12) / $netNewARR : 0;
+        if ($monthlyBurn <= 0) {
+            $burnMultiple = 0; // Profitable companies have 0 burn multiple
+        }
+
+        // Operating Cash Flow (simplified: EBITDA - working capital changes)
+        // In a SaaS business, this is typically close to EBITDA
+        $operatingCashFlow = $ebitda * 0.9; // Assume 10% tied in working capital
+
+        // Cash balance (would need to be configured - using placeholder)
+        // This should ideally come from settings or a dedicated field
+        $cashBalance = $this->getCashBalance();
+
+        // Runway = Cash Balance / Monthly Burn Rate
+        $runway = $monthlyBurn > 0 ? $cashBalance / $monthlyBurn : 999; // 999 months if profitable
+
+        // AI Search Visibility (placeholder - would need external API integration)
+        $aiSearchVisibility = $this->getAISearchVisibility();
+
+        $this->financialHealth = [
+            'ebitda' => round($ebitda, 2),
+            'ebitda_margin' => $mrr > 0 ? round(($ebitda / $mrr) * 100, 1) : 0,
+            'burn_multiple' => round($burnMultiple, 2),
+            'operating_cash_flow' => round($operatingCashFlow, 2),
+            'monthly_burn' => round($monthlyBurn, 2),
+            'runway_months' => min(round($runway, 0), 999),
+            'cash_balance' => round($cashBalance, 2),
+            'net_new_arr' => round($netNewARR, 2),
+            'ai_search_visibility' => $aiSearchVisibility,
+            'is_profitable' => $netProfit > 0,
+        ];
+    }
+
+    /**
+     * Get cash balance from settings or return default
+     */
+    protected function getCashBalance(): float
+    {
+        // This would ideally come from a settings table or manual input
+        // For now, return a configurable default or check config
+        return (float) config('analytics.cash_balance', 50000);
+    }
+
+    /**
+     * Get AI search visibility score
+     * This is a placeholder for future integration with AI search APIs
+     */
+    protected function getAISearchVisibility(): array
+    {
+        // This would integrate with external APIs to check brand visibility
+        // in AI search results (ChatGPT, Claude, Perplexity, etc.)
+        // For now, return placeholder data
+        return [
+            'score' => null, // null indicates not configured
+            'status' => 'not_configured',
+            'message' => 'Configure AI search monitoring to track visibility',
+        ];
     }
 }

@@ -108,6 +108,158 @@
             </div>
         </div>
 
+        {{-- SaaS Health Metrics --}}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">SaaS Health Metrics</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                {{-- Net Revenue Retention --}}
+                <div class="text-center p-4 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Net Revenue Retention</p>
+                    <p class="text-2xl font-bold {{ ($saasMetrics['nrr'] ?? 100) >= 100 ? 'text-green-600' : 'text-amber-600' }}">
+                        {{ number_format($saasMetrics['nrr'] ?? 100, 1) }}%
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1">{{ ($saasMetrics['nrr'] ?? 100) >= 100 ? 'Expanding' : 'Contracting' }}</p>
+                </div>
+
+                {{-- Churn Rate --}}
+                <div class="text-center p-4 bg-red-50 dark:bg-red-900/30 rounded-lg">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Churn Rate</p>
+                    <p class="text-2xl font-bold {{ ($saasMetrics['churn_rate'] ?? 0) <= 5 ? 'text-green-600' : 'text-red-600' }}">
+                        {{ number_format($saasMetrics['churn_rate'] ?? 0, 2) }}%
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1">{{ $saasMetrics['churned_tenants'] ?? 0 }} churned this month</p>
+                </div>
+
+                {{-- Retention Rate --}}
+                <div class="text-center p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Retention Rate</p>
+                    <p class="text-2xl font-bold {{ ($saasMetrics['retention_rate'] ?? 100) >= 95 ? 'text-green-600' : 'text-amber-600' }}">
+                        {{ number_format($saasMetrics['retention_rate'] ?? 100, 2) }}%
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1">Monthly retention</p>
+                </div>
+
+                {{-- Growth Rate --}}
+                <div class="text-center p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Growth Rate</p>
+                    <p class="text-2xl font-bold {{ ($saasMetrics['growth_rate'] ?? 0) >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                        {{ ($saasMetrics['growth_rate'] ?? 0) >= 0 ? '+' : '' }}{{ number_format($saasMetrics['growth_rate'] ?? 0, 2) }}%
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1">MoM MRR growth</p>
+                </div>
+
+                {{-- Stickiness --}}
+                <div class="text-center p-4 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Stickiness</p>
+                    <p class="text-2xl font-bold {{ ($saasMetrics['stickiness'] ?? 0) >= 20 ? 'text-green-600' : 'text-amber-600' }}">
+                        {{ number_format($saasMetrics['stickiness'] ?? 0, 1) }}%
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1">DAU/MAU ratio</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Unit Economics --}}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Unit Economics</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {{-- Lifetime Value (LTV) --}}
+                <div class="text-center p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Lifetime Value (LTV)</p>
+                    <p class="text-2xl font-bold text-indigo-600">€{{ number_format($unitEconomics['ltv'] ?? 0, 2) }}</p>
+                    <p class="text-xs text-gray-400 mt-1">Avg {{ number_format($unitEconomics['avg_lifespan_months'] ?? 0, 0) }} months lifespan</p>
+                </div>
+
+                {{-- Customer Acquisition Cost (CAC) --}}
+                <div class="text-center p-4 bg-rose-50 dark:bg-rose-900/30 rounded-lg">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Customer Acquisition Cost</p>
+                    <p class="text-2xl font-bold text-rose-600">€{{ number_format($unitEconomics['cac'] ?? 0, 2) }}</p>
+                    <p class="text-xs text-gray-400 mt-1">{{ $unitEconomics['new_tenants_this_month'] ?? 0 }} new customers</p>
+                </div>
+
+                {{-- LTV:CAC Ratio --}}
+                <div class="text-center p-4 bg-teal-50 dark:bg-teal-900/30 rounded-lg">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">LTV:CAC Ratio</p>
+                    <p class="text-2xl font-bold {{ ($unitEconomics['ltv_cac_ratio'] ?? 0) >= 3 ? 'text-green-600' : (($unitEconomics['ltv_cac_ratio'] ?? 0) >= 1 ? 'text-amber-600' : 'text-red-600') }}">
+                        {{ number_format($unitEconomics['ltv_cac_ratio'] ?? 0, 1) }}x
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1">{{ ($unitEconomics['ltv_cac_ratio'] ?? 0) >= 3 ? 'Healthy' : (($unitEconomics['ltv_cac_ratio'] ?? 0) >= 1 ? 'Acceptable' : 'Needs improvement') }}</p>
+                </div>
+
+                {{-- ARPU --}}
+                <div class="text-center p-4 bg-cyan-50 dark:bg-cyan-900/30 rounded-lg">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">ARPU</p>
+                    <p class="text-2xl font-bold text-cyan-600">€{{ number_format($unitEconomics['arpu'] ?? 0, 2) }}</p>
+                    <p class="text-xs text-gray-400 mt-1">Per active tenant/mo</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Financial Health --}}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Financial Health</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {{-- EBITDA --}}
+                <div class="text-center p-4 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">EBITDA</p>
+                    <p class="text-2xl font-bold {{ ($financialHealth['ebitda'] ?? 0) >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                        €{{ number_format($financialHealth['ebitda'] ?? 0, 2) }}
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1">{{ number_format($financialHealth['ebitda_margin'] ?? 0, 1) }}% margin</p>
+                </div>
+
+                {{-- Burn Multiple --}}
+                <div class="text-center p-4 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Burn Multiple</p>
+                    <p class="text-2xl font-bold {{ ($financialHealth['burn_multiple'] ?? 0) <= 1 ? 'text-green-600' : (($financialHealth['burn_multiple'] ?? 0) <= 2 ? 'text-amber-600' : 'text-red-600') }}">
+                        {{ ($financialHealth['is_profitable'] ?? false) ? 'N/A' : number_format($financialHealth['burn_multiple'] ?? 0, 2) . 'x' }}
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1">{{ ($financialHealth['is_profitable'] ?? false) ? 'Profitable' : (($financialHealth['burn_multiple'] ?? 0) <= 1 ? 'Excellent' : (($financialHealth['burn_multiple'] ?? 0) <= 2 ? 'Good' : 'High burn')) }}</p>
+                </div>
+
+                {{-- Operating Cash Flow --}}
+                <div class="text-center p-4 bg-sky-50 dark:bg-sky-900/30 rounded-lg">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Operating Cash Flow</p>
+                    <p class="text-2xl font-bold {{ ($financialHealth['operating_cash_flow'] ?? 0) >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                        €{{ number_format($financialHealth['operating_cash_flow'] ?? 0, 2) }}
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1">Monthly</p>
+                </div>
+
+                {{-- Runway --}}
+                <div class="text-center p-4 bg-violet-50 dark:bg-violet-900/30 rounded-lg">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Runway</p>
+                    <p class="text-2xl font-bold {{ ($financialHealth['runway_months'] ?? 0) >= 18 ? 'text-green-600' : (($financialHealth['runway_months'] ?? 0) >= 6 ? 'text-amber-600' : 'text-red-600') }}">
+                        {{ ($financialHealth['runway_months'] ?? 0) >= 999 ? '∞' : number_format($financialHealth['runway_months'] ?? 0, 0) . ' mo' }}
+                    </p>
+                    <p class="text-xs text-gray-400 mt-1">
+                        @if(($financialHealth['runway_months'] ?? 0) >= 999)
+                            Cash flow positive
+                        @else
+                            €{{ number_format($financialHealth['monthly_burn'] ?? 0, 0) }}/mo burn
+                        @endif
+                    </p>
+                </div>
+            </div>
+
+            {{-- AI Search Visibility - Full Width --}}
+            <div class="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">AI Search Visibility</p>
+                        @if(($financialHealth['ai_search_visibility']['status'] ?? 'not_configured') === 'not_configured')
+                            <p class="text-sm text-gray-400 mt-1">{{ $financialHealth['ai_search_visibility']['message'] ?? 'Not configured' }}</p>
+                        @else
+                            <p class="text-2xl font-bold text-primary-600">{{ $financialHealth['ai_search_visibility']['score'] ?? 0 }}%</p>
+                        @endif
+                    </div>
+                    <div class="p-3 bg-gray-200 dark:bg-gray-600 rounded-full">
+                        <x-heroicon-o-magnifying-glass class="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {{-- Revenue Breakdown (3 parts) --}}
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {{-- Revenue Sources with Chart --}}
