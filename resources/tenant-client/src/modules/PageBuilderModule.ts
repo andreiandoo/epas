@@ -88,6 +88,22 @@ export class PageBuilderModule {
     }
 
     /**
+     * Get localized array content from a block
+     */
+    static getContentArray<T = Record<string, unknown>>(block: Block, key: string, fallback: T[] = []): T[] {
+        const langContent = block.content?.[this.currentLanguage];
+        if (langContent && Array.isArray(langContent[key])) {
+            return langContent[key] as T[];
+        }
+        // Fallback to English
+        const enContent = block.content?.['en'];
+        if (enContent && Array.isArray(enContent[key])) {
+            return enContent[key] as T[];
+        }
+        return fallback;
+    }
+
+    /**
      * Register all default block renderers
      */
     private static registerDefaultRenderers(): void {
@@ -729,7 +745,7 @@ export class PageBuilderModule {
         // Stats Counter Block
         this.registerRenderer('stats-counter', (block) => {
             const title = this.getContent(block, 'title', '');
-            const stats = this.getContent(block, 'stats', []) as any[];
+            const stats = this.getContentArray(block, 'stats');
             const columns = block.settings.columns || 4;
             const style = block.settings.style || 'simple';
             const animate = block.settings.animate ?? true;
@@ -762,7 +778,7 @@ export class PageBuilderModule {
         // Accordion Block
         this.registerRenderer('accordion', (block) => {
             const title = this.getContent(block, 'title', '');
-            const items = this.getContent(block, 'items', []) as any[];
+            const items = this.getContentArray(block, 'items');
             const style = block.settings.style || 'simple';
             const allowMultiple = block.settings.allowMultiple ?? false;
             const defaultOpen = block.settings.defaultOpen ?? 0;
@@ -844,7 +860,7 @@ export class PageBuilderModule {
 
         // Slider Block
         this.registerRenderer('slider', (block) => {
-            const slides = this.getContent(block, 'slides', []) as any[];
+            const slides = this.getContentArray(block, 'slides');
             const height = block.settings.height || 'medium';
             const autoplay = block.settings.autoplay ?? true;
             const autoplaySpeed = block.settings.autoplaySpeed || 5000;
@@ -915,7 +931,7 @@ export class PageBuilderModule {
         // Image Gallery Block
         this.registerRenderer('image-gallery', (block) => {
             const title = this.getContent(block, 'title', '');
-            const images = this.getContent(block, 'images', []) as any[];
+            const images = this.getContentArray(block, 'images');
             const columns = block.settings.columns || 4;
             const style = block.settings.style || 'grid';
             const gap = block.settings.gap || 'md';
@@ -1043,7 +1059,7 @@ export class PageBuilderModule {
         this.registerRenderer('map', (block) => {
             const title = this.getContent(block, 'title', '');
             const address = this.getContent(block, 'address', '');
-            const markers = this.getContent(block, 'markers', []) as any[];
+            const markers = this.getContentArray(block, 'markers');
             const provider = block.settings.provider || 'openstreetmap';
             const latitude = block.settings.latitude || 44.4268;
             const longitude = block.settings.longitude || 26.1025;
