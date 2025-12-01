@@ -720,7 +720,6 @@ class EventResource extends Resource
                         ->label('Event types')
                         ->relationship(
                             name: 'eventTypes',
-                            titleAttribute: 'name',
                             modifyQueryUsing: function (Builder $query) {
                                 $query
                                     ->leftJoin('event_types as p', 'p.id', '=', 'event_types.parent_id')
@@ -738,8 +737,8 @@ class EventResource extends Resource
                                 ->leftJoin('event_types as p', 'p.id', '=', 'event_types.parent_id')
                                 ->whereNotNull('event_types.parent_id') // doar copii
                                 ->where(function ($q) use ($search) {
-                                    $q->where('event_types.name', 'ilike', "%{$search}%")
-                                      ->orWhere('p.name', 'ilike', "%{$search}%");
+                                    $q->where('event_types.name', 'like', "%{$search}%")
+                                      ->orWhere('p.name', 'like', "%{$search}%");
                                 })
                                 ->select('event_types.id', 'event_types.name', 'p.name as __parent_name')
                                 ->addSelect(DB::raw("CASE WHEN event_types.parent_id IS NULL THEN 0 ELSE 1 END AS __parent_rank"))
@@ -748,14 +747,46 @@ class EventResource extends Resource
                                 ->orderBy('event_types.name')
                                 ->limit(50)
                                 ->get()
-                                ->mapWithKeys(fn ($r) => [
-                                    $r->id => ($r->__parent_name ? "{$r->__parent_name} ▸ {$r->name}" : $r->name),
-                                ])
+                                ->mapWithKeys(function ($r) {
+                                    // Extract translated name for child
+                                    $childName = is_array($r->name)
+                                        ? ($r->name['en'] ?? $r->name['ro'] ?? reset($r->name))
+                                        : $r->name;
+                                    // Extract translated name for parent
+                                    $parentName = $r->__parent_name;
+                                    if (is_array($parentName)) {
+                                        $parentName = $parentName['en'] ?? $parentName['ro'] ?? reset($parentName);
+                                    } elseif (is_string($parentName) && str_starts_with($parentName, '{')) {
+                                        $decoded = json_decode($parentName, true);
+                                        $parentName = $decoded['en'] ?? $decoded['ro'] ?? reset($decoded) ?? $parentName;
+                                    }
+                                    return [
+                                        $r->id => $parentName ? "{$parentName} ▸ {$childName}" : $childName,
+                                    ];
+                                })
                                 ->toArray();
                         })
-                        ->getOptionLabelFromRecordUsing(fn ($record) =>
-                            ($record->__parent_name ? ($record->__parent_name . ' ▸ ') : '') . $record->getTranslation('name', 'en')
-                        )
+                        ->getOptionLabelFromRecordUsing(function ($record) {
+                            // Get translated child name
+                            $childName = $record->getTranslation('name', 'en') ?: $record->getTranslation('name', 'ro') ?: $record->name;
+                            if (is_array($childName)) {
+                                $childName = $childName['en'] ?? $childName['ro'] ?? reset($childName);
+                            }
+
+                            // Get parent name if exists
+                            $parentName = null;
+                            if ($record->parent_id) {
+                                $parent = EventType::find($record->parent_id);
+                                if ($parent) {
+                                    $parentName = $parent->getTranslation('name', 'en') ?: $parent->getTranslation('name', 'ro') ?: $parent->name;
+                                    if (is_array($parentName)) {
+                                        $parentName = $parentName['en'] ?? $parentName['ro'] ?? reset($parentName);
+                                    }
+                                }
+                            }
+
+                            return $parentName ? "{$parentName} ▸ {$childName}" : $childName;
+                        })
                         ->multiple()
                         ->preload()
                         ->searchable()
@@ -1072,7 +1103,9 @@ class EventResource extends Resource
                         ->label('Ticket types')
                         ->collapsed()
                         ->addActionLabel('Add ticket type')
-                        ->itemLabel(fn (array $state) => $state['name'] ?? 'Ticket')
+                        ->itemLabel(fn (array $state) => ($state['is_active'] ?? true)
+                            ? '✓ ' . ($state['name'] ?? 'Ticket')
+                            : '○ ' . ($state['name'] ?? 'Ticket'))
                         ->columns(12) // tot item-ul pe un grid de 12 col pentru control fin
                         ->schema([
                             Forms\Components\TextInput::make('name')
@@ -1328,6 +1361,7 @@ class EventResource extends Resource
                             Forms\Components\Toggle::make('is_active')
                                 ->label('Active?')
                                 ->default(true)
+                                ->live()
                                 ->columnSpan(12),
                         ]),
                 ])
@@ -1339,10 +1373,11 @@ class EventResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('title.en')
+                Tables\Columns\TextColumn::make('title')
                     ->label('Title')
-                    ->searchable()
-                    ->sortable()
+                    ->getStateUsing(fn (Event $record) => $record->getTranslation('title', 'en') ?: $record->getTranslation('title', 'ro') ?: collect($record->title)->first())
+                    ->searchable(query: fn (Builder $query, string $search) => $query->where('title', 'like', "%{$search}%"))
+                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderByRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.en')) {$direction}"))
                     ->url(fn (Event $record) => static::getUrl('edit', ['record' => $record])),
 
                 Tables\Columns\TextColumn::make('tenant.name')

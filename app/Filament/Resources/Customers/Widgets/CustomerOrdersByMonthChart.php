@@ -25,9 +25,9 @@ class CustomerOrdersByMonthChart extends ChartWidget
             ];
         }
 
-        // Construim serii lunare (YYYY-MM)
+        // Construim serii lunare (YYYY-MM) - using DATE_FORMAT for MySQL
         $rows = Order::query()
-            ->selectRaw("to_char(created_at, 'YYYY-MM') as month, COUNT(*) as cnt, SUM(total_cents) as total")
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as cnt, SUM(total_cents) as total")
             ->where('customer_id', $this->record->id)
             ->groupBy('month')
             ->orderBy('month')

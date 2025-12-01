@@ -16,8 +16,13 @@ class CreateEvent extends CreateRecord
         $data['tenant_id'] = $tenant?->id;
 
         // Auto-fill ticket_terms from tenant settings if empty
-        if (empty($data['ticket_terms']) && $tenant?->ticket_terms) {
-            $data['ticket_terms'] = $tenant->ticket_terms;
+        // The form uses translatable format: ticket_terms.{language}
+        // If ticket_terms array is empty but tenant has default terms, populate it
+        if ($tenant?->ticket_terms) {
+            $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+            if (empty($data['ticket_terms'][$tenantLanguage])) {
+                $data['ticket_terms'][$tenantLanguage] = $tenant->ticket_terms;
+            }
         }
 
         return $data;

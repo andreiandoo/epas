@@ -138,6 +138,13 @@
     </div>
 </div>
 
+@php
+    $genresData = $eventGenres->map(function($g) {
+        $slug = is_array($g->slug) ? ($g->slug[app()->getLocale()] ?? $g->slug['en'] ?? '') : $g->slug;
+        $name = $g->getTranslation('name', app()->getLocale()) ?? $g->getTranslation('name', 'en');
+        return ['slug' => $slug, 'name' => $name];
+    })->values()->toArray();
+@endphp
 <script>
 function eventsFilter() {
     return {
@@ -154,14 +161,8 @@ function eventsFilter() {
         countries: [],
         states: [],
         cities: [],
-        eventGenres: @json($eventGenres->map(fn($g) => [
-            'slug' => is_array($g->slug) ? ($g->slug[app()->getLocale()] ?? $g->slug['en'] ?? '') : $g->slug,
-            'name' => $g->getTranslation('name', app()->getLocale()) ?? $g->getTranslation('name', 'en')
-        ])),
-        filteredGenres: @json($eventGenres->map(fn($g) => [
-            'slug' => is_array($g->slug) ? ($g->slug[app()->getLocale()] ?? $g->slug['en'] ?? '') : $g->slug,
-            'name' => $g->getTranslation('name', app()->getLocale()) ?? $g->getTranslation('name', 'en')
-        ])),
+        eventGenres: @json($genresData),
+        filteredGenres: @json($genresData),
 
         async init() {
             await this.loadCountries();

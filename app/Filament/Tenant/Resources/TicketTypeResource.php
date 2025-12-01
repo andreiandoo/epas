@@ -36,10 +36,11 @@ class TicketTypeResource extends Resource
                 SC\Section::make('Ticket Type Details')
                     ->schema([
                         Forms\Components\Select::make('event_id')
-                            ->relationship('event', 'title', function (Builder $query) {
+                            ->relationship('event', modifyQueryUsing: function (Builder $query) {
                                 $tenant = auth()->user()->tenant;
                                 return $query->where('tenant_id', $tenant?->id);
                             })
+                            ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('title', app()->getLocale()))
                             ->required()
                             ->searchable()
                             ->preload(),
@@ -76,6 +77,8 @@ class TicketTypeResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('event.title')
+                    ->label('Event')
+                    ->formatStateUsing(fn ($record) => $record->event?->getTranslation('title', app()->getLocale()) ?? '-')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('name')

@@ -11,6 +11,7 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 
 class OrderResource extends Resource
 {
@@ -23,6 +24,90 @@ class OrderResource extends Resource
     {
         $tenant = auth()->user()->tenant;
         return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+    }
+
+    public static function infolist(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                SC\Section::make('Detalii comandă')
+                    ->icon('heroicon-o-shopping-cart')
+                    ->columns(3)
+                    ->schema([
+                        Forms\Components\Placeholder::make('order_number')
+                            ->label('Număr comandă')
+                            ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold">#' . str_pad($record->id, 6, '0', STR_PAD_LEFT) . '</span>')),
+                        Forms\Components\Placeholder::make('status')
+                            ->label('Status')
+                            ->content(fn ($record) => new HtmlString('<span class="px-2 py-1 rounded text-sm font-medium ' . match ($record->status) {
+                                'pending' => 'bg-warning-100 text-warning-700',
+                                'paid', 'confirmed' => 'bg-success-100 text-success-700',
+                                'cancelled' => 'bg-danger-100 text-danger-700',
+                                default => 'bg-gray-100 text-gray-700',
+                            } . '">' . match ($record->status) {
+                                'pending' => 'În așteptare',
+                                'paid' => 'Plătită',
+                                'confirmed' => 'Confirmată',
+                                'cancelled' => 'Anulată',
+                                'refunded' => 'Rambursată',
+                                default => ucfirst($record->status),
+                            } . '</span>')),
+                        Forms\Components\Placeholder::make('total_cents')
+                            ->label('Total')
+                            ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold">' . number_format($record->total_cents / 100, 2) . ' ' . ($record->tickets->first()?->ticketType?->currency ?? 'RON') . '</span>')),
+                        Forms\Components\Placeholder::make('created_at')
+                            ->label('Data comenzii')
+                            ->content(fn ($record) => $record->created_at?->format('d M Y H:i')),
+                        Forms\Components\Placeholder::make('payment_method')
+                            ->label('Metodă plată')
+                            ->content(fn ($record) => $record->meta['payment_method'] ?? 'Card'),
+                        Forms\Components\Placeholder::make('updated_at')
+                            ->label('Ultima actualizare')
+                            ->content(fn ($record) => $record->updated_at?->format('d M Y H:i')),
+                    ]),
+
+                SC\Section::make('Client')
+                    ->icon('heroicon-o-user')
+                    ->columns(3)
+                    ->schema([
+                        Forms\Components\Placeholder::make('customer_name')
+                            ->label('Nume')
+                            ->content(fn ($record) => $record->meta['customer_name'] ?? 'N/A'),
+                        Forms\Components\Placeholder::make('customer_email')
+                            ->label('Email')
+                            ->content(fn ($record) => new HtmlString('<a href="mailto:' . $record->customer_email . '" class="text-primary-600 hover:underline">' . $record->customer_email . '</a>')),
+                        Forms\Components\Placeholder::make('customer_phone')
+                            ->label('Telefon')
+                            ->content(fn ($record) => $record->meta['customer_phone'] ?? 'N/A'),
+                    ]),
+
+                SC\Section::make('Bilete comandate')
+                    ->icon('heroicon-o-ticket')
+                    ->schema([
+                        Forms\Components\Placeholder::make('tickets_count')
+                            ->label('Total bilete')
+                            ->content(function ($record) {
+                                $count = $record->tickets->count();
+                                return $count . ' bilet' . ($count > 1 ? 'e' : '');
+                            }),
+                        Forms\Components\Placeholder::make('tickets_list')
+                            ->label('')
+                            ->content(fn ($record) => new HtmlString(
+                                view('filament.tenant.resources.order-resource.tickets-list', ['record' => $record])->render()
+                            )),
+                    ]),
+
+                SC\Section::make('Beneficiari')
+                    ->icon('heroicon-o-users')
+                    ->visible(fn ($record) => !empty($record->meta['beneficiaries']))
+                    ->schema([
+                        Forms\Components\Placeholder::make('beneficiaries_list')
+                            ->label('')
+                            ->content(fn ($record) => new HtmlString(
+                                view('filament.tenant.resources.order-resource.beneficiaries-list', ['record' => $record])->render()
+                            )),
+                    ]),
+            ]);
     }
 
     public static function form(Schema $schema): Schema
@@ -59,33 +144,51 @@ class OrderResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('order_number')
+                Tables\Columns\TextColumn::make('id')
+                    ->label('Nr. Comandă')
+                    ->formatStateUsing(fn ($state) => '#' . str_pad($state, 6, '0', STR_PAD_LEFT))
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('customer.email')
+                    ->label('Client')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('total')
-                    ->money('EUR')
+                Tables\Columns\TextColumn::make('meta.customer_name')
+                    ->label('Nume')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('total_cents')
+                    ->label('Total')
+                    ->formatStateUsing(fn ($state, $record) => number_format($state / 100, 2) . ' ' . ($record->tickets->first()?->ticketType?->currency ?? 'RON'))
                     ->sortable(),
                 Tables\Columns\BadgeColumn::make('status')
+                    ->label('Status')
                     ->colors([
                         'warning' => 'pending',
-                        'success' => 'confirmed',
+                        'success' => fn ($state) => in_array($state, ['confirmed', 'paid']),
                         'danger' => 'cancelled',
                         'gray' => 'refunded',
-                    ]),
+                    ])
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'pending' => 'În așteptare',
+                        'paid' => 'Plătită',
+                        'confirmed' => 'Confirmată',
+                        'cancelled' => 'Anulată',
+                        'refunded' => 'Rambursată',
+                        default => ucfirst($state),
+                    }),
                 Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
+                    ->label('Data')
+                    ->dateTime('d M Y H:i')
                     ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'pending' => 'Pending',
-                        'confirmed' => 'Confirmed',
-                        'cancelled' => 'Cancelled',
-                        'refunded' => 'Refunded',
+                        'pending' => 'În așteptare',
+                        'paid' => 'Plătită',
+                        'confirmed' => 'Confirmată',
+                        'cancelled' => 'Anulată',
+                        'refunded' => 'Rambursată',
                     ]),
             ])
             ->defaultSort('created_at', 'desc');

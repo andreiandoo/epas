@@ -12,6 +12,8 @@ use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Support\Enums\IconPosition;
 use Filament\Support\Colors\Color;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use App\Filament\Resources\Customers\Pages\ViewCustomerStats;
 use Filament\Schemas\Components as SC;
 
@@ -112,8 +114,13 @@ class CustomerResource extends Resource
                     ->preload(),
             ])
             ->defaultSort('created_at', 'desc')
-            ->actions([])      // lăsăm gol ca să evităm dependențe de Actions classes
-            ->bulkActions([]);
+            ->actions([])
+            ->bulkActions([])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
+            ]);
     }
 
 

@@ -31,7 +31,7 @@
                 @if ($artist->artistTypes?->isNotEmpty())
                     <div class="flex flex-wrap gap-2 mb-4">
                         @foreach ($artist->artistTypes as $type)
-                            <span class="px-4 py-1.5 bg-white/20 backdrop-blur rounded-full text-sm font-medium">{{ $type->name }}</span>
+                            <span class="px-4 py-1.5 bg-white/20 backdrop-blur rounded-full text-sm font-medium">{{ $type->getTranslation('name', app()->getLocale()) }}</span>
                         @endforeach
                     </div>
                 @endif
@@ -93,7 +93,7 @@
                     <h3 class="text-lg font-bold mb-3">Genres</h3>
                     <div class="flex flex-wrap gap-2">
                         @foreach ($artist->artistGenres as $genre)
-                            <span class="px-3 py-1 bg-gray-100 rounded-full text-sm">{{ $genre->name }}</span>
+                            <span class="px-3 py-1 bg-gray-100 rounded-full text-sm">{{ $genre->getTranslation('name', app()->getLocale()) }}</span>
                         @endforeach
                     </div>
                 </section>

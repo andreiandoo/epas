@@ -190,29 +190,122 @@ class AccountController extends Controller
             ->get();
 
         $formattedOrders = $orders->map(function ($order) {
+            // Group tickets by event and ticket type
+            $groupedTickets = $order->tickets->groupBy(function ($ticket) {
+                return $ticket->ticket_type_id;
+            })->map(function ($tickets) {
+                $first = $tickets->first();
+                $event = $first->ticketType?->event;
+                return [
+                    'event_name' => $event?->getTranslation('title', 'ro') ?? 'Unknown Event',
+                    'event_slug' => $event?->slug,
+                    'ticket_type' => $first->ticketType?->name ?? 'Unknown Type',
+                    'quantity' => $tickets->count(),
+                ];
+            })->values();
+
             return [
                 'id' => $order->id,
                 'order_number' => '#' . str_pad($order->id, 6, '0', STR_PAD_LEFT),
                 'date' => $order->created_at->format('d M Y'),
                 'total' => number_format($order->total_cents / 100, 2),
-                'currency' => 'EUR',
+                'currency' => $order->tickets->first()?->ticketType?->currency ?? 'EUR',
                 'status' => $order->status,
                 'status_label' => $this->getStatusLabel($order->status),
                 'items_count' => $order->tickets->count(),
-                'tickets' => $order->tickets->map(function ($ticket) {
-                    $event = $ticket->ticketType?->event;
-                    return [
-                        'event_name' => $event?->getTranslation('title', 'ro') ?? 'Unknown Event',
-                        'ticket_type' => $ticket->ticketType?->name ?? 'Unknown Type',
-                        'quantity' => 1,
-                    ];
-                }),
+                'tickets' => $groupedTickets,
             ];
         });
 
         return response()->json([
             'success' => true,
             'data' => $formattedOrders,
+        ]);
+    }
+
+    /**
+     * Get single order detail
+     */
+    public function orderDetail(Request $request, int $orderId): JsonResponse
+    {
+        $customer = $this->getAuthenticatedCustomer($request);
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $order = Order::where('customer_id', $customer->id)
+            ->where('id', $orderId)
+            ->with(['tickets.ticketType.event.venue', 'tickets.performance'])
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Comanda nu a fost găsită',
+            ], 404);
+        }
+
+        // Group tickets by event
+        $ticketsByEvent = $order->tickets->groupBy(function ($ticket) {
+            return $ticket->ticketType?->event_id;
+        })->map(function ($tickets) {
+            $first = $tickets->first();
+            $event = $first->ticketType?->event;
+            $venue = $event?->venue;
+
+            return [
+                'event' => [
+                    'id' => $event?->id,
+                    'title' => $event?->getTranslation('title', 'ro') ?? 'Unknown Event',
+                    'slug' => $event?->slug,
+                    'date' => $event?->start_date,
+                    'time' => $event?->start_time,
+                    'poster_url' => $event?->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
+                ],
+                'venue' => $venue ? [
+                    'id' => $venue->id,
+                    'name' => $venue->getTranslation('name', 'ro'),
+                    'city' => $venue->city,
+                    'address' => $venue->address,
+                ] : null,
+                'tickets' => $tickets->map(function ($ticket) {
+                    return [
+                        'id' => $ticket->id,
+                        'code' => $ticket->code,
+                        'qr_code' => "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($ticket->code),
+                        'ticket_type' => $ticket->ticketType?->name ?? 'Unknown Type',
+                        'seat_label' => $ticket->seat_label,
+                        'status' => $ticket->status,
+                        'status_label' => $this->getTicketStatusLabel($ticket->status),
+                        'price' => $ticket->price_cents ? $ticket->price_cents / 100 : null,
+                        'currency' => $ticket->ticketType?->currency ?? 'EUR',
+                    ];
+                })->values(),
+            ];
+        })->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $order->id,
+                'order_number' => '#' . str_pad($order->id, 6, '0', STR_PAD_LEFT),
+                'date' => $order->created_at->format('d M Y, H:i'),
+                'total' => number_format($order->total_cents / 100, 2),
+                'currency' => $order->tickets->first()?->ticketType?->currency ?? 'EUR',
+                'status' => $order->status,
+                'status_label' => $this->getStatusLabel($order->status),
+                'items_count' => $order->tickets->count(),
+                'events' => $ticketsByEvent,
+                'meta' => [
+                    'customer_name' => $order->meta['customer_name'] ?? null,
+                    'customer_email' => $order->customer_email,
+                    'payment_method' => $order->meta['payment_method'] ?? 'Card',
+                ],
+            ],
         ]);
     }
 

@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Artist;
+use App\Models\Customer;
 use App\Models\Event;
 use App\Models\Tenant;
+use App\Models\Ticket;
 use App\Models\Venue;
 use App\Services\SpotifyService;
 use App\Services\YouTubeService;
@@ -20,7 +22,19 @@ class PublicDataController extends Controller
             'events' => Event::count(),
             'venues' => Venue::count(),
             'artists' => Artist::count(),
-            'tenants' => Tenant::where('is_active', true)->count(),
+            'tenants' => Tenant::where('status', 'active')->count(),
+        ]);
+    }
+
+    public function data(): JsonResponse
+    {
+        return response()->json([
+            'tickets_sold' => Ticket::count(),
+            'customers' => Customer::count(),
+            'tenants' => Tenant::where('status', 'active')->count(),
+            'venues' => Venue::count(),
+            'events' => Event::count(),
+            'artists' => Artist::count(),
         ]);
     }
 
@@ -28,23 +42,141 @@ class PublicDataController extends Controller
     {
         $query = Venue::query();
 
-        if ($request->has('active')) {
-            $query->where('is_active', true);
+        if ($request->has('city')) {
+            $query->where('city', $request->get('city'));
         }
 
-        $venues = $query->select([
-            'id', 'name', 'slug', 'city', 'country', 'capacity',
-            'address', 'latitude', 'longitude', 'created_at'
-        ])->get();
+        if ($request->has('country')) {
+            $query->where('country', $request->get('country'));
+        }
 
-        return response()->json($venues);
+        $perPage = min((int) $request->get('per_page', 50), 500);
+        $paginator = $query->paginate($perPage);
+
+        $formattedVenues = collect($paginator->items())->map(function ($venue) {
+            return [
+                'id' => $venue->id,
+                'name' => $venue->getTranslation('name', 'en'),
+                'name_translations' => $venue->name,
+                'slug' => $venue->slug,
+                'description' => $venue->getTranslation('description', 'en'),
+                'description_translations' => $venue->description,
+                'address' => $venue->address,
+                'city' => $venue->city,
+                'state' => $venue->state,
+                'country' => $venue->country,
+                'capacity' => [
+                    'total' => $venue->capacity ?? $venue->capacity_total,
+                    'standing' => $venue->capacity_standing,
+                    'seated' => $venue->capacity_seated,
+                ],
+                'location' => [
+                    'latitude' => $venue->lat,
+                    'longitude' => $venue->lng,
+                    'google_maps_url' => $venue->google_maps_url,
+                ],
+                'contact' => [
+                    'website' => $venue->website_url,
+                    'phone' => $venue->phone,
+                    'phone2' => $venue->phone2,
+                    'email' => $venue->email,
+                    'email2' => $venue->email2,
+                ],
+                'social' => [
+                    'facebook_url' => $venue->facebook_url,
+                    'instagram_url' => $venue->instagram_url,
+                    'tiktok_url' => $venue->tiktok_url,
+                ],
+                'media' => [
+                    'image_url' => $venue->image_url,
+                    'video_type' => $venue->video_type,
+                    'video_url' => $venue->video_url,
+                    'gallery' => $venue->gallery,
+                ],
+                'established_at' => $venue->established_at?->toDateString(),
+                'meta' => $venue->meta,
+                'created_at' => $venue->created_at?->toIso8601String(),
+                'updated_at' => $venue->updated_at?->toIso8601String(),
+            ];
+        });
+
+        return response()->json([
+            'data' => $formattedVenues,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
+                'next_page_url' => $paginator->nextPageUrl(),
+                'prev_page_url' => $paginator->previousPageUrl(),
+            ],
+        ]);
     }
 
     public function venue(string $slug): JsonResponse
     {
-        $venue = Venue::where('slug', $slug)->firstOrFail();
+        $venue = Venue::where('slug', $slug)
+            ->with(['events' => function ($q) {
+                $q->where('event_date', '>=', now())
+                  ->orderBy('event_date')
+                  ->limit(20);
+            }])
+            ->firstOrFail();
 
-        return response()->json($venue);
+        return response()->json([
+            'id' => $venue->id,
+            'name' => $venue->getTranslation('name', 'en'),
+            'name_translations' => $venue->name,
+            'slug' => $venue->slug,
+            'description' => $venue->getTranslation('description', 'en'),
+            'description_translations' => $venue->description,
+            'address' => $venue->address,
+            'city' => $venue->city,
+            'state' => $venue->state,
+            'country' => $venue->country,
+            'capacity' => [
+                'total' => $venue->capacity ?? $venue->capacity_total,
+                'standing' => $venue->capacity_standing,
+                'seated' => $venue->capacity_seated,
+            ],
+            'location' => [
+                'latitude' => $venue->lat,
+                'longitude' => $venue->lng,
+                'google_maps_url' => $venue->google_maps_url,
+            ],
+            'contact' => [
+                'website' => $venue->website_url,
+                'phone' => $venue->phone,
+                'phone2' => $venue->phone2,
+                'email' => $venue->email,
+                'email2' => $venue->email2,
+            ],
+            'social' => [
+                'facebook_url' => $venue->facebook_url,
+                'instagram_url' => $venue->instagram_url,
+                'tiktok_url' => $venue->tiktok_url,
+            ],
+            'media' => [
+                'image_url' => $venue->image_url,
+                'video_type' => $venue->video_type,
+                'video_url' => $venue->video_url,
+                'gallery' => $venue->gallery,
+            ],
+            'established_at' => $venue->established_at?->toDateString(),
+            'meta' => $venue->meta,
+            'upcoming_events' => $venue->events->map(fn ($event) => [
+                'id' => $event->id,
+                'title' => $event->getTranslation('title', 'en'),
+                'slug' => $event->slug,
+                'event_date' => $event->event_date?->toDateString(),
+                'start_time' => $event->start_time,
+                'poster_url' => $event->poster_url,
+            ]),
+            'created_at' => $venue->created_at?->toIso8601String(),
+            'updated_at' => $venue->updated_at?->toIso8601String(),
+        ]);
     }
 
     public function artists(Request $request): JsonResponse
@@ -52,21 +184,206 @@ class PublicDataController extends Controller
         $query = Artist::query();
 
         if ($request->has('active')) {
-            $query->where('is_active', true);
+            $query->where('is_active', (bool) $request->get('active'));
         }
 
-        $artists = $query->select([
-            'id', 'name', 'slug', 'country', 'bio', 'created_at'
-        ])->get();
+        if ($request->has('country')) {
+            $query->where('country', $request->get('country'));
+        }
 
-        return response()->json($artists);
+        if ($request->has('city')) {
+            $query->where('city', $request->get('city'));
+        }
+
+        $perPage = min((int) $request->get('per_page', 50), 500);
+        $paginator = $query
+            ->with(['artistTypes', 'artistGenres'])
+            ->paginate($perPage);
+
+        $formattedArtists = collect($paginator->items())->map(function ($artist) {
+            return [
+                'id' => $artist->id,
+                'name' => $artist->name,
+                'slug' => $artist->slug,
+                'is_active' => $artist->is_active,
+                'bio' => $artist->getTranslation('bio_html', 'en'),
+                'bio_translations' => $artist->bio_html,
+                'location' => [
+                    'city' => $artist->city,
+                    'country' => $artist->country,
+                ],
+                'contact' => [
+                    'website' => $artist->website,
+                    'phone' => $artist->phone,
+                    'email' => $artist->email,
+                ],
+                'social' => [
+                    'facebook_url' => $artist->facebook_url,
+                    'instagram_url' => $artist->instagram_url,
+                    'tiktok_url' => $artist->tiktok_url,
+                    'youtube_url' => $artist->youtube_url,
+                    'spotify_url' => $artist->spotify_url,
+                ],
+                'platform_ids' => [
+                    'youtube_id' => $artist->youtube_id,
+                    'spotify_id' => $artist->spotify_id,
+                ],
+                'images' => [
+                    'main_image_url' => $artist->main_image_url,
+                    'logo_url' => $artist->logo_url,
+                    'portrait_url' => $artist->portrait_url,
+                ],
+                'youtube_videos' => $artist->youtube_videos,
+                'followers' => [
+                    'facebook' => $artist->followers_facebook ?? $artist->facebook_followers,
+                    'instagram' => $artist->followers_instagram ?? $artist->instagram_followers,
+                    'tiktok' => $artist->followers_tiktok ?? $artist->tiktok_followers,
+                    'youtube' => $artist->followers_youtube ?? $artist->youtube_followers,
+                    'spotify' => $artist->spotify_followers,
+                    'spotify_monthly_listeners' => $artist->spotify_monthly_listeners,
+                ],
+                'youtube_stats' => [
+                    'total_views' => $artist->youtube_total_views,
+                    'total_likes' => $artist->youtube_total_likes,
+                ],
+                'spotify_popularity' => $artist->spotify_popularity,
+                'social_stats_updated_at' => $artist->social_stats_updated_at?->toIso8601String(),
+                'artist_types' => $artist->artistTypes->map(fn($type) => [
+                    'id' => $type->id,
+                    'name' => is_array($type->name) ? ($type->name['en'] ?? $type->name['ro'] ?? reset($type->name)) : $type->name,
+                ])->toArray(),
+                'artist_genres' => $artist->artistGenres->map(fn($genre) => [
+                    'id' => $genre->id,
+                    'name' => is_array($genre->name) ? ($genre->name['en'] ?? $genre->name['ro'] ?? reset($genre->name)) : $genre->name,
+                ])->toArray(),
+                'manager' => [
+                    'first_name' => $artist->manager_first_name,
+                    'last_name' => $artist->manager_last_name,
+                    'email' => $artist->manager_email,
+                    'phone' => $artist->manager_phone,
+                    'website' => $artist->manager_website,
+                ],
+                'agent' => [
+                    'first_name' => $artist->agent_first_name,
+                    'last_name' => $artist->agent_last_name,
+                    'email' => $artist->agent_email,
+                    'phone' => $artist->agent_phone,
+                    'website' => $artist->agent_website,
+                ],
+                'created_at' => $artist->created_at?->toIso8601String(),
+                'updated_at' => $artist->updated_at?->toIso8601String(),
+            ];
+        });
+
+        return response()->json([
+            'data' => $formattedArtists,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
+                'next_page_url' => $paginator->nextPageUrl(),
+                'prev_page_url' => $paginator->previousPageUrl(),
+            ],
+        ]);
     }
 
     public function artist(string $slug): JsonResponse
     {
-        $artist = Artist::where('slug', $slug)->firstOrFail();
+        $artist = Artist::where('slug', $slug)
+            ->with(['artistTypes', 'artistGenres', 'events' => function ($q) {
+                $q->where('event_date', '>=', now())
+                  ->orderBy('event_date')
+                  ->limit(20);
+            }])
+            ->firstOrFail();
 
-        return response()->json($artist);
+        return response()->json([
+            'id' => $artist->id,
+            'name' => $artist->name,
+            'slug' => $artist->slug,
+            'is_active' => $artist->is_active,
+            'bio' => $artist->getTranslation('bio_html', 'en'),
+            'bio_translations' => $artist->bio_html,
+            'location' => [
+                'city' => $artist->city,
+                'country' => $artist->country,
+            ],
+            'contact' => [
+                'website' => $artist->website,
+                'phone' => $artist->phone,
+                'email' => $artist->email,
+            ],
+            'social' => [
+                'facebook_url' => $artist->facebook_url,
+                'instagram_url' => $artist->instagram_url,
+                'tiktok_url' => $artist->tiktok_url,
+                'youtube_url' => $artist->youtube_url,
+                'spotify_url' => $artist->spotify_url,
+            ],
+            'platform_ids' => [
+                'youtube_id' => $artist->youtube_id,
+                'spotify_id' => $artist->spotify_id,
+            ],
+            'images' => [
+                'main_image_url' => $artist->main_image_url,
+                'logo_url' => $artist->logo_url,
+                'portrait_url' => $artist->portrait_url,
+            ],
+            'youtube_videos' => $artist->youtube_videos,
+            'followers' => [
+                'facebook' => $artist->followers_facebook ?? $artist->facebook_followers,
+                'instagram' => $artist->followers_instagram ?? $artist->instagram_followers,
+                'tiktok' => $artist->followers_tiktok ?? $artist->tiktok_followers,
+                'youtube' => $artist->followers_youtube ?? $artist->youtube_followers,
+                'spotify' => $artist->spotify_followers,
+                'spotify_monthly_listeners' => $artist->spotify_monthly_listeners,
+            ],
+            'youtube_stats' => [
+                'total_views' => $artist->youtube_total_views,
+                'total_likes' => $artist->youtube_total_likes,
+            ],
+            'spotify_popularity' => $artist->spotify_popularity,
+            'social_stats_updated_at' => $artist->social_stats_updated_at?->toIso8601String(),
+            'artist_types' => $artist->artistTypes->map(fn($type) => [
+                'id' => $type->id,
+                'name' => is_array($type->name) ? ($type->name['en'] ?? $type->name['ro'] ?? reset($type->name)) : $type->name,
+            ])->toArray(),
+            'artist_genres' => $artist->artistGenres->map(fn($genre) => [
+                'id' => $genre->id,
+                'name' => is_array($genre->name) ? ($genre->name['en'] ?? $genre->name['ro'] ?? reset($genre->name)) : $genre->name,
+            ])->toArray(),
+            'manager' => [
+                'first_name' => $artist->manager_first_name,
+                'last_name' => $artist->manager_last_name,
+                'email' => $artist->manager_email,
+                'phone' => $artist->manager_phone,
+                'website' => $artist->manager_website,
+            ],
+            'agent' => [
+                'first_name' => $artist->agent_first_name,
+                'last_name' => $artist->agent_last_name,
+                'email' => $artist->agent_email,
+                'phone' => $artist->agent_phone,
+                'website' => $artist->agent_website,
+            ],
+            'upcoming_events' => $artist->events->map(fn ($event) => [
+                'id' => $event->id,
+                'title' => $event->getTranslation('title', 'en'),
+                'slug' => $event->slug,
+                'event_date' => $event->event_date?->toDateString(),
+                'start_time' => $event->start_time,
+                'poster_url' => $event->poster_url,
+                'venue' => $event->venue ? [
+                    'name' => $event->venue->getTranslation('name', 'en'),
+                    'city' => $event->venue->city,
+                ] : null,
+            ]),
+            'created_at' => $artist->created_at?->toIso8601String(),
+            'updated_at' => $artist->updated_at?->toIso8601String(),
+        ]);
     }
 
     public function tenants(Request $request): JsonResponse
@@ -99,7 +416,8 @@ class PublicDataController extends Controller
             $query->where('event_date', '>=', now());
         }
 
-        $events = $query->with([
+        $perPage = min((int) $request->get('per_page', 50), 500);
+        $paginator = $query->with([
             'venue:id,name,slug,address,city,lat as latitude,lng as longitude',
             'tenant:id,name,public_name,website',
             'tenant.domains' => function ($query) {
@@ -112,9 +430,9 @@ class PublicDataController extends Controller
             'artists:id,name,slug,main_image_url',
             'tags:id,name',
             'ticketTypes'
-        ])->limit(100)->get();
+        ])->paginate($perPage);
 
-        $formattedEvents = $events->map(function ($event) {
+        $formattedEvents = collect($paginator->items())->map(function ($event) {
             return [
                 'id' => $event->id,
                 'title' => $event->getTranslation('title', 'en'),
@@ -124,7 +442,9 @@ class PublicDataController extends Controller
                 'is_cancelled' => $event->is_cancelled ?? false,
                 'cancel_reason' => $event->cancel_reason,
                 'is_postponed' => $event->is_postponed ?? false,
-                'postponed_date' => $event->postponed_date,
+                'postponed_date' => $event->postponed_date && $event->postponed_start_time
+                    ? \Carbon\Carbon::parse($event->postponed_date->format('Y-m-d') . ' ' . $event->postponed_start_time)->toIso8601String()
+                    : $event->postponed_date?->toIso8601String(),
                 'postponed_start_time' => $event->postponed_start_time,
                 'postponed_door_time' => $event->postponed_door_time,
                 'postponed_end_time' => $event->postponed_end_time,
@@ -203,7 +523,19 @@ class PublicDataController extends Controller
             ];
         });
 
-        return response()->json($formattedEvents);
+        return response()->json([
+            'data' => $formattedEvents,
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
+                'next_page_url' => $paginator->nextPageUrl(),
+                'prev_page_url' => $paginator->previousPageUrl(),
+            ],
+        ]);
     }
 
     public function event(string $slug): JsonResponse

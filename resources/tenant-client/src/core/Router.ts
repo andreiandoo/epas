@@ -20,8 +20,12 @@ interface CartItem {
     eventDate: string;
     ticketTypeId: number;
     ticketTypeName: string;
-    price: number;
-    salePrice: number | null;
+    price: number;          // Base price (original price)
+    salePrice: number | null;  // Sale price (discounted price if any)
+    finalPrice: number;     // Price including commission if applicable
+    commissionAmount: number;  // Commission amount per ticket (calculated from base price)
+    commissionRate: number;    // Commission rate percentage
+    hasCommissionOnTop: boolean;  // Whether commission is added on top
     quantity: number;
     currency: string;
     bulkDiscounts: any[];
@@ -109,25 +113,37 @@ class CartService {
         return { total: bestTotal, discount: bestDiscount };
     }
 
-    static getTotal(): { subtotal: number; discount: number; total: number; currency: string } {
+    static getTotal(): { subtotal: number; discount: number; commission: number; total: number; currency: string; hasCommission: boolean } {
         const cart = this.getCart();
         let subtotal = 0;
         let totalDiscount = 0;
-        let currency = 'EUR';
+        let totalCommission = 0;
+        let hasCommission = false;
+        let currency = 'RON';
 
         for (const item of cart) {
+            // Use salePrice if available, otherwise base price (NOT finalPrice which includes commission)
             const itemPrice = item.salePrice || item.price;
             const result = this.calculateBulkDiscount(item.quantity, itemPrice, item.bulkDiscounts);
-            subtotal += item.quantity * itemPrice;
+            subtotal += result.total;  // This is already the discounted total
             totalDiscount += result.discount;
             currency = item.currency;
+
+            // Calculate commission from BASE price × quantity (not affected by discounts)
+            if (item.hasCommissionOnTop && item.commissionRate > 0) {
+                const commission = item.quantity * item.price * (item.commissionRate / 100);
+                totalCommission += commission;
+                hasCommission = true;
+            }
         }
 
         return {
-            subtotal,
+            subtotal: subtotal + totalDiscount, // Original subtotal before discount
             discount: totalDiscount,
-            total: subtotal - totalDiscount,
-            currency
+            commission: totalCommission,
+            total: subtotal + totalCommission,  // subtotal already has discount applied, add commission
+            currency,
+            hasCommission
         };
     }
 }
@@ -291,9 +307,38 @@ export class Router {
         return result;
     }
 
+    // DELETE helper
+    private async deleteApi(endpoint: string): Promise<any> {
+        const url = new URL(`${this.config.apiEndpoint}${endpoint}`);
+        url.searchParams.set('hostname', window.location.hostname);
+
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+        };
+
+        if (this.authToken) {
+            (headers as Record<string, string>)['Authorization'] = `Bearer ${this.authToken}`;
+        }
+
+        const response = await fetch(url.toString(), {
+            method: 'DELETE',
+            headers,
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || result.error || 'Request failed');
+        }
+
+        return result;
+    }
+
     // Event card HTML generator
     private renderEventCard(event: any): string {
-        const date = event.start_date ? new Date(event.start_date).toLocaleDateString('ro-RO', {
+        // Use postponed date if event is postponed
+        const displayDate = event.is_postponed && event.postponed_date ? event.postponed_date : event.start_date;
+        const date = displayDate ? new Date(displayDate).toLocaleDateString('ro-RO', {
             day: 'numeric',
             month: 'short',
             year: 'numeric'
@@ -315,12 +360,13 @@ export class Router {
                     }
                     ${event.is_sold_out ? `<span class="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">SOLD OUT</span>` : ''}
                     ${event.is_cancelled ? `<span class="absolute top-2 right-2 bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded">ANULAT</span>` : ''}
+                    ${event.is_postponed && !event.is_cancelled ? `<span class="absolute top-2 right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">AMÂNAT</span>` : ''}
                 </div>
                 <div class="p-4">
                     <h3 class="font-semibold text-gray-900 mb-1 line-clamp-2">${event.title}</h3>
                     <p class="text-sm text-gray-500 mb-2">${date}</p>
                     ${event.venue ? `<p class="text-sm text-gray-600 mb-2">${event.venue.name}${event.venue.city ? `, ${event.venue.city}` : ''}</p>` : ''}
-                    ${event.price_from ? `<p class="text-sm font-semibold text-primary">de la ${event.price_from} ${event.currency || '€'}</p>` : ''}
+                    ${event.price_from ? `<p class="text-sm font-semibold text-primary">de la ${event.price_from} ${event.currency || 'RON'}</p>` : ''}
                 </div>
             </a>
         `;
@@ -677,14 +723,21 @@ export class Router {
             // Store event data globally for cart functionality
             (window as any).currentEventData = event;
 
-            const date = event.start_date ? new Date(event.start_date).toLocaleDateString('ro-RO', {
+            // Use postponed date/time if event is postponed
+            const isPostponed = event.is_postponed === true;
+            const displayDate = isPostponed && event.postponed_date ? event.postponed_date : event.start_date;
+            const displayStartTime = isPostponed && event.postponed_start_time ? event.postponed_start_time : event.start_time;
+            const displayDoorTime = isPostponed && event.postponed_door_time ? event.postponed_door_time : event.door_time;
+            const displayEndTime = isPostponed && event.postponed_end_time ? event.postponed_end_time : event.end_time;
+
+            const date = displayDate ? new Date(displayDate).toLocaleDateString('ro-RO', {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric'
             }) : '';
 
-            const time = event.start_time || (event.start_date ? new Date(event.start_date).toLocaleTimeString('ro-RO', {
+            const time = displayStartTime || (displayDate ? new Date(displayDate).toLocaleTimeString('ro-RO', {
                 hour: '2-digit',
                 minute: '2-digit'
             }) : '');
@@ -705,7 +758,7 @@ export class Router {
                               </div>`
                         }
 
-                        <div id="countdown-container" data-event-date="${event.start_date || event.event_date || ''}" data-event-time="${event.start_time || ''}" data-is-cancelled="${event.is_cancelled || false}" data-is-postponed="${event.is_postponed || false}"></div>
+                        <div id="countdown-container" data-event-date="${displayDate || ''}" data-event-time="${displayStartTime || ''}" data-is-cancelled="${event.is_cancelled || false}" data-is-postponed="${event.is_postponed || false}"></div>
 
                         ${event.is_cancelled ? `
                         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -713,9 +766,9 @@ export class Router {
                         </div>
                         ` : ''}
 
-                        ${event.is_postponed ? `
+                        ${isPostponed ? `
                         <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-                            <strong>Eveniment amânat:</strong> ${event.postponed_reason || 'Acest eveniment a fost amânat.'}
+                            <strong>Eveniment amânat${event.postponed_date ? ` pentru ${date}${displayStartTime ? ` ora ${displayStartTime}` : ''}` : ''}:</strong> ${event.postponed_reason || 'Acest eveniment a fost amânat.'}
                         </div>
                         ` : ''}
 
@@ -759,16 +812,10 @@ export class Router {
                             ` : ''}
                         </div>
 
-                        ${event.short_description ? `
-                        <div class="mb-4">
-                            <p class="text-gray-700 text-lg">${event.short_description}</p>
-                        </div>
-                        ` : ''}
-
                         ${event.description ? `
-                        <div class="prose max-w-none mb-8">
+                        <div class="mb-8">
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Descriere</h2>
-                            <div class="text-gray-700">${event.description}</div>
+                            <div class="prose prose-gray max-w-none text-gray-700 [&>p]:mb-4 [&>ul]:mb-4 [&>ol]:mb-4 [&>p:last-child]:mb-0">${event.description}</div>
                         </div>
                         ` : ''}
 
@@ -792,17 +839,241 @@ export class Router {
 
                         ${event.artists && event.artists.length > 0 ? `
                         <div class="mb-8">
-                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Artiști</h2>
-                            <div class="flex flex-wrap gap-4">
-                                ${event.artists.map((artist: any) => `
-                                    <a href="https://core.tixello.com/artist/${artist.slug}?locale=en" target="_blank" class="flex items-center bg-gray-100 rounded-lg p-3 hover:bg-gray-200 transition">
-                                        ${artist.image
-                                            ? `<img src="${artist.image}" alt="${artist.name}" class="w-10 h-10 rounded-full object-cover mr-3">`
-                                            : `<div class="w-10 h-10 rounded-full bg-gray-300 mr-3"></div>`
-                                        }
-                                        <span class="font-medium">${artist.name}</span>
-                                    </a>
-                                `).join('')}
+                            <h2 class="text-xl font-semibold text-gray-900 mb-6">Artiști</h2>
+                            <div class="space-y-8">
+                                ${event.artists.map((artist: any) => {
+                                    const formatNumber = (num: number | null | undefined): string => {
+                                        if (!num) return '';
+                                        if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+                                        if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+                                        return num.toString();
+                                    };
+
+                                    const hasStats = artist.youtube_subscribers || artist.youtube_total_views ||
+                                                     artist.spotify_followers || artist.facebook_followers ||
+                                                     artist.instagram_followers || artist.tiktok_followers;
+
+                                    const hasSocial = artist.facebook_url || artist.instagram_url || artist.youtube_url ||
+                                                      artist.spotify_url || artist.tiktok_url || artist.website;
+
+                                    const latestVideo = artist.youtube_videos && artist.youtube_videos.length > 0
+                                        ? artist.youtube_videos[0] : null;
+
+                                    return `
+                                    <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                                        <div class="p-6">
+                                            <!-- Header: Image, Name, Types/Genres -->
+                                            <div class="flex flex-col md:flex-row gap-6">
+                                                <a href="https://core.tixello.com/artist/${artist.slug}?locale=en" target="_blank" class="flex-shrink-0 group">
+                                                    ${artist.image || artist.portrait
+                                                        ? `<img src="${artist.portrait || artist.image}" alt="${artist.name}" class="w-32 h-32 md:w-40 md:h-40 rounded-xl object-cover shadow-md group-hover:shadow-lg transition">`
+                                                        : `<div class="w-32 h-32 md:w-40 md:h-40 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+                                                            <span class="text-4xl text-white font-bold">${artist.name.charAt(0)}</span>
+                                                           </div>`
+                                                    }
+                                                </a>
+                                                <div class="flex-1">
+                                                    <a href="https://core.tixello.com/artist/${artist.slug}?locale=en" target="_blank" class="hover:text-primary transition">
+                                                        <h3 class="text-2xl font-bold text-gray-900 mb-2">${artist.name}</h3>
+                                                    </a>
+                                                    ${artist.city || artist.country ? `
+                                                        <p class="text-gray-500 mb-3">📍 ${[artist.city, artist.country].filter(Boolean).join(', ')}</p>
+                                                    ` : ''}
+
+                                                    ${artist.artist_types && artist.artist_types.length > 0 ? `
+                                                        <div class="flex flex-wrap gap-2 mb-2">
+                                                            ${artist.artist_types.map((t: any) => `
+                                                                <span class="px-3 py-1 bg-primary/10 text-primary text-sm font-medium rounded-full">${t.name}</span>
+                                                            `).join('')}
+                                                        </div>
+                                                    ` : ''}
+
+                                                    ${artist.artist_genres && artist.artist_genres.length > 0 ? `
+                                                        <div class="flex flex-wrap gap-2">
+                                                            ${artist.artist_genres.map((g: any) => `
+                                                                <span class="px-3 py-1 bg-gray-200 text-gray-700 text-sm rounded-full">${g.name}</span>
+                                                            `).join('')}
+                                                        </div>
+                                                    ` : ''}
+
+                                                    ${hasSocial ? `
+                                                        <div class="flex flex-wrap gap-3 mt-4">
+                                                            ${artist.spotify_url ? `<a href="${artist.spotify_url}" target="_blank" class="w-10 h-10 flex items-center justify-center bg-[#1DB954] text-white rounded-full hover:scale-110 transition" title="Spotify"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg></a>` : ''}
+                                                            ${artist.youtube_url ? `<a href="${artist.youtube_url}" target="_blank" class="w-10 h-10 flex items-center justify-center bg-[#FF0000] text-white rounded-full hover:scale-110 transition" title="YouTube"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>` : ''}
+                                                            ${artist.instagram_url ? `<a href="${artist.instagram_url}" target="_blank" class="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-[#833AB4] via-[#FD1D1D] to-[#FCAF45] text-white rounded-full hover:scale-110 transition" title="Instagram"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>` : ''}
+                                                            ${artist.facebook_url ? `<a href="${artist.facebook_url}" target="_blank" class="w-10 h-10 flex items-center justify-center bg-[#1877F2] text-white rounded-full hover:scale-110 transition" title="Facebook"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>` : ''}
+                                                            ${artist.tiktok_url ? `<a href="${artist.tiktok_url}" target="_blank" class="w-10 h-10 flex items-center justify-center bg-black text-white rounded-full hover:scale-110 transition" title="TikTok"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg></a>` : ''}
+                                                            ${artist.website ? `<a href="${artist.website}" target="_blank" class="w-10 h-10 flex items-center justify-center bg-gray-700 text-white rounded-full hover:scale-110 transition" title="Website"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg></a>` : ''}
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+
+                                            ${hasStats ? `
+                                            <!-- Social Stats -->
+                                            <div class="mt-6 pt-6 border-t border-gray-200">
+                                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+                                                    ${artist.spotify_followers ? `
+                                                        <div class="text-center p-3 bg-white rounded-xl shadow-sm">
+                                                            <div class="text-[#1DB954] mb-1"><svg class="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg></div>
+                                                            <div class="text-xl font-bold text-gray-900">${formatNumber(artist.spotify_followers)}</div>
+                                                            <div class="text-xs text-gray-500">Followers</div>
+                                                        </div>
+                                                    ` : ''}
+                                                    ${artist.spotify_monthly_listeners ? `
+                                                        <div class="text-center p-3 bg-white rounded-xl shadow-sm">
+                                                            <div class="text-[#1DB954] mb-1"><svg class="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg></div>
+                                                            <div class="text-xl font-bold text-gray-900">${formatNumber(artist.spotify_monthly_listeners)}</div>
+                                                            <div class="text-xs text-gray-500">Monthly</div>
+                                                        </div>
+                                                    ` : ''}
+                                                    ${artist.youtube_subscribers ? `
+                                                        <div class="text-center p-3 bg-white rounded-xl shadow-sm">
+                                                            <div class="text-[#FF0000] mb-1"><svg class="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></div>
+                                                            <div class="text-xl font-bold text-gray-900">${formatNumber(artist.youtube_subscribers)}</div>
+                                                            <div class="text-xs text-gray-500">Subscribers</div>
+                                                        </div>
+                                                    ` : ''}
+                                                    ${artist.youtube_total_views ? `
+                                                        <div class="text-center p-3 bg-white rounded-xl shadow-sm">
+                                                            <div class="text-[#FF0000] mb-1"><svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></div>
+                                                            <div class="text-xl font-bold text-gray-900">${formatNumber(artist.youtube_total_views)}</div>
+                                                            <div class="text-xs text-gray-500">Views</div>
+                                                        </div>
+                                                    ` : ''}
+                                                    ${artist.instagram_followers ? `
+                                                        <div class="text-center p-3 bg-white rounded-xl shadow-sm">
+                                                            <div class="text-[#E4405F] mb-1"><svg class="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></div>
+                                                            <div class="text-xl font-bold text-gray-900">${formatNumber(artist.instagram_followers)}</div>
+                                                            <div class="text-xs text-gray-500">Followers</div>
+                                                        </div>
+                                                    ` : ''}
+                                                    ${artist.facebook_followers ? `
+                                                        <div class="text-center p-3 bg-white rounded-xl shadow-sm">
+                                                            <div class="text-[#1877F2] mb-1"><svg class="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></div>
+                                                            <div class="text-xl font-bold text-gray-900">${formatNumber(artist.facebook_followers)}</div>
+                                                            <div class="text-xs text-gray-500">Followers</div>
+                                                        </div>
+                                                    ` : ''}
+                                                    ${artist.tiktok_followers ? `
+                                                        <div class="text-center p-3 bg-white rounded-xl shadow-sm">
+                                                            <div class="text-black mb-1"><svg class="w-6 h-6 mx-auto" fill="currentColor" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg></div>
+                                                            <div class="text-xl font-bold text-gray-900">${formatNumber(artist.tiktok_followers)}</div>
+                                                            <div class="text-xs text-gray-500">Followers</div>
+                                                        </div>
+                                                    ` : ''}
+                                                </div>
+                                            </div>
+                                            ` : ''}
+
+                                            ${artist.bio ? `
+                                            <!-- Bio -->
+                                            <div class="mt-6 pt-6 border-t border-gray-200">
+                                                <div class="prose prose-sm max-w-none text-gray-600">${artist.bio}</div>
+                                            </div>
+                                            ` : ''}
+
+                                            ${latestVideo && latestVideo.video_id ? `
+                                            <!-- YouTube Video Embed -->
+                                            <div class="mt-6 pt-6 border-t border-gray-200">
+                                                <h4 class="text-lg font-semibold text-gray-900 mb-4">Ultimul videoclip</h4>
+                                                <div class="relative pb-[56.25%] h-0 rounded-xl overflow-hidden shadow-lg">
+                                                    <iframe
+                                                        class="absolute top-0 left-0 w-full h-full"
+                                                        src="https://www.youtube.com/embed/${latestVideo.video_id}"
+                                                        title="${latestVideo.title || 'YouTube video'}"
+                                                        frameborder="0"
+                                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                        allowfullscreen>
+                                                    </iframe>
+                                                </div>
+                                                ${latestVideo.title ? `<p class="mt-2 text-sm text-gray-600">${latestVideo.title}</p>` : ''}
+                                            </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                `}).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${event.venue ? `
+                        <div class="mb-8">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Locație</h2>
+                            <div class="bg-gray-50 rounded-lg overflow-hidden">
+                                ${event.venue.image_url ? `
+                                <img src="${event.venue.image_url}" alt="${event.venue.name}" class="w-full h-48 object-cover">
+                                ` : ''}
+                                <div class="p-4">
+                                    <h3 class="font-semibold text-lg text-gray-900 mb-2">${event.venue.name}</h3>
+
+                                    ${event.venue.address || event.venue.city || event.venue.state || event.venue.country ? `
+                                    <div class="flex items-start mb-3">
+                                        <svg class="w-5 h-5 text-gray-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                        <div class="text-gray-600">
+                                            ${event.venue.address ? `<div>${event.venue.address}</div>` : ''}
+                                            ${event.venue.city || event.venue.state || event.venue.country ? `
+                                            <div>${[event.venue.city, event.venue.state, event.venue.country].filter(Boolean).join(', ')}</div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                    ` : ''}
+
+                                    ${event.venue.phone || event.venue.phone2 ? `
+                                    <div class="flex items-center mb-3">
+                                        <svg class="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                        </svg>
+                                        <div class="text-gray-600">
+                                            ${event.venue.phone ? `<a href="tel:${event.venue.phone}" class="hover:text-primary">${event.venue.phone}</a>` : ''}
+                                            ${event.venue.phone && event.venue.phone2 ? ' / ' : ''}
+                                            ${event.venue.phone2 ? `<a href="tel:${event.venue.phone2}" class="hover:text-primary">${event.venue.phone2}</a>` : ''}
+                                        </div>
+                                    </div>
+                                    ` : ''}
+
+                                    ${event.venue.email || event.venue.email2 ? `
+                                    <div class="flex items-center mb-3">
+                                        <svg class="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                        </svg>
+                                        <div class="text-gray-600">
+                                            ${event.venue.email ? `<a href="mailto:${event.venue.email}" class="hover:text-primary">${event.venue.email}</a>` : ''}
+                                            ${event.venue.email && event.venue.email2 ? ' / ' : ''}
+                                            ${event.venue.email2 ? `<a href="mailto:${event.venue.email2}" class="hover:text-primary">${event.venue.email2}</a>` : ''}
+                                        </div>
+                                    </div>
+                                    ` : ''}
+
+                                    <div class="flex flex-wrap gap-3 mt-4">
+                                        ${event.venue.website_url ? `
+                                        <a href="${event.venue.website_url}" target="_blank" class="inline-flex items-center px-3 py-1.5 bg-gray-200 hover:bg-gray-300 rounded text-sm text-gray-700 transition">
+                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                                            </svg>
+                                            Website
+                                        </a>
+                                        ` : ''}
+                                        ${event.venue.google_maps_url ? `
+                                        <a href="${event.venue.google_maps_url}" target="_blank" class="inline-flex items-center px-3 py-1.5 bg-blue-100 hover:bg-blue-200 rounded text-sm text-blue-700 transition">
+                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                                            </svg>
+                                            Google Maps
+                                        </a>
+                                        ` : event.venue.latitude && event.venue.longitude ? `
+                                        <a href="https://www.google.com/maps?q=${event.venue.latitude},${event.venue.longitude}" target="_blank" class="inline-flex items-center px-3 py-1.5 bg-blue-100 hover:bg-blue-200 rounded text-sm text-blue-700 transition">
+                                            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                                            </svg>
+                                            Google Maps
+                                        </a>
+                                        ` : ''}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         ` : ''}
@@ -820,20 +1091,32 @@ export class Router {
                                 </div>
                             ` : ''}
 
-                            ${event.ticket_types && event.ticket_types.length > 0 && !event.is_cancelled && !event.door_sales_only ? `
+                            ${event.ticket_types && event.ticket_types.length > 0 && !event.is_cancelled && !event.door_sales_only && !event.is_sold_out ? `
                                 <div class="space-y-4 mb-6">
                                     ${event.ticket_types.map((ticket: any) => {
-                                        const currency = ticket.currency || event.currency || 'EUR';
+                                        const currency = ticket.currency || event.currency || 'RON';
                                         const available = ticket.available ?? 0;
                                         const maxQty = Math.min(10, available);
+                                        const commissionInfo = event.commission;
+                                        const hasCommissionOnTop = commissionInfo?.is_added_on_top && ticket.commission_amount > 0;
                                         return `
                                         <div class="border border-gray-200 rounded-lg p-4 ${ticket.status !== 'active' ? 'opacity-50' : ''}">
                                             <div class="flex justify-between items-start mb-2">
-                                                <div>
+                                                <div class="flex items-center gap-2">
                                                     <h3 class="font-semibold text-gray-900">${ticket.name}</h3>
-                                                    ${ticket.description ? `<p class="text-sm text-gray-500">${ticket.description}</p>` : ''}
+                                                    ${hasCommissionOnTop ? `
+                                                    <div class="relative group">
+                                                        <svg class="w-4 h-4 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                        </svg>
+                                                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                                            Prețul include comision Tixello de ${ticket.commission_amount} ${currency}
+                                                        </div>
+                                                    </div>
+                                                    ` : ''}
                                                 </div>
                                             </div>
+                                            ${ticket.description ? `<p class="text-sm text-gray-500 mb-2">${ticket.description}</p>` : ''}
                                             ${ticket.bulk_discounts && ticket.bulk_discounts.length > 0 ? `
                                             <div class="mt-2 space-y-1">
                                                 ${ticket.bulk_discounts.map((discount: any) => {
@@ -857,7 +1140,18 @@ export class Router {
                                             <div class="flex justify-between items-start">
                                                 <div></div>
                                                 <div class="text-right">
-                                                    ${ticket.sale_price ? `
+                                                    ${hasCommissionOnTop ? `
+                                                        <div>
+                                                            ${ticket.sale_price ? `
+                                                                <span class="line-through text-gray-400 text-sm">${ticket.price} ${currency}</span>
+                                                                <span class="font-bold text-primary block">${(parseFloat(ticket.sale_price) + parseFloat(ticket.commission_amount || 0)).toFixed(2)} ${currency}</span>
+                                                                <span class="text-xs text-gray-500">(${ticket.sale_price} + ${ticket.commission_amount} comision)</span>
+                                                            ` : `
+                                                                <span class="font-bold text-primary">${(parseFloat(ticket.price) + parseFloat(ticket.commission_amount || 0)).toFixed(2)} ${currency}</span>
+                                                                <span class="text-xs text-gray-500 block">(${ticket.price} + ${ticket.commission_amount} comision)</span>
+                                                            `}
+                                                        </div>
+                                                    ` : ticket.sale_price ? `
                                                         <div>
                                                             <span class="line-through text-gray-400 text-sm">${ticket.price} ${currency}</span>
                                                             <span class="font-bold text-red-600 block">${ticket.sale_price} ${currency}</span>
@@ -876,7 +1170,7 @@ export class Router {
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
                                                         </svg>
                                                     </button>
-                                                    <span class="ticket-qty-display w-12 text-center font-semibold" data-ticket-id="${ticket.id}" data-price="${ticket.sale_price || ticket.price}" data-currency="${currency}" data-bulk-discounts='${JSON.stringify(ticket.bulk_discounts || [])}'>0</span>
+                                                    <span class="ticket-qty-display w-12 text-center font-semibold" data-ticket-id="${ticket.id}" data-price="${ticket.sale_price || ticket.price}" data-base-price="${ticket.price}" data-currency="${currency}" data-bulk-discounts='${JSON.stringify(ticket.bulk_discounts || [])}' data-commission-rate="${commissionInfo?.rate || 0}" data-has-commission-on-top="${hasCommissionOnTop}">0</span>
                                                     <button class="ticket-plus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-ticket-id="${ticket.id}" data-max="${maxQty}">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -895,7 +1189,7 @@ export class Router {
                                 <div class="border-t pt-4 mb-4">
                                     <div class="flex justify-between items-center text-lg font-bold">
                                         <span>Total</span>
-                                        <span id="cart-total-price">0 ${event.currency || 'EUR'}</span>
+                                        <span id="cart-total-price">0 ${event.currency || 'RON'}</span>
                                     </div>
                                 </div>
 
@@ -908,6 +1202,9 @@ export class Router {
                                     </svg>
                                     <span id="watchlist-btn-text">Adaugă la favorite</span>
                                 </button>
+                                <p class="text-center text-xs text-gray-400 mt-4">
+                                    Ticketing system powered by <a href="https://tixello.com" target="_blank" class="text-primary hover:underline">Tixello</a>
+                                </p>
                             ` : `
                                 <p class="text-gray-500 text-center py-4">Nu sunt bilete disponibile pentru achiziție online.</p>
                             `}
@@ -993,15 +1290,20 @@ export class Router {
         const updateTotal = () => {
             let total = 0;
             let totalDiscount = 0;
+            let totalCommission = 0;
             let hasSelection = false;
-            let currency = 'EUR';
+            let currency = 'RON';
             let discountInfos: string[] = [];
+            let hasCommissionOnTop = false;
 
             qtyDisplays.forEach((display) => {
                 const ticketId = (display as HTMLElement).dataset.ticketId || '';
                 const qty = quantities[ticketId] || 0;
                 const price = parseFloat((display as HTMLElement).dataset.price || '0');
-                const ticketCurrency = (display as HTMLElement).dataset.currency || 'EUR';
+                const basePrice = parseFloat((display as HTMLElement).dataset.basePrice || '0');
+                const ticketCurrency = (display as HTMLElement).dataset.currency || 'RON';
+                const commissionRate = parseFloat((display as HTMLElement).dataset.commissionRate || '0');
+                const ticketHasCommission = (display as HTMLElement).dataset.hasCommissionOnTop === 'true';
                 const discounts = ticketBulkDiscounts[ticketId] || [];
 
                 if (qty > 0) {
@@ -1011,16 +1313,42 @@ export class Router {
                     if (result.info) discountInfos.push(result.info);
                     hasSelection = true;
                     currency = ticketCurrency;
+
+                    // Commission is calculated from BASE price × quantity, not affected by discounts
+                    if (ticketHasCommission && commissionRate > 0) {
+                        const commission = qty * basePrice * (commissionRate / 100);
+                        totalCommission += commission;
+                        hasCommissionOnTop = true;
+                    }
                 }
             });
 
+            // Add commission to total if applicable
+            const finalTotal = total + totalCommission;
+
             if (totalEl) {
-                if (totalDiscount > 0) {
+                if (totalDiscount > 0 && hasCommissionOnTop) {
+                    // Has both discount and commission
+                    const originalTotal = total + totalDiscount;
+                    totalEl.innerHTML = `
+                        <div class="text-sm text-gray-500 line-through">${originalTotal.toFixed(2)} ${currency}</div>
+                        <div class="text-sm text-green-600">-${totalDiscount.toFixed(2)} ${currency} reducere</div>
+                        <div class="text-sm text-gray-500">+${totalCommission.toFixed(2)} ${currency} comision</div>
+                        <div class="text-lg font-bold text-primary">${finalTotal.toFixed(2)} ${currency}</div>
+                    `;
+                } else if (totalDiscount > 0) {
+                    // Only discount, no commission
                     const originalTotal = total + totalDiscount;
                     totalEl.innerHTML = `
                         <div class="text-sm text-gray-500 line-through">${originalTotal.toFixed(2)} ${currency}</div>
                         <div class="text-lg font-bold text-green-600">${total.toFixed(2)} ${currency}</div>
                         <div class="text-xs text-green-600">Economisești ${totalDiscount.toFixed(2)} ${currency}</div>
+                    `;
+                } else if (hasCommissionOnTop) {
+                    // Only commission, no discount
+                    totalEl.innerHTML = `
+                        <div class="text-sm text-gray-500">${total.toFixed(2)} + ${totalCommission.toFixed(2)} comision</div>
+                        <div class="text-lg font-bold text-primary">${finalTotal.toFixed(2)} ${currency}</div>
                     `;
                 } else {
                     totalEl.textContent = `${total.toFixed(2)} ${currency}`;
@@ -1074,6 +1402,8 @@ export class Router {
 
                     if (qty > 0 && eventData) {
                         const ticketType = eventData.ticket_types.find((t: any) => t.id === ticketId);
+                        const commissionInfo = eventData.commission;
+                        const hasCommissionOnTop = commissionInfo?.is_added_on_top && ticketType.commission_amount > 0;
                         if (ticketType) {
                             CartService.addItem({
                                 eventId: eventData.id,
@@ -1082,10 +1412,14 @@ export class Router {
                                 eventDate: eventData.start_date,
                                 ticketTypeId: ticketType.id,
                                 ticketTypeName: ticketType.name,
-                                price: ticketType.price,
-                                salePrice: ticketType.sale_price,
+                                price: ticketType.price,  // Base price
+                                salePrice: ticketType.sale_price,  // Discounted price
+                                finalPrice: ticketType.final_price || ticketType.sale_price || ticketType.price,
+                                commissionAmount: ticketType.commission_amount || 0,
+                                commissionRate: commissionInfo?.rate || 0,
+                                hasCommissionOnTop: hasCommissionOnTop,
                                 quantity: qty,
-                                currency: ticketType.currency || 'EUR',
+                                currency: ticketType.currency || 'RON',
                                 bulkDiscounts: ticketType.bulk_discounts || []
                             });
                             hasItems = true;
@@ -1185,20 +1519,29 @@ export class Router {
                     </svg>
                     <h1 class="text-2xl font-bold text-gray-900 mb-4">Coșul tău este gol</h1>
                     <p class="text-gray-600 mb-8">Explorează evenimentele noastre și adaugă bilete în coș.</p>
-                    <button class="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition" onclick="window.tixelloRouter.navigate('/events')">
+                    <a href="/events" class="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition inline-block">
                         Vezi evenimente
-                    </button>
+                    </a>
                 </div>
             `;
             return;
         }
 
         const cartItemsHtml = cart.map((item, index) => {
-            const effectivePrice = item.salePrice || item.price;
-            const result = CartService.calculateBulkDiscount(item.quantity, effectivePrice, item.bulkDiscounts);
-            const itemTotal = result.total;
+            // Use sale price if available, otherwise base price (same as getTotal)
+            const ticketPrice = item.salePrice || item.price;
+            const result = CartService.calculateBulkDiscount(item.quantity, ticketPrice, item.bulkDiscounts);
+            let itemTotal = result.total;
             const itemDiscount = result.discount;
-            const originalTotal = item.quantity * effectivePrice;
+            let originalTotal = item.quantity * ticketPrice;
+
+            // Add commission if applicable (from BASE price, not affected by discounts/sale price)
+            let itemCommission = 0;
+            if (item.hasCommissionOnTop && item.commissionRate > 0) {
+                itemCommission = item.quantity * item.price * (item.commissionRate / 100);
+                itemTotal += itemCommission;
+                originalTotal += itemCommission;
+            }
             const dateFormatted = new Date(item.eventDate).toLocaleDateString('ro-RO', {
                 weekday: 'long',
                 day: 'numeric',
@@ -1266,13 +1609,19 @@ export class Router {
 
                             <div class="space-y-2 mb-4 pb-4 border-b">
                                 <div class="flex justify-between text-gray-600">
-                                    <span>Subtotal</span>
+                                    <span>Subtotal bilete</span>
                                     <span>${totals.subtotal.toFixed(2)} ${totals.currency}</span>
                                 </div>
                                 ${totals.discount > 0 ? `
                                 <div class="flex justify-between text-green-600">
                                     <span>Discount bulk</span>
                                     <span>-${totals.discount.toFixed(2)} ${totals.currency}</span>
+                                </div>
+                                ` : ''}
+                                ${totals.hasCommission ? `
+                                <div class="flex justify-between text-gray-600">
+                                    <span>Comision Tixello</span>
+                                    <span>+${totals.commission.toFixed(2)} ${totals.currency}</span>
                                 </div>
                                 ` : ''}
                             </div>
@@ -1286,9 +1635,13 @@ export class Router {
                                 Finalizează comanda
                             </button>
 
-                            <button onclick="window.tixelloRouter.navigate('/events')" class="w-full mt-3 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition">
+                            <a href="/events" class="w-full mt-3 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition block text-center">
                                 Continuă cumpărăturile
-                            </button>
+                            </a>
+
+                            <p class="text-center text-xs text-gray-400 mt-4">
+                                Ticketing system powered by <a href="https://tixello.com" target="_blank" class="text-primary hover:underline">Tixello</a>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -1447,6 +1800,77 @@ export class Router {
                             </div>
 
                             <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Beneficiari bilete</h2>
+                                <p class="text-sm text-gray-600 mb-4">
+                                    Implicit, toate biletele vor fi pe numele tău. Poți specifica beneficiari diferiți pentru fiecare bilet.
+                                </p>
+                                <div class="flex items-start mb-4">
+                                    <input
+                                        type="checkbox"
+                                        id="different_beneficiaries"
+                                        name="different_beneficiaries"
+                                        class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                    >
+                                    <label for="different_beneficiaries" class="ml-2 text-sm text-gray-700">
+                                        Doresc să specific beneficiari diferiți pentru fiecare bilet
+                                    </label>
+                                </div>
+                                <div id="beneficiaries-section" class="hidden">
+                                    <div class="border-t pt-4">
+                                        <p class="text-sm text-gray-600 mb-4">
+                                            Completează datele pentru fiecare bilet. Primul bilet va fi pre-completat cu datele tale.
+                                        </p>
+                                        <div id="beneficiaries-container" class="space-y-4">
+                                            <!-- Beneficiary fields will be generated dynamically -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Acorduri</h2>
+                                <div class="space-y-3 mb-6">
+                                    <div class="flex items-start">
+                                        <input
+                                            type="checkbox"
+                                            id="agree_terms"
+                                            name="agree_terms"
+                                            required
+                                            class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                        >
+                                        <label for="agree_terms" class="ml-2 text-sm text-gray-700">
+                                            Sunt de acord cu <a href="/terms" target="_blank" class="text-primary hover:underline">Termenii și Condițiile</a> *
+                                        </label>
+                                    </div>
+                                    <div class="flex items-start">
+                                        <input
+                                            type="checkbox"
+                                            id="agree_privacy"
+                                            name="agree_privacy"
+                                            required
+                                            class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                        >
+                                        <label for="agree_privacy" class="ml-2 text-sm text-gray-700">
+                                            Sunt de acord cu <a href="/privacy" target="_blank" class="text-primary hover:underline">Politica de Confidențialitate</a> și procesarea datelor personale *
+                                        </label>
+                                    </div>
+                                    ${!this.authToken ? `
+                                    <div class="flex items-start">
+                                        <input
+                                            type="checkbox"
+                                            id="create_account"
+                                            name="create_account"
+                                            class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                        >
+                                        <label for="create_account" class="ml-2 text-sm text-gray-700">
+                                            Doresc să îmi creez un cont automat pentru comenzi viitoare
+                                        </label>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-6">
                                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Plată</h2>
                                 <p class="text-gray-600 mb-4">
                                     Vei primi biletele pe email imediat după finalizarea comenzii.
@@ -1458,6 +1882,9 @@ export class Router {
                                 >
                                     Plasează comanda
                                 </button>
+                                <p class="text-center text-xs text-gray-400 mt-4">
+                                    Ticketing system powered by <a href="https://tixello.com" target="_blank" class="text-primary hover:underline">Tixello</a>
+                                </p>
                             </div>
                         </form>
                     </div>
@@ -1468,28 +1895,41 @@ export class Router {
 
                             <div class="space-y-3 mb-4 pb-4 border-b">
                                 ${cart.map(item => {
-                                    const effectivePrice = item.salePrice || item.price;
-                                    const result = CartService.calculateBulkDiscount(item.quantity, effectivePrice, item.bulkDiscounts);
+                                    // Use sale price if available, otherwise base price (same as getTotal)
+                                    const ticketPrice = item.salePrice || item.price;
+                                    const result = CartService.calculateBulkDiscount(item.quantity, ticketPrice, item.bulkDiscounts);
+                                    let itemTotal = result.total;
+                                    // Add commission if applicable (from BASE price)
+                                    if (item.hasCommissionOnTop && item.commissionRate > 0) {
+                                        const commission = item.quantity * item.price * (item.commissionRate / 100);
+                                        itemTotal += commission;
+                                    }
                                     return `
                                     <div class="flex justify-between text-sm">
                                         <div>
                                             <div class="font-medium">${item.eventTitle}</div>
                                             <div class="text-gray-500">${item.ticketTypeName} × ${item.quantity}</div>
                                         </div>
-                                        <div class="font-medium">${result.total.toFixed(2)} ${item.currency}</div>
+                                        <div class="font-medium">${itemTotal.toFixed(2)} ${item.currency}</div>
                                     </div>
                                 `}).join('')}
                             </div>
 
                             <div class="space-y-2 mb-4 pb-4 border-b">
                                 <div class="flex justify-between text-gray-600">
-                                    <span>Subtotal</span>
+                                    <span>Subtotal bilete</span>
                                     <span>${totals.subtotal.toFixed(2)} ${totals.currency}</span>
                                 </div>
                                 ${totals.discount > 0 ? `
                                 <div class="flex justify-between text-green-600">
                                     <span>Discount</span>
                                     <span>-${totals.discount.toFixed(2)} ${totals.currency}</span>
+                                </div>
+                                ` : ''}
+                                ${totals.hasCommission ? `
+                                <div class="flex justify-between text-gray-600">
+                                    <span>Comision Tixello</span>
+                                    <span>+${totals.commission.toFixed(2)} ${totals.currency}</span>
                                 </div>
                                 ` : ''}
                             </div>
@@ -1610,11 +2050,19 @@ export class Router {
                     }
                 }
 
+                // Get checkbox values
+                const agreeTerms = (document.getElementById('agree_terms') as HTMLInputElement)?.checked ?? false;
+                const agreePrivacy = (document.getElementById('agree_privacy') as HTMLInputElement)?.checked ?? false;
+                const createAccount = (document.getElementById('create_account') as HTMLInputElement)?.checked ?? false;
+
                 try {
                     const response = await this.postApi('/orders', {
                         customer_name: formData.get('customer_name'),
                         customer_email: formData.get('customer_email'),
                         customer_phone: formData.get('customer_phone'),
+                        agree_terms: agreeTerms,
+                        agree_privacy: agreePrivacy,
+                        create_account: createAccount,
                         cart: cart.map(item => ({
                             eventId: item.eventId,
                             ticketTypeId: item.ticketTypeId,
@@ -1660,7 +2108,7 @@ export class Router {
                     </div>
                     <h1 class="text-3xl font-bold text-gray-900 mb-2">Comanda plasată cu succes!</h1>
                     <p class="text-gray-600 mb-4">
-                        Comanda ta # a fost înregistrată.
+                        Comanda ta <strong>#${orderId}</strong> a fost înregistrată.
                     </p>
                     <p class="text-gray-600">
                         Vei primi biletele pe email în câteva minute.
@@ -1668,9 +2116,9 @@ export class Router {
                 </div>
 
                 <div class="space-y-3">
-                    <button onclick="window.tixelloRouter.navigate('/events')" class="w-full max-w-xs mx-auto block px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition">
+                    <a href="/events" class="w-full max-w-xs mx-auto block px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition text-center">
                         Înapoi la evenimente
-                    </button>
+                    </a>
                 </div>
             </div>
         `;
@@ -1972,7 +2420,7 @@ export class Router {
             if (ordersListEl) {
                 if (orders && orders.length > 0) {
                     ordersListEl.innerHTML = orders.map((order: any) => `
-                        <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+                        <a href="/account/orders/${order.id}" class="block bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
                             <div class="flex justify-between items-start mb-4">
                                 <div>
                                     <h3 class="text-lg font-semibold text-gray-900">${order.order_number}</h3>
@@ -1994,11 +2442,19 @@ export class Router {
                                 <p class="text-sm text-gray-600 mb-2">${order.items_count} bilet${order.items_count > 1 ? 'e' : ''}</p>
                                 <div class="space-y-1">
                                     ${order.tickets.map((ticket: any) => `
-                                        <p class="text-sm text-gray-700">• ${ticket.event_name} - ${ticket.ticket_type}</p>
+                                        <p class="text-sm text-gray-700">• ${ticket.event_name} - ${ticket.ticket_type} ${ticket.quantity > 1 ? `(×${ticket.quantity})` : ''}</p>
                                     `).join('')}
                                 </div>
                             </div>
-                        </div>
+                            <div class="mt-4 pt-4 border-t flex justify-end">
+                                <span class="text-sm text-primary hover:text-primary-dark font-medium inline-flex items-center">
+                                    Vezi detalii
+                                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        </a>
                     `).join('');
                 } else {
                     ordersListEl.innerHTML = `
@@ -2051,64 +2507,54 @@ export class Router {
             const ticketsListEl = document.getElementById('tickets-list');
             if (ticketsListEl) {
                 if (tickets && tickets.length > 0) {
-                    ticketsListEl.innerHTML = tickets.map((ticket: any) => `
-                        <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="flex-1">
-                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">${ticket.event_name}</h3>
-                                    <p class="text-sm text-gray-600">${ticket.ticket_type}</p>
-                                    ${ticket.beneficiary ? `
-                                        <div class="mt-2 pt-2 border-t border-gray-100">
-                                            <p class="text-xs text-gray-500 mb-1">Beneficiar:</p>
-                                            <p class="text-sm font-medium text-gray-900">👤 ${ticket.beneficiary.name}</p>
-                                            ${ticket.beneficiary.email ? `<p class="text-xs text-gray-600 mt-0.5">✉️ ${ticket.beneficiary.email}</p>` : ''}
-                                            ${ticket.beneficiary.phone ? `<p class="text-xs text-gray-600 mt-0.5">📱 ${ticket.beneficiary.phone}</p>` : ''}
+                    ticketsListEl.innerHTML = `
+                        <div class="bg-white rounded-lg shadow overflow-hidden col-span-2">
+                            <div class="divide-y divide-gray-100">
+                                ${tickets.map((ticket: any) => `
+                                    <div class="p-4 hover:bg-gray-50 transition flex items-center gap-4">
+                                        <img src="${ticket.qr_code}" alt="QR" class="w-16 h-16 border border-gray-200 rounded flex-shrink-0">
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center gap-2 mb-1">
+                                                <h3 class="font-semibold text-gray-900 truncate">${ticket.event_name}</h3>
+                                                <span class="inline-block px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap flex-shrink-0 ${
+                                                    ticket.status === 'valid' || ticket.status === 'pending' ? 'bg-green-100 text-green-700' :
+                                                    ticket.status === 'used' ? 'bg-blue-100 text-blue-700' :
+                                                    ticket.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                    'bg-gray-100 text-gray-700'
+                                                }">${ticket.status_label}</span>
+                                            </div>
+                                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
+                                                <span>${ticket.ticket_type}</span>
+                                                ${ticket.date ? `<span>${new Date(ticket.date).toLocaleDateString('ro-RO', {day: 'numeric', month: 'short', year: 'numeric'})}</span>` : ''}
+                                                ${ticket.venue ? `<span>📍 ${ticket.venue}</span>` : ''}
+                                                ${ticket.seat_label ? `<span>💺 ${ticket.seat_label}</span>` : ''}
+                                            </div>
+                                            ${ticket.beneficiary?.name ? `
+                                                <p class="text-sm text-gray-600 mt-1">👤 ${ticket.beneficiary.name}</p>
+                                            ` : ''}
+                                            <p class="text-xs text-gray-400 font-mono mt-1">${ticket.code}</p>
                                         </div>
-                                    ` : ''}
-                                </div>
-                                <span class="inline-block px-3 py-1 text-xs font-medium rounded-full whitespace-nowrap ml-3 ${
-                                    ticket.status === 'valid' || ticket.status === 'pending' ? 'bg-green-100 text-green-800' :
-                                    ticket.status === 'used' ? 'bg-blue-100 text-blue-800' :
-                                    ticket.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                    'bg-gray-100 text-gray-800'
-                                }">
-                                    ${ticket.status_label}
-                                </span>
-                            </div>
-                            <div class="space-y-2 mb-4">
-                                ${ticket.date ? `<p class="text-sm text-gray-600">${new Date(ticket.date).toLocaleDateString('ro-RO', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}</p>` : ''}
-                                ${ticket.venue ? `<p class="text-sm text-gray-600">📍 ${ticket.venue}</p>` : ''}
-                                ${ticket.seat_label ? `<p class="text-sm text-gray-600">💺 Loc: ${ticket.seat_label}</p>` : ''}
-                            </div>
-                            <div class="border-t pt-4">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center space-x-3">
-                                        <img src="${ticket.qr_code}" alt="QR Code" class="w-20 h-20 border border-gray-200 rounded">
-                                        <div>
-                                            <p class="text-xs text-gray-500 mb-1">Cod bilet:</p>
-                                            <p class="text-sm font-mono font-semibold text-gray-900">${ticket.code}</p>
-                                        </div>
+                                        <button
+                                            class="view-ticket-btn flex-shrink-0 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition text-sm font-medium"
+                                            data-ticket-id="${ticket.id}"
+                                            data-ticket-code="${ticket.code}"
+                                            data-ticket-qr="${ticket.qr_code}"
+                                            data-event-name="${ticket.event_name || ''}"
+                                            data-ticket-type="${ticket.ticket_type || ''}"
+                                            data-date="${ticket.date || ''}"
+                                            data-venue="${ticket.venue || ''}"
+                                            data-seat="${ticket.seat_label || ''}"
+                                            data-status="${ticket.status || ''}"
+                                            data-status-label="${ticket.status_label || ''}"
+                                            data-beneficiary-name="${ticket.beneficiary?.name || ''}"
+                                            data-beneficiary-email="${ticket.beneficiary?.email || ''}">
+                                            Detalii
+                                        </button>
                                     </div>
-                                </div>
-                                <button
-                                    class="view-ticket-btn mt-4 w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium"
-                                    data-ticket-id="${ticket.id}"
-                                    data-ticket-code="${ticket.code}"
-                                    data-ticket-qr="${ticket.qr_code}"
-                                    data-event-name="${ticket.event_name || ''}"
-                                    data-ticket-type="${ticket.ticket_type || ''}"
-                                    data-date="${ticket.date || ''}"
-                                    data-venue="${ticket.venue || ''}"
-                                    data-seat="${ticket.seat_label || ''}"
-                                    data-status="${ticket.status || ''}"
-                                    data-status-label="${ticket.status_label || ''}"
-                                    data-beneficiary-name="${ticket.beneficiary?.name || ''}"
-                                    data-beneficiary-email="${ticket.beneficiary?.email || ''}">
-                                    Vezi Detalii Bilet
-                                </button>
+                                `).join('')}
                             </div>
                         </div>
-                    `).join('');
+                    `;
 
                     // Attach event listeners to ticket detail buttons
                     document.querySelectorAll('.view-ticket-btn').forEach(button => {
@@ -2157,7 +2603,7 @@ export class Router {
         }
     }
 
-    private renderOrderDetail(params: Record<string, string>): void {
+    private async renderOrderDetail(params: Record<string, string>): Promise<void> {
         const content = this.getContentElement();
         if (!content) return;
 
@@ -2167,9 +2613,9 @@ export class Router {
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
-                    Back to Orders
+                    Înapoi la Comenzi
                 </a>
-                <div id="order-detail-${params.id}">
+                <div id="order-detail-container">
                     <div class="animate-pulse space-y-4">
                         <div class="bg-gray-200 h-8 w-1/3 rounded"></div>
                         <div class="bg-gray-200 h-48 rounded-lg"></div>
@@ -2177,6 +2623,108 @@ export class Router {
                 </div>
             </div>
         `;
+
+        try {
+            const response = await this.fetchApi(`/account/orders/${params.id}`);
+            const order = response.data;
+
+            const containerEl = document.getElementById('order-detail-container');
+            if (containerEl) {
+                containerEl.innerHTML = `
+                    <h1 class="text-3xl font-bold text-gray-900 mb-6">Comanda ${order.order_number}</h1>
+
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            <div>
+                                <p class="text-sm text-gray-500">Status</p>
+                                <span class="inline-block px-3 py-1 text-xs font-medium rounded-full ${
+                                    order.status === 'paid' ? 'bg-green-100 text-green-800' :
+                                    order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
+                                }">
+                                    ${order.status_label || order.status}
+                                </span>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Data comenzii</p>
+                                <p class="font-medium text-gray-900">${order.date}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Metodă plată</p>
+                                <p class="font-medium text-gray-900">${order.meta?.payment_method || 'Card'}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Total</p>
+                                <p class="font-bold text-lg text-primary">${order.total} ${order.currency || 'RON'}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Bilete (${order.items_count})</h2>
+                    <div class="space-y-6">
+                        ${(order.events || []).map((eventGroup: any) => `
+                            <div class="bg-white rounded-lg shadow overflow-hidden">
+                                <div class="bg-gray-50 p-4 border-b">
+                                    <h3 class="font-semibold text-gray-900">${eventGroup.event?.title || 'Eveniment'}</h3>
+                                    ${eventGroup.venue ? `
+                                        <p class="text-sm text-gray-600">${eventGroup.venue.name}${eventGroup.venue.city ? `, ${eventGroup.venue.city}` : ''}</p>
+                                    ` : ''}
+                                    ${eventGroup.event?.date ? `
+                                        <p class="text-sm text-gray-500">${new Date(eventGroup.event.date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' })}${eventGroup.event.time ? ` • ${eventGroup.event.time}` : ''}</p>
+                                    ` : ''}
+                                </div>
+                                <div class="divide-y">
+                                    ${(eventGroup.tickets || []).map((ticket: any) => `
+                                        <div class="p-4 flex justify-between items-center">
+                                            <div class="flex-1">
+                                                <p class="font-medium text-gray-900">${ticket.ticket_type}</p>
+                                                ${ticket.seat_label ? `<p class="text-sm text-gray-600">💺 Loc: ${ticket.seat_label}</p>` : ''}
+                                                <p class="text-xs text-gray-500 font-mono mt-1">${ticket.code}</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <span class="inline-block px-2 py-1 text-xs rounded-full ${
+                                                    ticket.status === 'valid' ? 'bg-green-100 text-green-700' :
+                                                    ticket.status === 'used' ? 'bg-gray-100 text-gray-700' :
+                                                    'bg-red-100 text-red-700'
+                                                }">${ticket.status_label || ticket.status}</span>
+                                                ${ticket.price ? `<p class="font-medium mt-1">${ticket.price} ${ticket.currency || order.currency || 'RON'}</p>` : ''}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    ${order.meta ? `
+                        <h2 class="text-xl font-semibold text-gray-900 mt-8 mb-4">Informații client</h2>
+                        <div class="bg-white rounded-lg shadow p-6">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p class="text-sm text-gray-500">Nume</p>
+                                    <p class="font-medium">${order.meta.customer_name || '-'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-500">Email</p>
+                                    <p class="font-medium">${order.meta.customer_email || '-'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+            }
+        } catch (error) {
+            console.error('Error loading order:', error);
+            const containerEl = document.getElementById('order-detail-container');
+            if (containerEl) {
+                containerEl.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                        <p class="text-red-700">Eroare la încărcarea comenzii</p>
+                    </div>
+                `;
+            }
+        }
     }
 
     private renderMyEvents(): void {
@@ -2818,23 +3366,36 @@ private async renderProfile(): Promise<void> {
         const isCancelled = container.dataset.isCancelled === 'true';
         const isPostponed = container.dataset.isPostponed === 'true';
 
-        // Don't show countdown for cancelled or postponed events
-        if (isCancelled || isPostponed || !eventDate) {
+        // Don't show countdown for cancelled events or if no date available
+        // For postponed events, we show countdown to the NEW date (already passed in eventDate)
+        if (isCancelled || !eventDate) {
             container.style.display = 'none';
             return;
         }
 
-        // Parse event datetime
+        // Parse event datetime - handles ISO 8601 format (includes time) or date-only formats
         let eventDateTime: Date;
         try {
-            const dateTimeStr = eventTime ? `${eventDate} ${eventTime}` : eventDate;
-            eventDateTime = new Date(dateTimeStr);
+            // Try parsing eventDate directly first (it may already include time in ISO 8601 format)
+            eventDateTime = new Date(eventDate);
+
+            // Check if we got a valid date with a meaningful time (not midnight unless midnight is the actual event time)
+            const hasTimeInDate = eventDate.includes('T') || eventDate.includes(' ');
+
+            // If eventDate is date-only and we have a separate eventTime, combine them
+            if (!hasTimeInDate && eventTime && eventTime.match(/^\d{2}:\d{2}/)) {
+                // eventDate is like "2024-03-15", eventTime is like "19:00"
+                const dateOnly = eventDate.split('T')[0]; // Handle any potential timezone suffix
+                eventDateTime = new Date(`${dateOnly}T${eventTime}`);
+            }
 
             if (isNaN(eventDateTime.getTime())) {
+                console.warn('Countdown: Invalid date', { eventDate, eventTime });
                 container.style.display = 'none';
                 return;
             }
         } catch (e) {
+            console.warn('Countdown: Date parsing error', e);
             container.style.display = 'none';
             return;
         }
@@ -2845,7 +3406,7 @@ private async renderProfile(): Promise<void> {
 
         const title = document.createElement('h3');
         title.className = 'text-lg font-semibold mb-3 text-center';
-        title.textContent = 'Începe în:';
+        title.textContent = isPostponed ? 'Noua dată - Începe în:' : 'Începe în:';
 
         const timeDisplay = document.createElement('div');
         timeDisplay.className = 'flex justify-center gap-4 text-center';

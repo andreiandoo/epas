@@ -106,6 +106,7 @@ Route::prefix('docs')->group(function () {
 */
 
 Route::prefix('v1/public')->middleware(['api.key'])->group(function () {
+    Route::get('/data', [PublicDataController::class, 'data'])->name('api.public.data');
     Route::get('/stats', [PublicDataController::class, 'stats'])->name('api.public.stats');
     Route::get('/venues', [PublicDataController::class, 'venues'])->name('api.public.venues');
     Route::get('/venues/{slug}', [PublicDataController::class, 'venue'])->name('api.public.venue');
@@ -855,6 +856,8 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
     Route::prefix('account')->group(function () {
         Route::get('/orders', [AccountController::class, 'orders'])
             ->name('api.tenant-client.account.orders');
+        Route::get('/orders/{orderId}', [AccountController::class, 'orderDetail'])
+            ->name('api.tenant-client.account.orders.detail');
         Route::get('/tickets', [AccountController::class, 'tickets'])
             ->name('api.tenant-client.account.tickets');
         Route::get('/profile', [AccountController::class, 'profile'])

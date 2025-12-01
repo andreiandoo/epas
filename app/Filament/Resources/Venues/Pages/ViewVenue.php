@@ -15,7 +15,7 @@ class ViewVenue extends ViewRecord
 
     protected function hasInfolist(): bool
     {
-        return true;
+        return false;
     }
 
     public function getHeaderWidgetsColumns(): array|int

@@ -391,7 +391,7 @@ canvas{width:100% !important; height:240px !important;}
                                     <tr>
                                         <td>{{ $event->event_date ? \Carbon\Carbon::parse($event->event_date)->format('d M Y') : '—' }}</td>
                                         <td>{{ $event->getTranslation('title', app()->getLocale()) ?? $event->title ?? '—' }}</td>
-                                        <td>{{ $event->venue?->name ?? '—' }}</td>
+                                        <td>{{ $event->venue ? ($event->venue->getTranslation('name', app()->getLocale()) ?? (is_array($event->venue->name) ? ($event->venue->name['en'] ?? array_values($event->venue->name)[0] ?? '—') : ($event->venue->name ?? '—'))) : '—' }}</td>
                                         <td>{{ $event->tenant?->public_name ?? $event->tenant?->name ?? '—' }}</td>
                                     </tr>
                                 @endforeach
@@ -411,7 +411,7 @@ canvas{width:100% !important; height:240px !important;}
                             <tbody>
                                 @foreach($artistVenues as $venue)
                                     <tr>
-                                        <td>{{ $venue->name ?? '—' }}</td>
+                                        <td>{{ $venue->getTranslation('name', app()->getLocale()) ?? (is_array($venue->name) ? ($venue->name['en'] ?? array_values($venue->name)[0] ?? '—') : ($venue->name ?? '—')) }}</td>
                                         <td>{{ $venue->city ?? '—' }}</td>
                                         <td>{{ $venue->country ?? '—' }}</td>
                                     </tr>

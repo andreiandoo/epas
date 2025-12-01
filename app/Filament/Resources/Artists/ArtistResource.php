@@ -21,6 +21,10 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\BulkAction;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -394,6 +398,53 @@ class ArtistResource extends Resource
                     ->sortable()
                     ->url(fn (Artist $record) => static::getUrl('view', ['record' => $record->getKey()])),
 
+                Tables\Columns\TextColumn::make('completeness')
+                    ->label('Info %')
+                    ->getStateUsing(function (Artist $record) {
+                        $fields = [
+                            'name', 'slug', 'website', 'facebook_url', 'instagram_url',
+                            'tiktok_url', 'spotify_url', 'youtube_url', 'youtube_id',
+                            'spotify_id', 'country', 'city', 'main_image_url',
+                        ];
+                        $filled = 0;
+                        foreach ($fields as $field) {
+                            if (!empty($record->$field)) $filled++;
+                        }
+                        // Check youtube_videos (at least one)
+                        if (!empty($record->youtube_videos) && is_array($record->youtube_videos) && count($record->youtube_videos) > 0) {
+                            $filled++;
+                        }
+                        return round(($filled / 14) * 100);
+                    })
+                    ->formatStateUsing(fn ($state) => $state . '%')
+                    ->badge()
+                    ->color(fn ($state): string => match (true) {
+                        $state >= 80 => 'success',
+                        $state >= 60 => 'info',
+                        $state >= 30 => 'warning',
+                        default => 'danger',
+                    })
+                    ->sortable(query: function ($query, string $direction) {
+                        // Sort by number of filled fields
+                        return $query->orderByRaw("
+                            (CASE WHEN name IS NOT NULL AND name != '' THEN 1 ELSE 0 END +
+                             CASE WHEN slug IS NOT NULL AND slug != '' THEN 1 ELSE 0 END +
+                             CASE WHEN website IS NOT NULL AND website != '' THEN 1 ELSE 0 END +
+                             CASE WHEN facebook_url IS NOT NULL AND facebook_url != '' THEN 1 ELSE 0 END +
+                             CASE WHEN instagram_url IS NOT NULL AND instagram_url != '' THEN 1 ELSE 0 END +
+                             CASE WHEN tiktok_url IS NOT NULL AND tiktok_url != '' THEN 1 ELSE 0 END +
+                             CASE WHEN spotify_url IS NOT NULL AND spotify_url != '' THEN 1 ELSE 0 END +
+                             CASE WHEN youtube_url IS NOT NULL AND youtube_url != '' THEN 1 ELSE 0 END +
+                             CASE WHEN youtube_id IS NOT NULL AND youtube_id != '' THEN 1 ELSE 0 END +
+                             CASE WHEN spotify_id IS NOT NULL AND spotify_id != '' THEN 1 ELSE 0 END +
+                             CASE WHEN country IS NOT NULL AND country != '' THEN 1 ELSE 0 END +
+                             CASE WHEN city IS NOT NULL AND city != '' THEN 1 ELSE 0 END +
+                             CASE WHEN main_image_url IS NOT NULL AND main_image_url != '' THEN 1 ELSE 0 END +
+                             CASE WHEN youtube_videos IS NOT NULL AND youtube_videos != '[]' AND youtube_videos != '' THEN 1 ELSE 0 END
+                            ) {$direction}
+                        ");
+                    }),
+
                 Tables\Columns\TextColumn::make('country')
                     ->label('Country')
                     ->sortable()
@@ -522,7 +573,74 @@ class ArtistResource extends Resource
                     }))
                     ->toggle(),
             ])
-            ->defaultSort('created_at', 'desc');
+            ->defaultSort('created_at', 'desc')
+            ->actions([])
+            ->bulkActions([])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                    BulkAction::make('activate')
+                        ->label('Activate')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->action(fn (Collection $records) => $records->each->update(['is_active' => true]))
+                        ->deselectRecordsAfterCompletion()
+                        ->requiresConfirmation(),
+                    BulkAction::make('deactivate')
+                        ->label('Deactivate')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->action(fn (Collection $records) => $records->each->update(['is_active' => false]))
+                        ->deselectRecordsAfterCompletion()
+                        ->requiresConfirmation(),
+                    BulkAction::make('assignTypes')
+                        ->label('Assign Types')
+                        ->icon('heroicon-o-tag')
+                        ->form([
+                            Forms\Components\Select::make('artist_types')
+                                ->label('Artist Types')
+                                ->multiple()
+                                ->options(ArtistType::all()->pluck('name', 'id')->map(fn ($name) => is_array($name) ? ($name['en'] ?? $name['ro'] ?? reset($name)) : $name))
+                                ->required(),
+                            Forms\Components\Toggle::make('replace')
+                                ->label('Replace existing (otherwise append)')
+                                ->default(false),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            foreach ($records as $artist) {
+                                if ($data['replace']) {
+                                    $artist->artistTypes()->sync($data['artist_types']);
+                                } else {
+                                    $artist->artistTypes()->syncWithoutDetaching($data['artist_types']);
+                                }
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                    BulkAction::make('assignGenres')
+                        ->label('Assign Genres')
+                        ->icon('heroicon-o-musical-note')
+                        ->form([
+                            Forms\Components\Select::make('artist_genres')
+                                ->label('Artist Genres')
+                                ->multiple()
+                                ->options(ArtistGenre::all()->pluck('name', 'id')->map(fn ($name) => is_array($name) ? ($name['en'] ?? $name['ro'] ?? reset($name)) : $name))
+                                ->required(),
+                            Forms\Components\Toggle::make('replace')
+                                ->label('Replace existing (otherwise append)')
+                                ->default(false),
+                        ])
+                        ->action(function (Collection $records, array $data) {
+                            foreach ($records as $artist) {
+                                if ($data['replace']) {
+                                    $artist->artistGenres()->sync($data['artist_genres']);
+                                } else {
+                                    $artist->artistGenres()->syncWithoutDetaching($data['artist_genres']);
+                                }
+                            }
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                ]),
+            ]);
     }
 
 

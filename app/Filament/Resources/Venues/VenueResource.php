@@ -7,13 +7,14 @@ use App\Filament\Forms\Components\TranslatableField;
 use App\Models\Venue;
 use BackedEnum;
 use Filament\Actions;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Filament\Forms;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Infolists\Components as IC;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\HtmlString;
 
@@ -82,6 +83,34 @@ class VenueResource extends Resource
                     ->downloadable()
                     ->hintIcon('heroicon-o-information-circle', tooltip: 'Poți uploada mai multe imagini care vor forma galeria venue-ului.')
                     ->columnSpanFull(),
+
+                // Video field
+                SC\Grid::make(2)->schema([
+                    Forms\Components\Select::make('video_type')
+                        ->label('Video Type')
+                        ->options([
+                            'youtube' => 'YouTube Link',
+                            'upload' => 'Upload Video',
+                        ])
+                        ->placeholder('No video')
+                        ->live()
+                        ->nullable(),
+                    Forms\Components\TextInput::make('video_url')
+                        ->label('YouTube URL')
+                        ->url()
+                        ->placeholder('https://www.youtube.com/watch?v=...')
+                        ->prefixIcon('heroicon-o-play')
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'youtube'),
+                ])->columnSpanFull(),
+                Forms\Components\FileUpload::make('video_url')
+                    ->label('Upload Video')
+                    ->acceptedFileTypes(['video/mp4', 'video/webm', 'video/ogg'])
+                    ->disk('public')
+                    ->directory('venues/videos')
+                    ->visibility('public')
+                    ->maxSize(102400) // 100MB
+                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('video_type') === 'upload')
+                    ->columnSpanFull(),
             ]),
 
             SC\Section::make('Location')->schema([
@@ -107,6 +136,12 @@ class VenueResource extends Resource
                 Forms\Components\TextInput::make('lng')
                     ->label('Longitudine')->numeric()->step('0.0000001')
                     ->placeholder('26.1025'),
+                Forms\Components\TextInput::make('google_maps_url')
+                    ->label('Google Maps Link')
+                    ->url()
+                    ->placeholder('https://maps.google.com/...')
+                    ->prefixIcon('heroicon-o-map')
+                    ->columnSpanFull(),
                 SC\Actions::make([
                     Actions\Action::make('geocode')
                         ->label('Auto-detect coordinates')
@@ -190,8 +225,10 @@ class VenueResource extends Resource
             ])->columns(3),
 
             SC\Section::make('Contact & Links')->schema([
-                Forms\Components\TextInput::make('phone')->label('Telefon')->maxLength(64)->placeholder('+40 ...')->prefixIcon('heroicon-o-phone'),
-                Forms\Components\TextInput::make('email')->label('Email')->email()->placeholder('contact@exemplu.ro')->prefixIcon('heroicon-o-envelope'),
+                Forms\Components\TextInput::make('phone')->label('Telefon 1')->maxLength(64)->placeholder('+40 ...')->prefixIcon('heroicon-o-phone'),
+                Forms\Components\TextInput::make('phone2')->label('Telefon 2')->maxLength(64)->placeholder('+40 ...')->prefixIcon('heroicon-o-phone'),
+                Forms\Components\TextInput::make('email')->label('Email 1')->email()->placeholder('contact@exemplu.ro')->prefixIcon('heroicon-o-envelope'),
+                Forms\Components\TextInput::make('email2')->label('Email 2')->email()->placeholder('rezervari@exemplu.ro')->prefixIcon('heroicon-o-envelope'),
                 Forms\Components\TextInput::make('website_url')->label('Website')->url()->placeholder('https://...')->prefixIcon('heroicon-o-globe-alt'),
                 Forms\Components\TextInput::make('facebook_url')->label('Facebook')->url()->placeholder('https://facebook.com/...')->prefixIcon('heroicon-o-link'),
                 Forms\Components\TextInput::make('instagram_url')->label('Instagram')->url()->placeholder('https://instagram.com/...')->prefixIcon('heroicon-o-link'),
@@ -210,9 +247,12 @@ class VenueResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name.en')
+                Tables\Columns\TextColumn::make('name')
                     ->label('Nume')
-                    ->searchable()
+                    ->formatStateUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en') ?: '-')
+                    ->searchable(query: function ($query, string $search) {
+                        return $query->where('name', 'like', "%{$search}%");
+                    })
                     ->sortable()
                     ->url(fn ($record) => static::getUrl('view', ['record' => $record->slug])),
 
@@ -257,196 +297,11 @@ class VenueResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->recordUrl(null)       // ⟵ IMPORTANT: previne linkul implicit spre `view` fără record
             ->actions([])
-            ->bulkActions([]);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return $schema
-            ->schema([
-                // Hero Section with Image and Name
-                IC\Section::make()
-                    ->schema([
-                        IC\Grid::make(3)
-                            ->schema([
-                                IC\ImageEntry::make('image_url')
-                                    ->label('')
-                                    ->disk('public')
-                                    ->height(200)
-                                    ->extraImgAttributes(['class' => 'rounded-xl object-cover'])
-                                    ->columnSpan(1),
-                                IC\Group::make([
-                                    IC\TextEntry::make('name')
-                                        ->label('')
-                                        ->formatStateUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?? $record->getTranslation('name', 'en'))
-                                        ->size(IC\TextEntry\TextEntrySize::Large)
-                                        ->weight('bold'),
-                                    IC\TextEntry::make('location')
-                                        ->label('')
-                                        ->state(fn ($record) => collect([$record->address, $record->city, $record->state, $record->country])->filter()->implode(', '))
-                                        ->icon('heroicon-o-map-pin')
-                                        ->color('gray'),
-                                    IC\TextEntry::make('tenant.name')
-                                        ->label('Tenant')
-                                        ->badge()
-                                        ->color('primary')
-                                        ->placeholder('Public venue'),
-                                ])->columnSpan(2),
-                            ]),
-                    ])
-                    ->columnSpanFull(),
-
-                // Statistics Grid
-                IC\Section::make('Capacity & Info')
-                    ->icon('heroicon-o-users')
-                    ->schema([
-                        IC\Grid::make(4)
-                            ->schema([
-                                IC\TextEntry::make('capacity_total')
-                                    ->label('Total Capacity')
-                                    ->numeric()
-                                    ->placeholder('—')
-                                    ->icon('heroicon-o-users'),
-                                IC\TextEntry::make('capacity_standing')
-                                    ->label('Standing')
-                                    ->numeric()
-                                    ->placeholder('—'),
-                                IC\TextEntry::make('capacity_seated')
-                                    ->label('Seated')
-                                    ->numeric()
-                                    ->placeholder('—'),
-                                IC\TextEntry::make('established_at')
-                                    ->label('Established')
-                                    ->date('Y')
-                                    ->placeholder('—'),
-                            ]),
-                    ])
-                    ->collapsible(),
-
-                // Location & Map
-                IC\Section::make('Location')
-                    ->icon('heroicon-o-map')
-                    ->schema([
-                        IC\Grid::make(2)
-                            ->schema([
-                                IC\Group::make([
-                                    IC\TextEntry::make('address')
-                                        ->label('Address')
-                                        ->placeholder('—'),
-                                    IC\TextEntry::make('city')
-                                        ->label('City')
-                                        ->placeholder('—'),
-                                    IC\TextEntry::make('state')
-                                        ->label('State/Region')
-                                        ->placeholder('—'),
-                                    IC\TextEntry::make('country')
-                                        ->label('Country')
-                                        ->placeholder('—'),
-                                    IC\TextEntry::make('coordinates')
-                                        ->label('Coordinates')
-                                        ->state(fn ($record) => $record->lat && $record->lng ? "{$record->lat}, {$record->lng}" : null)
-                                        ->placeholder('—'),
-                                ]),
-                                IC\ViewEntry::make('map')
-                                    ->view('filament.infolists.entries.venue-map')
-                                    ->visible(fn ($record) => $record->lat && $record->lng),
-                            ]),
-                    ])
-                    ->collapsible(),
-
-                // Contact Information
-                IC\Section::make('Contact & Social')
-                    ->icon('heroicon-o-phone')
-                    ->schema([
-                        IC\Grid::make(3)
-                            ->schema([
-                                IC\TextEntry::make('phone')
-                                    ->label('Phone')
-                                    ->icon('heroicon-o-phone')
-                                    ->url(fn ($state) => $state ? "tel:{$state}" : null)
-                                    ->placeholder('—'),
-                                IC\TextEntry::make('email')
-                                    ->label('Email')
-                                    ->icon('heroicon-o-envelope')
-                                    ->url(fn ($state) => $state ? "mailto:{$state}" : null)
-                                    ->placeholder('—'),
-                                IC\TextEntry::make('website_url')
-                                    ->label('Website')
-                                    ->icon('heroicon-o-globe-alt')
-                                    ->url(fn ($state) => $state)
-                                    ->openUrlInNewTab()
-                                    ->placeholder('—'),
-                                IC\TextEntry::make('facebook_url')
-                                    ->label('Facebook')
-                                    ->icon('heroicon-o-link')
-                                    ->url(fn ($state) => $state)
-                                    ->openUrlInNewTab()
-                                    ->placeholder('—'),
-                                IC\TextEntry::make('instagram_url')
-                                    ->label('Instagram')
-                                    ->icon('heroicon-o-link')
-                                    ->url(fn ($state) => $state)
-                                    ->openUrlInNewTab()
-                                    ->placeholder('—'),
-                                IC\TextEntry::make('tiktok_url')
-                                    ->label('TikTok')
-                                    ->icon('heroicon-o-link')
-                                    ->url(fn ($state) => $state)
-                                    ->openUrlInNewTab()
-                                    ->placeholder('—'),
-                            ]),
-                    ])
-                    ->collapsible(),
-
-                // Description
-                IC\Section::make('Description')
-                    ->icon('heroicon-o-document-text')
-                    ->schema([
-                        IC\TextEntry::make('description')
-                            ->label('')
-                            ->html()
-                            ->formatStateUsing(fn ($record) => new HtmlString($record->getTranslation('description', app()->getLocale()) ?? $record->getTranslation('description', 'en') ?? '<em class="text-gray-400">No description</em>'))
-                            ->columnSpanFull(),
-                    ])
-                    ->collapsible(),
-
-                // Gallery
-                IC\Section::make('Gallery')
-                    ->icon('heroicon-o-photo')
-                    ->schema([
-                        IC\ImageEntry::make('gallery')
-                            ->label('')
-                            ->disk('public')
-                            ->height(150)
-                            ->extraImgAttributes(['class' => 'rounded-lg object-cover'])
-                            ->stacked()
-                            ->limit(10)
-                            ->columnSpanFull(),
-                    ])
-                    ->collapsible()
-                    ->collapsed()
-                    ->visible(fn ($record) => !empty($record->gallery)),
-
-                // Metadata
-                IC\Section::make('System Info')
-                    ->icon('heroicon-o-cog')
-                    ->schema([
-                        IC\Grid::make(3)
-                            ->schema([
-                                IC\TextEntry::make('slug')
-                                    ->label('Slug')
-                                    ->badge()
-                                    ->color('gray'),
-                                IC\TextEntry::make('created_at')
-                                    ->label('Created')
-                                    ->dateTime(),
-                                IC\TextEntry::make('updated_at')
-                                    ->label('Last Updated')
-                                    ->dateTime(),
-                            ]),
-                    ])
-                    ->collapsible()
-                    ->collapsed(),
+            ->bulkActions([])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
             ]);
     }
 

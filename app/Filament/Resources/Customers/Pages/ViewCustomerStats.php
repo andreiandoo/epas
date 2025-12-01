@@ -48,9 +48,9 @@ class ViewCustomerStats extends ViewRecord
                 ->count('e.id'),
         ];
 
-        // Monthly orders (YYYY-MM)
+        // Monthly orders (YYYY-MM) - using DATE_FORMAT for MySQL
         $this->monthlyOrders = Order::query()
-            ->selectRaw("to_char(created_at, 'YYYY-MM') as month, COUNT(*) as cnt")
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as cnt")
             ->where('customer_id', $customer->id)
             ->groupBy('month')
             ->orderBy('month')
@@ -60,13 +60,13 @@ class ViewCustomerStats extends ViewRecord
         // Top event genres
         $this->preferredGenres = $this->topEventGenres();
 
-        // Events list (last 20 distinct)
+        // Events list (last 20 distinct) - extract translated title
         $this->eventsList = DB::table('events as e')
             ->join('ticket_types as tt', 'tt.event_id', '=', 'e.id')
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.customer_id', $customer->id)
-            ->select('e.id', 'e.title')
+            ->select('e.id', DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(e.title, '$.ro'))) as title"))
             ->distinct()
             ->orderByDesc('e.id')
             ->limit(20)
@@ -137,10 +137,11 @@ class ViewCustomerStats extends ViewRecord
             ->join('tickets as t', 't.ticket_type_id', '=', 'tt.id')
             ->join('orders as o', 'o.id', '=', 't.order_id')
             ->where('o.customer_id', $customerId)
-            ->groupBy('eg.name')
-            ->orderByDesc(DB::raw('COUNT(*)'))
+            ->select(DB::raw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.en')), JSON_UNQUOTE(JSON_EXTRACT(eg.name, '$.ro'))) as genre_name"), DB::raw('COUNT(*) as cnt'))
+            ->groupBy('genre_name')
+            ->orderByDesc('cnt')
             ->limit(10)
-            ->pluck(DB::raw('COUNT(*) as cnt'), 'eg.name')
+            ->pluck('cnt', 'genre_name')
             ->toArray();
     }
 
