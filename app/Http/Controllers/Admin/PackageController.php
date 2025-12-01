@@ -234,6 +234,7 @@ HTML;
     private function generateHtaccess(): string
     {
         $coreUrl = config('app.url');
+        $coreHost = parse_url($coreUrl, PHP_URL_HOST);
 
         return <<<HTACCESS
 # Tixello Event Platform - Apache Configuration
@@ -256,9 +257,13 @@ RewriteRule ^(.*)$ /index.html [L]
 # Security headers
 <IfModule mod_headers.c>
     Header set X-Content-Type-Options "nosniff"
-    Header set X-Frame-Options "SAMEORIGIN"
     Header set X-XSS-Protection "1; mode=block"
     Header set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # Allow framing from core domain for preview mode, otherwise block
+    SetEnvIf Query_String "preview_mode=1" ALLOW_FRAME
+    Header set X-Frame-Options "SAMEORIGIN" env=!ALLOW_FRAME
+    Header set Content-Security-Policy "frame-ancestors 'self' https://{$coreHost}" env=ALLOW_FRAME
 </IfModule>
 
 # Cache static assets
@@ -316,6 +321,23 @@ Add this to your server block:
 ```nginx
 location / {
     try_files \$uri \$uri/ /index.html;
+}
+
+# Security headers with preview mode support
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-XSS-Protection "1; mode=block" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+# Allow framing from core domain for preview mode
+set \$frame_options "SAMEORIGIN";
+if (\$arg_preview_mode = "1") {
+    set \$frame_options "";
+}
+add_header X-Frame-Options \$frame_options always;
+
+# For preview mode, use Content-Security-Policy instead
+if (\$arg_preview_mode = "1") {
+    add_header Content-Security-Policy "frame-ancestors 'self' https://{$coreHost}" always;
 }
 ```
 
