@@ -135,15 +135,30 @@ class PageBuilder extends Page implements HasForms
 
     public function addBlock(string $type): void
     {
+        // Ensure blocks are registered
+        if (empty(BlockRegistry::all())) {
+            BlockRegistry::registerDefaults();
+        }
+
         $block = BlockRegistry::create($type);
 
         if ($block) {
             $this->blocks[] = $block;
             $this->saveBlocks();
 
+            // Dispatch event to refresh preview
+            $this->dispatch('blocks-updated');
+
             Notification::make()
                 ->success()
                 ->title('Block added')
+                ->body('Added: ' . $this->getBlockName($type))
+                ->send();
+        } else {
+            Notification::make()
+                ->danger()
+                ->title('Error adding block')
+                ->body('Block type not found: ' . $type)
                 ->send();
         }
     }
@@ -354,12 +369,22 @@ class PageBuilder extends Page implements HasForms
 
     public function getBlockName(string $type): string
     {
+        // Ensure blocks are registered
+        if (empty(BlockRegistry::all())) {
+            BlockRegistry::registerDefaults();
+        }
+
         $class = BlockRegistry::get($type);
         return $class ? $class::$name : $type;
     }
 
     public function getBlockIcon(string $type): string
     {
+        // Ensure blocks are registered
+        if (empty(BlockRegistry::all())) {
+            BlockRegistry::registerDefaults();
+        }
+
         $class = BlockRegistry::get($type);
         return $class ? $class::$icon : 'heroicon-o-cube';
     }
