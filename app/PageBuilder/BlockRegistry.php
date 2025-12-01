@@ -4,29 +4,51 @@ namespace App\PageBuilder;
 
 use App\PageBuilder\Blocks\AccordionBlock;
 use App\PageBuilder\Blocks\AlertBannerBlock;
+use App\PageBuilder\Blocks\AudioBlock;
 use App\PageBuilder\Blocks\BaseBlock;
+use App\PageBuilder\Blocks\BreadcrumbBlock;
 use App\PageBuilder\Blocks\ButtonBlock;
+use App\PageBuilder\Blocks\CardBlock;
 use App\PageBuilder\Blocks\CategoryNavBlock;
+use App\PageBuilder\Blocks\ColumnsBlock;
+use App\PageBuilder\Blocks\ContactInfoBlock;
 use App\PageBuilder\Blocks\CountdownBlock;
 use App\PageBuilder\Blocks\CtaBannerBlock;
 use App\PageBuilder\Blocks\CustomHtmlBlock;
 use App\PageBuilder\Blocks\DividerBlock;
+use App\PageBuilder\Blocks\EmbedBlock;
 use App\PageBuilder\Blocks\EventGridBlock;
 use App\PageBuilder\Blocks\EventListBlock;
 use App\PageBuilder\Blocks\FeaturedEventBlock;
+use App\PageBuilder\Blocks\FileDownloadBlock;
+use App\PageBuilder\Blocks\FooterBlock;
+use App\PageBuilder\Blocks\FormBlock;
+use App\PageBuilder\Blocks\HeaderBlock;
+use App\PageBuilder\Blocks\HeadingBlock;
 use App\PageBuilder\Blocks\HeroBlock;
+use App\PageBuilder\Blocks\IconBoxBlock;
 use App\PageBuilder\Blocks\ImageBlock;
 use App\PageBuilder\Blocks\ImageGalleryBlock;
+use App\PageBuilder\Blocks\ListBlock;
+use App\PageBuilder\Blocks\LogoBlock;
 use App\PageBuilder\Blocks\MapBlock;
+use App\PageBuilder\Blocks\MenuBlock;
 use App\PageBuilder\Blocks\NewsletterBlock;
 use App\PageBuilder\Blocks\PartnersBlock;
+use App\PageBuilder\Blocks\PricingBlock;
+use App\PageBuilder\Blocks\QuoteBlock;
+use App\PageBuilder\Blocks\ReviewsBlock;
 use App\PageBuilder\Blocks\SliderBlock;
 use App\PageBuilder\Blocks\SocialLinksBlock;
 use App\PageBuilder\Blocks\SpacerBlock;
 use App\PageBuilder\Blocks\StatsCounterBlock;
+use App\PageBuilder\Blocks\TableBlock;
+use App\PageBuilder\Blocks\TabsBlock;
+use App\PageBuilder\Blocks\TeamBlock;
 use App\PageBuilder\Blocks\TestimonialsBlock;
 use App\PageBuilder\Blocks\TextContentBlock;
 use App\PageBuilder\Blocks\TextImageBlock;
+use App\PageBuilder\Blocks\TimelineBlock;
 use App\PageBuilder\Blocks\VideoBlock;
 
 class BlockRegistry
@@ -81,6 +103,10 @@ class BlockRegistry
         static::register(SliderBlock::class);
         static::register(SpacerBlock::class);
         static::register(DividerBlock::class);
+        static::register(HeaderBlock::class);
+        static::register(FooterBlock::class);
+        static::register(ColumnsBlock::class);
+        static::register(TabsBlock::class);
 
         // Events blocks
         static::register(EventGridBlock::class);
@@ -97,23 +123,41 @@ class BlockRegistry
         static::register(StatsCounterBlock::class);
         static::register(AccordionBlock::class);
         static::register(MapBlock::class);
+        static::register(HeadingBlock::class);
+        static::register(QuoteBlock::class);
+        static::register(TableBlock::class);
+        static::register(ListBlock::class);
+        static::register(IconBoxBlock::class);
+        static::register(CardBlock::class);
+        static::register(TeamBlock::class);
+        static::register(ContactInfoBlock::class);
+        static::register(AudioBlock::class);
+        static::register(FileDownloadBlock::class);
+        static::register(TimelineBlock::class);
 
         // Navigation blocks
         static::register(CategoryNavBlock::class);
         static::register(ButtonBlock::class);
         static::register(SocialLinksBlock::class);
+        static::register(LogoBlock::class);
+        static::register(BreadcrumbBlock::class);
+        static::register(MenuBlock::class);
 
         // Marketing blocks
         static::register(CtaBannerBlock::class);
         static::register(NewsletterBlock::class);
         static::register(AlertBannerBlock::class);
+        static::register(PricingBlock::class);
 
         // Social proof blocks
         static::register(TestimonialsBlock::class);
         static::register(PartnersBlock::class);
+        static::register(ReviewsBlock::class);
 
         // Advanced blocks
         static::register(CustomHtmlBlock::class);
+        static::register(EmbedBlock::class);
+        static::register(FormBlock::class);
     }
 
     /**

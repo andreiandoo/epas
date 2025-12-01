@@ -1114,6 +1114,998 @@ export class PageBuilderModule {
                 </section>
             `;
         });
+
+        // Tabs Block
+        this.registerRenderer('tabs', (block) => {
+            const tabs = this.getContentArray(block, 'tabs');
+            const style = block.settings.style || 'default';
+            const alignment = block.settings.alignment || 'left';
+            const vertical = block.settings.vertical ?? false;
+
+            const alignClass = {
+                left: 'justify-start',
+                center: 'justify-center',
+                right: 'justify-end',
+                full: ''
+            }[alignment] || 'justify-start';
+
+            const tabsHtml = Array.isArray(tabs) && tabs.length > 0
+                ? tabs.map((tab: any, index: number) => `
+                    <button @click="activeTab = ${index}"
+                            :class="{ 'border-primary text-primary': activeTab === ${index}, 'border-transparent text-gray-500 hover:text-gray-700': activeTab !== ${index} }"
+                            class="px-4 py-2 border-b-2 font-medium text-sm transition ${alignment === 'full' ? 'flex-1' : ''}">
+                        ${this.escapeHtml(tab.title || '')}
+                    </button>
+                `).join('')
+                : '';
+
+            const contentHtml = Array.isArray(tabs) && tabs.length > 0
+                ? tabs.map((tab: any, index: number) => `
+                    <div x-show="activeTab === ${index}" x-transition class="prose prose-lg max-w-none">
+                        ${tab.content || ''}
+                    </div>
+                `).join('')
+                : '<p class="text-gray-500">No tabs configured</p>';
+
+            return `
+                <section class="py-8">
+                    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8" x-data="{ activeTab: 0 }">
+                        <div class="flex ${alignClass} ${vertical ? 'flex-col sm:flex-row gap-4' : 'border-b border-gray-200 gap-4'}">
+                            ${tabsHtml}
+                        </div>
+                        <div class="mt-6">
+                            ${contentHtml}
+                        </div>
+                    </div>
+                </section>
+            `;
+        });
+
+        // Card Block
+        this.registerRenderer('card', (block) => {
+            const title = this.getContent(block, 'title', '');
+            const subtitle = this.getContent(block, 'subtitle', '');
+            const cards = this.getContentArray(block, 'cards');
+            const columns = block.settings.columns || 3;
+            const style = block.settings.style || 'shadow';
+            const showImage = block.settings.showImage ?? true;
+
+            const styleClass = {
+                default: 'bg-white',
+                bordered: 'bg-white border border-gray-200',
+                shadow: 'bg-white shadow-md',
+                minimal: 'bg-transparent'
+            }[style] || 'bg-white shadow-md';
+
+            const cardsHtml = Array.isArray(cards) && cards.length > 0
+                ? cards.map((card: any) => `
+                    <div class="${styleClass} rounded-xl overflow-hidden group">
+                        ${showImage && card.image ? `
+                            <div class="aspect-video overflow-hidden">
+                                <img src="${card.image}" alt="${this.escapeHtml(card.title || '')}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                            </div>
+                        ` : ''}
+                        <div class="p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">${this.escapeHtml(card.title || '')}</h3>
+                            <p class="text-gray-600 mb-4">${this.escapeHtml(card.description || '')}</p>
+                            ${card.link ? `
+                                <a href="${card.link}" class="text-primary font-medium hover:underline">
+                                    ${this.escapeHtml(card.linkText || 'Learn More')} →
+                                </a>
+                            ` : ''}
+                        </div>
+                    </div>
+                `).join('')
+                : '<p class="col-span-full text-center text-gray-500">No cards configured</p>';
+
+            return `
+                <section class="py-16">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        ${title || subtitle ? `
+                            <div class="text-center mb-12">
+                                ${title ? `<h2 class="text-3xl font-bold text-gray-900 mb-4">${this.escapeHtml(title)}</h2>` : ''}
+                                ${subtitle ? `<p class="text-lg text-gray-600 max-w-2xl mx-auto">${this.escapeHtml(subtitle)}</p>` : ''}
+                            </div>
+                        ` : ''}
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${columns} gap-6">
+                            ${cardsHtml}
+                        </div>
+                    </div>
+                </section>
+            `;
+        });
+
+        // Heading Block
+        this.registerRenderer('heading', (block) => {
+            const heading = this.getContent(block, 'heading', '');
+            const subheading = this.getContent(block, 'subheading', '');
+            const level = block.settings.level || 'h2';
+            const alignment = block.settings.alignment || 'left';
+            const size = block.settings.size || 'md';
+            const showDivider = block.settings.showDivider ?? false;
+
+            const alignClass = {
+                left: 'text-left',
+                center: 'text-center',
+                right: 'text-right'
+            }[alignment] || 'text-left';
+
+            const sizeClass = {
+                sm: 'text-xl md:text-2xl',
+                md: 'text-2xl md:text-3xl',
+                lg: 'text-3xl md:text-4xl',
+                xl: 'text-4xl md:text-5xl'
+            }[size] || 'text-2xl md:text-3xl';
+
+            return `
+                <section class="py-8">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${alignClass}">
+                        <${level} class="${sizeClass} font-bold text-gray-900">${this.escapeHtml(heading)}</${level}>
+                        ${subheading ? `<p class="mt-2 text-lg text-gray-600">${this.escapeHtml(subheading)}</p>` : ''}
+                        ${showDivider ? `<div class="mt-4 w-20 h-1 bg-primary ${alignment === 'center' ? 'mx-auto' : alignment === 'right' ? 'ml-auto' : ''}"></div>` : ''}
+                    </div>
+                </section>
+            `;
+        });
+
+        // Quote Block
+        this.registerRenderer('quote', (block) => {
+            const quote = this.getContent(block, 'quote', '');
+            const author = this.getContent(block, 'author', '');
+            const authorTitle = this.getContent(block, 'authorTitle', '');
+            const style = block.settings.style || 'bordered';
+            const showQuoteMarks = block.settings.showQuoteMarks ?? true;
+
+            const styleClass = {
+                default: '',
+                bordered: 'border-l-4 border-primary pl-6',
+                centered: 'text-center',
+                card: 'bg-gray-50 p-8 rounded-xl',
+                large: 'text-xl md:text-2xl'
+            }[style] || 'border-l-4 border-primary pl-6';
+
+            return `
+                <section class="py-8">
+                    <blockquote class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 ${styleClass}">
+                        ${showQuoteMarks ? '<span class="text-4xl text-primary leading-none">"</span>' : ''}
+                        <p class="text-lg md:text-xl text-gray-700 italic mb-4">${this.escapeHtml(quote)}</p>
+                        ${author ? `
+                            <footer class="flex items-center gap-3 ${style === 'centered' ? 'justify-center' : ''}">
+                                <cite class="not-italic">
+                                    <span class="font-semibold text-gray-900">${this.escapeHtml(author)}</span>
+                                    ${authorTitle ? `<span class="text-gray-500"> — ${this.escapeHtml(authorTitle)}</span>` : ''}
+                                </cite>
+                            </footer>
+                        ` : ''}
+                    </blockquote>
+                </section>
+            `;
+        });
+
+        // Table Block
+        this.registerRenderer('table', (block) => {
+            const title = this.getContent(block, 'title', '');
+            const caption = this.getContent(block, 'caption', '');
+            const headers = this.getContentArray(block, 'headers');
+            const rows = this.getContentArray(block, 'rows');
+            const style = block.settings.style || 'striped';
+            const showHeader = block.settings.showHeader ?? true;
+
+            const styleClass = {
+                default: '',
+                striped: '[&>tbody>tr:nth-child(odd)]:bg-gray-50',
+                bordered: 'border border-gray-200 [&_td]:border [&_th]:border',
+                minimal: ''
+            }[style] || '';
+
+            const headersHtml = showHeader && Array.isArray(headers) && headers.length > 0
+                ? `<thead class="bg-gray-100"><tr>${headers.map((h: any) => `<th class="px-4 py-3 text-left text-sm font-semibold text-gray-900">${this.escapeHtml(typeof h === 'string' ? h : h.header || '')}</th>`).join('')}</tr></thead>`
+                : '';
+
+            const rowsHtml = Array.isArray(rows) && rows.length > 0
+                ? rows.map((row: any) => `
+                    <tr class="hover:bg-gray-50 transition">
+                        ${Array.isArray(row.cells) ? row.cells.map((cell: any) => `
+                            <td class="px-4 py-3 text-sm text-gray-600">${this.escapeHtml(typeof cell === 'string' ? cell : cell.cell || '')}</td>
+                        `).join('') : ''}
+                    </tr>
+                `).join('')
+                : '<tr><td class="px-4 py-3 text-center text-gray-500" colspan="100">No data</td></tr>';
+
+            return `
+                <section class="py-8">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        ${title ? `<h2 class="text-2xl font-bold text-gray-900 mb-4">${this.escapeHtml(title)}</h2>` : ''}
+                        <div class="overflow-x-auto">
+                            <table class="w-full ${styleClass}">
+                                ${headersHtml}
+                                <tbody class="divide-y divide-gray-200">
+                                    ${rowsHtml}
+                                </tbody>
+                            </table>
+                        </div>
+                        ${caption ? `<p class="mt-2 text-sm text-gray-500">${this.escapeHtml(caption)}</p>` : ''}
+                    </div>
+                </section>
+            `;
+        });
+
+        // List Block
+        this.registerRenderer('list', (block) => {
+            const title = this.getContent(block, 'title', '');
+            const items = this.getContentArray(block, 'items');
+            const listType = block.settings.listType || 'bullet';
+            const columns = block.settings.columns || 1;
+
+            const markerHtml = {
+                bullet: '•',
+                numbered: '',
+                check: '✓',
+                icon: '',
+                none: ''
+            };
+
+            const itemsHtml = Array.isArray(items) && items.length > 0
+                ? items.map((item: any, index: number) => `
+                    <li class="flex gap-3">
+                        ${listType !== 'none' && listType !== 'numbered' ? `<span class="text-primary flex-shrink-0">${markerHtml[listType as keyof typeof markerHtml] || '•'}</span>` : ''}
+                        ${listType === 'numbered' ? `<span class="text-primary font-medium flex-shrink-0">${index + 1}.</span>` : ''}
+                        <div>
+                            <span class="text-gray-900">${this.escapeHtml(item.text || '')}</span>
+                            ${item.subtext ? `<span class="block text-sm text-gray-500">${this.escapeHtml(item.subtext)}</span>` : ''}
+                        </div>
+                    </li>
+                `).join('')
+                : '<li class="text-gray-500">No items configured</li>';
+
+            return `
+                <section class="py-8">
+                    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                        ${title ? `<h2 class="text-2xl font-bold text-gray-900 mb-4">${this.escapeHtml(title)}</h2>` : ''}
+                        <ul class="grid grid-cols-1 ${columns > 1 ? `md:grid-cols-${columns}` : ''} gap-3">
+                            ${itemsHtml}
+                        </ul>
+                    </div>
+                </section>
+            `;
+        });
+
+        // Icon Box Block
+        this.registerRenderer('icon-box', (block) => {
+            const title = this.getContent(block, 'title', '');
+            const subtitle = this.getContent(block, 'subtitle', '');
+            const boxes = this.getContentArray(block, 'boxes');
+            const columns = block.settings.columns || 3;
+            const style = block.settings.style || 'default';
+            const iconPosition = block.settings.iconPosition || 'top';
+
+            const styleClass = {
+                default: '',
+                bordered: 'border border-gray-200 rounded-xl',
+                filled: 'bg-gray-50 rounded-xl',
+                minimal: ''
+            }[style] || '';
+
+            const boxesHtml = Array.isArray(boxes) && boxes.length > 0
+                ? boxes.map((box: any) => `
+                    <div class="p-6 ${styleClass} ${iconPosition === 'top' ? 'text-center' : 'flex gap-4'}">
+                        <div class="${iconPosition === 'top' ? 'w-16 h-16 mx-auto mb-4' : 'w-12 h-12 flex-shrink-0'} bg-primary/10 rounded-full flex items-center justify-center text-primary text-2xl">
+                            ${box.icon ? `<span>${box.icon.replace('heroicon-o-', '')}</span>` : '★'}
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">${this.escapeHtml(box.title || '')}</h3>
+                            <p class="text-gray-600">${this.escapeHtml(box.description || '')}</p>
+                        </div>
+                    </div>
+                `).join('')
+                : '<p class="col-span-full text-center text-gray-500">No items configured</p>';
+
+            return `
+                <section class="py-16">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        ${title || subtitle ? `
+                            <div class="text-center mb-12">
+                                ${title ? `<h2 class="text-3xl font-bold text-gray-900 mb-4">${this.escapeHtml(title)}</h2>` : ''}
+                                ${subtitle ? `<p class="text-lg text-gray-600">${this.escapeHtml(subtitle)}</p>` : ''}
+                            </div>
+                        ` : ''}
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${columns} gap-6">
+                            ${boxesHtml}
+                        </div>
+                    </div>
+                </section>
+            `;
+        });
+
+        // Logo Block
+        this.registerRenderer('logo', (block) => {
+            const logo = this.getContent(block, 'logo', '');
+            const altText = this.getContent(block, 'altText', 'Logo');
+            const link = this.getContent(block, 'link', '');
+            const size = block.settings.size || 'md';
+            const alignment = block.settings.alignment || 'left';
+            const linkToHome = block.settings.linkToHome ?? true;
+
+            const sizeClass = {
+                xs: 'h-6',
+                sm: 'h-8',
+                md: 'h-12',
+                lg: 'h-16',
+                xl: 'h-24'
+            }[size] || 'h-12';
+
+            const alignClass = {
+                left: 'justify-start',
+                center: 'justify-center',
+                right: 'justify-end'
+            }[alignment] || 'justify-start';
+
+            const href = link || (linkToHome ? '/' : '');
+            const logoHtml = logo
+                ? `<img src="${logo}" alt="${this.escapeHtml(altText)}" class="${sizeClass} w-auto">`
+                : `<span class="text-2xl font-bold text-primary">Logo</span>`;
+
+            return `
+                <div class="flex ${alignClass} py-4">
+                    ${href ? `<a href="${href}">${logoHtml}</a>` : logoHtml}
+                </div>
+            `;
+        });
+
+        // Pricing Block
+        this.registerRenderer('pricing', (block) => {
+            const title = this.getContent(block, 'title', '');
+            const subtitle = this.getContent(block, 'subtitle', '');
+            const plans = this.getContentArray(block, 'plans');
+            const columns = block.settings.columns || 3;
+
+            const plansHtml = Array.isArray(plans) && plans.length > 0
+                ? plans.map((plan: any) => `
+                    <div class="relative bg-white rounded-2xl shadow-lg overflow-hidden ${plan.featured ? 'ring-2 ring-primary' : ''}">
+                        ${plan.featured && plan.badge ? `
+                            <div class="absolute top-0 right-0 bg-primary text-white px-4 py-1 text-sm font-medium rounded-bl-lg">
+                                ${this.escapeHtml(plan.badge)}
+                            </div>
+                        ` : ''}
+                        <div class="p-8">
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">${this.escapeHtml(plan.name || '')}</h3>
+                            <p class="text-gray-600 mb-4">${this.escapeHtml(plan.description || '')}</p>
+                            <div class="mb-6">
+                                <span class="text-4xl font-bold text-gray-900">${this.escapeHtml(plan.price || '')}</span>
+                                <span class="text-gray-500">${this.escapeHtml(plan.period || '')}</span>
+                            </div>
+                            <ul class="space-y-3 mb-8">
+                                ${Array.isArray(plan.features) ? plan.features.map((f: any) => `
+                                    <li class="flex items-center gap-2">
+                                        <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                        <span class="text-gray-600">${this.escapeHtml(typeof f === 'string' ? f : f.feature || '')}</span>
+                                    </li>
+                                `).join('') : ''}
+                            </ul>
+                            <a href="${plan.buttonLink || '#'}" class="block w-full text-center px-6 py-3 ${plan.featured ? 'bg-primary text-white' : 'bg-gray-100 text-gray-900 hover:bg-gray-200'} font-semibold rounded-lg transition">
+                                ${this.escapeHtml(plan.buttonText || 'Get Started')}
+                            </a>
+                        </div>
+                    </div>
+                `).join('')
+                : '<p class="col-span-full text-center text-gray-500">No pricing plans configured</p>';
+
+            return `
+                <section class="py-16 bg-gray-50">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        ${title || subtitle ? `
+                            <div class="text-center mb-12">
+                                ${title ? `<h2 class="text-3xl font-bold text-gray-900 mb-4">${this.escapeHtml(title)}</h2>` : ''}
+                                ${subtitle ? `<p class="text-lg text-gray-600">${this.escapeHtml(subtitle)}</p>` : ''}
+                            </div>
+                        ` : ''}
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-${columns} gap-8">
+                            ${plansHtml}
+                        </div>
+                    </div>
+                </section>
+            `;
+        });
+
+        // Team Block
+        this.registerRenderer('team', (block) => {
+            const title = this.getContent(block, 'title', '');
+            const subtitle = this.getContent(block, 'subtitle', '');
+            const members = this.getContentArray(block, 'members');
+            const columns = block.settings.columns || 4;
+            const showBio = block.settings.showBio ?? true;
+            const showSocial = block.settings.showSocial ?? true;
+
+            const membersHtml = Array.isArray(members) && members.length > 0
+                ? members.map((member: any) => `
+                    <div class="text-center">
+                        <div class="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden bg-gray-200">
+                            ${member.photo ? `<img src="${member.photo}" alt="${this.escapeHtml(member.name || '')}" class="w-full h-full object-cover">` : `
+                                <div class="w-full h-full flex items-center justify-center text-4xl font-bold text-gray-400">
+                                    ${(member.name || 'T').charAt(0)}
+                                </div>
+                            `}
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900">${this.escapeHtml(member.name || '')}</h3>
+                        <p class="text-primary text-sm mb-2">${this.escapeHtml(member.role || '')}</p>
+                        ${showBio && member.bio ? `<p class="text-gray-600 text-sm">${this.escapeHtml(member.bio)}</p>` : ''}
+                        ${showSocial && (member.linkedin || member.twitter) ? `
+                            <div class="flex justify-center gap-2 mt-3">
+                                ${member.linkedin ? `<a href="${member.linkedin}" target="_blank" class="text-gray-400 hover:text-primary">LinkedIn</a>` : ''}
+                                ${member.twitter ? `<a href="${member.twitter}" target="_blank" class="text-gray-400 hover:text-primary">Twitter</a>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('')
+                : '<p class="col-span-full text-center text-gray-500">No team members configured</p>';
+
+            return `
+                <section class="py-16">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        ${title || subtitle ? `
+                            <div class="text-center mb-12">
+                                ${title ? `<h2 class="text-3xl font-bold text-gray-900 mb-4">${this.escapeHtml(title)}</h2>` : ''}
+                                ${subtitle ? `<p class="text-lg text-gray-600">${this.escapeHtml(subtitle)}</p>` : ''}
+                            </div>
+                        ` : ''}
+                        <div class="grid grid-cols-2 md:grid-cols-${columns} gap-8">
+                            ${membersHtml}
+                        </div>
+                    </div>
+                </section>
+            `;
+        });
+
+        // Contact Info Block
+        this.registerRenderer('contact-info', (block) => {
+            const title = this.getContent(block, 'title', '');
+            const description = this.getContent(block, 'description', '');
+            const contacts = this.getContentArray(block, 'contacts');
+            const layout = block.settings.layout || 'vertical';
+            const showIcons = block.settings.showIcons ?? true;
+
+            const icons: Record<string, string> = {
+                phone: '📞',
+                email: '✉️',
+                address: '📍',
+                hours: '🕐',
+                website: '🌐',
+                custom: '•'
+            };
+
+            const contactsHtml = Array.isArray(contacts) && contacts.length > 0
+                ? contacts.map((contact: any) => {
+                    const icon = showIcons ? icons[contact.type as keyof typeof icons] || icons.custom : '';
+                    let href = contact.link || '';
+                    if (!href && contact.type === 'phone') href = `tel:${contact.value}`;
+                    if (!href && contact.type === 'email') href = `mailto:${contact.value}`;
+
+                    return `
+                        <div class="flex items-start gap-3">
+                            ${icon ? `<span class="text-xl">${icon}</span>` : ''}
+                            <div>
+                                ${contact.label ? `<span class="text-sm text-gray-500 block">${this.escapeHtml(contact.label)}</span>` : ''}
+                                ${href ? `<a href="${href}" class="text-gray-900 hover:text-primary">${this.escapeHtml(contact.value || '')}</a>` : `<span class="text-gray-900">${this.escapeHtml(contact.value || '')}</span>`}
+                            </div>
+                        </div>
+                    `;
+                }).join('')
+                : '<p class="text-gray-500">No contact information configured</p>';
+
+            const layoutClass = layout === 'horizontal' ? 'flex flex-wrap gap-8' : layout === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-4';
+
+            return `
+                <section class="py-8">
+                    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                        ${title ? `<h2 class="text-2xl font-bold text-gray-900 mb-4">${this.escapeHtml(title)}</h2>` : ''}
+                        ${description ? `<p class="text-gray-600 mb-6">${this.escapeHtml(description)}</p>` : ''}
+                        <div class="${layoutClass}">
+                            ${contactsHtml}
+                        </div>
+                    </div>
+                </section>
+            `;
+        });
+
+        // Form Block
+        this.registerRenderer('form', (block) => {
+            const title = this.getContent(block, 'title', '');
+            const description = this.getContent(block, 'description', '');
+            const fields = this.getContentArray(block, 'fields');
+            const submitText = this.getContent(block, 'submitText', 'Submit');
+            const successMessage = this.getContent(block, 'successMessage', 'Thank you!');
+            const layout = block.settings.layout || 'vertical';
+
+            const fieldsHtml = Array.isArray(fields) && fields.length > 0
+                ? fields.map((field: any) => {
+                    const inputClass = 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent';
+                    const widthClass = field.width === 'half' ? 'md:col-span-1' : 'md:col-span-2';
+                    let inputHtml = '';
+
+                    switch (field.type) {
+                        case 'textarea':
+                            inputHtml = `<textarea name="${field.name}" placeholder="${this.escapeHtml(field.placeholder || '')}" ${field.required ? 'required' : ''} rows="4" class="${inputClass}"></textarea>`;
+                            break;
+                        case 'select':
+                            const options = (field.options || '').split(',').map((o: string) => `<option value="${o.trim()}">${o.trim()}</option>`).join('');
+                            inputHtml = `<select name="${field.name}" ${field.required ? 'required' : ''} class="${inputClass}"><option value="">Select...</option>${options}</select>`;
+                            break;
+                        case 'checkbox':
+                            inputHtml = `<label class="flex items-center gap-2"><input type="checkbox" name="${field.name}" ${field.required ? 'required' : ''} class="w-4 h-4 text-primary rounded"> ${this.escapeHtml(field.label || '')}</label>`;
+                            break;
+                        default:
+                            inputHtml = `<input type="${field.type || 'text'}" name="${field.name}" placeholder="${this.escapeHtml(field.placeholder || '')}" ${field.required ? 'required' : ''} class="${inputClass}">`;
+                    }
+
+                    return `
+                        <div class="${widthClass}">
+                            ${field.type !== 'checkbox' ? `<label class="block text-sm font-medium text-gray-700 mb-2">${this.escapeHtml(field.label || '')}${field.required ? ' *' : ''}</label>` : ''}
+                            ${inputHtml}
+                        </div>
+                    `;
+                }).join('')
+                : '';
+
+            return `
+                <section class="py-8">
+                    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+                        ${title ? `<h2 class="text-2xl font-bold text-gray-900 mb-4">${this.escapeHtml(title)}</h2>` : ''}
+                        ${description ? `<p class="text-gray-600 mb-6">${this.escapeHtml(description)}</p>` : ''}
+                        <form id="form-${block.id}" class="grid grid-cols-1 md:grid-cols-2 gap-4" data-success="${this.escapeHtml(successMessage)}">
+                            ${fieldsHtml}
+                            <div class="md:col-span-2">
+                                <button type="submit" class="px-8 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition">
+                                    ${this.escapeHtml(submitText)}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+            `;
+        });
+
+        // Audio Block
+        this.registerRenderer('audio', (block) => {
+            const title = this.getContent(block, 'title', '');
+            const artist = this.getContent(block, 'artist', '');
+            const audioUrl = this.getContent(block, 'audioUrl', '') || block.settings.audioFile || '';
+            const coverImage = this.getContent(block, 'coverImage', '');
+            const autoplay = block.settings.autoplay ?? false;
+            const loop = block.settings.loop ?? false;
+            const showDownload = block.settings.showDownload ?? false;
+
+            return `
+                <section class="py-8">
+                    <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div class="bg-white rounded-xl shadow-md p-6 flex gap-4 items-center">
+                            ${coverImage ? `<img src="${coverImage}" alt="${this.escapeHtml(title)}" class="w-20 h-20 rounded-lg object-cover">` : `
+                                <div class="w-20 h-20 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                                    <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                                </div>
+                            `}
+                            <div class="flex-1">
+                                ${title ? `<h3 class="font-semibold text-gray-900">${this.escapeHtml(title)}</h3>` : ''}
+                                ${artist ? `<p class="text-sm text-gray-500">${this.escapeHtml(artist)}</p>` : ''}
+                                ${audioUrl ? `
+                                    <audio controls ${autoplay ? 'autoplay' : ''} ${loop ? 'loop' : ''} class="w-full mt-2">
+                                        <source src="${audioUrl}" type="audio/mpeg">
+                                    </audio>
+                                ` : '<p class="text-gray-400 text-sm mt-2">No audio file</p>'}
+                            </div>
+                            ${showDownload && audioUrl ? `<a href="${audioUrl}" download class="text-primary hover:underline">Download</a>` : ''}
+                        </div>
+                    </div>
+                </section>
+            `;
+        });
+
+        // Embed Block
+        this.registerRenderer('embed', (block) => {
+            const title = this.getContent(block, 'title', '');
+            const url = this.getContent(block, 'url', '');
+            const caption = this.getContent(block, 'caption', '');
+            const type = block.settings.type || 'url';
+            const aspectRatio = block.settings.aspectRatio || '16:9';
+            const maxWidth = block.settings.maxWidth || 800;
+
+            const aspectClass = {
+                '16:9': 'aspect-video',
+                '4:3': 'aspect-[4/3]',
+                '1:1': 'aspect-square',
+                '9:16': 'aspect-[9/16]',
+                'auto': ''
+            }[aspectRatio] || 'aspect-video';
+
+            let embedHtml = '';
+            if (url) {
+                if (type === 'youtube') {
+                    const videoId = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1] || '';
+                    embedHtml = `<iframe src="https://www.youtube.com/embed/${videoId}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>`;
+                } else if (type === 'vimeo') {
+                    const videoId = url.match(/(?:vimeo\.com\/)(\d+)/)?.[1] || '';
+                    embedHtml = `<iframe src="https://player.vimeo.com/video/${videoId}" class="w-full h-full" frameborder="0" allowfullscreen></iframe>`;
+                } else {
+                    embedHtml = `<iframe src="${url}" class="w-full h-full" frameborder="0"></iframe>`;
+                }
+            } else {
+                embedHtml = `<div class="w-full h-full bg-gray-200 flex items-center justify-center"><span class="text-gray-400">No embed URL</span></div>`;
+            }
+
+            return `
+                <section class="py-8">
+                    <div class="mx-auto px-4 sm:px-6 lg:px-8" style="max-width: ${maxWidth}px">
+                        ${title ? `<h2 class="text-xl font-bold text-gray-900 mb-4">${this.escapeHtml(title)}</h2>` : ''}
+                        <div class="${aspectClass} rounded-lg overflow-hidden">
+                            ${embedHtml}
+                        </div>
+                        ${caption ? `<p class="mt-2 text-sm text-gray-500 text-center">${this.escapeHtml(caption)}</p>` : ''}
+                    </div>
+                </section>
+            `;
+        });
+
+        // File Download Block
+        this.registerRenderer('file-download', (block) => {
+            const title = this.getContent(block, 'title', '');
+            const files = this.getContentArray(block, 'files');
+            const style = block.settings.style || 'list';
+            const showFileSize = block.settings.showFileSize ?? true;
+            const showFileType = block.settings.showFileType ?? true;
+
+            const fileIcons: Record<string, string> = {
+                pdf: '📄',
+                doc: '📝',
+                xls: '📊',
+                zip: '📦',
+                image: '🖼️',
+                other: '📁'
+            };
+
+            const filesHtml = Array.isArray(files) && files.length > 0
+                ? files.map((file: any) => `
+                    <a href="${file.file || file.externalUrl || '#'}" target="_blank" class="flex items-center gap-4 p-4 bg-white rounded-lg shadow hover:shadow-md transition group">
+                        ${showFileType ? `<span class="text-2xl">${fileIcons[file.fileType as keyof typeof fileIcons] || fileIcons.other}</span>` : ''}
+                        <div class="flex-1 min-w-0">
+                            <span class="font-medium text-gray-900 group-hover:text-primary truncate block">${this.escapeHtml(file.name || 'File')}</span>
+                            ${file.description ? `<span class="text-sm text-gray-500 truncate block">${this.escapeHtml(file.description)}</span>` : ''}
+                        </div>
+                        ${showFileSize && file.fileSize ? `<span class="text-sm text-gray-400">${this.escapeHtml(file.fileSize)}</span>` : ''}
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </a>
+                `).join('')
+                : '<p class="text-gray-500 text-center">No files configured</p>';
+
+            return `
+                <section class="py-8">
+                    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+                        ${title ? `<h2 class="text-2xl font-bold text-gray-900 mb-6">${this.escapeHtml(title)}</h2>` : ''}
+                        <div class="space-y-3">
+                            ${filesHtml}
+                        </div>
+                    </div>
+                </section>
+            `;
+        });
+
+        // Breadcrumb Block
+        this.registerRenderer('breadcrumb', (block) => {
+            const items = this.getContentArray(block, 'items');
+            const separator = block.settings.separator || 'chevron';
+            const showHomeIcon = block.settings.showHomeIcon ?? true;
+
+            const separators: Record<string, string> = {
+                chevron: '<svg class="w-4 h-4 mx-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>',
+                slash: '<span class="mx-2 text-gray-400">/</span>',
+                arrow: '<span class="mx-2 text-gray-400">→</span>',
+                dot: '<span class="mx-2 text-gray-400">•</span>'
+            };
+
+            const sep = separators[separator] || separators.chevron;
+
+            const itemsHtml = Array.isArray(items) && items.length > 0
+                ? items.map((item: any, index: number) => {
+                    const isLast = index === items.length - 1 || item.isCurrentPage;
+                    const content = index === 0 && showHomeIcon
+                        ? `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>`
+                        : this.escapeHtml(item.label || '');
+
+                    return `
+                        ${index > 0 ? sep : ''}
+                        ${isLast || !item.url
+                            ? `<span class="text-gray-500">${content}</span>`
+                            : `<a href="${item.url}" class="text-primary hover:underline">${content}</a>`
+                        }
+                    `;
+                }).join('')
+                : '';
+
+            return `
+                <nav class="py-4">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <ol class="flex items-center text-sm">
+                            ${itemsHtml}
+                        </ol>
+                    </div>
+                </nav>
+            `;
+        });
+
+        // Timeline Block
+        this.registerRenderer('timeline', (block) => {
+            const title = this.getContent(block, 'title', '');
+            const subtitle = this.getContent(block, 'subtitle', '');
+            const items = this.getContentArray(block, 'items');
+            const style = block.settings.style || 'vertical';
+
+            const statusColors: Record<string, string> = {
+                completed: 'bg-green-500',
+                current: 'bg-primary',
+                upcoming: 'bg-gray-300'
+            };
+
+            const itemsHtml = Array.isArray(items) && items.length > 0
+                ? items.map((item: any, index: number) => `
+                    <div class="relative pl-8 pb-8 ${index === items.length - 1 ? '' : 'border-l-2 border-gray-200 ml-3'}">
+                        <div class="absolute left-0 top-0 w-6 h-6 rounded-full ${statusColors[item.status as keyof typeof statusColors] || statusColors.completed} flex items-center justify-center">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div class="ml-6">
+                            <span class="text-sm font-medium text-primary">${this.escapeHtml(item.date || '')}</span>
+                            <h3 class="text-lg font-semibold text-gray-900 mt-1">${this.escapeHtml(item.title || '')}</h3>
+                            ${item.description ? `<div class="mt-2 text-gray-600 prose prose-sm">${item.description}</div>` : ''}
+                        </div>
+                    </div>
+                `).join('')
+                : '<p class="text-gray-500 text-center">No timeline items configured</p>';
+
+            return `
+                <section class="py-16">
+                    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+                        ${title || subtitle ? `
+                            <div class="text-center mb-12">
+                                ${title ? `<h2 class="text-3xl font-bold text-gray-900 mb-4">${this.escapeHtml(title)}</h2>` : ''}
+                                ${subtitle ? `<p class="text-lg text-gray-600">${this.escapeHtml(subtitle)}</p>` : ''}
+                            </div>
+                        ` : ''}
+                        <div class="relative">
+                            ${itemsHtml}
+                        </div>
+                    </div>
+                </section>
+            `;
+        });
+
+        // Reviews Block
+        this.registerRenderer('reviews', (block) => {
+            const title = this.getContent(block, 'title', '');
+            const subtitle = this.getContent(block, 'subtitle', '');
+            const reviews = this.getContentArray(block, 'reviews');
+            const layout = block.settings.layout || 'grid';
+            const columns = block.settings.columns || 2;
+            const showRating = block.settings.showRating ?? true;
+            const showVerifiedBadge = block.settings.showVerifiedBadge ?? true;
+
+            const stars = (rating: number) => '★'.repeat(rating) + '☆'.repeat(5 - rating);
+
+            const reviewsHtml = Array.isArray(reviews) && reviews.length > 0
+                ? reviews.map((review: any) => `
+                    <div class="bg-white rounded-xl shadow-md p-6">
+                        <div class="flex items-center gap-4 mb-4">
+                            ${review.avatar ? `<img src="${review.avatar}" class="w-12 h-12 rounded-full">` : `
+                                <div class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+                                    ${(review.author || 'A').charAt(0)}
+                                </div>
+                            `}
+                            <div>
+                                <div class="font-semibold text-gray-900">${this.escapeHtml(review.author || '')}</div>
+                                ${showVerifiedBadge && review.verified ? `<span class="text-xs text-green-600">✓ Verified</span>` : ''}
+                            </div>
+                        </div>
+                        ${showRating ? `<div class="text-yellow-400 mb-2">${stars(review.rating || 5)}</div>` : ''}
+                        ${review.title ? `<h4 class="font-medium text-gray-900 mb-2">${this.escapeHtml(review.title)}</h4>` : ''}
+                        <p class="text-gray-600">${this.escapeHtml(review.content || '')}</p>
+                        ${review.date ? `<p class="text-sm text-gray-400 mt-3">${this.escapeHtml(review.date)}</p>` : ''}
+                    </div>
+                `).join('')
+                : '<p class="col-span-full text-center text-gray-500">No reviews configured</p>';
+
+            return `
+                <section class="py-16 bg-gray-50">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        ${title || subtitle ? `
+                            <div class="text-center mb-12">
+                                ${title ? `<h2 class="text-3xl font-bold text-gray-900 mb-4">${this.escapeHtml(title)}</h2>` : ''}
+                                ${subtitle ? `<p class="text-lg text-gray-600">${this.escapeHtml(subtitle)}</p>` : ''}
+                            </div>
+                        ` : ''}
+                        <div class="grid grid-cols-1 md:grid-cols-${columns} gap-6">
+                            ${reviewsHtml}
+                        </div>
+                    </div>
+                </section>
+            `;
+        });
+
+        // Header Block
+        this.registerRenderer('header', (block) => {
+            const logo = this.getContent(block, 'logo', '');
+            const logoAlt = this.getContent(block, 'logoAlt', 'Logo');
+            const navigation = this.getContentArray(block, 'navigation');
+            const ctaText = this.getContent(block, 'ctaText', '');
+            const ctaUrl = this.getContent(block, 'ctaUrl', '/');
+            const sticky = block.settings.sticky ?? true;
+            const showCta = block.settings.showCta ?? true;
+            const backgroundColor = block.settings.backgroundColor || 'white';
+
+            const bgClass = {
+                white: 'bg-white',
+                dark: 'bg-gray-900 text-white',
+                transparent: 'bg-transparent',
+                primary: 'bg-primary text-white'
+            }[backgroundColor] || 'bg-white';
+
+            const navHtml = Array.isArray(navigation) && navigation.length > 0
+                ? navigation.map((item: any) => `
+                    <a href="${item.url || '#'}" ${item.isExternal ? 'target="_blank"' : ''} class="hover:text-primary transition">
+                        ${this.escapeHtml(item.label || '')}
+                    </a>
+                `).join('')
+                : '';
+
+            return `
+                <header class="${bgClass} ${sticky ? 'sticky top-0 z-50' : ''} shadow-sm" x-data="{ mobileOpen: false }">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div class="flex items-center justify-between h-16">
+                            <a href="/" class="flex-shrink-0">
+                                ${logo ? `<img src="${logo}" alt="${this.escapeHtml(logoAlt)}" class="h-8 w-auto">` : `<span class="text-xl font-bold">Logo</span>`}
+                            </a>
+                            <nav class="hidden md:flex items-center gap-8">
+                                ${navHtml}
+                                ${showCta && ctaText ? `<a href="${ctaUrl}" class="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition">${this.escapeHtml(ctaText)}</a>` : ''}
+                            </nav>
+                            <button @click="mobileOpen = !mobileOpen" class="md:hidden p-2">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div x-show="mobileOpen" x-collapse class="md:hidden border-t">
+                        <nav class="px-4 py-4 space-y-2">
+                            ${navHtml}
+                            ${showCta && ctaText ? `<a href="${ctaUrl}" class="block px-4 py-2 bg-primary text-white rounded-lg font-medium text-center">${this.escapeHtml(ctaText)}</a>` : ''}
+                        </nav>
+                    </div>
+                </header>
+            `;
+        });
+
+        // Footer Block
+        this.registerRenderer('footer', (block) => {
+            const logo = this.getContent(block, 'logo', '');
+            const description = this.getContent(block, 'description', '');
+            const linkGroups = this.getContentArray(block, 'linkGroups');
+            const socialLinks = this.getContentArray(block, 'socialLinks');
+            const copyright = this.getContent(block, 'copyright', '');
+            const email = this.getContent(block, 'email', '');
+            const phone = this.getContent(block, 'phone', '');
+            const style = block.settings.style || 'default';
+
+            const bgClass = style === 'dark' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900';
+            const mutedClass = style === 'dark' ? 'text-gray-400' : 'text-gray-600';
+
+            const linkGroupsHtml = Array.isArray(linkGroups) && linkGroups.length > 0
+                ? linkGroups.map((group: any) => `
+                    <div>
+                        <h3 class="font-semibold mb-4">${this.escapeHtml(group.title || '')}</h3>
+                        <ul class="space-y-2">
+                            ${Array.isArray(group.links) ? group.links.map((link: any) => `
+                                <li><a href="${link.url || '#'}" class="${mutedClass} hover:text-primary transition">${this.escapeHtml(link.label || '')}</a></li>
+                            `).join('') : ''}
+                        </ul>
+                    </div>
+                `).join('')
+                : '';
+
+            return `
+                <footer class="${bgClass} pt-16 pb-8">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+                            <div>
+                                ${logo ? `<img src="${logo}" alt="Logo" class="h-8 w-auto mb-4">` : ''}
+                                ${description ? `<div class="${mutedClass} prose prose-sm">${description}</div>` : ''}
+                                ${email ? `<p class="mt-4"><a href="mailto:${email}" class="${mutedClass} hover:text-primary">${email}</a></p>` : ''}
+                                ${phone ? `<p><a href="tel:${phone}" class="${mutedClass} hover:text-primary">${phone}</a></p>` : ''}
+                            </div>
+                            ${linkGroupsHtml}
+                        </div>
+                        <div class="border-t ${style === 'dark' ? 'border-gray-800' : 'border-gray-200'} pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+                            <p class="${mutedClass} text-sm">${this.escapeHtml(copyright)}</p>
+                            ${Array.isArray(socialLinks) && socialLinks.length > 0 ? `
+                                <div class="flex gap-4">
+                                    ${socialLinks.map((s: any) => `<a href="${s.url || '#'}" target="_blank" class="${mutedClass} hover:text-primary">${s.platform}</a>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </footer>
+            `;
+        });
+
+        // Menu Block
+        this.registerRenderer('menu', (block) => {
+            const items = this.getContentArray(block, 'items');
+            const style = block.settings.style || 'horizontal';
+            const alignment = block.settings.alignment || 'left';
+
+            const alignClass = {
+                left: 'justify-start',
+                center: 'justify-center',
+                right: 'justify-end',
+                justified: 'justify-between'
+            }[alignment] || 'justify-start';
+
+            const styleClass = style === 'vertical' ? 'flex-col space-y-2' : 'flex-row flex-wrap gap-6';
+
+            const itemsHtml = Array.isArray(items) && items.length > 0
+                ? items.map((item: any) => `
+                    <a href="${item.url || '#'}" ${item.isExternal ? 'target="_blank"' : ''}
+                       class="${item.highlighted ? 'text-primary font-semibold' : 'text-gray-700'} hover:text-primary transition">
+                        ${this.escapeHtml(item.label || '')}
+                    </a>
+                `).join('')
+                : '';
+
+            return `
+                <nav class="py-4">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div class="flex ${alignClass} ${styleClass}">
+                            ${itemsHtml}
+                        </div>
+                    </div>
+                </nav>
+            `;
+        });
+
+        // Columns Block
+        this.registerRenderer('columns', (block) => {
+            const columns = this.getContentArray(block, 'columns');
+            const numColumns = block.settings.columns || 2;
+            const gap = block.settings.gap || 'md';
+            const stackOnMobile = block.settings.stackOnMobile ?? true;
+
+            const gapClass = {
+                none: 'gap-0',
+                sm: 'gap-4',
+                md: 'gap-8',
+                lg: 'gap-12',
+                xl: 'gap-16'
+            }[gap] || 'gap-8';
+
+            const columnsHtml = Array.isArray(columns) && columns.length > 0
+                ? columns.map((col: any) => {
+                    const bgClass = col.background === 'light' ? 'bg-gray-50' : col.background === 'white' ? 'bg-white' : col.background === 'primary-light' ? 'bg-primary/5' : '';
+                    const padClass = col.padding === 'sm' ? 'p-4' : col.padding === 'md' ? 'p-6' : col.padding === 'lg' ? 'p-8' : '';
+                    return `<div class="${bgClass} ${padClass} rounded-lg prose prose-lg max-w-none">${col.content || ''}</div>`;
+                }).join('')
+                : '';
+
+            return `
+                <section class="py-8">
+                    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div class="grid ${stackOnMobile ? 'grid-cols-1' : ''} md:grid-cols-${numColumns} ${gapClass}">
+                            ${columnsHtml}
+                        </div>
+                    </div>
+                </section>
+            `;
+        });
     }
 
     /**
