@@ -7,12 +7,13 @@ use App\Services\ThemeService;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Form;
+use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Schema;
 use Livewire\Attributes\On;
 
-class ThemeEditor extends Page
+class ThemeEditor extends Page implements HasForms
 {
     use InteractsWithForms;
 
@@ -68,9 +69,9 @@ class ThemeEditor extends Page
         $formData = $this->flattenTheme($theme);
         $this->form->fill($formData);
 
-        // Get preview URL from first verified domain
+        // Get preview URL from first active domain
         $domain = Domain::where('tenant_id', $tenant->id)
-            ->where('is_verified', true)
+            ->where('is_active', true)
             ->first();
 
         if ($domain) {
@@ -78,7 +79,7 @@ class ThemeEditor extends Page
         }
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $form): Schema
     {
         return $form
             ->schema([

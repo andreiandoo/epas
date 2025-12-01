@@ -9,12 +9,13 @@ use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
-use Filament\Forms\Form;
+use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Schema;
 use Illuminate\Contracts\Support\Htmlable;
 
-class PageBuilder extends Page
+class PageBuilder extends Page implements HasForms
 {
     use InteractsWithForms;
 
@@ -91,7 +92,7 @@ class PageBuilder extends Page
 
         // Get preview URL
         $domain = Domain::where('tenant_id', $tenant->id)
-            ->where('is_verified', true)
+            ->where('is_active', true)
             ->first();
 
         if ($domain) {
