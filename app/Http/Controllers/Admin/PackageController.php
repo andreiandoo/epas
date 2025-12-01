@@ -149,6 +149,10 @@ class PackageController extends Controller
         $htaccess = $this->generateHtaccess();
         $zip->addFromString('.htaccess', $htaccess);
 
+        // Add nginx.conf for Nginx users
+        $nginxConf = $this->generateNginxConf();
+        $zip->addFromString('nginx.conf', $nginxConf);
+
         // Add README
         $readme = $this->generateReadme($tenant, $domain, $package);
         $zip->addFromString('README.md', $readme);
@@ -283,6 +287,60 @@ RewriteRule ^(.*)$ /index.html [L]
 HTACCESS;
     }
 
+    private function generateNginxConf(): string
+    {
+        $coreUrl = config('app.url');
+        $coreHost = parse_url($coreUrl, PHP_URL_HOST);
+
+        return <<<NGINX
+# Tixello Event Platform - Nginx Configuration
+# Include this file in your server block or copy the contents
+
+# Force HTTPS (uncomment if needed)
+# if (\$scheme != "https") {
+#     return 301 https://\$host\$request_uri;
+# }
+
+# SPA routing - serve index.html for all routes
+location / {
+    try_files \$uri \$uri/ /index.html;
+}
+
+# Redirect /admin to tenant panel
+location = /admin {
+    return 302 {$coreUrl}/tenant;
+}
+
+# Security headers
+add_header X-Content-Type-Options "nosniff" always;
+add_header X-XSS-Protection "1; mode=block" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+# X-Frame-Options: Allow framing from core domain only for preview mode
+# When preview_mode=1 is in the query string, allow framing from core
+set \$frame_options "SAMEORIGIN";
+set \$csp_frame "";
+if (\$arg_preview_mode = "1") {
+    set \$frame_options "";
+    set \$csp_frame "frame-ancestors 'self' https://{$coreHost}";
+}
+add_header X-Frame-Options \$frame_options always;
+add_header Content-Security-Policy \$csp_frame always;
+
+# Cache static assets
+location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
+
+# Gzip compression
+gzip on;
+gzip_vary on;
+gzip_min_length 1024;
+gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+NGINX;
+    }
+
     private function generateReadme(Tenant $tenant, Domain $domain, TenantPackage $package): string
     {
         $coreUrl = config('app.url');
@@ -316,30 +374,9 @@ If you want to integrate with an existing website, add this code to your HTML:
 - Rewrite rules for SPA routing (Apache .htaccess included)
 
 ## For Nginx Users
-Add this to your server block:
-
-```nginx
-location / {
-    try_files \$uri \$uri/ /index.html;
-}
-
-# Security headers with preview mode support
-add_header X-Content-Type-Options "nosniff" always;
-add_header X-XSS-Protection "1; mode=block" always;
-add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
-# Allow framing from core domain for preview mode
-set \$frame_options "SAMEORIGIN";
-if (\$arg_preview_mode = "1") {
-    set \$frame_options "";
-}
-add_header X-Frame-Options \$frame_options always;
-
-# For preview mode, use Content-Security-Policy instead
-if (\$arg_preview_mode = "1") {
-    add_header Content-Security-Policy "frame-ancestors 'self' https://{$coreHost}" always;
-}
-```
+Use the included `nginx.conf` file. Either:
+1. Include it in your server block: `include /path/to/nginx.conf;`
+2. Or copy the contents into your server block configuration
 
 ## Support
 For technical support, contact your Tixello account manager or visit:
