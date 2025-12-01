@@ -20,7 +20,7 @@ class ThemeEditor extends Page
     protected static ?string $navigationLabel = 'Theme Editor';
     protected static \UnitEnum|string|null $navigationGroup = 'Website';
     protected static ?int $navigationSort = 1;
-    protected static ?string $view = 'filament.tenant.pages.theme-editor';
+    protected string $view = 'filament.tenant.pages.theme-editor';
 
     public const MICROSERVICE_SLUG = 'website-visual-editor';
 
