@@ -458,7 +458,11 @@
         function ticketCustomizer() {
             return {
                 templateId: {{ $template->id }},
-                templateData: @json($template->template_data ?? ['meta' => ['dpi' => 300, 'size_mm' => ['w' => 80, 'h' => 200], 'orientation' => 'portrait', 'bleed_mm' => 3, 'safe_area_mm' => 5], 'assets' => [], 'layers' => []]),
+                templateData: {!! json_encode($template->template_data ?: [
+                    'meta' => ['dpi' => 300, 'size_mm' => ['w' => 80, 'h' => 200], 'orientation' => 'portrait', 'bleed_mm' => 3, 'safe_area_mm' => 5],
+                    'assets' => [],
+                    'layers' => []
+                ]) !!},
                 selectedLayerId: null,
                 zoom: 100,
                 saving: false,
