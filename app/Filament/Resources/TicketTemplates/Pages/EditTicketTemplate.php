@@ -14,6 +14,13 @@ class EditTicketTemplate extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('open_visual_editor')
+                ->label('Open Visual Editor')
+                ->icon('heroicon-o-paint-brush')
+                ->url(fn () => route('admin.ticket-customizer.edit', ['template' => $this->record]))
+                ->openUrlInNewTab()
+                ->color('primary'),
+
             Actions\Action::make('generate_preview')
                 ->label('Generate Preview')
                 ->icon('heroicon-o-photo')

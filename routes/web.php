@@ -17,6 +17,7 @@ use App\Http\Controllers\StatusController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\Public\DocsController as PublicDocsController;
 use App\Http\Controllers\Tenant\PreviewProxyController;
+use App\Http\Controllers\Admin\TicketCustomizerController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
 
@@ -198,6 +199,14 @@ Route::middleware(['web', 'auth'])->prefix('admin')->group(function () {
         ->name('admin.tenant.contract.preview');
     Route::get('/contract-templates/{template}/preview', [ContractController::class, 'previewTemplate'])
         ->name('admin.contract-template.preview');
+});
+
+// Admin Ticket Customizer (Visual Editor) Routes
+Route::middleware(['web', 'auth'])->prefix('admin')->group(function () {
+    Route::get('/ticket-customizer/{template}', [TicketCustomizerController::class, 'edit'])
+        ->name('admin.ticket-customizer.edit');
+    Route::put('/ticket-customizer/{template}', [TicketCustomizerController::class, 'update'])
+        ->name('admin.ticket-customizer.update');
 });
 
 // Public Contract Signing Routes (no auth required - token-based)
