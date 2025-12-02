@@ -410,15 +410,16 @@
                         <h3 class="text-sm font-semibold text-gray-400 mb-3">Available Variables</h3>
                         <p class="text-xs text-gray-500 mb-3">Click to copy. Use in text layers.</p>
                         <div class="space-y-3">
-                            @foreach($variables as $category)
+                            @foreach($variables as $groupKey => $group)
                                 <div>
-                                    <h4 class="text-xs font-medium text-gray-500 mb-1">{{ $category['category'] }}</h4>
+                                    <h4 class="text-xs font-medium text-gray-500 mb-1">{{ $group['label'] }}</h4>
                                     <div class="space-y-1">
-                                        @foreach($category['variables'] as $variable)
-                                            <div @click="copyVariable('{{ $variable['placeholder'] }}')"
+                                        @foreach($group['variables'] as $variable)
+                                            @php $placeholder = '{{' . $variable['path'] . '}}'; @endphp
+                                            <div @click="copyVariable('{{ $placeholder }}')"
                                                  class="text-xs p-2 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 flex items-center justify-between"
                                                  title="{{ $variable['description'] }}">
-                                                <code class="text-blue-400">{{ $variable['placeholder'] }}</code>
+                                                <code class="text-blue-400">{{ $placeholder }}</code>
                                                 <span class="text-gray-400 truncate ml-2">{{ $variable['label'] }}</span>
                                             </div>
                                         @endforeach
