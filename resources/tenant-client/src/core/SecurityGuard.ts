@@ -29,6 +29,16 @@ export class SecurityGuard {
             return true;
         }
 
+        // Allow preview mode (set by security wrapper in generated package)
+        if ((window as any).__TIXELLO_PREVIEW__ === true) {
+            return true;
+        }
+
+        // Check if preview_mode is in URL
+        if (window.location.search.includes('preview_mode=1')) {
+            return true;
+        }
+
         // Check exact match or subdomain
         return currentDomain === expectedDomain ||
                currentDomain.endsWith('.' + expectedDomain);
