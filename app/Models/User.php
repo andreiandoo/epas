@@ -95,9 +95,9 @@ class User extends Authenticatable implements FilamentUser
      */
     public function getTenantAttribute(): ?Tenant
     {
-        // First check if user belongs to a tenant (editor)
+        // First check if user belongs to a tenant via tenant_id
         if ($this->tenant_id) {
-            return $this->belongsToTenant;
+            return Tenant::find($this->tenant_id);
         }
         // Otherwise check if user owns a tenant (tenant role)
         return $this->ownedTenant;
