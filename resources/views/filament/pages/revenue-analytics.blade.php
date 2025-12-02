@@ -1,445 +1,316 @@
 <x-filament-panels::page>
-    <div class="space-y-6">
+    <div class="space-y-4">
         {{-- Date Filter --}}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <div class="flex flex-wrap items-end gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
-                    <input type="date" wire:model.live="startDate" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500">
+        <div class="bg-gray-800 rounded-lg shadow p-3">
+            <div class="flex flex-wrap items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <label class="text-sm font-medium text-gray-300">From</label>
+                    <input type="date" wire:model.live="startDate" class="rounded-md border-gray-600 bg-gray-700 text-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 py-1.5">
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
-                    <input type="date" wire:model.live="endDate" class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                <div class="flex items-center gap-2">
+                    <label class="text-sm font-medium text-gray-300">To</label>
+                    <input type="date" wire:model.live="endDate" class="rounded-md border-gray-600 bg-gray-700 text-white text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 py-1.5">
                 </div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">
-                    Filtered period: {{ $filteredRevenue['start'] }} - {{ $filteredRevenue['end'] }}
-                </div>
+                <span class="text-xs text-gray-500">{{ $filteredRevenue['start'] }} - {{ $filteredRevenue['end'] }}</span>
             </div>
         </div>
 
-        {{-- Filtered Period Revenue --}}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Revenue for Selected Period</h3>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Gross Sales</p>
-                    <p class="text-xl font-bold text-gray-900 dark:text-white">€{{ number_format($filteredRevenue['gross_sales'], 2) }}</p>
-                </div>
-                <div class="text-center p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Commission Earned</p>
-                    <p class="text-xl font-bold text-blue-600">€{{ number_format($filteredRevenue['commission'], 2) }}</p>
-                </div>
-                <div class="text-center p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Recurring Microservices</p>
-                    <p class="text-xl font-bold text-green-600">€{{ number_format($filteredRevenue['recurring_microservices'], 2) }}</p>
-                </div>
-                <div class="text-center p-4 bg-primary-50 dark:bg-primary-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Total Revenue</p>
-                    <p class="text-xl font-bold text-primary-600">€{{ number_format($filteredRevenue['total'], 2) }}</p>
-                </div>
-            </div>
-        </div>
-
-        {{-- Key Metrics --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {{-- Key Metrics Row --}}
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
             {{-- MRR --}}
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Monthly Recurring Revenue</p>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">€{{ number_format($metrics['mrr'], 2) }}</p>
-                    </div>
-                    <div class="p-3 bg-green-100 dark:bg-green-900 rounded-full">
-                        <x-heroicon-o-currency-euro class="w-6 h-6 text-green-600 dark:text-green-400" />
-                    </div>
-                </div>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <p class="text-xs text-gray-400">MRR</p>
+                <p class="text-lg font-bold text-white">€{{ number_format($metrics['mrr'], 0) }}</p>
                 @if($metrics['mrr_growth'] != 0)
-                    <p class="mt-2 text-sm {{ $metrics['mrr_growth'] > 0 ? 'text-green-600' : 'text-red-600' }}">
-                        {{ $metrics['mrr_growth'] > 0 ? '↑' : '↓' }} {{ abs(number_format($metrics['mrr_growth'], 1)) }}% vs last month
+                    <p class="text-xs {{ $metrics['mrr_growth'] > 0 ? 'text-green-400' : 'text-red-400' }}">
+                        {{ $metrics['mrr_growth'] > 0 ? '↑' : '↓' }} {{ abs(number_format($metrics['mrr_growth'], 1)) }}%
                     </p>
                 @endif
             </div>
-
             {{-- ARR --}}
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Annual Recurring Revenue</p>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">€{{ number_format($metrics['arr'], 2) }}</p>
+            <div class="bg-gray-800 rounded-lg p-3">
+                <p class="text-xs text-gray-400">ARR</p>
+                <p class="text-lg font-bold text-white">€{{ number_format($metrics['arr'], 0) }}</p>
+            </div>
+            {{-- Net Profit --}}
+            <div class="bg-gray-800 rounded-lg p-3">
+                <p class="text-xs text-gray-400">Net Profit/mo</p>
+                <p class="text-lg font-bold {{ $metrics['net_profit'] >= 0 ? 'text-green-400' : 'text-red-400' }}">
+                    €{{ number_format($metrics['net_profit'], 0) }}
+                </p>
+                <p class="text-xs text-gray-500">{{ number_format($metrics['profit_margin'], 1) }}% margin</p>
+            </div>
+            {{-- Costs --}}
+            <div class="bg-gray-800 rounded-lg p-3">
+                <p class="text-xs text-gray-400">Costs/mo</p>
+                <p class="text-lg font-bold text-red-400">€{{ number_format($metrics['monthly_costs'], 0) }}</p>
+            </div>
+            {{-- Filtered Gross --}}
+            <div class="bg-gray-800 rounded-lg p-3">
+                <p class="text-xs text-gray-400">Period Gross</p>
+                <p class="text-lg font-bold text-white">€{{ number_format($filteredRevenue['gross_sales'], 0) }}</p>
+            </div>
+            {{-- Commission --}}
+            <div class="bg-gray-800 rounded-lg p-3">
+                <p class="text-xs text-gray-400">Commission</p>
+                <p class="text-lg font-bold text-blue-400">€{{ number_format($filteredRevenue['commission'], 0) }}</p>
+            </div>
+            {{-- Recurring MS --}}
+            <div class="bg-gray-800 rounded-lg p-3">
+                <p class="text-xs text-gray-400">Recurring MS</p>
+                <p class="text-lg font-bold text-emerald-400">€{{ number_format($filteredRevenue['recurring_microservices'], 0) }}</p>
+            </div>
+            {{-- Total Period --}}
+            <div class="bg-gray-800 rounded-lg p-3 border border-primary-600">
+                <p class="text-xs text-gray-400">Period Total</p>
+                <p class="text-lg font-bold text-primary-400">€{{ number_format($filteredRevenue['total'], 0) }}</p>
+            </div>
+        </div>
+
+        {{-- SaaS Metrics + Unit Economics + Financial Health - Combined Row --}}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+            {{-- SaaS Health --}}
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h3 class="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-purple-500"></span>SaaS Health
+                </h3>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="text-center p-2 bg-gray-700/50 rounded">
+                        <p class="text-xs text-gray-400">NRR</p>
+                        <p class="text-sm font-bold {{ ($saasMetrics['nrr'] ?? 100) >= 100 ? 'text-green-400' : 'text-amber-400' }}">{{ number_format($saasMetrics['nrr'] ?? 100, 1) }}%</p>
                     </div>
-                    <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
-                        <x-heroicon-o-chart-bar class="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                    <div class="text-center p-2 bg-gray-700/50 rounded">
+                        <p class="text-xs text-gray-400">Churn</p>
+                        <p class="text-sm font-bold {{ ($saasMetrics['churn_rate'] ?? 0) <= 5 ? 'text-green-400' : 'text-red-400' }}">{{ number_format($saasMetrics['churn_rate'] ?? 0, 1) }}%</p>
+                    </div>
+                    <div class="text-center p-2 bg-gray-700/50 rounded">
+                        <p class="text-xs text-gray-400">Retention</p>
+                        <p class="text-sm font-bold {{ ($saasMetrics['retention_rate'] ?? 100) >= 95 ? 'text-green-400' : 'text-amber-400' }}">{{ number_format($saasMetrics['retention_rate'] ?? 100, 1) }}%</p>
+                    </div>
+                    <div class="text-center p-2 bg-gray-700/50 rounded">
+                        <p class="text-xs text-gray-400">Growth</p>
+                        <p class="text-sm font-bold {{ ($saasMetrics['growth_rate'] ?? 0) >= 0 ? 'text-green-400' : 'text-red-400' }}">{{ ($saasMetrics['growth_rate'] ?? 0) >= 0 ? '+' : '' }}{{ number_format($saasMetrics['growth_rate'] ?? 0, 1) }}%</p>
+                    </div>
+                    <div class="text-center p-2 bg-gray-700/50 rounded">
+                        <p class="text-xs text-gray-400">Stickiness</p>
+                        <p class="text-sm font-bold {{ ($saasMetrics['stickiness'] ?? 0) >= 20 ? 'text-green-400' : 'text-amber-400' }}">{{ number_format($saasMetrics['stickiness'] ?? 0, 1) }}%</p>
+                    </div>
+                    <div class="text-center p-2 bg-gray-700/50 rounded">
+                        <p class="text-xs text-gray-400">Churned</p>
+                        <p class="text-sm font-bold text-gray-300">{{ $saasMetrics['churned_tenants'] ?? 0 }}</p>
                     </div>
                 </div>
             </div>
 
-            {{-- Net Profit --}}
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Monthly Net Profit</p>
-                        <p class="text-2xl font-bold {{ $metrics['net_profit'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                            €{{ number_format($metrics['net_profit'], 2) }}
+            {{-- Unit Economics --}}
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h3 class="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500"></span>Unit Economics
+                </h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="text-center p-2 bg-gray-700/50 rounded">
+                        <p class="text-xs text-gray-400">LTV</p>
+                        <p class="text-sm font-bold text-indigo-400">€{{ number_format($unitEconomics['ltv'] ?? 0, 0) }}</p>
+                        <p class="text-xs text-gray-500">{{ number_format($unitEconomics['avg_lifespan_months'] ?? 0, 0) }}mo avg</p>
+                    </div>
+                    <div class="text-center p-2 bg-gray-700/50 rounded">
+                        <p class="text-xs text-gray-400">CAC</p>
+                        <p class="text-sm font-bold text-rose-400">€{{ number_format($unitEconomics['cac'] ?? 0, 0) }}</p>
+                        <p class="text-xs text-gray-500">{{ $unitEconomics['new_tenants_this_month'] ?? 0 }} new</p>
+                    </div>
+                    <div class="text-center p-2 bg-gray-700/50 rounded">
+                        <p class="text-xs text-gray-400">LTV:CAC</p>
+                        <p class="text-sm font-bold {{ ($unitEconomics['ltv_cac_ratio'] ?? 0) >= 3 ? 'text-green-400' : (($unitEconomics['ltv_cac_ratio'] ?? 0) >= 1 ? 'text-amber-400' : 'text-red-400') }}">{{ number_format($unitEconomics['ltv_cac_ratio'] ?? 0, 1) }}x</p>
+                    </div>
+                    <div class="text-center p-2 bg-gray-700/50 rounded">
+                        <p class="text-xs text-gray-400">ARPU</p>
+                        <p class="text-sm font-bold text-cyan-400">€{{ number_format($unitEconomics['arpu'] ?? 0, 0) }}</p>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Financial Health --}}
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h3 class="text-sm font-semibold text-gray-300 mb-3 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>Financial Health
+                </h3>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="text-center p-2 bg-gray-700/50 rounded">
+                        <p class="text-xs text-gray-400">EBITDA</p>
+                        <p class="text-sm font-bold {{ ($financialHealth['ebitda'] ?? 0) >= 0 ? 'text-green-400' : 'text-red-400' }}">€{{ number_format($financialHealth['ebitda'] ?? 0, 0) }}</p>
+                        <p class="text-xs text-gray-500">{{ number_format($financialHealth['ebitda_margin'] ?? 0, 1) }}%</p>
+                    </div>
+                    <div class="text-center p-2 bg-gray-700/50 rounded">
+                        <p class="text-xs text-gray-400">Burn Multiple</p>
+                        <p class="text-sm font-bold {{ ($financialHealth['burn_multiple'] ?? 0) <= 1 ? 'text-green-400' : (($financialHealth['burn_multiple'] ?? 0) <= 2 ? 'text-amber-400' : 'text-red-400') }}">
+                            {{ ($financialHealth['is_profitable'] ?? false) ? 'N/A' : number_format($financialHealth['burn_multiple'] ?? 0, 1) . 'x' }}
                         </p>
                     </div>
-                    <div class="p-3 {{ $metrics['net_profit'] >= 0 ? 'bg-green-100 dark:bg-green-900' : 'bg-red-100 dark:bg-red-900' }} rounded-full">
-                        <x-heroicon-o-banknotes class="w-6 h-6 {{ $metrics['net_profit'] >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}" />
+                    <div class="text-center p-2 bg-gray-700/50 rounded">
+                        <p class="text-xs text-gray-400">Cash Flow</p>
+                        <p class="text-sm font-bold {{ ($financialHealth['operating_cash_flow'] ?? 0) >= 0 ? 'text-green-400' : 'text-red-400' }}">€{{ number_format($financialHealth['operating_cash_flow'] ?? 0, 0) }}</p>
                     </div>
-                </div>
-                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                    {{ number_format($metrics['profit_margin'], 1) }}% margin
-                </p>
-            </div>
-
-            {{-- Monthly Costs --}}
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Monthly Costs</p>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">€{{ number_format($metrics['monthly_costs'], 2) }}</p>
-                    </div>
-                    <div class="p-3 bg-red-100 dark:bg-red-900 rounded-full">
-                        <x-heroicon-o-calculator class="w-6 h-6 text-red-600 dark:text-red-400" />
-                    </div>
-                </div>
-                <a href="{{ route('filament.admin.resources.costs.platform-costs.index') }}" class="mt-2 text-sm text-primary-600 hover:underline">
-                    Manage costs →
-                </a>
-            </div>
-        </div>
-
-        {{-- SaaS Health Metrics --}}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">SaaS Health Metrics</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                {{-- Net Revenue Retention --}}
-                <div class="text-center p-4 bg-purple-50 dark:bg-purple-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Net Revenue Retention</p>
-                    <p class="text-2xl font-bold {{ ($saasMetrics['nrr'] ?? 100) >= 100 ? 'text-green-600' : 'text-amber-600' }}">
-                        {{ number_format($saasMetrics['nrr'] ?? 100, 1) }}%
-                    </p>
-                    <p class="text-xs text-gray-400 mt-1">{{ ($saasMetrics['nrr'] ?? 100) >= 100 ? 'Expanding' : 'Contracting' }}</p>
-                </div>
-
-                {{-- Churn Rate --}}
-                <div class="text-center p-4 bg-red-50 dark:bg-red-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Churn Rate</p>
-                    <p class="text-2xl font-bold {{ ($saasMetrics['churn_rate'] ?? 0) <= 5 ? 'text-green-600' : 'text-red-600' }}">
-                        {{ number_format($saasMetrics['churn_rate'] ?? 0, 2) }}%
-                    </p>
-                    <p class="text-xs text-gray-400 mt-1">{{ $saasMetrics['churned_tenants'] ?? 0 }} churned this month</p>
-                </div>
-
-                {{-- Retention Rate --}}
-                <div class="text-center p-4 bg-green-50 dark:bg-green-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Retention Rate</p>
-                    <p class="text-2xl font-bold {{ ($saasMetrics['retention_rate'] ?? 100) >= 95 ? 'text-green-600' : 'text-amber-600' }}">
-                        {{ number_format($saasMetrics['retention_rate'] ?? 100, 2) }}%
-                    </p>
-                    <p class="text-xs text-gray-400 mt-1">Monthly retention</p>
-                </div>
-
-                {{-- Growth Rate --}}
-                <div class="text-center p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Growth Rate</p>
-                    <p class="text-2xl font-bold {{ ($saasMetrics['growth_rate'] ?? 0) >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                        {{ ($saasMetrics['growth_rate'] ?? 0) >= 0 ? '+' : '' }}{{ number_format($saasMetrics['growth_rate'] ?? 0, 2) }}%
-                    </p>
-                    <p class="text-xs text-gray-400 mt-1">MoM MRR growth</p>
-                </div>
-
-                {{-- Stickiness --}}
-                <div class="text-center p-4 bg-amber-50 dark:bg-amber-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Stickiness</p>
-                    <p class="text-2xl font-bold {{ ($saasMetrics['stickiness'] ?? 0) >= 20 ? 'text-green-600' : 'text-amber-600' }}">
-                        {{ number_format($saasMetrics['stickiness'] ?? 0, 1) }}%
-                    </p>
-                    <p class="text-xs text-gray-400 mt-1">DAU/MAU ratio</p>
-                </div>
-            </div>
-        </div>
-
-        {{-- Unit Economics --}}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Unit Economics</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {{-- Lifetime Value (LTV) --}}
-                <div class="text-center p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Lifetime Value (LTV)</p>
-                    <p class="text-2xl font-bold text-indigo-600">€{{ number_format($unitEconomics['ltv'] ?? 0, 2) }}</p>
-                    <p class="text-xs text-gray-400 mt-1">Avg {{ number_format($unitEconomics['avg_lifespan_months'] ?? 0, 0) }} months lifespan</p>
-                </div>
-
-                {{-- Customer Acquisition Cost (CAC) --}}
-                <div class="text-center p-4 bg-rose-50 dark:bg-rose-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Customer Acquisition Cost</p>
-                    <p class="text-2xl font-bold text-rose-600">€{{ number_format($unitEconomics['cac'] ?? 0, 2) }}</p>
-                    <p class="text-xs text-gray-400 mt-1">{{ $unitEconomics['new_tenants_this_month'] ?? 0 }} new customers</p>
-                </div>
-
-                {{-- LTV:CAC Ratio --}}
-                <div class="text-center p-4 bg-teal-50 dark:bg-teal-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">LTV:CAC Ratio</p>
-                    <p class="text-2xl font-bold {{ ($unitEconomics['ltv_cac_ratio'] ?? 0) >= 3 ? 'text-green-600' : (($unitEconomics['ltv_cac_ratio'] ?? 0) >= 1 ? 'text-amber-600' : 'text-red-600') }}">
-                        {{ number_format($unitEconomics['ltv_cac_ratio'] ?? 0, 1) }}x
-                    </p>
-                    <p class="text-xs text-gray-400 mt-1">{{ ($unitEconomics['ltv_cac_ratio'] ?? 0) >= 3 ? 'Healthy' : (($unitEconomics['ltv_cac_ratio'] ?? 0) >= 1 ? 'Acceptable' : 'Needs improvement') }}</p>
-                </div>
-
-                {{-- ARPU --}}
-                <div class="text-center p-4 bg-cyan-50 dark:bg-cyan-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">ARPU</p>
-                    <p class="text-2xl font-bold text-cyan-600">€{{ number_format($unitEconomics['arpu'] ?? 0, 2) }}</p>
-                    <p class="text-xs text-gray-400 mt-1">Per active tenant/mo</p>
-                </div>
-            </div>
-        </div>
-
-        {{-- Financial Health --}}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Financial Health</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {{-- EBITDA --}}
-                <div class="text-center p-4 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">EBITDA</p>
-                    <p class="text-2xl font-bold {{ ($financialHealth['ebitda'] ?? 0) >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                        €{{ number_format($financialHealth['ebitda'] ?? 0, 2) }}
-                    </p>
-                    <p class="text-xs text-gray-400 mt-1">{{ number_format($financialHealth['ebitda_margin'] ?? 0, 1) }}% margin</p>
-                </div>
-
-                {{-- Burn Multiple --}}
-                <div class="text-center p-4 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Burn Multiple</p>
-                    <p class="text-2xl font-bold {{ ($financialHealth['burn_multiple'] ?? 0) <= 1 ? 'text-green-600' : (($financialHealth['burn_multiple'] ?? 0) <= 2 ? 'text-amber-600' : 'text-red-600') }}">
-                        {{ ($financialHealth['is_profitable'] ?? false) ? 'N/A' : number_format($financialHealth['burn_multiple'] ?? 0, 2) . 'x' }}
-                    </p>
-                    <p class="text-xs text-gray-400 mt-1">{{ ($financialHealth['is_profitable'] ?? false) ? 'Profitable' : (($financialHealth['burn_multiple'] ?? 0) <= 1 ? 'Excellent' : (($financialHealth['burn_multiple'] ?? 0) <= 2 ? 'Good' : 'High burn')) }}</p>
-                </div>
-
-                {{-- Operating Cash Flow --}}
-                <div class="text-center p-4 bg-sky-50 dark:bg-sky-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Operating Cash Flow</p>
-                    <p class="text-2xl font-bold {{ ($financialHealth['operating_cash_flow'] ?? 0) >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                        €{{ number_format($financialHealth['operating_cash_flow'] ?? 0, 2) }}
-                    </p>
-                    <p class="text-xs text-gray-400 mt-1">Monthly</p>
-                </div>
-
-                {{-- Runway --}}
-                <div class="text-center p-4 bg-violet-50 dark:bg-violet-900/30 rounded-lg">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Runway</p>
-                    <p class="text-2xl font-bold {{ ($financialHealth['runway_months'] ?? 0) >= 18 ? 'text-green-600' : (($financialHealth['runway_months'] ?? 0) >= 6 ? 'text-amber-600' : 'text-red-600') }}">
-                        {{ ($financialHealth['runway_months'] ?? 0) >= 999 ? '∞' : number_format($financialHealth['runway_months'] ?? 0, 0) . ' mo' }}
-                    </p>
-                    <p class="text-xs text-gray-400 mt-1">
-                        @if(($financialHealth['runway_months'] ?? 0) >= 999)
-                            Cash flow positive
-                        @else
-                            €{{ number_format($financialHealth['monthly_burn'] ?? 0, 0) }}/mo burn
-                        @endif
-                    </p>
-                </div>
-            </div>
-
-            {{-- AI Search Visibility - Full Width --}}
-            <div class="mt-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">AI Search Visibility</p>
-                        @if(($financialHealth['ai_search_visibility']['status'] ?? 'not_configured') === 'not_configured')
-                            <p class="text-sm text-gray-400 mt-1">{{ $financialHealth['ai_search_visibility']['message'] ?? 'Not configured' }}</p>
-                        @else
-                            <p class="text-2xl font-bold text-primary-600">{{ $financialHealth['ai_search_visibility']['score'] ?? 0 }}%</p>
-                        @endif
-                    </div>
-                    <div class="p-3 bg-gray-200 dark:bg-gray-600 rounded-full">
-                        <x-heroicon-o-magnifying-glass class="w-6 h-6 text-gray-500 dark:text-gray-400" />
+                    <div class="text-center p-2 bg-gray-700/50 rounded">
+                        <p class="text-xs text-gray-400">Runway</p>
+                        <p class="text-sm font-bold {{ ($financialHealth['runway_months'] ?? 0) >= 18 ? 'text-green-400' : (($financialHealth['runway_months'] ?? 0) >= 6 ? 'text-amber-400' : 'text-red-400') }}">
+                            {{ ($financialHealth['runway_months'] ?? 0) >= 999 ? '∞' : number_format($financialHealth['runway_months'] ?? 0, 0) . 'mo' }}
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
 
-        {{-- Revenue Breakdown (3 parts) --}}
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {{-- Revenue Sources with Chart --}}
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Revenue Sources (Current Month)</h3>
-                <div class="space-y-4">
+        {{-- Revenue Breakdown + Costs Side by Side --}}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+            {{-- Revenue Sources --}}
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h3 class="text-sm font-semibold text-gray-300 mb-3">Revenue Sources</h3>
+                <div class="space-y-2">
                     @foreach($revenueBreakdown as $source)
-                        <div>
-                            <div class="flex justify-between mb-1">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">{{ $source['label'] }}</span>
-                                <span class="text-sm font-medium text-gray-900 dark:text-white">€{{ number_format($source['value'], 2) }}</span>
-                            </div>
-                            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                                @php
-                                    $total = array_sum(array_column($revenueBreakdown, 'value'));
-                                    $percent = $total > 0 ? ($source['value'] / $total) * 100 : 0;
-                                @endphp
-                                <div class="h-2 rounded-full" style="width: {{ $percent }}%; background-color: {{ $source['color'] }}"></div>
-                            </div>
+                        <div class="flex items-center gap-3">
+                            <div class="w-3 h-3 rounded-full" style="background-color: {{ $source['color'] }}"></div>
+                            <span class="text-xs text-gray-400 flex-1">{{ $source['label'] }}</span>
+                            <span class="text-sm font-medium text-white">€{{ number_format($source['value'], 0) }}</span>
+                            @php
+                                $total = array_sum(array_column($revenueBreakdown, 'value'));
+                                $percent = $total > 0 ? ($source['value'] / $total) * 100 : 0;
+                            @endphp
+                            <span class="text-xs text-gray-500 w-12 text-right">{{ number_format($percent, 0) }}%</span>
                         </div>
                     @endforeach
-                    <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <div class="flex justify-between">
-                            <span class="font-medium text-gray-900 dark:text-white">Total MRR</span>
-                            <span class="font-bold text-gray-900 dark:text-white">€{{ number_format($metrics['mrr'], 2) }}</span>
-                        </div>
+                    <div class="pt-2 border-t border-gray-700 flex justify-between">
+                        <span class="text-sm font-medium text-gray-300">Total MRR</span>
+                        <span class="text-sm font-bold text-white">€{{ number_format($metrics['mrr'], 0) }}</span>
                     </div>
                 </div>
             </div>
 
             {{-- Cost Breakdown --}}
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Cost Breakdown</h3>
+            <div class="bg-gray-800 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-gray-300">Cost Breakdown</h3>
+                    <a href="{{ route('filament.admin.resources.costs.platform-costs.index') }}" class="text-xs text-primary-400 hover:underline">Manage →</a>
+                </div>
                 @if(count($costBreakdown) > 0)
-                    <div class="space-y-3">
+                    <div class="space-y-2">
                         @foreach($costBreakdown as $cost)
-                            <div class="flex justify-between items-center">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">{{ $cost['label'] }}</span>
-                                <span class="text-sm font-medium text-gray-900 dark:text-white">€{{ number_format($cost['value'], 2) }}</span>
+                            <div class="flex justify-between">
+                                <span class="text-xs text-gray-400">{{ $cost['label'] }}</span>
+                                <span class="text-sm font-medium text-gray-300">€{{ number_format($cost['value'], 0) }}</span>
                             </div>
                         @endforeach
-                        <div class="pt-3 border-t border-gray-200 dark:border-gray-700">
-                            <div class="flex justify-between">
-                                <span class="font-medium text-gray-900 dark:text-white">Total Monthly Costs</span>
-                                <span class="font-bold text-red-600">€{{ number_format($metrics['monthly_costs'], 2) }}</span>
-                            </div>
+                        <div class="pt-2 border-t border-gray-700 flex justify-between">
+                            <span class="text-sm font-medium text-gray-300">Total Costs</span>
+                            <span class="text-sm font-bold text-red-400">€{{ number_format($metrics['monthly_costs'], 0) }}</span>
                         </div>
                     </div>
                 @else
-                    <p class="text-gray-500 dark:text-gray-400 text-sm">No costs configured yet.</p>
-                    <a href="{{ route('filament.admin.resources.costs.platform-costs.create') }}" class="mt-2 inline-block text-sm text-primary-600 hover:underline">
-                        Add your first cost →
-                    </a>
+                    <p class="text-gray-500 text-xs">No costs configured.</p>
                 @endif
             </div>
         </div>
 
         {{-- Projections Chart --}}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Revenue Projections</h3>
-            <div class="h-80">
+        <div class="bg-gray-800 rounded-lg p-4">
+            <h3 class="text-sm font-semibold text-gray-300 mb-3">Revenue Projections</h3>
+            <div class="h-64">
                 <canvas id="projectionsChart"></canvas>
             </div>
         </div>
 
-        {{-- Projections Table --}}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Projection Details</h3>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="border-b border-gray-200 dark:border-gray-700">
-                            <th class="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Period</th>
-                            <th class="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Projected MRR</th>
-                            <th class="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Projected ARR</th>
-                            <th class="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Est. Costs</th>
-                            <th class="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Net Profit</th>
-                            <th class="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Cumulative Revenue</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($projections as $months => $projection)
-                            <tr class="border-b border-gray-100 dark:border-gray-700">
-                                <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">{{ $projection['label'] }}</td>
-                                <td class="py-3 px-4 text-right text-gray-900 dark:text-white">€{{ number_format($projection['mrr'], 2) }}</td>
-                                <td class="py-3 px-4 text-right text-gray-900 dark:text-white">€{{ number_format($projection['arr'], 2) }}</td>
-                                <td class="py-3 px-4 text-right text-red-600">€{{ number_format($projection['costs'], 2) }}</td>
-                                <td class="py-3 px-4 text-right {{ $projection['net_profit'] >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                    €{{ number_format($projection['net_profit'], 2) }}
-                                </td>
-                                <td class="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">
-                                    €{{ number_format($projection['cumulative_revenue'], 2) }}
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        {{-- Microservice Revenue Breakdown --}}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Revenue by Microservice</h3>
-            @if(count($microserviceBreakdown) > 0)
+        {{-- Projections Table + Microservice Table Side by Side --}}
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-3">
+            {{-- Projections Table --}}
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h3 class="text-sm font-semibold text-gray-300 mb-3">Projection Details</h3>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
+                    <table class="w-full text-xs">
                         <thead>
-                            <tr class="border-b border-gray-200 dark:border-gray-700">
-                                <th class="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Microservice</th>
-                                <th class="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Price</th>
-                                <th class="text-center py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Type</th>
-                                <th class="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Active</th>
-                                <th class="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Monthly</th>
-                                <th class="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">3mo</th>
-                                <th class="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">6mo</th>
-                                <th class="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">12mo</th>
+                            <tr class="border-b border-gray-700">
+                                <th class="text-left py-2 px-2 font-medium text-gray-400">Period</th>
+                                <th class="text-right py-2 px-2 font-medium text-gray-400">MRR</th>
+                                <th class="text-right py-2 px-2 font-medium text-gray-400">Costs</th>
+                                <th class="text-right py-2 px-2 font-medium text-gray-400">Net</th>
+                                <th class="text-right py-2 px-2 font-medium text-gray-400">Cumulative</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($microserviceBreakdown as $ms)
-                                <tr class="border-b border-gray-100 dark:border-gray-700">
-                                    <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">{{ is_array($ms['name']) ? ($ms['name']['en'] ?? '') : $ms['name'] }}</td>
-                                    <td class="py-3 px-4 text-right text-gray-900 dark:text-white">€{{ number_format($ms['price'], 2) }}</td>
-                                    <td class="py-3 px-4 text-center">
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium {{ $ms['is_recurring'] ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' }}">
-                                            {{ ucfirst($ms['billing_cycle']) }}
-                                        </span>
-                                    </td>
-                                    <td class="py-3 px-4 text-right text-gray-900 dark:text-white">{{ $ms['active_tenants'] }}</td>
-                                    <td class="py-3 px-4 text-right font-medium {{ $ms['is_recurring'] ? 'text-green-600' : 'text-amber-600' }}">
-                                        €{{ number_format($ms['monthly_revenue'], 2) }}
-                                    </td>
-                                    <td class="py-3 px-4 text-right text-gray-600 dark:text-gray-400">€{{ number_format($ms['projections'][3], 2) }}</td>
-                                    <td class="py-3 px-4 text-right text-gray-600 dark:text-gray-400">€{{ number_format($ms['projections'][6], 2) }}</td>
-                                    <td class="py-3 px-4 text-right text-gray-600 dark:text-gray-400">€{{ number_format($ms['projections'][12], 2) }}</td>
+                            @foreach($projections as $months => $projection)
+                                <tr class="border-b border-gray-700/50">
+                                    <td class="py-2 px-2 text-gray-300">{{ $projection['label'] }}</td>
+                                    <td class="py-2 px-2 text-right text-white">€{{ number_format($projection['mrr'], 0) }}</td>
+                                    <td class="py-2 px-2 text-right text-red-400">€{{ number_format($projection['costs'], 0) }}</td>
+                                    <td class="py-2 px-2 text-right {{ $projection['net_profit'] >= 0 ? 'text-green-400' : 'text-red-400' }}">€{{ number_format($projection['net_profit'], 0) }}</td>
+                                    <td class="py-2 px-2 text-right text-gray-300">€{{ number_format($projection['cumulative_revenue'], 0) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
-                        <tfoot>
-                            <tr class="border-t-2 border-gray-300 dark:border-gray-600">
-                                <td colspan="4" class="py-3 px-4 font-bold text-gray-900 dark:text-white">Total</td>
-                                <td class="py-3 px-4 text-right font-bold text-gray-900 dark:text-white">
-                                    €{{ number_format($metrics['total_microservice_revenue'], 2) }}
-                                </td>
-                                <td class="py-3 px-4 text-right font-bold text-gray-900 dark:text-white">
-                                    €{{ number_format($metrics['total_microservice_revenue'] * 3, 2) }}
-                                </td>
-                                <td class="py-3 px-4 text-right font-bold text-gray-900 dark:text-white">
-                                    €{{ number_format($metrics['total_microservice_revenue'] * 6, 2) }}
-                                </td>
-                                <td class="py-3 px-4 text-right font-bold text-gray-900 dark:text-white">
-                                    €{{ number_format($metrics['total_microservice_revenue'] * 12, 2) }}
-                                </td>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
-            @else
-                <p class="text-gray-500 dark:text-gray-400">No active microservices found.</p>
-            @endif
+            </div>
+
+            {{-- Microservice Revenue --}}
+            <div class="bg-gray-800 rounded-lg p-4">
+                <h3 class="text-sm font-semibold text-gray-300 mb-3">Revenue by Microservice</h3>
+                @if(count($microserviceBreakdown) > 0)
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead>
+                                <tr class="border-b border-gray-700">
+                                    <th class="text-left py-2 px-2 font-medium text-gray-400">Service</th>
+                                    <th class="text-right py-2 px-2 font-medium text-gray-400">Price</th>
+                                    <th class="text-center py-2 px-2 font-medium text-gray-400">Type</th>
+                                    <th class="text-right py-2 px-2 font-medium text-gray-400">Active</th>
+                                    <th class="text-right py-2 px-2 font-medium text-gray-400">Monthly</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($microserviceBreakdown as $ms)
+                                    <tr class="border-b border-gray-700/50">
+                                        <td class="py-2 px-2 text-gray-300 truncate max-w-[120px]">{{ is_array($ms['name']) ? ($ms['name']['en'] ?? '') : $ms['name'] }}</td>
+                                        <td class="py-2 px-2 text-right text-white">€{{ number_format($ms['price'], 0) }}</td>
+                                        <td class="py-2 px-2 text-center">
+                                            <span class="inline-flex px-1.5 py-0.5 rounded text-xs {{ $ms['is_recurring'] ? 'bg-green-900/50 text-green-400' : 'bg-amber-900/50 text-amber-400' }}">
+                                                {{ $ms['is_recurring'] ? 'Rec' : 'Once' }}
+                                            </span>
+                                        </td>
+                                        <td class="py-2 px-2 text-right text-gray-300">{{ $ms['active_tenants'] }}</td>
+                                        <td class="py-2 px-2 text-right font-medium {{ $ms['is_recurring'] ? 'text-green-400' : 'text-amber-400' }}">€{{ number_format($ms['monthly_revenue'], 0) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot>
+                                <tr class="border-t border-gray-600">
+                                    <td colspan="4" class="py-2 px-2 font-medium text-gray-300">Total</td>
+                                    <td class="py-2 px-2 text-right font-bold text-white">€{{ number_format($metrics['total_microservice_revenue'], 0) }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                @else
+                    <p class="text-gray-500 text-xs">No active microservices.</p>
+                @endif
+            </div>
         </div>
 
-        {{-- Historical Data --}}
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Revenue History (Last 12 Months)</h3>
+        {{-- Revenue History --}}
+        <div class="bg-gray-800 rounded-lg p-4">
+            <h3 class="text-sm font-semibold text-gray-300 mb-3">Revenue History (Last 12 Months)</h3>
             <div class="overflow-x-auto">
-                <table class="w-full text-sm">
+                <table class="w-full text-xs">
                     <thead>
-                        <tr class="border-b border-gray-200 dark:border-gray-700">
-                            <th class="text-left py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Month</th>
-                            <th class="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Gross Revenue</th>
-                            <th class="text-right py-3 px-4 font-medium text-gray-600 dark:text-gray-400">Commission Earned</th>
+                        <tr class="border-b border-gray-700">
+                            <th class="text-left py-2 px-2 font-medium text-gray-400">Month</th>
+                            <th class="text-right py-2 px-2 font-medium text-gray-400">Gross Revenue</th>
+                            <th class="text-right py-2 px-2 font-medium text-gray-400">Commission</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($monthlyData as $data)
-                            <tr class="border-b border-gray-100 dark:border-gray-700">
-                                <td class="py-3 px-4 font-medium text-gray-900 dark:text-white">{{ $data['month'] }}</td>
-                                <td class="py-3 px-4 text-right text-gray-900 dark:text-white">€{{ number_format($data['revenue'], 2) }}</td>
-                                <td class="py-3 px-4 text-right text-green-600">€{{ number_format($data['commission'], 2) }}</td>
+                            <tr class="border-b border-gray-700/50">
+                                <td class="py-2 px-2 text-gray-300">{{ $data['month'] }}</td>
+                                <td class="py-2 px-2 text-right text-white">€{{ number_format($data['revenue'], 0) }}</td>
+                                <td class="py-2 px-2 text-right text-green-400">€{{ number_format($data['commission'], 0) }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -448,27 +319,25 @@
         </div>
 
         {{-- Investor Summary --}}
-        <div class="bg-gradient-to-r from-primary-500 to-primary-700 rounded-lg shadow p-6 text-white">
-            <h3 class="text-lg font-semibold mb-4">Investor Summary</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-gradient-to-r from-primary-600 to-primary-800 rounded-lg p-4">
+            <h3 class="text-sm font-semibold text-white mb-3">Investor Summary</h3>
+            <div class="grid grid-cols-3 gap-4">
                 <div>
-                    <p class="text-primary-100 text-sm">Current ARR</p>
-                    <p class="text-3xl font-bold">€{{ number_format($metrics['arr'], 0) }}</p>
+                    <p class="text-primary-200 text-xs">Current ARR</p>
+                    <p class="text-2xl font-bold text-white">€{{ number_format($metrics['arr'], 0) }}</p>
                 </div>
                 <div>
-                    <p class="text-primary-100 text-sm">12-Month Projected ARR</p>
-                    <p class="text-3xl font-bold">€{{ number_format($projections[12]['arr'] ?? 0, 0) }}</p>
+                    <p class="text-primary-200 text-xs">12mo Projected ARR</p>
+                    <p class="text-2xl font-bold text-white">€{{ number_format($projections[12]['arr'] ?? 0, 0) }}</p>
                 </div>
                 <div>
-                    <p class="text-primary-100 text-sm">Profit Margin</p>
-                    <p class="text-3xl font-bold">{{ number_format($metrics['profit_margin'], 1) }}%</p>
+                    <p class="text-primary-200 text-xs">Profit Margin</p>
+                    <p class="text-2xl font-bold text-white">{{ number_format($metrics['profit_margin'], 1) }}%</p>
                 </div>
             </div>
-            <div class="mt-4 pt-4 border-t border-primary-400">
-                <p class="text-sm text-primary-100">
-                    Revenue model: Platform commission ({{ number_format($metrics['avg_commission_rate'], 1) }}% avg) + Recurring microservices (€{{ number_format($metrics['recurring_microservice_revenue'], 2) }}/mo) + One-time (€{{ number_format($metrics['fixed_microservice_revenue'], 2) }})
-                </p>
-            </div>
+            <p class="mt-3 text-xs text-primary-200 border-t border-primary-500 pt-2">
+                Commission ({{ number_format($metrics['avg_commission_rate'], 1) }}% avg) + Recurring MS (€{{ number_format($metrics['recurring_microservice_revenue'], 0) }}/mo) + One-time (€{{ number_format($metrics['fixed_microservice_revenue'], 0) }})
+            </p>
         </div>
     </div>
 
@@ -516,11 +385,12 @@
                     plugins: {
                         legend: {
                             position: 'top',
+                            labels: { color: '#9ca3af', font: { size: 11 } }
                         },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    return context.dataset.label + ': €' + context.parsed.y.toFixed(2);
+                                    return context.dataset.label + ': €' + context.parsed.y.toFixed(0);
                                 }
                             }
                         }
@@ -528,11 +398,15 @@
                     scales: {
                         y: {
                             beginAtZero: true,
+                            grid: { color: 'rgba(75, 85, 99, 0.3)' },
                             ticks: {
-                                callback: function(value) {
-                                    return '€' + value;
-                                }
+                                color: '#9ca3af',
+                                callback: function(value) { return '€' + value; }
                             }
+                        },
+                        x: {
+                            grid: { color: 'rgba(75, 85, 99, 0.3)' },
+                            ticks: { color: '#9ca3af' }
                         }
                     }
                 }
