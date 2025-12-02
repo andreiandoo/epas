@@ -310,7 +310,7 @@ class PagesController extends Controller
         $hostname = $request->input('hostname') ?? $request->getHost();
 
         $domain = Domain::where('domain', $hostname)
-            ->where('is_verified', true)
+            ->where('is_active', true)
             ->first();
 
         return $domain?->tenant;
