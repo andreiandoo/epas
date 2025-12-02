@@ -150,9 +150,9 @@
                     @endif
                 </div>
 
-                @if($previewUrl && $currentPageSlug)
+                @if($liveUrl && $currentPageSlug)
                     <a
-                        href="{{ $previewUrl }}/page/{{ $currentPageSlug }}"
+                        href="{{ $liveUrl }}/page/{{ $currentPageSlug }}"
                         target="_blank"
                         class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded text-xs font-medium transition"
                     >

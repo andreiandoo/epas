@@ -32,6 +32,7 @@ class PageBuilder extends Page implements HasForms
     public array $blocks = [];
     public array $availableBlocks = [];
     public string $previewUrl = '';
+    public string $liveUrl = '';  // Direct URL to tenant site (for "Open in New Tab")
     public array $pages = [];
 
     public ?array $blockSettingsData = [];
@@ -90,13 +91,19 @@ class PageBuilder extends Page implements HasForms
             $this->selectPage($homePage->id);
         }
 
-        // Get preview URL
+        // Get preview URL via proxy to avoid X-Frame-Options issues
         $domain = Domain::where('tenant_id', $tenant->id)
             ->where('is_active', true)
             ->first();
 
         if ($domain) {
-            $this->previewUrl = 'https://' . $domain->domain;
+            // Use proxy URL for preview (avoids X-Frame-Options blocking)
+            $this->previewUrl = route('tenant.preview.proxy', ['domain' => $domain->domain, 'path' => '']);
+            // Remove trailing slash from base URL
+            $this->previewUrl = rtrim($this->previewUrl, '/');
+
+            // Direct URL for "Open in New Tab" button
+            $this->liveUrl = 'https://' . $domain->domain;
         }
     }
 

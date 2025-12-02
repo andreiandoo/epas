@@ -16,6 +16,7 @@ use App\Http\Controllers\TenantPaymentWebhookController;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\Public\DocsController as PublicDocsController;
+use App\Http\Controllers\Tenant\PreviewProxyController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
 
@@ -324,3 +325,15 @@ Route::middleware(['web', 'auth'])->group(function () {
 
 Route::get('/status', [StatusController::class, 'index'])
     ->name('status');
+
+/*
+|--------------------------------------------------------------------------
+| Tenant Preview Proxy (for Page Builder iframe)
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/tenant/preview/{domain}/{path?}', [PreviewProxyController::class, 'proxy'])
+        ->where('path', '.*')
+        ->name('tenant.preview.proxy');
+});
