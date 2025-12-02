@@ -30,8 +30,13 @@ class PreviewProxyController extends Controller
             abort(404, 'Domain not found');
         }
 
-        // Verify user owns this domain
-        if ($domainModel->tenant_id !== $user->tenant_id) {
+        // Verify user has access to this domain
+        // Super-admins and admins can preview any domain
+        // Tenant users can only preview their own domains
+        $isAdmin = in_array($user->role, ['super-admin', 'admin']);
+        $ownsDomain = $user->tenant_id && $domainModel->tenant_id === $user->tenant_id;
+
+        if (!$isAdmin && !$ownsDomain) {
             abort(403, 'Access denied');
         }
 
