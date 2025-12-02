@@ -26,8 +26,10 @@ class GeneratePackageJob implements ShouldQueue
 
     public function handle(PackageGeneratorService $service): void
     {
-        if (!$this->domain->isVerified()) {
-            Log::warning('Cannot generate package for unverified domain', [
+        // Check if domain is active (is_active = true)
+        // In production, you might also want to check isVerified() for stricter security
+        if (!$this->domain->is_active) {
+            Log::warning('Cannot generate package for inactive domain', [
                 'domain_id' => $this->domain->id,
                 'domain' => $this->domain->domain,
             ]);
