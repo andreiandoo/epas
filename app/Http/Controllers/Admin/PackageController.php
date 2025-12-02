@@ -50,18 +50,30 @@ class PackageController extends Controller
      */
     public function generate(Request $request, Tenant $tenant, Domain $domain)
     {
-        // Dispatch the job to generate the package
-        GeneratePackageJob::dispatch($domain);
+        try {
+            // Run the job synchronously for immediate feedback
+            GeneratePackageJob::dispatchSync($domain);
 
-        // Return JSON for AJAX requests, redirect otherwise
-        if ($request->expectsJson() || $request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Package generation started. Please refresh in a moment.',
-            ]);
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Package generated successfully.',
+                ]);
+            }
+
+            return redirect()->back()->with('success', 'Package generated successfully.');
+        } catch (\Exception $e) {
+            \Log::error('Package generation failed', ['error' => $e->getMessage()]);
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Package generation failed: ' . $e->getMessage(),
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'Package generation failed: ' . $e->getMessage());
         }
-
-        return redirect()->back()->with('success', 'Package generation started. Please refresh in a moment.');
     }
 
     /**
@@ -69,23 +81,35 @@ class PackageController extends Controller
      */
     public function regenerate(Request $request, Tenant $tenant, Domain $domain)
     {
-        // Invalidate existing packages
-        $domain->packages()
-            ->where('status', TenantPackage::STATUS_READY)
-            ->update(['status' => TenantPackage::STATUS_INVALIDATED]);
+        try {
+            // Invalidate existing packages
+            $domain->packages()
+                ->where('status', TenantPackage::STATUS_READY)
+                ->update(['status' => TenantPackage::STATUS_INVALIDATED]);
 
-        // Dispatch the job to generate a new package
-        GeneratePackageJob::dispatch($domain);
+            // Run the job synchronously for immediate feedback
+            GeneratePackageJob::dispatchSync($domain, true);
 
-        // Return JSON for AJAX requests, redirect otherwise
-        if ($request->expectsJson() || $request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Package regeneration started. Please refresh in a moment.',
-            ]);
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Package regenerated successfully.',
+                ]);
+            }
+
+            return redirect()->back()->with('success', 'Package regenerated successfully.');
+        } catch (\Exception $e) {
+            \Log::error('Package regeneration failed', ['error' => $e->getMessage()]);
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Package regeneration failed: ' . $e->getMessage(),
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'Package regeneration failed: ' . $e->getMessage());
         }
-
-        return redirect()->back()->with('success', 'Package regeneration started. Please refresh in a moment.');
     }
 
     /**
