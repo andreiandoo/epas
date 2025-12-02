@@ -110,11 +110,13 @@ class PackageGeneratorService
  */
 ";
 
+        $coreHost = parse_url(config('app.url'), PHP_URL_HOST);
         $securityWrapper = "
 (function(){
     var d=\"{$domain}\";
     var h=window.location.hostname;
-    if(h!==\"localhost\"&&h!==\"127.0.0.1\"&&h!==d&&h!==\"www.\"+d&&!h.endsWith(\".\"+d)){
+    var isPreview=window.location.search.indexOf('preview_mode=1')!==-1||h===\"{$coreHost}\";
+    if(!isPreview&&h!==\"localhost\"&&h!==\"127.0.0.1\"&&h!==d&&h!==\"www.\"+d&&!h.endsWith(\".\"+d)){
         console.error(\"Tixello: Domain mismatch\");
         document.body.innerHTML=\"<div style='padding:20px;text-align:center;'><h1>Invalid License</h1><p>This application is not licensed for this domain.</p></div>\";
         throw new Error(\"Invalid domain\");
@@ -123,6 +125,7 @@ class PackageGeneratorService
         throw new Error(\"Tampering detected\");
     }
     window.__TIXELLO_TAMPER_CHECK__=\"{$package->package_hash}\";
+    window.__TIXELLO_PREVIEW__=isPreview;
 })();
 ";
 
