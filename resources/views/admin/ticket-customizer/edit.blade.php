@@ -529,8 +529,8 @@
                     const defaults = {
                         text: { name: 'Text', content: 'New Text', fontSize: 12, fontWeight: 'normal', color: '#000000', textAlign: 'left' },
                         image: { name: 'Image', src: '', objectFit: 'contain' },
-                        qr: { name: 'QR Code', variable: '{{ticket.qr_code}}' },
-                        barcode: { name: 'Barcode', variable: '{{ticket.barcode}}' },
+                        qr: { name: 'QR Code', variable: '@{{qrcode}}' },
+                        barcode: { name: 'Barcode', variable: '@{{barcode}}' },
                         shape: { name: 'Shape', fillColor: '#e5e7eb', borderColor: '#9ca3af', borderWidth: 1, borderRadius: 0 },
                         line: { name: 'Line', lineColor: '#000000', lineWidth: 1, lineStyle: 'solid' },
                     };
