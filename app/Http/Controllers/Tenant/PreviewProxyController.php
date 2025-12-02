@@ -36,8 +36,18 @@ class PreviewProxyController extends Controller
         $isAdmin = in_array($user->role, ['super-admin', 'admin']);
         $ownsDomain = $user->tenant_id && $domainModel->tenant_id === $user->tenant_id;
 
+        \Log::info('Preview proxy access check', [
+            'user_id' => $user->id,
+            'user_role' => $user->role,
+            'user_tenant_id' => $user->tenant_id,
+            'domain' => $domain,
+            'domain_tenant_id' => $domainModel->tenant_id,
+            'is_admin' => $isAdmin,
+            'owns_domain' => $ownsDomain,
+        ]);
+
         if (!$isAdmin && !$ownsDomain) {
-            abort(403, 'Access denied');
+            abort(403, 'Access denied - User tenant_id: ' . ($user->tenant_id ?? 'null') . ', Domain tenant_id: ' . $domainModel->tenant_id);
         }
 
         // Build the target URL
