@@ -4,6 +4,7 @@ namespace App\Filament\Resources\TicketTemplates\Pages;
 
 use App\Filament\Resources\TicketTemplates\TicketTemplateResource;
 use Filament\Actions;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 
 class EditTicketTemplate extends EditRecord
@@ -13,21 +14,25 @@ class EditTicketTemplate extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\Action::make('open_visual_editor')
-                ->label('Open Visual Editor')
-                ->icon('heroicon-o-pencil-square')
-                ->url(fn () => "/ticket-customizer/{$this->record->id}")
-                ->openUrlInNewTab()
-                ->color('primary'),
-
             Actions\Action::make('generate_preview')
                 ->label('Generate Preview')
                 ->icon('heroicon-o-photo')
                 ->action(function () {
-                    $previewGenerator = app(\App\Services\TicketCustomizer\TicketPreviewGenerator::class);
-                    $previewGenerator->saveTemplatePreview($this->record);
-                    $this->record->refresh();
-                    $this->notify('success', 'Preview generated successfully');
+                    try {
+                        $previewGenerator = app(\App\Services\TicketCustomizer\TicketPreviewGenerator::class);
+                        $previewGenerator->saveTemplatePreview($this->record);
+                        $this->record->refresh();
+                        Notification::make()
+                            ->title('Preview generated successfully')
+                            ->success()
+                            ->send();
+                    } catch (\Exception $e) {
+                        Notification::make()
+                            ->title('Error generating preview')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->send();
+                    }
                 })
                 ->color('success'),
 
@@ -37,7 +42,10 @@ class EditTicketTemplate extends EditRecord
                 ->action(function () {
                     $this->record->setAsDefault();
                     $this->record->refresh();
-                    $this->notify('success', 'Template set as default');
+                    Notification::make()
+                        ->title('Template set as default')
+                        ->success()
+                        ->send();
                 })
                 ->visible(fn () => !$this->record->is_default && $this->record->status === 'active')
                 ->requiresConfirmation()
@@ -55,7 +63,10 @@ class EditTicketTemplate extends EditRecord
                 ])
                 ->action(function (array $data) {
                     $newVersion = $this->record->createVersion($this->record->template_data, $data['name']);
-                    $this->notify('success', 'Version created successfully');
+                    Notification::make()
+                        ->title('Version created successfully')
+                        ->success()
+                        ->send();
                     return redirect($this->getResource()::getUrl('edit', ['record' => $newVersion]));
                 })
                 ->color('success'),
