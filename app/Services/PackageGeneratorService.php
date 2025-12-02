@@ -198,10 +198,11 @@ class PackageGeneratorService
         $modules = ['core', 'events', 'auth', 'cart', 'checkout'];
 
         // Add modules based on active microservices
-        $microservices = $tenant->microservices()->active()->with('microservice')->get();
+        // microservices() is a BelongsToMany that returns Microservice models directly
+        $microservices = $tenant->microservices()->wherePivot('is_active', true)->get();
 
-        foreach ($microservices as $tm) {
-            $slug = $tm->microservice->slug ?? '';
+        foreach ($microservices as $microservice) {
+            $slug = $microservice->slug ?? '';
 
             $moduleMap = [
                 'seating' => 'seating',
