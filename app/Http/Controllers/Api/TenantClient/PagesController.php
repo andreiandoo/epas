@@ -43,10 +43,18 @@ class PagesController extends Controller
             ], 404);
         }
 
-        $page = TenantPage::where('tenant_id', $tenant->id)
-            ->where('slug', $slug)
-            ->where('is_published', true)
-            ->first();
+        // Check if preview mode (allow unpublished pages)
+        $isPreview = $request->has('preview_mode') || $request->header('X-Preview-Mode');
+
+        $query = TenantPage::where('tenant_id', $tenant->id)
+            ->where('slug', $slug);
+
+        // Only filter by published if not in preview mode
+        if (!$isPreview) {
+            $query->where('is_published', true);
+        }
+
+        $page = $query->first();
 
         if (!$page) {
             return response()->json([
@@ -303,10 +311,17 @@ class PagesController extends Controller
     }
 
     /**
-     * Get tenant from hostname
+     * Get tenant from hostname or headers
      */
     private function getTenant(Request $request): ?Tenant
     {
+        // First check for tenant ID header (used by tenant-client)
+        $tenantId = $request->header('X-Tenant-ID');
+        if ($tenantId) {
+            return Tenant::find($tenantId);
+        }
+
+        // Fall back to hostname lookup
         $hostname = $request->input('hostname') ?? $request->getHost();
 
         $domain = Domain::where('domain', $hostname)
