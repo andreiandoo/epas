@@ -229,14 +229,16 @@
                             @if($batch->status === 'draft')
                                 {{-- Add Manual Recipient --}}
                                 <button wire:click="openManualModal('{{ $batch->id }}')"
-                                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm">
+                                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg shadow-sm"
+                                        style="background-color: #2563eb; color: white;">
                                     <x-heroicon-o-user-plus class="w-4 h-4" />
                                     Add Recipient
                                 </button>
 
                                 {{-- Import CSV --}}
                                 <button wire:click="openImportModal('{{ $batch->id }}')"
-                                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors shadow-sm">
+                                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg shadow-sm"
+                                        style="background-color: #9333ea; color: white;">
                                     <x-heroicon-o-arrow-up-tray class="w-4 h-4" />
                                     Import CSV
                                 </button>
@@ -244,13 +246,15 @@
                                 {{-- Generate PDFs - Only if has recipients --}}
                                 @if($canRender)
                                     <button wire:click="renderBatch('{{ $batch->id }}')"
-                                            class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors shadow-sm">
+                                            class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg shadow-sm"
+                                            style="background-color: #ea580c; color: white;">
                                         <x-heroicon-o-document class="w-4 h-4" />
                                         Generate PDFs ({{ $recipientCount }})
                                     </button>
                                 @else
                                     <button disabled
-                                            class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed">
+                                            class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg cursor-not-allowed"
+                                            style="background-color: #e5e7eb; color: #9ca3af;">
                                         <x-heroicon-o-document class="w-4 h-4" />
                                         Generate PDFs
                                     </button>
@@ -259,7 +263,8 @@
 
                             @if($batch->status === 'ready')
                                 <button wire:click="sendEmails('{{ $batch->id }}')"
-                                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors shadow-sm">
+                                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg shadow-sm"
+                                        style="background-color: #16a34a; color: white;">
                                     <x-heroicon-o-paper-airplane class="w-4 h-4" />
                                     Send Emails ({{ $batch->qty_rendered }})
                                 </button>
@@ -300,72 +305,68 @@
 
     {{-- Import Modal --}}
     @if($showImportModal && $selectedBatchId)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" wire:click.self="$set('showImportModal', false)">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-gray-200 dark:border-gray-700">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-purple-600 to-indigo-600">
-                    <h3 class="text-lg font-semibold text-white">Import Recipients</h3>
-                    <p class="text-sm text-purple-100 mt-1">Upload a CSV file with recipient data</p>
+        <div class="fixed inset-0 z-50 flex items-center justify-center" style="background-color: rgba(0,0,0,0.5);" wire:click.self="$set('showImportModal', false)">
+            <div class="rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden" style="background-color: white; border: 1px solid #e5e7eb;">
+                <div class="px-6 py-4" style="background: linear-gradient(to right, #9333ea, #4f46e5); border-bottom: 1px solid #e5e7eb;">
+                    <h3 style="font-size: 1.125rem; font-weight: 600; color: white;">Import Recipients</h3>
+                    <p style="font-size: 0.875rem; color: #e9d5ff; margin-top: 0.25rem;">Upload a CSV file with recipient data</p>
                 </div>
 
                 <form wire:submit="processImport" class="p-6 space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CSV File</label>
+                        <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;">CSV File</label>
                         <input type="file" wire:model="csvFile" accept=".csv"
-                               class="block w-full text-sm text-gray-500 dark:text-gray-400
-                                      file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0
-                                      file:text-sm file:font-medium file:bg-purple-50 dark:file:bg-purple-900/50
-                                      file:text-purple-700 dark:file:text-purple-300 hover:file:bg-purple-100
-                                      dark:hover:file:bg-purple-900/70 cursor-pointer" />
-                        <p class="text-xs text-gray-500 mt-2">
+                               style="width: 100%; font-size: 0.875rem; color: #6b7280;" />
+                        <p style="font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem;">
                             <strong>Required columns:</strong> name, email<br>
                             <strong>Optional:</strong> phone, company, seat
                         </p>
                     </div>
 
-                    <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                        <p class="text-xs font-medium text-gray-600 dark:text-gray-400 mb-3">Column Mapping (0-indexed)</p>
+                    <div class="p-4 rounded-lg" style="background-color: #f9fafb;">
+                        <p style="font-size: 0.75rem; font-weight: 500; color: #4b5563; margin-bottom: 0.75rem;">Column Mapping (0-indexed)</p>
                         <div class="grid grid-cols-5 gap-2">
                             <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Name</label>
+                                <label style="display: block; font-size: 0.75rem; color: #6b7280; margin-bottom: 0.25rem;">Name</label>
                                 <input type="number" wire:model="colName" min="0"
-                                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm py-1.5" />
+                                       style="width: 100%; padding: 0.375rem 0.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;" />
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Email</label>
+                                <label style="display: block; font-size: 0.75rem; color: #6b7280; margin-bottom: 0.25rem;">Email</label>
                                 <input type="number" wire:model="colEmail" min="0"
-                                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm py-1.5" />
+                                       style="width: 100%; padding: 0.375rem 0.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;" />
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Phone</label>
+                                <label style="display: block; font-size: 0.75rem; color: #6b7280; margin-bottom: 0.25rem;">Phone</label>
                                 <input type="number" wire:model="colPhone" min="0"
-                                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm py-1.5" />
+                                       style="width: 100%; padding: 0.375rem 0.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;" />
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Company</label>
+                                <label style="display: block; font-size: 0.75rem; color: #6b7280; margin-bottom: 0.25rem;">Company</label>
                                 <input type="number" wire:model="colCompany" min="0"
-                                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm py-1.5" />
+                                       style="width: 100%; padding: 0.375rem 0.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;" />
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500 dark:text-gray-400 mb-1">Seat</label>
+                                <label style="display: block; font-size: 0.75rem; color: #6b7280; margin-bottom: 0.25rem;">Seat</label>
                                 <input type="number" wire:model="colSeat" min="0"
-                                       class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm py-1.5" />
+                                       style="width: 100%; padding: 0.375rem 0.5rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;" />
                             </div>
                         </div>
                     </div>
 
                     <div class="flex items-center">
                         <input type="checkbox" wire:model="skipHeader" id="skipHeader"
-                               class="rounded border-gray-300 dark:border-gray-600 text-purple-600 focus:ring-purple-500" checked />
-                        <label for="skipHeader" class="ml-2 text-sm text-gray-600 dark:text-gray-400">Skip header row</label>
+                               style="border-radius: 0.25rem; border: 1px solid #d1d5db;" checked />
+                        <label for="skipHeader" style="margin-left: 0.5rem; font-size: 0.875rem; color: #4b5563;">Skip header row</label>
                     </div>
 
-                    <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex justify-end gap-3 pt-4" style="border-top: 1px solid #e5e7eb;">
                         <button type="button" wire:click="$set('showImportModal', false)"
-                                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #374151; background-color: #f3f4f6; border-radius: 0.5rem; border: none; cursor: pointer;">
                             Cancel
                         </button>
                         <button type="submit"
-                                class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors shadow-sm">
+                                style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: white; background-color: #9333ea; border-radius: 0.5rem; border: none; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                             Import Recipients
                         </button>
                     </div>
@@ -376,62 +377,62 @@
 
     {{-- Manual Entry Modal --}}
     @if($showManualModal && $manualBatchId)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" wire:click.self="closeManualModal">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-200 dark:border-gray-700">
-                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-600 to-cyan-600">
-                    <h3 class="text-lg font-semibold text-white">Add Recipient</h3>
-                    <p class="text-sm text-blue-100 mt-1">Enter recipient details manually</p>
+        <div class="fixed inset-0 z-50 flex items-center justify-center" style="background-color: rgba(0,0,0,0.5);" wire:click.self="closeManualModal">
+            <div class="rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" style="background-color: white; border: 1px solid #e5e7eb;">
+                <div class="px-6 py-4" style="background: linear-gradient(to right, #2563eb, #0891b2); border-bottom: 1px solid #e5e7eb;">
+                    <h3 style="font-size: 1.125rem; font-weight: 600; color: white;">Add Recipient</h3>
+                    <p style="font-size: 0.875rem; color: #bfdbfe; margin-top: 0.25rem;">Enter recipient details manually</p>
                 </div>
 
                 <form wire:submit="addManualRecipient" class="p-6 space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Name <span class="text-red-500">*</span>
+                        <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">
+                            Name <span style="color: #ef4444;">*</span>
                         </label>
                         <input type="text" wire:model="manualName" required
                                placeholder="John Doe"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" />
+                               style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;" />
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Email <span class="text-red-500">*</span>
+                        <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">
+                            Email <span style="color: #ef4444;">*</span>
                         </label>
                         <input type="email" wire:model="manualEmail" required
                                placeholder="john@example.com"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" />
+                               style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;" />
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Phone</label>
                             <input type="text" wire:model="manualPhone"
                                    placeholder="+40 700 000 000"
-                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" />
+                                   style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;" />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company</label>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Company</label>
                             <input type="text" wire:model="manualCompany"
                                    placeholder="ACME Inc."
-                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" />
+                                   style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;" />
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seat Reference</label>
+                        <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Seat Reference</label>
                         <input type="text" wire:model="manualSeat"
                                placeholder="A-12"
-                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" />
-                        <p class="text-xs text-gray-500 mt-1">Optional: Assigned seat or table reference</p>
+                               style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;" />
+                        <p style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Optional: Assigned seat or table reference</p>
                     </div>
 
-                    <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex justify-end gap-3 pt-4" style="border-top: 1px solid #e5e7eb;">
                         <button type="button" wire:click="closeManualModal"
-                                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #374151; background-color: #f3f4f6; border-radius: 0.5rem; border: none; cursor: pointer;">
                             Done
                         </button>
                         <button type="submit"
-                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+                                style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: white; background-color: #2563eb; border-radius: 0.5rem; border: none; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                             Add & Continue
                         </button>
                     </div>
