@@ -112,7 +112,7 @@ class Invitations extends Page
         $tenant = auth()->user()->tenant;
 
         return TicketTemplate::where('tenant_id', $tenant->id)
-            ->where('is_active', true)
+            ->where('status', 'active')
             ->pluck('name', 'id')
             ->toArray();
     }

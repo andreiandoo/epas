@@ -106,8 +106,8 @@ class AnalyticsDashboard extends Page
                         ->reactive()
                         ->afterStateUpdated(fn ($state) => $this->dateRange = $state),
 
-                    Forms\Components\Actions::make([
-                        Forms\Components\Actions\Action::make('refresh')
+                    SC\Actions::make([
+                        SC\Actions\Action::make('refresh')
                             ->label('Refresh')
                             ->icon('heroicon-o-arrow-path')
                             ->action(fn () => $this->dispatch('$refresh')),
