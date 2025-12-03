@@ -270,6 +270,15 @@
                                     Download PDFs ({{ $batch->qty_rendered }})
                                 </button>
 
+                                {{-- Regenerate PDFs --}}
+                                <button wire:click="regeneratePdfs('{{ $batch->id }}')"
+                                        wire:confirm="This will regenerate all PDFs. Continue?"
+                                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg shadow-sm"
+                                        style="background-color: #f59e0b; color: white;">
+                                    <x-heroicon-o-arrow-path class="w-4 h-4" />
+                                    Regenerate PDFs
+                                </button>
+
                                 @if($batch->status === 'ready')
                                     <button wire:click="sendEmails('{{ $batch->id }}')"
                                             class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg shadow-sm"

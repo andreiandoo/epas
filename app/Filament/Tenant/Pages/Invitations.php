@@ -1045,6 +1045,41 @@ class Invitations extends Page
         ])->deleteFileAfterSend(true);
     }
 
+    /**
+     * Regenerate all PDFs for a batch (force re-render)
+     */
+    public function regeneratePdfs(string $batchId): void
+    {
+        $batch = InviteBatch::find($batchId);
+        $tenant = auth()->user()->tenant;
+
+        if (!$batch || $batch->tenant_id !== $tenant->id) {
+            Notification::make()
+                ->danger()
+                ->title('Access denied')
+                ->send();
+            return;
+        }
+
+        // Delete existing PDFs
+        $storagePath = "invitations/{$batch->id}";
+        Storage::disk('local')->deleteDirectory($storagePath);
+
+        // Reset rendered status on invites
+        $batch->invites()
+            ->whereNotNull('rendered_at')
+            ->update([
+                'rendered_at' => null,
+                'urls' => null,
+            ]);
+
+        // Reset batch qty_rendered
+        $batch->update(['qty_rendered' => 0]);
+
+        // Now regenerate
+        $this->renderBatch($batchId);
+    }
+
     public function downloadExport(string $batchId): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $batch = InviteBatch::with('invites')->find($batchId);
