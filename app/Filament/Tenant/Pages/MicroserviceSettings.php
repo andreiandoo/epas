@@ -53,7 +53,12 @@ class MicroserviceSettings extends Page
         $this->activatedAt = $activeMicroservice->pivot->activated_at;
 
         // Load saved settings from pivot configuration
-        $this->form->fill($activeMicroservice->pivot->configuration ?? []);
+        // Handle case where configuration might be stored as JSON string
+        $config = $activeMicroservice->pivot->configuration;
+        if (is_string($config)) {
+            $config = json_decode($config, true) ?? [];
+        }
+        $this->form->fill($config ?? []);
     }
 
     public function getTitle(): string
