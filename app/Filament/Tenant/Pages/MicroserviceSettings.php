@@ -3,7 +3,7 @@
 namespace App\Filament\Tenant\Pages;
 
 use App\Models\Microservice;
-use App\Models\TenantMicroservice;
+use App\Models\Tenant;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Actions;
@@ -24,32 +24,32 @@ class MicroserviceSettings extends Page
 
     public ?string $microserviceSlug = null;
     public ?Microservice $microservice = null;
-    public ?TenantMicroservice $tenantMicroservice = null;
+    public ?Tenant $tenant = null;
     public ?array $data = [];
 
     public function mount(string $slug): void
     {
-        $tenant = auth()->user()->tenant;
+        $this->tenant = auth()->user()->tenant;
 
-        if (!$tenant) {
+        if (!$this->tenant) {
             abort(404);
         }
 
         $this->microserviceSlug = $slug;
         $this->microservice = Microservice::where('slug', $slug)->firstOrFail();
 
-        // Check if tenant has this microservice active
-        $this->tenantMicroservice = TenantMicroservice::where('tenant_id', $tenant->id)
-            ->where('microservice_id', $this->microservice->id)
-            ->where('status', 'active')
+        // Check if tenant has this microservice active (using pivot table)
+        $activeMicroservice = $this->tenant->microservices()
+            ->where('microservices.id', $this->microservice->id)
+            ->wherePivot('is_active', true)
             ->first();
 
-        if (!$this->tenantMicroservice) {
+        if (!$activeMicroservice) {
             abort(403, 'You do not have access to this microservice.');
         }
 
-        // Load saved settings
-        $this->form->fill($this->tenantMicroservice->settings ?? []);
+        // Load saved settings from pivot configuration
+        $this->form->fill($activeMicroservice->pivot->configuration ?? []);
     }
 
     public function getTitle(): string
@@ -553,9 +553,11 @@ class MicroserviceSettings extends Page
     {
         $data = $this->form->getState();
 
-        $this->tenantMicroservice->update([
-            'settings' => $data,
-        ]);
+        // Update configuration in pivot table
+        $this->tenant->microservices()->updateExistingPivot(
+            $this->microservice->id,
+            ['configuration' => $data]
+        );
 
         Notification::make()
             ->success()

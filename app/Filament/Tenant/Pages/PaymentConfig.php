@@ -3,7 +3,6 @@
 namespace App\Filament\Tenant\Pages;
 
 use App\Models\Microservice;
-use App\Models\TenantMicroservice;
 use App\Models\TenantPaymentConfig;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use BackedEnum;
@@ -60,16 +59,14 @@ class PaymentConfig extends Page
     {
         $paymentMicroserviceSlugs = array_keys(static::$paymentProcessorSlugs);
 
-        $activeMicroservice = TenantMicroservice::where('tenant_id', $tenant->id)
-            ->where('status', 'active')
-            ->whereHas('microservice', function ($query) use ($paymentMicroserviceSlugs) {
-                $query->whereIn('slug', $paymentMicroserviceSlugs);
-            })
-            ->with('microservice')
+        // Use pivot table relationship
+        $activeMicroservice = $tenant->microservices()
+            ->whereIn('microservices.slug', $paymentMicroserviceSlugs)
+            ->wherePivot('is_active', true)
             ->first();
 
-        if ($activeMicroservice && $activeMicroservice->microservice) {
-            return static::$paymentProcessorSlugs[$activeMicroservice->microservice->slug] ?? null;
+        if ($activeMicroservice) {
+            return static::$paymentProcessorSlugs[$activeMicroservice->slug] ?? null;
         }
 
         return null;
