@@ -233,4 +233,121 @@ class AnalyticsDashboard extends Page
     {
         return 'Analytics Dashboard';
     }
+
+    /**
+     * Get real-time analytics data
+     * Note: This returns simulated data. In production, connect to actual tracking service.
+     */
+    public function getRealtimeData(): array
+    {
+        // Simulated real-time data - would come from tracking service in production
+        $baseUsers = rand(5, 25);
+
+        // Generate users per minute for last 30 minutes
+        $usersPerMinute = [];
+        for ($i = 0; $i < 30; $i++) {
+            $usersPerMinute[] = max(0, $baseUsers + rand(-8, 12));
+        }
+
+        return [
+            'active_users' => $baseUsers,
+            'users_per_minute' => $usersPerMinute,
+            'active_pages' => [
+                ['path' => '/events', 'users' => rand(3, 12)],
+                ['path' => '/checkout', 'users' => rand(1, 5)],
+                ['path' => '/event/concert-xyz', 'users' => rand(2, 8)],
+                ['path' => '/tickets', 'users' => rand(1, 4)],
+                ['path' => '/', 'users' => rand(2, 6)],
+            ],
+            'recent_events' => $this->generateRecentEvents(),
+            'total_users' => rand(1200, 2500),
+            'users_change' => rand(-5, 15) + (rand(0, 100) / 10),
+            'total_sessions' => rand(1800, 4000),
+            'sessions_change' => rand(0, 20) + (rand(0, 100) / 10),
+            'bounce_rate' => 35 + rand(0, 20) + (rand(0, 100) / 100),
+            'avg_duration' => sprintf('%d:%02d', rand(2, 5), rand(0, 59)),
+        ];
+    }
+
+    /**
+     * Generate simulated recent activity events
+     */
+    protected function generateRecentEvents(): array
+    {
+        $events = [];
+        $types = ['purchase', 'view', 'cart', 'view', 'view', 'purchase', 'cart'];
+        $locations = ['Bucharest, RO', 'Cluj-Napoca, RO', 'Timișoara, RO', 'Berlin, DE', 'Vienna, AT', 'Budapest, HU'];
+        $pages = ['Summer Festival 2025', 'Jazz Night', 'Rock Concert', 'Classical Evening', 'Electronic Party'];
+
+        for ($i = 0; $i < 8; $i++) {
+            $type = $types[array_rand($types)];
+            $page = $pages[array_rand($pages)];
+
+            $description = match ($type) {
+                'purchase' => "Purchased 2 tickets for {$page}",
+                'view' => "Viewing {$page}",
+                'cart' => "Added {$page} to cart",
+                default => "Browsing events",
+            };
+
+            $events[] = [
+                'type' => $type,
+                'description' => $description,
+                'location' => $locations[array_rand($locations)],
+                'time' => rand(1, 15) . ' sec ago',
+            ];
+        }
+
+        return $events;
+    }
+
+    /**
+     * Get traffic sources data
+     */
+    public function getTrafficSources(): array
+    {
+        return [
+            ['name' => 'Direct', 'percentage' => 42, 'color' => 'bg-blue-500'],
+            ['name' => 'Organic Search', 'percentage' => 28, 'color' => 'bg-green-500'],
+            ['name' => 'Social Media', 'percentage' => 18, 'color' => 'bg-purple-500'],
+            ['name' => 'Referral', 'percentage' => 8, 'color' => 'bg-orange-500'],
+            ['name' => 'Email', 'percentage' => 4, 'color' => 'bg-pink-500'],
+        ];
+    }
+
+    /**
+     * Get top pages data
+     */
+    public function getTopPages(): array
+    {
+        return [
+            ['path' => '/events', 'views' => rand(800, 1500)],
+            ['path' => '/events/summer-fest', 'views' => rand(400, 800)],
+            ['path' => '/checkout', 'views' => rand(200, 500)],
+            ['path' => '/artists', 'views' => rand(150, 400)],
+            ['path' => '/about', 'views' => rand(80, 200)],
+        ];
+    }
+
+    /**
+     * Get geographic distribution data
+     */
+    public function getGeographicData(): array
+    {
+        return [
+            ['flag' => '🇷🇴', 'name' => 'Romania', 'users' => rand(800, 1500)],
+            ['flag' => '🇩🇪', 'name' => 'Germany', 'users' => rand(200, 500)],
+            ['flag' => '🇦🇹', 'name' => 'Austria', 'users' => rand(100, 300)],
+            ['flag' => '🇭🇺', 'name' => 'Hungary', 'users' => rand(80, 200)],
+            ['flag' => '🇬🇧', 'name' => 'UK', 'users' => rand(50, 150)],
+        ];
+    }
+
+    /**
+     * Refresh real-time data (called by wire:poll)
+     */
+    public function refreshRealtime(): void
+    {
+        // This triggers a re-render which will call getRealtimeData() again
+    }
 }
