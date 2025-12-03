@@ -345,7 +345,7 @@
                                 <div class="space-y-4 pt-4 border-t border-gray-700">
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-1">Content</label>
-                                        <textarea x-model="selectedLayer.content" @input="markChanged()" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Text or {{variable}}"></textarea>
+                                        <textarea x-model="selectedLayer.content" @input="markChanged()" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Text or @{{variable}}"></textarea>
                                     </div>
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-1">Font Family</label>
