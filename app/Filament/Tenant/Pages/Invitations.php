@@ -25,7 +25,7 @@ class Invitations extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-envelope';
     protected static ?string $navigationLabel = 'Invitations';
-    protected static \UnitEnum|string|null $navigationGroup = 'Distribution';
+    protected static \UnitEnum|string|null $navigationGroup = 'Services';
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.tenant.pages.invitations';
 
@@ -129,7 +129,7 @@ class Invitations extends Page
                 ->form([
                     Forms\Components\Select::make('event_ref')
                         ->label('Event')
-                        ->options($this->getEvents())
+                        ->options(fn () => $this->getEvents())
                         ->required()
                         ->searchable(),
 
@@ -149,7 +149,7 @@ class Invitations extends Page
 
                     Forms\Components\Select::make('template_id')
                         ->label('Ticket Template')
-                        ->options($this->getTemplates())
+                        ->options(fn () => $this->getTemplates())
                         ->searchable()
                         ->helperText('Optional: Select a template for invitation design'),
 

@@ -9,7 +9,8 @@ class Microservices extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-puzzle-piece';
     protected static ?string $navigationLabel = 'Microservices';
-    protected static ?int $navigationSort = 4;
+    protected static \UnitEnum|string|null $navigationGroup = 'Services';
+    protected static ?int $navigationSort = 0;
     protected string $view = 'filament.tenant.pages.microservices';
 
     public function getTitle(): string

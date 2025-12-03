@@ -20,7 +20,7 @@ class AnalyticsDashboard extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar-square';
     protected static ?string $navigationLabel = 'Analytics';
-    protected static \UnitEnum|string|null $navigationGroup = 'Insights';
+    protected static \UnitEnum|string|null $navigationGroup = 'Services';
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.tenant.pages.analytics-dashboard';
 
@@ -86,12 +86,12 @@ class AnalyticsDashboard extends Page
 
         return $form
             ->schema([
-                SC\Grid::make(3)->schema([
+                SC\Grid::make(2)->schema([
                     Forms\Components\Select::make('event_id')
                         ->label('Event')
                         ->options(['all' => 'All Events'] + $events)
                         ->default('all')
-                        ->reactive()
+                        ->live()
                         ->afterStateUpdated(fn ($state) => $this->selectedEventId = $state),
 
                     Forms\Components\Select::make('date_range')
@@ -103,15 +103,8 @@ class AnalyticsDashboard extends Page
                             'all' => 'All time',
                         ])
                         ->default('30d')
-                        ->reactive()
+                        ->live()
                         ->afterStateUpdated(fn ($state) => $this->dateRange = $state),
-
-                    SC\Actions::make([
-                        SC\Actions\Action::make('refresh')
-                            ->label('Refresh')
-                            ->icon('heroicon-o-arrow-path')
-                            ->action(fn () => $this->dispatch('$refresh')),
-                    ])->verticallyAlignEnd(),
                 ]),
             ])
             ->statePath('data');

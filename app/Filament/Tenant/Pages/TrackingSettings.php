@@ -18,7 +18,7 @@ class TrackingSettings extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
     protected static ?string $navigationLabel = 'Tracking & Pixels';
-    protected static \UnitEnum|string|null $navigationGroup = 'Marketing';
+    protected static \UnitEnum|string|null $navigationGroup = 'Services';
     protected static ?int $navigationSort = 5;
     protected string $view = 'filament.tenant.pages.tracking-settings';
 
@@ -98,7 +98,8 @@ class TrackingSettings extends Page
                     ->schema([
                         Forms\Components\Toggle::make('ga4_enabled')
                             ->label('Enable GA4')
-                            ->helperText('Enable Google Analytics 4 tracking'),
+                            ->helperText('Enable Google Analytics 4 tracking')
+                            ->live(),
 
                         Forms\Components\TextInput::make('ga4_id')
                             ->label('Measurement ID')
@@ -135,7 +136,8 @@ class TrackingSettings extends Page
                     ->schema([
                         Forms\Components\Toggle::make('gtm_enabled')
                             ->label('Enable GTM')
-                            ->helperText('Enable Google Tag Manager'),
+                            ->helperText('Enable Google Tag Manager')
+                            ->live(),
 
                         Forms\Components\TextInput::make('gtm_id')
                             ->label('Container ID')
@@ -173,7 +175,8 @@ class TrackingSettings extends Page
                     ->schema([
                         Forms\Components\Toggle::make('meta_enabled')
                             ->label('Enable Meta Pixel')
-                            ->helperText('Enable Facebook/Meta Pixel tracking'),
+                            ->helperText('Enable Facebook/Meta Pixel tracking')
+                            ->live(),
 
                         Forms\Components\TextInput::make('meta_id')
                             ->label('Pixel ID')
@@ -211,7 +214,8 @@ class TrackingSettings extends Page
                     ->schema([
                         Forms\Components\Toggle::make('tiktok_enabled')
                             ->label('Enable TikTok Pixel')
-                            ->helperText('Enable TikTok Pixel tracking'),
+                            ->helperText('Enable TikTok Pixel tracking')
+                            ->live(),
 
                         Forms\Components\TextInput::make('tiktok_id')
                             ->label('Pixel ID')
