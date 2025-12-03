@@ -97,6 +97,13 @@ class Invitations extends Page
             ->get();
     }
 
+    public function getRecipientCount(int $batchId): int
+    {
+        return Invite::where('batch_id', $batchId)
+            ->whereNotNull('recipient')
+            ->count();
+    }
+
     public function getEvents(): array
     {
         $tenant = auth()->user()->tenant;

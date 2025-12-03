@@ -10,47 +10,75 @@
     @endphp
 
     <div class="space-y-6">
-        {{-- Top Bar with Date Range --}}
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-medium">
-                    <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                    Real-time
+        {{-- Header with Info Banner --}}
+        <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-2xl p-6 text-white shadow-xl">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold mb-2">Analytics Dashboard</h2>
+                    <p class="text-indigo-100 text-sm max-w-2xl">
+                        Track your sales performance, ticket revenue, and visitor engagement.
+                        Data shown combines your platform sales with simulated traffic data.
+                    </p>
                 </div>
-                <span class="text-sm text-gray-500 dark:text-gray-400">Last updated: {{ now()->format('H:i:s') }}</span>
-            </div>
-            <div class="w-48">
-                {{ $this->form }}
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur rounded-lg text-sm">
+                        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                        Live
+                    </div>
+                    <div class="w-40">
+                        {{ $this->form }}
+                    </div>
+                </div>
             </div>
         </div>
 
-        {{-- Real-time Overview (Google Analytics Style) --}}
+        {{-- Info Note --}}
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+            <div class="flex gap-3">
+                <x-heroicon-o-information-circle class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div class="text-sm">
+                    <p class="font-medium text-blue-900 dark:text-blue-100">About this dashboard</p>
+                    <p class="text-blue-700 dark:text-blue-300 mt-1">
+                        <strong>Revenue & Orders:</strong> Real data from your platform sales.<br>
+                        <strong>Traffic & Visitors:</strong> Simulated preview. To see real traffic data, configure your tracking pixels in
+                        <a href="{{ route('filament.tenant.pages.tracking-settings') }}" class="underline hover:text-blue-900">Tracking Settings</a>
+                        and view analytics in Google Analytics, Meta Business Suite, or TikTok Ads Manager.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Main Grid --}}
         <div class="grid grid-cols-12 gap-6">
             {{-- Left Panel - Real-time Stats --}}
             <div class="col-span-12 lg:col-span-4">
-                <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-xl" wire:poll.5s="refreshRealtime">
+                <div class="bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 rounded-2xl p-6 text-white shadow-xl" wire:poll.10s="refreshRealtime">
                     <div class="flex items-center justify-between mb-6">
-                        <span class="text-blue-100 text-sm font-medium uppercase tracking-wider">Real-time</span>
-                        <span class="flex items-center text-xs text-blue-200">
+                        <span class="text-purple-100 text-sm font-medium uppercase tracking-wider">Real-time Preview</span>
+                        <span class="flex items-center text-xs text-purple-200 bg-white/10 px-2 py-1 rounded-full">
                             <span class="w-1.5 h-1.5 rounded-full bg-green-400 mr-1.5 animate-pulse"></span>
-                            LIVE
+                            DEMO
                         </span>
                     </div>
 
                     <div class="text-center mb-8">
-                        <div class="text-6xl font-bold mb-2">{{ $realtimeData['active_users'] }}</div>
-                        <div class="text-blue-200 text-sm">active users right now</div>
+                        <div class="text-7xl font-black mb-2 bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
+                            {{ $realtimeData['active_users'] }}
+                        </div>
+                        <div class="text-purple-200 text-sm">visitors right now</div>
                     </div>
 
                     {{-- Activity by Time (Last 30 minutes) --}}
                     <div class="mb-6">
-                        <div class="text-xs text-blue-200 uppercase tracking-wider mb-3">Users per minute (last 30 min)</div>
+                        <div class="text-xs text-purple-200 uppercase tracking-wider mb-3">Activity (last 30 min)</div>
                         <div class="flex items-end justify-between h-16 gap-0.5">
                             @foreach($realtimeData['users_per_minute'] as $count)
-                                <div class="flex-1 bg-white/20 rounded-t transition-all hover:bg-white/30" style="height: {{ max(4, ($count / max(1, max($realtimeData['users_per_minute']))) * 100) }}%"></div>
+                                @php $height = max(8, ($count / max(1, max($realtimeData['users_per_minute']))) * 100); @endphp
+                                <div class="flex-1 bg-white/30 rounded-t transition-all hover:bg-white/50"
+                                     style="height: {{ $height }}%"></div>
                             @endforeach
                         </div>
-                        <div class="flex justify-between text-xs text-blue-200 mt-2">
+                        <div class="flex justify-between text-xs text-purple-200 mt-2">
                             <span>30 min ago</span>
                             <span>Now</span>
                         </div>
@@ -58,12 +86,12 @@
 
                     {{-- Top Active Pages --}}
                     <div>
-                        <div class="text-xs text-blue-200 uppercase tracking-wider mb-3">Top Active Pages</div>
+                        <div class="text-xs text-purple-200 uppercase tracking-wider mb-3">Top Active Pages</div>
                         <div class="space-y-2">
                             @foreach($realtimeData['active_pages'] as $page)
-                                <div class="flex items-center justify-between text-sm">
+                                <div class="flex items-center justify-between text-sm bg-white/10 rounded-lg px-3 py-2">
                                     <span class="truncate flex-1 text-white/90">{{ $page['path'] }}</span>
-                                    <span class="font-semibold ml-2">{{ $page['users'] }}</span>
+                                    <span class="font-bold ml-2 bg-white/20 px-2 py-0.5 rounded text-xs">{{ $page['users'] }}</span>
                                 </div>
                             @endforeach
                         </div>
@@ -71,14 +99,14 @@
                 </div>
 
                 {{-- Real-time Events --}}
-                <div class="mt-6 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-gray-700">
+                <div class="mt-6 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-semibold text-gray-900 dark:text-white">Live Activity</h3>
-                        <span class="text-xs text-gray-500">Auto-refresh</span>
+                        <span class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">Preview</span>
                     </div>
                     <div class="space-y-3 max-h-64 overflow-y-auto">
                         @foreach($realtimeData['recent_events'] as $event)
-                            <div class="flex items-start gap-3 text-sm animate-fade-in">
+                            <div class="flex items-start gap-3 text-sm p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                 <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
                                     {{ $event['type'] === 'purchase' ? 'bg-green-100 dark:bg-green-900/50' : '' }}
                                     {{ $event['type'] === 'view' ? 'bg-blue-100 dark:bg-blue-900/50' : '' }}
@@ -104,127 +132,172 @@
 
             {{-- Right Panel - Main Dashboard --}}
             <div class="col-span-12 lg:col-span-8 space-y-6">
-                {{-- Key Metrics Row --}}
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {{-- Users --}}
-                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-                        <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Users</div>
-                        <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ number_format($realtimeData['total_users']) }}</div>
-                        <div class="flex items-center mt-2 text-xs">
-                            @if($realtimeData['users_change'] >= 0)
-                                <span class="text-green-600 flex items-center">
-                                    <x-heroicon-s-arrow-trending-up class="w-3 h-3 mr-0.5" />
-                                    {{ number_format($realtimeData['users_change'], 1) }}%
-                                </span>
-                            @else
-                                <span class="text-red-600 flex items-center">
-                                    <x-heroicon-s-arrow-trending-down class="w-3 h-3 mr-0.5" />
-                                    {{ number_format(abs($realtimeData['users_change']), 1) }}%
-                                </span>
+                {{-- Revenue Stats (Real Data) --}}
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <x-heroicon-s-check-badge class="w-4 h-4 text-green-500" />
+                        Real Platform Data
+                    </h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-5 text-white shadow-lg">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                                    <x-heroicon-s-currency-euro class="w-5 h-5" />
+                                </div>
+                                <span class="text-xs text-emerald-100 uppercase tracking-wider">Revenue</span>
+                            </div>
+                            <div class="text-3xl font-black">€{{ number_format($metrics['total_revenue'], 0) }}</div>
+                            @if($metrics['revenue_change'] != 0)
+                                <div class="text-xs text-emerald-100 mt-2 flex items-center gap-1">
+                                    @if($metrics['revenue_change'] > 0)
+                                        <x-heroicon-s-arrow-trending-up class="w-3 h-3" />
+                                    @else
+                                        <x-heroicon-s-arrow-trending-down class="w-3 h-3" />
+                                    @endif
+                                    {{ $metrics['revenue_change'] > 0 ? '+' : '' }}{{ number_format($metrics['revenue_change'], 1) }}%
+                                </div>
                             @endif
                         </div>
-                    </div>
-
-                    {{-- Sessions --}}
-                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-                        <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sessions</div>
-                        <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ number_format($realtimeData['total_sessions']) }}</div>
-                        <div class="flex items-center mt-2 text-xs">
-                            <span class="text-green-600 flex items-center">
-                                <x-heroicon-s-arrow-trending-up class="w-3 h-3 mr-0.5" />
-                                {{ number_format($realtimeData['sessions_change'], 1) }}%
-                            </span>
+                        <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-5 text-white shadow-lg">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                                    <x-heroicon-s-shopping-bag class="w-5 h-5" />
+                                </div>
+                                <span class="text-xs text-blue-100 uppercase tracking-wider">Orders</span>
+                            </div>
+                            <div class="text-3xl font-black">{{ number_format($metrics['total_orders']) }}</div>
                         </div>
-                    </div>
-
-                    {{-- Bounce Rate --}}
-                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-                        <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bounce Rate</div>
-                        <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ number_format($realtimeData['bounce_rate'], 1) }}%</div>
-                        <div class="flex items-center mt-2 text-xs">
-                            <span class="text-green-600 flex items-center">
-                                <x-heroicon-s-arrow-trending-down class="w-3 h-3 mr-0.5" />
-                                2.3%
-                            </span>
+                        <div class="bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl p-5 text-white shadow-lg">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                                    <x-heroicon-s-ticket class="w-5 h-5" />
+                                </div>
+                                <span class="text-xs text-orange-100 uppercase tracking-wider">Tickets</span>
+                            </div>
+                            <div class="text-3xl font-black">{{ number_format($metrics['total_tickets']) }}</div>
                         </div>
-                    </div>
-
-                    {{-- Avg Session Duration --}}
-                    <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-                        <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg Duration</div>
-                        <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ $realtimeData['avg_duration'] }}</div>
-                        <div class="flex items-center mt-2 text-xs">
-                            <span class="text-green-600 flex items-center">
-                                <x-heroicon-s-arrow-trending-up class="w-3 h-3 mr-0.5" />
-                                8.5%
-                            </span>
+                        <div class="bg-gradient-to-br from-purple-500 to-violet-600 rounded-2xl p-5 text-white shadow-lg">
+                            <div class="flex items-center gap-2 mb-3">
+                                <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                                    <x-heroicon-s-calculator class="w-5 h-5" />
+                                </div>
+                                <span class="text-xs text-purple-100 uppercase tracking-wider">Avg Order</span>
+                            </div>
+                            <div class="text-3xl font-black">€{{ number_format($metrics['avg_order_value'], 0) }}</div>
                         </div>
                     </div>
                 </div>
 
-                {{-- Revenue Stats --}}
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 text-white shadow-lg">
-                        <div class="text-xs text-green-100 uppercase tracking-wider">Total Revenue</div>
-                        <div class="text-2xl font-bold mt-1">€{{ number_format($metrics['total_revenue'], 0) }}</div>
-                        @if($metrics['revenue_change'] != 0)
-                            <div class="text-xs text-green-100 mt-2">
-                                {{ $metrics['revenue_change'] > 0 ? '+' : '' }}{{ number_format($metrics['revenue_change'], 1) }}% vs prev
+                {{-- Traffic Metrics (Demo) --}}
+                <div>
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <x-heroicon-s-sparkles class="w-4 h-4 text-purple-500" />
+                        Traffic Preview (Demo)
+                    </h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Users</div>
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ number_format($realtimeData['total_users']) }}</div>
+                            <div class="flex items-center mt-2 text-xs">
+                                <span class="text-green-600 dark:text-green-400 flex items-center">
+                                    <x-heroicon-s-arrow-trending-up class="w-3 h-3 mr-0.5" />
+                                    {{ number_format(abs($realtimeData['users_change']), 1) }}%
+                                </span>
                             </div>
-                        @endif
-                    </div>
-                    <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-4 text-white shadow-lg">
-                        <div class="text-xs text-blue-100 uppercase tracking-wider">Orders</div>
-                        <div class="text-2xl font-bold mt-1">{{ number_format($metrics['total_orders']) }}</div>
-                    </div>
-                    <div class="bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl p-4 text-white shadow-lg">
-                        <div class="text-xs text-orange-100 uppercase tracking-wider">Tickets Sold</div>
-                        <div class="text-2xl font-bold mt-1">{{ number_format($metrics['total_tickets']) }}</div>
-                    </div>
-                    <div class="bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl p-4 text-white shadow-lg">
-                        <div class="text-xs text-purple-100 uppercase tracking-wider">Avg Order</div>
-                        <div class="text-2xl font-bold mt-1">€{{ number_format($metrics['avg_order_value'], 0) }}</div>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sessions</div>
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ number_format($realtimeData['total_sessions']) }}</div>
+                            <div class="flex items-center mt-2 text-xs">
+                                <span class="text-green-600 dark:text-green-400 flex items-center">
+                                    <x-heroicon-s-arrow-trending-up class="w-3 h-3 mr-0.5" />
+                                    {{ number_format($realtimeData['sessions_change'], 1) }}%
+                                </span>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bounce Rate</div>
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ number_format($realtimeData['bounce_rate'], 1) }}%</div>
+                            <div class="flex items-center mt-2 text-xs">
+                                <span class="text-green-600 dark:text-green-400 flex items-center">
+                                    <x-heroicon-s-arrow-trending-down class="w-3 h-3 mr-0.5" />
+                                    2.3%
+                                </span>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
+                            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg Duration</div>
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ $realtimeData['avg_duration'] }}</div>
+                            <div class="flex items-center mt-2 text-xs">
+                                <span class="text-green-600 dark:text-green-400 flex items-center">
+                                    <x-heroicon-s-arrow-trending-up class="w-3 h-3 mr-0.5" />
+                                    8.5%
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 {{-- Charts Row --}}
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {{-- Users Over Time --}}
-                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                    {{-- Revenue Chart --}}
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                         <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-semibold text-gray-900 dark:text-white">Users Over Time</h3>
-                            <div class="flex gap-2">
-                                <span class="inline-flex items-center text-xs">
-                                    <span class="w-2 h-2 rounded-full bg-blue-500 mr-1"></span>
-                                    Users
-                                </span>
-                                <span class="inline-flex items-center text-xs">
-                                    <span class="w-2 h-2 rounded-full bg-indigo-500 mr-1"></span>
-                                    Sessions
-                                </span>
+                            <div>
+                                <h3 class="font-semibold text-gray-900 dark:text-white">Revenue Trend</h3>
+                                <p class="text-xs text-gray-500">Based on completed orders</p>
                             </div>
-                        </div>
-                        <div class="h-48">
-                            <canvas id="usersChart"></canvas>
-                        </div>
-                    </div>
-
-                    {{-- Revenue Over Time --}}
-                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="font-semibold text-gray-900 dark:text-white">Revenue</h3>
+                            <span class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">Real Data</span>
                         </div>
                         <div class="h-48">
                             <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+
+                    {{-- Orders Chart --}}
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="font-semibold text-gray-900 dark:text-white">Orders Over Time</h3>
+                                <p class="text-xs text-gray-500">Daily order volume</p>
+                            </div>
+                            <span class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">Real Data</span>
+                        </div>
+                        <div class="h-48">
+                            <canvas id="ordersChart"></canvas>
                         </div>
                     </div>
                 </div>
 
                 {{-- Bottom Row --}}
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {{-- Traffic Sources --}}
-                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                        <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Traffic Sources</h3>
+                    {{-- Top Events (Real) --}}
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-gray-900 dark:text-white">Top Events</h3>
+                            <span class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">Real</span>
+                        </div>
+                        <div class="space-y-3">
+                            @forelse($topEvents as $event)
+                                <div class="flex items-center justify-between text-sm p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-gray-900 dark:text-white font-medium truncate">{{ $event['name'] }}</p>
+                                        <p class="text-xs text-gray-500">{{ $event['orders'] }} orders</p>
+                                    </div>
+                                    <span class="font-bold text-green-600 dark:text-green-400 ml-2">€{{ number_format($event['revenue'], 0) }}</span>
+                                </div>
+                            @empty
+                                <p class="text-sm text-gray-500 text-center py-4">No sales data yet</p>
+                            @endforelse
+                        </div>
+                    </div>
+
+                    {{-- Traffic Sources (Demo) --}}
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-gray-900 dark:text-white">Traffic Sources</h3>
+                            <span class="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-full">Demo</span>
+                        </div>
                         <div class="space-y-3">
                             @foreach($trafficSources as $source)
                                 <div>
@@ -232,7 +305,7 @@
                                         <span class="text-gray-700 dark:text-gray-300">{{ $source['name'] }}</span>
                                         <span class="font-medium text-gray-900 dark:text-white">{{ $source['percentage'] }}%</span>
                                     </div>
-                                    <div class="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                    <div class="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                                         <div class="h-full rounded-full {{ $source['color'] }}" style="width: {{ $source['percentage'] }}%"></div>
                                     </div>
                                 </div>
@@ -240,52 +313,23 @@
                         </div>
                     </div>
 
-                    {{-- Top Pages --}}
-                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                        <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Top Pages</h3>
-                        <div class="space-y-3">
-                            @foreach($pageViews as $page)
-                                <div class="flex items-center justify-between text-sm">
-                                    <span class="text-gray-700 dark:text-gray-300 truncate flex-1">{{ $page['path'] }}</span>
-                                    <span class="font-medium text-gray-900 dark:text-white ml-2">{{ number_format($page['views']) }}</span>
+                    {{-- Geographic (Demo) --}}
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-gray-900 dark:text-white">Visitors by Country</h3>
+                            <span class="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-full">Demo</span>
+                        </div>
+                        <div class="space-y-2">
+                            @foreach($geoData as $country)
+                                <div class="flex items-center justify-between text-sm p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xl">{{ $country['flag'] }}</span>
+                                        <span class="text-gray-700 dark:text-gray-300">{{ $country['name'] }}</span>
+                                    </div>
+                                    <span class="font-medium text-gray-900 dark:text-white">{{ number_format($country['users']) }}</span>
                                 </div>
                             @endforeach
                         </div>
-                    </div>
-
-                    {{-- Top Events --}}
-                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                        <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Top Events</h3>
-                        <div class="space-y-3">
-                            @forelse($topEvents as $event)
-                                <div class="flex items-center justify-between text-sm">
-                                    <div class="min-w-0 flex-1">
-                                        <p class="text-gray-700 dark:text-gray-300 truncate">{{ $event['name'] }}</p>
-                                        <p class="text-xs text-gray-500">{{ $event['orders'] }} orders</p>
-                                    </div>
-                                    <span class="font-medium text-gray-900 dark:text-white ml-2">€{{ number_format($event['revenue'], 0) }}</span>
-                                </div>
-                            @empty
-                                <p class="text-sm text-gray-500 text-center py-4">No data available</p>
-                            @endforelse
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Geographic Distribution --}}
-                <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="font-semibold text-gray-900 dark:text-white">Users by Country</h3>
-                        <span class="text-xs text-gray-500">Last 30 days</span>
-                    </div>
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-                        @foreach($geoData as $country)
-                            <div class="text-center">
-                                <div class="text-2xl mb-1">{{ $country['flag'] }}</div>
-                                <div class="text-sm font-medium text-gray-900 dark:text-white">{{ number_format($country['users']) }}</div>
-                                <div class="text-xs text-gray-500">{{ $country['name'] }}</div>
-                            </div>
-                        @endforeach
                     </div>
                 </div>
             </div>
@@ -293,14 +337,20 @@
 
         {{-- Device & Browser Stats --}}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Devices</h3>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Devices</h3>
+                    <span class="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-full">Demo</span>
+                </div>
                 <div class="h-48">
                     <canvas id="devicesChart"></canvas>
                 </div>
             </div>
-            <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-                <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Browsers</h3>
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Browsers</h3>
+                    <span class="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-full">Demo</span>
+                </div>
                 <div class="h-48">
                     <canvas id="browsersChart"></canvas>
                 </div>
@@ -313,56 +363,25 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const chartColors = {
-                blue: 'rgb(59, 130, 246)',
-                indigo: 'rgb(99, 102, 241)',
-                green: 'rgb(34, 197, 94)',
-                orange: 'rgb(249, 115, 22)',
-                purple: 'rgb(168, 85, 247)',
-            };
-
-            const gridColor = document.documentElement.classList.contains('dark') ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
-
-            // Users Chart
-            const usersCtx = document.getElementById('usersChart');
-            if (usersCtx) {
-                new Chart(usersCtx, {
-                    type: 'line',
-                    data: {
-                        labels: @json($salesData['labels']),
-                        datasets: [{
-                            label: 'Users',
-                            data: @json($salesData['orders']),
-                            borderColor: chartColors.blue,
-                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                            fill: true,
-                            tension: 0.4,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { beginAtZero: true, grid: { color: gridColor } },
-                            x: { grid: { display: false } }
-                        }
-                    }
-                });
-            }
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#9CA3AF' : '#6B7280';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
 
             // Revenue Chart
             const revenueCtx = document.getElementById('revenueChart');
             if (revenueCtx) {
                 new Chart(revenueCtx, {
-                    type: 'bar',
+                    type: 'line',
                     data: {
                         labels: @json($salesData['labels']),
                         datasets: [{
                             label: 'Revenue (EUR)',
                             data: @json($salesData['revenue']),
-                            backgroundColor: 'rgba(34, 197, 94, 0.8)',
-                            borderRadius: 4,
+                            borderColor: 'rgb(16, 185, 129)',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
                         }]
                     },
                     options: {
@@ -370,8 +389,34 @@
                         maintainAspectRatio: false,
                         plugins: { legend: { display: false } },
                         scales: {
-                            y: { beginAtZero: true, grid: { color: gridColor } },
-                            x: { grid: { display: false } }
+                            y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                            x: { grid: { display: false }, ticks: { color: textColor } }
+                        }
+                    }
+                });
+            }
+
+            // Orders Chart
+            const ordersCtx = document.getElementById('ordersChart');
+            if (ordersCtx) {
+                new Chart(ordersCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: @json($salesData['labels']),
+                        datasets: [{
+                            label: 'Orders',
+                            data: @json($salesData['orders']),
+                            backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                            borderRadius: 6,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                            x: { grid: { display: false }, ticks: { color: textColor } }
                         }
                     }
                 });
@@ -386,7 +431,7 @@
                         labels: ['Desktop', 'Mobile', 'Tablet'],
                         datasets: [{
                             data: [58, 35, 7],
-                            backgroundColor: [chartColors.blue, chartColors.green, chartColors.orange],
+                            backgroundColor: ['rgb(99, 102, 241)', 'rgb(16, 185, 129)', 'rgb(249, 115, 22)'],
                             borderWidth: 0,
                         }]
                     },
@@ -394,7 +439,7 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { position: 'right' }
+                            legend: { position: 'right', labels: { color: textColor } }
                         }
                     }
                 });
@@ -409,7 +454,7 @@
                         labels: ['Chrome', 'Safari', 'Firefox', 'Edge', 'Other'],
                         datasets: [{
                             data: [64, 18, 8, 6, 4],
-                            backgroundColor: [chartColors.blue, chartColors.orange, chartColors.purple, chartColors.green, chartColors.indigo],
+                            backgroundColor: ['rgb(59, 130, 246)', 'rgb(249, 115, 22)', 'rgb(168, 85, 247)', 'rgb(16, 185, 129)', 'rgb(107, 114, 128)'],
                             borderWidth: 0,
                         }]
                     },
@@ -417,7 +462,7 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { position: 'right' }
+                            legend: { position: 'right', labels: { color: textColor } }
                         }
                     }
                 });
@@ -425,14 +470,4 @@
         });
     </script>
     @endpush
-
-    <style>
-        @keyframes fade-in {
-            from { opacity: 0; transform: translateY(-5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-            animation: fade-in 0.3s ease-out;
-        }
-    </style>
 </x-filament-panels::page>
