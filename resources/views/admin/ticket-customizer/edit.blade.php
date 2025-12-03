@@ -24,6 +24,12 @@
         .rotate-handle:active { cursor: grabbing; }
         .drop-zone { border: 2px dashed #4b5563; border-radius: 8px; transition: all 0.2s; }
         .drop-zone.drag-over { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+        .layer-item { transition: transform 0.15s, background 0.15s; }
+        .layer-item.dragging { opacity: 0.5; background: #1f2937; }
+        .layer-item.drag-over-top { border-top: 2px solid #3b82f6; }
+        .layer-item.drag-over-bottom { border-bottom: 2px solid #3b82f6; }
+        .collapsible-header { cursor: pointer; user-select: none; }
+        .collapsible-header:hover { background: rgba(255,255,255,0.05); }
     </style>
 </head>
 <body class="font-sans antialiased bg-gray-900 text-white overflow-hidden">
@@ -56,18 +62,25 @@
 
         <div class="flex flex-1 overflow-hidden">
             <!-- Left Sidebar - Tools & Layers -->
-            <aside class="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
-                <!-- Background Settings -->
-                <div class="p-4 border-b border-gray-700">
-                    <h3 class="text-sm font-semibold text-gray-400 mb-3">Background</h3>
-                    <div class="space-y-3">
+            <aside class="w-64 bg-gray-800 border-r border-gray-700 flex flex-col overflow-y-auto">
+                <!-- Ticket Settings (Collapsible) -->
+                <div class="border-b border-gray-700">
+                    <div @click="showTicketSettings = !showTicketSettings" class="collapsible-header p-3 flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-gray-300">Ticket Settings</h3>
+                        <svg :class="{'rotate-180': showTicketSettings}" class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </div>
+                    <div x-show="showTicketSettings" x-collapse class="px-3 pb-3 space-y-4">
+                        <!-- Background Color -->
                         <div>
-                            <label class="block text-xs text-gray-400 mb-1">Color</label>
+                            <label class="block text-xs text-gray-400 mb-1">Background Color</label>
                             <input type="color" x-model="templateData.meta.background.color" @input="markChanged()" class="w-full h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
                         </div>
+                        <!-- Background Image -->
                         <div>
-                            <label class="block text-xs text-gray-400 mb-1">Image</label>
-                            <div class="drop-zone p-3 text-center cursor-pointer"
+                            <label class="block text-xs text-gray-400 mb-1">Background Image</label>
+                            <div class="drop-zone p-2 text-center cursor-pointer"
                                  :class="{'drag-over': bgDragOver}"
                                  @click="$refs.bgImageInput.click()"
                                  @dragover.prevent="bgDragOver = true"
@@ -75,143 +88,142 @@
                                  @drop.prevent="handleBgImageDrop($event)">
                                 <template x-if="templateData.meta.background.image">
                                     <div class="relative">
-                                        <img :src="templateData.meta.background.image" class="max-h-16 mx-auto rounded" />
-                                        <button @click.stop="templateData.meta.background.image = ''; markChanged()" class="absolute -top-2 -right-2 bg-red-500 rounded-full w-5 h-5 text-xs">&times;</button>
+                                        <img :src="templateData.meta.background.image" class="max-h-12 mx-auto rounded" />
+                                        <button @click.stop="templateData.meta.background.image = ''; markChanged()" class="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 text-xs leading-none">&times;</button>
                                     </div>
                                 </template>
                                 <template x-if="!templateData.meta.background.image">
                                     <div class="text-xs text-gray-500">
-                                        <svg class="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                         Drop or click
                                     </div>
                                 </template>
                             </div>
                             <input type="file" x-ref="bgImageInput" @change="handleBgImageSelect($event)" accept="image/*" class="hidden" />
                         </div>
-                        <!-- Background image position controls -->
+                        <!-- Background Position -->
                         <template x-if="templateData.meta.background.image">
                             <div class="space-y-2">
                                 <label class="block text-xs text-gray-400">Image Position</label>
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
-                                        <span class="text-xs text-gray-500">X (%)</span>
-                                        <input type="number" x-model.number="templateData.meta.background.positionX" @input="markChanged()" min="0" max="100" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" placeholder="50" />
+                                        <span class="text-xs text-gray-500">X%</span>
+                                        <input type="number" x-model.number="templateData.meta.background.positionX" @input="markChanged()" min="0" max="100" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs" placeholder="50" />
                                     </div>
                                     <div>
-                                        <span class="text-xs text-gray-500">Y (%)</span>
-                                        <input type="number" x-model.number="templateData.meta.background.positionY" @input="markChanged()" min="0" max="100" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" placeholder="50" />
+                                        <span class="text-xs text-gray-500">Y%</span>
+                                        <input type="number" x-model.number="templateData.meta.background.positionY" @input="markChanged()" min="0" max="100" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs" placeholder="50" />
                                     </div>
                                 </div>
                                 <div class="flex gap-1 flex-wrap">
-                                    <button @click="templateData.meta.background.positionX = 0; templateData.meta.background.positionY = 50; markChanged()" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">Left</button>
-                                    <button @click="templateData.meta.background.positionX = 50; templateData.meta.background.positionY = 50; markChanged()" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">Center</button>
-                                    <button @click="templateData.meta.background.positionX = 100; templateData.meta.background.positionY = 50; markChanged()" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">Right</button>
-                                    <button @click="templateData.meta.background.positionX = 50; templateData.meta.background.positionY = 0; markChanged()" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">Top</button>
-                                    <button @click="templateData.meta.background.positionX = 50; templateData.meta.background.positionY = 100; markChanged()" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">Bottom</button>
+                                    <button @click="templateData.meta.background.positionX = 0; templateData.meta.background.positionY = 50; markChanged()" class="px-1.5 py-0.5 text-xs bg-gray-700 hover:bg-gray-600 rounded">L</button>
+                                    <button @click="templateData.meta.background.positionX = 50; templateData.meta.background.positionY = 50; markChanged()" class="px-1.5 py-0.5 text-xs bg-gray-700 hover:bg-gray-600 rounded">C</button>
+                                    <button @click="templateData.meta.background.positionX = 100; templateData.meta.background.positionY = 50; markChanged()" class="px-1.5 py-0.5 text-xs bg-gray-700 hover:bg-gray-600 rounded">R</button>
+                                    <button @click="templateData.meta.background.positionX = 50; templateData.meta.background.positionY = 0; markChanged()" class="px-1.5 py-0.5 text-xs bg-gray-700 hover:bg-gray-600 rounded">T</button>
+                                    <button @click="templateData.meta.background.positionX = 50; templateData.meta.background.positionY = 100; markChanged()" class="px-1.5 py-0.5 text-xs bg-gray-700 hover:bg-gray-600 rounded">B</button>
                                 </div>
                             </div>
                         </template>
-                    </div>
-                </div>
-
-                <!-- Global Text Settings -->
-                <div class="p-4 border-b border-gray-700">
-                    <h3 class="text-sm font-semibold text-gray-400 mb-3">Global Text Color</h3>
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1">Base Color</label>
-                        <div class="flex items-center gap-2">
-                            <input type="color" x-model="templateData.meta.baseTextColor" @input="markChanged()" class="w-10 h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
-                            <span class="text-xs text-gray-500" x-text="templateData.meta.baseTextColor || '#000000'"></span>
-                            <button @click="applyBaseTextColor()" class="ml-auto px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded">Apply to All</button>
+                        <!-- Base Text Color -->
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Base Text Color</label>
+                            <div class="flex items-center gap-2">
+                                <input type="color" x-model="templateData.meta.baseTextColor" @input="markChanged()" class="w-8 h-6 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
+                                <span class="text-xs text-gray-500" x-text="templateData.meta.baseTextColor || '#000000'"></span>
+                                <button @click="applyBaseTextColor()" class="ml-auto px-1.5 py-0.5 text-xs bg-blue-600 hover:bg-blue-700 rounded">Apply All</button>
+                            </div>
                         </div>
-                        <p class="text-xs text-gray-500 mt-1">New text layers will use this color</p>
                     </div>
                 </div>
 
-                <!-- Tools -->
-                <div class="p-4 border-b border-gray-700">
-                    <h3 class="text-sm font-semibold text-gray-400 mb-3">Add Elements</h3>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button @click="addLayer('text')" class="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded text-sm">
-                            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/>
-                            </svg>
-                            Text
-                        </button>
-                        <button @click="addLayer('image')" class="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded text-sm">
-                            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                            Image
-                        </button>
-                        <button @click="addLayer('qr')" class="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded text-sm">
-                            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
-                            </svg>
-                            QR Code
-                        </button>
-                        <button @click="addLayer('barcode')" class="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded text-sm">
-                            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                            </svg>
-                            Barcode
-                        </button>
-                        <button @click="addLayer('shape')" class="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded text-sm">
-                            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z"/>
-                            </svg>
-                            Shape
-                        </button>
-                        <button @click="addLayer('shape', 'line')" class="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded text-sm">
-                            <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 20L20 4"/>
-                            </svg>
-                            Line
-                        </button>
+                <!-- Ticket Elements (Collapsible) -->
+                <div class="border-b border-gray-700">
+                    <div @click="showTicketElements = !showTicketElements" class="collapsible-header p-3 flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-gray-300">Ticket Elements</h3>
+                        <svg :class="{'rotate-180': showTicketElements}" class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </div>
+                    <div x-show="showTicketElements" x-collapse class="px-3 pb-3">
+                        <div class="grid grid-cols-3 gap-1">
+                            <button @click="addLayer('text')" class="flex flex-col items-center p-2 bg-gray-700 hover:bg-gray-600 rounded text-xs">
+                                <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/>
+                                </svg>
+                                Text
+                            </button>
+                            <button @click="addLayer('image')" class="flex flex-col items-center p-2 bg-gray-700 hover:bg-gray-600 rounded text-xs">
+                                <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                Image
+                            </button>
+                            <button @click="addLayer('qr')" class="flex flex-col items-center p-2 bg-gray-700 hover:bg-gray-600 rounded text-xs">
+                                <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                                </svg>
+                                QR
+                            </button>
+                            <button @click="addLayer('barcode')" class="flex flex-col items-center p-2 bg-gray-700 hover:bg-gray-600 rounded text-xs">
+                                <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Barcode
+                            </button>
+                            <button @click="addLayer('shape')" class="flex flex-col items-center p-2 bg-gray-700 hover:bg-gray-600 rounded text-xs">
+                                <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z"/>
+                                </svg>
+                                Shape
+                            </button>
+                            <button @click="addLayer('shape', 'line')" class="flex flex-col items-center p-2 bg-gray-700 hover:bg-gray-600 rounded text-xs">
+                                <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 20L20 4"/>
+                                </svg>
+                                Line
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Layers List -->
-                <div class="flex-1 overflow-y-auto p-4">
-                    <h3 class="text-sm font-semibold text-gray-400 mb-3">Layers</h3>
+                <!-- Layers List (Drag & Drop) -->
+                <div class="flex-1 overflow-y-auto p-3">
+                    <h3 class="text-sm font-semibold text-gray-400 mb-2">Layers</h3>
                     <div class="space-y-1">
-                        <template x-for="layer in sortedLayers" :key="layer.id">
+                        <template x-for="(layer, index) in sortedLayers" :key="layer.id">
                             <div @click="selectLayer(layer.id)"
-                                 :class="{'bg-blue-600': selectedLayerId === layer.id, 'bg-gray-700 hover:bg-gray-600': selectedLayerId !== layer.id}"
-                                 class="p-2 rounded cursor-pointer flex items-center justify-between group">
+                                 draggable="true"
+                                 @dragstart="startLayerDrag($event, layer)"
+                                 @dragend="endLayerDrag()"
+                                 @dragover.prevent="handleLayerDragOver($event, layer)"
+                                 @dragleave="handleLayerDragLeave($event)"
+                                 @drop.prevent="handleLayerDrop($event, layer)"
+                                 :class="{'bg-blue-600': selectedLayerId === layer.id, 'bg-gray-700 hover:bg-gray-600': selectedLayerId !== layer.id, 'dragging': draggingLayerId === layer.id}"
+                                 class="layer-item p-2 rounded cursor-grab flex items-center justify-between group">
                                 <div class="flex items-center gap-2 truncate">
-                                    <button @click.stop="toggleLayerVisibility(layer.id)" class="text-gray-400 hover:text-white">
-                                        <svg x-show="layer.visible !== false" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-3 h-3 text-gray-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M8 6h2v2H8V6zm6 0h2v2h-2V6zM8 11h2v2H8v-2zm6 0h2v2h-2v-2zm-6 5h2v2H8v-2zm6 0h2v2h-2v-2z"/>
+                                    </svg>
+                                    <button @click.stop="toggleLayerVisibility(layer.id)" class="text-gray-400 hover:text-white flex-shrink-0">
+                                        <svg x-show="layer.visible !== false" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                         </svg>
-                                        <svg x-show="layer.visible === false" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg x-show="layer.visible === false" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
                                         </svg>
                                     </button>
-                                    <span class="text-sm truncate" x-text="layer.name"></span>
+                                    <span class="text-xs truncate" x-text="layer.name"></span>
                                 </div>
-                                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                                    <button @click.stop="moveLayerUp(layer.id)" class="p-1 hover:bg-gray-500 rounded" title="Move up">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
-                                        </svg>
-                                    </button>
-                                    <button @click.stop="moveLayerDown(layer.id)" class="p-1 hover:bg-gray-500 rounded" title="Move down">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                        </svg>
-                                    </button>
-                                    <button @click.stop="deleteLayer(layer.id)" class="p-1 hover:bg-red-500 rounded" title="Delete">
-                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                        </svg>
-                                    </button>
-                                </div>
+                                <button @click.stop="deleteLayer(layer.id)" class="p-1 hover:bg-red-500 rounded opacity-0 group-hover:opacity-100" title="Delete">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
                             </div>
                         </template>
-                        <div x-show="templateData.layers.length === 0" class="text-gray-500 text-sm text-center py-4">
-                            No layers yet. Add elements using the tools above.
+                        <div x-show="templateData.layers.length === 0" class="text-gray-500 text-xs text-center py-3">
+                            No layers yet
                         </div>
                     </div>
                 </div>
@@ -597,6 +609,10 @@
                 rotateState: null,
                 bgDragOver: false,
                 imageDragOver: false,
+                showTicketSettings: false,
+                showTicketElements: true,
+                draggingLayerId: null,
+                dragOverLayerId: null,
 
                 init() {
                     // Ensure required structures exist
@@ -738,21 +754,88 @@
                     }
                 },
 
-                moveLayerUp(id) {
-                    const layer = this.templateData.layers.find(l => l.id === id);
-                    if (layer) {
-                        layer.z = this.getNextZIndex();
-                        this.markChanged();
+                // Layer drag-and-drop handlers
+                startLayerDrag(event, layer) {
+                    this.draggingLayerId = layer.id;
+                    event.dataTransfer.effectAllowed = 'move';
+                    event.dataTransfer.setData('text/plain', layer.id);
+                },
+
+                endLayerDrag() {
+                    this.draggingLayerId = null;
+                    this.dragOverLayerId = null;
+                    // Remove all drag-over classes
+                    document.querySelectorAll('.layer-item').forEach(el => {
+                        el.classList.remove('drag-over-top', 'drag-over-bottom');
+                    });
+                },
+
+                handleLayerDragOver(event, layer) {
+                    if (this.draggingLayerId === layer.id) return;
+                    this.dragOverLayerId = layer.id;
+                    const rect = event.target.closest('.layer-item').getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    const target = event.target.closest('.layer-item');
+                    target.classList.remove('drag-over-top', 'drag-over-bottom');
+                    if (event.clientY < midY) {
+                        target.classList.add('drag-over-top');
+                    } else {
+                        target.classList.add('drag-over-bottom');
                     }
                 },
 
-                moveLayerDown(id) {
-                    const layer = this.templateData.layers.find(l => l.id === id);
-                    if (layer) {
-                        const minZ = Math.min(...this.templateData.layers.map(l => l.z || 0));
-                        layer.z = Math.max(0, minZ - 1);
-                        this.markChanged();
+                handleLayerDragLeave(event) {
+                    const target = event.target.closest('.layer-item');
+                    if (target) {
+                        target.classList.remove('drag-over-top', 'drag-over-bottom');
                     }
+                },
+
+                handleLayerDrop(event, targetLayer) {
+                    if (this.draggingLayerId === targetLayer.id) return;
+
+                    const draggedLayer = this.templateData.layers.find(l => l.id === this.draggingLayerId);
+                    if (!draggedLayer) return;
+
+                    const rect = event.target.closest('.layer-item').getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    const insertAbove = event.clientY < midY;
+
+                    // Get sorted layers (by z descending - top layer first)
+                    const sorted = [...this.templateData.layers].sort((a, b) => (b.z || 0) - (a.z || 0));
+                    const targetIdx = sorted.findIndex(l => l.id === targetLayer.id);
+                    const draggedIdx = sorted.findIndex(l => l.id === this.draggingLayerId);
+
+                    // Calculate new z-index based on drop position
+                    if (insertAbove) {
+                        // Insert before target (higher z-index)
+                        if (targetIdx === 0) {
+                            draggedLayer.z = (targetLayer.z || 0) + 1;
+                        } else {
+                            const above = sorted[targetIdx - 1];
+                            draggedLayer.z = Math.floor(((above.z || 0) + (targetLayer.z || 0)) / 2) || (targetLayer.z || 0) + 1;
+                        }
+                    } else {
+                        // Insert after target (lower z-index)
+                        if (targetIdx === sorted.length - 1) {
+                            draggedLayer.z = Math.max(0, (targetLayer.z || 0) - 1);
+                        } else {
+                            const below = sorted[targetIdx + 1];
+                            draggedLayer.z = Math.floor(((targetLayer.z || 0) + (below.z || 0)) / 2);
+                        }
+                    }
+
+                    // Normalize z-indexes to prevent collisions
+                    this.normalizeZIndexes();
+                    this.markChanged();
+                    this.endLayerDrag();
+                },
+
+                normalizeZIndexes() {
+                    const sorted = [...this.templateData.layers].sort((a, b) => (b.z || 0) - (a.z || 0));
+                    sorted.forEach((layer, idx) => {
+                        layer.z = sorted.length - idx;
+                    });
                 },
 
                 getLayerStyle(layer) {

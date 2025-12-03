@@ -451,37 +451,85 @@ SVG;
         // Replace placeholders
         $codeData = $this->replacePlaceholders($codeData, $data);
 
-        // Generate barcode-like pattern based on data
+        // Generate Code128-style barcode pattern
+        $barHeight = $h * 0.80;
+        $barY = $y + ($h - $barHeight) * 0.3; // Position bars in upper portion
+
+        // Calculate bar dimensions for a proper barcode
+        $quietZone = $w * 0.05; // 5% quiet zone on each side
+        $availableWidth = $w - (2 * $quietZone);
+        $unitWidth = $availableWidth / 95; // Code128 has ~95 modules for short codes
+
+        // Generate deterministic pattern from data
+        $pattern = $this->generateBarcodePattern($codeData);
         $bars = '';
-        $barWidth = $w / 60;
-        $seed = crc32($codeData);
-        srand($seed);
+        $currentX = $x + $quietZone;
 
-        $currentX = $x + $barWidth * 2;
-        for ($i = 0; $i < 50; $i++) {
-            $isBar = rand(0, 2) !== 0;
-            $width = $barWidth * (rand(1, 2));
-
-            if ($isBar) {
-                $bars .= "<rect x=\"{$currentX}\" y=\"{$y}\" width=\"{$width}\" height=\"" . ($h * 0.85) . "\" fill=\"#000\"/>";
+        foreach ($pattern as $bar) {
+            $barW = $bar['width'] * $unitWidth;
+            if ($bar['black']) {
+                $bars .= "<rect x=\"{$currentX}\" y=\"{$barY}\" width=\"{$barW}\" height=\"{$barHeight}\" fill=\"#000\"/>";
             }
-            $currentX += $width;
+            $currentX += $barW;
         }
 
         // Add text below barcode
-        $textY = $y + $h * 0.95;
+        $textY = $y + $h - ($h * 0.05);
         $textX = $x + $w / 2;
-        $fontSize = $h * 0.12;
+        $fontSize = min($h * 0.12, 14);
         $displayData = htmlspecialchars(substr($codeData, 0, 20), ENT_XML1);
 
         return <<<SVG
   <g opacity="{$opacity}" {$transform}>
     <rect x="{$x}" y="{$y}" width="{$w}" height="{$h}" fill="white"/>
     {$bars}
-    <text x="{$textX}" y="{$textY}" font-size="{$fontSize}" font-family="monospace" text-anchor="middle" fill="#000">{$displayData}</text>
+    <text x="{$textX}" y="{$textY}" font-size="{$fontSize}" font-family="'Courier New', monospace" text-anchor="middle" fill="#000">{$displayData}</text>
   </g>
 
 SVG;
+    }
+
+    /**
+     * Generate a Code128-like barcode pattern
+     */
+    private function generateBarcodePattern(string $data): array
+    {
+        $pattern = [];
+
+        // Start code (Code128 B start pattern: 211214)
+        $startPattern = [2, 1, 1, 2, 1, 4];
+        foreach ($startPattern as $i => $width) {
+            $pattern[] = ['width' => $width, 'black' => ($i % 2 === 0)];
+        }
+
+        // Generate data pattern based on string hash
+        $hash = md5($data);
+        for ($i = 0; $i < min(strlen($data) * 2, 12); $i++) {
+            $charCode = hexdec($hash[$i % 32]);
+
+            // Code128 patterns alternate between bars and spaces
+            // Width can be 1, 2, 3, or 4 units
+            $widths = [
+                (($charCode >> 0) & 3) + 1,
+                (($charCode >> 2) & 3) + 1,
+                (($charCode >> 4) & 3) + 1,
+                (($charCode >> 6) & 1) + 1,
+                2, // separator
+                1, // space
+            ];
+
+            foreach ($widths as $j => $width) {
+                $pattern[] = ['width' => $width, 'black' => ($j % 2 === 0)];
+            }
+        }
+
+        // Stop code (Code128 stop pattern: 2331112)
+        $stopPattern = [2, 3, 3, 1, 1, 1, 2];
+        foreach ($stopPattern as $i => $width) {
+            $pattern[] = ['width' => $width, 'black' => ($i % 2 === 0)];
+        }
+
+        return $pattern;
     }
 
     /**
