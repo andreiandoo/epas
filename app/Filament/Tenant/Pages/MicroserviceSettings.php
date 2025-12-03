@@ -25,6 +25,7 @@ class MicroserviceSettings extends Page
     public ?string $microserviceSlug = null;
     public ?Microservice $microservice = null;
     public ?Tenant $tenant = null;
+    public ?object $pivotData = null;
     public ?array $data = [];
 
     public function mount(string $slug): void
@@ -47,6 +48,9 @@ class MicroserviceSettings extends Page
         if (!$activeMicroservice) {
             abort(403, 'You do not have access to this microservice.');
         }
+
+        // Store pivot data for view
+        $this->pivotData = $activeMicroservice->pivot;
 
         // Load saved settings from pivot configuration
         $this->form->fill($activeMicroservice->pivot->configuration ?? []);
