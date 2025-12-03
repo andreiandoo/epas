@@ -44,6 +44,18 @@ class Invitations extends Page
     public int $colSeat = 4;
     public bool $skipHeader = true;
 
+    // Manual recipient entry
+    public bool $showManualModal = false;
+    public ?string $manualBatchId = null;
+    public string $manualName = '';
+    public string $manualEmail = '';
+    public string $manualPhone = '';
+    public string $manualCompany = '';
+    public string $manualSeat = '';
+
+    // Pre-selected event (from query param)
+    public ?int $preselectedEventId = null;
+
     /**
      * Only show if tenant has invitations microservice active
      */
@@ -84,6 +96,16 @@ class Invitations extends Page
 
             redirect()->route('filament.tenant.pages.microservices');
             return;
+        }
+
+        // Capture event query parameter
+        $eventId = request()->query('event');
+        if ($eventId) {
+            // Verify the event belongs to this tenant
+            $event = Event::where('tenant_id', $tenant->id)->find($eventId);
+            if ($event) {
+                $this->preselectedEventId = (int) $eventId;
+            }
         }
     }
 
@@ -148,7 +170,8 @@ class Invitations extends Page
                         ->label('Event')
                         ->options(fn () => $this->getEvents())
                         ->required()
-                        ->searchable(),
+                        ->searchable()
+                        ->default($this->preselectedEventId),
 
                     Forms\Components\TextInput::make('name')
                         ->label('Batch Name')
@@ -596,6 +619,143 @@ class Invitations extends Page
             ->send();
 
         $this->dispatch('$refresh');
+    }
+
+    /**
+     * Delete batch and all associated invites permanently
+     */
+    public function deleteBatch(string $batchId): void
+    {
+        $batch = InviteBatch::find($batchId);
+        $tenant = auth()->user()->tenant;
+
+        if (!$batch || $batch->tenant_id !== $tenant->id) {
+            Notification::make()
+                ->danger()
+                ->title('Access denied')
+                ->send();
+            return;
+        }
+
+        $batchName = $batch->name;
+        $inviteCount = $batch->invites()->count();
+
+        // Delete all invites (this will also delete logs due to cascade)
+        $batch->invites()->forceDelete();
+
+        // Delete the batch itself
+        $batch->forceDelete();
+
+        Notification::make()
+            ->success()
+            ->title('Batch Deleted')
+            ->body("Deleted batch \"{$batchName}\" with {$inviteCount} invitations.")
+            ->send();
+
+        $this->dispatch('$refresh');
+    }
+
+    /**
+     * Open manual recipient entry modal
+     */
+    public function openManualModal(string $batchId): void
+    {
+        $this->manualBatchId = $batchId;
+        $this->manualName = '';
+        $this->manualEmail = '';
+        $this->manualPhone = '';
+        $this->manualCompany = '';
+        $this->manualSeat = '';
+        $this->showManualModal = true;
+    }
+
+    /**
+     * Add a single recipient manually
+     */
+    public function addManualRecipient(): void
+    {
+        $batch = InviteBatch::find($this->manualBatchId);
+        $tenant = auth()->user()->tenant;
+
+        if (!$batch || $batch->tenant_id !== $tenant->id) {
+            Notification::make()
+                ->danger()
+                ->title('Access denied')
+                ->send();
+            return;
+        }
+
+        // Validate email
+        if (!filter_var($this->manualEmail, FILTER_VALIDATE_EMAIL)) {
+            Notification::make()
+                ->danger()
+                ->title('Invalid Email')
+                ->body('Please enter a valid email address.')
+                ->send();
+            return;
+        }
+
+        // Validate name
+        if (empty(trim($this->manualName))) {
+            Notification::make()
+                ->danger()
+                ->title('Name Required')
+                ->body('Please enter a name for the recipient.')
+                ->send();
+            return;
+        }
+
+        // Find an available invite slot (one without a recipient)
+        $invite = $batch->invites()->whereNull('recipient')->first();
+
+        if (!$invite) {
+            // No available slots, create a new invite
+            $invite = Invite::create([
+                'batch_id' => $batch->id,
+                'tenant_id' => $tenant->id,
+                'status' => 'created',
+            ]);
+
+            // Update batch quantities
+            $batch->increment('qty_planned');
+            $batch->increment('qty_generated');
+        }
+
+        // Set the recipient data
+        $invite->setRecipient([
+            'name' => trim($this->manualName),
+            'email' => trim($this->manualEmail),
+            'phone' => trim($this->manualPhone),
+            'company' => trim($this->manualCompany),
+        ]);
+
+        if (!empty(trim($this->manualSeat))) {
+            $invite->update(['seat_ref' => trim($this->manualSeat)]);
+        }
+
+        Notification::make()
+            ->success()
+            ->title('Recipient Added')
+            ->body("Added {$this->manualName} to the batch.")
+            ->send();
+
+        // Reset form but keep modal open for adding more
+        $this->manualName = '';
+        $this->manualEmail = '';
+        $this->manualPhone = '';
+        $this->manualCompany = '';
+        $this->manualSeat = '';
+
+        $this->dispatch('$refresh');
+    }
+
+    /**
+     * Close manual modal
+     */
+    public function closeManualModal(): void
+    {
+        $this->showManualModal = false;
+        $this->manualBatchId = null;
     }
 
     public function downloadExport(string $batchId): \Symfony\Component\HttpFoundation\StreamedResponse

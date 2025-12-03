@@ -19,7 +19,7 @@
             {{-- Workflow Steps --}}
             <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Workflow</p>
-                <div class="flex items-center gap-2 text-sm">
+                <div class="flex flex-wrap items-center gap-2 text-sm">
                     <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
                         <span class="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">1</span>
                         Create Batch
@@ -27,7 +27,8 @@
                     <x-heroicon-o-arrow-right class="w-4 h-4 text-gray-400" />
                     <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
                         <span class="w-5 h-5 rounded-full bg-purple-600 text-white text-xs flex items-center justify-center font-bold">2</span>
-                        Import Recipients
+                        <span>Add Recipients</span>
+                        <span class="text-xs text-purple-500 dark:text-purple-400">(Manual / CSV)</span>
                     </div>
                     <x-heroicon-o-arrow-right class="w-4 h-4 text-gray-400" />
                     <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300">
@@ -37,7 +38,7 @@
                     <x-heroicon-o-arrow-right class="w-4 h-4 text-gray-400" />
                     <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300">
                         <span class="w-5 h-5 rounded-full bg-green-600 text-white text-xs flex items-center justify-center font-bold">4</span>
-                        Send Emails
+                        <span>Download / Send</span>
                     </div>
                 </div>
             </div>
@@ -158,10 +159,10 @@
                                 <div class="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
                                     <div class="flex items-center gap-2 text-amber-800 dark:text-amber-300">
                                         <x-heroicon-o-exclamation-triangle class="w-5 h-5" />
-                                        <span class="text-sm font-medium">Step 2: Import recipients before generating PDFs</span>
+                                        <span class="text-sm font-medium">Step 2: Add recipients before generating PDFs</span>
                                     </div>
                                     <p class="text-xs text-amber-600 dark:text-amber-400 mt-1 ml-7">
-                                        Upload a CSV file with recipient data (name, email, phone, company)
+                                        Click "Add Recipient" to enter details manually, or "Import CSV" to bulk import
                                     </p>
                                 </div>
                             @else
@@ -226,11 +227,18 @@
                         {{-- Actions --}}
                         <div class="flex flex-wrap gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
                             @if($batch->status === 'draft')
-                                {{-- Import CSV - Always show for draft --}}
+                                {{-- Add Manual Recipient --}}
+                                <button wire:click="openManualModal('{{ $batch->id }}')"
+                                        class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm">
+                                    <x-heroicon-o-user-plus class="w-4 h-4" />
+                                    Add Recipient
+                                </button>
+
+                                {{-- Import CSV --}}
                                 <button wire:click="openImportModal('{{ $batch->id }}')"
                                         class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors shadow-sm">
                                     <x-heroicon-o-arrow-up-tray class="w-4 h-4" />
-                                    Import Recipients (CSV)
+                                    Import CSV
                                 </button>
 
                                 {{-- Generate PDFs - Only if has recipients --}}
@@ -263,14 +271,26 @@
                                 Export
                             </button>
 
+                            {{-- Spacer --}}
+                            <div class="flex-1"></div>
+
+                            {{-- Cancel Batch (voids invitations) --}}
                             @if(!in_array($batch->status, ['cancelled', 'completed']))
                                 <button wire:click="cancelBatch('{{ $batch->id }}')"
                                         wire:confirm="Are you sure you want to cancel this batch? All invitations will be voided."
-                                        class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors ml-auto">
+                                        class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20 transition-colors">
                                     <x-heroicon-o-x-circle class="w-4 h-4" />
                                     Cancel
                                 </button>
                             @endif
+
+                            {{-- Delete Batch (permanent deletion) --}}
+                            <button wire:click="deleteBatch('{{ $batch->id }}')"
+                                    wire:confirm="Are you sure you want to permanently delete this batch? This will remove all invitations and cannot be undone."
+                                    class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors">
+                                <x-heroicon-o-trash class="w-4 h-4" />
+                                Delete
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -347,6 +367,72 @@
                         <button type="submit"
                                 class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors shadow-sm">
                             Import Recipients
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
+    {{-- Manual Entry Modal --}}
+    @if($showManualModal && $manualBatchId)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" wire:click.self="closeManualModal">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-gray-200 dark:border-gray-700">
+                <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-blue-600 to-cyan-600">
+                    <h3 class="text-lg font-semibold text-white">Add Recipient</h3>
+                    <p class="text-sm text-blue-100 mt-1">Enter recipient details manually</p>
+                </div>
+
+                <form wire:submit="addManualRecipient" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" wire:model="manualName" required
+                               placeholder="John Doe"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Email <span class="text-red-500">*</span>
+                        </label>
+                        <input type="email" wire:model="manualEmail" required
+                               placeholder="john@example.com"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone</label>
+                            <input type="text" wire:model="manualPhone"
+                                   placeholder="+40 700 000 000"
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company</label>
+                            <input type="text" wire:model="manualCompany"
+                                   placeholder="ACME Inc."
+                                   class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Seat Reference</label>
+                        <input type="text" wire:model="manualSeat"
+                               placeholder="A-12"
+                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" />
+                        <p class="text-xs text-gray-500 mt-1">Optional: Assigned seat or table reference</p>
+                    </div>
+
+                    <div class="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <button type="button" wire:click="closeManualModal"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                            Done
+                        </button>
+                        <button type="submit"
+                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm">
+                            Add & Continue
                         </button>
                     </div>
                 </form>

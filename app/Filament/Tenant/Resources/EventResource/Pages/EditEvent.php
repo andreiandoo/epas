@@ -12,8 +12,26 @@ class EditEvent extends EditRecord
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\DeleteAction::make(),
-        ];
+        $tenant = auth()->user()->tenant;
+
+        // Check if invitations microservice is active
+        $hasInvitations = $tenant?->microservices()
+            ->where('microservices.slug', 'invitations')
+            ->wherePivot('is_active', true)
+            ->exists() ?? false;
+
+        $actions = [];
+
+        if ($hasInvitations) {
+            $actions[] = Actions\Action::make('invitations')
+                ->label('Create Invitations')
+                ->icon('heroicon-o-envelope')
+                ->color('info')
+                ->url(fn () => route('filament.tenant.pages.invitations') . '?event=' . $this->record->id);
+        }
+
+        $actions[] = Actions\DeleteAction::make();
+
+        return $actions;
     }
 }
