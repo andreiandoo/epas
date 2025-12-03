@@ -18,7 +18,6 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use League\Csv\Reader;
 use Livewire\WithFileUploads;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use ZipArchive;
 
 class Invitations extends Page
@@ -510,48 +509,79 @@ class Invitations extends Page
     }
 
     /**
-     * Generate a QR code as base64 PNG using simple-qrcode library
+     * Generate a QR code as base64 PNG using QR Server API (no dependencies)
      */
     protected function generateQrCode(string $data): string
     {
-        try {
-            // Generate QR code using simple-qrcode library
-            $qrCode = QrCode::format('png')
-                ->size(200)
-                ->margin(1)
-                ->errorCorrection('M')
-                ->generate($data);
+        // Use QR Server API - free, no authentication required
+        $size = 200;
+        $url = 'https://api.qrserver.com/v1/create-qr-code/?size=' . $size . 'x' . $size . '&data=' . urlencode($data) . '&format=png&margin=5';
 
-            return base64_encode($qrCode);
+        try {
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 10,
+                    'user_agent' => 'Tixello/1.0',
+                ],
+                'ssl' => [
+                    'verify_peer' => true,
+                    'verify_peer_name' => true,
+                ],
+            ]);
+
+            $imageData = @file_get_contents($url, false, $context);
+
+            if ($imageData !== false && strlen($imageData) > 100) {
+                return base64_encode($imageData);
+            }
         } catch (\Exception $e) {
-            // Fallback to placeholder if QR generation fails
-            return $this->generatePlaceholderQr($data);
+            // Log error if needed
         }
+
+        // Fallback to placeholder
+        return $this->generatePlaceholderQr($data);
     }
 
     /**
-     * Generate a simple placeholder QR code image
+     * Generate a placeholder QR code image with invite code
      */
     protected function generatePlaceholderQr(string $data): string
     {
-        // Create a simple placeholder image with the code text
         $size = 200;
         $image = imagecreatetruecolor($size, $size);
         $white = imagecolorallocate($image, 255, 255, 255);
         $black = imagecolorallocate($image, 0, 0, 0);
+        $gray = imagecolorallocate($image, 200, 200, 200);
 
         imagefill($image, 0, 0, $white);
 
-        // Draw border
+        // Draw QR-like pattern border
         imagerectangle($image, 0, 0, $size - 1, $size - 1, $black);
-        imagerectangle($image, 5, 5, $size - 6, $size - 6, $black);
+        imagerectangle($image, 10, 10, $size - 11, $size - 11, $gray);
+
+        // Draw corner markers (like QR codes have)
+        $markerSize = 40;
+        // Top-left
+        imagefilledrectangle($image, 20, 20, 20 + $markerSize, 20 + $markerSize, $black);
+        imagefilledrectangle($image, 28, 28, 20 + $markerSize - 8, 20 + $markerSize - 8, $white);
+        imagefilledrectangle($image, 34, 34, 20 + $markerSize - 14, 20 + $markerSize - 14, $black);
+
+        // Top-right
+        imagefilledrectangle($image, $size - 20 - $markerSize, 20, $size - 20, 20 + $markerSize, $black);
+        imagefilledrectangle($image, $size - 20 - $markerSize + 8, 28, $size - 28, 20 + $markerSize - 8, $white);
+        imagefilledrectangle($image, $size - 20 - $markerSize + 14, 34, $size - 34, 20 + $markerSize - 14, $black);
+
+        // Bottom-left
+        imagefilledrectangle($image, 20, $size - 20 - $markerSize, 20 + $markerSize, $size - 20, $black);
+        imagefilledrectangle($image, 28, $size - 20 - $markerSize + 8, 20 + $markerSize - 8, $size - 28, $white);
+        imagefilledrectangle($image, 34, $size - 20 - $markerSize + 14, 20 + $markerSize - 14, $size - 34, $black);
 
         // Add text in center
-        $text = 'SCAN QR';
-        $fontSize = 4;
+        $text = 'QR CODE';
+        $fontSize = 3;
         $textWidth = imagefontwidth($fontSize) * strlen($text);
         $textX = ($size - $textWidth) / 2;
-        $textY = $size / 2 - 10;
+        $textY = $size / 2 - 5;
         imagestring($image, $fontSize, $textX, $textY, $text, $black);
 
         ob_start();
