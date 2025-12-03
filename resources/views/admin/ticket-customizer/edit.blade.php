@@ -71,7 +71,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </div>
-                    <div x-show="showTicketSettings" x-collapse class="p-3 pt-0 space-y-4">
+                    <div x-show="showTicketSettings" x-collapse class="p-3 space-y-4">
                         <!-- Background Color -->
                         <div>
                             <label class="block text-xs text-gray-400 mb-1">Background Color</label>
@@ -144,7 +144,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </div>
-                    <div x-show="showTicketElements" x-collapse class="p-3 pt-0">
+                    <div x-show="showTicketElements" x-collapse class="p-3">
                         <div class="grid grid-cols-3 gap-1">
                             <button @click="addLayer('text')" class="flex flex-col items-center p-2 bg-gray-700 hover:bg-gray-600 rounded text-xs">
                                 <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -339,7 +339,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </div>
-                        <div x-show="showVariables" x-collapse class="p-3 pt-0">
+                        <div x-show="showVariables" x-collapse class="p-3">
                             <p class="text-xs text-gray-500 mb-2">Click to copy</p>
                             <div class="space-y-2 max-h-48 overflow-y-auto">
                                 @foreach($variables as $groupKey => $group)
@@ -369,7 +369,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </div>
-                        <div x-show="showLayerProperties" x-collapse class="p-3 pt-0">
+                        <div x-show="showLayerProperties" x-collapse class="p-3">
                             <template x-if="selectedLayer">
                                 <div class="space-y-3">
                                     <!-- Name -->
