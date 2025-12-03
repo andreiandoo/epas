@@ -107,7 +107,7 @@ class TrackingSettings extends Page
                             ->maxLength(20)
                             ->visible(fn ($get) => $get('ga4_enabled')),
 
-                        Forms\Components\Grid::make(2)->schema([
+                        SC\Grid::make(2)->schema([
                             Forms\Components\Select::make('ga4_inject_at')
                                 ->label('Inject Location')
                                 ->options([
@@ -144,7 +144,7 @@ class TrackingSettings extends Page
                             ->maxLength(15)
                             ->visible(fn ($get) => $get('gtm_enabled')),
 
-                        Forms\Components\Grid::make(2)->schema([
+                        SC\Grid::make(2)->schema([
                             Forms\Components\Select::make('gtm_inject_at')
                                 ->label('Inject Location')
                                 ->options([
@@ -182,7 +182,7 @@ class TrackingSettings extends Page
                             ->maxLength(20)
                             ->visible(fn ($get) => $get('meta_enabled')),
 
-                        Forms\Components\Grid::make(2)->schema([
+                        SC\Grid::make(2)->schema([
                             Forms\Components\Select::make('meta_inject_at')
                                 ->label('Inject Location')
                                 ->options([
@@ -220,7 +220,7 @@ class TrackingSettings extends Page
                             ->maxLength(25)
                             ->visible(fn ($get) => $get('tiktok_enabled')),
 
-                        Forms\Components\Grid::make(2)->schema([
+                        SC\Grid::make(2)->schema([
                             Forms\Components\Select::make('tiktok_inject_at')
                                 ->label('Inject Location')
                                 ->options([

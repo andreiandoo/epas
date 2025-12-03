@@ -102,8 +102,7 @@ class Invitations extends Page
         $tenant = auth()->user()->tenant;
 
         return Event::where('tenant_id', $tenant->id)
-            ->where('start_date', '>=', now()->subMonths(6))
-            ->orderBy('start_date', 'desc')
+            ->orderBy('created_at', 'desc')
             ->pluck('title', 'id')
             ->toArray();
     }

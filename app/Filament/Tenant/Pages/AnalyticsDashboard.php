@@ -80,13 +80,13 @@ class AnalyticsDashboard extends Page
     {
         $tenant = auth()->user()->tenant;
         $events = Event::where('tenant_id', $tenant->id)
-            ->orderBy('start_date', 'desc')
+            ->orderBy('created_at', 'desc')
             ->pluck('title', 'id')
             ->toArray();
 
         return $form
             ->schema([
-                Forms\Components\Grid::make(3)->schema([
+                SC\Grid::make(3)->schema([
                     Forms\Components\Select::make('event_id')
                         ->label('Event')
                         ->options(['all' => 'All Events'] + $events)
