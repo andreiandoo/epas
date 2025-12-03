@@ -9,11 +9,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use App\Support\Translatable;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Event extends Model
 {
     use HasFactory;
     use Translatable;
+    use LogsActivity;
 
     public array $translatable = ['title', 'subtitle', 'short_description', 'description', 'ticket_terms'];
 
@@ -204,5 +207,26 @@ class Event extends Model
                 : null,
             default => null,
         };
+    }
+
+    /**
+     * Configure activity logging
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['title', 'slug', 'event_date', 'is_cancelled', 'is_postponed', 'is_sold_out', 'status'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn (string $eventName) => "Event {$eventName}")
+            ->useLogName('tenant');
+    }
+
+    /**
+     * Add tenant_id to activity properties for scoping
+     */
+    public function tapActivity(\Spatie\Activitylog\Contracts\Activity $activity, string $eventName)
+    {
+        $activity->properties = $activity->properties->put('tenant_id', $this->tenant_id);
     }
 }

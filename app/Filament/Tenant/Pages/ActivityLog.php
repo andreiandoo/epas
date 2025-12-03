@@ -26,17 +26,24 @@ class ActivityLog extends Page
             return ['activities' => collect()];
         }
 
-        // Get activities related to this tenant
-        $activities = Activity::where(function ($query) use ($tenant) {
-                $query->where('subject_type', 'App\\Models\\Tenant')
-                      ->where('subject_id', $tenant->id);
-            })
-            ->orWhere(function ($query) use ($tenant) {
-                $query->where('causer_type', 'App\\Models\\User')
-                      ->where('causer_id', auth()->id());
+        // Get activities for this tenant from the 'tenant' log channel
+        // Activities are scoped via tenant_id stored in properties JSON
+        $activities = Activity::where('log_name', 'tenant')
+            ->where(function ($query) use ($tenant) {
+                // Match by tenant_id in properties JSON
+                $query->whereJsonContains('properties->tenant_id', $tenant->id)
+                    // Also match activities caused by users belonging to this tenant
+                    ->orWhere(function ($q) use ($tenant) {
+                        $q->where('causer_type', 'App\\Models\\User')
+                          ->whereIn('causer_id', function ($subQuery) use ($tenant) {
+                              $subQuery->select('id')
+                                  ->from('users')
+                                  ->where('tenant_id', $tenant->id);
+                          });
+                    });
             })
             ->orderBy('created_at', 'desc')
-            ->limit(50)
+            ->limit(100)
             ->get();
 
         return [

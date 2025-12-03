@@ -6,9 +6,12 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class TicketType extends Model
 {
+    use LogsActivity;
     protected $fillable = [
         'event_id',
         'name',
@@ -120,5 +123,29 @@ class TicketType extends Model
         return Attribute::make(
             get: fn () => max(0, ($this->quota_total ?? 0) - ($this->quota_sold ?? 0))
         );
+    }
+
+    /**
+     * Configure activity logging
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'price_cents', 'quota_total', 'status'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn (string $eventName) => "Ticket Type {$eventName}")
+            ->useLogName('tenant');
+    }
+
+    /**
+     * Add tenant_id to activity properties for scoping (via event relationship)
+     */
+    public function tapActivity(\Spatie\Activitylog\Contracts\Activity $activity, string $eventName)
+    {
+        $tenantId = $this->event?->tenant_id;
+        if ($tenantId) {
+            $activity->properties = $activity->properties->put('tenant_id', $tenantId);
+        }
     }
 }

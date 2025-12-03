@@ -14,24 +14,16 @@
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-start justify-between mb-4">
-                            <h3 class="font-semibold text-gray-900">
+                            <a href="{{ route('filament.tenant.pages.microservice-settings', ['slug' => $microservice->slug]) }}"
+                               class="font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                 {{ $microservice->getTranslation('name', app()->getLocale()) }}
-                            </h3>
-                            @php
-                                $status = $microservice->pivot->status;
-                                $statusColors = [
-                                    'active' => 'bg-green-100 text-green-800',
-                                    'trial' => 'bg-blue-100 text-blue-800',
-                                    'suspended' => 'bg-yellow-100 text-yellow-800',
-                                    'cancelled' => 'bg-red-100 text-red-800',
-                                ];
-                            @endphp
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusColors[$status] ?? 'bg-gray-100 text-gray-800' }}">
-                                {{ ucfirst($status) }}
+                            </a>
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Active
                             </span>
                         </div>
 
-                        <p class="text-sm text-gray-600 mb-4">
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
                             {{ $microservice->getTranslation('short_description', app()->getLocale()) }}
                         </p>
 
@@ -51,6 +43,14 @@
                                 </div>
                             @endif
                         </dl>
+
+                        <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <a href="{{ route('filament.tenant.pages.microservice-settings', ['slug' => $microservice->slug]) }}"
+                               class="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">
+                                <x-heroicon-o-cog-6-tooth class="w-4 h-4 mr-1" />
+                                Settings
+                            </a>
+                        </div>
                     </div>
                 </div>
             @endforeach

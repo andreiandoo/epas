@@ -257,3 +257,20 @@ Schedule::command('artists:update-social-stats')
     ->onFailure(function () {
         \Log::error('Failed to update artist social stats');
     });
+
+/*
+|--------------------------------------------------------------------------
+| Activity Log Cleanup
+|--------------------------------------------------------------------------
+*/
+
+// Cleanup old tenant activity logs (daily at 3:30 AM - keep 10 days)
+Schedule::command('activitylog:cleanup --days=10')
+    ->dailyAt('03:30')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('Tenant activity logs cleanup completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to cleanup tenant activity logs');
+    });

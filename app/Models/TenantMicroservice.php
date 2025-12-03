@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class TenantMicroservice extends Model
 {
+    use LogsActivity;
     protected $fillable = [
         'tenant_id',
         'microservice_id',
@@ -67,5 +70,26 @@ class TenantMicroservice extends Model
         $stats = $this->usage_stats ?? [];
         $stats[$key] = ($stats[$key] ?? 0) + $amount;
         $this->update(['usage_stats' => $stats]);
+    }
+
+    /**
+     * Configure activity logging
+     */
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['is_active', 'settings'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn (string $eventName) => "Microservice settings {$eventName}")
+            ->useLogName('tenant');
+    }
+
+    /**
+     * Add tenant_id to activity properties for scoping
+     */
+    public function tapActivity(\Spatie\Activitylog\Contracts\Activity $activity, string $eventName)
+    {
+        $activity->properties = $activity->properties->put('tenant_id', $this->tenant_id);
     }
 }

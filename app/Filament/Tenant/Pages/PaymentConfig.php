@@ -2,6 +2,8 @@
 
 namespace App\Filament\Tenant\Pages;
 
+use App\Models\Microservice;
+use App\Models\TenantMicroservice;
 use App\Models\TenantPaymentConfig;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use BackedEnum;
@@ -24,48 +26,127 @@ class PaymentConfig extends Page
     protected string $view = 'filament.tenant.pages.payment-config';
 
     public ?array $data = [];
+    public ?string $activeProcessor = null;
+    public ?string $processorLabel = null;
+
+    /**
+     * Payment processor microservice slugs mapping
+     */
+    protected static array $paymentProcessorSlugs = [
+        'payment-stripe' => 'stripe',
+        'payment-netopia' => 'netopia',
+        'payment-euplatesc' => 'euplatesc',
+        'payment-payu' => 'payu',
+    ];
+
+    /**
+     * Only show in navigation if tenant has a payment processor microservice activated
+     */
+    public static function shouldRegisterNavigation(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+
+        if (!$tenant) {
+            return false;
+        }
+
+        return static::getActivePaymentProcessor($tenant) !== null;
+    }
+
+    /**
+     * Get the active payment processor for a tenant
+     */
+    protected static function getActivePaymentProcessor($tenant): ?string
+    {
+        $paymentMicroserviceSlugs = array_keys(static::$paymentProcessorSlugs);
+
+        $activeMicroservice = TenantMicroservice::where('tenant_id', $tenant->id)
+            ->where('is_active', true)
+            ->whereHas('microservice', function ($query) use ($paymentMicroserviceSlugs) {
+                $query->whereIn('slug', $paymentMicroserviceSlugs);
+            })
+            ->with('microservice')
+            ->first();
+
+        if ($activeMicroservice && $activeMicroservice->microservice) {
+            return static::$paymentProcessorSlugs[$activeMicroservice->microservice->slug] ?? null;
+        }
+
+        return null;
+    }
 
     public function mount(): void
     {
         $tenant = auth()->user()->tenant;
 
-        if ($tenant) {
-            $formData = [
-                'payment_processor' => $tenant->payment_processor,
-                'payment_processor_mode' => $tenant->payment_processor_mode ?? 'test',
-            ];
-
-            // Load existing payment config
-            $config = $tenant->activePaymentConfig();
-
-            if ($config) {
-                switch ($tenant->payment_processor) {
-                    case 'stripe':
-                        $formData['stripe_publishable_key'] = $config->stripe_publishable_key;
-                        $formData['stripe_secret_key'] = $config->stripe_secret_key;
-                        $formData['stripe_webhook_secret'] = $config->stripe_webhook_secret;
-                        break;
-
-                    case 'netopia':
-                        $formData['netopia_signature'] = $config->netopia_signature;
-                        $formData['netopia_api_key'] = $config->netopia_api_key;
-                        $formData['netopia_public_key'] = $config->netopia_public_key;
-                        break;
-
-                    case 'euplatesc':
-                        $formData['euplatesc_merchant_id'] = $config->euplatesc_merchant_id;
-                        $formData['euplatesc_secret_key'] = $config->euplatesc_secret_key;
-                        break;
-
-                    case 'payu':
-                        $formData['payu_merchant_id'] = $config->payu_merchant_id;
-                        $formData['payu_secret_key'] = $config->payu_secret_key;
-                        break;
-                }
-            }
-
-            $this->form->fill($formData);
+        if (!$tenant) {
+            abort(404);
         }
+
+        // Get active payment processor from microservice
+        $this->activeProcessor = static::getActivePaymentProcessor($tenant);
+
+        if (!$this->activeProcessor) {
+            // Redirect to microservices page if no payment processor is activated
+            Notification::make()
+                ->warning()
+                ->title('No Payment Processor')
+                ->body('You need to activate a payment processor microservice first.')
+                ->send();
+
+            redirect()->route('filament.tenant.pages.microservices');
+            return;
+        }
+
+        // Set processor label for display
+        $this->processorLabel = match ($this->activeProcessor) {
+            'stripe' => 'Stripe',
+            'netopia' => 'Netopia Payments (mobilPay)',
+            'euplatesc' => 'EuPlatesc',
+            'payu' => 'PayU',
+            default => ucfirst($this->activeProcessor),
+        };
+
+        // Auto-set the processor on tenant if not set
+        if ($tenant->payment_processor !== $this->activeProcessor) {
+            $tenant->update(['payment_processor' => $this->activeProcessor]);
+        }
+
+        $formData = [
+            'payment_processor' => $this->activeProcessor,
+            'payment_processor_mode' => $tenant->payment_processor_mode ?? 'test',
+        ];
+
+        // Load existing payment config
+        $config = $tenant->activePaymentConfig();
+
+        if ($config) {
+            switch ($this->activeProcessor) {
+                case 'stripe':
+                    $formData['stripe_publishable_key'] = $config->stripe_publishable_key;
+                    $formData['stripe_secret_key'] = $config->stripe_secret_key;
+                    $formData['stripe_webhook_secret'] = $config->stripe_webhook_secret;
+                    break;
+
+                case 'netopia':
+                    $formData['netopia_signature'] = $config->netopia_signature;
+                    $formData['netopia_api_key'] = $config->netopia_api_key;
+                    $formData['netopia_public_key'] = $config->netopia_public_key;
+                    break;
+
+                case 'euplatesc':
+                    $formData['euplatesc_merchant_id'] = $config->euplatesc_merchant_id;
+                    $formData['euplatesc_secret_key'] = $config->euplatesc_secret_key;
+                    break;
+
+                case 'payu':
+                    $formData['payu_merchant_id'] = $config->payu_merchant_id;
+                    $formData['payu_secret_key'] = $config->payu_secret_key;
+                    break;
+            }
+        }
+
+        $this->form->fill($formData);
     }
 
     protected function getHeaderActions(): array
@@ -121,23 +202,26 @@ class PaymentConfig extends Page
     public function form(Schema $form): Schema
     {
         $tenant = auth()->user()->tenant;
+        $processor = $this->activeProcessor;
 
         return $form
             ->schema([
                 SC\Section::make('Payment Processor')
                     ->description('Configure your payment processor to accept payments from customers')
                     ->schema([
-                        Forms\Components\Select::make('payment_processor')
-                            ->label('Payment Processor')
-                            ->options([
-                                'stripe' => 'Stripe',
-                                'netopia' => 'Netopia Payments (mobilPay)',
-                                'euplatesc' => 'EuPlatesc',
-                                'payu' => 'PayU',
-                            ])
-                            ->required()
-                            ->live()
-                            ->helperText('Select your preferred payment processor'),
+                        // Hidden field to store the processor
+                        Forms\Components\Hidden::make('payment_processor')
+                            ->default($processor),
+
+                        // Display the active processor (read-only)
+                        Forms\Components\Placeholder::make('active_processor_display')
+                            ->label('Active Processor')
+                            ->content(fn () => new HtmlString(
+                                '<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">' .
+                                $this->processorLabel .
+                                '</span>'
+                            ))
+                            ->helperText('This processor is enabled via your microservices subscription'),
 
                         Forms\Components\Select::make('payment_processor_mode')
                             ->label('Mode')
@@ -181,7 +265,7 @@ class PaymentConfig extends Page
                             ->content(fn () => $tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'stripe']) : '-')
                             ->helperText('Add this URL to your Stripe webhook settings'),
                     ])
-                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('payment_processor') === 'stripe')
+                    ->visible(fn () => $processor === 'stripe')
                     ->columns(1),
 
                 // Netopia Configuration
@@ -211,7 +295,7 @@ class PaymentConfig extends Page
                             ->content(fn () => $tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'netopia']) : '-')
                             ->helperText('Add this URL to your Netopia account settings'),
                     ])
-                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('payment_processor') === 'netopia')
+                    ->visible(fn () => $processor === 'netopia')
                     ->columns(1),
 
                 // Euplatesc Configuration
@@ -237,7 +321,7 @@ class PaymentConfig extends Page
                             ->content(fn () => $tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'euplatesc']) : '-')
                             ->helperText('Add this URL to your EuPlatesc account settings'),
                     ])
-                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('payment_processor') === 'euplatesc')
+                    ->visible(fn () => $processor === 'euplatesc')
                     ->columns(1),
 
                 // PayU Configuration
@@ -263,7 +347,7 @@ class PaymentConfig extends Page
                             ->content(fn () => $tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'payu']) : '-')
                             ->helperText('Add this URL to your PayU account for IPN/IOS notifications'),
                     ])
-                    ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('payment_processor') === 'payu')
+                    ->visible(fn () => $processor === 'payu')
                     ->columns(1),
 
                 SC\Section::make('Security Notes')
@@ -289,25 +373,28 @@ class PaymentConfig extends Page
         $data = $this->form->getState();
         $tenant = auth()->user()->tenant;
 
-        if (!$tenant) {
+        if (!$tenant || !$this->activeProcessor) {
             return;
         }
 
+        // Use the active processor (from microservice) - ignore form data for processor
+        $processor = $this->activeProcessor;
+
         // Update tenant payment processor
         $tenant->update([
-            'payment_processor' => $data['payment_processor'],
+            'payment_processor' => $processor,
             'payment_processor_mode' => $data['payment_processor_mode'],
         ]);
 
         // Prepare config data
         $configData = [
-            'processor' => $data['payment_processor'],
+            'processor' => $processor,
             'mode' => $data['payment_processor_mode'],
             'is_active' => true,
         ];
 
         // Add processor-specific fields
-        switch ($data['payment_processor']) {
+        switch ($processor) {
             case 'stripe':
                 $configData['stripe_publishable_key'] = $data['stripe_publishable_key'] ?? null;
                 $configData['stripe_secret_key'] = $data['stripe_secret_key'] ?? null;
@@ -335,7 +422,7 @@ class PaymentConfig extends Page
         TenantPaymentConfig::updateOrCreate(
             [
                 'tenant_id' => $tenant->id,
-                'processor' => $data['payment_processor'],
+                'processor' => $processor,
             ],
             $configData
         );
