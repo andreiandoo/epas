@@ -73,7 +73,9 @@ class TrackingSettings extends Page
         foreach (['ga4', 'gtm', 'meta', 'tiktok'] as $provider) {
             $integration = $integrations->where('provider', $provider)->first();
             if ($integration) {
-                $formData["{$provider}_enabled"] = (bool) $integration->enabled;
+                $settings = $integration->getSettings();
+                // Use toggle_enabled from settings if available, otherwise fall back to enabled
+                $formData["{$provider}_enabled"] = (bool) ($settings['toggle_enabled'] ?? $integration->enabled);
                 $formData["{$provider}_id"] = $integration->getProviderId() ?? '';
                 $formData["{$provider}_inject_at"] = $integration->getInjectAt();
                 $formData["{$provider}_page_scope"] = $integration->getPageScope();
@@ -86,6 +88,7 @@ class TrackingSettings extends Page
         }
 
         $this->data = $formData;
+        $this->form->fill($this->data);
     }
 
     public function form(Schema $form): Schema
@@ -298,22 +301,24 @@ class TrackingSettings extends Page
         ];
 
         foreach ($providers as $provider => $config) {
-            $enabled = (bool) ($data["{$provider}_enabled"] ?? false);
+            $toggleEnabled = (bool) ($data["{$provider}_enabled"] ?? false);
             $providerId = $data["{$provider}_id"] ?? '';
 
-            // Always save the toggle state
+            // enabled = true only when toggle is on AND provider ID exists
+            // toggle_enabled in settings stores the UI toggle state
             TrackingIntegration::updateOrCreate(
                 [
                     'tenant_id' => $tenant->id,
                     'provider' => $provider,
                 ],
                 [
-                    'enabled' => $enabled && !empty($providerId),
+                    'enabled' => $toggleEnabled && !empty($providerId),
                     'consent_category' => $config['consent_category'],
                     'settings' => [
                         $config['id_field'] => $providerId,
                         'inject_at' => $data["{$provider}_inject_at"] ?? 'head',
                         'page_scope' => $data["{$provider}_page_scope"] ?? 'public',
+                        'toggle_enabled' => $toggleEnabled,
                     ],
                 ]
             );

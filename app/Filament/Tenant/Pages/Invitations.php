@@ -108,7 +108,7 @@ class Invitations extends Page
         return Event::where('tenant_id', $tenant->id)
             ->orderBy('created_at', 'desc')
             ->get()
-            ->mapWithKeys(fn ($event) => [$event->id => $event->title])
+            ->mapWithKeys(fn ($event) => [$event->id => $event->getTranslation('title')])
             ->all();
     }
 

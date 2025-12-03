@@ -24,7 +24,6 @@ class AnalyticsDashboard extends Page
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.tenant.pages.analytics-dashboard';
 
-    public ?string $selectedEventId = null;
     public ?string $dateRange = '30d';
     public ?array $data = [];
 
@@ -70,42 +69,26 @@ class AnalyticsDashboard extends Page
             return;
         }
 
-        $this->form->fill([
-            'event_id' => $this->selectedEventId,
+        $this->data = [
             'date_range' => $this->dateRange,
-        ]);
+        ];
     }
 
     public function form(Schema $form): Schema
     {
-        $tenant = auth()->user()->tenant;
-        $events = Event::where('tenant_id', $tenant->id)
-            ->orderBy('created_at', 'desc')
-            ->pluck('title', 'id')
-            ->toArray();
-
         return $form
             ->schema([
-                SC\Grid::make(2)->schema([
-                    Forms\Components\Select::make('event_id')
-                        ->label('Event')
-                        ->options(['all' => 'All Events'] + $events)
-                        ->default('all')
-                        ->live()
-                        ->afterStateUpdated(fn ($state) => $this->selectedEventId = $state),
-
-                    Forms\Components\Select::make('date_range')
-                        ->label('Date Range')
-                        ->options([
-                            '7d' => 'Last 7 days',
-                            '30d' => 'Last 30 days',
-                            '90d' => 'Last 90 days',
-                            'all' => 'All time',
-                        ])
-                        ->default('30d')
-                        ->live()
-                        ->afterStateUpdated(fn ($state) => $this->dateRange = $state),
-                ]),
+                Forms\Components\Select::make('date_range')
+                    ->label('Date Range')
+                    ->options([
+                        '7d' => 'Last 7 days',
+                        '30d' => 'Last 30 days',
+                        '90d' => 'Last 90 days',
+                        'all' => 'All time',
+                    ])
+                    ->default('30d')
+                    ->live()
+                    ->afterStateUpdated(fn ($state) => $this->dateRange = $state),
             ])
             ->statePath('data');
     }
@@ -113,6 +96,17 @@ class AnalyticsDashboard extends Page
     public function getMetrics(): array
     {
         $tenant = auth()->user()->tenant;
+
+        if (!$tenant) {
+            return [
+                'total_revenue' => 0,
+                'total_orders' => 0,
+                'total_tickets' => 0,
+                'avg_order_value' => 0,
+                'revenue_change' => 0,
+            ];
+        }
+
         $query = Order::where('tenant_id', $tenant->id);
 
         // Apply date filter
@@ -125,11 +119,6 @@ class AnalyticsDashboard extends Page
 
         if ($startDate) {
             $query->where('created_at', '>=', $startDate);
-        }
-
-        // Apply event filter
-        if ($this->selectedEventId && $this->selectedEventId !== 'all') {
-            $query->where('event_id', $this->selectedEventId);
         }
 
         $totalRevenue = (clone $query)->where('status', 'paid')->sum('total_cents') / 100;
@@ -161,6 +150,10 @@ class AnalyticsDashboard extends Page
     {
         $tenant = auth()->user()->tenant;
 
+        if (!$tenant) {
+            return ['labels' => [], 'revenue' => [], 'orders' => []];
+        }
+
         $days = match ($this->dateRange) {
             '7d' => 7,
             '30d' => 30,
@@ -171,9 +164,6 @@ class AnalyticsDashboard extends Page
         $data = Order::where('tenant_id', $tenant->id)
             ->where('status', 'paid')
             ->where('created_at', '>=', Carbon::now()->subDays($days))
-            ->when($this->selectedEventId && $this->selectedEventId !== 'all', function ($q) {
-                $q->where('event_id', $this->selectedEventId);
-            })
             ->selectRaw('DATE(created_at) as date, SUM(total_cents) as revenue, COUNT(*) as orders')
             ->groupBy('date')
             ->orderBy('date')
@@ -203,6 +193,10 @@ class AnalyticsDashboard extends Page
     {
         $tenant = auth()->user()->tenant;
 
+        if (!$tenant) {
+            return [];
+        }
+
         $startDate = match ($this->dateRange) {
             '7d' => Carbon::now()->subDays(7),
             '30d' => Carbon::now()->subDays(30),
@@ -210,26 +204,27 @@ class AnalyticsDashboard extends Page
             default => null,
         };
 
-        return Event::where('tenant_id', $tenant->id)
-            ->withCount(['orders as completed_orders' => function ($q) use ($startDate) {
-                $q->where('status', 'paid');
+        // Get events with ticket sales through ticket_types -> tickets -> orders
+        return Event::where('events.tenant_id', $tenant->id)
+            ->select('events.id', 'events.title')
+            ->join('ticket_types', 'ticket_types.event_id', '=', 'events.id')
+            ->join('tickets', 'tickets.ticket_type_id', '=', 'ticket_types.id')
+            ->join('orders', function ($join) use ($startDate) {
+                $join->on('orders.id', '=', 'tickets.order_id')
+                    ->where('orders.status', '=', 'paid');
                 if ($startDate) {
-                    $q->where('created_at', '>=', $startDate);
+                    $join->where('orders.created_at', '>=', $startDate);
                 }
-            }])
-            ->withSum(['orders as total_revenue' => function ($q) use ($startDate) {
-                $q->where('status', 'paid');
-                if ($startDate) {
-                    $q->where('created_at', '>=', $startDate);
-                }
-            }], 'total_cents')
-            ->orderByDesc('total_revenue')
+            })
+            ->groupBy('events.id', 'events.title')
+            ->selectRaw('COUNT(DISTINCT orders.id) as order_count, SUM(ticket_types.price_cents) as revenue_cents')
+            ->orderByDesc('revenue_cents')
             ->limit(5)
             ->get()
             ->map(fn ($event) => [
-                'name' => $event->title,
-                'orders' => $event->completed_orders,
-                'revenue' => ($event->total_revenue ?? 0) / 100,
+                'name' => is_array($event->title) ? ($event->title['en'] ?? $event->title[array_key_first($event->title)] ?? 'Untitled') : $event->title,
+                'orders' => $event->order_count ?? 0,
+                'revenue' => ($event->revenue_cents ?? 0) / 100,
             ])
             ->toArray();
     }
