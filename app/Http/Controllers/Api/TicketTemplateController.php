@@ -401,15 +401,22 @@ class TicketTemplateController extends Controller
         $presets = [
             [
                 'id' => 'ticket_standard',
-                'name' => 'Standard Ticket (80×200mm)',
-                'size_mm' => ['w' => 80, 'h' => 200],
-                'orientation' => 'portrait',
+                'name' => 'Standard Ticket (200×100mm)',
+                'size_mm' => ['w' => 200, 'h' => 100],
+                'orientation' => 'landscape',
                 'dpi' => 300,
             ],
             [
-                'id' => 'ticket_landscape',
-                'name' => 'Landscape Ticket (200×80mm)',
+                'id' => 'ticket_wide',
+                'name' => 'Wide Ticket (200×80mm)',
                 'size_mm' => ['w' => 200, 'h' => 80],
+                'orientation' => 'landscape',
+                'dpi' => 300,
+            ],
+            [
+                'id' => 'ticket_tall',
+                'name' => 'Tall Ticket (200×120mm)',
+                'size_mm' => ['w' => 200, 'h' => 120],
                 'orientation' => 'landscape',
                 'dpi' => 300,
             ],

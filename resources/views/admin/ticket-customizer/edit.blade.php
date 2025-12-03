@@ -644,21 +644,26 @@
                     <button @click="showTemplatesModal = false" class="text-gray-400 hover:text-white text-2xl">&times;</button>
                 </div>
                 <p class="text-gray-400 text-sm mb-6">Select a template to start with. This will replace your current design.</p>
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div class="space-y-4">
                     <template x-for="(preset, index) in templatePresets" :key="index">
-                        <div @click="loadTemplate(preset)" class="bg-gray-700 rounded-lg p-3 cursor-pointer hover:bg-gray-600 transition border-2 border-transparent hover:border-blue-500">
-                            <div class="aspect-[2/5] bg-gray-900 rounded mb-3 overflow-hidden flex items-center justify-center">
-                                <div class="w-full h-full p-2" :style="'background-color: ' + preset.preview.bg">
-                                    <!-- Mini preview representation -->
-                                    <div class="w-full h-full relative" style="transform: scale(0.8);">
-                                        <template x-for="(elem, i) in preset.preview.elements" :key="i">
-                                            <div class="absolute" :style="elem.style" x-html="elem.content || ''"></div>
-                                        </template>
+                        <div @click="loadTemplate(preset)" class="bg-gray-700 rounded-lg p-4 cursor-pointer hover:bg-gray-600 transition border-2 border-transparent hover:border-blue-500 flex items-center gap-6">
+                            <div class="w-80 flex-shrink-0">
+                                <div class="aspect-[2/1] bg-gray-900 rounded overflow-hidden">
+                                    <div class="w-full h-full p-1" :style="'background-color: ' + preset.preview.bg">
+                                        <!-- Mini preview representation -->
+                                        <div class="w-full h-full relative">
+                                            <template x-for="(elem, i) in preset.preview.elements" :key="i">
+                                                <div class="absolute" :style="elem.style" x-html="elem.content || ''"></div>
+                                            </template>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <h4 class="font-medium text-sm" x-text="preset.name"></h4>
-                            <p class="text-xs text-gray-400" x-text="preset.description"></p>
+                            <div class="flex-1">
+                                <h4 class="font-semibold text-lg mb-1" x-text="preset.name"></h4>
+                                <p class="text-sm text-gray-400 mb-2" x-text="preset.description"></p>
+                                <span class="text-xs text-gray-500">200mm × 100mm • Landscape</span>
+                            </div>
                         </div>
                     </template>
                 </div>
@@ -677,8 +682,8 @@
                     'meta' => [
                         'version' => '1.0',
                         'dpi' => 300,
-                        'size_mm' => ['w' => 80, 'h' => 200],
-                        'orientation' => 'portrait',
+                        'size_mm' => ['w' => 200, 'h' => 100],
+                        'orientation' => 'landscape',
                         'bleed_mm' => ['top' => 3, 'right' => 3, 'bottom' => 3, 'left' => 3],
                         'safe_area_mm' => 5,
                         'background' => ['color' => '#ffffff', 'image' => '']
@@ -707,151 +712,147 @@
                 templatePresets: [
                     {
                         name: 'Classic Concert',
-                        description: 'Traditional concert ticket layout',
+                        description: 'Traditional concert ticket with bold header and clear info sections',
                         preview: { bg: '#1a1a2e', elements: [
-                            { style: 'top: 5%; left: 10%; right: 10%; height: 15%; background: linear-gradient(135deg, #e94560, #0f3460); border-radius: 4px;' },
-                            { style: 'top: 25%; left: 10%; width: 60%; height: 8%; background: #fff; border-radius: 2px;' },
-                            { style: 'top: 35%; left: 10%; width: 40%; height: 5%; background: rgba(255,255,255,0.5); border-radius: 2px;' },
-                            { style: 'top: 45%; left: 10%; width: 50%; height: 4%; background: rgba(255,255,255,0.3); border-radius: 2px;' },
-                            { style: 'bottom: 10%; right: 10%; width: 25%; height: 20%; background: #fff; border-radius: 4px;' },
+                            { style: 'top: 10%; left: 3%; width: 25%; height: 80%; background: #e94560; border-radius: 4px;' },
+                            { style: 'top: 15%; left: 32%; width: 40%; height: 12%; background: #fff; border-radius: 2px;' },
+                            { style: 'top: 32%; left: 32%; width: 30%; height: 8%; background: rgba(255,255,255,0.5); border-radius: 2px;' },
+                            { style: 'top: 55%; left: 32%; width: 35%; height: 6%; background: rgba(255,255,255,0.3); border-radius: 2px;' },
+                            { style: 'top: 20%; right: 5%; width: 18%; height: 35%; background: #fff; border-radius: 4px;' },
                         ]},
                         data: {
-                            meta: { version: '1.0', dpi: 300, size_mm: { w: 80, h: 200 }, orientation: 'portrait', bleed_mm: { top: 3, right: 3, bottom: 3, left: 3 }, safe_area_mm: 5, background: { color: '#1a1a2e', image: '' }, baseTextColor: '#ffffff' },
+                            meta: { version: '1.0', dpi: 300, size_mm: { w: 200, h: 100 }, orientation: 'landscape', bleed_mm: { top: 3, right: 3, bottom: 3, left: 3 }, safe_area_mm: 5, background: { color: '#1a1a2e', image: '' }, baseTextColor: '#ffffff' },
                             assets: [], layers: [
-                                { id: 'header_shape', type: 'shape', z: 1, frame: { x: 5, y: 5, w: 70, h: 25 }, rotation: 0, opacity: 1, visible: true, name: 'Header BG', shapeKind: 'rect', fillColor: '#e94560', borderColor: '#e94560', borderWidth: 0, borderRadius: 8 },
-                                { id: 'event_name', type: 'text', z: 10, frame: { x: 5, y: 35, w: 70, h: 15 }, rotation: 0, opacity: 1, visible: true, name: 'Event Name', content: '@{{event.name}}', fontSize: 16, fontWeight: 'bold', fontFamily: 'Montserrat', color: '#ffffff', textAlign: 'left' },
-                                { id: 'venue', type: 'text', z: 9, frame: { x: 5, y: 52, w: 70, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Venue', content: '@{{event.venue}}', fontSize: 10, fontWeight: 'normal', fontFamily: 'Inter', color: '#cccccc', textAlign: 'left' },
-                                { id: 'date', type: 'text', z: 8, frame: { x: 5, y: 65, w: 35, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Date', content: '@{{event.date}}', fontSize: 11, fontWeight: '600', fontFamily: 'Inter', color: '#e94560', textAlign: 'left' },
-                                { id: 'time', type: 'text', z: 7, frame: { x: 40, y: 65, w: 35, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Time', content: '@{{event.time}}', fontSize: 11, fontWeight: '600', fontFamily: 'Inter', color: '#e94560', textAlign: 'right' },
-                                { id: 'divider', type: 'shape', z: 2, frame: { x: 5, y: 80, w: 70, h: 1 }, rotation: 0, opacity: 0.3, visible: true, name: 'Divider', shapeKind: 'rect', fillColor: '#ffffff', borderColor: '#ffffff', borderWidth: 0, borderRadius: 0 },
-                                { id: 'ticket_holder', type: 'text', z: 6, frame: { x: 5, y: 90, w: 70, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket Holder', content: '@{{ticket.holder_name}}', fontSize: 12, fontWeight: '500', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
-                                { id: 'ticket_type', type: 'text', z: 5, frame: { x: 5, y: 105, w: 40, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket Type', content: '@{{ticket.type}}', fontSize: 9, fontWeight: 'normal', fontFamily: 'Inter', color: '#888888', textAlign: 'left' },
-                                { id: 'price', type: 'text', z: 4, frame: { x: 45, y: 105, w: 30, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Price', content: '@{{ticket.price}}', fontSize: 11, fontWeight: 'bold', fontFamily: 'Inter', color: '#e94560', textAlign: 'right' },
-                                { id: 'qr', type: 'qr', z: 3, frame: { x: 50, y: 160, w: 28, h: 28 }, rotation: 0, opacity: 1, visible: true, name: 'QR Code', qrData: '@{{qrcode}}', qrForeground: '#000000', qrBackground: '#ffffff' },
-                                { id: 'ticket_id', type: 'text', z: 2, frame: { x: 5, y: 175, w: 40, h: 6 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket ID', content: '#@{{ticket.id}}', fontSize: 7, fontWeight: 'normal', fontFamily: 'Inter', color: '#666666', textAlign: 'left' },
+                                { id: 'accent_bar', type: 'shape', z: 1, frame: { x: 5, y: 5, w: 45, h: 90 }, rotation: 0, opacity: 1, visible: true, name: 'Accent Bar', shapeKind: 'rect', fillColor: '#e94560', borderColor: '#e94560', borderWidth: 0, borderRadius: 6 },
+                                { id: 'event_name', type: 'text', z: 10, frame: { x: 55, y: 10, w: 95, h: 15 }, rotation: 0, opacity: 1, visible: true, name: 'Event Name', content: '@{{event.name}}', fontSize: 14, fontWeight: 'bold', fontFamily: 'Montserrat', color: '#ffffff', textAlign: 'left' },
+                                { id: 'venue', type: 'text', z: 9, frame: { x: 55, y: 28, w: 95, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Venue', content: '@{{event.venue}}', fontSize: 9, fontWeight: 'normal', fontFamily: 'Inter', color: '#cccccc', textAlign: 'left' },
+                                { id: 'date_time', type: 'text', z: 8, frame: { x: 55, y: 40, w: 95, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Date & Time', content: '@{{event.date}} • @{{event.time}}', fontSize: 9, fontWeight: '600', fontFamily: 'Inter', color: '#e94560', textAlign: 'left' },
+                                { id: 'divider', type: 'shape', z: 2, frame: { x: 55, y: 52, w: 90, h: 0.5 }, rotation: 0, opacity: 0.3, visible: true, name: 'Divider', shapeKind: 'rect', fillColor: '#ffffff', borderColor: '#ffffff', borderWidth: 0, borderRadius: 0 },
+                                { id: 'ticket_holder', type: 'text', z: 6, frame: { x: 55, y: 58, w: 95, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket Holder', content: '@{{ticket.holder_name}}', fontSize: 10, fontWeight: '500', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
+                                { id: 'ticket_type', type: 'text', z: 5, frame: { x: 55, y: 70, w: 50, h: 7 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket Type', content: '@{{ticket.type}}', fontSize: 8, fontWeight: 'normal', fontFamily: 'Inter', color: '#888888', textAlign: 'left' },
+                                { id: 'price', type: 'text', z: 4, frame: { x: 105, y: 70, w: 40, h: 7 }, rotation: 0, opacity: 1, visible: true, name: 'Price', content: '@{{ticket.price}}', fontSize: 9, fontWeight: 'bold', fontFamily: 'Inter', color: '#e94560', textAlign: 'right' },
+                                { id: 'qr', type: 'qr', z: 3, frame: { x: 158, y: 18, w: 35, h: 35 }, rotation: 0, opacity: 1, visible: true, name: 'QR Code', qrData: '@{{qrcode}}', qrForeground: '#000000', qrBackground: '#ffffff' },
+                                { id: 'ticket_id', type: 'text', z: 2, frame: { x: 55, y: 85, w: 90, h: 6 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket ID', content: '#@{{ticket.id}}', fontSize: 7, fontWeight: 'normal', fontFamily: 'Inter', color: '#666666', textAlign: 'left' },
                             ]
                         }
                     },
                     {
                         name: 'Modern Minimal',
-                        description: 'Clean and simple design',
+                        description: 'Clean white design with subtle typography',
                         preview: { bg: '#ffffff', elements: [
-                            { style: 'top: 8%; left: 10%; width: 70%; height: 10%; background: #111; border-radius: 2px;' },
-                            { style: 'top: 22%; left: 10%; width: 50%; height: 6%; background: #333; border-radius: 2px;' },
-                            { style: 'top: 32%; left: 10%; width: 35%; height: 4%; background: #666; border-radius: 2px;' },
-                            { style: 'bottom: 15%; left: 50%; transform: translateX(-50%); width: 30%; height: 25%; background: #000; border-radius: 4px;' },
+                            { style: 'top: 15%; left: 5%; width: 50%; height: 15%; background: #111; border-radius: 2px;' },
+                            { style: 'top: 35%; left: 5%; width: 35%; height: 8%; background: #666; border-radius: 2px;' },
+                            { style: 'top: 55%; left: 5%; width: 40%; height: 6%; background: #999; border-radius: 2px;' },
+                            { style: 'top: 20%; right: 5%; width: 20%; height: 40%; background: #000; border-radius: 4px;' },
                         ]},
                         data: {
-                            meta: { version: '1.0', dpi: 300, size_mm: { w: 80, h: 200 }, orientation: 'portrait', bleed_mm: { top: 3, right: 3, bottom: 3, left: 3 }, safe_area_mm: 5, background: { color: '#ffffff', image: '' }, baseTextColor: '#000000' },
+                            meta: { version: '1.0', dpi: 300, size_mm: { w: 200, h: 100 }, orientation: 'landscape', bleed_mm: { top: 3, right: 3, bottom: 3, left: 3 }, safe_area_mm: 5, background: { color: '#ffffff', image: '' }, baseTextColor: '#000000' },
                             assets: [], layers: [
-                                { id: 'event_name', type: 'text', z: 10, frame: { x: 8, y: 15, w: 64, h: 18 }, rotation: 0, opacity: 1, visible: true, name: 'Event Name', content: '@{{event.name}}', fontSize: 18, fontWeight: 'bold', fontFamily: 'Playfair Display', color: '#000000', textAlign: 'left' },
-                                { id: 'venue', type: 'text', z: 9, frame: { x: 8, y: 38, w: 64, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Venue', content: '@{{event.venue}}', fontSize: 10, fontWeight: 'normal', fontFamily: 'Inter', color: '#333333', textAlign: 'left' },
-                                { id: 'date_time', type: 'text', z: 8, frame: { x: 8, y: 52, w: 64, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Date & Time', content: '@{{event.date}} • @{{event.time}}', fontSize: 9, fontWeight: '500', fontFamily: 'Inter', color: '#666666', textAlign: 'left' },
-                                { id: 'line1', type: 'shape', z: 2, frame: { x: 8, y: 68, w: 64, h: 0.5 }, rotation: 0, opacity: 1, visible: true, name: 'Line', shapeKind: 'rect', fillColor: '#e0e0e0', borderColor: '#e0e0e0', borderWidth: 0, borderRadius: 0 },
-                                { id: 'holder', type: 'text', z: 7, frame: { x: 8, y: 78, w: 64, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Holder', content: '@{{ticket.holder_name}}', fontSize: 11, fontWeight: '600', fontFamily: 'Inter', color: '#000000', textAlign: 'left' },
-                                { id: 'type_price', type: 'text', z: 6, frame: { x: 8, y: 92, w: 64, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Type & Price', content: '@{{ticket.type}} — @{{ticket.price}}', fontSize: 9, fontWeight: 'normal', fontFamily: 'Inter', color: '#666666', textAlign: 'left' },
-                                { id: 'qr', type: 'qr', z: 5, frame: { x: 25, y: 140, w: 30, h: 30 }, rotation: 0, opacity: 1, visible: true, name: 'QR Code', qrData: '@{{qrcode}}', qrForeground: '#000000', qrBackground: '#ffffff' },
-                                { id: 'ticket_id', type: 'text', z: 4, frame: { x: 8, y: 180, w: 64, h: 6 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket ID', content: '@{{ticket.id}}', fontSize: 7, fontWeight: 'normal', fontFamily: 'Inter', color: '#999999', textAlign: 'center' },
+                                { id: 'event_name', type: 'text', z: 10, frame: { x: 10, y: 12, w: 120, h: 16 }, rotation: 0, opacity: 1, visible: true, name: 'Event Name', content: '@{{event.name}}', fontSize: 14, fontWeight: 'bold', fontFamily: 'Playfair Display', color: '#000000', textAlign: 'left' },
+                                { id: 'venue', type: 'text', z: 9, frame: { x: 10, y: 30, w: 120, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Venue', content: '@{{event.venue}}', fontSize: 9, fontWeight: 'normal', fontFamily: 'Inter', color: '#333333', textAlign: 'left' },
+                                { id: 'date_time', type: 'text', z: 8, frame: { x: 10, y: 42, w: 120, h: 7 }, rotation: 0, opacity: 1, visible: true, name: 'Date & Time', content: '@{{event.date}} • @{{event.time}}', fontSize: 8, fontWeight: '500', fontFamily: 'Inter', color: '#666666', textAlign: 'left' },
+                                { id: 'line1', type: 'shape', z: 2, frame: { x: 10, y: 54, w: 120, h: 0.5 }, rotation: 0, opacity: 1, visible: true, name: 'Line', shapeKind: 'rect', fillColor: '#e0e0e0', borderColor: '#e0e0e0', borderWidth: 0, borderRadius: 0 },
+                                { id: 'holder', type: 'text', z: 7, frame: { x: 10, y: 60, w: 120, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Holder', content: '@{{ticket.holder_name}}', fontSize: 10, fontWeight: '600', fontFamily: 'Inter', color: '#000000', textAlign: 'left' },
+                                { id: 'type_price', type: 'text', z: 6, frame: { x: 10, y: 73, w: 120, h: 7 }, rotation: 0, opacity: 1, visible: true, name: 'Type & Price', content: '@{{ticket.type}} — @{{ticket.price}}', fontSize: 8, fontWeight: 'normal', fontFamily: 'Inter', color: '#666666', textAlign: 'left' },
+                                { id: 'qr', type: 'qr', z: 5, frame: { x: 155, y: 20, w: 35, h: 35 }, rotation: 0, opacity: 1, visible: true, name: 'QR Code', qrData: '@{{qrcode}}', qrForeground: '#000000', qrBackground: '#ffffff' },
+                                { id: 'ticket_id', type: 'text', z: 4, frame: { x: 10, y: 88, w: 180, h: 6 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket ID', content: '@{{ticket.id}}', fontSize: 7, fontWeight: 'normal', fontFamily: 'Inter', color: '#999999', textAlign: 'left' },
                             ]
                         }
                     },
                     {
                         name: 'Bold Festival',
-                        description: 'Vibrant colors for festivals',
+                        description: 'Vibrant two-tone design perfect for music festivals',
                         preview: { bg: '#ff6b35', elements: [
-                            { style: 'top: 0; left: 0; right: 0; height: 40%; background: linear-gradient(180deg, #004e89, #1a659e);' },
-                            { style: 'top: 10%; left: 10%; width: 60%; height: 12%; background: #fff; border-radius: 2px;' },
-                            { style: 'top: 25%; left: 10%; width: 40%; height: 6%; background: rgba(255,255,255,0.7); border-radius: 2px;' },
-                            { style: 'bottom: 8%; right: 8%; width: 28%; height: 22%; background: #fff; border-radius: 4px;' },
+                            { style: 'top: 0; left: 0; width: 60%; height: 100%; background: #004e89;' },
+                            { style: 'top: 15%; left: 5%; width: 45%; height: 15%; background: #fff; border-radius: 2px;' },
+                            { style: 'top: 38%; left: 5%; width: 30%; height: 8%; background: rgba(255,255,255,0.7); border-radius: 2px;' },
+                            { style: 'top: 20%; right: 5%; width: 18%; height: 35%; background: #fff; border-radius: 4px;' },
                         ]},
                         data: {
-                            meta: { version: '1.0', dpi: 300, size_mm: { w: 80, h: 200 }, orientation: 'portrait', bleed_mm: { top: 3, right: 3, bottom: 3, left: 3 }, safe_area_mm: 5, background: { color: '#ff6b35', image: '' }, baseTextColor: '#ffffff' },
+                            meta: { version: '1.0', dpi: 300, size_mm: { w: 200, h: 100 }, orientation: 'landscape', bleed_mm: { top: 3, right: 3, bottom: 3, left: 3 }, safe_area_mm: 5, background: { color: '#ff6b35', image: '' }, baseTextColor: '#ffffff' },
                             assets: [], layers: [
-                                { id: 'header_bg', type: 'shape', z: 1, frame: { x: 0, y: 0, w: 80, h: 70 }, rotation: 0, opacity: 1, visible: true, name: 'Header BG', shapeKind: 'rect', fillColor: '#004e89', borderColor: '#004e89', borderWidth: 0, borderRadius: 0 },
-                                { id: 'event_name', type: 'text', z: 10, frame: { x: 8, y: 20, w: 64, h: 22 }, rotation: 0, opacity: 1, visible: true, name: 'Event Name', content: '@{{event.name}}', fontSize: 20, fontWeight: 'bold', fontFamily: 'Oswald', color: '#ffffff', textAlign: 'left' },
-                                { id: 'venue', type: 'text', z: 9, frame: { x: 8, y: 45, w: 64, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Venue', content: '@{{event.venue}}', fontSize: 10, fontWeight: '500', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
-                                { id: 'date', type: 'text', z: 8, frame: { x: 8, y: 80, w: 64, h: 14 }, rotation: 0, opacity: 1, visible: true, name: 'Date', content: '@{{event.date}}', fontSize: 14, fontWeight: 'bold', fontFamily: 'Oswald', color: '#ffffff', textAlign: 'left' },
-                                { id: 'time', type: 'text', z: 7, frame: { x: 8, y: 96, w: 64, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Time', content: '@{{event.time}}', fontSize: 10, fontWeight: 'normal', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
-                                { id: 'holder', type: 'text', z: 6, frame: { x: 8, y: 120, w: 64, h: 12 }, rotation: 0, opacity: 1, visible: true, name: 'Holder', content: '@{{ticket.holder_name}}', fontSize: 12, fontWeight: '600', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
-                                { id: 'ticket_type', type: 'text', z: 5, frame: { x: 8, y: 135, w: 40, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket Type', content: '@{{ticket.type}}', fontSize: 10, fontWeight: '500', fontFamily: 'Inter', color: '#004e89', textAlign: 'left' },
-                                { id: 'qr', type: 'qr', z: 4, frame: { x: 48, y: 155, w: 28, h: 28 }, rotation: 0, opacity: 1, visible: true, name: 'QR Code', qrData: '@{{qrcode}}', qrForeground: '#004e89', qrBackground: '#ffffff' },
-                                { id: 'ticket_id', type: 'text', z: 3, frame: { x: 8, y: 165, w: 38, h: 6 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket ID', content: '#@{{ticket.id}}', fontSize: 7, fontWeight: 'normal', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
+                                { id: 'left_panel', type: 'shape', z: 1, frame: { x: 0, y: 0, w: 120, h: 100 }, rotation: 0, opacity: 1, visible: true, name: 'Left Panel', shapeKind: 'rect', fillColor: '#004e89', borderColor: '#004e89', borderWidth: 0, borderRadius: 0 },
+                                { id: 'event_name', type: 'text', z: 10, frame: { x: 10, y: 12, w: 100, h: 16 }, rotation: 0, opacity: 1, visible: true, name: 'Event Name', content: '@{{event.name}}', fontSize: 14, fontWeight: 'bold', fontFamily: 'Oswald', color: '#ffffff', textAlign: 'left' },
+                                { id: 'venue', type: 'text', z: 9, frame: { x: 10, y: 32, w: 100, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Venue', content: '@{{event.venue}}', fontSize: 9, fontWeight: '500', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
+                                { id: 'date_time', type: 'text', z: 8, frame: { x: 10, y: 45, w: 100, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Date & Time', content: '@{{event.date}} • @{{event.time}}', fontSize: 10, fontWeight: 'bold', fontFamily: 'Oswald', color: '#ffffff', textAlign: 'left' },
+                                { id: 'holder', type: 'text', z: 6, frame: { x: 10, y: 62, w: 100, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Holder', content: '@{{ticket.holder_name}}', fontSize: 10, fontWeight: '600', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
+                                { id: 'ticket_type', type: 'text', z: 5, frame: { x: 10, y: 75, w: 50, h: 7 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket Type', content: '@{{ticket.type}}', fontSize: 8, fontWeight: '500', fontFamily: 'Inter', color: '#ff6b35', textAlign: 'left' },
+                                { id: 'price', type: 'text', z: 4, frame: { x: 60, y: 75, w: 50, h: 7 }, rotation: 0, opacity: 1, visible: true, name: 'Price', content: '@{{ticket.price}}', fontSize: 9, fontWeight: 'bold', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
+                                { id: 'qr', type: 'qr', z: 3, frame: { x: 155, y: 20, w: 35, h: 35 }, rotation: 0, opacity: 1, visible: true, name: 'QR Code', qrData: '@{{qrcode}}', qrForeground: '#004e89', qrBackground: '#ffffff' },
+                                { id: 'ticket_id', type: 'text', z: 2, frame: { x: 10, y: 88, w: 100, h: 6 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket ID', content: '#@{{ticket.id}}', fontSize: 7, fontWeight: 'normal', fontFamily: 'Inter', color: 'rgba(255,255,255,0.6)', textAlign: 'left' },
                             ]
                         }
                     },
                     {
                         name: 'Elegant Dark',
-                        description: 'Sophisticated dark theme',
+                        description: 'Sophisticated black and gold theme for premium events',
                         preview: { bg: '#0d0d0d', elements: [
-                            { style: 'top: 8%; left: 15%; right: 15%; height: 1px; background: linear-gradient(90deg, transparent, #c9a227, transparent);' },
-                            { style: 'top: 15%; left: 10%; width: 65%; height: 10%; background: #c9a227; border-radius: 2px;' },
-                            { style: 'top: 28%; left: 10%; width: 45%; height: 5%; background: #333; border-radius: 2px;' },
-                            { style: 'top: 36%; left: 10%; width: 30%; height: 4%; background: #222; border-radius: 2px;' },
-                            { style: 'bottom: 10%; left: 50%; transform: translateX(-50%); width: 25%; height: 20%; background: #c9a227; border-radius: 4px;' },
+                            { style: 'top: 5%; left: 3%; right: 3%; bottom: 5%; border: 1px solid #c9a227; border-radius: 4px;' },
+                            { style: 'top: 20%; left: 8%; width: 50%; height: 15%; background: #c9a227; border-radius: 2px;' },
+                            { style: 'top: 42%; left: 8%; width: 35%; height: 8%; background: #444; border-radius: 2px;' },
+                            { style: 'top: 20%; right: 8%; width: 18%; height: 35%; background: #c9a227; border-radius: 4px;' },
                         ]},
                         data: {
-                            meta: { version: '1.0', dpi: 300, size_mm: { w: 80, h: 200 }, orientation: 'portrait', bleed_mm: { top: 3, right: 3, bottom: 3, left: 3 }, safe_area_mm: 5, background: { color: '#0d0d0d', image: '' }, baseTextColor: '#ffffff' },
+                            meta: { version: '1.0', dpi: 300, size_mm: { w: 200, h: 100 }, orientation: 'landscape', bleed_mm: { top: 3, right: 3, bottom: 3, left: 3 }, safe_area_mm: 5, background: { color: '#0d0d0d', image: '' }, baseTextColor: '#ffffff' },
                             assets: [], layers: [
-                                { id: 'gold_line_top', type: 'shape', z: 1, frame: { x: 10, y: 12, w: 60, h: 0.5 }, rotation: 0, opacity: 1, visible: true, name: 'Gold Line Top', shapeKind: 'rect', fillColor: '#c9a227', borderColor: '#c9a227', borderWidth: 0, borderRadius: 0 },
-                                { id: 'event_name', type: 'text', z: 10, frame: { x: 8, y: 22, w: 64, h: 18 }, rotation: 0, opacity: 1, visible: true, name: 'Event Name', content: '@{{event.name}}', fontSize: 16, fontWeight: 'bold', fontFamily: 'Playfair Display', color: '#c9a227', textAlign: 'center' },
-                                { id: 'venue', type: 'text', z: 9, frame: { x: 8, y: 45, w: 64, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Venue', content: '@{{event.venue}}', fontSize: 9, fontWeight: 'normal', fontFamily: 'Inter', color: '#888888', textAlign: 'center' },
-                                { id: 'gold_line_mid', type: 'shape', z: 1, frame: { x: 25, y: 60, w: 30, h: 0.5 }, rotation: 0, opacity: 0.5, visible: true, name: 'Gold Line Mid', shapeKind: 'rect', fillColor: '#c9a227', borderColor: '#c9a227', borderWidth: 0, borderRadius: 0 },
-                                { id: 'date', type: 'text', z: 8, frame: { x: 8, y: 70, w: 64, h: 12 }, rotation: 0, opacity: 1, visible: true, name: 'Date', content: '@{{event.date}}', fontSize: 12, fontWeight: '600', fontFamily: 'Inter', color: '#ffffff', textAlign: 'center' },
-                                { id: 'time', type: 'text', z: 7, frame: { x: 8, y: 84, w: 64, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Time', content: '@{{event.time}}', fontSize: 9, fontWeight: 'normal', fontFamily: 'Inter', color: '#666666', textAlign: 'center' },
-                                { id: 'holder', type: 'text', z: 6, frame: { x: 8, y: 105, w: 64, h: 12 }, rotation: 0, opacity: 1, visible: true, name: 'Holder', content: '@{{ticket.holder_name}}', fontSize: 11, fontWeight: '500', fontFamily: 'Inter', color: '#ffffff', textAlign: 'center' },
-                                { id: 'type_price', type: 'text', z: 5, frame: { x: 8, y: 120, w: 64, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Type & Price', content: '@{{ticket.type}} • @{{ticket.price}}', fontSize: 8, fontWeight: 'normal', fontFamily: 'Inter', color: '#c9a227', textAlign: 'center' },
-                                { id: 'qr', type: 'qr', z: 4, frame: { x: 25, y: 145, w: 30, h: 30 }, rotation: 0, opacity: 1, visible: true, name: 'QR Code', qrData: '@{{qrcode}}', qrForeground: '#c9a227', qrBackground: '#0d0d0d' },
-                                { id: 'ticket_id', type: 'text', z: 3, frame: { x: 8, y: 182, w: 64, h: 6 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket ID', content: '@{{ticket.id}}', fontSize: 6, fontWeight: 'normal', fontFamily: 'Inter', color: '#444444', textAlign: 'center' },
+                                { id: 'border', type: 'shape', z: 1, frame: { x: 5, y: 5, w: 190, h: 90 }, rotation: 0, opacity: 1, visible: true, name: 'Border', shapeKind: 'rect', fillColor: 'transparent', borderColor: '#c9a227', borderWidth: 1, borderRadius: 6 },
+                                { id: 'event_name', type: 'text', z: 10, frame: { x: 15, y: 15, w: 120, h: 16 }, rotation: 0, opacity: 1, visible: true, name: 'Event Name', content: '@{{event.name}}', fontSize: 14, fontWeight: 'bold', fontFamily: 'Playfair Display', color: '#c9a227', textAlign: 'left' },
+                                { id: 'venue', type: 'text', z: 9, frame: { x: 15, y: 33, w: 120, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Venue', content: '@{{event.venue}}', fontSize: 8, fontWeight: 'normal', fontFamily: 'Inter', color: '#888888', textAlign: 'left' },
+                                { id: 'gold_line', type: 'shape', z: 2, frame: { x: 15, y: 45, w: 80, h: 0.5 }, rotation: 0, opacity: 0.5, visible: true, name: 'Gold Line', shapeKind: 'rect', fillColor: '#c9a227', borderColor: '#c9a227', borderWidth: 0, borderRadius: 0 },
+                                { id: 'date_time', type: 'text', z: 8, frame: { x: 15, y: 52, w: 120, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Date & Time', content: '@{{event.date}} • @{{event.time}}', fontSize: 9, fontWeight: '600', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
+                                { id: 'holder', type: 'text', z: 6, frame: { x: 15, y: 65, w: 120, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Holder', content: '@{{ticket.holder_name}}', fontSize: 10, fontWeight: '500', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
+                                { id: 'type_price', type: 'text', z: 5, frame: { x: 15, y: 78, w: 120, h: 7 }, rotation: 0, opacity: 1, visible: true, name: 'Type & Price', content: '@{{ticket.type}} • @{{ticket.price}}', fontSize: 8, fontWeight: 'normal', fontFamily: 'Inter', color: '#c9a227', textAlign: 'left' },
+                                { id: 'qr', type: 'qr', z: 4, frame: { x: 155, y: 20, w: 32, h: 32 }, rotation: 0, opacity: 1, visible: true, name: 'QR Code', qrData: '@{{qrcode}}', qrForeground: '#c9a227', qrBackground: '#0d0d0d' },
+                                { id: 'ticket_id', type: 'text', z: 3, frame: { x: 155, y: 56, w: 32, h: 6 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket ID', content: '@{{ticket.id}}', fontSize: 6, fontWeight: 'normal', fontFamily: 'Inter', color: '#444444', textAlign: 'center' },
                             ]
                         }
                     },
                     {
                         name: 'Sports Event',
-                        description: 'Dynamic layout for sports',
+                        description: 'Dynamic diagonal design for sports and action events',
                         preview: { bg: '#1e3a5f', elements: [
-                            { style: 'top: 0; left: 0; width: 40%; height: 35%; background: #e63946; clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);' },
-                            { style: 'top: 8%; left: 8%; width: 50%; height: 10%; background: #fff; border-radius: 2px;' },
-                            { style: 'top: 40%; left: 8%; width: 60%; height: 6%; background: rgba(255,255,255,0.8); border-radius: 2px;' },
-                            { style: 'bottom: 8%; right: 8%; width: 28%; height: 22%; background: #fff; border-radius: 4px;' },
+                            { style: 'top: 0; left: 0; width: 50%; height: 100%; background: #e63946;' },
+                            { style: 'top: 15%; left: 55%; width: 35%; height: 12%; background: #fff; border-radius: 2px;' },
+                            { style: 'top: 35%; left: 55%; width: 25%; height: 8%; background: rgba(255,255,255,0.7); border-radius: 2px;' },
+                            { style: 'top: 60%; left: 55%; width: 30%; height: 6%; background: rgba(255,255,255,0.5); border-radius: 2px;' },
                         ]},
                         data: {
-                            meta: { version: '1.0', dpi: 300, size_mm: { w: 80, h: 200 }, orientation: 'portrait', bleed_mm: { top: 3, right: 3, bottom: 3, left: 3 }, safe_area_mm: 5, background: { color: '#1e3a5f', image: '' }, baseTextColor: '#ffffff' },
+                            meta: { version: '1.0', dpi: 300, size_mm: { w: 200, h: 100 }, orientation: 'landscape', bleed_mm: { top: 3, right: 3, bottom: 3, left: 3 }, safe_area_mm: 5, background: { color: '#1e3a5f', image: '' }, baseTextColor: '#ffffff' },
                             assets: [], layers: [
-                                { id: 'accent_shape', type: 'shape', z: 1, frame: { x: 0, y: 0, w: 50, h: 60 }, rotation: 0, opacity: 1, visible: true, name: 'Accent Shape', shapeKind: 'rect', fillColor: '#e63946', borderColor: '#e63946', borderWidth: 0, borderRadius: 0 },
-                                { id: 'event_name', type: 'text', z: 10, frame: { x: 8, y: 18, w: 64, h: 18 }, rotation: 0, opacity: 1, visible: true, name: 'Event Name', content: '@{{event.name}}', fontSize: 16, fontWeight: 'bold', fontFamily: 'Oswald', color: '#ffffff', textAlign: 'left' },
-                                { id: 'venue', type: 'text', z: 9, frame: { x: 8, y: 40, w: 64, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Venue', content: '@{{event.venue}}', fontSize: 10, fontWeight: 'normal', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
-                                { id: 'date', type: 'text', z: 8, frame: { x: 8, y: 70, w: 35, h: 14 }, rotation: 0, opacity: 1, visible: true, name: 'Date', content: '@{{event.date}}', fontSize: 13, fontWeight: 'bold', fontFamily: 'Oswald', color: '#e63946', textAlign: 'left' },
-                                { id: 'time', type: 'text', z: 7, frame: { x: 45, y: 70, w: 30, h: 14 }, rotation: 0, opacity: 1, visible: true, name: 'Time', content: '@{{event.time}}', fontSize: 13, fontWeight: 'bold', fontFamily: 'Oswald', color: '#ffffff', textAlign: 'right' },
-                                { id: 'holder', type: 'text', z: 6, frame: { x: 8, y: 100, w: 64, h: 12 }, rotation: 0, opacity: 1, visible: true, name: 'Holder', content: '@{{ticket.holder_name}}', fontSize: 12, fontWeight: '600', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
-                                { id: 'seat_info', type: 'text', z: 5, frame: { x: 8, y: 115, w: 40, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Seat Info', content: '@{{ticket.type}}', fontSize: 10, fontWeight: '500', fontFamily: 'Inter', color: '#e63946', textAlign: 'left' },
-                                { id: 'price', type: 'text', z: 4, frame: { x: 50, y: 115, w: 25, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Price', content: '@{{ticket.price}}', fontSize: 11, fontWeight: 'bold', fontFamily: 'Inter', color: '#ffffff', textAlign: 'right' },
-                                { id: 'qr', type: 'qr', z: 3, frame: { x: 48, y: 155, w: 28, h: 28 }, rotation: 0, opacity: 1, visible: true, name: 'QR Code', qrData: '@{{qrcode}}', qrForeground: '#1e3a5f', qrBackground: '#ffffff' },
-                                { id: 'ticket_id', type: 'text', z: 2, frame: { x: 8, y: 165, w: 38, h: 6 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket ID', content: '#@{{ticket.id}}', fontSize: 7, fontWeight: 'normal', fontFamily: 'Inter', color: '#8899aa', textAlign: 'left' },
+                                { id: 'accent_panel', type: 'shape', z: 1, frame: { x: 0, y: 0, w: 80, h: 100 }, rotation: 0, opacity: 1, visible: true, name: 'Accent Panel', shapeKind: 'rect', fillColor: '#e63946', borderColor: '#e63946', borderWidth: 0, borderRadius: 0 },
+                                { id: 'event_name', type: 'text', z: 10, frame: { x: 10, y: 15, w: 60, h: 20 }, rotation: 0, opacity: 1, visible: true, name: 'Event Name', content: '@{{event.name}}', fontSize: 12, fontWeight: 'bold', fontFamily: 'Oswald', color: '#ffffff', textAlign: 'left' },
+                                { id: 'venue', type: 'text', z: 9, frame: { x: 10, y: 38, w: 60, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Venue', content: '@{{event.venue}}', fontSize: 8, fontWeight: 'normal', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
+                                { id: 'date_time', type: 'text', z: 8, frame: { x: 10, y: 55, w: 60, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Date & Time', content: '@{{event.date}}', fontSize: 10, fontWeight: 'bold', fontFamily: 'Oswald', color: '#ffffff', textAlign: 'left' },
+                                { id: 'time', type: 'text', z: 7, frame: { x: 10, y: 68, w: 60, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Time', content: '@{{event.time}}', fontSize: 9, fontWeight: 'bold', fontFamily: 'Oswald', color: '#ffffff', textAlign: 'left' },
+                                { id: 'holder', type: 'text', z: 6, frame: { x: 90, y: 15, w: 65, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Holder', content: '@{{ticket.holder_name}}', fontSize: 10, fontWeight: '600', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
+                                { id: 'seat_info', type: 'text', z: 5, frame: { x: 90, y: 30, w: 65, h: 7 }, rotation: 0, opacity: 1, visible: true, name: 'Seat Info', content: '@{{ticket.type}}', fontSize: 8, fontWeight: '500', fontFamily: 'Inter', color: '#e63946', textAlign: 'left' },
+                                { id: 'price', type: 'text', z: 4, frame: { x: 90, y: 42, w: 65, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Price', content: '@{{ticket.price}}', fontSize: 9, fontWeight: 'bold', fontFamily: 'Inter', color: '#ffffff', textAlign: 'left' },
+                                { id: 'qr', type: 'qr', z: 3, frame: { x: 155, y: 20, w: 35, h: 35 }, rotation: 0, opacity: 1, visible: true, name: 'QR Code', qrData: '@{{qrcode}}', qrForeground: '#1e3a5f', qrBackground: '#ffffff' },
+                                { id: 'ticket_id', type: 'text', z: 2, frame: { x: 90, y: 88, w: 100, h: 6 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket ID', content: '#@{{ticket.id}}', fontSize: 7, fontWeight: 'normal', fontFamily: 'Inter', color: '#8899aa', textAlign: 'left' },
                             ]
                         }
                     },
                     {
                         name: 'Theater Classic',
-                        description: 'Elegant theater ticket',
+                        description: 'Warm elegant design for theater and cultural events',
                         preview: { bg: '#2c1810', elements: [
-                            { style: 'top: 5%; left: 5%; right: 5%; bottom: 5%; border: 2px solid #d4a574; border-radius: 4px;' },
-                            { style: 'top: 12%; left: 15%; width: 55%; height: 10%; background: #d4a574; border-radius: 2px;' },
-                            { style: 'top: 26%; left: 15%; width: 40%; height: 5%; background: rgba(212,165,116,0.5); border-radius: 2px;' },
-                            { style: 'bottom: 12%; left: 50%; transform: translateX(-50%); width: 25%; height: 20%; background: #f5f0e8; border-radius: 4px;' },
+                            { style: 'top: 5%; left: 3%; right: 3%; bottom: 5%; border: 2px solid #d4a574; border-radius: 4px;' },
+                            { style: 'top: 18%; left: 8%; width: 50%; height: 15%; background: #d4a574; border-radius: 2px;' },
+                            { style: 'top: 40%; left: 8%; width: 35%; height: 8%; background: rgba(212,165,116,0.5); border-radius: 2px;' },
+                            { style: 'top: 18%; right: 8%; width: 18%; height: 35%; background: #f5f0e8; border-radius: 4px;' },
                         ]},
                         data: {
-                            meta: { version: '1.0', dpi: 300, size_mm: { w: 80, h: 200 }, orientation: 'portrait', bleed_mm: { top: 3, right: 3, bottom: 3, left: 3 }, safe_area_mm: 5, background: { color: '#2c1810', image: '' }, baseTextColor: '#d4a574' },
+                            meta: { version: '1.0', dpi: 300, size_mm: { w: 200, h: 100 }, orientation: 'landscape', bleed_mm: { top: 3, right: 3, bottom: 3, left: 3 }, safe_area_mm: 5, background: { color: '#2c1810', image: '' }, baseTextColor: '#d4a574' },
                             assets: [], layers: [
-                                { id: 'border', type: 'shape', z: 1, frame: { x: 4, y: 8, w: 72, h: 184 }, rotation: 0, opacity: 1, visible: true, name: 'Border', shapeKind: 'rect', fillColor: 'transparent', borderColor: '#d4a574', borderWidth: 2, borderRadius: 8 },
-                                { id: 'event_name', type: 'text', z: 10, frame: { x: 10, y: 20, w: 60, h: 18 }, rotation: 0, opacity: 1, visible: true, name: 'Event Name', content: '@{{event.name}}', fontSize: 15, fontWeight: 'bold', fontFamily: 'Playfair Display', color: '#d4a574', textAlign: 'center' },
-                                { id: 'venue', type: 'text', z: 9, frame: { x: 10, y: 42, w: 60, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Venue', content: '@{{event.venue}}', fontSize: 9, fontWeight: 'normal', fontFamily: 'Inter', color: '#a08060', textAlign: 'center' },
-                                { id: 'ornament', type: 'text', z: 8, frame: { x: 30, y: 55, w: 20, h: 8 }, rotation: 0, opacity: 0.5, visible: true, name: 'Ornament', content: '✦ ✦ ✦', fontSize: 8, fontWeight: 'normal', fontFamily: 'Inter', color: '#d4a574', textAlign: 'center' },
-                                { id: 'date', type: 'text', z: 7, frame: { x: 10, y: 70, w: 60, h: 12 }, rotation: 0, opacity: 1, visible: true, name: 'Date', content: '@{{event.date}}', fontSize: 11, fontWeight: '600', fontFamily: 'Inter', color: '#f5f0e8', textAlign: 'center' },
-                                { id: 'time', type: 'text', z: 6, frame: { x: 10, y: 84, w: 60, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Time', content: '@{{event.time}}', fontSize: 9, fontWeight: 'normal', fontFamily: 'Inter', color: '#a08060', textAlign: 'center' },
-                                { id: 'holder', type: 'text', z: 5, frame: { x: 10, y: 105, w: 60, h: 12 }, rotation: 0, opacity: 1, visible: true, name: 'Holder', content: '@{{ticket.holder_name}}', fontSize: 11, fontWeight: '500', fontFamily: 'Inter', color: '#f5f0e8', textAlign: 'center' },
-                                { id: 'type_price', type: 'text', z: 4, frame: { x: 10, y: 120, w: 60, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Type & Price', content: '@{{ticket.type}} — @{{ticket.price}}', fontSize: 8, fontWeight: 'normal', fontFamily: 'Inter', color: '#d4a574', textAlign: 'center' },
-                                { id: 'qr', type: 'qr', z: 3, frame: { x: 25, y: 145, w: 30, h: 30 }, rotation: 0, opacity: 1, visible: true, name: 'QR Code', qrData: '@{{qrcode}}', qrForeground: '#2c1810', qrBackground: '#f5f0e8' },
-                                { id: 'ticket_id', type: 'text', z: 2, frame: { x: 10, y: 180, w: 60, h: 6 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket ID', content: '@{{ticket.id}}', fontSize: 6, fontWeight: 'normal', fontFamily: 'Inter', color: '#6b5040', textAlign: 'center' },
+                                { id: 'border', type: 'shape', z: 1, frame: { x: 5, y: 5, w: 190, h: 90 }, rotation: 0, opacity: 1, visible: true, name: 'Border', shapeKind: 'rect', fillColor: 'transparent', borderColor: '#d4a574', borderWidth: 2, borderRadius: 8 },
+                                { id: 'event_name', type: 'text', z: 10, frame: { x: 15, y: 15, w: 120, h: 16 }, rotation: 0, opacity: 1, visible: true, name: 'Event Name', content: '@{{event.name}}', fontSize: 13, fontWeight: 'bold', fontFamily: 'Playfair Display', color: '#d4a574', textAlign: 'left' },
+                                { id: 'venue', type: 'text', z: 9, frame: { x: 15, y: 33, w: 120, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Venue', content: '@{{event.venue}}', fontSize: 8, fontWeight: 'normal', fontFamily: 'Inter', color: '#a08060', textAlign: 'left' },
+                                { id: 'ornament', type: 'text', z: 8, frame: { x: 15, y: 45, w: 30, h: 6 }, rotation: 0, opacity: 0.5, visible: true, name: 'Ornament', content: '✦ ✦ ✦', fontSize: 7, fontWeight: 'normal', fontFamily: 'Inter', color: '#d4a574', textAlign: 'left' },
+                                { id: 'date_time', type: 'text', z: 7, frame: { x: 15, y: 55, w: 120, h: 8 }, rotation: 0, opacity: 1, visible: true, name: 'Date & Time', content: '@{{event.date}} • @{{event.time}}', fontSize: 9, fontWeight: '600', fontFamily: 'Inter', color: '#f5f0e8', textAlign: 'left' },
+                                { id: 'holder', type: 'text', z: 5, frame: { x: 15, y: 68, w: 120, h: 10 }, rotation: 0, opacity: 1, visible: true, name: 'Holder', content: '@{{ticket.holder_name}}', fontSize: 10, fontWeight: '500', fontFamily: 'Inter', color: '#f5f0e8', textAlign: 'left' },
+                                { id: 'type_price', type: 'text', z: 4, frame: { x: 15, y: 80, w: 120, h: 7 }, rotation: 0, opacity: 1, visible: true, name: 'Type & Price', content: '@{{ticket.type}} — @{{ticket.price}}', fontSize: 8, fontWeight: 'normal', fontFamily: 'Inter', color: '#d4a574', textAlign: 'left' },
+                                { id: 'qr', type: 'qr', z: 3, frame: { x: 155, y: 20, w: 32, h: 32 }, rotation: 0, opacity: 1, visible: true, name: 'QR Code', qrData: '@{{qrcode}}', qrForeground: '#2c1810', qrBackground: '#f5f0e8' },
+                                { id: 'ticket_id', type: 'text', z: 2, frame: { x: 155, y: 56, w: 32, h: 6 }, rotation: 0, opacity: 1, visible: true, name: 'Ticket ID', content: '@{{ticket.id}}', fontSize: 6, fontWeight: 'normal', fontFamily: 'Inter', color: '#6b5040', textAlign: 'center' },
                             ]
                         }
                     },

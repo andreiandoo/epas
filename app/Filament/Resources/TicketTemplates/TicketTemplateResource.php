@@ -73,7 +73,7 @@ class TicketTemplateResource extends Resource
                             'portrait' => 'Portrait',
                             'landscape' => 'Landscape',
                         ])
-                        ->default('portrait')
+                        ->default('landscape')
                         ->required()
                         ->live(),
 
@@ -89,7 +89,7 @@ class TicketTemplateResource extends Resource
                     Forms\Components\TextInput::make('template_data.meta.size_mm.w')
                         ->label('Width (mm)')
                         ->numeric()
-                        ->default(80)
+                        ->default(200)
                         ->required()
                         ->minValue(10)
                         ->helperText('Canvas width in millimeters'),
@@ -97,7 +97,7 @@ class TicketTemplateResource extends Resource
                     Forms\Components\TextInput::make('template_data.meta.size_mm.h')
                         ->label('Height (mm)')
                         ->numeric()
-                        ->default(200)
+                        ->default(100)
                         ->required()
                         ->minValue(10)
                         ->helperText('Canvas height in millimeters'),
