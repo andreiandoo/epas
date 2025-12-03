@@ -14,7 +14,7 @@
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border overflow-hidden">
                     <div class="p-6">
                         <div class="flex items-start justify-between mb-4">
-                            <a href="/tenant/microservices/{{ $microservice->slug }}/settings"
+                            <a href="{{ route('filament.tenant.pages.microservice-settings', ['slug' => $microservice->slug]) }}"
                                class="font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                 {{ $microservice->getTranslation('name', app()->getLocale()) }}
                             </a>
@@ -45,7 +45,7 @@
                         </dl>
 
                         <div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <a href="/tenant/microservices/{{ $microservice->slug }}/settings"
+                            <a href="{{ route('filament.tenant.pages.microservice-settings', ['slug' => $microservice->slug]) }}"
                                class="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300">
                                 <x-heroicon-o-cog-6-tooth class="w-4 h-4 mr-1" />
                                 Settings

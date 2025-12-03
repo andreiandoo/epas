@@ -19,6 +19,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Route;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class TenantPanelProvider extends PanelProvider
@@ -56,10 +57,11 @@ class TenantPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Tenant/Pages'), for: 'App\\Filament\\Tenant\\Pages')
             ->discoverWidgets(in: app_path('Filament/Tenant/Widgets'), for: 'App\\Filament\\Tenant\\Widgets')
 
-            // Custom page routes
-            ->pages([
-                \App\Filament\Tenant\Pages\MicroserviceSettings::class,
-            ])
+            // Register custom routes for pages with dynamic parameters
+            ->routes(function () {
+                Route::get('/microservices/{slug}/settings', \App\Filament\Tenant\Pages\MicroserviceSettings::class)
+                    ->name('filament.tenant.pages.microservice-settings');
+            })
 
             ->middleware([
                 EncryptCookies::class,
