@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Visual Editor - {{ $template->name }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700|roboto:400,500,700|open+sans:400,600,700|lato:400,700|montserrat:400,500,600,700|poppins:400,500,600,700|playfair+display:400,700|oswald:400,500,700&display=swap" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
@@ -19,6 +19,11 @@
         .resize-handle.ne { top: -4px; right: -4px; cursor: ne-resize; }
         .resize-handle.sw { bottom: -4px; left: -4px; cursor: sw-resize; }
         .resize-handle.se { bottom: -4px; right: -4px; cursor: se-resize; }
+        .rotate-handle { width: 20px; height: 20px; background: #2563eb; position: absolute; border-radius: 50%; top: -30px; left: 50%; transform: translateX(-50%); cursor: grab; display: flex; align-items: center; justify-content: center; }
+        .rotate-handle svg { width: 12px; height: 12px; color: white; }
+        .rotate-handle:active { cursor: grabbing; }
+        .drop-zone { border: 2px dashed #4b5563; border-radius: 8px; transition: all 0.2s; }
+        .drop-zone.drag-over { border-color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
     </style>
 </head>
 <body class="font-sans antialiased bg-gray-900 text-white overflow-hidden">
@@ -52,6 +57,40 @@
         <div class="flex flex-1 overflow-hidden">
             <!-- Left Sidebar - Tools & Layers -->
             <aside class="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
+                <!-- Background Settings -->
+                <div class="p-4 border-b border-gray-700">
+                    <h3 class="text-sm font-semibold text-gray-400 mb-3">Background</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Color</label>
+                            <input type="color" x-model="templateData.meta.background.color" @input="markChanged()" class="w-full h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Image</label>
+                            <div class="drop-zone p-3 text-center cursor-pointer"
+                                 :class="{'drag-over': bgDragOver}"
+                                 @click="$refs.bgImageInput.click()"
+                                 @dragover.prevent="bgDragOver = true"
+                                 @dragleave="bgDragOver = false"
+                                 @drop.prevent="handleBgImageDrop($event)">
+                                <template x-if="templateData.meta.background.image">
+                                    <div class="relative">
+                                        <img :src="templateData.meta.background.image" class="max-h-16 mx-auto rounded" />
+                                        <button @click.stop="templateData.meta.background.image = ''; markChanged()" class="absolute -top-2 -right-2 bg-red-500 rounded-full w-5 h-5 text-xs">&times;</button>
+                                    </div>
+                                </template>
+                                <template x-if="!templateData.meta.background.image">
+                                    <div class="text-xs text-gray-500">
+                                        <svg class="w-6 h-6 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        Drop or click
+                                    </div>
+                                </template>
+                            </div>
+                            <input type="file" x-ref="bgImageInput" @change="handleBgImageSelect($event)" accept="image/*" class="hidden" />
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Tools -->
                 <div class="p-4 border-b border-gray-700">
                     <h3 class="text-sm font-semibold text-gray-400 mb-3">Add Elements</h3>
@@ -86,7 +125,7 @@
                             </svg>
                             Shape
                         </button>
-                        <button @click="addLayer('line')" class="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded text-sm">
+                        <button @click="addLayer('shape', 'line')" class="flex flex-col items-center p-3 bg-gray-700 hover:bg-gray-600 rounded text-sm">
                             <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 20L20 4"/>
                             </svg>
@@ -160,7 +199,9 @@
                 </div>
 
                 <!-- Canvas Area -->
-                <div class="bg-white shadow-2xl relative" :style="canvasStyle" @click="selectLayer(null)">
+                <div class="shadow-2xl relative" :style="canvasStyle" @click="selectLayer(null)">
+                    <!-- Background -->
+                    <div class="absolute inset-0" :style="canvasBackgroundStyle"></div>
                     <!-- Grid overlay (optional) -->
                     <div class="absolute inset-0 pointer-events-none opacity-10" style="background-image: linear-gradient(#000 1px, transparent 1px), linear-gradient(90deg, #000 1px, transparent 1px); background-size: 10px 10px;"></div>
 
@@ -176,13 +217,13 @@
                             <template x-if="layer.type === 'text'">
                                 <div class="w-full h-full flex items-center overflow-hidden"
                                      :style="getTextStyle(layer)"
-                                     x-text="layer.content || 'Text'"></div>
+                                     x-text="getDisplayContent(layer)"></div>
                             </template>
                             <!-- Image layer -->
                             <template x-if="layer.type === 'image'">
                                 <div class="w-full h-full bg-gray-200 flex items-center justify-center">
                                     <template x-if="layer.src">
-                                        <img :src="layer.src" class="w-full h-full object-contain" />
+                                        <img :src="layer.src" class="w-full h-full" :style="'object-fit: ' + (layer.objectFit || 'contain')" />
                                     </template>
                                     <template x-if="!layer.src">
                                         <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,8 +244,8 @@
                             <template x-if="layer.type === 'barcode'">
                                 <div class="w-full h-full bg-white flex items-center justify-center border border-gray-300">
                                     <div class="w-full h-3/4 flex items-end justify-center gap-px px-2">
-                                        <template x-for="i in 30">
-                                            <div class="bg-gray-800" :style="'width: ' + (Math.random() > 0.5 ? '2px' : '1px') + '; height: ' + (60 + Math.random() * 40) + '%'"></div>
+                                        <template x-for="i in 30" :key="i">
+                                            <div class="bg-gray-800" :style="'width: ' + (i % 3 === 0 ? '2px' : '1px') + '; height: ' + (60 + (i * 2) % 40) + '%'"></div>
                                         </template>
                                     </div>
                                 </div>
@@ -213,19 +254,20 @@
                             <template x-if="layer.type === 'shape'">
                                 <div class="w-full h-full" :style="getShapeStyle(layer)"></div>
                             </template>
-                            <!-- Line layer -->
-                            <template x-if="layer.type === 'line'">
-                                <div class="w-full h-full flex items-center">
-                                    <div class="w-full" :style="getLineStyle(layer)"></div>
-                                </div>
-                            </template>
-                            <!-- Resize handles -->
+                            <!-- Handles for selected layer -->
                             <template x-if="selectedLayerId === layer.id">
                                 <div>
+                                    <!-- Resize handles -->
                                     <div class="resize-handle nw" @mousedown.stop="startResize($event, layer, 'nw')"></div>
                                     <div class="resize-handle ne" @mousedown.stop="startResize($event, layer, 'ne')"></div>
                                     <div class="resize-handle sw" @mousedown.stop="startResize($event, layer, 'sw')"></div>
                                     <div class="resize-handle se" @mousedown.stop="startResize($event, layer, 'se')"></div>
+                                    <!-- Rotate handle -->
+                                    <div class="rotate-handle" @mousedown.stop="startRotate($event, layer)">
+                                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                        </svg>
+                                    </div>
                                 </div>
                             </template>
                         </div>
@@ -284,8 +326,11 @@
                             <!-- Rotation -->
                             <div>
                                 <label class="block text-xs text-gray-400 mb-1">Rotation</label>
-                                <input type="range" x-model.number="selectedLayer.rotation" @input="markChanged()" min="0" max="360" class="w-full" />
-                                <span class="text-xs text-gray-500" x-text="(selectedLayer.rotation || 0) + '°'"></span>
+                                <div class="flex items-center gap-2">
+                                    <input type="range" x-model.number="selectedLayer.rotation" @input="markChanged()" min="0" max="360" class="flex-1" />
+                                    <input type="number" x-model.number="selectedLayer.rotation" @input="markChanged()" min="0" max="360" class="w-16 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" />
+                                    <span class="text-xs text-gray-500">°</span>
+                                </div>
                             </div>
 
                             <!-- Opacity -->
@@ -300,7 +345,20 @@
                                 <div class="space-y-4 pt-4 border-t border-gray-700">
                                     <div>
                                         <label class="block text-xs text-gray-400 mb-1">Content</label>
-                                        <textarea x-model="selectedLayer.content" @input="markChanged()" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"></textarea>
+                                        <textarea x-model="selectedLayer.content" @input="markChanged()" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Text or {{variable}}"></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-400 mb-1">Font Family</label>
+                                        <select x-model="selectedLayer.fontFamily" @change="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm">
+                                            <option value="Inter">Inter</option>
+                                            <option value="Roboto">Roboto</option>
+                                            <option value="Open Sans">Open Sans</option>
+                                            <option value="Lato">Lato</option>
+                                            <option value="Montserrat">Montserrat</option>
+                                            <option value="Poppins">Poppins</option>
+                                            <option value="Playfair Display">Playfair Display</option>
+                                            <option value="Oswald">Oswald</option>
+                                        </select>
                                     </div>
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
@@ -311,6 +369,8 @@
                                             <label class="block text-xs text-gray-400 mb-1">Font Weight</label>
                                             <select x-model="selectedLayer.fontWeight" @change="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm">
                                                 <option value="normal">Normal</option>
+                                                <option value="500">Medium</option>
+                                                <option value="600">Semi Bold</option>
                                                 <option value="bold">Bold</option>
                                             </select>
                                         </div>
@@ -340,43 +400,34 @@
                             <template x-if="selectedLayer.type === 'shape'">
                                 <div class="space-y-4 pt-4 border-t border-gray-700">
                                     <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Fill Color</label>
-                                        <input type="color" x-model="selectedLayer.fillColor" @input="markChanged()" class="w-full h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
+                                        <label class="block text-xs text-gray-400 mb-1">Shape Type</label>
+                                        <select x-model="selectedLayer.shapeKind" @change="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm">
+                                            <option value="rect">Rectangle</option>
+                                            <option value="line">Line</option>
+                                            <option value="circle">Circle</option>
+                                            <option value="ellipse">Ellipse</option>
+                                        </select>
                                     </div>
+                                    <template x-if="selectedLayer.shapeKind !== 'line'">
+                                        <div>
+                                            <label class="block text-xs text-gray-400 mb-1">Fill Color</label>
+                                            <input type="color" x-model="selectedLayer.fillColor" @input="markChanged()" class="w-full h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
+                                        </div>
+                                    </template>
                                     <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Border Color</label>
+                                        <label class="block text-xs text-gray-400 mb-1">Border/Line Color</label>
                                         <input type="color" x-model="selectedLayer.borderColor" @input="markChanged()" class="w-full h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
                                     </div>
                                     <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Border Width</label>
+                                        <label class="block text-xs text-gray-400 mb-1">Border/Line Width</label>
                                         <input type="number" x-model.number="selectedLayer.borderWidth" @input="markChanged()" min="0" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" />
                                     </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Border Radius</label>
-                                        <input type="number" x-model.number="selectedLayer.borderRadius" @input="markChanged()" min="0" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" />
-                                    </div>
-                                </div>
-                            </template>
-
-                            <!-- Line-specific properties -->
-                            <template x-if="selectedLayer.type === 'line'">
-                                <div class="space-y-4 pt-4 border-t border-gray-700">
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Line Color</label>
-                                        <input type="color" x-model="selectedLayer.lineColor" @input="markChanged()" class="w-full h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Line Width</label>
-                                        <input type="number" x-model.number="selectedLayer.lineWidth" @input="markChanged()" min="1" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" />
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Line Style</label>
-                                        <select x-model="selectedLayer.lineStyle" @change="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm">
-                                            <option value="solid">Solid</option>
-                                            <option value="dashed">Dashed</option>
-                                            <option value="dotted">Dotted</option>
-                                        </select>
-                                    </div>
+                                    <template x-if="selectedLayer.shapeKind === 'rect'">
+                                        <div>
+                                            <label class="block text-xs text-gray-400 mb-1">Border Radius</label>
+                                            <input type="number" x-model.number="selectedLayer.borderRadius" @input="markChanged()" min="0" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" />
+                                        </div>
+                                    </template>
                                 </div>
                             </template>
 
@@ -384,7 +435,30 @@
                             <template x-if="selectedLayer.type === 'image'">
                                 <div class="space-y-4 pt-4 border-t border-gray-700">
                                     <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Image URL</label>
+                                        <label class="block text-xs text-gray-400 mb-1">Image</label>
+                                        <div class="drop-zone p-4 text-center cursor-pointer"
+                                             :class="{'drag-over': imageDragOver}"
+                                             @click="$refs.layerImageInput.click()"
+                                             @dragover.prevent="imageDragOver = true"
+                                             @dragleave="imageDragOver = false"
+                                             @drop.prevent="handleLayerImageDrop($event)">
+                                            <template x-if="selectedLayer.src">
+                                                <div class="relative">
+                                                    <img :src="selectedLayer.src" class="max-h-24 mx-auto rounded" />
+                                                    <button @click.stop="selectedLayer.src = ''; markChanged()" class="absolute -top-2 -right-2 bg-red-500 rounded-full w-5 h-5 text-xs">&times;</button>
+                                                </div>
+                                            </template>
+                                            <template x-if="!selectedLayer.src">
+                                                <div class="text-xs text-gray-500">
+                                                    <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                                    Drop image here or click to upload
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <input type="file" x-ref="layerImageInput" @change="handleLayerImageSelect($event)" accept="image/*" class="hidden" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-400 mb-1">Or enter URL</label>
                                         <input type="text" x-model="selectedLayer.src" @input="markChanged()" placeholder="https://..." class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
                                     </div>
                                     <div>
@@ -409,7 +483,7 @@
                     <div class="p-4">
                         <h3 class="text-sm font-semibold text-gray-400 mb-3">Available Variables</h3>
                         <p class="text-xs text-gray-500 mb-3">Click to copy. Use in text layers.</p>
-                        <div class="space-y-3">
+                        <div class="space-y-3 max-h-64 overflow-y-auto">
                             @foreach($variables as $groupKey => $group)
                                 <div>
                                     <h4 class="text-xs font-medium text-gray-500 mb-1">{{ $group['label'] }}</h4>
@@ -456,11 +530,22 @@
     </div>
 
     <script>
+        // Sample data for variable preview
+        const sampleData = @json($sampleData);
+
         function ticketCustomizer() {
             return {
                 templateId: {{ $template->id }},
                 templateData: {!! json_encode($template->template_data ?: [
-                    'meta' => ['dpi' => 300, 'size_mm' => ['w' => 80, 'h' => 200], 'orientation' => 'portrait', 'bleed_mm' => 3, 'safe_area_mm' => 5],
+                    'meta' => [
+                        'version' => '1.0',
+                        'dpi' => 300,
+                        'size_mm' => ['w' => 80, 'h' => 200],
+                        'orientation' => 'portrait',
+                        'bleed_mm' => ['top' => 3, 'right' => 3, 'bottom' => 3, 'left' => 3],
+                        'safe_area_mm' => 5,
+                        'background' => ['color' => '#ffffff', 'image' => '']
+                    ],
                     'assets' => [],
                     'layers' => []
                 ]) !!},
@@ -472,16 +557,32 @@
                 previewUrl: null,
                 dragState: null,
                 resizeState: null,
+                rotateState: null,
+                bgDragOver: false,
+                imageDragOver: false,
 
                 init() {
-                    // Ensure layers array exists
+                    // Ensure required structures exist
                     if (!this.templateData.layers) {
                         this.templateData.layers = [];
+                    }
+                    if (!this.templateData.meta.version) {
+                        this.templateData.meta.version = '1.0';
+                    }
+                    if (!this.templateData.meta.background) {
+                        this.templateData.meta.background = { color: '#ffffff', image: '' };
+                    }
+                    if (typeof this.templateData.meta.bleed_mm === 'number') {
+                        const b = this.templateData.meta.bleed_mm;
+                        this.templateData.meta.bleed_mm = { top: b, right: b, bottom: b, left: b };
+                    }
+                    if (!this.templateData.assets) {
+                        this.templateData.assets = [];
                     }
 
                     // Add keyboard shortcuts
                     document.addEventListener('keydown', (e) => {
-                        if (e.key === 'Delete' && this.selectedLayerId) {
+                        if (e.key === 'Delete' && this.selectedLayerId && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
                             this.deleteLayer(this.selectedLayerId);
                         }
                         if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
@@ -490,7 +591,7 @@
                         }
                     });
 
-                    // Mouse move/up for drag and resize
+                    // Mouse move/up for drag, resize, and rotate
                     document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
                     document.addEventListener('mouseup', () => this.handleMouseUp());
 
@@ -518,28 +619,45 @@
                     return `width: ${w}px; height: ${h}px;`;
                 },
 
+                get canvasBackgroundStyle() {
+                    const bg = this.templateData.meta.background || {};
+                    let style = `background-color: ${bg.color || '#ffffff'};`;
+                    if (bg.image) {
+                        style += ` background-image: url('${bg.image}'); background-size: cover; background-position: center;`;
+                    }
+                    return style;
+                },
+
                 generateId() {
                     return 'layer_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 },
 
-                addLayer(type) {
+                getNextZIndex() {
+                    const usedIndexes = this.templateData.layers.map(l => l.z || 0);
+                    let next = 1;
+                    while (usedIndexes.includes(next)) {
+                        next++;
+                    }
+                    return next;
+                },
+
+                addLayer(type, shapeKind = null) {
                     const id = this.generateId();
-                    const maxZ = Math.max(0, ...this.templateData.layers.map(l => l.z || 0));
+                    const z = this.getNextZIndex();
 
                     const defaults = {
-                        text: { name: 'Text', content: 'New Text', fontSize: 12, fontWeight: 'normal', color: '#000000', textAlign: 'left' },
+                        text: { name: 'Text', content: 'New Text', fontSize: 12, fontWeight: 'normal', fontFamily: 'Inter', color: '#000000', textAlign: 'left' },
                         image: { name: 'Image', src: '', objectFit: 'contain' },
-                        qr: { name: 'QR Code', variable: '@{{qrcode}}' },
-                        barcode: { name: 'Barcode', variable: '@{{barcode}}' },
-                        shape: { name: 'Shape', fillColor: '#e5e7eb', borderColor: '#9ca3af', borderWidth: 1, borderRadius: 0 },
-                        line: { name: 'Line', lineColor: '#000000', lineWidth: 1, lineStyle: 'solid' },
+                        qr: { name: 'QR Code', props: { data: '@{{qrcode}}' } },
+                        barcode: { name: 'Barcode', props: { data: '@{{barcode}}', symbology: 'code128' } },
+                        shape: { name: shapeKind === 'line' ? 'Line' : 'Shape', shapeKind: shapeKind || 'rect', fillColor: shapeKind === 'line' ? 'transparent' : '#e5e7eb', borderColor: '#000000', borderWidth: shapeKind === 'line' ? 2 : 1, borderRadius: 0 },
                     };
 
                     const layer = {
                         id,
                         type,
-                        z: maxZ + 1,
-                        frame: { x: 10, y: 10, w: type === 'line' ? 50 : 30, h: type === 'line' ? 2 : 20 },
+                        z,
+                        frame: { x: 10, y: 10, w: shapeKind === 'line' ? 50 : 30, h: shapeKind === 'line' ? 2 : 20 },
                         rotation: 0,
                         opacity: 1,
                         visible: true,
@@ -574,7 +692,7 @@
                 moveLayerUp(id) {
                     const layer = this.templateData.layers.find(l => l.id === id);
                     if (layer) {
-                        layer.z = (layer.z || 0) + 1;
+                        layer.z = this.getNextZIndex();
                         this.markChanged();
                     }
                 },
@@ -582,7 +700,8 @@
                 moveLayerDown(id) {
                     const layer = this.templateData.layers.find(l => l.id === id);
                     if (layer) {
-                        layer.z = Math.max(0, (layer.z || 0) - 1);
+                        const minZ = Math.min(...this.templateData.layers.map(l => l.z || 0));
+                        layer.z = Math.max(0, minZ - 1);
                         this.markChanged();
                     }
                 },
@@ -605,6 +724,7 @@
                     return {
                         fontSize: ((layer.fontSize || 12) * scale) + 'px',
                         fontWeight: layer.fontWeight || 'normal',
+                        fontFamily: layer.fontFamily || 'Inter',
                         color: layer.color || '#000000',
                         textAlign: layer.textAlign || 'left',
                         justifyContent: layer.textAlign === 'center' ? 'center' : layer.textAlign === 'right' ? 'flex-end' : 'flex-start',
@@ -612,23 +732,52 @@
                 },
 
                 getShapeStyle(layer) {
-                    return {
-                        backgroundColor: layer.fillColor || '#e5e7eb',
-                        border: `${layer.borderWidth || 1}px solid ${layer.borderColor || '#9ca3af'}`,
-                        borderRadius: (layer.borderRadius || 0) + 'px',
-                    };
+                    const kind = layer.shapeKind || 'rect';
+                    let style = {};
+
+                    if (kind === 'line') {
+                        style = {
+                            backgroundColor: 'transparent',
+                            borderTop: `${layer.borderWidth || 2}px solid ${layer.borderColor || '#000000'}`,
+                            height: '0',
+                            marginTop: '50%',
+                        };
+                    } else if (kind === 'circle' || kind === 'ellipse') {
+                        style = {
+                            backgroundColor: layer.fillColor || '#e5e7eb',
+                            border: `${layer.borderWidth || 1}px solid ${layer.borderColor || '#9ca3af'}`,
+                            borderRadius: '50%',
+                        };
+                    } else {
+                        style = {
+                            backgroundColor: layer.fillColor || '#e5e7eb',
+                            border: `${layer.borderWidth || 1}px solid ${layer.borderColor || '#9ca3af'}`,
+                            borderRadius: (layer.borderRadius || 0) + 'px',
+                        };
+                    }
+
+                    return style;
                 },
 
-                getLineStyle(layer) {
-                    return {
-                        height: (layer.lineWidth || 1) + 'px',
-                        backgroundColor: layer.lineColor || '#000000',
-                        borderStyle: layer.lineStyle || 'solid',
-                    };
+                getDisplayContent(layer) {
+                    const content = layer.content || 'Text';
+                    // Replace variables with sample data
+                    return content.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
+                        const keys = path.trim().split('.');
+                        let value = sampleData;
+                        for (const key of keys) {
+                            if (value && typeof value === 'object' && key in value) {
+                                value = value[key];
+                            } else {
+                                return match; // Keep original if not found
+                            }
+                        }
+                        return value || match;
+                    });
                 },
 
                 startDrag(event, layer) {
-                    if (event.target.classList.contains('resize-handle')) return;
+                    if (event.target.classList.contains('resize-handle') || event.target.classList.contains('rotate-handle')) return;
 
                     this.dragState = {
                         layerId: layer.id,
@@ -646,6 +795,20 @@
                         startX: event.clientX,
                         startY: event.clientY,
                         initialFrame: { ...layer.frame },
+                    };
+                },
+
+                startRotate(event, layer) {
+                    const rect = event.target.closest('.layer-element').getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+
+                    this.rotateState = {
+                        layerId: layer.id,
+                        centerX,
+                        centerY,
+                        initialRotation: layer.rotation || 0,
+                        startAngle: Math.atan2(event.clientY - centerY, event.clientX - centerX) * 180 / Math.PI,
                     };
                 },
 
@@ -685,14 +848,74 @@
                             }
                         }
                     }
+
+                    if (this.rotateState) {
+                        const layer = this.templateData.layers.find(l => l.id === this.rotateState.layerId);
+                        if (layer) {
+                            const { centerX, centerY, initialRotation, startAngle } = this.rotateState;
+                            const currentAngle = Math.atan2(event.clientY - centerY, event.clientX - centerX) * 180 / Math.PI;
+                            let newRotation = initialRotation + (currentAngle - startAngle);
+                            // Normalize to 0-360
+                            newRotation = ((newRotation % 360) + 360) % 360;
+                            layer.rotation = Math.round(newRotation);
+                        }
+                    }
                 },
 
                 handleMouseUp() {
-                    if (this.dragState || this.resizeState) {
+                    if (this.dragState || this.resizeState || this.rotateState) {
                         this.markChanged();
                     }
                     this.dragState = null;
                     this.resizeState = null;
+                    this.rotateState = null;
+                },
+
+                // Image upload handlers
+                handleBgImageDrop(event) {
+                    this.bgDragOver = false;
+                    const file = event.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        this.uploadImage(file, 'background');
+                    }
+                },
+
+                handleBgImageSelect(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        this.uploadImage(file, 'background');
+                    }
+                    event.target.value = '';
+                },
+
+                handleLayerImageDrop(event) {
+                    this.imageDragOver = false;
+                    const file = event.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/') && this.selectedLayer) {
+                        this.uploadImage(file, 'layer');
+                    }
+                },
+
+                handleLayerImageSelect(event) {
+                    const file = event.target.files[0];
+                    if (file && this.selectedLayer) {
+                        this.uploadImage(file, 'layer');
+                    }
+                    event.target.value = '';
+                },
+
+                async uploadImage(file, target) {
+                    // For now, convert to base64 (in production, upload to server)
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        if (target === 'background') {
+                            this.templateData.meta.background.image = e.target.result;
+                        } else if (target === 'layer' && this.selectedLayer) {
+                            this.selectedLayer.src = e.target.result;
+                        }
+                        this.markChanged();
+                    };
+                    reader.readAsDataURL(file);
                 },
 
                 markChanged() {
