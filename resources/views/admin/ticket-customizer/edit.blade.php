@@ -88,6 +88,43 @@
                             </div>
                             <input type="file" x-ref="bgImageInput" @change="handleBgImageSelect($event)" accept="image/*" class="hidden" />
                         </div>
+                        <!-- Background image position controls -->
+                        <template x-if="templateData.meta.background.image">
+                            <div class="space-y-2">
+                                <label class="block text-xs text-gray-400">Image Position</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <span class="text-xs text-gray-500">X (%)</span>
+                                        <input type="number" x-model.number="templateData.meta.background.positionX" @input="markChanged()" min="0" max="100" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" placeholder="50" />
+                                    </div>
+                                    <div>
+                                        <span class="text-xs text-gray-500">Y (%)</span>
+                                        <input type="number" x-model.number="templateData.meta.background.positionY" @input="markChanged()" min="0" max="100" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" placeholder="50" />
+                                    </div>
+                                </div>
+                                <div class="flex gap-1 flex-wrap">
+                                    <button @click="templateData.meta.background.positionX = 0; templateData.meta.background.positionY = 50; markChanged()" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">Left</button>
+                                    <button @click="templateData.meta.background.positionX = 50; templateData.meta.background.positionY = 50; markChanged()" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">Center</button>
+                                    <button @click="templateData.meta.background.positionX = 100; templateData.meta.background.positionY = 50; markChanged()" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">Right</button>
+                                    <button @click="templateData.meta.background.positionX = 50; templateData.meta.background.positionY = 0; markChanged()" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">Top</button>
+                                    <button @click="templateData.meta.background.positionX = 50; templateData.meta.background.positionY = 100; markChanged()" class="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 rounded">Bottom</button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Global Text Settings -->
+                <div class="p-4 border-b border-gray-700">
+                    <h3 class="text-sm font-semibold text-gray-400 mb-3">Global Text Color</h3>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Base Color</label>
+                        <div class="flex items-center gap-2">
+                            <input type="color" x-model="templateData.meta.baseTextColor" @input="markChanged()" class="w-10 h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
+                            <span class="text-xs text-gray-500" x-text="templateData.meta.baseTextColor || '#000000'"></span>
+                            <button @click="applyBaseTextColor()" class="ml-auto px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 rounded">Apply to All</button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">New text layers will use this color</p>
                     </div>
                 </div>
 
@@ -190,7 +227,7 @@
                         </svg>
                     </button>
                     <span class="text-sm w-16 text-center" x-text="zoom + '%'"></span>
-                    <button @click="zoom = Math.min(400, zoom + 25)" class="text-gray-400 hover:text-white">
+                    <button @click="zoom = Math.min(600, zoom + 25)" class="text-gray-400 hover:text-white">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
@@ -570,7 +607,16 @@
                         this.templateData.meta.version = '1.0';
                     }
                     if (!this.templateData.meta.background) {
-                        this.templateData.meta.background = { color: '#ffffff', image: '' };
+                        this.templateData.meta.background = { color: '#ffffff', image: '', positionX: 50, positionY: 50 };
+                    }
+                    if (this.templateData.meta.background.positionX === undefined) {
+                        this.templateData.meta.background.positionX = 50;
+                    }
+                    if (this.templateData.meta.background.positionY === undefined) {
+                        this.templateData.meta.background.positionY = 50;
+                    }
+                    if (!this.templateData.meta.baseTextColor) {
+                        this.templateData.meta.baseTextColor = '#000000';
                     }
                     if (typeof this.templateData.meta.bleed_mm === 'number') {
                         const b = this.templateData.meta.bleed_mm;
@@ -623,7 +669,9 @@
                     const bg = this.templateData.meta.background || {};
                     let style = `background-color: ${bg.color || '#ffffff'};`;
                     if (bg.image) {
-                        style += ` background-image: url('${bg.image}'); background-size: cover; background-position: center;`;
+                        const posX = bg.positionX ?? 50;
+                        const posY = bg.positionY ?? 50;
+                        style += ` background-image: url('${bg.image}'); background-size: cover; background-position: ${posX}% ${posY}%;`;
                     }
                     return style;
                 },
@@ -644,9 +692,10 @@
                 addLayer(type, shapeKind = null) {
                     const id = this.generateId();
                     const z = this.getNextZIndex();
+                    const baseColor = this.templateData.meta.baseTextColor || '#000000';
 
                     const defaults = {
-                        text: { name: 'Text', content: 'New Text', fontSize: 12, fontWeight: 'normal', fontFamily: 'Inter', color: '#000000', textAlign: 'left' },
+                        text: { name: 'Text', content: 'New Text', fontSize: 12, fontWeight: 'normal', fontFamily: 'Inter', color: baseColor, textAlign: 'left' },
                         image: { name: 'Image', src: '', objectFit: 'contain' },
                         qr: { name: 'QR Code', props: { data: '@{{qrcode}}' } },
                         barcode: { name: 'Barcode', props: { data: '@{{barcode}}', symbology: 'code128' } },
@@ -920,6 +969,17 @@
 
                 markChanged() {
                     this.hasUnsavedChanges = true;
+                },
+
+                applyBaseTextColor() {
+                    const baseColor = this.templateData.meta.baseTextColor || '#000000';
+                    this.templateData.layers.forEach(layer => {
+                        if (layer.type === 'text') {
+                            layer.color = baseColor;
+                        }
+                    });
+                    this.markChanged();
+                    this.showMessage('Base text color applied to all text layers', 'success');
                 },
 
                 copyVariable(placeholder) {

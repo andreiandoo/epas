@@ -95,8 +95,15 @@ SVG;
 
         // Background image if present
         if (!empty($bgImage)) {
+            $posX = $background['positionX'] ?? 50;
+            $posY = $background['positionY'] ?? 50;
+            // Map percentage position to SVG preserveAspectRatio values
+            $xAlign = $posX <= 25 ? 'xMin' : ($posX >= 75 ? 'xMax' : 'xMid');
+            $yAlign = $posY <= 25 ? 'YMin' : ($posY >= 75 ? 'YMax' : 'YMid');
+            $preserveAspectRatio = "{$xAlign}{$yAlign} slice";
+
             $svg .= <<<SVG
-  <image href="{$bgImage}" x="0" y="0" width="{$width}" height="{$height}" preserveAspectRatio="xMidYMid slice"/>
+  <image href="{$bgImage}" x="0" y="0" width="{$width}" height="{$height}" preserveAspectRatio="{$preserveAspectRatio}"/>
 
 SVG;
         }
@@ -276,77 +283,161 @@ SVG;
         $qrX = $x + ($w - $size) / 2;
         $qrY = $y + ($h - $size) / 2;
 
-        // Generate a simple QR-like placeholder pattern
-        $modules = 25; // Standard QR code has ~25 modules
+        // Generate QR code matrix
+        $modules = 25;
+        $matrix = $this->generateQRMatrix($codeData, $modules);
         $cellSize = $size / $modules;
-        $pattern = '';
 
-        // Create finder patterns (corners) - proper nested squares
-        $pattern .= $this->generateFinderPattern($qrX + $cellSize, $qrY + $cellSize, $cellSize * 7);
-        $pattern .= $this->generateFinderPattern($qrX + $size - $cellSize * 8, $qrY + $cellSize, $cellSize * 7);
-        $pattern .= $this->generateFinderPattern($qrX + $cellSize, $qrY + $size - $cellSize * 8, $cellSize * 7);
-
-        // Add alignment pattern (center-right area)
-        $ax = $qrX + $size - $cellSize * 9;
-        $ay = $qrY + $size - $cellSize * 9;
-        $pattern .= "<rect x=\"{$ax}\" y=\"{$ay}\" width=\"" . ($cellSize * 5) . "\" height=\"" . ($cellSize * 5) . "\" fill=\"#000\"/>";
-        $pattern .= "<rect x=\"" . ($ax + $cellSize) . "\" y=\"" . ($ay + $cellSize) . "\" width=\"" . ($cellSize * 3) . "\" height=\"" . ($cellSize * 3) . "\" fill=\"white\"/>";
-        $pattern .= "<rect x=\"" . ($ax + $cellSize * 2) . "\" y=\"" . ($ay + $cellSize * 2) . "\" width=\"{$cellSize}\" height=\"{$cellSize}\" fill=\"#000\"/>";
-
-        // Add timing patterns (dotted lines connecting finder patterns)
-        for ($i = 8; $i < $modules - 8; $i++) {
-            if ($i % 2 === 0) {
-                $tx = $qrX + $i * $cellSize;
-                $pattern .= "<rect x=\"{$tx}\" y=\"" . ($qrY + $cellSize * 6) . "\" width=\"{$cellSize}\" height=\"{$cellSize}\" fill=\"#000\"/>";
-                $pattern .= "<rect x=\"" . ($qrX + $cellSize * 6) . "\" y=\"" . ($qrY + $i * $cellSize) . "\" width=\"{$cellSize}\" height=\"{$cellSize}\" fill=\"#000\"/>";
-            }
-        }
-
-        // Add deterministic data modules based on codeData
-        $seed = crc32($codeData);
-        srand($seed);
-        for ($row = 9; $row < $modules - 1; $row++) {
-            for ($col = 9; $col < $modules - 1; $col++) {
-                // Skip areas covered by finder and alignment patterns
-                if ($row < 9 && $col > $modules - 9) continue;
-                if ($row > $modules - 9 && $col < 9) continue;
-                if ($row > $modules - 10 && $col > $modules - 10) continue;
-
-                if (rand(0, 100) > 50) {
+        // Build SVG path for all black modules (more efficient than individual rects)
+        $pathData = '';
+        for ($row = 0; $row < $modules; $row++) {
+            for ($col = 0; $col < $modules; $col++) {
+                if ($matrix[$row][$col]) {
                     $mx = $qrX + $col * $cellSize;
                     $my = $qrY + $row * $cellSize;
-                    $pattern .= "<rect x=\"{$mx}\" y=\"{$my}\" width=\"{$cellSize}\" height=\"{$cellSize}\" fill=\"#000\"/>";
+                    $pathData .= "M{$mx},{$my}h{$cellSize}v{$cellSize}h-{$cellSize}Z ";
                 }
             }
         }
 
         return <<<SVG
   <g opacity="{$opacity}" {$transform}>
-    <rect x="{$x}" y="{$y}" width="{$w}" height="{$h}" fill="white" stroke="#e5e7eb" stroke-width="1"/>
-    {$pattern}
+    <rect x="{$qrX}" y="{$qrY}" width="{$size}" height="{$size}" fill="white"/>
+    <path d="{$pathData}" fill="#000"/>
   </g>
 
 SVG;
     }
 
     /**
-     * Generate QR finder pattern (the large squares in corners)
+     * Generate a QR code matrix (simplified but realistic-looking)
      */
-    private function generateFinderPattern(float $x, float $y, float $size): string
+    private function generateQRMatrix(string $data, int $size): array
     {
-        $cell = $size / 7;
-        $innerX = $x + $cell;
-        $innerY = $y + $cell;
-        $innerSize = $size - $cell * 2;
-        $coreX = $x + $cell * 2;
-        $coreY = $y + $cell * 2;
-        $coreSize = $size - $cell * 4;
+        // Initialize matrix with false (white)
+        $matrix = array_fill(0, $size, array_fill(0, $size, false));
 
-        return <<<SVG
-    <rect x="{$x}" y="{$y}" width="{$size}" height="{$size}" fill="#000"/>
-    <rect x="{$innerX}" y="{$innerY}" width="{$innerSize}" height="{$innerSize}" fill="white"/>
-    <rect x="{$coreX}" y="{$coreY}" width="{$coreSize}" height="{$coreSize}" fill="#000"/>
-SVG;
+        // Add finder patterns (top-left, top-right, bottom-left)
+        $this->addFinderPattern($matrix, 0, 0);
+        $this->addFinderPattern($matrix, $size - 7, 0);
+        $this->addFinderPattern($matrix, 0, $size - 7);
+
+        // Add separators around finder patterns (white border)
+        $this->addSeparators($matrix, $size);
+
+        // Add timing patterns (alternating black/white lines)
+        for ($i = 8; $i < $size - 8; $i++) {
+            $matrix[6][$i] = ($i % 2 === 0);
+            $matrix[$i][6] = ($i % 2 === 0);
+        }
+
+        // Add alignment pattern (for version 2+ QR codes)
+        if ($size >= 25) {
+            $this->addAlignmentPattern($matrix, $size - 9, $size - 9);
+        }
+
+        // Add dark module (always present)
+        $matrix[$size - 8][8] = true;
+
+        // Fill data area with deterministic pattern based on input data
+        $hash = md5($data);
+        $hashIndex = 0;
+
+        for ($row = 0; $row < $size; $row++) {
+            for ($col = 0; $col < $size; $col++) {
+                // Skip reserved areas
+                if ($this->isReservedArea($row, $col, $size)) {
+                    continue;
+                }
+
+                // Use hash to determine if module is black
+                $charValue = hexdec($hash[$hashIndex % 32]);
+                $bitPosition = ($row + $col) % 4;
+                $matrix[$row][$col] = (($charValue >> $bitPosition) & 1) === 1;
+                $hashIndex++;
+            }
+        }
+
+        return $matrix;
+    }
+
+    /**
+     * Add finder pattern to matrix
+     */
+    private function addFinderPattern(array &$matrix, int $startX, int $startY): void
+    {
+        // Outer black square (7x7)
+        for ($i = 0; $i < 7; $i++) {
+            for ($j = 0; $j < 7; $j++) {
+                // Outer ring or center square
+                $isOuter = ($i === 0 || $i === 6 || $j === 0 || $j === 6);
+                $isInner = ($i >= 2 && $i <= 4 && $j >= 2 && $j <= 4);
+                $matrix[$startY + $i][$startX + $j] = $isOuter || $isInner;
+            }
+        }
+    }
+
+    /**
+     * Add separators (white space around finder patterns)
+     */
+    private function addSeparators(array &$matrix, int $size): void
+    {
+        // Top-left separator
+        for ($i = 0; $i < 8; $i++) {
+            if ($i < $size) {
+                $matrix[7][$i] = false;
+                $matrix[$i][7] = false;
+            }
+        }
+        // Top-right separator
+        for ($i = 0; $i < 8; $i++) {
+            if ($size - 8 + $i < $size) {
+                $matrix[7][$size - 8 + $i] = false;
+            }
+            $matrix[$i][$size - 8] = false;
+        }
+        // Bottom-left separator
+        for ($i = 0; $i < 8; $i++) {
+            $matrix[$size - 8][$i] = false;
+            if ($size - 8 + $i < $size) {
+                $matrix[$size - 8 + $i][7] = false;
+            }
+        }
+    }
+
+    /**
+     * Add alignment pattern
+     */
+    private function addAlignmentPattern(array &$matrix, int $centerX, int $centerY): void
+    {
+        for ($i = -2; $i <= 2; $i++) {
+            for ($j = -2; $j <= 2; $j++) {
+                $isOuter = (abs($i) === 2 || abs($j) === 2);
+                $isCenter = ($i === 0 && $j === 0);
+                $matrix[$centerY + $i][$centerX + $j] = $isOuter || $isCenter;
+            }
+        }
+    }
+
+    /**
+     * Check if position is in a reserved area
+     */
+    private function isReservedArea(int $row, int $col, int $size): bool
+    {
+        // Finder pattern areas + separators
+        if ($row < 9 && $col < 9) return true; // Top-left
+        if ($row < 9 && $col >= $size - 8) return true; // Top-right
+        if ($row >= $size - 8 && $col < 9) return true; // Bottom-left
+
+        // Timing patterns
+        if ($row === 6 || $col === 6) return true;
+
+        // Alignment pattern area (for version 2+)
+        if ($size >= 25 && $row >= $size - 11 && $row <= $size - 7 && $col >= $size - 11 && $col <= $size - 7) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
