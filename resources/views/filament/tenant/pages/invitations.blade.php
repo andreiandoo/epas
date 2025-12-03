@@ -184,29 +184,29 @@
 
                         {{-- Progress Stats --}}
                         <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
-                            <div class="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                                <p class="text-xl font-bold text-gray-900 dark:text-white">{{ $batch->qty_planned }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Planned</p>
+                            <div class="text-center p-3 rounded-lg" style="background-color: #f9fafb;">
+                                <p class="text-xl font-bold" style="color: #111827;">{{ $batch->qty_planned }}</p>
+                                <p class="text-xs" style="color: #6b7280;">Planned</p>
                             </div>
-                            <div class="text-center p-3 rounded-lg {{ $recipientCount > 0 ? 'bg-purple-50 dark:bg-purple-900/30' : 'bg-gray-50 dark:bg-gray-700/50' }}">
-                                <p class="text-xl font-bold {{ $recipientCount > 0 ? 'text-purple-600 dark:text-purple-400' : 'text-gray-900 dark:text-white' }}">{{ $recipientCount }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Recipients</p>
+                            <div class="text-center p-3 rounded-lg" style="background-color: {{ $recipientCount > 0 ? '#faf5ff' : '#f9fafb' }};">
+                                <p class="text-xl font-bold" style="color: {{ $recipientCount > 0 ? '#9333ea' : '#111827' }};">{{ $recipientCount }}</p>
+                                <p class="text-xs" style="color: #6b7280;">Recipients</p>
                             </div>
-                            <div class="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                                <p class="text-xl font-bold text-gray-900 dark:text-white">{{ $batch->qty_generated }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Generated</p>
+                            <div class="text-center p-3 rounded-lg" style="background-color: #f9fafb;">
+                                <p class="text-xl font-bold" style="color: #111827;">{{ $batch->qty_generated }}</p>
+                                <p class="text-xs" style="color: #6b7280;">Generated</p>
                             </div>
-                            <div class="text-center p-3 rounded-lg {{ $batch->qty_rendered > 0 ? 'bg-orange-50 dark:bg-orange-900/30' : 'bg-gray-50 dark:bg-gray-700/50' }}">
-                                <p class="text-xl font-bold {{ $batch->qty_rendered > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white' }}">{{ $batch->qty_rendered }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Rendered</p>
+                            <div class="text-center p-3 rounded-lg" style="background-color: {{ $batch->qty_rendered > 0 ? '#fff7ed' : '#f9fafb' }};">
+                                <p class="text-xl font-bold" style="color: {{ $batch->qty_rendered > 0 ? '#ea580c' : '#111827' }};">{{ $batch->qty_rendered }}</p>
+                                <p class="text-xs" style="color: #6b7280;">Rendered</p>
                             </div>
-                            <div class="text-center p-3 rounded-lg {{ $batch->qty_emailed > 0 ? 'bg-green-50 dark:bg-green-900/30' : 'bg-gray-50 dark:bg-gray-700/50' }}">
-                                <p class="text-xl font-bold {{ $batch->qty_emailed > 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white' }}">{{ $batch->qty_emailed }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Emailed</p>
+                            <div class="text-center p-3 rounded-lg" style="background-color: {{ $batch->qty_emailed > 0 ? '#f0fdf4' : '#f9fafb' }};">
+                                <p class="text-xl font-bold" style="color: {{ $batch->qty_emailed > 0 ? '#16a34a' : '#111827' }};">{{ $batch->qty_emailed }}</p>
+                                <p class="text-xs" style="color: #6b7280;">Emailed</p>
                             </div>
-                            <div class="text-center p-3 rounded-lg {{ $batch->qty_checked_in > 0 ? 'bg-amber-50 dark:bg-amber-900/30' : 'bg-gray-50 dark:bg-gray-700/50' }}">
-                                <p class="text-xl font-bold {{ $batch->qty_checked_in > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white' }}">{{ $batch->qty_checked_in }}</p>
-                                <p class="text-xs text-gray-500 dark:text-gray-400">Checked In</p>
+                            <div class="text-center p-3 rounded-lg" style="background-color: {{ $batch->qty_checked_in > 0 ? '#fffbeb' : '#f9fafb' }};">
+                                <p class="text-xl font-bold" style="color: {{ $batch->qty_checked_in > 0 ? '#d97706' : '#111827' }};">{{ $batch->qty_checked_in }}</p>
+                                <p class="text-xs" style="color: #6b7280;">Checked In</p>
                             </div>
                         </div>
 
@@ -261,19 +261,30 @@
                                 @endif
                             @endif
 
-                            @if($batch->status === 'ready')
-                                <button wire:click="sendEmails('{{ $batch->id }}')"
+                            @if($batch->status === 'ready' || $batch->qty_rendered > 0)
+                                {{-- Download PDFs --}}
+                                <button wire:click="downloadPdfs('{{ $batch->id }}')"
                                         class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg shadow-sm"
-                                        style="background-color: #16a34a; color: white;">
-                                    <x-heroicon-o-paper-airplane class="w-4 h-4" />
-                                    Send Emails ({{ $batch->qty_rendered }})
+                                        style="background-color: #0891b2; color: white;">
+                                    <x-heroicon-o-arrow-down-tray class="w-4 h-4" />
+                                    Download PDFs ({{ $batch->qty_rendered }})
                                 </button>
+
+                                @if($batch->status === 'ready')
+                                    <button wire:click="sendEmails('{{ $batch->id }}')"
+                                            class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg shadow-sm"
+                                            style="background-color: #16a34a; color: white;">
+                                        <x-heroicon-o-paper-airplane class="w-4 h-4" />
+                                        Send Emails ({{ $batch->qty_rendered }})
+                                    </button>
+                                @endif
                             @endif
 
                             <button wire:click="downloadExport('{{ $batch->id }}')"
-                                    class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-                                <x-heroicon-o-arrow-down-tray class="w-4 h-4" />
-                                Export
+                                    class="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg"
+                                    style="background-color: #f3f4f6; color: #374151;">
+                                <x-heroicon-o-table-cells class="w-4 h-4" />
+                                Export CSV
                             </button>
 
                             {{-- Spacer --}}

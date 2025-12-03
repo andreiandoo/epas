@@ -758,6 +758,66 @@ class Invitations extends Page
         $this->manualBatchId = null;
     }
 
+    /**
+     * Download PDFs for a batch
+     * Note: Currently shows placeholder - in production would generate actual PDF files
+     */
+    public function downloadPdfs(string $batchId): void
+    {
+        $batch = InviteBatch::find($batchId);
+        $tenant = auth()->user()->tenant;
+
+        if (!$batch || $batch->tenant_id !== $tenant->id) {
+            Notification::make()
+                ->danger()
+                ->title('Access denied')
+                ->send();
+            return;
+        }
+
+        if ($batch->qty_rendered === 0) {
+            Notification::make()
+                ->warning()
+                ->title('No PDFs Available')
+                ->body('Generate PDFs first before downloading.')
+                ->send();
+            return;
+        }
+
+        // Get rendered invites
+        $invites = $batch->invites()
+            ->whereNotNull('rendered_at')
+            ->whereNotNull('recipient')
+            ->get();
+
+        if ($invites->isEmpty()) {
+            Notification::make()
+                ->warning()
+                ->title('No PDFs Available')
+                ->body('No rendered invitations found.')
+                ->send();
+            return;
+        }
+
+        // For now, show info about what would be downloaded
+        // In production: generate ZIP with all PDFs or queue the generation
+        Notification::make()
+            ->info()
+            ->title('PDF Download')
+            ->body("Ready to download {$invites->count()} invitation PDFs. PDF generation service integration required.")
+            ->persistent()
+            ->actions([
+                \Filament\Notifications\Actions\Action::make('export_csv')
+                    ->label('Export Data as CSV')
+                    ->url(route('filament.tenant.pages.invitations') . "?export={$batchId}")
+                    ->openUrlInNewTab(),
+            ])
+            ->send();
+
+        // TODO: Implement actual PDF generation with a PDF library like DOMPDF or TCPDF
+        // The PDFs would typically be stored in storage and downloaded as a ZIP
+    }
+
     public function downloadExport(string $batchId): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $batch = InviteBatch::with('invites')->find($batchId);
