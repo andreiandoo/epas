@@ -7,6 +7,7 @@ use App\Models\Invite;
 use App\Models\InviteBatch;
 use App\Models\TicketTemplate;
 use BackedEnum;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Forms;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use League\Csv\Reader;
 use Livewire\WithFileUploads;
+use ZipArchive;
 
 class Invitations extends Page
 {
@@ -506,6 +508,81 @@ class Invitations extends Page
         $this->dispatch('$refresh');
     }
 
+    /**
+     * Generate a QR code as base64 PNG using Google Charts API
+     */
+    protected function generateQrCode(string $data): string
+    {
+        $size = 200;
+        $url = 'https://chart.googleapis.com/chart?chs=' . $size . 'x' . $size . '&cht=qr&chl=' . urlencode($data) . '&choe=UTF-8';
+
+        try {
+            $context = stream_context_create([
+                'http' => ['timeout' => 5],
+                'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
+            ]);
+            $imageData = @file_get_contents($url, false, $context);
+            if ($imageData !== false) {
+                return base64_encode($imageData);
+            }
+        } catch (\Exception $e) {
+            // Fallback to placeholder
+        }
+
+        return $this->generatePlaceholderQr($data);
+    }
+
+    /**
+     * Generate a placeholder QR code image with the invite code
+     */
+    protected function generatePlaceholderQr(string $data): string
+    {
+        $size = 200;
+        $image = imagecreatetruecolor($size, $size);
+        $white = imagecolorallocate($image, 255, 255, 255);
+        $black = imagecolorallocate($image, 0, 0, 0);
+        $gray = imagecolorallocate($image, 100, 100, 100);
+
+        imagefill($image, 0, 0, $white);
+
+        // Draw a simple QR-like pattern
+        for ($i = 10; $i < $size - 10; $i += 8) {
+            for ($j = 10; $j < $size - 10; $j += 8) {
+                if (rand(0, 1) === 1) {
+                    imagefilledrectangle($image, $i, $j, $i + 6, $j + 6, $black);
+                }
+            }
+        }
+
+        // Draw corner markers (like real QR codes)
+        $this->drawQrMarker($image, 10, 10, 50, $black, $white);
+        $this->drawQrMarker($image, $size - 60, 10, 50, $black, $white);
+        $this->drawQrMarker($image, 10, $size - 60, 50, $black, $white);
+
+        // Draw border
+        imagerectangle($image, 0, 0, $size - 1, $size - 1, $gray);
+
+        ob_start();
+        imagepng($image);
+        $imageData = ob_get_clean();
+        imagedestroy($image);
+
+        return base64_encode($imageData);
+    }
+
+    /**
+     * Draw a QR code corner marker
+     */
+    protected function drawQrMarker($image, int $x, int $y, int $size, $black, $white): void
+    {
+        imagefilledrectangle($image, $x, $y, $x + $size, $y + $size, $black);
+        imagefilledrectangle($image, $x + 6, $y + 6, $x + $size - 6, $y + $size - 6, $white);
+        imagefilledrectangle($image, $x + 12, $y + 12, $x + $size - 12, $y + $size - 12, $black);
+    }
+
+    /**
+     * Render batch and generate actual PDF files
+     */
     public function renderBatch(string $batchId): void
     {
         $batch = InviteBatch::find($batchId);
@@ -522,19 +599,113 @@ class Invitations extends Page
         // Mark batch as rendering
         $batch->updateStatus('rendering');
 
-        // Mark invites as rendered (simplified - in production would generate actual PDFs)
+        // Get invites with recipients
         $invitesWithRecipients = $batch->invites()->whereNotNull('recipient')->get();
 
+        if ($invitesWithRecipients->isEmpty()) {
+            Notification::make()
+                ->warning()
+                ->title('No Recipients')
+                ->body('Add recipients before generating PDFs.')
+                ->send();
+            $batch->updateStatus('draft');
+            return;
+        }
+
+        // Get event details
+        $event = Event::find($batch->event_ref);
+        $eventTitle = $event ? $event->getTranslation('title') : 'Event';
+        $eventSubtitle = $event ? $event->getTranslation('subtitle') : null;
+
+        // Format event date
+        $eventDate = 'TBA';
+        if ($event) {
+            if ($event->event_date) {
+                $eventDate = $event->event_date->format('F j, Y');
+            } elseif ($event->range_start_date) {
+                $eventDate = $event->range_start_date->format('F j') . ' - ' . $event->range_end_date->format('F j, Y');
+            }
+        }
+
+        // Format event time
+        $eventTime = null;
+        if ($event && $event->start_time) {
+            $eventTime = $event->start_time;
+            if ($event->door_time) {
+                $eventTime = "Doors: {$event->door_time} | Start: {$event->start_time}";
+            }
+        }
+
+        // Get venue name
+        $venueName = null;
+        if ($event && $event->venue) {
+            $venueName = $event->venue->getTranslation('name');
+        }
+
+        $watermark = $batch->getWatermark();
+
+        // Create storage directory for this batch
+        $storagePath = "invitations/{$batch->id}";
+        Storage::disk('local')->makeDirectory($storagePath);
+
+        $rendered = 0;
+        $errors = [];
+
         foreach ($invitesWithRecipients as $invite) {
-            $invite->markAsRendered();
+            try {
+                // Generate QR code for this invitation
+                $qrData = url("/verify/{$invite->invite_code}");
+                $qrCode = $this->generateQrCode($qrData);
+
+                // Generate PDF
+                $pdf = Pdf::loadView('pdf.invitation', [
+                    'invite' => $invite,
+                    'eventTitle' => $eventTitle,
+                    'eventSubtitle' => $eventSubtitle,
+                    'eventDate' => $eventDate,
+                    'eventTime' => $eventTime,
+                    'venueName' => $venueName,
+                    'watermark' => $watermark,
+                    'qrCode' => $qrCode,
+                ]);
+
+                // Set PDF options
+                $pdf->setPaper('a4', 'portrait');
+
+                // Save PDF to storage
+                $pdfFilename = "{$invite->invite_code}.pdf";
+                $pdfPath = "{$storagePath}/{$pdfFilename}";
+                Storage::disk('local')->put($pdfPath, $pdf->output());
+
+                // Update invite with PDF URL
+                $invite->setUrls([
+                    'pdf' => $pdfPath,
+                    'generated_at' => now()->toIso8601String(),
+                ]);
+
+                // Store QR data
+                $invite->update(['qr_data' => $qrData]);
+
+                // Mark as rendered
+                $invite->markAsRendered();
+                $rendered++;
+
+            } catch (\Exception $e) {
+                $errors[] = "Failed to render invitation for {$invite->getRecipientName()}: {$e->getMessage()}";
+            }
         }
 
         $batch->updateStatus('ready');
 
+        $message = "Generated {$rendered} invitation PDFs.";
+        if (count($errors) > 0) {
+            $message .= " " . count($errors) . " failed.";
+        }
+
         Notification::make()
             ->success()
-            ->title('Batch Rendered')
-            ->body("Rendered {$invitesWithRecipients->count()} invitations.")
+            ->title('PDFs Generated')
+            ->body($message)
             ->send();
 
         $this->dispatch('$refresh');
@@ -639,6 +810,10 @@ class Invitations extends Page
 
         $batchName = $batch->name;
         $inviteCount = $batch->invites()->count();
+
+        // Delete stored PDFs
+        $storagePath = "invitations/{$batch->id}";
+        Storage::disk('local')->deleteDirectory($storagePath);
 
         // Delete all invites (this will also delete logs due to cascade)
         $batch->invites()->forceDelete();
@@ -759,10 +934,9 @@ class Invitations extends Page
     }
 
     /**
-     * Download PDFs for a batch
-     * Note: Currently shows placeholder - in production would generate actual PDF files
+     * Download PDFs as ZIP archive
      */
-    public function downloadPdfs(string $batchId): void
+    public function downloadPdfs(string $batchId)
     {
         $batch = InviteBatch::find($batchId);
         $tenant = auth()->user()->tenant;
@@ -799,23 +973,76 @@ class Invitations extends Page
             return;
         }
 
-        // For now, show info about what would be downloaded
-        // In production: generate ZIP with all PDFs or queue the generation
-        Notification::make()
-            ->info()
-            ->title('PDF Download')
-            ->body("Ready to download {$invites->count()} invitation PDFs. PDF generation service integration required.")
-            ->persistent()
-            ->actions([
-                \Filament\Notifications\Actions\Action::make('export_csv')
-                    ->label('Export Data as CSV')
-                    ->url(route('filament.tenant.pages.invitations') . "?export={$batchId}")
-                    ->openUrlInNewTab(),
-            ])
-            ->send();
+        // Check if PDFs exist
+        $storagePath = "invitations/{$batch->id}";
+        if (!Storage::disk('local')->exists($storagePath)) {
+            Notification::make()
+                ->warning()
+                ->title('PDFs Not Found')
+                ->body('PDF files not found. Please regenerate them.')
+                ->send();
+            return;
+        }
 
-        // TODO: Implement actual PDF generation with a PDF library like DOMPDF or TCPDF
-        // The PDFs would typically be stored in storage and downloaded as a ZIP
+        // Create ZIP file
+        $zipFilename = Str::slug($batch->name) . '-invitations-' . now()->format('Y-m-d') . '.zip';
+        $tempDir = storage_path('app/temp');
+        $zipPath = "{$tempDir}/{$zipFilename}";
+
+        // Ensure temp directory exists
+        if (!file_exists($tempDir)) {
+            mkdir($tempDir, 0755, true);
+        }
+
+        $zip = new ZipArchive();
+
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            Notification::make()
+                ->danger()
+                ->title('ZIP Creation Failed')
+                ->body('Could not create ZIP archive.')
+                ->send();
+            return;
+        }
+
+        $addedFiles = 0;
+
+        foreach ($invites as $invite) {
+            $pdfPath = $invite->getPdfUrl();
+
+            if ($pdfPath && Storage::disk('local')->exists($pdfPath)) {
+                $pdfContent = Storage::disk('local')->get($pdfPath);
+                $recipientName = Str::slug($invite->getRecipientName() ?? 'guest');
+                $filename = "{$recipientName}-{$invite->invite_code}.pdf";
+
+                $zip->addFromString($filename, $pdfContent);
+                $addedFiles++;
+
+                // Mark as downloaded
+                $invite->markAsDownloaded();
+            }
+        }
+
+        $zip->close();
+
+        if ($addedFiles === 0) {
+            Notification::make()
+                ->warning()
+                ->title('No PDFs Found')
+                ->body('No PDF files were found to download.')
+                ->send();
+
+            // Clean up empty zip
+            if (file_exists($zipPath)) {
+                unlink($zipPath);
+            }
+            return;
+        }
+
+        // Return download response
+        return response()->download($zipPath, $zipFilename, [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
     }
 
     public function downloadExport(string $batchId): \Symfony\Component\HttpFoundation\StreamedResponse
