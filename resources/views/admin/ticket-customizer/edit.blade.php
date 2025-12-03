@@ -71,7 +71,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </div>
-                    <div x-show="showTicketSettings" x-collapse class="px-3 pb-3 space-y-4">
+                    <div x-show="showTicketSettings" x-collapse class="p-3 pt-0 space-y-4">
                         <!-- Background Color -->
                         <div>
                             <label class="block text-xs text-gray-400 mb-1">Background Color</label>
@@ -144,7 +144,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </div>
-                    <div x-show="showTicketElements" x-collapse class="px-3 pb-3">
+                    <div x-show="showTicketElements" x-collapse class="p-3 pt-0">
                         <div class="grid grid-cols-3 gap-1">
                             <button @click="addLayer('text')" class="flex flex-col items-center p-2 bg-gray-700 hover:bg-gray-600 rounded text-xs">
                                 <svg class="w-4 h-4 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -329,226 +329,229 @@
             </main>
 
             <!-- Right Sidebar - Properties -->
-            <aside class="w-80 bg-gray-800 border-l border-gray-700 flex flex-col overflow-hidden">
+            <aside class="w-72 bg-gray-800 border-l border-gray-700 flex flex-col overflow-hidden">
                 <div class="flex-1 overflow-y-auto">
-                    <!-- Layer Properties -->
-                    <div x-show="selectedLayer" class="p-4 border-b border-gray-700">
-                        <h3 class="text-sm font-semibold text-gray-400 mb-4">Layer Properties</h3>
-
-                        <div class="space-y-4">
-                            <!-- Name -->
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1">Name</label>
-                                <input type="text" x-model="selectedLayer.name" @input="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
-                            </div>
-
-                            <!-- Position -->
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1">Position (mm)</label>
-                                <div class="grid grid-cols-2 gap-2">
+                    <!-- Available Variables (Collapsible) - First -->
+                    <div class="border-b border-gray-700">
+                        <div @click="showVariables = !showVariables" class="collapsible-header p-3 flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-gray-300">Available Variables</h3>
+                            <svg :class="{'rotate-180': showVariables}" class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                        <div x-show="showVariables" x-collapse class="p-3 pt-0">
+                            <p class="text-xs text-gray-500 mb-2">Click to copy</p>
+                            <div class="space-y-2 max-h-48 overflow-y-auto">
+                                @foreach($variables as $groupKey => $group)
                                     <div>
-                                        <span class="text-xs text-gray-500">X</span>
-                                        <input type="number" x-model.number="selectedLayer.frame.x" @input="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" />
-                                    </div>
-                                    <div>
-                                        <span class="text-xs text-gray-500">Y</span>
-                                        <input type="number" x-model.number="selectedLayer.frame.y" @input="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Size -->
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1">Size (mm)</label>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <span class="text-xs text-gray-500">Width</span>
-                                        <input type="number" x-model.number="selectedLayer.frame.w" @input="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" />
-                                    </div>
-                                    <div>
-                                        <span class="text-xs text-gray-500">Height</span>
-                                        <input type="number" x-model.number="selectedLayer.frame.h" @input="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Rotation -->
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1">Rotation</label>
-                                <div class="flex items-center gap-2">
-                                    <input type="range" x-model.number="selectedLayer.rotation" @input="markChanged()" min="0" max="360" class="flex-1" />
-                                    <input type="number" x-model.number="selectedLayer.rotation" @input="markChanged()" min="0" max="360" class="w-16 bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" />
-                                    <span class="text-xs text-gray-500">°</span>
-                                </div>
-                            </div>
-
-                            <!-- Opacity -->
-                            <div>
-                                <label class="block text-xs text-gray-400 mb-1">Opacity</label>
-                                <input type="range" x-model.number="selectedLayer.opacity" @input="markChanged()" min="0" max="1" step="0.1" class="w-full" />
-                                <span class="text-xs text-gray-500" x-text="Math.round((selectedLayer.opacity || 1) * 100) + '%'"></span>
-                            </div>
-
-                            <!-- Text-specific properties -->
-                            <template x-if="selectedLayer.type === 'text'">
-                                <div class="space-y-4 pt-4 border-t border-gray-700">
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Content</label>
-                                        <textarea x-model="selectedLayer.content" @input="markChanged()" rows="3" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" placeholder="Text or @{{variable}}"></textarea>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Font Family</label>
-                                        <select x-model="selectedLayer.fontFamily" @change="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm">
-                                            <option value="Inter">Inter</option>
-                                            <option value="Roboto">Roboto</option>
-                                            <option value="Open Sans">Open Sans</option>
-                                            <option value="Lato">Lato</option>
-                                            <option value="Montserrat">Montserrat</option>
-                                            <option value="Poppins">Poppins</option>
-                                            <option value="Playfair Display">Playfair Display</option>
-                                            <option value="Oswald">Oswald</option>
-                                        </select>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label class="block text-xs text-gray-400 mb-1">Font Size</label>
-                                            <input type="number" x-model.number="selectedLayer.fontSize" @input="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" />
-                                        </div>
-                                        <div>
-                                            <label class="block text-xs text-gray-400 mb-1">Font Weight</label>
-                                            <select x-model="selectedLayer.fontWeight" @change="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm">
-                                                <option value="normal">Normal</option>
-                                                <option value="500">Medium</option>
-                                                <option value="600">Semi Bold</option>
-                                                <option value="bold">Bold</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Color</label>
-                                        <input type="color" x-model="selectedLayer.color" @input="markChanged()" class="w-full h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Text Align</label>
-                                        <div class="flex gap-1">
-                                            <button @click="selectedLayer.textAlign = 'left'; markChanged()" :class="{'bg-blue-600': selectedLayer.textAlign === 'left'}" class="flex-1 p-2 bg-gray-700 hover:bg-gray-600 rounded">
-                                                <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h14"/></svg>
-                                            </button>
-                                            <button @click="selectedLayer.textAlign = 'center'; markChanged()" :class="{'bg-blue-600': selectedLayer.textAlign === 'center'}" class="flex-1 p-2 bg-gray-700 hover:bg-gray-600 rounded">
-                                                <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M5 18h14"/></svg>
-                                            </button>
-                                            <button @click="selectedLayer.textAlign = 'right'; markChanged()" :class="{'bg-blue-600': selectedLayer.textAlign === 'right'}" class="flex-1 p-2 bg-gray-700 hover:bg-gray-600 rounded">
-                                                <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M6 18h14"/></svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </template>
-
-                            <!-- Shape-specific properties -->
-                            <template x-if="selectedLayer.type === 'shape'">
-                                <div class="space-y-4 pt-4 border-t border-gray-700">
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Shape Type</label>
-                                        <select x-model="selectedLayer.shapeKind" @change="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm">
-                                            <option value="rect">Rectangle</option>
-                                            <option value="line">Line</option>
-                                            <option value="circle">Circle</option>
-                                            <option value="ellipse">Ellipse</option>
-                                        </select>
-                                    </div>
-                                    <template x-if="selectedLayer.shapeKind !== 'line'">
-                                        <div>
-                                            <label class="block text-xs text-gray-400 mb-1">Fill Color</label>
-                                            <input type="color" x-model="selectedLayer.fillColor" @input="markChanged()" class="w-full h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
-                                        </div>
-                                    </template>
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Border/Line Color</label>
-                                        <input type="color" x-model="selectedLayer.borderColor" @input="markChanged()" class="w-full h-8 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Border/Line Width</label>
-                                        <input type="number" x-model.number="selectedLayer.borderWidth" @input="markChanged()" min="0" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" />
-                                    </div>
-                                    <template x-if="selectedLayer.shapeKind === 'rect'">
-                                        <div>
-                                            <label class="block text-xs text-gray-400 mb-1">Border Radius</label>
-                                            <input type="number" x-model.number="selectedLayer.borderRadius" @input="markChanged()" min="0" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" />
-                                        </div>
-                                    </template>
-                                </div>
-                            </template>
-
-                            <!-- Image-specific properties -->
-                            <template x-if="selectedLayer.type === 'image'">
-                                <div class="space-y-4 pt-4 border-t border-gray-700">
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Image</label>
-                                        <div class="drop-zone p-4 text-center cursor-pointer"
-                                             :class="{'drag-over': imageDragOver}"
-                                             @click="$refs.layerImageInput.click()"
-                                             @dragover.prevent="imageDragOver = true"
-                                             @dragleave="imageDragOver = false"
-                                             @drop.prevent="handleLayerImageDrop($event)">
-                                            <template x-if="selectedLayer.src">
-                                                <div class="relative">
-                                                    <img :src="selectedLayer.src" class="max-h-24 mx-auto rounded" />
-                                                    <button @click.stop="selectedLayer.src = ''; markChanged()" class="absolute -top-2 -right-2 bg-red-500 rounded-full w-5 h-5 text-xs">&times;</button>
+                                        <h4 class="text-xs font-medium text-gray-500 mb-1">{{ $group['label'] }}</h4>
+                                        <div class="space-y-0.5">
+                                            @foreach($group['variables'] as $variable)
+                                                @php $placeholder = '{{' . $variable['path'] . '}}'; @endphp
+                                                <div @click="copyVariable('{{ $placeholder }}')"
+                                                     class="text-xs py-1 px-2 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 flex items-center justify-between"
+                                                     title="{{ $variable['description'] }}">
+                                                    <code class="text-blue-400 text-xs">{{ $placeholder }}</code>
                                                 </div>
-                                            </template>
-                                            <template x-if="!selectedLayer.src">
-                                                <div class="text-xs text-gray-500">
-                                                    <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                                                    Drop image here or click to upload
-                                                </div>
-                                            </template>
+                                            @endforeach
                                         </div>
-                                        <input type="file" x-ref="layerImageInput" @change="handleLayerImageSelect($event)" accept="image/*" class="hidden" />
                                     </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Or enter URL</label>
-                                        <input type="text" x-model="selectedLayer.src" @input="markChanged()" placeholder="https://..." class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" />
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Fit Mode</label>
-                                        <select x-model="selectedLayer.objectFit" @change="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm">
-                                            <option value="contain">Contain</option>
-                                            <option value="cover">Cover</option>
-                                            <option value="fill">Fill</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </template>
+                                @endforeach
+                            </div>
                         </div>
                     </div>
 
-                    <!-- No selection -->
-                    <div x-show="!selectedLayer" class="p-4 border-b border-gray-700">
-                        <p class="text-gray-500 text-sm">Select a layer to edit its properties</p>
-                    </div>
-
-                    <!-- Variables Panel -->
-                    <div class="p-4">
-                        <h3 class="text-sm font-semibold text-gray-400 mb-3">Available Variables</h3>
-                        <p class="text-xs text-gray-500 mb-3">Click to copy. Use in text layers.</p>
-                        <div class="space-y-3 max-h-64 overflow-y-auto">
-                            @foreach($variables as $groupKey => $group)
-                                <div>
-                                    <h4 class="text-xs font-medium text-gray-500 mb-1">{{ $group['label'] }}</h4>
-                                    <div class="space-y-1">
-                                        @foreach($group['variables'] as $variable)
-                                            @php $placeholder = '{{' . $variable['path'] . '}}'; @endphp
-                                            <div @click="copyVariable('{{ $placeholder }}')"
-                                                 class="text-xs p-2 bg-gray-700 rounded cursor-pointer hover:bg-gray-600 flex items-center justify-between"
-                                                 title="{{ $variable['description'] }}">
-                                                <code class="text-blue-400">{{ $placeholder }}</code>
-                                                <span class="text-gray-400 truncate ml-2">{{ $variable['label'] }}</span>
-                                            </div>
-                                        @endforeach
+                    <!-- Layer Properties (Collapsible) -->
+                    <div class="border-b border-gray-700">
+                        <div @click="showLayerProperties = !showLayerProperties" class="collapsible-header p-3 flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-gray-300">Layer Properties</h3>
+                            <svg :class="{'rotate-180': showLayerProperties}" class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                        <div x-show="showLayerProperties" x-collapse class="p-3 pt-0">
+                            <template x-if="selectedLayer">
+                                <div class="space-y-3">
+                                    <!-- Name -->
+                                    <div>
+                                        <label class="block text-xs text-gray-400 mb-1">Name</label>
+                                        <input type="text" x-model="selectedLayer.name" @input="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm" />
                                     </div>
+
+                                    <!-- Position & Size in grid -->
+                                    <div class="grid grid-cols-4 gap-1">
+                                        <div>
+                                            <span class="text-xs text-gray-500">X</span>
+                                            <input type="number" x-model.number="selectedLayer.frame.x" @input="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-1 py-1 text-xs" />
+                                        </div>
+                                        <div>
+                                            <span class="text-xs text-gray-500">Y</span>
+                                            <input type="number" x-model.number="selectedLayer.frame.y" @input="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-1 py-1 text-xs" />
+                                        </div>
+                                        <div>
+                                            <span class="text-xs text-gray-500">W</span>
+                                            <input type="number" x-model.number="selectedLayer.frame.w" @input="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-1 py-1 text-xs" />
+                                        </div>
+                                        <div>
+                                            <span class="text-xs text-gray-500">H</span>
+                                            <input type="number" x-model.number="selectedLayer.frame.h" @input="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-1 py-1 text-xs" />
+                                        </div>
+                                    </div>
+
+                                    <!-- Rotation & Opacity on same row -->
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <span class="text-xs text-gray-500">Rotation °</span>
+                                            <input type="number" x-model.number="selectedLayer.rotation" @input="markChanged()" min="0" max="360" class="w-full bg-gray-700 border border-gray-600 rounded px-1 py-1 text-xs" />
+                                        </div>
+                                        <div>
+                                            <span class="text-xs text-gray-500">Opacity %</span>
+                                            <input type="number" :value="Math.round((selectedLayer.opacity || 1) * 100)" @input="selectedLayer.opacity = $event.target.value / 100; markChanged()" min="0" max="100" class="w-full bg-gray-700 border border-gray-600 rounded px-1 py-1 text-xs" />
+                                        </div>
+                                    </div>
+
+                                    <!-- Text-specific properties -->
+                                    <template x-if="selectedLayer.type === 'text'">
+                                        <div class="space-y-2 pt-2 border-t border-gray-700">
+                                            <div>
+                                                <label class="block text-xs text-gray-400 mb-1">Content</label>
+                                                <textarea x-model="selectedLayer.content" @input="markChanged()" rows="2" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs" placeholder="Text or @{{variable}}"></textarea>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <span class="text-xs text-gray-500">Font</span>
+                                                    <select x-model="selectedLayer.fontFamily" @change="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-1 py-1 text-xs">
+                                                        <option value="Inter">Inter</option>
+                                                        <option value="Roboto">Roboto</option>
+                                                        <option value="Open Sans">Open Sans</option>
+                                                        <option value="Lato">Lato</option>
+                                                        <option value="Montserrat">Montserrat</option>
+                                                        <option value="Poppins">Poppins</option>
+                                                        <option value="Playfair Display">Playfair</option>
+                                                        <option value="Oswald">Oswald</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <span class="text-xs text-gray-500">Weight</span>
+                                                    <select x-model="selectedLayer.fontWeight" @change="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-1 py-1 text-xs">
+                                                        <option value="normal">Normal</option>
+                                                        <option value="500">Medium</option>
+                                                        <option value="600">SemiBold</option>
+                                                        <option value="bold">Bold</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <span class="text-xs text-gray-500">Size</span>
+                                                    <input type="number" x-model.number="selectedLayer.fontSize" @input="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-1 py-1 text-xs" />
+                                                </div>
+                                                <div>
+                                                    <span class="text-xs text-gray-500">Color</span>
+                                                    <input type="color" x-model="selectedLayer.color" @input="markChanged()" class="w-full h-6 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span class="text-xs text-gray-500">Align</span>
+                                                <div class="flex gap-1 mt-1">
+                                                    <button @click="selectedLayer.textAlign = 'left'; markChanged()" :class="{'bg-blue-600': selectedLayer.textAlign === 'left'}" class="flex-1 p-1 bg-gray-700 hover:bg-gray-600 rounded">
+                                                        <svg class="w-3 h-3 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h14"/></svg>
+                                                    </button>
+                                                    <button @click="selectedLayer.textAlign = 'center'; markChanged()" :class="{'bg-blue-600': selectedLayer.textAlign === 'center'}" class="flex-1 p-1 bg-gray-700 hover:bg-gray-600 rounded">
+                                                        <svg class="w-3 h-3 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M7 12h10M5 18h14"/></svg>
+                                                    </button>
+                                                    <button @click="selectedLayer.textAlign = 'right'; markChanged()" :class="{'bg-blue-600': selectedLayer.textAlign === 'right'}" class="flex-1 p-1 bg-gray-700 hover:bg-gray-600 rounded">
+                                                        <svg class="w-3 h-3 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M10 12h10M6 18h14"/></svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Shape-specific properties -->
+                                    <template x-if="selectedLayer.type === 'shape'">
+                                        <div class="space-y-2 pt-2 border-t border-gray-700">
+                                            <div>
+                                                <span class="text-xs text-gray-500">Shape</span>
+                                                <select x-model="selectedLayer.shapeKind" @change="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-1 py-1 text-xs">
+                                                    <option value="rect">Rectangle</option>
+                                                    <option value="line">Line</option>
+                                                    <option value="circle">Circle</option>
+                                                    <option value="ellipse">Ellipse</option>
+                                                </select>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <template x-if="selectedLayer.shapeKind !== 'line'">
+                                                    <div>
+                                                        <span class="text-xs text-gray-500">Fill</span>
+                                                        <input type="color" x-model="selectedLayer.fillColor" @input="markChanged()" class="w-full h-6 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
+                                                    </div>
+                                                </template>
+                                                <div>
+                                                    <span class="text-xs text-gray-500">Border</span>
+                                                    <input type="color" x-model="selectedLayer.borderColor" @input="markChanged()" class="w-full h-6 bg-gray-700 border border-gray-600 rounded cursor-pointer" />
+                                                </div>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <div>
+                                                    <span class="text-xs text-gray-500">Border W</span>
+                                                    <input type="number" x-model.number="selectedLayer.borderWidth" @input="markChanged()" min="0" class="w-full bg-gray-700 border border-gray-600 rounded px-1 py-1 text-xs" />
+                                                </div>
+                                                <template x-if="selectedLayer.shapeKind === 'rect'">
+                                                    <div>
+                                                        <span class="text-xs text-gray-500">Radius</span>
+                                                        <input type="number" x-model.number="selectedLayer.borderRadius" @input="markChanged()" min="0" class="w-full bg-gray-700 border border-gray-600 rounded px-1 py-1 text-xs" />
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Image-specific properties -->
+                                    <template x-if="selectedLayer.type === 'image'">
+                                        <div class="space-y-2 pt-2 border-t border-gray-700">
+                                            <div>
+                                                <span class="text-xs text-gray-500">Image</span>
+                                                <div class="drop-zone p-2 text-center cursor-pointer mt-1"
+                                                     :class="{'drag-over': imageDragOver}"
+                                                     @click="$refs.layerImageInput.click()"
+                                                     @dragover.prevent="imageDragOver = true"
+                                                     @dragleave="imageDragOver = false"
+                                                     @drop.prevent="handleLayerImageDrop($event)">
+                                                    <template x-if="selectedLayer.src">
+                                                        <div class="relative">
+                                                            <img :src="selectedLayer.src" class="max-h-16 mx-auto rounded" />
+                                                            <button @click.stop="selectedLayer.src = ''; markChanged()" class="absolute -top-1 -right-1 bg-red-500 rounded-full w-4 h-4 text-xs">&times;</button>
+                                                        </div>
+                                                    </template>
+                                                    <template x-if="!selectedLayer.src">
+                                                        <div class="text-xs text-gray-500">
+                                                            <svg class="w-5 h-5 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                                            Drop or click
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                                <input type="file" x-ref="layerImageInput" @change="handleLayerImageSelect($event)" accept="image/*" class="hidden" />
+                                            </div>
+                                            <div>
+                                                <span class="text-xs text-gray-500">URL</span>
+                                                <input type="text" x-model="selectedLayer.src" @input="markChanged()" placeholder="https://..." class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs" />
+                                            </div>
+                                            <div>
+                                                <span class="text-xs text-gray-500">Fit</span>
+                                                <select x-model="selectedLayer.objectFit" @change="markChanged()" class="w-full bg-gray-700 border border-gray-600 rounded px-1 py-1 text-xs">
+                                                    <option value="contain">Contain</option>
+                                                    <option value="cover">Cover</option>
+                                                    <option value="fill">Fill</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </template>
                                 </div>
-                            @endforeach
+                            </template>
+                            <template x-if="!selectedLayer">
+                                <p class="text-gray-500 text-xs">Select a layer to edit</p>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -611,6 +614,8 @@
                 imageDragOver: false,
                 showTicketSettings: false,
                 showTicketElements: true,
+                showVariables: false,
+                showLayerProperties: true,
                 draggingLayerId: null,
                 dragOverLayerId: null,
 
