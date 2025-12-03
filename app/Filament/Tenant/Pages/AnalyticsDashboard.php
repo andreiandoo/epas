@@ -132,20 +132,20 @@ class AnalyticsDashboard extends Page
             $query->where('event_id', $this->selectedEventId);
         }
 
-        $totalRevenue = (clone $query)->where('status', 'completed')->sum('total_amount') / 100;
-        $totalOrders = (clone $query)->where('status', 'completed')->count();
-        $totalTickets = Ticket::whereIn('order_id', (clone $query)->where('status', 'completed')->pluck('id'))->count();
+        $totalRevenue = (clone $query)->where('status', 'paid')->sum('total_cents') / 100;
+        $totalOrders = (clone $query)->where('status', 'paid')->count();
+        $totalTickets = Ticket::whereIn('order_id', (clone $query)->where('status', 'paid')->pluck('id'))->count();
         $avgOrderValue = $totalOrders > 0 ? $totalRevenue / $totalOrders : 0;
 
         // Get previous period for comparison
         $previousStartDate = $startDate ? (clone $startDate)->subDays($startDate->diffInDays(Carbon::now())) : null;
-        $previousQuery = Order::where('tenant_id', $tenant->id)->where('status', 'completed');
+        $previousQuery = Order::where('tenant_id', $tenant->id)->where('status', 'paid');
 
         if ($previousStartDate && $startDate) {
             $previousQuery->whereBetween('created_at', [$previousStartDate, $startDate]);
         }
 
-        $previousRevenue = $previousQuery->sum('total_amount') / 100;
+        $previousRevenue = $previousQuery->sum('total_cents') / 100;
         $revenueChange = $previousRevenue > 0 ? (($totalRevenue - $previousRevenue) / $previousRevenue) * 100 : 0;
 
         return [
@@ -169,12 +169,12 @@ class AnalyticsDashboard extends Page
         };
 
         $data = Order::where('tenant_id', $tenant->id)
-            ->where('status', 'completed')
+            ->where('status', 'paid')
             ->where('created_at', '>=', Carbon::now()->subDays($days))
             ->when($this->selectedEventId && $this->selectedEventId !== 'all', function ($q) {
                 $q->where('event_id', $this->selectedEventId);
             })
-            ->selectRaw('DATE(created_at) as date, SUM(total_amount) as revenue, COUNT(*) as orders')
+            ->selectRaw('DATE(created_at) as date, SUM(total_cents) as revenue, COUNT(*) as orders')
             ->groupBy('date')
             ->orderBy('date')
             ->get();
@@ -212,17 +212,17 @@ class AnalyticsDashboard extends Page
 
         return Event::where('tenant_id', $tenant->id)
             ->withCount(['orders as completed_orders' => function ($q) use ($startDate) {
-                $q->where('status', 'completed');
+                $q->where('status', 'paid');
                 if ($startDate) {
                     $q->where('created_at', '>=', $startDate);
                 }
             }])
             ->withSum(['orders as total_revenue' => function ($q) use ($startDate) {
-                $q->where('status', 'completed');
+                $q->where('status', 'paid');
                 if ($startDate) {
                     $q->where('created_at', '>=', $startDate);
                 }
-            }], 'total_amount')
+            }], 'total_cents')
             ->orderByDesc('total_revenue')
             ->limit(5)
             ->get()

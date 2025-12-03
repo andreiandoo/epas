@@ -97,24 +97,34 @@ class Invitations extends Page
             ->get();
     }
 
-    public function getEvents()
+    public function getEvents(): array
     {
         $tenant = auth()->user()->tenant;
+
+        if (!$tenant) {
+            return [];
+        }
 
         return Event::where('tenant_id', $tenant->id)
             ->orderBy('created_at', 'desc')
-            ->pluck('title', 'id')
-            ->toArray();
+            ->get()
+            ->mapWithKeys(fn ($event) => [$event->id => $event->title])
+            ->all();
     }
 
-    public function getTemplates()
+    public function getTemplates(): array
     {
         $tenant = auth()->user()->tenant;
 
+        if (!$tenant) {
+            return [];
+        }
+
         return TicketTemplate::where('tenant_id', $tenant->id)
             ->where('status', 'active')
-            ->pluck('name', 'id')
-            ->toArray();
+            ->get()
+            ->mapWithKeys(fn ($template) => [$template->id => $template->name])
+            ->all();
     }
 
     protected function getHeaderActions(): array

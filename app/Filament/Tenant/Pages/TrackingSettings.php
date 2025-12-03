@@ -73,8 +73,8 @@ class TrackingSettings extends Page
         foreach (['ga4', 'gtm', 'meta', 'tiktok'] as $provider) {
             $integration = $integrations->where('provider', $provider)->first();
             if ($integration) {
-                $formData["{$provider}_enabled"] = $integration->enabled;
-                $formData["{$provider}_id"] = $integration->getProviderId();
+                $formData["{$provider}_enabled"] = (bool) $integration->enabled;
+                $formData["{$provider}_id"] = $integration->getProviderId() ?? '';
                 $formData["{$provider}_inject_at"] = $integration->getInjectAt();
                 $formData["{$provider}_page_scope"] = $integration->getPageScope();
             } else {
@@ -85,7 +85,7 @@ class TrackingSettings extends Page
             }
         }
 
-        $this->form->fill($formData);
+        $this->data = $formData;
     }
 
     public function form(Schema $form): Schema
@@ -298,32 +298,25 @@ class TrackingSettings extends Page
         ];
 
         foreach ($providers as $provider => $config) {
-            $enabled = $data["{$provider}_enabled"] ?? false;
+            $enabled = (bool) ($data["{$provider}_enabled"] ?? false);
             $providerId = $data["{$provider}_id"] ?? '';
 
-            // Only save if enabled and has an ID
-            if ($enabled && !empty($providerId)) {
-                TrackingIntegration::updateOrCreate(
-                    [
-                        'tenant_id' => $tenant->id,
-                        'provider' => $provider,
+            // Always save the toggle state
+            TrackingIntegration::updateOrCreate(
+                [
+                    'tenant_id' => $tenant->id,
+                    'provider' => $provider,
+                ],
+                [
+                    'enabled' => $enabled && !empty($providerId),
+                    'consent_category' => $config['consent_category'],
+                    'settings' => [
+                        $config['id_field'] => $providerId,
+                        'inject_at' => $data["{$provider}_inject_at"] ?? 'head',
+                        'page_scope' => $data["{$provider}_page_scope"] ?? 'public',
                     ],
-                    [
-                        'enabled' => true,
-                        'consent_category' => $config['consent_category'],
-                        'settings' => [
-                            $config['id_field'] => $providerId,
-                            'inject_at' => $data["{$provider}_inject_at"] ?? 'head',
-                            'page_scope' => $data["{$provider}_page_scope"] ?? 'public',
-                        ],
-                    ]
-                );
-            } else {
-                // Disable or delete the integration
-                TrackingIntegration::where('tenant_id', $tenant->id)
-                    ->where('provider', $provider)
-                    ->update(['enabled' => false]);
-            }
+                ]
+            );
         }
 
         Notification::make()
