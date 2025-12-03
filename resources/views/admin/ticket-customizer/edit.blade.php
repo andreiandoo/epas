@@ -340,7 +340,7 @@
                             </svg>
                         </div>
                         <div x-show="showVariables" x-collapse class="p-3">
-                            <p class="text-xs text-gray-500 mb-2">Click to copy</p>
+                            <p class="text-xs text-gray-500 mb-2" x-text="selectedLayer && selectedLayer.type === 'text' ? 'Click to insert' : 'Click to copy'"></p>
                             <div class="space-y-2 max-h-48 overflow-y-auto">
                                 @foreach($variables as $groupKey => $group)
                                     <div>
@@ -414,8 +414,20 @@
                                     <template x-if="selectedLayer.type === 'text'">
                                         <div class="space-y-2 pt-2 border-t border-gray-700">
                                             <div>
-                                                <label class="block text-xs text-gray-400 mb-1">Content</label>
-                                                <textarea x-model="selectedLayer.content" @input="markChanged()" rows="2" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs" placeholder="Text or @{{variable}}"></textarea>
+                                                <div class="flex items-center justify-between mb-1">
+                                                    <label class="text-xs text-gray-400">Content</label>
+                                                    <button @click="showVariables = true" type="button" class="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                                                        Add variable
+                                                    </button>
+                                                </div>
+                                                <!-- Formatting toolbar -->
+                                                <div class="flex gap-1 mb-1">
+                                                    <button @click="wrapSelectedText('**', '**')" type="button" class="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-xs font-bold" title="Bold">B</button>
+                                                    <button @click="wrapSelectedText('_', '_')" type="button" class="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-xs italic" title="Italic">I</button>
+                                                    <button @click="wrapSelectedText('<u>', '</u>')" type="button" class="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-xs underline" title="Underline">U</button>
+                                                </div>
+                                                <textarea x-ref="contentTextarea" x-model="selectedLayer.content" @input="markChanged()" rows="4" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm" placeholder="Text or {{variable}}"></textarea>
                                             </div>
                                             <div class="grid grid-cols-2 gap-2">
                                                 <div>
@@ -1071,8 +1083,62 @@
                 },
 
                 copyVariable(placeholder) {
+                    // If a text layer is selected, insert at cursor position
+                    if (this.selectedLayer && this.selectedLayer.type === 'text') {
+                        const textarea = this.$refs.contentTextarea;
+                        if (textarea) {
+                            const start = textarea.selectionStart || 0;
+                            const end = textarea.selectionEnd || 0;
+                            const text = this.selectedLayer.content || '';
+                            this.selectedLayer.content = text.substring(0, start) + placeholder + text.substring(end);
+                            this.markChanged();
+
+                            this.$nextTick(() => {
+                                textarea.focus();
+                                const newPos = start + placeholder.length;
+                                textarea.setSelectionRange(newPos, newPos);
+                            });
+                            this.showMessage('Variable inserted', 'success');
+                            return;
+                        }
+                    }
+                    // Fallback: copy to clipboard
                     navigator.clipboard.writeText(placeholder);
                     this.showMessage('Copied to clipboard', 'success');
+                },
+
+                wrapSelectedText(prefix, suffix) {
+                    const textarea = this.$refs.contentTextarea;
+                    if (!textarea || !this.selectedLayer) return;
+
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const text = this.selectedLayer.content || '';
+                    const selectedText = text.substring(start, end);
+
+                    if (selectedText) {
+                        // Wrap selected text
+                        const newText = text.substring(0, start) + prefix + selectedText + suffix + text.substring(end);
+                        this.selectedLayer.content = newText;
+                        this.markChanged();
+
+                        // Restore cursor position after the wrapped text
+                        this.$nextTick(() => {
+                            textarea.focus();
+                            textarea.setSelectionRange(start + prefix.length, end + prefix.length);
+                        });
+                    } else {
+                        // Insert placeholder at cursor
+                        const newText = text.substring(0, start) + prefix + suffix + text.substring(end);
+                        this.selectedLayer.content = newText;
+                        this.markChanged();
+
+                        // Position cursor between prefix and suffix
+                        this.$nextTick(() => {
+                            textarea.focus();
+                            textarea.setSelectionRange(start + prefix.length, start + prefix.length);
+                        });
+                    }
                 },
 
                 showMessage(text, type = 'info') {
