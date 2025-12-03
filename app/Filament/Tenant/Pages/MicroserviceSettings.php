@@ -25,7 +25,7 @@ class MicroserviceSettings extends Page
     public ?string $microserviceSlug = null;
     public ?Microservice $microservice = null;
     public ?Tenant $tenant = null;
-    public ?object $pivotData = null;
+    public ?string $activatedAt = null;
     public ?array $data = [];
 
     public function mount(string $slug): void
@@ -49,8 +49,8 @@ class MicroserviceSettings extends Page
             abort(403, 'You do not have access to this microservice.');
         }
 
-        // Store pivot data for view
-        $this->pivotData = $activeMicroservice->pivot;
+        // Store activation date for view (as string to avoid Livewire serialization issues)
+        $this->activatedAt = $activeMicroservice->pivot->activated_at;
 
         // Load saved settings from pivot configuration
         $this->form->fill($activeMicroservice->pivot->configuration ?? []);

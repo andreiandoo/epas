@@ -20,10 +20,10 @@
                     <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         {{ $microservice->getTranslation('short_description', app()->getLocale()) }}
                     </p>
-                    @if($pivotData?->activated_at)
+                    @if($activatedAt)
                         <p class="text-xs text-gray-500 dark:text-gray-500 mt-2 flex items-center gap-1">
                             <x-heroicon-o-calendar class="w-3.5 h-3.5" />
-                            Active since {{ \Carbon\Carbon::parse($pivotData->activated_at)->format('M d, Y') }}
+                            Active since {{ \Carbon\Carbon::parse($activatedAt)->format('M d, Y') }}
                         </p>
                     @endif
                 </div>
