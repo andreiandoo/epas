@@ -41,7 +41,7 @@ class MicroserviceSettings extends Page
         // Check if tenant has this microservice active
         $this->tenantMicroservice = TenantMicroservice::where('tenant_id', $tenant->id)
             ->where('microservice_id', $this->microservice->id)
-            ->where('is_active', true)
+            ->where('status', 'active')
             ->first();
 
         if (!$this->tenantMicroservice) {

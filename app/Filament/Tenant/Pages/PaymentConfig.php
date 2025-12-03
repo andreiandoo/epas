@@ -61,7 +61,7 @@ class PaymentConfig extends Page
         $paymentMicroserviceSlugs = array_keys(static::$paymentProcessorSlugs);
 
         $activeMicroservice = TenantMicroservice::where('tenant_id', $tenant->id)
-            ->where('is_active', true)
+            ->where('status', 'active')
             ->whereHas('microservice', function ($query) use ($paymentMicroserviceSlugs) {
                 $query->whereIn('slug', $paymentMicroserviceSlugs);
             })

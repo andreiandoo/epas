@@ -13,19 +13,29 @@ class TenantMicroservice extends Model
     protected $fillable = [
         'tenant_id',
         'microservice_id',
-        'is_active',
+        'status',
         'activated_at',
-        'deactivated_at',
+        'expires_at',
+        'trial_ends_at',
+        'cancelled_at',
+        'cancellation_reason',
         'settings',
         'usage_stats',
+        'monthly_price',
+        'last_billed_at',
+        'next_billing_at',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
         'activated_at' => 'datetime',
-        'deactivated_at' => 'datetime',
+        'expires_at' => 'datetime',
+        'trial_ends_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+        'last_billed_at' => 'datetime',
+        'next_billing_at' => 'datetime',
         'settings' => 'array',
         'usage_stats' => 'array',
+        'monthly_price' => 'decimal:2',
     ];
 
     public function tenant(): BelongsTo
@@ -40,23 +50,36 @@ class TenantMicroservice extends Model
 
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where('status', 'active');
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
     }
 
     public function activate(): void
     {
         $this->update([
-            'is_active' => true,
+            'status' => 'active',
             'activated_at' => now(),
-            'deactivated_at' => null,
+            'cancelled_at' => null,
+            'cancellation_reason' => null,
         ]);
     }
 
     public function deactivate(): void
     {
         $this->update([
-            'is_active' => false,
-            'deactivated_at' => now(),
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+        ]);
+    }
+
+    public function suspend(): void
+    {
+        $this->update([
+            'status' => 'suspended',
         ]);
     }
 
@@ -78,7 +101,7 @@ class TenantMicroservice extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['is_active', 'settings'])
+            ->logOnly(['status', 'settings'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->setDescriptionForEvent(fn (string $eventName) => "Microservice settings {$eventName}")
