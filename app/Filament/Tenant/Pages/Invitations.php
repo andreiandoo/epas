@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use League\Csv\Reader;
 use Livewire\WithFileUploads;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use ZipArchive;
 
 class Invitations extends Page
@@ -509,58 +510,49 @@ class Invitations extends Page
     }
 
     /**
-     * Generate a QR code as base64 PNG using Google Charts API
+     * Generate a QR code as base64 PNG using simple-qrcode library
      */
     protected function generateQrCode(string $data): string
     {
-        $size = 200;
-        $url = 'https://chart.googleapis.com/chart?chs=' . $size . 'x' . $size . '&cht=qr&chl=' . urlencode($data) . '&choe=UTF-8';
-
         try {
-            $context = stream_context_create([
-                'http' => ['timeout' => 5],
-                'ssl' => ['verify_peer' => false, 'verify_peer_name' => false],
-            ]);
-            $imageData = @file_get_contents($url, false, $context);
-            if ($imageData !== false) {
-                return base64_encode($imageData);
-            }
-        } catch (\Exception $e) {
-            // Fallback to placeholder
-        }
+            // Generate QR code using simple-qrcode library
+            $qrCode = QrCode::format('png')
+                ->size(200)
+                ->margin(1)
+                ->errorCorrection('M')
+                ->generate($data);
 
-        return $this->generatePlaceholderQr($data);
+            return base64_encode($qrCode);
+        } catch (\Exception $e) {
+            // Fallback to placeholder if QR generation fails
+            return $this->generatePlaceholderQr($data);
+        }
     }
 
     /**
-     * Generate a placeholder QR code image with the invite code
+     * Generate a simple placeholder QR code image
      */
     protected function generatePlaceholderQr(string $data): string
     {
+        // Create a simple placeholder image with the code text
         $size = 200;
         $image = imagecreatetruecolor($size, $size);
         $white = imagecolorallocate($image, 255, 255, 255);
         $black = imagecolorallocate($image, 0, 0, 0);
-        $gray = imagecolorallocate($image, 100, 100, 100);
 
         imagefill($image, 0, 0, $white);
 
-        // Draw a simple QR-like pattern
-        for ($i = 10; $i < $size - 10; $i += 8) {
-            for ($j = 10; $j < $size - 10; $j += 8) {
-                if (rand(0, 1) === 1) {
-                    imagefilledrectangle($image, $i, $j, $i + 6, $j + 6, $black);
-                }
-            }
-        }
-
-        // Draw corner markers (like real QR codes)
-        $this->drawQrMarker($image, 10, 10, 50, $black, $white);
-        $this->drawQrMarker($image, $size - 60, 10, 50, $black, $white);
-        $this->drawQrMarker($image, 10, $size - 60, 50, $black, $white);
-
         // Draw border
-        imagerectangle($image, 0, 0, $size - 1, $size - 1, $gray);
+        imagerectangle($image, 0, 0, $size - 1, $size - 1, $black);
+        imagerectangle($image, 5, 5, $size - 6, $size - 6, $black);
+
+        // Add text in center
+        $text = 'SCAN QR';
+        $fontSize = 4;
+        $textWidth = imagefontwidth($fontSize) * strlen($text);
+        $textX = ($size - $textWidth) / 2;
+        $textY = $size / 2 - 10;
+        imagestring($image, $fontSize, $textX, $textY, $text, $black);
 
         ob_start();
         imagepng($image);
@@ -568,16 +560,6 @@ class Invitations extends Page
         imagedestroy($image);
 
         return base64_encode($imageData);
-    }
-
-    /**
-     * Draw a QR code corner marker
-     */
-    protected function drawQrMarker($image, int $x, int $y, int $size, $black, $white): void
-    {
-        imagefilledrectangle($image, $x, $y, $x + $size, $y + $size, $black);
-        imagefilledrectangle($image, $x + 6, $y + 6, $x + $size - 6, $y + $size - 6, $white);
-        imagefilledrectangle($image, $x + 12, $y + 12, $x + $size - 12, $y + $size - 12, $black);
     }
 
     /**

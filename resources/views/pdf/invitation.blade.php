@@ -2,208 +2,220 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>Invitation - {{ $invite->invite_code }}</title>
     <style>
         @page {
-            margin: 0;
+            margin: 20px;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: DejaVu Sans, Arial, sans-serif;
         }
 
         body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
-            color: #ffffff;
-            min-height: 100%;
-            padding: 40px;
+            background-color: #ffffff;
+            color: #1f2937;
+            font-size: 12px;
+            line-height: 1.4;
         }
 
-        .invitation-container {
-            max-width: 600px;
+        .invitation-card {
+            border: 3px solid #4f46e5;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 550px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
-            padding: 50px 40px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
+        /* Header */
         .header {
             text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .watermark {
-            font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 6px;
-            color: #a78bfa;
-            text-transform: uppercase;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 20px;
             margin-bottom: 20px;
         }
 
-        .event-title {
-            font-size: 32px;
-            font-weight: 700;
-            color: #ffffff;
+        .watermark {
+            font-size: 10px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            color: #4f46e5;
+            text-transform: uppercase;
             margin-bottom: 10px;
-            line-height: 1.2;
+        }
+
+        .event-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 5px;
         }
 
         .event-subtitle {
-            font-size: 16px;
-            color: #c4b5fd;
-            margin-bottom: 30px;
+            font-size: 14px;
+            color: #6b7280;
         }
 
-        .divider {
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #a78bfa, transparent);
-            margin: 30px 0;
-        }
-
+        /* Recipient Section */
         .recipient-section {
             text-align: center;
-            margin-bottom: 40px;
+            background-color: #f3f4f6;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 6px;
         }
 
-        .you-are-invited {
-            font-size: 14px;
-            color: #a78bfa;
+        .invited-label {
+            font-size: 10px;
+            color: #4f46e5;
             text-transform: uppercase;
-            letter-spacing: 3px;
-            margin-bottom: 15px;
-        }
-
-        .recipient-name {
-            font-size: 28px;
-            font-weight: 600;
-            color: #ffffff;
+            letter-spacing: 2px;
             margin-bottom: 8px;
         }
 
+        .recipient-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 4px;
+        }
+
         .recipient-company {
-            font-size: 16px;
-            color: #c4b5fd;
+            font-size: 12px;
+            color: #6b7280;
         }
 
-        .details-section {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 30px;
-        }
-
-        .detail-row {
-            display: table;
+        /* Details Table */
+        .details-table {
             width: 100%;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            border-collapse: collapse;
         }
 
-        .detail-row:last-child {
-            margin-bottom: 0;
+        .details-table td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #e5e7eb;
         }
 
-        .detail-icon {
-            display: table-cell;
-            width: 30px;
-            vertical-align: middle;
-            color: #a78bfa;
-            font-size: 16px;
-        }
-
-        .detail-content {
-            display: table-cell;
-            vertical-align: middle;
-        }
-
-        .detail-label {
-            font-size: 11px;
-            color: #a78bfa;
+        .details-table .label {
+            font-size: 10px;
+            color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: 3px;
+            width: 80px;
         }
 
-        .detail-value {
-            font-size: 16px;
-            color: #ffffff;
+        .details-table .value {
+            font-size: 13px;
+            color: #1f2937;
+            font-weight: 500;
         }
 
-        @if($invite->seat_ref)
+        /* Seat Section */
         .seat-section {
             text-align: center;
-            background: linear-gradient(135deg, #7c3aed, #a78bfa);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 30px;
+            background-color: #4f46e5;
+            color: #ffffff;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 6px;
         }
 
         .seat-label {
-            font-size: 11px;
-            color: rgba(255, 255, 255, 0.8);
+            font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 2px;
             margin-bottom: 5px;
         }
 
         .seat-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: #ffffff;
+            font-size: 22px;
+            font-weight: bold;
         }
-        @endif
 
+        /* Value Section */
+        .value-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .value-badge {
+            display: inline-block;
+            background-color: #10b981;
+            color: #ffffff;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        /* QR Section */
         .qr-section {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+        }
+
+        .qr-container {
+            display: inline-block;
+            background-color: #ffffff;
+            border: 2px solid #e5e7eb;
+            padding: 10px;
+            border-radius: 8px;
         }
 
         .qr-code {
-            width: 180px;
-            height: 180px;
-            margin: 0 auto 15px;
-            background: #ffffff;
-            padding: 10px;
-            border-radius: 10px;
-        }
-
-        .qr-code img {
-            width: 100%;
-            height: 100%;
+            width: 120px;
+            height: 120px;
         }
 
         .invite-code {
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            color: #a78bfa;
-            letter-spacing: 2px;
+            font-family: DejaVu Sans Mono, Courier New, monospace;
+            font-size: 12px;
+            color: #4f46e5;
+            letter-spacing: 1px;
+            margin-top: 10px;
+            font-weight: bold;
         }
 
+        /* Footer */
         .footer {
             text-align: center;
-            font-size: 12px;
-            color: #8b5cf6;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 2px solid #e5e7eb;
+            padding-top: 15px;
         }
 
-        .footer p {
+        .footer-main {
+            font-size: 11px;
+            color: #1f2937;
             margin-bottom: 5px;
         }
 
-        .note {
-            font-size: 11px;
-            color: #a78bfa;
+        .footer-note {
+            font-size: 10px;
+            color: #6b7280;
             font-style: italic;
+            margin-bottom: 10px;
+        }
+
+        .powered-by {
+            font-size: 9px;
+            color: #9ca3af;
+            margin-top: 10px;
+        }
+
+        .powered-by a {
+            color: #4f46e5;
+            text-decoration: none;
         }
     </style>
 </head>
 <body>
-    <div class="invitation-container">
+    <div class="invitation-card">
+        <!-- Header -->
         <div class="header">
             <div class="watermark">{{ $watermark }}</div>
             <h1 class="event-title">{{ $eventTitle }}</h1>
@@ -212,46 +224,36 @@
             @endif
         </div>
 
-        <div class="divider"></div>
-
+        <!-- Recipient -->
         <div class="recipient-section">
-            <p class="you-are-invited">You Are Cordially Invited</p>
-            <h2 class="recipient-name">{{ $invite->getRecipientName() }}</h2>
+            <div class="invited-label">You Are Cordially Invited</div>
+            <div class="recipient-name">{{ $invite->getRecipientName() }}</div>
             @if($invite->getRecipientCompany())
-                <p class="recipient-company">{{ $invite->getRecipientCompany() }}</p>
+                <div class="recipient-company">{{ $invite->getRecipientCompany() }}</div>
             @endif
         </div>
 
-        <div class="details-section">
-            <div class="detail-row">
-                <div class="detail-icon">📅</div>
-                <div class="detail-content">
-                    <div class="detail-label">Date</div>
-                    <div class="detail-value">{{ $eventDate }}</div>
-                </div>
-            </div>
-
+        <!-- Event Details -->
+        <table class="details-table">
+            <tr>
+                <td class="label">Date</td>
+                <td class="value">{{ $eventDate }}</td>
+            </tr>
             @if($eventTime)
-            <div class="detail-row">
-                <div class="detail-icon">🕐</div>
-                <div class="detail-content">
-                    <div class="detail-label">Time</div>
-                    <div class="detail-value">{{ $eventTime }}</div>
-                </div>
-            </div>
+            <tr>
+                <td class="label">Time</td>
+                <td class="value">{{ $eventTime }}</td>
+            </tr>
             @endif
-
             @if($venueName)
-            <div class="detail-row">
-                <div class="detail-icon">📍</div>
-                <div class="detail-content">
-                    <div class="detail-label">Venue</div>
-                    <div class="detail-value">{{ $venueName }}</div>
-                </div>
-            </div>
+            <tr>
+                <td class="label">Venue</td>
+                <td class="value">{{ $venueName }}</td>
+            </tr>
             @endif
-        </div>
+        </table>
 
+        <!-- Seat (if assigned) -->
         @if($invite->seat_ref)
         <div class="seat-section">
             <div class="seat-label">Your Assigned Seat</div>
@@ -259,16 +261,30 @@
         </div>
         @endif
 
-        <div class="qr-section">
-            <div class="qr-code">
-                <img src="data:image/png;base64,{{ $qrCode }}" alt="QR Code">
-            </div>
-            <p class="invite-code">{{ $invite->invite_code }}</p>
+        <!-- Value Badge -->
+        <div class="value-section">
+            <span class="value-badge">COMPLIMENTARY - Value: 0 RON</span>
         </div>
 
+        <!-- QR Code -->
+        <div class="qr-section">
+            <div class="qr-container">
+                @if($qrCode)
+                    <img class="qr-code" src="data:image/png;base64,{{ $qrCode }}" alt="QR Code">
+                @else
+                    <div class="qr-code" style="background-color: #f3f4f6; display: flex; align-items: center; justify-content: center;">
+                        <span style="color: #6b7280; font-size: 10px;">QR</span>
+                    </div>
+                @endif
+            </div>
+            <div class="invite-code">{{ $invite->invite_code }}</div>
+        </div>
+
+        <!-- Footer -->
         <div class="footer">
-            <p>Please present this invitation at the entrance</p>
-            <p class="note">This invitation is personal and non-transferable</p>
+            <p class="footer-main">Please present this invitation at the entrance</p>
+            <p class="footer-note">This invitation is personal and non-transferable</p>
+            <p class="powered-by">Generated by <a href="https://tixello.com">Tixello.com</a></p>
         </div>
     </div>
 </body>
