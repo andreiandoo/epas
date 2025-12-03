@@ -272,8 +272,10 @@ SVG;
      */
     private function renderQRLayer(array $layer, array $data, float $x, float $y, float $w, float $h, float $opacity, string $transform): string
     {
-        $props = $layer['props'] ?? [];
-        $codeData = $props['data'] ?? 'QR';
+        // Support both old (props.data) and new (qrData) structure
+        $codeData = $layer['qrData'] ?? $layer['props']['data'] ?? 'QR';
+        $foreground = $layer['qrForeground'] ?? '#000000';
+        $background = $layer['qrBackground'] ?? '#ffffff';
 
         // Replace placeholders
         $codeData = $this->replacePlaceholders($codeData, $data);
@@ -302,8 +304,8 @@ SVG;
 
         return <<<SVG
   <g opacity="{$opacity}" {$transform}>
-    <rect x="{$qrX}" y="{$qrY}" width="{$size}" height="{$size}" fill="white"/>
-    <path d="{$pathData}" fill="#000"/>
+    <rect x="{$qrX}" y="{$qrY}" width="{$size}" height="{$size}" fill="{$background}"/>
+    <path d="{$pathData}" fill="{$foreground}"/>
   </g>
 
 SVG;
@@ -445,8 +447,10 @@ SVG;
      */
     private function renderBarcodeLayer(array $layer, array $data, float $x, float $y, float $w, float $h, float $opacity, string $transform): string
     {
-        $props = $layer['props'] ?? [];
-        $codeData = $props['data'] ?? '123456789';
+        // Support both old (props.data) and new (barcodeData) structure
+        $codeData = $layer['barcodeData'] ?? $layer['props']['data'] ?? '123456789';
+        $foreground = $layer['barcodeForeground'] ?? '#000000';
+        $background = $layer['barcodeBackground'] ?? '#ffffff';
 
         // Replace placeholders
         $codeData = $this->replacePlaceholders($codeData, $data);
@@ -468,7 +472,7 @@ SVG;
         foreach ($pattern as $bar) {
             $barW = $bar['width'] * $unitWidth;
             if ($bar['black']) {
-                $bars .= "<rect x=\"{$currentX}\" y=\"{$barY}\" width=\"{$barW}\" height=\"{$barHeight}\" fill=\"#000\"/>";
+                $bars .= "<rect x=\"{$currentX}\" y=\"{$barY}\" width=\"{$barW}\" height=\"{$barHeight}\" fill=\"{$foreground}\"/>";
             }
             $currentX += $barW;
         }
@@ -481,9 +485,9 @@ SVG;
 
         return <<<SVG
   <g opacity="{$opacity}" {$transform}>
-    <rect x="{$x}" y="{$y}" width="{$w}" height="{$h}" fill="white"/>
+    <rect x="{$x}" y="{$y}" width="{$w}" height="{$h}" fill="{$background}"/>
     {$bars}
-    <text x="{$textX}" y="{$textY}" font-size="{$fontSize}" font-family="'Courier New', monospace" text-anchor="middle" fill="#000">{$displayData}</text>
+    <text x="{$textX}" y="{$textY}" font-size="{$fontSize}" font-family="'Courier New', monospace" text-anchor="middle" fill="{$foreground}">{$displayData}</text>
   </g>
 
 SVG;
