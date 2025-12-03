@@ -137,10 +137,11 @@ class TicketTemplateResource extends Resource
                         ->label('')
                         ->content(fn ($record) => $record
                             ? new \Illuminate\Support\HtmlString(
-                                '<a href="/ticket-customizer/' . $record->id . '"
+                                '<a href="/admin/ticket-customizer/' . $record->id . '"
                                    target="_blank"
-                                   class="text-blue-600 hover:text-blue-800 underline">
-                                   Open Visual Editor (WYSIWYG) →
+                                   class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition">
+                                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                   Open Visual Editor
                                 </a>'
                             )
                             : 'Save the template first to access the visual editor'
@@ -150,15 +151,26 @@ class TicketTemplateResource extends Resource
             SC\Section::make('Preview')
                 ->description('Template preview image')
                 ->schema([
-                    Forms\Components\FileUpload::make('preview_image')
-                        ->label('Preview Image')
-                        ->image()
-                        ->imagePreviewHeight('250')
-                        ->helperText('Preview is automatically generated when using the WYSIWYG editor')
-                        ->disabled()
+                    Forms\Components\Placeholder::make('preview_display')
+                        ->label('Preview')
+                        ->content(function ($record) {
+                            if (!$record || !$record->preview_image) {
+                                return new \Illuminate\Support\HtmlString(
+                                    '<div class="text-gray-500 text-sm">No preview generated yet. Use the Visual Editor or click "Generate Preview" button.</div>'
+                                );
+                            }
+                            $url = \Illuminate\Support\Facades\Storage::disk('public')->url($record->preview_image);
+                            return new \Illuminate\Support\HtmlString(
+                                '<div class="border rounded-lg p-2 bg-gray-50 inline-block">
+                                    <object data="' . $url . '" type="image/svg+xml" class="max-h-96 max-w-full">
+                                        <img src="' . $url . '" class="max-h-96 max-w-full" alt="Template Preview" />
+                                    </object>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-2">Last updated: ' . ($record->updated_at?->format('Y-m-d H:i:s') ?? 'Unknown') . '</p>'
+                            );
+                        })
                         ->columnSpanFull(),
-                ])
-                ->visible(fn ($record) => $record && $record->preview_image),
+                ]),
 
             SC\Section::make('Metadata')
                 ->description('Version and tracking information')

@@ -550,7 +550,7 @@
                     'layers' => []
                 ]) !!},
                 selectedLayerId: null,
-                zoom: 100,
+                zoom: 300,
                 saving: false,
                 hasUnsavedChanges: false,
                 messages: [],

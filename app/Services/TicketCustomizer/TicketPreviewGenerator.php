@@ -142,7 +142,7 @@ SVG;
             case 'text':
                 return $this->renderTextLayer($layer, $data, $x, $y, $w, $h, $opacity, $transform, $pxPerMm);
             case 'shape':
-                return $this->renderShapeLayer($layer, $x, $y, $w, $h, $opacity, $transform);
+                return $this->renderShapeLayer($layer, $x, $y, $w, $h, $opacity, $transform, $pxPerMm);
             case 'qr':
                 return $this->renderQRLayer($layer, $data, $x, $y, $w, $h, $opacity, $transform);
             case 'barcode':
@@ -166,7 +166,9 @@ SVG;
         $content = $this->replacePlaceholders($content, $data);
 
         // Get styles directly from layer (new structure)
-        $fontSize = ($layer['fontSize'] ?? 12) * $pxPerMm * 0.35; // Convert mm-based font size to px
+        // fontSize in editor is CSS px at zoom=100%, which corresponds to 1px per mm in the editor
+        // So fontSize 12 means 12px at 1:1 with mm. Scale to actual output px.
+        $fontSize = ($layer['fontSize'] ?? 12) * $pxPerMm;
         $color = $layer['color'] ?? '#000000';
         $align = $layer['textAlign'] ?? 'left';
         $fontWeight = $layer['fontWeight'] ?? 'normal';
@@ -211,14 +213,15 @@ SVG;
     /**
      * Render shape layer
      */
-    private function renderShapeLayer(array $layer, float $x, float $y, float $w, float $h, float $opacity, string $transform): string
+    private function renderShapeLayer(array $layer, float $x, float $y, float $w, float $h, float $opacity, string $transform, float $pxPerMm = 1): string
     {
         // Get shape properties directly from layer (new structure)
         $kind = $layer['shapeKind'] ?? 'rect';
         $fill = $layer['fillColor'] ?? '#e5e7eb';
         $stroke = $layer['borderColor'] ?? '#000000';
-        $strokeWidth = $layer['borderWidth'] ?? 1;
-        $borderRadius = $layer['borderRadius'] ?? 0;
+        // Scale borderWidth and borderRadius with pxPerMm
+        $strokeWidth = ($layer['borderWidth'] ?? 1) * $pxPerMm;
+        $borderRadius = ($layer['borderRadius'] ?? 0) * $pxPerMm;
 
         switch ($kind) {
             case 'rect':
@@ -268,29 +271,58 @@ SVG;
         // Replace placeholders
         $codeData = $this->replacePlaceholders($codeData, $data);
 
+        // Use the smaller dimension for a square QR code, centered in the frame
+        $size = min($w, $h);
+        $qrX = $x + ($w - $size) / 2;
+        $qrY = $y + ($h - $size) / 2;
+
         // Generate a simple QR-like placeholder pattern
-        $cellSize = min($w, $h) / 25;
+        $modules = 25; // Standard QR code has ~25 modules
+        $cellSize = $size / $modules;
         $pattern = '';
 
-        // Create finder patterns (corners)
-        $pattern .= $this->generateFinderPattern($x + $cellSize, $y + $cellSize, $cellSize * 7);
-        $pattern .= $this->generateFinderPattern($x + $w - $cellSize * 8, $y + $cellSize, $cellSize * 7);
-        $pattern .= $this->generateFinderPattern($x + $cellSize, $y + $h - $cellSize * 8, $cellSize * 7);
+        // Create finder patterns (corners) - proper nested squares
+        $pattern .= $this->generateFinderPattern($qrX + $cellSize, $qrY + $cellSize, $cellSize * 7);
+        $pattern .= $this->generateFinderPattern($qrX + $size - $cellSize * 8, $qrY + $cellSize, $cellSize * 7);
+        $pattern .= $this->generateFinderPattern($qrX + $cellSize, $qrY + $size - $cellSize * 8, $cellSize * 7);
 
-        // Add some random-looking data modules
+        // Add alignment pattern (center-right area)
+        $ax = $qrX + $size - $cellSize * 9;
+        $ay = $qrY + $size - $cellSize * 9;
+        $pattern .= "<rect x=\"{$ax}\" y=\"{$ay}\" width=\"" . ($cellSize * 5) . "\" height=\"" . ($cellSize * 5) . "\" fill=\"#000\"/>";
+        $pattern .= "<rect x=\"" . ($ax + $cellSize) . "\" y=\"" . ($ay + $cellSize) . "\" width=\"" . ($cellSize * 3) . "\" height=\"" . ($cellSize * 3) . "\" fill=\"white\"/>";
+        $pattern .= "<rect x=\"" . ($ax + $cellSize * 2) . "\" y=\"" . ($ay + $cellSize * 2) . "\" width=\"{$cellSize}\" height=\"{$cellSize}\" fill=\"#000\"/>";
+
+        // Add timing patterns (dotted lines connecting finder patterns)
+        for ($i = 8; $i < $modules - 8; $i++) {
+            if ($i % 2 === 0) {
+                $tx = $qrX + $i * $cellSize;
+                $pattern .= "<rect x=\"{$tx}\" y=\"" . ($qrY + $cellSize * 6) . "\" width=\"{$cellSize}\" height=\"{$cellSize}\" fill=\"#000\"/>";
+                $pattern .= "<rect x=\"" . ($qrX + $cellSize * 6) . "\" y=\"" . ($qrY + $i * $cellSize) . "\" width=\"{$cellSize}\" height=\"{$cellSize}\" fill=\"#000\"/>";
+            }
+        }
+
+        // Add deterministic data modules based on codeData
         $seed = crc32($codeData);
         srand($seed);
-        for ($i = 0; $i < 100; $i++) {
-            $mx = $x + rand(9, 20) * $cellSize;
-            $my = $y + rand(9, 20) * $cellSize;
-            if (rand(0, 1)) {
-                $pattern .= "<rect x=\"{$mx}\" y=\"{$my}\" width=\"{$cellSize}\" height=\"{$cellSize}\" fill=\"#000\"/>";
+        for ($row = 9; $row < $modules - 1; $row++) {
+            for ($col = 9; $col < $modules - 1; $col++) {
+                // Skip areas covered by finder and alignment patterns
+                if ($row < 9 && $col > $modules - 9) continue;
+                if ($row > $modules - 9 && $col < 9) continue;
+                if ($row > $modules - 10 && $col > $modules - 10) continue;
+
+                if (rand(0, 100) > 50) {
+                    $mx = $qrX + $col * $cellSize;
+                    $my = $qrY + $row * $cellSize;
+                    $pattern .= "<rect x=\"{$mx}\" y=\"{$my}\" width=\"{$cellSize}\" height=\"{$cellSize}\" fill=\"#000\"/>";
+                }
             }
         }
 
         return <<<SVG
   <g opacity="{$opacity}" {$transform}>
-    <rect x="{$x}" y="{$y}" width="{$w}" height="{$h}" fill="white"/>
+    <rect x="{$x}" y="{$y}" width="{$w}" height="{$h}" fill="white" stroke="#e5e7eb" stroke-width="1"/>
     {$pattern}
   </g>
 
@@ -298,15 +330,22 @@ SVG;
     }
 
     /**
-     * Generate QR finder pattern
+     * Generate QR finder pattern (the large squares in corners)
      */
     private function generateFinderPattern(float $x, float $y, float $size): string
     {
         $cell = $size / 7;
+        $innerX = $x + $cell;
+        $innerY = $y + $cell;
+        $innerSize = $size - $cell * 2;
+        $coreX = $x + $cell * 2;
+        $coreY = $y + $cell * 2;
+        $coreSize = $size - $cell * 4;
+
         return <<<SVG
     <rect x="{$x}" y="{$y}" width="{$size}" height="{$size}" fill="#000"/>
-    <rect x="{$x}" y="{$y}" width="{$size}" height="{$size}" fill="white" transform="translate({$cell}, {$cell}) scale(0.714)"/>
-    <rect x="{$x}" y="{$y}" width="{$size}" height="{$size}" fill="#000" transform="translate({$cell},{$cell}) translate({$cell}, {$cell}) scale(0.428)"/>
+    <rect x="{$innerX}" y="{$innerY}" width="{$innerSize}" height="{$innerSize}" fill="white"/>
+    <rect x="{$coreX}" y="{$coreY}" width="{$coreSize}" height="{$coreSize}" fill="#000"/>
 SVG;
     }
 
