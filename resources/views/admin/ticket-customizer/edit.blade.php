@@ -427,7 +427,7 @@
                                                     <button @click="wrapSelectedText('_', '_')" type="button" class="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-xs italic" title="Italic">I</button>
                                                     <button @click="wrapSelectedText('<u>', '</u>')" type="button" class="px-2 py-0.5 bg-gray-700 hover:bg-gray-600 rounded text-xs underline" title="Underline">U</button>
                                                 </div>
-                                                <textarea x-ref="contentTextarea" x-model="selectedLayer.content" @input="markChanged()" rows="4" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm" placeholder="Text or {{variable}}"></textarea>
+                                                <textarea x-ref="contentTextarea" x-model="selectedLayer.content" @input="markChanged()" rows="4" class="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1.5 text-sm" placeholder="Text or @{{variable}}"></textarea>
                                             </div>
                                             <div class="grid grid-cols-2 gap-2">
                                                 <div>
