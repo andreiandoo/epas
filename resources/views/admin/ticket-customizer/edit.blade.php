@@ -957,7 +957,7 @@
                         text: { name: 'Text', content: 'New Text', fontSize: 12, fontWeight: 'normal', fontFamily: 'Inter', color: baseColor, textAlign: 'left' },
                         image: { name: 'Image', src: '', objectFit: 'contain' },
                         qr: { name: 'QR Code', qrData: '@{{qrcode}}', qrForeground: '#000000', qrBackground: '#ffffff' },
-                        barcode: { name: 'Barcode', barcodeData: '{{barcode}}', barcodeForeground: '#000000', barcodeBackground: '#ffffff' },
+                        barcode: { name: 'Barcode', barcodeData: '@{{barcode}}', barcodeForeground: '#000000', barcodeBackground: '#ffffff' },
                         shape: { name: shapeKind === 'line' ? 'Line' : 'Shape', shapeKind: shapeKind || 'rect', fillColor: shapeKind === 'line' ? 'transparent' : '#e5e7eb', borderColor: '#000000', borderWidth: shapeKind === 'line' ? 2 : 1, borderRadius: 0 },
                     };
 
