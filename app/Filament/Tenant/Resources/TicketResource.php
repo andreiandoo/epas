@@ -70,9 +70,25 @@ class TicketResource extends Resource
                             $q->where('meta->customer_name', 'like', "%{$search}%");
                         });
                     }),
-                Tables\Columns\TextColumn::make('order.customer.email')
-                    ->label('Email Client')
-                    ->searchable()
+                Tables\Columns\TextColumn::make('beneficiary_email')
+                    ->label('Email')
+                    ->getStateUsing(function ($record) {
+                        // Check if ticket has beneficiary email in meta (for invitations)
+                        $meta = $record->meta ?? [];
+                        if (!empty($meta['beneficiary']['email'])) {
+                            return $meta['beneficiary']['email'];
+                        }
+                        // Fall back to customer email from order
+                        return $record->order?->customer?->email ?? '-';
+                    })
+                    ->searchable(query: function ($query, $search) {
+                        $query->where(function ($q) use ($search) {
+                            $q->where('meta->beneficiary->email', 'like', "%{$search}%")
+                              ->orWhereHas('order.customer', function ($q2) use ($search) {
+                                  $q2->where('email', 'like', "%{$search}%");
+                              });
+                        });
+                    })
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\BadgeColumn::make('status')
                     ->label('Status')
@@ -106,6 +122,18 @@ class TicketResource extends Resource
                         'cancelled' => 'Anulat',
                         'refunded' => 'Rambursat',
                     ]),
+                Tables\Filters\TernaryFilter::make('is_invitation')
+                    ->label('Tip')
+                    ->placeholder('Toate')
+                    ->trueLabel('Doar Invitații')
+                    ->falseLabel('Doar Comenzi')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereJsonContains('meta->is_invitation', true),
+                        false: fn (Builder $query) => $query->where(function ($q) {
+                            $q->whereNull('meta->is_invitation')
+                              ->orWhereJsonContains('meta->is_invitation', false);
+                        }),
+                    ),
             ])
             ->defaultSort('created_at', 'desc');
     }

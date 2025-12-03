@@ -5,7 +5,9 @@ namespace App\Filament\Tenant\Pages;
 use App\Models\Event;
 use App\Models\Invite;
 use App\Models\InviteBatch;
+use App\Models\Ticket;
 use App\Models\TicketTemplate;
+use App\Models\TicketType;
 use BackedEnum;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Forms;
@@ -629,6 +631,25 @@ class Invitations extends Page
         $eventTitle = $event ? $event->getTranslation('title') : 'Event';
         $eventSubtitle = $event ? $event->getTranslation('subtitle') : null;
 
+        // Find or create "Invitatie" ticket type for this event
+        $invitationTicketType = null;
+        if ($event) {
+            $invitationTicketType = TicketType::firstOrCreate(
+                [
+                    'event_id' => $event->id,
+                    'name' => 'Invitatie',
+                ],
+                [
+                    'price_cents' => 0,
+                    'currency' => 'RON',
+                    'quota_total' => 0, // Unlimited for invitations
+                    'quota_sold' => 0,
+                    'status' => 'active',
+                    'meta' => ['is_invitation' => true],
+                ]
+            );
+        }
+
         // Format event date
         $eventDate = 'TBA';
         if ($event) {
@@ -701,6 +722,28 @@ class Invitations extends Page
                 // Mark as rendered
                 $invite->markAsRendered();
                 $rendered++;
+
+                // Create ticket record for this invitation (if not already exists)
+                if ($invitationTicketType && !Ticket::where('code', $invite->invite_code)->exists()) {
+                    Ticket::create([
+                        'order_id' => null, // No order for invitations
+                        'ticket_type_id' => $invitationTicketType->id,
+                        'performance_id' => null,
+                        'code' => $invite->invite_code,
+                        'status' => 'valid',
+                        'seat_label' => $invite->seat_ref,
+                        'meta' => [
+                            'is_invitation' => true,
+                            'invite_batch_id' => $batch->id,
+                            'beneficiary' => [
+                                'name' => $invite->getRecipientName(),
+                                'email' => $invite->getRecipientEmail(),
+                                'phone' => $invite->getRecipientPhone(),
+                                'company' => $invite->getRecipientCompany(),
+                            ],
+                        ],
+                    ]);
+                }
 
             } catch (\Exception $e) {
                 $errors[] = "Failed to render invitation for {$invite->getRecipientName()}: {$e->getMessage()}";

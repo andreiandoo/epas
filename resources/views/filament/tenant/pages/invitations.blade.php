@@ -261,7 +261,7 @@
                                 @endif
                             @endif
 
-                            @if($batch->status === 'ready' || $batch->qty_rendered > 0)
+                            @if($batch->status === 'ready' || $batch->status === 'rendering' || $batch->qty_rendered > 0)
                                 {{-- Download PDFs --}}
                                 <button wire:click="downloadPdfs('{{ $batch->id }}')"
                                         class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg shadow-sm"
