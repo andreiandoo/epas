@@ -6,9 +6,9 @@ use App\Filament\Tenant\Resources\AffiliateResource\Pages;
 use App\Models\Affiliate;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,28 +34,28 @@ class AffiliateResource extends Resource
         return $schema
             ->columns(2)
             ->components([
-                Forms\Components\Section::make('Affiliate Information')
+                SC\Section::make('Affiliate Information')
                     ->columns(2)
                     ->schema([
-                        Forms\Components\TextInput::make('name')
+                        SC\TextInput::make('name')
                             ->label('Name')
                             ->required()
                             ->maxLength(190),
 
-                        Forms\Components\TextInput::make('code')
+                        SC\TextInput::make('code')
                             ->label('Affiliate Code')
                             ->helperText('Leave empty to auto-generate')
                             ->maxLength(50)
                             ->unique(ignoreRecord: true)
                             ->disabled(fn ($record) => $record !== null),
 
-                        Forms\Components\TextInput::make('contact_email')
+                        SC\TextInput::make('contact_email')
                             ->label('Contact Email')
                             ->email()
                             ->required()
                             ->maxLength(190),
 
-                        Forms\Components\Select::make('status')
+                        SC\Select::make('status')
                             ->label('Status')
                             ->options([
                                 'active' => 'Active',
@@ -66,10 +66,10 @@ class AffiliateResource extends Resource
                             ->required(),
                     ]),
 
-                Forms\Components\Section::make('Commission Settings')
+                SC\Section::make('Commission Settings')
                     ->columns(2)
                     ->schema([
-                        Forms\Components\Select::make('commission_type')
+                        SC\Select::make('commission_type')
                             ->label('Commission Type')
                             ->options([
                                 'percent' => 'Percentage (%)',
@@ -79,7 +79,7 @@ class AffiliateResource extends Resource
                             ->required()
                             ->reactive(),
 
-                        Forms\Components\TextInput::make('commission_rate')
+                        SC\TextInput::make('commission_rate')
                             ->label(fn ($get) => $get('commission_type') === 'fixed' ? 'Fixed Amount (RON)' : 'Commission Rate (%)')
                             ->numeric()
                             ->default(10)
@@ -88,10 +88,10 @@ class AffiliateResource extends Resource
                             ->required(),
                     ]),
 
-                Forms\Components\Section::make('Coupon Code')
+                SC\Section::make('Coupon Code')
                     ->description('Assign a coupon code for coupon-based attribution')
                     ->schema([
-                        Forms\Components\TextInput::make('coupon_code')
+                        SC\TextInput::make('coupon_code')
                             ->label('Coupon Code')
                             ->helperText('If this coupon is used at checkout, the order will be attributed to this affiliate')
                             ->maxLength(50)
@@ -105,9 +105,9 @@ class AffiliateResource extends Resource
                     ])
                     ->collapsed(),
 
-                Forms\Components\Section::make('Additional Information')
+                SC\Section::make('Additional Information')
                     ->schema([
-                        Forms\Components\KeyValue::make('meta')
+                        SC\KeyValue::make('meta')
                             ->label('Additional Data')
                             ->keyLabel('Key')
                             ->valueLabel('Value')
