@@ -102,27 +102,7 @@ class AffiliateConversionResource extends Resource
                     ->label('Affiliate')
                     ->relationship('affiliate', 'name'),
             ])
-            ->actions([
-                Tables\Actions\Action::make('approve')
-                    ->label('Approve')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->visible(fn ($record) => $record->status === 'pending')
-                    ->requiresConfirmation()
-                    ->action(function ($record) {
-                        $record->update(['status' => 'approved']);
-                    }),
-
-                Tables\Actions\Action::make('reverse')
-                    ->label('Reverse')
-                    ->icon('heroicon-o-x-circle')
-                    ->color('danger')
-                    ->visible(fn ($record) => in_array($record->status, ['pending', 'approved']))
-                    ->requiresConfirmation()
-                    ->action(function ($record) {
-                        $record->update(['status' => 'reversed']);
-                    }),
-            ])
+            ->actions([])
             ->bulkActions([])
             ->toolbarActions([
                 BulkActionGroup::make([
