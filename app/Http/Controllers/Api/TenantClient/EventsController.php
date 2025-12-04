@@ -61,27 +61,13 @@ class EventsController extends Controller
 
         $query = Event::where('tenant_id', $tenant->id);
 
-        // Date filtering (skip if show_all=1)
+        // Use upcoming scope for filtering (excludes past events and cancelled)
         if (!$showAll) {
-            $today = now()->startOfDay();
-
-            if (\Schema::hasColumn('events', 'end_date') && \Schema::hasColumn('events', 'start_date')) {
-                $query->where(function ($q) use ($today) {
-                    $q->where('end_date', '>=', $today)
-                      ->orWhere(function ($q2) use ($today) {
-                          $q2->whereNull('end_date')
-                             ->where('start_date', '>=', $today);
-                      });
-                });
-            } elseif (\Schema::hasColumn('events', 'start_date')) {
-                $query->where('start_date', '>=', $today);
-            }
-        }
-
-        // Cancelled check
-        if (\Schema::hasColumn('events', 'is_cancelled')) {
+            $query->upcoming();
+        } else {
+            // Even with show_all, exclude cancelled
             $query->where(function ($q) {
-                $q->where('is_cancelled', 0)
+                $q->where('is_cancelled', false)
                   ->orWhereNull('is_cancelled');
             });
         }
@@ -198,26 +184,30 @@ class EventsController extends Controller
                             'slug' => $tag->slug,
                         ]),
 
-                        // Tickets
-                        'ticket_types' => $event->ticketTypes->map(fn ($type) => [
-                            'id' => $type->id,
-                            'name' => $type->name,
-                            'description' => $type->description ?? '',
-                            'sku' => $type->sku,
-                            'price' => $type->price_max,
-                            'sale_price' => $type->price ?? null,
-                            'discount_percent' => $type->price && $type->price_max
-                                ? round((1 - ($type->price / $type->price_max)) * 100, 2)
-                                : null,
-                            'currency' => $type->currency ?? 'RON',
-                            'available' => $type->available_quantity,
-                            'capacity' => $type->quota_total,
-                            'status' => $type->status,
-                            'sales_start_at' => $type->sales_start_at?->toIso8601String(),
-                            'sales_end_at' => $type->sales_end_at?->toIso8601String(),
-                            'bulk_discounts' => $type->bulk_discounts ?? [],
-                        ]),
-                        'price_from' => $event->ticketTypes->min('price_max'),
+                        // Tickets - exclude invitations (meta->is_invitation = true)
+                        'ticket_types' => $event->ticketTypes
+                            ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
+                            ->map(fn ($type) => [
+                                'id' => $type->id,
+                                'name' => $type->name,
+                                'description' => $type->description ?? '',
+                                'sku' => $type->sku,
+                                'price' => $type->price_max,
+                                'sale_price' => $type->price ?? null,
+                                'discount_percent' => $type->price && $type->price_max
+                                    ? round((1 - ($type->price / $type->price_max)) * 100, 2)
+                                    : null,
+                                'currency' => $type->currency ?? 'RON',
+                                'available' => $type->available_quantity,
+                                'capacity' => $type->quota_total,
+                                'status' => $type->status,
+                                'sales_start_at' => $type->sales_start_at?->toIso8601String(),
+                                'sales_end_at' => $type->sales_end_at?->toIso8601String(),
+                                'bulk_discounts' => $type->bulk_discounts ?? [],
+                            ])->values(),
+                        'price_from' => $event->ticketTypes
+                            ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
+                            ->min('price_max'),
                     ];
                 }),
                 'meta' => [
@@ -405,41 +395,45 @@ class EventsController extends Controller
                     'slug' => $tag->slug,
                 ]) ?? [],
 
-                // Ticket types with commission calculation
+                // Ticket types with commission calculation - exclude invitations
                 // Commission is ALWAYS calculated from BASE price (price_max), not discounted price
-                'ticket_types' => $event->ticketTypes->map(function ($type) use ($commissionMode, $commissionRate) {
-                    $basePrice = $type->price_max; // Always use base price for commission
-                    $effectivePrice = $type->price ?? $type->price_max; // Sale price or base price
-                    $commissionAmount = $commissionMode === 'added_on_top' && $basePrice
-                        ? round($basePrice * ($commissionRate / 100), 2)
-                        : 0;
-                    $finalPrice = $commissionMode === 'added_on_top' && $effectivePrice
-                        ? round($effectivePrice + $commissionAmount, 2)
-                        : $effectivePrice;
+                'ticket_types' => $event->ticketTypes
+                    ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
+                    ->map(function ($type) use ($commissionMode, $commissionRate) {
+                        $basePrice = $type->price_max; // Always use base price for commission
+                        $effectivePrice = $type->price ?? $type->price_max; // Sale price or base price
+                        $commissionAmount = $commissionMode === 'added_on_top' && $basePrice
+                            ? round($basePrice * ($commissionRate / 100), 2)
+                            : 0;
+                        $finalPrice = $commissionMode === 'added_on_top' && $effectivePrice
+                            ? round($effectivePrice + $commissionAmount, 2)
+                            : $effectivePrice;
 
-                    return [
-                        'id' => $type->id,
-                        'name' => $type->name,
-                        'description' => $type->description ?? '',
-                        'sku' => $type->sku,
-                        'price' => $type->price_max,
-                        'sale_price' => $type->price ?? null,
-                        'discount_percent' => $type->price && $type->price_max
-                            ? round((1 - ($type->price / $type->price_max)) * 100, 2)
-                            : null,
-                        'currency' => $type->currency ?? 'RON',
-                        'available' => $type->available_quantity,
-                        'capacity' => $type->capacity,
-                        'status' => $type->status,
-                        'sales_start_at' => $type->sales_start_at?->toIso8601String(),
-                        'sales_end_at' => $type->sales_end_at?->toIso8601String(),
-                        'bulk_discounts' => $type->bulk_discounts ?? [],
-                        // Commission details per ticket
-                        'commission_amount' => $commissionAmount,
-                        'final_price' => $finalPrice, // Price customer pays (with commission if added_on_top)
-                    ];
-                }),
-                'price_from' => $event->ticketTypes->min('price_max'),
+                        return [
+                            'id' => $type->id,
+                            'name' => $type->name,
+                            'description' => $type->description ?? '',
+                            'sku' => $type->sku,
+                            'price' => $type->price_max,
+                            'sale_price' => $type->price ?? null,
+                            'discount_percent' => $type->price && $type->price_max
+                                ? round((1 - ($type->price / $type->price_max)) * 100, 2)
+                                : null,
+                            'currency' => $type->currency ?? 'RON',
+                            'available' => $type->available_quantity,
+                            'capacity' => $type->capacity,
+                            'status' => $type->status,
+                            'sales_start_at' => $type->sales_start_at?->toIso8601String(),
+                            'sales_end_at' => $type->sales_end_at?->toIso8601String(),
+                            'bulk_discounts' => $type->bulk_discounts ?? [],
+                            // Commission details per ticket
+                            'commission_amount' => $commissionAmount,
+                            'final_price' => $finalPrice, // Price customer pays (with commission if added_on_top)
+                        ];
+                    })->values(),
+                'price_from' => $event->ticketTypes
+                    ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
+                    ->min('price_max'),
             ],
         ]);
     }
@@ -473,6 +467,112 @@ class EventsController extends Controller
         return response()->json([
             'success' => true,
             'data' => $seating,
+        ]);
+    }
+
+    /**
+     * List past events for the tenant
+     */
+    public function pastEvents(Request $request): JsonResponse
+    {
+        $tenant = $this->resolveTenant($request);
+
+        if (!$tenant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tenant not found',
+            ], 404);
+        }
+
+        $search = $request->query('search');
+        $category = $request->query('category');
+        $page = $request->query('page', 1);
+        $perPage = $request->query('per_page', 12);
+
+        $query = Event::where('tenant_id', $tenant->id)
+            ->past(); // Use past scope
+
+        // Search
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title->en', 'like', "%{$search}%")
+                  ->orWhere('title->ro', 'like', "%{$search}%");
+            });
+        }
+
+        // Category filter
+        if ($category) {
+            $query->whereHas('eventTypes', function ($q) use ($category) {
+                $q->where('slug', $category);
+            });
+        }
+
+        $total = $query->count();
+
+        // Order by start_date descending (most recent first)
+        $events = $query->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'tags'])
+            ->orderBy('event_date', 'desc')
+            ->orderBy('range_start_date', 'desc')
+            ->skip(($page - 1) * $perPage)
+            ->take($perPage)
+            ->get();
+
+        $locale = $request->query('locale', 'en');
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'events' => $events->map(function ($event) use ($locale) {
+                    return [
+                        'id' => $event->id,
+                        'title' => $event->getTranslation('title', $locale),
+                        'slug' => $event->slug,
+
+                        // Status Flags
+                        'is_cancelled' => $event->is_cancelled ?? false,
+                        'is_postponed' => $event->is_postponed ?? false,
+
+                        // Schedule
+                        'duration_mode' => $event->duration_mode,
+                        'start_date' => $event->start_date?->toIso8601String(),
+                        'end_date' => $event->end_date?->toIso8601String(),
+                        'start_time' => $event->start_time,
+
+                        // Location
+                        'venue' => $event->venue ? [
+                            'id' => $event->venue->id,
+                            'name' => $event->venue->getTranslation('name', $locale),
+                            'city' => $event->venue->city,
+                        ] : null,
+
+                        // Media
+                        'poster_url' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
+                        'hero_image_url' => $event->hero_image_url ? Storage::disk('public')->url($event->hero_image_url) : null,
+
+                        // Content
+                        'short_description' => $event->getTranslation('short_description', $locale),
+
+                        // Taxonomies
+                        'event_types' => $event->eventTypes->map(fn ($type) => [
+                            'id' => $type->id,
+                            'name' => $type->getTranslation('name', $locale),
+                            'slug' => $type->slug,
+                        ]),
+                        'artists' => $event->artists->map(fn ($artist) => [
+                            'id' => $artist->id,
+                            'name' => $artist->name,
+                            'image' => $artist->main_image ? Storage::disk('public')->url($artist->main_image) : null,
+                        ]),
+
+                        // Note: No ticket_types for past events - they can't be purchased
+                    ];
+                }),
+                'meta' => [
+                    'total' => $total,
+                    'page' => $page,
+                    'per_page' => $perPage,
+                ],
+            ],
         ]);
     }
 }

@@ -3,11 +3,18 @@
 namespace App\Http\Controllers\Api\TenantClient;
 
 use App\Http\Controllers\Controller;
+use App\Services\AffiliateTrackingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CheckoutController extends Controller
 {
+    protected AffiliateTrackingService $affiliateService;
+
+    public function __construct(AffiliateTrackingService $affiliateService)
+    {
+        $this->affiliateService = $affiliateService;
+    }
     /**
      * Initialize checkout
      */
@@ -53,15 +60,33 @@ class CheckoutController extends Controller
             'billing.city' => 'nullable|string|max:100',
             'billing.country' => 'nullable|string|max:100',
             'add_insurance' => 'nullable|boolean',
+            'affiliate_cookie' => 'nullable|string',
+            'coupon_code' => 'nullable|string',
         ]);
 
         // Create order
+        // TODO: Implement actual order creation
+        $orderId = 'ord_' . uniqid();
+        $orderAmount = 0; // TODO: Calculate from cart
+
+        // Track affiliate conversion if affiliate cookie is present
+        if (!empty($validated['affiliate_cookie']) || !empty($validated['coupon_code'])) {
+            $this->affiliateService->confirmOrder([
+                'tenant_id' => $tenant->id,
+                'order_ref' => $orderId,
+                'order_amount' => $orderAmount,
+                'buyer_email' => $validated['billing']['email'],
+                'coupon_code' => $validated['coupon_code'] ?? null,
+                'cookie_value' => $validated['affiliate_cookie'] ?? null,
+            ]);
+        }
+
         // Initialize payment with selected processor
 
         return response()->json([
             'success' => true,
             'data' => [
-                'order_id' => 'ord_' . uniqid(),
+                'order_id' => $orderId,
                 'payment' => [
                     'method' => $validated['payment_method'],
                     'redirect_url' => 'https://payment-gateway.com/pay/xxx',
@@ -81,11 +106,20 @@ class CheckoutController extends Controller
         // Update order status
         // Generate tickets if successful
 
+        $orderId = $request->input('order_id');
+        $tenantId = $request->input('tenant_id');
+        $paymentStatus = 'paid'; // TODO: Get from provider
+
+        // Approve affiliate conversion if payment was successful
+        if ($paymentStatus === 'paid' && $tenantId) {
+            $this->affiliateService->approveConversion($orderId, $tenantId);
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
-                'order_id' => $request->input('order_id'),
-                'status' => 'paid',
+                'order_id' => $orderId,
+                'status' => $paymentStatus,
             ],
         ]);
     }

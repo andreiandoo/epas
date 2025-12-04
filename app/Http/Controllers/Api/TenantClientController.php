@@ -132,30 +132,13 @@ class TenantClientController extends Controller
 
         $query = Event::where('tenant_id', $tenantId);
 
-        // Check date columns exist before filtering
-        // Use today's date (not time) for comparison to include events starting today
+        // Use upcoming scope for filtering (excludes past events and cancelled)
         if (!$showAll) {
-            $today = now()->startOfDay();
-
-            if (\Schema::hasColumn('events', 'end_date') && \Schema::hasColumn('events', 'start_date')) {
-                $query->where(function ($q) use ($today) {
-                    $q->where('end_date', '>=', $today)
-                      ->orWhere(function ($q2) use ($today) {
-                          $q2->whereNull('end_date')
-                             ->where('start_date', '>=', $today);
-                      });
-                });
-            } elseif (\Schema::hasColumn('events', 'start_date')) {
-                $query->where('start_date', '>=', $today);
-            } elseif (\Schema::hasColumn('events', 'event_date')) {
-                $query->where('event_date', '>=', $today);
-            }
-        }
-
-        // Check if cancelled - allow NULL or false
-        if (\Schema::hasColumn('events', 'is_cancelled')) {
+            $query->upcoming();
+        } else {
+            // Even with show_all, exclude cancelled
             $query->where(function ($q) {
-                $q->where('is_cancelled', 0)
+                $q->where('is_cancelled', false)
                   ->orWhereNull('is_cancelled');
             });
         }
@@ -216,30 +199,13 @@ class TenantClientController extends Controller
 
         $query = Event::where('tenant_id', $tenantId);
 
-        // Check date columns exist before filtering
-        // Use today's date (not time) for comparison to include events starting today
+        // Use upcoming scope for filtering (excludes past events and cancelled)
         if (!$showAll) {
-            $today = now()->startOfDay();
-
-            if (\Schema::hasColumn('events', 'end_date') && \Schema::hasColumn('events', 'start_date')) {
-                $query->where(function ($q) use ($today) {
-                    $q->where('end_date', '>=', $today)
-                      ->orWhere(function ($q2) use ($today) {
-                          $q2->whereNull('end_date')
-                             ->where('start_date', '>=', $today);
-                      });
-                });
-            } elseif (\Schema::hasColumn('events', 'start_date')) {
-                $query->where('start_date', '>=', $today);
-            } elseif (\Schema::hasColumn('events', 'event_date')) {
-                $query->where('event_date', '>=', $today);
-            }
-        }
-
-        // Check if cancelled - allow NULL or false
-        if (\Schema::hasColumn('events', 'is_cancelled')) {
+            $query->upcoming();
+        } else {
+            // Even with show_all, exclude cancelled
             $query->where(function ($q) {
-                $q->where('is_cancelled', 0)
+                $q->where('is_cancelled', false)
                   ->orWhereNull('is_cancelled');
             });
         }
@@ -250,11 +216,9 @@ class TenantClientController extends Controller
         }
 
         // Determine order column
-        $orderColumn = 'created_at';
-        if (\Schema::hasColumn('events', 'start_date')) {
-            $orderColumn = 'start_date';
-        } elseif (\Schema::hasColumn('events', 'event_date')) {
-            $orderColumn = 'event_date';
+        $orderColumn = 'event_date';
+        if (\Schema::hasColumn('events', 'range_start_date')) {
+            $orderColumn = 'range_start_date';
         }
 
         $events = $query->with(['venue', 'eventTypes', 'ticketTypes'])
@@ -365,9 +329,13 @@ class TenantClientController extends Controller
                 'slug' => $event->eventTypes->first()->slug,
             ] : null,
 
-            // Pricing
-            'price_from' => $event->ticketTypes->min('price_max'),
-            'currency' => $event->ticketTypes->first()?->currency ?? 'EUR',
+            // Pricing - exclude invitations
+            'price_from' => $event->ticketTypes
+                ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
+                ->min('price_max'),
+            'currency' => $event->ticketTypes
+                ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
+                ->first()?->currency ?? 'EUR',
         ];
     }
 
@@ -396,20 +364,23 @@ class TenantClientController extends Controller
                 'latitude' => $event->venue->latitude,
                 'longitude' => $event->venue->longitude,
             ] : null,
-            'ticket_types' => $event->ticketTypes->map(fn ($type) => [
-                'id' => $type->id,
-                'name' => $type->name,
-                'description' => $type->description ?? '',
-                'sku' => $type->sku,
-                'price' => $type->price_max,
-                'sale_price' => $type->price ?? null,
-                'discount_percent' => $type->price && $type->price_max
-                    ? round((1 - ($type->price / $type->price_max)) * 100, 2)
-                    : null,
-                'currency' => $type->currency ?? 'EUR',
-                'available' => $type->available_quantity ?? 0,
-                'status' => $type->status,
-            ]),
+            // Exclude invitations from ticket types
+            'ticket_types' => $event->ticketTypes
+                ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
+                ->map(fn ($type) => [
+                    'id' => $type->id,
+                    'name' => $type->name,
+                    'description' => $type->description ?? '',
+                    'sku' => $type->sku,
+                    'price' => $type->price_max,
+                    'sale_price' => $type->price ?? null,
+                    'discount_percent' => $type->price && $type->price_max
+                        ? round((1 - ($type->price / $type->price_max)) * 100, 2)
+                        : null,
+                    'currency' => $type->currency ?? 'EUR',
+                    'available' => $type->available_quantity ?? 0,
+                    'status' => $type->status,
+                ])->values(),
             'genres' => $event->eventGenres->map(fn ($genre) => [
                 'name' => $genre->getTranslation('name', $locale),
                 'slug' => $genre->slug,

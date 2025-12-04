@@ -130,9 +130,9 @@ class AffiliateTrackingService
             return null;
         }
 
-        // Calculate commission
+        // Calculate commission using affiliate's own rate (not global config)
         $orderAmount = $data['order_amount'] ?? 0;
-        $commission = $this->calculateCommission($orderAmount, $config);
+        $commission = $this->calculateCommissionForAffiliate($orderAmount, $affiliate);
 
         return [
             'affiliate_id' => $affiliate->id,
@@ -301,7 +301,31 @@ class AffiliateTrackingService
     }
 
     /**
-     * Calculate commission based on config
+     * Calculate commission based on affiliate's own rate
+     */
+    protected function calculateCommissionForAffiliate(float $amount, Affiliate $affiliate): array
+    {
+        $type = $affiliate->commission_type ?? 'percent';
+        $rate = $affiliate->commission_rate ?? 10;
+
+        if ($type === 'fixed') {
+            return [
+                'type' => 'fixed',
+                'value' => $rate,
+            ];
+        }
+
+        // Percent
+        $commissionAmount = ($amount * $rate) / 100;
+
+        return [
+            'type' => 'percent',
+            'value' => round($commissionAmount, 2),
+        ];
+    }
+
+    /**
+     * Calculate commission based on config (fallback for global settings)
      */
     protected function calculateCommission(float $amount, array $config): array
     {

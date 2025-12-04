@@ -210,6 +210,119 @@ class Event extends Model
     }
 
     /**
+     * Get the effective end datetime (date + time) for the event
+     */
+    public function getEffectiveEndDatetime(): ?\Carbon\Carbon
+    {
+        $endDate = $this->end_date;
+        $endTime = match ($this->duration_mode) {
+            'single_day' => $this->end_time,
+            'range' => $this->range_end_time,
+            'multi_day' => isset($this->multi_slots) && count($this->multi_slots) > 0
+                ? (end($this->multi_slots)['end_time'] ?? '23:59')
+                : null,
+            default => $this->end_time,
+        };
+
+        // If we have an end_date, use it with end_time
+        if ($endDate) {
+            $time = $endTime ?? '23:59';
+            return \Carbon\Carbon::parse($endDate->format('Y-m-d') . ' ' . $time);
+        }
+
+        // For single_day without explicit end_date, use start_date with end_time
+        if ($this->duration_mode === 'single_day' && $this->start_date) {
+            $time = $this->end_time ?? '23:59';
+            return \Carbon\Carbon::parse($this->start_date->format('Y-m-d') . ' ' . $time);
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if the event has passed
+     */
+    public function isPast(): bool
+    {
+        $effectiveEnd = $this->getEffectiveEndDatetime();
+
+        if ($effectiveEnd) {
+            return $effectiveEnd->isPast();
+        }
+
+        // Fallback: if we only have start_date, event is past if start_date is before today
+        if ($this->start_date) {
+            return $this->start_date->endOfDay()->isPast();
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if the event is upcoming (not past and not cancelled)
+     */
+    public function isUpcoming(): bool
+    {
+        return !$this->isPast() && !$this->is_cancelled;
+    }
+
+    /**
+     * Scope for upcoming events (not past, not cancelled)
+     */
+    public function scopeUpcoming($query)
+    {
+        $now = now();
+
+        return $query
+            ->where(function ($q) {
+                $q->where('is_cancelled', false)
+                  ->orWhereNull('is_cancelled');
+            })
+            ->where(function ($q) use ($now) {
+                // Range events: end_date + range_end_time must be in future
+                $q->where(function ($q2) use ($now) {
+                    $q2->where('duration_mode', 'range')
+                       ->where('range_end_date', '>=', $now->toDateString());
+                })
+                // Single day events: event_date + end_time must be in future
+                ->orWhere(function ($q2) use ($now) {
+                    $q2->where('duration_mode', 'single_day')
+                       ->where('event_date', '>=', $now->toDateString());
+                })
+                // Multi-day or other modes
+                ->orWhere(function ($q2) use ($now) {
+                    $q2->whereNotIn('duration_mode', ['range', 'single_day'])
+                       ->where(function ($q3) use ($now) {
+                           $q3->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(multi_slots, '$[0].date')) >= ?", [$now->toDateString()])
+                              ->orWhereNull('multi_slots');
+                       });
+                });
+            });
+    }
+
+    /**
+     * Scope for past events
+     */
+    public function scopePast($query)
+    {
+        $now = now();
+
+        return $query
+            ->where(function ($q) use ($now) {
+                // Range events: end_date is in past
+                $q->where(function ($q2) use ($now) {
+                    $q2->where('duration_mode', 'range')
+                       ->where('range_end_date', '<', $now->toDateString());
+                })
+                // Single day events: event_date is in past
+                ->orWhere(function ($q2) use ($now) {
+                    $q2->where('duration_mode', 'single_day')
+                       ->where('event_date', '<', $now->toDateString());
+                });
+            });
+    }
+
+    /**
      * Configure activity logging
      */
     public function getActivitylogOptions(): LogOptions

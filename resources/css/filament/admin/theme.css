@@ -8,9 +8,268 @@
 @import "/vendor/filament/tables/resources/css/theme.css";
 @import "/vendor/filament/notifications/resources/css/theme.css";
 
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ * RAILWAY / METRO DARK THEME
+ * Inspired by Railway.app dark theme
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+:root {
+  /* Railway Theme Colors */
+  --metro-bg-primary: #13111c;
+  --metro-bg-secondary: #181622;
+  --metro-border: rgb(51, 50, 62);
+  --metro-border-light: rgb(40, 39, 50);
+  --metro-text-primary: #ffffff;
+  --metro-text-secondary: rgb(156, 163, 175); /* gray-400 */
+  --metro-text-muted: rgb(107, 114, 128); /* gray-500 */
+  --metro-accent: #a855f7; /* Purple accent like Railway */
+  --metro-accent-hover: #9333ea;
+
+  /* Dot grid pattern */
+  --metro-dot-color: rgba(255, 255, 255, 0.03);
+  --metro-dot-size: 1px;
+  --metro-dot-spacing: 24px;
+}
+
 @layer base {
   body { border-top: 2px solid rgba(0,0,0,.06); }
 }
+
+/*
+ * Metro Theme - Dark Mode Overrides
+ * Apply these styles when .theme-metro class is present on body or html
+ */
+
+/* Metro Theme Body Background with Dot Grid */
+.theme-metro,
+.theme-metro body,
+html.theme-metro {
+  background-color: var(--metro-bg-primary) !important;
+  background-image: radial-gradient(
+    circle at center,
+    var(--metro-dot-color) var(--metro-dot-size),
+    transparent var(--metro-dot-size)
+  );
+  background-size: var(--metro-dot-spacing) var(--metro-dot-spacing);
+  background-position: 0 0;
+  color: var(--metro-text-primary);
+}
+
+/* Sidebar */
+.theme-metro .fi-sidebar {
+  background-color: var(--metro-bg-secondary) !important;
+  border-color: var(--metro-border) !important;
+}
+
+.theme-metro .fi-sidebar-nav {
+  background-color: transparent !important;
+}
+
+.theme-metro .fi-sidebar-item-label,
+.theme-metro .fi-sidebar-group-label {
+  color: var(--metro-text-secondary) !important;
+}
+
+.theme-metro .fi-sidebar-item:hover .fi-sidebar-item-label {
+  color: var(--metro-text-primary) !important;
+}
+
+.theme-metro .fi-sidebar-item.fi-active .fi-sidebar-item-label {
+  color: var(--metro-text-primary) !important;
+}
+
+/* Top bar */
+.theme-metro .fi-topbar {
+  background-color: var(--metro-bg-secondary) !important;
+  border-color: var(--metro-border) !important;
+}
+
+/* Cards, Sections, Modals */
+.theme-metro .fi-section,
+.theme-metro .fi-card,
+.theme-metro .fi-modal-window,
+.theme-metro .fi-dropdown-panel,
+.theme-metro [class*="bg-white"],
+.theme-metro .bg-white {
+  background-color: var(--metro-bg-secondary) !important;
+  border-color: var(--metro-border) !important;
+}
+
+/* Tables */
+.theme-metro .fi-ta-table {
+  background-color: var(--metro-bg-secondary) !important;
+}
+
+.theme-metro .fi-ta-row {
+  background-color: transparent !important;
+  border-color: var(--metro-border-light) !important;
+}
+
+.theme-metro .fi-ta-row:hover {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+.theme-metro .fi-ta-header-cell {
+  background-color: var(--metro-bg-primary) !important;
+  border-color: var(--metro-border) !important;
+  color: var(--metro-text-secondary) !important;
+}
+
+.theme-metro .fi-ta-cell {
+  border-color: var(--metro-border-light) !important;
+  color: var(--metro-text-primary) !important;
+}
+
+/* Forms */
+.theme-metro .fi-input,
+.theme-metro .fi-fo-text-input input,
+.theme-metro .fi-fo-textarea textarea,
+.theme-metro .fi-fo-select select,
+.theme-metro input[type="text"],
+.theme-metro input[type="email"],
+.theme-metro input[type="password"],
+.theme-metro input[type="number"],
+.theme-metro input[type="url"],
+.theme-metro textarea {
+  background-color: var(--metro-bg-primary) !important;
+  border-color: var(--metro-border) !important;
+  color: var(--metro-text-primary) !important;
+}
+
+.theme-metro .fi-input:focus,
+.theme-metro input:focus,
+.theme-metro textarea:focus {
+  border-color: var(--metro-accent) !important;
+  box-shadow: 0 0 0 1px var(--metro-accent) !important;
+}
+
+/* Buttons */
+.theme-metro .fi-btn-primary,
+.theme-metro .fi-btn[data-color="primary"] {
+  background-color: var(--metro-accent) !important;
+  border-color: var(--metro-accent) !important;
+}
+
+.theme-metro .fi-btn-primary:hover,
+.theme-metro .fi-btn[data-color="primary"]:hover {
+  background-color: var(--metro-accent-hover) !important;
+}
+
+/* Text colors */
+.theme-metro h1,
+.theme-metro h2,
+.theme-metro h3,
+.theme-metro h4,
+.theme-metro h5,
+.theme-metro h6 {
+  color: var(--metro-text-primary) !important;
+}
+
+.theme-metro p,
+.theme-metro span:not(.fi-badge-label),
+.theme-metro label {
+  color: var(--metro-text-secondary);
+}
+
+.theme-metro .text-gray-500,
+.theme-metro .text-gray-600 {
+  color: var(--metro-text-muted) !important;
+}
+
+/* Borders */
+.theme-metro [class*="border-gray"],
+.theme-metro .border {
+  border-color: var(--metro-border) !important;
+}
+
+/* Stats widgets */
+.theme-metro .fi-wi-stats-overview-stat {
+  background-color: var(--metro-bg-secondary) !important;
+  border-color: var(--metro-border) !important;
+}
+
+/* Breadcrumbs */
+.theme-metro .fi-breadcrumbs {
+  color: var(--metro-text-secondary) !important;
+}
+
+.theme-metro .fi-breadcrumbs a {
+  color: var(--metro-text-secondary) !important;
+}
+
+.theme-metro .fi-breadcrumbs a:hover {
+  color: var(--metro-text-primary) !important;
+}
+
+/* Dropdowns and Select menus */
+.theme-metro .fi-fo-select [role="listbox"],
+.theme-metro .choices__list--dropdown,
+.theme-metro [data-headlessui-state] [role="listbox"] {
+  background-color: var(--metro-bg-secondary) !important;
+  border-color: var(--metro-border) !important;
+}
+
+.theme-metro .fi-fo-select [role="option"],
+.theme-metro .choices__item--choice {
+  color: var(--metro-text-secondary) !important;
+}
+
+.theme-metro .fi-fo-select [role="option"]:hover,
+.theme-metro .fi-fo-select [role="option"][aria-selected="true"],
+.theme-metro .choices__item--choice:hover {
+  background-color: rgba(168, 85, 247, 0.1) !important;
+  color: var(--metro-text-primary) !important;
+}
+
+/* Notifications & Toasts */
+.theme-metro .fi-notification {
+  background-color: var(--metro-bg-secondary) !important;
+  border-color: var(--metro-border) !important;
+}
+
+/* Pagination */
+.theme-metro .fi-pagination {
+  background-color: var(--metro-bg-secondary) !important;
+}
+
+.theme-metro .fi-pagination-item {
+  color: var(--metro-text-secondary) !important;
+  border-color: var(--metro-border) !important;
+}
+
+.theme-metro .fi-pagination-item:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Tabs */
+.theme-metro .fi-tabs-tab {
+  color: var(--metro-text-secondary) !important;
+  border-color: transparent !important;
+}
+
+.theme-metro .fi-tabs-tab:hover {
+  color: var(--metro-text-primary) !important;
+}
+
+.theme-metro .fi-tabs-tab[aria-selected="true"] {
+  color: var(--metro-accent) !important;
+  border-color: var(--metro-accent) !important;
+}
+
+/* Empty state */
+.theme-metro .fi-ta-empty-state {
+  color: var(--metro-text-muted) !important;
+}
+
+/* Loading indicators */
+.theme-metro .fi-loading-indicator {
+  color: var(--metro-accent) !important;
+}
+
+/* End Railway/Metro Theme */
+/* ═══════════════════════════════════════════════════════════════════════════ */
 
 /* Fix dropdown/select option styling */
 @layer components {

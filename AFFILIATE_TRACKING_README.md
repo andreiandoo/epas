@@ -250,21 +250,122 @@ If enabled, conversions where `buyer_email` matches `affiliate.contact_email` ar
 2. **Approved**: Set when payment is captured
 3. **Reversed**: Set on refund or chargeback
 
-## Frontend Integration Example
+## Frontend Integration
+
+### Tenant Client Package Integration
+
+The tenant client package (SPA deployed on tenant domains) automatically handles affiliate tracking using the bootstrap config.
+
+**1. Bootstrap Response (when affiliates feature is enabled):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "tenant": { "id": 1, "name": "...", "slug": "..." },
+    "features": {
+      "affiliates": true
+    },
+    "affiliate_tracking": {
+      "cookie_name": "aff_ref",
+      "cookie_duration_days": 90,
+      "api_url": "https://core.tixello.com/api/affiliates/track-click"
+    }
+  }
+}
+```
+
+**2. Frontend Tracking Script:**
+
+```javascript
+// Initialize affiliate tracking on page load
+function initAffiliateTracking(config, tenantId) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const affCode = urlParams.get('aff');
+
+  if (!affCode) return;
+
+  fetch(config.api_url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      tenant_id: tenantId,
+      affiliate_code: affCode,
+      url: window.location.href,
+      utm: {
+        source: urlParams.get('utm_source'),
+        medium: urlParams.get('utm_medium'),
+        campaign: urlParams.get('utm_campaign')
+      }
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      // Store affiliate cookie
+      document.cookie = `${data.cookie_name}=${encodeURIComponent(data.cookie_value)}; max-age=${data.cookie_duration_days * 86400}; path=/; SameSite=Lax`;
+    }
+  })
+  .catch(err => console.error('Affiliate tracking error:', err));
+}
+
+// Get affiliate cookie value for checkout
+function getAffiliateCookie(cookieName) {
+  const cookies = document.cookie.split(';');
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split('=');
+    if (name === cookieName) {
+      return decodeURIComponent(value);
+    }
+  }
+  return null;
+}
+```
+
+**3. Checkout Integration:**
+
+```javascript
+// When submitting checkout, include affiliate data
+async function submitCheckout(checkoutData, affiliateConfig) {
+  const payload = {
+    ...checkoutData,
+    // Include affiliate cookie if present
+    affiliate_cookie: affiliateConfig
+      ? getAffiliateCookie(affiliateConfig.cookie_name)
+      : null,
+    // Include coupon code if used
+    coupon_code: checkoutData.promo_code || null
+  };
+
+  const response = await fetch('/api/tenant-client/checkout/submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  return response.json();
+}
+```
+
+### Simple HTML Integration (Legacy)
+
+For simple websites not using the tenant client package:
 
 ```html
-<!-- Track affiliate click -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  const TENANT_ID = 1; // Your tenant ID
+  const API_URL = 'https://core.tixello.com/api/affiliates/track-click';
+
   const urlParams = new URLSearchParams(window.location.search);
   const affCode = urlParams.get('aff');
 
   if (affCode) {
-    fetch('/api/affiliates/track-click', {
+    fetch(API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        tenant_id: {{ $tenantId }},
+        tenant_id: TENANT_ID,
         affiliate_code: affCode,
         url: window.location.href,
         utm: {
@@ -277,8 +378,7 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(res => res.json())
     .then(data => {
       if (data.success) {
-        // Set cookie
-        document.cookie = `${data.cookie_name}=${data.cookie_value}; max-age=${data.cookie_duration_days * 86400}; path=/`;
+        document.cookie = `${data.cookie_name}=${encodeURIComponent(data.cookie_value)}; max-age=${data.cookie_duration_days * 86400}; path=/; SameSite=Lax`;
       }
     });
   }

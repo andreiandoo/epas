@@ -54,6 +54,9 @@ Route::prefix('tenant-client')->middleware(['throttle:120,1', 'tenant.client.cor
     Route::get('/events/featured', [TenantClientController::class, 'featuredEvents'])
         ->name('api.tenant-client-public.events.featured');
 
+    Route::get('/events/past', [EventsController::class, 'pastEvents'])
+        ->name('api.tenant-client-public.events.past');
+
     Route::get('/events/{slug}', [TenantClientController::class, 'event'])
         ->name('api.tenant-client-public.event');
 

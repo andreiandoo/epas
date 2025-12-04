@@ -17,34 +17,43 @@ class BootstrapController extends Controller
         $domain = $request->attributes->get('domain');
 
         $settings = $tenant->settings ?? [];
+        $hasAffiliates = $this->hasFeature($tenant, 'affiliates');
+
+        $data = [
+            'tenant' => [
+                'id' => $tenant->id,
+                'name' => $tenant->name,
+                'slug' => $tenant->slug,
+            ],
+            'branding' => [
+                'logo' => $settings['branding']['logo_url'] ?? null,
+                'favicon' => $settings['branding']['favicon_url'] ?? null,
+                'company_name' => $tenant->company_name ?? $tenant->name,
+            ],
+            'theme' => [
+                'primary_color' => $settings['theme']['primary_color'] ?? '#3B82F6',
+                'secondary_color' => $settings['theme']['secondary_color'] ?? '#1E40AF',
+                'font_family' => $settings['theme']['font_family'] ?? 'Inter',
+            ],
+            'features' => [
+                'seating' => $this->hasFeature($tenant, 'seating'),
+                'affiliates' => $hasAffiliates,
+                'insurance' => $this->hasFeature($tenant, 'insurance'),
+                'promo_codes' => $this->hasFeature($tenant, 'promo-codes'),
+            ],
+            'payment_methods' => $this->getPaymentMethods($tenant),
+            'currency' => $settings['currency'] ?? 'RON',
+            'locale' => $settings['locale'] ?? 'ro',
+        ];
+
+        // Include affiliate tracking config if feature is enabled
+        if ($hasAffiliates) {
+            $data['affiliate_tracking'] = $this->getAffiliateConfig($tenant);
+        }
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'tenant' => [
-                    'name' => $tenant->name,
-                    'slug' => $tenant->slug,
-                ],
-                'branding' => [
-                    'logo' => $settings['branding']['logo_url'] ?? null,
-                    'favicon' => $settings['branding']['favicon_url'] ?? null,
-                    'company_name' => $tenant->company_name ?? $tenant->name,
-                ],
-                'theme' => [
-                    'primary_color' => $settings['theme']['primary_color'] ?? '#3B82F6',
-                    'secondary_color' => $settings['theme']['secondary_color'] ?? '#1E40AF',
-                    'font_family' => $settings['theme']['font_family'] ?? 'Inter',
-                ],
-                'features' => [
-                    'seating' => $this->hasFeature($tenant, 'seating'),
-                    'affiliates' => $this->hasFeature($tenant, 'affiliates'),
-                    'insurance' => $this->hasFeature($tenant, 'insurance'),
-                    'promo_codes' => $this->hasFeature($tenant, 'promo-codes'),
-                ],
-                'payment_methods' => $this->getPaymentMethods($tenant),
-                'currency' => $settings['currency'] ?? 'RON',
-                'locale' => $settings['locale'] ?? 'ro',
-            ],
+            'data' => $data,
         ]);
     }
 
@@ -75,5 +84,21 @@ class BootstrapController extends Controller
         }
 
         return $methods;
+    }
+
+    protected function getAffiliateConfig($tenant): array
+    {
+        // Get microservice configuration from pivot table
+        $microservice = $tenant->microservices()
+            ->whereHas('microservice', fn ($q) => $q->where('slug', 'affiliates'))
+            ->first();
+
+        $config = $microservice?->pivot->configuration ?? [];
+
+        return [
+            'cookie_name' => $config['cookie_name'] ?? 'aff_ref',
+            'cookie_duration_days' => $config['cookie_duration_days'] ?? 90,
+            'api_url' => config('app.url') . '/api/affiliates/track-click',
+        ];
     }
 }
