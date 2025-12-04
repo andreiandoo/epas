@@ -4,6 +4,8 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\AffiliateConversionResource\Pages;
 use App\Models\AffiliateConversion;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables;
@@ -123,8 +125,8 @@ class AffiliateConversionResource extends Resource
             ])
             ->bulkActions([])
             ->toolbarActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('approve_selected')
+                BulkActionGroup::make([
+                    BulkAction::make('approve_selected')
                         ->label('Approve Selected')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')

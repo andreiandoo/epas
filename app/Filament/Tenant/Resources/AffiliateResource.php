@@ -4,6 +4,8 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\AffiliateResource\Pages;
 use App\Models\Affiliate;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -192,8 +194,8 @@ class AffiliateResource extends Resource
             ->actions([])
             ->bulkActions([])
             ->toolbarActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
