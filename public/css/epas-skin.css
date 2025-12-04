@@ -3156,7 +3156,7 @@ nav.fi-topbar .fi-topbar-end {
  * ═══════════════════════════════════════════════════════════════════════════
  * RAILWAY / METRO DARK THEME
  * Inspired by Railway.app dark theme
- * Toggle with .theme-metro class on <html> element
+ * Automatically applied when .dark class is present (Filament dark mode)
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
@@ -3180,13 +3180,13 @@ nav.fi-topbar .fi-topbar-end {
 
 /*
  * Metro Theme - Dark Mode Overrides
- * Apply these styles when .theme-metro class is present on html element
+ * These styles apply automatically when Filament dark mode is active (.dark class)
  */
 
 /* Metro Theme Body Background with Dot Grid */
-.theme-metro,
-.theme-metro body,
-html.theme-metro {
+.dark,
+.dark body,
+html.dark {
   background-color: var(--metro-bg-primary) !important;
   background-image: radial-gradient(
     circle at center,
@@ -3199,357 +3199,352 @@ html.theme-metro {
 }
 
 /* Main layout wrapper */
-.theme-metro .fi-layout {
+.dark .fi-layout {
   background-color: transparent !important;
 }
 
-.theme-metro .fi-main {
+.dark .fi-main {
   background-color: transparent !important;
 }
 
-.theme-metro .fi-main-ctn {
+.dark .fi-main-ctn {
   background-color: transparent !important;
 }
 
 /* Sidebar */
-.theme-metro .fi-sidebar {
+.dark .fi-sidebar {
   background-color: var(--metro-bg-secondary) !important;
   border-color: var(--metro-border) !important;
 }
 
-.theme-metro .fi-sidebar-nav {
+.dark .fi-sidebar-nav {
   background-color: transparent !important;
 }
 
-.theme-metro .fi-sidebar-item-label,
-.theme-metro .fi-sidebar-group-label {
+.dark .fi-sidebar-item-label,
+.dark .fi-sidebar-group-label {
   color: var(--metro-text-secondary) !important;
 }
 
-.theme-metro .fi-sidebar-item:hover .fi-sidebar-item-label {
+.dark .fi-sidebar-item:hover .fi-sidebar-item-label {
   color: var(--metro-text-primary) !important;
 }
 
-.theme-metro .fi-sidebar-item.fi-active .fi-sidebar-item-label {
+.dark .fi-sidebar-item.fi-active .fi-sidebar-item-label {
   color: var(--metro-text-primary) !important;
 }
 
-.theme-metro .fi-sidebar-item-icon {
+.dark .fi-sidebar-item-icon {
   color: var(--metro-text-secondary) !important;
 }
 
-.theme-metro .fi-sidebar-item:hover .fi-sidebar-item-icon,
-.theme-metro .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
+.dark .fi-sidebar-item:hover .fi-sidebar-item-icon,
+.dark .fi-sidebar-item.fi-active .fi-sidebar-item-icon {
   color: var(--metro-accent) !important;
 }
 
 /* Top bar */
-.theme-metro .fi-topbar {
+.dark .fi-topbar {
   background-color: var(--metro-bg-secondary) !important;
   border-color: var(--metro-border) !important;
 }
 
-.theme-metro .fi-custom-topbar {
+.dark .fi-custom-topbar {
   background-color: transparent !important;
 }
 
 /* Cards, Sections, Modals */
-.theme-metro .fi-section,
-.theme-metro .fi-section-content,
-.theme-metro .fi-card,
-.theme-metro .fi-modal-window,
-.theme-metro .fi-dropdown-panel {
+.dark .fi-section,
+.dark .fi-section-content,
+.dark .fi-card,
+.dark .fi-modal-window,
+.dark .fi-dropdown-panel {
   background-color: var(--metro-bg-secondary) !important;
   border-color: var(--metro-border) !important;
 }
 
-.theme-metro .fi-section-header {
+.dark .fi-section-header {
   background-color: transparent !important;
 }
 
 /* Override any bg-white classes */
-.theme-metro [class*="bg-white"]:not(.fi-badge):not(.fi-btn) {
+.dark [class*="bg-white"]:not(.fi-badge):not(.fi-btn) {
   background-color: var(--metro-bg-secondary) !important;
 }
 
 /* Tables */
-.theme-metro .fi-ta-table {
+.dark .fi-ta-table {
   background-color: var(--metro-bg-secondary) !important;
 }
 
-.theme-metro .fi-ta-ctn {
+.dark .fi-ta-ctn {
   background-color: var(--metro-bg-secondary) !important;
   border-color: var(--metro-border) !important;
 }
 
-.theme-metro .fi-ta-row {
+.dark .fi-ta-row {
   background-color: transparent !important;
   border-color: var(--metro-border-light) !important;
 }
 
-.theme-metro .fi-ta-row:hover {
+.dark .fi-ta-row:hover {
   background-color: rgba(255, 255, 255, 0.02) !important;
 }
 
-.theme-metro .fi-ta-header-cell {
+.dark .fi-ta-header-cell {
   background-color: var(--metro-bg-primary) !important;
   border-color: var(--metro-border) !important;
   color: var(--metro-text-secondary) !important;
 }
 
-.theme-metro .fi-ta-cell {
+.dark .fi-ta-cell {
   border-color: var(--metro-border-light) !important;
   color: var(--metro-text-primary) !important;
 }
 
-.theme-metro .fi-ta-content {
+.dark .fi-ta-content {
   background-color: var(--metro-bg-secondary) !important;
 }
 
 /* Forms */
-.theme-metro .fi-input,
-.theme-metro .fi-fo-text-input input,
-.theme-metro .fi-fo-textarea textarea,
-.theme-metro .fi-fo-select select,
-.theme-metro input[type="text"],
-.theme-metro input[type="email"],
-.theme-metro input[type="password"],
-.theme-metro input[type="number"],
-.theme-metro input[type="url"],
-.theme-metro input[type="search"],
-.theme-metro textarea,
-.theme-metro select {
+.dark .fi-input,
+.dark .fi-fo-text-input input,
+.dark .fi-fo-textarea textarea,
+.dark .fi-fo-select select,
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"],
+.dark input[type="number"],
+.dark input[type="url"],
+.dark input[type="search"],
+.dark textarea,
+.dark select {
   background-color: var(--metro-bg-primary) !important;
   border-color: var(--metro-border) !important;
   color: var(--metro-text-primary) !important;
 }
 
-.theme-metro .fi-input:focus,
-.theme-metro input:focus,
-.theme-metro textarea:focus,
-.theme-metro select:focus {
+.dark .fi-input:focus,
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
   border-color: var(--metro-accent) !important;
   box-shadow: 0 0 0 1px var(--metro-accent) !important;
 }
 
-.theme-metro .fi-fo-field-wrp {
+.dark .fi-fo-field-wrp {
   background-color: transparent !important;
 }
 
 /* Buttons - Primary */
-.theme-metro .fi-btn-primary,
-.theme-metro .fi-btn[data-color="primary"] {
+.dark .fi-btn-primary,
+.dark .fi-btn[data-color="primary"] {
   background-color: var(--metro-accent) !important;
   border-color: var(--metro-accent) !important;
 }
 
-.theme-metro .fi-btn-primary:hover,
-.theme-metro .fi-btn[data-color="primary"]:hover {
+.dark .fi-btn-primary:hover,
+.dark .fi-btn[data-color="primary"]:hover {
   background-color: var(--metro-accent-hover) !important;
 }
 
 /* Buttons - Secondary/Default */
-.theme-metro .fi-btn:not(.fi-btn-primary):not([data-color="primary"]):not([data-color="danger"]):not([data-color="success"]):not([data-color="warning"]) {
+.dark .fi-btn:not(.fi-btn-primary):not([data-color="primary"]):not([data-color="danger"]):not([data-color="success"]):not([data-color="warning"]) {
   background-color: var(--metro-bg-primary) !important;
   border-color: var(--metro-border) !important;
   color: var(--metro-text-secondary) !important;
 }
 
-.theme-metro .fi-btn:not(.fi-btn-primary):not([data-color="primary"]):not([data-color="danger"]):not([data-color="success"]):not([data-color="warning"]):hover {
+.dark .fi-btn:not(.fi-btn-primary):not([data-color="primary"]):not([data-color="danger"]):not([data-color="success"]):not([data-color="warning"]):hover {
   background-color: var(--metro-border) !important;
   color: var(--metro-text-primary) !important;
 }
 
 /* Text colors */
-.theme-metro h1,
-.theme-metro h2,
-.theme-metro h3,
-.theme-metro h4,
-.theme-metro h5,
-.theme-metro h6 {
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
   color: var(--metro-text-primary) !important;
 }
 
-.theme-metro p,
-.theme-metro span:not(.fi-badge-label):not(.fi-btn-label),
-.theme-metro label {
+.dark p,
+.dark span:not(.fi-badge-label):not(.fi-btn-label),
+.dark label {
   color: var(--metro-text-secondary);
 }
 
-.theme-metro .text-gray-500,
-.theme-metro .text-gray-600 {
+.dark .text-gray-500,
+.dark .text-gray-600 {
   color: var(--metro-text-muted) !important;
 }
 
 /* Page header */
-.theme-metro .fi-header {
+.dark .fi-header {
   background-color: transparent !important;
 }
 
-.theme-metro .fi-header-heading {
+.dark .fi-header-heading {
   color: var(--metro-text-primary) !important;
 }
 
 /* Borders */
-.theme-metro [class*="border-gray"],
-.theme-metro .border {
+.dark [class*="border-gray"],
+.dark .border {
   border-color: var(--metro-border) !important;
 }
 
 /* Stats widgets */
-.theme-metro .fi-wi-stats-overview-stat {
+.dark .fi-wi-stats-overview-stat {
   background-color: var(--metro-bg-secondary) !important;
   border-color: var(--metro-border) !important;
 }
 
-.theme-metro .fi-wi-stats-overview-stat-value {
+.dark .fi-wi-stats-overview-stat-value {
   color: var(--metro-text-primary) !important;
 }
 
-.theme-metro .fi-wi-stats-overview-stat-label {
+.dark .fi-wi-stats-overview-stat-label {
   color: var(--metro-text-secondary) !important;
 }
 
 /* Breadcrumbs */
-.theme-metro .fi-breadcrumbs {
+.dark .fi-breadcrumbs {
   color: var(--metro-text-secondary) !important;
 }
 
-.theme-metro .fi-breadcrumbs a {
+.dark .fi-breadcrumbs a {
   color: var(--metro-text-secondary) !important;
 }
 
-.theme-metro .fi-breadcrumbs a:hover {
+.dark .fi-breadcrumbs a:hover {
   color: var(--metro-text-primary) !important;
 }
 
 /* Dropdowns and Select menus */
-.theme-metro .fi-fo-select [role="listbox"],
-.theme-metro .choices__list--dropdown,
-.theme-metro [data-headlessui-state] [role="listbox"],
-.theme-metro .fi-dropdown-list {
+.dark .fi-fo-select [role="listbox"],
+.dark .choices__list--dropdown,
+.dark [data-headlessui-state] [role="listbox"],
+.dark .fi-dropdown-list {
   background-color: var(--metro-bg-secondary) !important;
   border-color: var(--metro-border) !important;
 }
 
-.theme-metro .fi-fo-select [role="option"],
-.theme-metro .choices__item--choice,
-.theme-metro .fi-dropdown-list-item {
+.dark .fi-fo-select [role="option"],
+.dark .choices__item--choice,
+.dark .fi-dropdown-list-item {
   color: var(--metro-text-secondary) !important;
 }
 
-.theme-metro .fi-fo-select [role="option"]:hover,
-.theme-metro .fi-fo-select [role="option"][aria-selected="true"],
-.theme-metro .choices__item--choice:hover,
-.theme-metro .fi-dropdown-list-item:hover {
+.dark .fi-fo-select [role="option"]:hover,
+.dark .fi-fo-select [role="option"][aria-selected="true"],
+.dark .choices__item--choice:hover,
+.dark .fi-dropdown-list-item:hover {
   background-color: rgba(168, 85, 247, 0.1) !important;
   color: var(--metro-text-primary) !important;
 }
 
 /* Notifications & Toasts */
-.theme-metro .fi-notification {
+.dark .fi-notification {
   background-color: var(--metro-bg-secondary) !important;
   border-color: var(--metro-border) !important;
 }
 
 /* Pagination */
-.theme-metro .fi-pagination {
+.dark .fi-pagination {
   background-color: var(--metro-bg-secondary) !important;
 }
 
-.theme-metro .fi-pagination-item {
+.dark .fi-pagination-item {
   color: var(--metro-text-secondary) !important;
   border-color: var(--metro-border) !important;
 }
 
-.theme-metro .fi-pagination-item:hover {
+.dark .fi-pagination-item:hover {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
 /* Tabs */
-.theme-metro .fi-tabs {
+.dark .fi-tabs {
   background-color: transparent !important;
   border-color: var(--metro-border) !important;
 }
 
-.theme-metro .fi-tabs-tab {
+.dark .fi-tabs-tab {
   color: var(--metro-text-secondary) !important;
   border-color: transparent !important;
 }
 
-.theme-metro .fi-tabs-tab:hover {
+.dark .fi-tabs-tab:hover {
   color: var(--metro-text-primary) !important;
 }
 
-.theme-metro .fi-tabs-tab[aria-selected="true"] {
+.dark .fi-tabs-tab[aria-selected="true"] {
   color: var(--metro-accent) !important;
   border-color: var(--metro-accent) !important;
 }
 
 /* Empty state */
-.theme-metro .fi-ta-empty-state {
+.dark .fi-ta-empty-state {
   color: var(--metro-text-muted) !important;
 }
 
 /* Loading indicators */
-.theme-metro .fi-loading-indicator {
+.dark .fi-loading-indicator {
   color: var(--metro-accent) !important;
 }
 
 /* Infolist / View pages */
-.theme-metro .fi-in-entry {
+.dark .fi-in-entry {
   background-color: transparent !important;
 }
 
-.theme-metro .fi-in-entry-wrp {
+.dark .fi-in-entry-wrp {
   border-color: var(--metro-border-light) !important;
 }
 
-.theme-metro .fi-in-text {
+.dark .fi-in-text {
   color: var(--metro-text-primary) !important;
 }
 
 /* Relation manager */
-.theme-metro .fi-rel-manager-ctn {
+.dark .fi-rel-manager-ctn {
   background-color: var(--metro-bg-secondary) !important;
   border-color: var(--metro-border) !important;
 }
 
 /* Action modals */
-.theme-metro .fi-modal-content {
+.dark .fi-modal-content {
   background-color: var(--metro-bg-secondary) !important;
 }
 
-.theme-metro .fi-modal-header {
+.dark .fi-modal-header {
   border-color: var(--metro-border) !important;
 }
 
-.theme-metro .fi-modal-footer {
+.dark .fi-modal-footer {
   border-color: var(--metro-border) !important;
   background-color: var(--metro-bg-primary) !important;
 }
 
-/* Badges - keep their colors */
-.theme-metro .fi-badge {
-  /* Don't override badge colors */
-}
-
 /* Scrollbar styling for Metro theme */
-.theme-metro ::-webkit-scrollbar {
+.dark ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-.theme-metro ::-webkit-scrollbar-track {
+.dark ::-webkit-scrollbar-track {
   background: var(--metro-bg-primary);
 }
 
-.theme-metro ::-webkit-scrollbar-thumb {
+.dark ::-webkit-scrollbar-thumb {
   background: var(--metro-border);
   border-radius: 4px;
 }
 
-.theme-metro ::-webkit-scrollbar-thumb:hover {
+.dark ::-webkit-scrollbar-thumb:hover {
   background: var(--metro-text-muted);
 }
 
