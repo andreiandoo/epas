@@ -174,6 +174,12 @@ class AffiliateResource extends Resource
                     ->dateTime('d M Y')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('edit_link')
+                    ->label('')
+                    ->getStateUsing(fn () => '✏️')
+                    ->url(fn ($record) => static::getUrl('edit', ['record' => $record]))
+                    ->tooltip('Edit affiliate'),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
@@ -183,9 +189,7 @@ class AffiliateResource extends Resource
                         'inactive' => 'Inactive',
                     ]),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-            ])
+            ->actions([])
             ->bulkActions([])
             ->toolbarActions([
                 Tables\Actions\BulkActionGroup::make([
