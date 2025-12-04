@@ -3174,7 +3174,7 @@ nav.fi-topbar .fi-topbar-end {
 
   /* Dot grid pattern - more visible */
   --metro-dot-color: rgba(255, 255, 255, 0.06);
-  --metro-dot-size: 1px;
+  --metro-dot-size: 0.1rem;
   --metro-dot-spacing: 20px;
 }
 
@@ -3232,13 +3232,12 @@ html.dark {
 .fi-form-actions,
 .fi-fo-actions,
 .fi-ac {
-  position: sticky !important;
+  position: fixed !important;
   bottom: 0 !important;
   z-index: 40 !important;
   padding: 1rem 1.5rem !important;
   margin-left: -1.5rem !important;
   margin-right: -1.5rem !important;
-  margin-bottom: -1.5rem !important;
   width: calc(100% + 3rem) !important;
   border-top: 1px solid var(--metro-border) !important;
 }
@@ -3249,6 +3248,18 @@ html.dark {
   background-color: var(--metro-bg-secondary) !important;
 }
 
+.fi-sidebar-nav-groups {
+  row-gap:0!important;
+}
+
+.fi-header-actions-ctn .fi-ac {
+  background:transparent !important;
+  border:0 !important;
+  padding: 0 !important;
+  margin:0 !important;
+  width: auto !important;
+  position: static !important;
+}
 .light .fi-form-actions,
 .light .fi-fo-actions,
 :not(.dark) .fi-form-actions,

@@ -935,6 +935,19 @@ class EventResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_cancelled'),
                 Tables\Filters\TernaryFilter::make('is_sold_out'),
             ])
+            ->actions([
+                Tables\Actions\Action::make('statistics')
+                    ->label('Statistics')
+                    ->icon('heroicon-o-chart-bar')
+                    ->color('info')
+                    ->url(fn (Event $record) => static::getUrl('statistics', ['record' => $record])),
+                Tables\Actions\EditAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ])
             ->defaultSort('created_at', 'desc');
     }
 
@@ -949,6 +962,7 @@ class EventResource extends Resource
             'index' => Pages\ListEvents::route('/'),
             'create' => Pages\CreateEvent::route('/create'),
             'edit' => Pages\EditEvent::route('/{record}/edit'),
+            'statistics' => Pages\EventStatistics::route('/{record}/statistics'),
         ];
     }
 }

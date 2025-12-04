@@ -22,11 +22,18 @@ class EditEvent extends EditRecord
 
         $actions = [];
 
+        // Statistics button - always visible
+        $actions[] = Actions\Action::make('statistics')
+            ->label('Statistics')
+            ->icon('heroicon-o-chart-bar')
+            ->color('info')
+            ->url(fn () => EventResource::getUrl('statistics', ['record' => $this->record]));
+
         if ($hasInvitations) {
             $actions[] = Actions\Action::make('invitations')
                 ->label('Create Invitations')
                 ->icon('heroicon-o-envelope')
-                ->color('info')
+                ->color('warning')
                 ->url(fn () => route('filament.tenant.pages.invitations') . '?event=' . $this->record->id);
         }
 
