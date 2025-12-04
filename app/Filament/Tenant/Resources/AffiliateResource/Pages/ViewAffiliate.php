@@ -5,11 +5,11 @@ namespace App\Filament\Tenant\Resources\AffiliateResource\Pages;
 use App\Filament\Tenant\Resources\AffiliateResource;
 use App\Services\AffiliateTrackingService;
 use Filament\Actions;
-use Filament\Infolists\Components\Grid;
-use Filament\Infolists\Components\Group;
-use Filament\Infolists\Components\Section;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Infolist;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\TextEntry;
+use Filament\Schemas\Schema;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewAffiliate extends ViewRecord
@@ -23,12 +23,12 @@ class ViewAffiliate extends ViewRecord
         ];
     }
 
-    public function infolist(Infolist $infolist): Infolist
+    public function infolist(Schema $schema): Schema
     {
         $stats = app(AffiliateTrackingService::class)->getAffiliateStats($this->record->id);
 
-        return $infolist
-            ->schema([
+        return $schema
+            ->components([
                 Section::make('Statistics Overview')
                     ->schema([
                         Grid::make(4)
