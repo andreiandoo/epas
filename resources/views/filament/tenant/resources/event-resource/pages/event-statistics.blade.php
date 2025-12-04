@@ -22,7 +22,7 @@
                 {{ $this->record->range_start_date->format('d M Y') }} - {{ $this->record->range_end_date?->format('d M Y') }}
             @endif
             @if($this->record->venue)
-                &bull; {{ $this->record->venue->name }}
+                &bull; {{ $this->record->venue->getTranslation('name', app()->getLocale()) }}
             @endif
         </p>
     </div>
