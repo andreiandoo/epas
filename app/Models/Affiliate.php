@@ -15,11 +15,14 @@ class Affiliate extends Model
         'name',
         'contact_email',
         'status',
+        'commission_rate',
+        'commission_type',
         'meta',
     ];
 
     protected $casts = [
         'meta' => 'array',
+        'commission_rate' => 'decimal:2',
     ];
 
     /**
@@ -75,5 +78,55 @@ class Affiliate extends Model
     public function scopeForTenant($query, $tenantId)
     {
         return $query->where('tenant_id', $tenantId);
+    }
+
+    /**
+     * Calculate commission for a given order amount
+     */
+    public function calculateCommission(float $amount): float
+    {
+        if ($this->commission_type === 'fixed') {
+            return (float) $this->commission_rate;
+        }
+
+        return round(($amount * $this->commission_rate) / 100, 2);
+    }
+
+    /**
+     * Check if email matches affiliate's contact email (self-purchase check)
+     */
+    public function isSelfPurchase(string $buyerEmail): bool
+    {
+        return strtolower($this->contact_email) === strtolower($buyerEmail);
+    }
+
+    /**
+     * Get total approved commission
+     */
+    public function getTotalCommissionAttribute(): float
+    {
+        return (float) $this->conversions()
+            ->where('status', 'approved')
+            ->sum('commission_value');
+    }
+
+    /**
+     * Get total pending commission
+     */
+    public function getPendingCommissionAttribute(): float
+    {
+        return (float) $this->conversions()
+            ->where('status', 'pending')
+            ->sum('commission_value');
+    }
+
+    /**
+     * Get total sales generated
+     */
+    public function getTotalSalesAttribute(): float
+    {
+        return (float) $this->conversions()
+            ->whereIn('status', ['approved', 'pending'])
+            ->sum('amount');
     }
 }
