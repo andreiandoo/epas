@@ -3172,10 +3172,10 @@ nav.fi-topbar .fi-topbar-end {
   --metro-accent: #a855f7; /* Purple accent like Railway */
   --metro-accent-hover: #9333ea;
 
-  /* Dot grid pattern */
-  --metro-dot-color: rgba(255, 255, 255, 0.03);
+  /* Dot grid pattern - more visible */
+  --metro-dot-color: rgba(255, 255, 255, 0.06);
   --metro-dot-size: 1px;
-  --metro-dot-spacing: 24px;
+  --metro-dot-spacing: 20px;
 }
 
 /*
@@ -3192,23 +3192,95 @@ html.dark {
     circle at center,
     var(--metro-dot-color) var(--metro-dot-size),
     transparent var(--metro-dot-size)
-  );
-  background-size: var(--metro-dot-spacing) var(--metro-dot-spacing);
-  background-position: 0 0;
+  ) !important;
+  background-size: var(--metro-dot-spacing) var(--metro-dot-spacing) !important;
+  background-position: 0 0 !important;
+  background-attachment: fixed !important;
   color: var(--metro-text-primary);
 }
 
-/* Main layout wrapper */
+/* Main layout wrapper - all transparent to show dot grid */
 .dark .fi-layout {
   background-color: transparent !important;
+  background-image: none !important;
 }
 
 .dark .fi-main {
   background-color: transparent !important;
+  background-image: none !important;
 }
 
 .dark .fi-main-ctn {
   background-color: transparent !important;
+  background-image: none !important;
+}
+
+.dark .fi-body {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Remove max-width restriction - Full width pages */
+.fi-main.fi-main-ctn,
+.fi-main-ctn,
+.fi-width-7xl {
+  max-width: none !important;
+  width: 100% !important;
+}
+
+/* Sticky Form Actions Bar - Fixed at bottom */
+.fi-form-actions,
+.fi-fo-actions,
+.fi-ac {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 40 !important;
+  padding: 1rem 1.5rem !important;
+  margin-left: -1.5rem !important;
+  margin-right: -1.5rem !important;
+  margin-bottom: -1.5rem !important;
+  width: calc(100% + 3rem) !important;
+  border-top: 1px solid var(--metro-border) !important;
+}
+
+.dark .fi-form-actions,
+.dark .fi-fo-actions,
+.dark .fi-ac {
+  background-color: var(--metro-bg-secondary) !important;
+}
+
+.light .fi-form-actions,
+.light .fi-fo-actions,
+:not(.dark) .fi-form-actions,
+:not(.dark) .fi-fo-actions {
+  background-color: rgb(249 250 251) !important;
+  border-top-color: rgb(229 231 235) !important;
+}
+
+/* Alternative Filament 4 action selectors */
+.fi-page-edit-record .fi-form > .fi-ac,
+.fi-page-create-record .fi-form > .fi-ac,
+.fi-section-content > .fi-ac,
+[wire\:id] > form > .fi-ac,
+.fi-resource-edit-record .fi-ac,
+.fi-resource-create-record .fi-ac {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 40 !important;
+  padding: 1rem 1.5rem !important;
+  margin: 1.5rem -1.5rem -1.5rem -1.5rem !important;
+  width: calc(100% + 3rem) !important;
+  border-top: 1px solid var(--metro-border) !important;
+  border-radius: 0 !important;
+}
+
+.dark .fi-page-edit-record .fi-form > .fi-ac,
+.dark .fi-page-create-record .fi-form > .fi-ac,
+.dark .fi-section-content > .fi-ac,
+.dark [wire\:id] > form > .fi-ac,
+.dark .fi-resource-edit-record .fi-ac,
+.dark .fi-resource-create-record .fi-ac {
+  background-color: var(--metro-bg-secondary) !important;
 }
 
 /* Sidebar */
