@@ -28,7 +28,7 @@ class ViewAffiliate extends ViewRecord
     protected function getViewData(): array
     {
         $stats = app(AffiliateTrackingService::class)->getAffiliateStats($this->record->id);
-        $coupon = $this->record->coupons()->where('is_active', true)->first();
+        $coupon = $this->record->coupons()->where('active', true)->first();
 
         return [
             'affiliate' => $this->record,

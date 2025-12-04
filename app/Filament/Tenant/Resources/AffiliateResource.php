@@ -99,7 +99,7 @@ class AffiliateResource extends Resource
                             ->dehydrated(false)
                             ->afterStateHydrated(function ($state, $set, $record) {
                                 if ($record) {
-                                    $coupon = $record->coupons()->where('is_active', true)->first();
+                                    $coupon = $record->coupons()->where('active', true)->first();
                                     $set('coupon_code', $coupon?->coupon_code);
                                 }
                             }),

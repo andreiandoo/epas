@@ -26,7 +26,7 @@ class CreateAffiliate extends CreateRecord
             AffiliateCoupon::create([
                 'affiliate_id' => $this->record->id,
                 'coupon_code' => strtoupper($couponCode),
-                'is_active' => true,
+                'active' => true,
             ]);
         }
     }

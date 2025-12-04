@@ -23,7 +23,7 @@ class EditAffiliate extends EditRecord
     {
         // Update coupon if provided
         $couponCode = $this->data['coupon_code'] ?? null;
-        $existingCoupon = $this->record->coupons()->where('is_active', true)->first();
+        $existingCoupon = $this->record->coupons()->where('active', true)->first();
 
         if ($couponCode) {
             if ($existingCoupon) {
@@ -32,11 +32,11 @@ class EditAffiliate extends EditRecord
                 AffiliateCoupon::create([
                     'affiliate_id' => $this->record->id,
                     'coupon_code' => strtoupper($couponCode),
-                    'is_active' => true,
+                    'active' => true,
                 ]);
             }
         } elseif ($existingCoupon) {
-            $existingCoupon->update(['is_active' => false]);
+            $existingCoupon->update(['active' => false]);
         }
     }
 }
