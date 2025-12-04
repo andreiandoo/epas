@@ -15,6 +15,10 @@ use Filament\Schemas\Components\Utilities\Get as SGet;
 use Filament\Schemas\Components\Utilities\Set as SSet;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -935,17 +939,19 @@ class EventResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_cancelled'),
                 Tables\Filters\TernaryFilter::make('is_sold_out'),
             ])
-            ->actions([
-                Tables\Actions\Action::make('statistics')
+            ->actions([])
+            ->bulkActions([])
+            ->recordActions([
+                Action::make('statistics')
                     ->label('Statistics')
                     ->icon('heroicon-o-chart-bar')
                     ->color('info')
                     ->url(fn (Event $record) => static::getUrl('statistics', ['record' => $record])),
-                Tables\Actions\EditAction::make(),
+                EditAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
