@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\AnalyticsEvent;
 use Filament\Resources\Pages\Page;
+use Filament\Resources\Concerns\InteractsWithRecord;
 use Filament\Infolists\Infolist;
 use Filament\Infolists\Components;
 use Illuminate\Support\Facades\DB;
@@ -15,22 +16,16 @@ use Illuminate\Support\Carbon;
 
 class EventStatistics extends Page
 {
+    use InteractsWithRecord;
+
     protected static string $resource = EventResource::class;
     protected static ?string $title = 'Event Statistics';
 
     protected string $view = 'filament.tenant.resources.event-resource.pages.event-statistics';
 
-    public Event $record;
-
     public function mount(int | string $record): void
     {
-        $this->record = Event::findOrFail($record);
-
-        // Ensure tenant access
-        $tenant = auth()->user()->tenant;
-        if ($this->record->tenant_id !== $tenant?->id) {
-            abort(403);
-        }
+        $this->record = $this->resolveRecord($record);
     }
 
     public function getBreadcrumb(): string
