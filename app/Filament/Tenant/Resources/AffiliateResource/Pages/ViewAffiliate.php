@@ -30,11 +30,16 @@ class ViewAffiliate extends ViewRecord
         $stats = app(AffiliateTrackingService::class)->getAffiliateStats($this->record->id);
         $coupon = $this->record->coupons()->where('active', true)->first();
 
+        // Get tenant's primary domain for tracking URL
+        $tenant = auth()->user()->tenant;
+        $primaryDomain = $tenant->domains()->where('is_primary', true)->first();
+        $baseUrl = $primaryDomain ? 'https://' . $primaryDomain->domain : url('/');
+
         return [
             'affiliate' => $this->record,
             'stats' => $stats,
             'coupon' => $coupon,
-            'trackingUrl' => url('/') . '?aff=' . $this->record->code,
+            'trackingUrl' => $baseUrl . '?aff=' . $this->record->code,
         ];
     }
 }
