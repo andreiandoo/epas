@@ -36,7 +36,24 @@ class Affiliate extends Model
             if (!$affiliate->tenant_id && auth()->check() && isset(auth()->user()->tenant_id)) {
                 $affiliate->tenant_id = auth()->user()->tenant_id;
             }
+
+            // Auto-generate code if not provided
+            if (empty($affiliate->code)) {
+                $affiliate->code = static::generateUniqueCode();
+            }
         });
+    }
+
+    /**
+     * Generate a unique affiliate code
+     */
+    public static function generateUniqueCode(): string
+    {
+        do {
+            $code = strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        } while (static::withoutGlobalScopes()->where('code', $code)->exists());
+
+        return $code;
     }
 
     public function tenant(): BelongsTo
