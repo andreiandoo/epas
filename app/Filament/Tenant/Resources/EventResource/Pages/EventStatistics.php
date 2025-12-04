@@ -24,10 +24,14 @@ class EventStatistics extends Page
 
     public function mount(int|string $record): void
     {
-        // Use resource's scoped query to respect tenant filtering
-        $this->record = static::getResource()::getEloquentQuery()
-            ->where('id', $record)
-            ->firstOrFail();
+        // Temporarily use direct query for debugging
+        $this->record = Event::findOrFail($record);
+
+        // Verify tenant access
+        $tenant = auth()->user()?->tenant;
+        if ($this->record->tenant_id !== $tenant?->id) {
+            abort(403, 'Unauthorized access to this event');
+        }
     }
 
     public function getBreadcrumb(): string
