@@ -16,8 +16,9 @@ use Illuminate\Support\Carbon;
 class EventStatistics extends Page
 {
     protected static string $resource = EventResource::class;
-    protected static string $view = 'filament.tenant.resources.event-resource.pages.event-statistics';
     protected static ?string $title = 'Event Statistics';
+
+    protected string $view = 'filament.tenant.resources.event-resource.pages.event-statistics';
 
     public Event $record;
 
