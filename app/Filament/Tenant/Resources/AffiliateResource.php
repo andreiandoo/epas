@@ -129,7 +129,8 @@ class AffiliateResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->label('Name')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->url(fn ($record) => static::getUrl('view', ['record' => $record])),
 
                 Tables\Columns\TextColumn::make('contact_email')
                     ->label('Email')
@@ -183,10 +184,10 @@ class AffiliateResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
-            ->bulkActions([
+            ->bulkActions([])
+            ->toolbarActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),

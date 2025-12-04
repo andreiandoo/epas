@@ -121,19 +121,22 @@ class AffiliateConversionResource extends Resource
                         $record->update(['status' => 'reversed']);
                     }),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkAction::make('approve_selected')
-                    ->label('Approve Selected')
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->requiresConfirmation()
-                    ->action(function ($records) {
-                        $records->each(function ($record) {
-                            if ($record->status === 'pending') {
-                                $record->update(['status' => 'approved']);
-                            }
-                        });
-                    }),
+            ->bulkActions([])
+            ->toolbarActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('approve_selected')
+                        ->label('Approve Selected')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->action(function ($records) {
+                            $records->each(function ($record) {
+                                if ($record->status === 'pending') {
+                                    $record->update(['status' => 'approved']);
+                                }
+                            });
+                        }),
+                ]),
             ])
             ->defaultSort('created_at', 'desc');
     }
