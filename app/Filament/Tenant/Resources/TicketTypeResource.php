@@ -19,6 +19,7 @@ class TicketTypeResource extends Resource
     protected static \UnitEnum|string|null $navigationGroup = 'Content';
     protected static ?int $navigationSort = 3;
     protected static ?string $navigationLabel = 'Ticket Types';
+    protected static bool $shouldRegisterNavigation = false;
 
     public static function getEloquentQuery(): Builder
     {

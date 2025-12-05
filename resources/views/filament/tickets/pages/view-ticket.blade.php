@@ -16,7 +16,7 @@
                 <div class="text-center">
                     <div class="inline-block p-3 bg-white rounded-lg border-2 border-gray-100">
                         <img
-                            src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ urlencode($ticket->code) }}"
+                            src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ urlencode($ticket->code) }}&color=181622&margin=0"
                             alt="QR Code"
                             class="w-40 h-40"
                         />
@@ -79,7 +79,7 @@
                     <h3 class="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Eveniment</h3>
                     <div class="flex items-start gap-4">
                         @if($event->poster_url)
-                            <img src="{{ Storage::disk('public')->url($event->poster_url) }}" alt="{{ $eventTitle }}" class="w-20 h-20 object-cover rounded-lg">
+                            <img src="{{ Storage::disk('public')->url($event->poster_url) }}" alt="{{ $eventTitle }}" class="object-cover rounded-lg" style="max-width: 100px; height: auto;">
                         @endif
                         <div class="flex-1">
                             <p class="text-lg font-bold text-gray-900 dark:text-white">
@@ -88,7 +88,9 @@
                                         {{ $eventTitle }}
                                     </a>
                                 @else
-                                    {{ $eventTitle }}
+                                    <a href="{{ \App\Filament\Tenant\Resources\EventResource::getUrl('edit', ['record' => $event]) }}" class="text-primary-600 hover:underline">
+                                        {{ $eventTitle }}
+                                    </a>
                                 @endif
                             </p>
                             <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-300">

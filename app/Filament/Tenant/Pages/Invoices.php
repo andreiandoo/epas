@@ -9,7 +9,8 @@ class Invoices extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-text';
     protected static ?string $navigationLabel = 'Invoices';
-    protected static ?int $navigationSort = 5;
+    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+    protected static ?int $navigationSort = 3;
     protected string $view = 'filament.tenant.pages.invoices';
 
     public function getTitle(): string

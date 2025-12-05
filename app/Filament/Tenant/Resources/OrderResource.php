@@ -69,6 +69,7 @@ class OrderResource extends Resource
                 SC\Section::make('Client')
                     ->icon('heroicon-o-user')
                     ->columns(3)
+                    ->collapsible()
                     ->schema([
                         Forms\Components\Placeholder::make('customer_name')
                             ->label('Nume')
@@ -83,6 +84,7 @@ class OrderResource extends Resource
 
                 SC\Section::make('Bilete comandate')
                     ->icon('heroicon-o-ticket')
+                    ->collapsible()
                     ->schema([
                         Forms\Components\Placeholder::make('tickets_count')
                             ->label('Total bilete')
@@ -99,6 +101,8 @@ class OrderResource extends Resource
 
                 SC\Section::make('Beneficiari')
                     ->icon('heroicon-o-users')
+                    ->collapsible()
+                    ->collapsed()
                     ->visible(fn ($record) => !empty($record->meta['beneficiaries']))
                     ->schema([
                         Forms\Components\Placeholder::make('beneficiaries_list')

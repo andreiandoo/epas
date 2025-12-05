@@ -19,7 +19,7 @@ class AffiliateResource extends Resource
     protected static ?string $model = Affiliate::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
     protected static ?string $navigationLabel = 'Affiliates';
-    protected static \UnitEnum|string|null $navigationGroup = 'Marketing';
+    protected static \UnitEnum|string|null $navigationGroup = 'Microservices';
     protected static ?int $navigationSort = 1;
 
     public static function getEloquentQuery(): Builder

@@ -9,7 +9,8 @@ class Domains extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-globe-alt';
     protected static ?string $navigationLabel = 'Domains';
-    protected static ?int $navigationSort = 3;
+    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+    protected static ?int $navigationSort = 2;
     protected string $view = 'filament.tenant.pages.domains';
 
     public function getTitle(): string

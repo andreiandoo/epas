@@ -276,7 +276,7 @@ class AccountController extends Controller
                     return [
                         'id' => $ticket->id,
                         'code' => $ticket->code,
-                        'qr_code' => "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($ticket->code),
+                        'qr_code' => "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($ticket->code) . "&color=181622&margin=0",
                         'ticket_type' => $ticket->ticketType?->name ?? 'Unknown Type',
                         'seat_label' => $ticket->seat_label,
                         'status' => $ticket->status,
@@ -336,7 +336,7 @@ class AccountController extends Controller
             return [
                 'id' => $ticket->id,
                 'code' => $ticket->code,
-                'qr_code' => "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($ticket->code),
+                'qr_code' => "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=" . urlencode($ticket->code) . "&color=181622&margin=0",
                 'event_name' => $event?->getTranslation('title', 'ro') ?? 'Unknown Event',
                 'event_slug' => $event?->slug,
                 'ticket_type' => $ticket->ticketType?->name ?? 'Unknown Type',

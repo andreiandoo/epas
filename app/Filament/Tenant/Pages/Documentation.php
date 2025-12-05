@@ -11,7 +11,8 @@ class Documentation extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-book-open';
     protected static ?string $navigationLabel = 'Documentation';
-    protected static ?int $navigationSort = 20;
+    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
+    protected static ?int $navigationSort = 5;
     protected string $view = 'filament.tenant.pages.documentation';
 
     public function getTitle(): string

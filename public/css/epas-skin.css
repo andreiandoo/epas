@@ -3252,7 +3252,8 @@ html.dark {
   row-gap:0!important;
 }
 
-.fi-header-actions-ctn .fi-ac {
+.fi-header-actions-ctn .fi-ac,
+.fi-simple-page .fi-ac{
   background:transparent !important;
   border:0 !important;
   padding: 0 !important;
