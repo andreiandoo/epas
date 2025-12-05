@@ -73,15 +73,15 @@ class Dashboard extends Page
             ->where('is_cancelled', false)
             ->count();
 
-        // Total sales (sum of paid orders) - total_cents / 100
+        // Total sales (sum of paid/confirmed orders) - total_cents / 100
         $totalSales = Order::where('tenant_id', $tenantId)
-            ->where('status', 'completed')
+            ->whereIn('status', ['paid', 'confirmed'])
             ->sum('total_cents') / 100;
 
         // Total tickets sold (filter through orders since tickets don't have tenant_id)
         $totalTickets = Ticket::whereHas('order', function ($query) use ($tenantId) {
             $query->where('tenant_id', $tenantId)
-                ->where('status', 'completed');
+                ->whereIn('status', ['paid', 'confirmed']);
         })->count();
 
         // Total customers
@@ -116,7 +116,7 @@ class Dashboard extends Page
 
         // Get daily totals (total_cents / 100)
         $dailySales = Order::where('tenant_id', $tenantId)
-            ->where('status', 'completed')
+            ->whereIn('status', ['paid', 'confirmed'])
             ->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw('DATE(created_at) as date, SUM(total_cents) / 100 as total')
             ->groupBy('date')

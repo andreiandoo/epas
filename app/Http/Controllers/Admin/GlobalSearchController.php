@@ -54,17 +54,17 @@ class GlobalSearchController extends Controller
             })->toArray();
         }
 
-        // Search Artists (by name - translatable)
+        // Search Artists (by name - NOT translatable, regular string field)
         $artists = Artist::query()
             ->where('name', 'LIKE', "%{$query}%")
             ->limit(5)
             ->get();
 
         if ($artists->isNotEmpty()) {
-            $results['artists'] = $artists->map(function ($artist) use ($locale) {
+            $results['artists'] = $artists->map(function ($artist) {
                 return [
                     'id' => $artist->id,
-                    'name' => $artist->getTranslation('name', $locale) ?? $artist->getTranslation('name', 'en') ?? 'Unnamed',
+                    'name' => $artist->name ?? 'Unnamed',
                     'subtitle' => '',
                     'url' => route('filament.admin.resources.artists.edit', ['record' => $artist]),
                 ];

@@ -76,6 +76,24 @@ class Order extends Model
                     $customer->save();
                 }
             }
+
+            // Update ticket statuses based on order status
+            if ($order->wasChanged('status')) {
+                $newStatus = $order->status;
+
+                // When order is paid/confirmed, tickets become valid
+                if (in_array($newStatus, ['paid', 'confirmed', 'completed'])) {
+                    $order->tickets()->update(['status' => 'valid']);
+                }
+                // When order is cancelled/refunded, tickets become cancelled
+                elseif (in_array($newStatus, ['cancelled', 'refunded'])) {
+                    $order->tickets()->update(['status' => 'cancelled']);
+                }
+                // When order is pending, tickets stay pending
+                elseif ($newStatus === 'pending') {
+                    $order->tickets()->update(['status' => 'pending']);
+                }
+            }
         });
     }
 
