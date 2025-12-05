@@ -65,18 +65,14 @@ class TenantPanelProvider extends PanelProvider
             })
 
             // Define navigation group order
+            // Note: Groups cannot have icons if their items also have icons (Filament 4 constraint)
             ->navigationGroups([
-                NavigationGroup::make('Sales')
-                    ->icon('heroicon-o-shopping-cart'),
-                NavigationGroup::make('Services')
-                    ->icon('heroicon-o-cube'),
-                NavigationGroup::make('Website')
-                    ->icon('heroicon-o-globe-alt'),
+                NavigationGroup::make('Sales'),
+                NavigationGroup::make('Services'),
+                NavigationGroup::make('Website'),
                 NavigationGroup::make('Settings')
-                    ->icon('heroicon-o-cog-6-tooth')
                     ->collapsed(),
                 NavigationGroup::make('Help')
-                    ->icon('heroicon-o-question-mark-circle')
                     ->collapsed(),
             ])
 
