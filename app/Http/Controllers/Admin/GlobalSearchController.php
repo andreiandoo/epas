@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\TicketType;
+use App\Models\Invite;
 use Illuminate\Http\Request;
 
 class GlobalSearchController extends Controller
@@ -307,6 +308,90 @@ class GlobalSearchController extends Controller
             })->toArray();
         }
 
+        // Search Invitations (by code or recipient name/email)
+        $invites = Invite::query()
+            ->where('tenant_id', $tenantId)
+            ->where(function ($q) use ($lowerQuery, $query) {
+                $q->whereRaw("LOWER(invite_code) LIKE ?", [$lowerQuery])
+                    ->orWhereRaw("LOWER(recipient) LIKE ?", [$lowerQuery]);
+            })
+            ->with('batch')
+            ->limit(5)
+            ->get();
+
+        if ($invites->isNotEmpty()) {
+            $results['invitations'] = $invites->map(function ($invite) {
+                $recipientName = $invite->getRecipientName() ?? $invite->getRecipientEmail() ?? '';
+                return [
+                    'id' => $invite->id,
+                    'name' => $invite->invite_code,
+                    'subtitle' => $recipientName ?: ($invite->batch?->name ?? 'No recipient'),
+                    'url' => "/tenant/invitations?tableFilters[invite_code][value]={$invite->invite_code}",
+                ];
+            })->toArray();
+        }
+
+        // Search Beneficiaries (in Order meta and Ticket meta)
+        // Search in Order meta->beneficiaries[].name/email
+        $ordersWithBeneficiaries = Order::query()
+            ->where('tenant_id', $tenantId)
+            ->whereRaw("LOWER(meta) LIKE ?", [$lowerQuery])
+            ->limit(10)
+            ->get()
+            ->filter(function ($order) use ($query) {
+                $beneficiaries = $order->meta['beneficiaries'] ?? [];
+                foreach ($beneficiaries as $b) {
+                    if (
+                        (isset($b['name']) && mb_stripos($b['name'], $query) !== false) ||
+                        (isset($b['email']) && mb_stripos($b['email'], $query) !== false)
+                    ) {
+                        return true;
+                    }
+                }
+                return false;
+            })
+            ->take(5);
+
+        if ($ordersWithBeneficiaries->isNotEmpty()) {
+            $results['beneficiaries'] = $ordersWithBeneficiaries->map(function ($order) use ($query) {
+                // Find the matching beneficiary name
+                $matchedName = '';
+                $beneficiaries = $order->meta['beneficiaries'] ?? [];
+                foreach ($beneficiaries as $b) {
+                    if (
+                        (isset($b['name']) && mb_stripos($b['name'], $query) !== false) ||
+                        (isset($b['email']) && mb_stripos($b['email'], $query) !== false)
+                    ) {
+                        $matchedName = $b['name'] ?? $b['email'] ?? '';
+                        break;
+                    }
+                }
+                return [
+                    'id' => $order->id,
+                    'name' => $matchedName ?: 'Beneficiary',
+                    'subtitle' => "Order #{$order->id}",
+                    'url' => "/tenant/orders/{$order->id}",
+                ];
+            })->values()->toArray();
+        }
+
+        // Search Artists (public site URL)
+        $artists = Artist::query()
+            ->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
+            ->limit(5)
+            ->get();
+
+        if ($artists->isNotEmpty()) {
+            $results['artists'] = $artists->map(function ($artist) use ($locale) {
+                return [
+                    'id' => $artist->id,
+                    'name' => $artist->name ?? 'Unnamed',
+                    'subtitle' => 'Public artist page',
+                    'url' => "/{$locale}/artist/{$artist->slug}",
+                ];
+            })->toArray();
+        }
+
             return response()->json($results);
         } catch (\Exception $e) {
             \Log::error('Tenant search error: ' . $e->getMessage(), [
@@ -400,6 +485,7 @@ class GlobalSearchController extends Controller
             // Services
             ['name' => 'Affiliates', 'keywords' => ['affiliates', 'affiliate', 'afiliati', 'partners', 'parteneri'], 'url' => '/tenant/affiliates', 'subtitle' => 'Affiliate management'],
             ['name' => 'Microservices', 'keywords' => ['microservices', 'micro', 'services', 'servicii', 'integrations', 'integrari'], 'url' => '/tenant/microservices', 'subtitle' => 'Integrations & services'],
+            ['name' => 'Invitations', 'keywords' => ['invitations', 'invitation', 'invitatii', 'invitatie', 'invite', 'codes'], 'url' => '/tenant/invitations', 'subtitle' => 'Manage invitations'],
 
             // Website
             ['name' => 'Theme Editor', 'keywords' => ['theme', 'editor', 'design', 'culori', 'colors', 'style', 'tema'], 'url' => '/tenant/theme-editor', 'subtitle' => 'Customize website theme'],
