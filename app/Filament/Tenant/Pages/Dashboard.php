@@ -78,12 +78,11 @@ class Dashboard extends Page
             ->where('status', 'completed')
             ->sum('total_cents') / 100;
 
-        // Total tickets sold
-        $totalTickets = Ticket::where('tenant_id', $tenantId)
-            ->whereHas('order', function ($query) {
-                $query->where('status', 'completed');
-            })
-            ->count();
+        // Total tickets sold (filter through orders since tickets don't have tenant_id)
+        $totalTickets = Ticket::whereHas('order', function ($query) use ($tenantId) {
+            $query->where('tenant_id', $tenantId)
+                ->where('status', 'completed');
+        })->count();
 
         // Total customers
         $totalCustomers = Customer::where('tenant_id', $tenantId)->count();
