@@ -30,6 +30,7 @@ class GlobalSearchController extends Controller
 
             $results = [];
             $locale = app()->getLocale();
+            $lowerQuery = '%' . mb_strtolower($query) . '%';
 
         // Search Navigation/Pages first
         $pages = $this->searchAdminPages($query);
@@ -38,9 +39,9 @@ class GlobalSearchController extends Controller
         }
 
         // Search Venues (by name - translatable JSON field)
-        // Use whereRaw with ILIKE for case-insensitive search (PostgreSQL)
+        // Use LOWER() for case-insensitive search (works on MySQL and PostgreSQL)
         $venues = Venue::query()
-            ->whereRaw("name ILIKE ?", ['%' . $query . '%'])
+            ->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
             ->limit(5)
             ->get();
 
@@ -57,7 +58,7 @@ class GlobalSearchController extends Controller
 
         // Search Artists (by name - NOT translatable, regular string field)
         $artists = Artist::query()
-            ->whereRaw("name ILIKE ?", ['%' . $query . '%'])
+            ->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
             ->limit(5)
             ->get();
 
@@ -73,9 +74,9 @@ class GlobalSearchController extends Controller
         }
 
         // Search Events (by title - translatable JSON field)
-        // Use whereRaw with ILIKE for case-insensitive search (PostgreSQL)
+        // Use LOWER() for case-insensitive search (works on MySQL and PostgreSQL)
         $events = Event::query()
-            ->whereRaw("title ILIKE ?", ['%' . $query . '%'])
+            ->whereRaw("LOWER(title) LIKE ?", [$lowerQuery])
             ->limit(5)
             ->get();
 
@@ -92,9 +93,9 @@ class GlobalSearchController extends Controller
 
         // Search Tenants (by name or public_name)
         $tenants = Tenant::query()
-            ->where(function ($q) use ($query) {
-                $q->whereRaw("name ILIKE ?", ['%' . $query . '%'])
-                    ->orWhereRaw("public_name ILIKE ?", ['%' . $query . '%']);
+            ->where(function ($q) use ($lowerQuery) {
+                $q->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
+                    ->orWhereRaw("LOWER(public_name) LIKE ?", [$lowerQuery]);
             })
             ->limit(5)
             ->get();
@@ -112,10 +113,10 @@ class GlobalSearchController extends Controller
 
         // Search Customers (by first_name, last_name, or email)
         $customers = Customer::query()
-            ->where(function ($q) use ($query) {
-                $q->whereRaw("first_name ILIKE ?", ['%' . $query . '%'])
-                    ->orWhereRaw("last_name ILIKE ?", ['%' . $query . '%'])
-                    ->orWhereRaw("email ILIKE ?", ['%' . $query . '%']);
+            ->where(function ($q) use ($lowerQuery) {
+                $q->whereRaw("LOWER(first_name) LIKE ?", [$lowerQuery])
+                    ->orWhereRaw("LOWER(last_name) LIKE ?", [$lowerQuery])
+                    ->orWhereRaw("LOWER(email) LIKE ?", [$lowerQuery]);
             })
             ->limit(5)
             ->get();
@@ -134,9 +135,9 @@ class GlobalSearchController extends Controller
 
         // Search Users (by name or email)
         $users = User::query()
-            ->where(function ($q) use ($query) {
-                $q->whereRaw("name ILIKE ?", ['%' . $query . '%'])
-                    ->orWhereRaw("email ILIKE ?", ['%' . $query . '%']);
+            ->where(function ($q) use ($lowerQuery) {
+                $q->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
+                    ->orWhereRaw("LOWER(email) LIKE ?", [$lowerQuery]);
             })
             ->limit(5)
             ->get();
@@ -176,6 +177,7 @@ class GlobalSearchController extends Controller
 
             $results = [];
             $locale = app()->getLocale();
+            $lowerQuery = '%' . mb_strtolower($query) . '%';
 
             // Resolve tenant - can be ID or slug
             // Keep original for URL building, get numeric ID for queries
@@ -202,10 +204,10 @@ class GlobalSearchController extends Controller
         }
 
         // Search Events (by title - translatable JSON field)
-        // Use whereRaw with ILIKE for case-insensitive search (PostgreSQL)
+        // Use LOWER() for case-insensitive search (works on MySQL and PostgreSQL)
         $events = Event::query()
             ->where('tenant_id', $tenantId)
-            ->whereRaw("title ILIKE ?", ['%' . $query . '%'])
+            ->whereRaw("LOWER(title) LIKE ?", [$lowerQuery])
             ->limit(5)
             ->get();
 
@@ -221,10 +223,10 @@ class GlobalSearchController extends Controller
         }
 
         // Search Venues (by name - translatable JSON field)
-        // Use whereRaw with ILIKE for case-insensitive search (PostgreSQL)
+        // Use LOWER() for case-insensitive search (works on MySQL and PostgreSQL)
         $venues = Venue::query()
             ->where('tenant_id', $tenantId)
-            ->whereRaw("name ILIKE ?", ['%' . $query . '%'])
+            ->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
             ->limit(5)
             ->get();
 
@@ -242,9 +244,9 @@ class GlobalSearchController extends Controller
         // Search Orders (by customer_email or ID)
         $orders = Order::query()
             ->where('tenant_id', $tenantId)
-            ->where(function ($q) use ($query) {
-                $q->whereRaw("customer_email ILIKE ?", ['%' . $query . '%'])
-                    ->orWhereRaw("CAST(id AS TEXT) ILIKE ?", ['%' . $query . '%']);
+            ->where(function ($q) use ($lowerQuery, $query) {
+                $q->whereRaw("LOWER(customer_email) LIKE ?", [$lowerQuery])
+                    ->orWhere('id', 'LIKE', "%{$query}%");
             })
             ->limit(5)
             ->get();
@@ -265,10 +267,10 @@ class GlobalSearchController extends Controller
             ->whereHas('order', function ($q) use ($tenantId) {
                 $q->where('tenant_id', $tenantId);
             })
-            ->where(function ($q) use ($query) {
-                $q->whereRaw("code ILIKE ?", ['%' . $query . '%'])
-                    ->orWhereHas('order', function ($orderQ) use ($query) {
-                        $orderQ->whereRaw("customer_email ILIKE ?", ['%' . $query . '%']);
+            ->where(function ($q) use ($lowerQuery) {
+                $q->whereRaw("LOWER(code) LIKE ?", [$lowerQuery])
+                    ->orWhereHas('order', function ($orderQ) use ($lowerQuery) {
+                        $orderQ->whereRaw("LOWER(customer_email) LIKE ?", [$lowerQuery]);
                     });
             })
             ->limit(5)
@@ -288,11 +290,11 @@ class GlobalSearchController extends Controller
         // Search Customers (by first_name, last_name, email, or phone)
         $customers = Customer::query()
             ->where('tenant_id', $tenantId)
-            ->where(function ($q) use ($query) {
-                $q->whereRaw("first_name ILIKE ?", ['%' . $query . '%'])
-                    ->orWhereRaw("last_name ILIKE ?", ['%' . $query . '%'])
-                    ->orWhereRaw("email ILIKE ?", ['%' . $query . '%'])
-                    ->orWhereRaw("phone ILIKE ?", ['%' . $query . '%']);
+            ->where(function ($q) use ($lowerQuery) {
+                $q->whereRaw("LOWER(first_name) LIKE ?", [$lowerQuery])
+                    ->orWhereRaw("LOWER(last_name) LIKE ?", [$lowerQuery])
+                    ->orWhereRaw("LOWER(email) LIKE ?", [$lowerQuery])
+                    ->orWhereRaw("LOWER(phone) LIKE ?", [$lowerQuery]);
             })
             ->limit(5)
             ->get();
