@@ -56,11 +56,11 @@ Route::middleware(['web', 'auth'])->get('/test-admin-access', function() {
     ]);
 })->name('test.admin.access');
 
-// Admin Global Search API (requires authentication)
-Route::middleware(['web', 'auth'])->get('/admin/api/global-search', [GlobalSearchController::class, 'search'])->name('admin.api.global-search');
-
-// Tenant Global Search API (requires authentication)
-Route::middleware(['web', 'auth'])->get('/tenant/{tenant}/api/global-search', [GlobalSearchController::class, 'searchTenant'])->name('tenant.api.global-search');
+// Global Search API (requires authentication) - outside Filament panels to avoid route conflicts
+Route::middleware(['web', 'auth'])->group(function () {
+    Route::get('/api/search/admin', [GlobalSearchController::class, 'search'])->name('admin.api.global-search');
+    Route::get('/api/search/tenant/{tenant}', [GlobalSearchController::class, 'searchTenant'])->name('tenant.api.global-search');
+});
 
 // DEBUG: Test session and cookies
 Route::middleware(['web'])->get('/test-session', function() {

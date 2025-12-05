@@ -21,11 +21,11 @@ document.addEventListener('DOMContentLoaded', function () {
         // Check if we're in tenant panel (URL format: /tenant/{id}/...)
         const tenantMatch = path.match(/^\/tenant\/(\d+)/);
         if (tenantMatch) {
-            return `/tenant/${tenantMatch[1]}/api/global-search`;
+            return `/api/search/tenant/${tenantMatch[1]}`;
         }
 
         // Default to admin panel
-        return '/admin/api/global-search';
+        return '/api/search/admin';
     }
 
     searchInput.addEventListener('input', function (e) {

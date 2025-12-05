@@ -66,10 +66,11 @@ class Dashboard extends Page
         // Active events (upcoming or ongoing)
         $activeEvents = Event::where('tenant_id', $tenantId)
             ->where(function ($query) {
-                $query->where('event_date', '>=', Carbon::now()->startOfDay())
-                    ->orWhere('end_date', '>=', Carbon::now()->startOfDay());
+                $today = Carbon::now()->startOfDay();
+                $query->where('event_date', '>=', $today)
+                    ->orWhere('range_end_date', '>=', $today);
             })
-            ->where('is_published', true)
+            ->where('is_cancelled', false)
             ->count();
 
         // Total sales (sum of paid orders)
