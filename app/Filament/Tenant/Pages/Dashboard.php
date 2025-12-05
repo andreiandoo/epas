@@ -95,6 +95,9 @@ class Dashboard extends Page
         // Chart data - daily sales for the selected period
         $chartData = $this->getChartData($tenantId, $startDate, $endDate, $days);
 
+        // Ticket chart data - daily ticket sales with event breakdown
+        $ticketChartData = $this->getTicketChartData($tenantId, $startDate, $endDate, $days);
+
         return [
             'tenant' => $tenant,
             'stats' => [
@@ -105,6 +108,7 @@ class Dashboard extends Page
                 'unpaid_invoices_value' => $unpaidInvoicesValue,
             ],
             'chartData' => $chartData,
+            'ticketChartData' => $ticketChartData,
             'chartPeriod' => $this->chartPeriod,
         ];
     }
@@ -135,6 +139,65 @@ class Dashboard extends Page
         return [
             'labels' => $labels,
             'data' => $data,
+        ];
+    }
+
+    private function getTicketChartData(int $tenantId, Carbon $startDate, Carbon $endDate, int $days): array
+    {
+        $labels = [];
+        $data = [];
+        $tooltipData = [];
+
+        // Get tickets with event info, grouped by date
+        $tickets = Ticket::with(['ticketType.event', 'order'])
+            ->whereHas('order', function ($query) use ($tenantId, $startDate, $endDate) {
+                $query->where('tenant_id', $tenantId)
+                    ->whereIn('status', ['paid', 'confirmed'])
+                    ->whereBetween('created_at', [$startDate, $endDate]);
+            })
+            ->get();
+
+        // Group by date and event
+        $dailyTickets = [];
+        foreach ($tickets as $ticket) {
+            $dateKey = $ticket->order->created_at->format('Y-m-d');
+            $eventTitle = $ticket->ticketType?->event?->getTranslation('title', 'ro')
+                ?? $ticket->ticketType?->event?->getTranslation('title', 'en')
+                ?? 'Eveniment necunoscut';
+
+            if (!isset($dailyTickets[$dateKey])) {
+                $dailyTickets[$dateKey] = [
+                    'total' => 0,
+                    'events' => [],
+                ];
+            }
+
+            $dailyTickets[$dateKey]['total']++;
+
+            if (!isset($dailyTickets[$dateKey]['events'][$eventTitle])) {
+                $dailyTickets[$dateKey]['events'][$eventTitle] = 0;
+            }
+            $dailyTickets[$dateKey]['events'][$eventTitle]++;
+        }
+
+        // Fill in all days
+        $current = $startDate->copy();
+        while ($current <= $endDate) {
+            $dateKey = $current->format('Y-m-d');
+            $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
+            $data[] = $dailyTickets[$dateKey]['total'] ?? 0;
+
+            // Build tooltip data for this day
+            $dayEvents = $dailyTickets[$dateKey]['events'] ?? [];
+            $tooltipData[] = $dayEvents;
+
+            $current->addDay();
+        }
+
+        return [
+            'labels' => $labels,
+            'data' => $data,
+            'tooltipData' => $tooltipData,
         ];
     }
 }

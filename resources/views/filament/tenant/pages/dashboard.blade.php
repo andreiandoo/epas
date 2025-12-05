@@ -104,26 +104,41 @@
             </div>
         </div>
 
-        <!-- Sales Chart -->
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Sales Overview</h3>
-                <div class="flex items-center gap-2">
-                    <select
-                        wire:model.live="chartPeriod"
-                        class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg focus:ring-primary-500 focus:border-primary-500"
-                    >
-                        <option value="7">Last 7 days</option>
-                        <option value="15">Last 15 days</option>
-                        <option value="30">Last 30 days</option>
-                        <option value="60">Last 60 days</option>
-                        <option value="90">Last 90 days</option>
-                    </select>
+        <!-- Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Sales Chart -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Sales Overview</h3>
+                    <div class="flex items-center gap-2">
+                        <select
+                            wire:model.live="chartPeriod"
+                            class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 rounded-lg focus:ring-primary-500 focus:border-primary-500"
+                        >
+                            <option value="7">Last 7 days</option>
+                            <option value="15">Last 15 days</option>
+                            <option value="30">Last 30 days</option>
+                            <option value="60">Last 60 days</option>
+                            <option value="90">Last 90 days</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="h-64">
+                    <canvas id="salesChart"></canvas>
                 </div>
             </div>
 
-            <div class="h-64">
-                <canvas id="salesChart"></canvas>
+            <!-- Tickets Chart -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Tickets Sold</h3>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">Hover for event details</span>
+                </div>
+
+                <div class="h-64">
+                    <canvas id="ticketsChart"></canvas>
+                </div>
             </div>
         </div>
     @endif
@@ -132,21 +147,26 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            initChart();
+            initCharts();
         });
 
         document.addEventListener('livewire:navigated', function() {
-            initChart();
+            initCharts();
         });
 
-        // Re-init chart when Livewire updates
+        // Re-init charts when Livewire updates
         Livewire.hook('morph.updated', ({ el, component }) => {
-            if (el.querySelector('#salesChart')) {
-                setTimeout(() => initChart(), 100);
+            if (el.querySelector('#salesChart') || el.querySelector('#ticketsChart')) {
+                setTimeout(() => initCharts(), 100);
             }
         });
 
-        function initChart() {
+        function initCharts() {
+            initSalesChart();
+            initTicketsChart();
+        }
+
+        function initSalesChart() {
             const ctx = document.getElementById('salesChart');
             if (!ctx) return;
 
@@ -226,6 +246,109 @@
                                         notation: 'compact',
                                         maximumFractionDigits: 1
                                     }).format(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initTicketsChart() {
+            const ctx = document.getElementById('ticketsChart');
+            if (!ctx) return;
+
+            // Destroy existing chart
+            const existingChart = Chart.getChart(ctx);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const ticketData = @json($ticketChartData ?? ['labels' => [], 'data' => [], 'tooltipData' => []]);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ticketData.labels,
+                    datasets: [{
+                        label: 'Tickets',
+                        data: ticketData.data,
+                        backgroundColor: isDark ? 'rgba(168, 85, 247, 0.7)' : 'rgba(147, 51, 234, 0.7)',
+                        borderColor: isDark ? '#a855f7' : '#9333ea',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index',
+                    },
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                        tooltip: {
+                            backgroundColor: isDark ? '#1f2937' : '#fff',
+                            titleColor: isDark ? '#f3f4f6' : '#111827',
+                            bodyColor: isDark ? '#d1d5db' : '#4b5563',
+                            borderColor: isDark ? '#374151' : '#e5e7eb',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                title: function(context) {
+                                    return context[0].label;
+                                },
+                                label: function(context) {
+                                    const total = context.parsed.y;
+                                    return 'Total: ' + total + ' bilet' + (total !== 1 ? 'e' : '');
+                                },
+                                afterBody: function(context) {
+                                    const index = context[0].dataIndex;
+                                    const events = ticketData.tooltipData[index] || {};
+                                    const lines = [];
+
+                                    if (Object.keys(events).length > 0) {
+                                        lines.push('');
+                                        lines.push('Per event:');
+                                        for (const [event, count] of Object.entries(events)) {
+                                            // Truncate event name if too long
+                                            const name = event.length > 30 ? event.substring(0, 27) + '...' : event;
+                                            lines.push('  ' + name + ': ' + count);
+                                        }
+                                    }
+
+                                    return lines;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false,
+                            },
+                            ticks: {
+                                color: isDark ? '#9ca3af' : '#6b7280',
+                                maxRotation: 45,
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: isDark ? '#374151' : '#f3f4f6',
+                            },
+                            ticks: {
+                                color: isDark ? '#9ca3af' : '#6b7280',
+                                stepSize: 1,
+                                callback: function(value) {
+                                    if (Number.isInteger(value)) {
+                                        return value;
+                                    }
                                 }
                             }
                         }

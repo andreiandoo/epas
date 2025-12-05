@@ -88,12 +88,11 @@ class GlobalSearchController extends Controller
             })->toArray();
         }
 
-        // Search Tenants (by name, public_name, or email)
+        // Search Tenants (by name or public_name)
         $tenants = Tenant::query()
             ->where(function ($q) use ($query) {
                 $q->where('name', 'LIKE', "%{$query}%")
-                    ->orWhere('public_name', 'LIKE', "%{$query}%")
-                    ->orWhere('email', 'LIKE', "%{$query}%");
+                    ->orWhere('public_name', 'LIKE', "%{$query}%");
             })
             ->limit(5)
             ->get();
