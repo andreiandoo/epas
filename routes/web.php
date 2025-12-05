@@ -59,6 +59,9 @@ Route::middleware(['web', 'auth'])->get('/test-admin-access', function() {
 // Admin Global Search API (requires authentication)
 Route::middleware(['web', 'auth'])->get('/admin/api/global-search', [GlobalSearchController::class, 'search'])->name('admin.api.global-search');
 
+// Tenant Global Search API (requires authentication)
+Route::middleware(['web', 'auth'])->get('/tenant/{tenant}/api/global-search', [GlobalSearchController::class, 'searchTenant'])->name('tenant.api.global-search');
+
 // DEBUG: Test session and cookies
 Route::middleware(['web'])->get('/test-session', function() {
     session(['test_key' => 'test_value_' . time()]);

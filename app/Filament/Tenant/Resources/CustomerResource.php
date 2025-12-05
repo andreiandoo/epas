@@ -17,7 +17,7 @@ class CustomerResource extends Resource
     protected static ?string $model = Customer::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     public static function getEloquentQuery(): Builder
     {
@@ -98,10 +98,10 @@ class CustomerResource extends Resource
                                 // Build table HTML
                                 $html = '<div class="overflow-x-auto"><table class="w-full text-sm">';
                                 $html .= '<thead class="bg-gray-50"><tr>';
-                                $html .= '<th class="px-4 py-2 text-left font-medium text-gray-700">Nume</th>';
-                                $html .= '<th class="px-4 py-2 text-left font-medium text-gray-700">Email</th>';
-                                $html .= '<th class="px-4 py-2 text-left font-medium text-gray-700">Telefon</th>';
-                                $html .= '<th class="px-4 py-2 text-left font-medium text-gray-700">Comandă</th>';
+                                $html .= '<th class="px-4 py-2 font-medium text-left text-gray-700">Nume</th>';
+                                $html .= '<th class="px-4 py-2 font-medium text-left text-gray-700">Email</th>';
+                                $html .= '<th class="px-4 py-2 font-medium text-left text-gray-700">Telefon</th>';
+                                $html .= '<th class="px-4 py-2 font-medium text-left text-gray-700">Comandă</th>';
                                 $html .= '</tr></thead><tbody>';
 
                                 foreach ($beneficiaries as $b) {

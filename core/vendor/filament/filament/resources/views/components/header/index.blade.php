@@ -14,22 +14,24 @@
         ])
     }}
 >
-    <div>
-        @if ($breadcrumbs)
-            <x-filament::breadcrumbs :breadcrumbs="$breadcrumbs" />
-        @endif
-
+    <div class="flex items-center gap-4">
         @if (filled($heading))
             <h1 class="fi-header-heading">
                 {{ $heading }}
             </h1>
         @endif
 
-        @if (filled($subheading))
-            <p class="fi-header-subheading">
-                {{ $subheading }}
-            </p>
-        @endif
+        <div class="flex flex-col">
+            @if ($breadcrumbs)
+                <x-filament::breadcrumbs :breadcrumbs="$breadcrumbs" />
+            @endif
+            @if (filled($subheading))
+                <p class="fi-header-subheading">
+                    {{ $subheading }}
+                </p>
+            @endif
+        </div>
+        
     </div>
 
     @php

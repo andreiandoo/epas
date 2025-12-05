@@ -14,6 +14,12 @@
         'es' => 'Español'
     ];
     $currentLocale = app()->getLocale();
+
+    // Detect if in tenant or admin panel for search placeholder
+    $isAdminPanel = request()->is('admin*');
+    $searchPlaceholder = $isAdminPanel
+        ? 'Search pages, events, venues, tenants...'
+        : 'Search pages, events, orders, tickets...';
 @endphp
 <div class="sticky top-0 z-20 px-4 fi-custom-topbar">
     <div class="flex items-center justify-between max-w-full gap-4">
@@ -23,7 +29,7 @@
                 <input
                     type="text"
                     id="epas-global-search-input"
-                    placeholder="Search venues, artists, tenants, customers, users..."
+                    placeholder="{{ $searchPlaceholder }}"
                     class="dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:border-gray-600"
                     autocomplete="off"
                 >

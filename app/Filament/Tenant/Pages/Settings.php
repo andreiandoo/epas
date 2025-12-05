@@ -10,6 +10,7 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Illuminate\Support\Str;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Collection;
 
 class Settings extends Page
 {
@@ -22,10 +23,14 @@ class Settings extends Page
     protected string $view = 'filament.tenant.pages.settings';
 
     public ?array $data = [];
+    public Collection $domains;
 
     public function mount(): void
     {
         $tenant = auth()->user()->tenant;
+
+        // Load domains
+        $this->domains = $tenant ? $tenant->domains()->orderBy('is_primary', 'desc')->orderBy('created_at', 'desc')->get() : collect();
 
         if ($tenant) {
             $settings = $tenant->settings ?? [];
@@ -427,6 +432,14 @@ class Settings extends Page
                                             ->placeholder('Your Company Name')
                                             ->helperText('Display name shown as sender'),
                                     ])->columns(2),
+                            ]),
+
+                        SC\Tabs\Tab::make('Domains')
+                            ->icon('heroicon-o-globe-alt')
+                            ->schema([
+                                Forms\Components\Placeholder::make('domains_list')
+                                    ->label('')
+                                    ->content(fn () => new HtmlString(view('filament.tenant.components.domains-list', ['domains' => $this->domains])->render())),
                             ]),
                     ])
                     ->columnSpanFull(),

@@ -9,20 +9,20 @@
         $isAdminPanel = filament()->getCurrentPanel()->getId() === 'admin';
     @endphp
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
         {{-- Left Column: QR Code --}}
         <div class="lg:col-span-1">
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div class="sticky p-6 bg-white border border-gray-200 shadow-sm top-20 dark:bg-gray-800 rounded-xl dark:border-gray-700">
                 <div class="text-center">
-                    <div class="inline-block p-3 bg-white rounded-lg border-2 border-gray-100">
+                    <div class="inline-block p-3 bg-white border-2 border-gray-100 rounded-lg">
                         <img
                             src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ urlencode($ticket->code) }}&color=181622&margin=0"
                             alt="QR Code"
                             class="w-40 h-40"
                         />
                     </div>
-                    <p class="mt-3 text-xl font-mono font-bold text-gray-900 dark:text-white">{{ $ticket->code }}</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Cod scanabil la intrare</p>
+                    <p class="mt-3 font-mono text-xl font-bold text-gray-900 dark:text-white">{{ $ticket->code }}</p>
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Cod scanabil la intrare</p>
 
                     {{-- Status Badge --}}
                     <div class="mt-4">
@@ -45,10 +45,10 @@
         </div>
 
         {{-- Right Column: Details --}}
-        <div class="lg:col-span-2 space-y-4">
+        <div class="space-y-4 lg:col-span-3">
             {{-- Ticket Details --}}
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-                <h3 class="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Detalii bilet</h3>
+            <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Detalii bilet</h3>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Tip bilet</span>
@@ -75,8 +75,8 @@
 
             {{-- Event Details --}}
             @if($event)
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-                    <h3 class="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Eveniment</h3>
+                <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Eveniment</h3>
                     <div class="flex items-start gap-4">
                         @if($event->poster_url)
                             <img src="{{ Storage::disk('public')->url($event->poster_url) }}" alt="{{ $eventTitle }}" class="object-cover rounded-lg" style="max-width: 100px; height: auto;">
@@ -93,7 +93,7 @@
                                     </a>
                                 @endif
                             </p>
-                            <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-300">
+                            <div class="flex flex-wrap mt-2 text-sm text-gray-600 gap-x-4 gap-y-1 dark:text-gray-300">
                                 <span class="flex items-center">
                                     <x-heroicon-o-calendar class="w-4 h-4 mr-1 text-gray-400" />
                                     {{ $event->event_date ? $event->event_date->format('d M Y') : 'TBA' }}
@@ -118,9 +118,9 @@
 
             {{-- Order & Customer --}}
             @if($ticket->order)
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-                    <h3 class="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Comandă & Client</h3>
-                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Comandă & Client</h3>
+                    <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
                         <div>
                             <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Nr. comandă</span>
                             <p class="text-base font-semibold text-gray-900 dark:text-white">
@@ -191,9 +191,9 @@
 
             {{-- Beneficiary --}}
             @if($beneficiary)
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-                    <h3 class="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Beneficiar bilet</h3>
-                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="p-5 bg-white border border-gray-200 shadow-sm dark:bg-gray-800 rounded-xl dark:border-gray-700">
+                    <h3 class="mb-3 text-sm font-semibold tracking-wider text-gray-400 uppercase dark:text-gray-500">Beneficiar bilet</h3>
+                    <div class="grid grid-cols-2 gap-4 lg:grid-cols-3">
                         <div>
                             <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Nume</span>
                             <p class="text-base font-semibold text-gray-900 dark:text-white">{{ $beneficiary['name'] ?? 'N/A' }}</p>

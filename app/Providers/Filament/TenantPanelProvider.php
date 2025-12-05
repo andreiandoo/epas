@@ -6,6 +6,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -62,6 +63,22 @@ class TenantPanelProvider extends PanelProvider
                 Route::get('/microservices/{slug}/settings', \App\Filament\Tenant\Pages\MicroserviceSettings::class)
                     ->name('filament.tenant.pages.microservice-settings');
             })
+
+            // Define navigation group order
+            ->navigationGroups([
+                NavigationGroup::make('Sales')
+                    ->icon('heroicon-o-shopping-cart'),
+                NavigationGroup::make('Services')
+                    ->icon('heroicon-o-cube'),
+                NavigationGroup::make('Website')
+                    ->icon('heroicon-o-globe-alt'),
+                NavigationGroup::make('Settings')
+                    ->icon('heroicon-o-cog-6-tooth')
+                    ->collapsed(),
+                NavigationGroup::make('Help')
+                    ->icon('heroicon-o-question-mark-circle')
+                    ->collapsed(),
+            ])
 
             ->middleware([
                 EncryptCookies::class,

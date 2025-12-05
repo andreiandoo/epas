@@ -15,7 +15,7 @@ class TicketResource extends Resource
     protected static ?string $model = Ticket::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     public static function getEloquentQuery(): Builder
     {

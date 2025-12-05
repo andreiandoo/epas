@@ -3345,6 +3345,7 @@ html.dark {
 .dark .fi-dropdown-panel {
   background-color: var(--metro-bg-secondary) !important;
   border-color: var(--metro-border) !important;
+  overflow: hidden !important;
 }
 
 .dark .fi-section-header {
@@ -3403,9 +3404,8 @@ html.dark {
 .dark input[type="search"],
 .dark textarea,
 .dark select {
-  background-color: var(--metro-bg-primary) !important;
-  border-color: var(--metro-border) !important;
   color: var(--metro-text-primary) !important;
+  padding-inline-start: calc(var(--spacing)*2)!important;
 }
 
 .dark .fi-input:focus,
@@ -3630,6 +3630,10 @@ html.dark {
 
 .dark ::-webkit-scrollbar-thumb:hover {
   background: var(--metro-text-muted);
+}
+
+.fi-input-wrp {
+  background-color: var(--metro-bg-primary) !important;
 }
 
 /* End Railway/Metro Theme */

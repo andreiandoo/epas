@@ -961,31 +961,66 @@ HTML;
     {
         return <<<'HTML'
 <h2>Affiliate Tracking</h2>
-<p>Track referrals and manage affiliate commissions.</p>
+<p>Create affiliate partners who earn commissions on ticket sales they refer.</p>
 
-<h3>Features</h3>
-<ul>
-<li>Affiliate registration</li>
-<li>Unique tracking links</li>
-<li>Click tracking</li>
-<li>Conversion attribution</li>
-<li>Commission calculation</li>
-<li>Payout management</li>
-</ul>
+<h3>Where to Manage</h3>
+<p><strong>Location:</strong> Services &rarr; Affiliates (<code>/tenant/affiliates</code>)</p>
+
+<h3>Creating an Affiliate</h3>
+<ol>
+<li>Go to <strong>Services &rarr; Affiliates</strong></li>
+<li>Click <strong>Create Affiliate</strong></li>
+<li>Fill in the required fields</li>
+</ol>
+
+<h4>Affiliate Information</h4>
+<table>
+<tr><td><strong>Name</strong></td><td>Affiliate's name or company</td></tr>
+<tr><td><strong>Affiliate Code</strong></td><td>Auto-generated unique code (e.g., <code>AFF-ABC123</code>)</td></tr>
+<tr><td><strong>Contact Email</strong></td><td>Where to send commission reports</td></tr>
+<tr><td><strong>Status</strong></td><td>Active, Suspended, or Inactive</td></tr>
+</table>
+
+<h4>Commission Settings</h4>
+<table>
+<tr><td><strong>Commission Type</strong></td><td><strong>Percentage (%)</strong> - Earn % of each sale<br><strong>Fixed Amount</strong> - Earn fixed RON per sale</td></tr>
+<tr><td><strong>Commission Rate</strong></td><td>The percentage (0-100) or fixed amount per order</td></tr>
+</table>
 
 <h3>Tracking Methods</h3>
+
+<h4>1. Referral Links</h4>
+<p>Affiliates share their unique tracking URL:</p>
+<pre><code>https://your-site.com/?ref=AFF-ABC123</code></pre>
+<p>When a customer clicks this link and purchases, the order is attributed to the affiliate.</p>
+
+<h4>2. Coupon Codes</h4>
+<p>Assign a coupon code to an affiliate in the <strong>Coupon Code</strong> section. When a customer uses this coupon at checkout, the order is attributed to the affiliate.</p>
+
+<h3>Viewing Affiliate Performance</h3>
+<p>On the affiliates list, you can see:</p>
 <ul>
-<li>URL parameters (?ref=code)</li>
-<li>Coupon codes</li>
-<li>Cookie-based tracking</li>
+<li><strong>Conversions</strong> - Number of successful orders</li>
+<li><strong>Commission Earned</strong> - Total approved commissions</li>
+</ul>
+<p>Click on an affiliate name to view detailed statistics.</p>
+
+<h3>Conversion Tracking</h3>
+<p>View all conversions at <strong>Services &rarr; Affiliate Conversions</strong>:</p>
+<ul>
+<li>Order details and amount</li>
+<li>Commission value calculated</li>
+<li>Conversion status (Pending, Approved, Paid)</li>
 </ul>
 
-<h3>Commission Models</h3>
-<ul>
-<li>Percentage of sale</li>
-<li>Fixed amount per sale</li>
-<li>Tiered commissions</li>
-</ul>
+<h3>How Attribution Works</h3>
+<ol>
+<li>Customer clicks affiliate link or uses coupon</li>
+<li>A tracking cookie is set (30-day duration)</li>
+<li>When customer completes purchase, order is attributed</li>
+<li>Commission is calculated based on affiliate's rate</li>
+<li>Commission appears in affiliate's dashboard</li>
+</ol>
 HTML;
     }
 
@@ -1060,28 +1095,75 @@ HTML;
     {
         return <<<'HTML'
 <h2>Analytics Dashboard</h2>
-<p>Custom dashboards with real-time analytics.</p>
+<p>Advanced analytics with real-time metrics and traffic analysis. Requires the <strong>Analytics</strong> microservice.</p>
 
-<h3>Widget Types</h3>
+<h3>Where to Access</h3>
+<p><strong>Location:</strong> Services &rarr; Analytics (<code>/tenant/analytics-dashboard</code>)</p>
+
+<h3>Key Metrics</h3>
+<p>The dashboard displays:</p>
+
+<h4>Revenue Metrics</h4>
+<table>
+<tr><td><strong>Total Revenue</strong></td><td>Sum of all paid orders in selected period</td></tr>
+<tr><td><strong>Total Orders</strong></td><td>Number of completed orders</td></tr>
+<tr><td><strong>Total Tickets</strong></td><td>Number of tickets sold</td></tr>
+<tr><td><strong>Average Order Value</strong></td><td>Revenue divided by orders</td></tr>
+<tr><td><strong>Revenue Change</strong></td><td>% change compared to previous period</td></tr>
+</table>
+
+<h3>Date Range Filter</h3>
+<p>Filter all metrics by time period:</p>
 <ul>
-<li>Line charts</li>
-<li>Bar charts</li>
-<li>Pie charts</li>
-<li>Stats cards</li>
-<li>Tables</li>
+<li><strong>Last 7 days</strong> - Past week</li>
+<li><strong>Last 30 days</strong> - Past month (default)</li>
+<li><strong>Last 90 days</strong> - Past quarter</li>
+<li><strong>All time</strong> - Since account creation</li>
 </ul>
 
-<h3>Metrics</h3>
+<h3>Sales Chart</h3>
+<p>Interactive line chart showing:</p>
 <ul>
-<li>Revenue</li>
-<li>Ticket sales</li>
-<li>Conversion rates</li>
-<li>Customer acquisition</li>
-<li>Event performance</li>
+<li>Daily revenue over time</li>
+<li>Order count per day</li>
 </ul>
 
-<h3>Customization</h3>
-<p>Create custom dashboards for different roles and purposes.</p>
+<h3>Top Events</h3>
+<p>Ranking of your best-performing events by:</p>
+<ul>
+<li>Event name</li>
+<li>Number of orders</li>
+<li>Revenue generated</li>
+</ul>
+
+<h3>Real-Time Analytics</h3>
+<p>Live visitor tracking section shows:</p>
+<ul>
+<li><strong>Active Users</strong> - Currently on your site</li>
+<li><strong>Users per Minute</strong> - Traffic trend (30-min chart)</li>
+<li><strong>Active Pages</strong> - Most viewed pages right now</li>
+<li><strong>Recent Activity</strong> - Live feed of purchases, views, cart additions</li>
+</ul>
+
+<h3>Traffic Sources</h3>
+<p>Breakdown of where visitors come from:</p>
+<ul>
+<li>Direct traffic</li>
+<li>Organic search</li>
+<li>Social media</li>
+<li>Referral links</li>
+<li>Email campaigns</li>
+</ul>
+
+<h3>Geographic Data</h3>
+<p>See where your customers are located by country.</p>
+
+<h3>How to Enable</h3>
+<ol>
+<li>Purchase the <strong>Analytics</strong> microservice from the Store</li>
+<li>Navigate to Services &rarr; Analytics</li>
+<li>Dashboard loads automatically with your data</li>
+</ol>
 HTML;
     }
 
@@ -1223,34 +1305,76 @@ HTML;
     {
         return <<<'HTML'
 <h2>Stripe Integration</h2>
-<p>Payment processing with Stripe Connect.</p>
+<p>Accept payments with Stripe. Configure your Stripe credentials to process ticket sales.</p>
 
-<h3>Setup</h3>
+<h3>Where to Configure</h3>
+<p><strong>Location:</strong> Settings &rarr; Payment Config (<code>/tenant/payment-config</code>)</p>
+
+<h3>Step 1: Get Your Stripe Credentials</h3>
 <ol>
-<li>Create Stripe account</li>
-<li>Enable Connect</li>
-<li>Add API keys to .env</li>
-<li>Configure webhook endpoint</li>
+<li>Log in to your <a href="https://dashboard.stripe.com" target="_blank">Stripe Dashboard</a></li>
+<li>Navigate to <strong>Developers &rarr; API Keys</strong></li>
+<li>Copy your keys:
+    <ul>
+        <li><strong>Publishable key</strong> (starts with <code>pk_test_</code> or <code>pk_live_</code>)</li>
+        <li><strong>Secret key</strong> (starts with <code>sk_test_</code> or <code>sk_live_</code>)</li>
+    </ul>
+</li>
 </ol>
 
-<h3>Connect Flow</h3>
-<p>Tenants connect their Stripe accounts:</p>
+<h3>Step 2: Configure in EPAS</h3>
+<p>In Payment Config, you'll find two sections for Stripe:</p>
+
+<h4>Test Credentials</h4>
+<table>
+<tr><td><strong>Test Publishable Key</strong></td><td>Your <code>pk_test_...</code> key for testing</td></tr>
+<tr><td><strong>Test Secret Key</strong></td><td>Your <code>sk_test_...</code> key for testing</td></tr>
+</table>
+
+<h4>Live Credentials</h4>
+<table>
+<tr><td><strong>Live Publishable Key</strong></td><td>Your <code>pk_live_...</code> key for production</td></tr>
+<tr><td><strong>Live Secret Key</strong></td><td>Your <code>sk_live_...</code> key for production</td></tr>
+<tr><td><strong>Webhook Secret</strong></td><td>Your webhook signing secret (<code>whsec_...</code>)</td></tr>
+</table>
+
+<h3>Step 3: Set Up Webhooks</h3>
 <ol>
-<li>Click "Connect Stripe"</li>
-<li>Authorize EPAS</li>
-<li>Complete onboarding</li>
+<li>In Stripe Dashboard, go to <strong>Developers &rarr; Webhooks</strong></li>
+<li>Click <strong>Add endpoint</strong></li>
+<li>Enter your webhook URL: <code>https://your-domain.com/webhooks/stripe</code></li>
+<li>Select events to listen for:
+    <ul>
+        <li><code>payment_intent.succeeded</code></li>
+        <li><code>payment_intent.payment_failed</code></li>
+        <li><code>checkout.session.completed</code></li>
+        <li><code>charge.refunded</code></li>
+    </ul>
+</li>
+<li>Copy the <strong>Signing secret</strong> and paste it in the Webhook Secret field</li>
 </ol>
 
-<h3>Payment Flow</h3>
+<h3>Step 4: Select Mode</h3>
+<p>Use the <strong>Mode</strong> toggle to switch between:</p>
 <ul>
-<li>Platform creates payment intent</li>
-<li>Customer pays</li>
-<li>Stripe splits payment</li>
-<li>Tenant receives payout</li>
+<li><strong>Test</strong> - Uses test credentials (no real charges)</li>
+<li><strong>Live</strong> - Uses live credentials (real payments)</li>
 </ul>
 
-<h3>Webhooks</h3>
-<p>Handle Stripe events at <code>/webhooks/stripe</code></p>
+<h3>Testing Payments</h3>
+<p>Use Stripe test card numbers:</p>
+<ul>
+<li><code>4242 4242 4242 4242</code> - Success</li>
+<li><code>4000 0000 0000 0002</code> - Declined</li>
+<li><code>4000 0025 0000 3155</code> - Requires 3D Secure</li>
+</ul>
+
+<h3>Troubleshooting</h3>
+<ul>
+<li><strong>Payments not processing:</strong> Check that your mode matches your credentials (test vs live)</li>
+<li><strong>Webhook errors:</strong> Verify the webhook URL is accessible and the signing secret is correct</li>
+<li><strong>SSL required:</strong> Live mode requires HTTPS</li>
+</ul>
 HTML;
     }
 
@@ -1318,29 +1442,69 @@ HTML;
     {
         return <<<'HTML'
 <h2>Tracking Pixels</h2>
-<p>Marketing analytics and conversion tracking.</p>
+<p>Track conversions and analyze traffic with marketing pixels. Requires the <strong>Tracking & Pixels</strong> microservice.</p>
+
+<h3>Where to Configure</h3>
+<p><strong>Location:</strong> Services &rarr; Tracking & Pixels (<code>/tenant/tracking-settings</code>)</p>
 
 <h3>Supported Platforms</h3>
+
+<h4>Google Analytics 4 (GA4)</h4>
+<table>
+<tr><td><strong>Field</strong></td><td><strong>Format</strong></td><td><strong>Where to Find</strong></td></tr>
+<tr><td>Measurement ID</td><td><code>G-XXXXXXXXXX</code></td><td>GA4 Admin &rarr; Data Streams &rarr; Web stream details</td></tr>
+</table>
+
+<h4>Google Tag Manager (GTM)</h4>
+<table>
+<tr><td><strong>Field</strong></td><td><strong>Format</strong></td><td><strong>Where to Find</strong></td></tr>
+<tr><td>Container ID</td><td><code>GTM-XXXXXX</code></td><td>GTM Dashboard &rarr; Top of container page</td></tr>
+</table>
+
+<h4>Meta Pixel (Facebook/Instagram)</h4>
+<table>
+<tr><td><strong>Field</strong></td><td><strong>Format</strong></td><td><strong>Where to Find</strong></td></tr>
+<tr><td>Pixel ID</td><td><code>1234567890123456</code></td><td>Meta Events Manager &rarr; Data Sources &rarr; Select Pixel</td></tr>
+</table>
+
+<h4>TikTok Pixel</h4>
+<table>
+<tr><td><strong>Field</strong></td><td><strong>Format</strong></td><td><strong>Where to Find</strong></td></tr>
+<tr><td>Pixel ID</td><td><code>CXXXXXXXXXXXXXXXXX</code></td><td>TikTok Ads Manager &rarr; Assets &rarr; Events &rarr; Website Pixel</td></tr>
+</table>
+
+<h3>Configuration Options</h3>
+<p>For each pixel, you can configure:</p>
 <ul>
-<li>Google Analytics 4</li>
-<li>Google Tag Manager</li>
-<li>Meta Pixel (Facebook)</li>
-<li>TikTok Pixel</li>
+<li><strong>Enable/Disable Toggle</strong> - Turn tracking on or off</li>
+<li><strong>Inject Location</strong> - Where to add the script (Head recommended, or Body End)</li>
+<li><strong>Page Scope</strong> - Public pages only, or All pages</li>
 </ul>
 
-<h3>Events Tracked</h3>
+<h3>Events Automatically Tracked</h3>
 <ul>
-<li>Page views</li>
-<li>Add to cart</li>
-<li>Begin checkout</li>
-<li>Purchase</li>
+<li><strong>PageView</strong> - Every page load</li>
+<li><strong>ViewContent</strong> - Event detail pages</li>
+<li><strong>AddToCart</strong> - When tickets added to cart</li>
+<li><strong>InitiateCheckout</strong> - Checkout started</li>
+<li><strong>Purchase</strong> - Successful order completion</li>
 </ul>
 
-<h3>Consent Management</h3>
-<p>Integrates with cookie consent for GDPR compliance.</p>
+<h3>GDPR Compliance</h3>
+<p>All tracking pixels respect user consent:</p>
+<ul>
+<li><strong>Analytics pixels</strong> (GA4, GTM) - Require "Analytics" consent category</li>
+<li><strong>Marketing pixels</strong> (Meta, TikTok) - Require "Marketing" consent category</li>
+</ul>
+<p>No tracking occurs until the user explicitly consents via the cookie consent banner.</p>
 
-<h3>Configuration</h3>
-<p>Add tracking IDs in Settings → Tracking Integrations</p>
+<h3>How to Enable</h3>
+<ol>
+<li>Purchase the <strong>Tracking & Pixels</strong> microservice from the Store</li>
+<li>Navigate to Services &rarr; Tracking & Pixels</li>
+<li>Enable desired pixels and enter your IDs</li>
+<li>Click <strong>Save Settings</strong></li>
+</ol>
 HTML;
     }
 }

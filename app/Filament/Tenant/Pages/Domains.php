@@ -11,6 +11,7 @@ class Domains extends Page
     protected static ?string $navigationLabel = 'Domains';
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 2;
+    protected static bool $shouldRegisterNavigation = false; // Moved to Settings tab
     protected string $view = 'filament.tenant.pages.domains';
 
     public function getTitle(): string

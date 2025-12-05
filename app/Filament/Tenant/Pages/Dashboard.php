@@ -3,8 +3,14 @@
 namespace App\Filament\Tenant\Pages;
 
 use App\Models\Tenant;
+use App\Models\Event;
+use App\Models\Order;
+use App\Models\Ticket;
+use App\Models\Customer;
 use BackedEnum;
+use Carbon\Carbon;
 use Filament\Pages\Page;
+use Livewire\Attributes\Url;
 
 class Dashboard extends Page
 {
@@ -15,6 +21,9 @@ class Dashboard extends Page
 
     public ?Tenant $tenant = null;
 
+    #[Url]
+    public string $chartPeriod = '30';
+
     public function mount(): void
     {
         $this->tenant = auth()->user()->tenant;
@@ -22,7 +31,17 @@ class Dashboard extends Page
 
     public function getTitle(): string
     {
-        return 'Dashboard';
+        return ''; // Empty title as requested
+    }
+
+    public function getHeading(): string|null
+    {
+        return null; // Remove heading
+    }
+
+    public function updatedChartPeriod(): void
+    {
+        // Livewire will automatically re-render with new period
     }
 
     public function getViewData(): array
@@ -33,18 +52,89 @@ class Dashboard extends Page
             return [
                 'tenant' => null,
                 'stats' => [],
+                'chartData' => [],
             ];
         }
+
+        $tenantId = $tenant->id;
+
+        // Calculate date range for chart
+        $days = (int) $this->chartPeriod;
+        $startDate = Carbon::now()->subDays($days)->startOfDay();
+        $endDate = Carbon::now()->endOfDay();
+
+        // Active events (upcoming or ongoing)
+        $activeEvents = Event::where('tenant_id', $tenantId)
+            ->where(function ($query) {
+                $query->where('event_date', '>=', Carbon::now()->startOfDay())
+                    ->orWhere('end_date', '>=', Carbon::now()->startOfDay());
+            })
+            ->where('is_published', true)
+            ->count();
+
+        // Total sales (sum of paid orders)
+        $totalSales = Order::where('tenant_id', $tenantId)
+            ->where('status', 'completed')
+            ->sum('total');
+
+        // Total tickets sold
+        $totalTickets = Ticket::where('tenant_id', $tenantId)
+            ->whereHas('order', function ($query) {
+                $query->where('status', 'completed');
+            })
+            ->count();
+
+        // Total customers
+        $totalCustomers = Customer::where('tenant_id', $tenantId)->count();
+
+        // Unpaid invoices VALUE
+        $unpaidInvoicesValue = $tenant->invoices()
+            ->whereIn('status', ['pending', 'overdue'])
+            ->sum('total');
+
+        // Chart data - daily sales for the selected period
+        $chartData = $this->getChartData($tenantId, $startDate, $endDate, $days);
 
         return [
             'tenant' => $tenant,
             'stats' => [
-                'domains' => $tenant->domains()->count(),
-                'active_domains' => $tenant->domains()->where('is_active', true)->count(),
-                'microservices' => $tenant->microservices()->wherePivot('is_active', true)->count(),
-                'invoices' => $tenant->invoices()->count(),
-                'unpaid_invoices' => $tenant->invoices()->whereIn('status', ['pending', 'overdue'])->count(),
+                'active_events' => $activeEvents,
+                'total_sales' => $totalSales,
+                'total_tickets' => $totalTickets,
+                'total_customers' => $totalCustomers,
+                'unpaid_invoices_value' => $unpaidInvoicesValue,
             ],
+            'chartData' => $chartData,
+            'chartPeriod' => $this->chartPeriod,
+        ];
+    }
+
+    private function getChartData(int $tenantId, Carbon $startDate, Carbon $endDate, int $days): array
+    {
+        $labels = [];
+        $data = [];
+
+        // Get daily totals
+        $dailySales = Order::where('tenant_id', $tenantId)
+            ->where('status', 'completed')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('DATE(created_at) as date, SUM(total) as total')
+            ->groupBy('date')
+            ->pluck('total', 'date')
+            ->toArray();
+
+        // Fill in all days
+        $current = $startDate->copy();
+        while ($current <= $endDate) {
+            $dateKey = $current->format('Y-m-d');
+            $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
+            $data[] = (float) ($dailySales[$dateKey] ?? 0);
+            $current->addDay();
+        }
+
+        return [
+            'labels' => $labels,
+            'data' => $data,
         ];
     }
 }
