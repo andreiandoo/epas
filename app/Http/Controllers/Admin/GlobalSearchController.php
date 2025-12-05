@@ -38,9 +38,9 @@ class GlobalSearchController extends Controller
         }
 
         // Search Venues (by name - translatable JSON field)
-        // Use whereRaw to bypass Laravel's cast handling for JSON columns
+        // Use whereRaw with ILIKE for case-insensitive search (PostgreSQL)
         $venues = Venue::query()
-            ->whereRaw("name LIKE ?", ['%' . $query . '%'])
+            ->whereRaw("name ILIKE ?", ['%' . $query . '%'])
             ->limit(5)
             ->get();
 
@@ -57,7 +57,7 @@ class GlobalSearchController extends Controller
 
         // Search Artists (by name - NOT translatable, regular string field)
         $artists = Artist::query()
-            ->where('name', 'LIKE', "%{$query}%")
+            ->whereRaw("name ILIKE ?", ['%' . $query . '%'])
             ->limit(5)
             ->get();
 
@@ -73,9 +73,9 @@ class GlobalSearchController extends Controller
         }
 
         // Search Events (by title - translatable JSON field)
-        // Use whereRaw to bypass Laravel's cast handling for JSON columns
+        // Use whereRaw with ILIKE for case-insensitive search (PostgreSQL)
         $events = Event::query()
-            ->whereRaw("title LIKE ?", ['%' . $query . '%'])
+            ->whereRaw("title ILIKE ?", ['%' . $query . '%'])
             ->limit(5)
             ->get();
 
@@ -93,8 +93,8 @@ class GlobalSearchController extends Controller
         // Search Tenants (by name or public_name)
         $tenants = Tenant::query()
             ->where(function ($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%")
-                    ->orWhere('public_name', 'LIKE', "%{$query}%");
+                $q->whereRaw("name ILIKE ?", ['%' . $query . '%'])
+                    ->orWhereRaw("public_name ILIKE ?", ['%' . $query . '%']);
             })
             ->limit(5)
             ->get();
@@ -113,9 +113,9 @@ class GlobalSearchController extends Controller
         // Search Customers (by first_name, last_name, or email)
         $customers = Customer::query()
             ->where(function ($q) use ($query) {
-                $q->where('first_name', 'LIKE', "%{$query}%")
-                    ->orWhere('last_name', 'LIKE', "%{$query}%")
-                    ->orWhere('email', 'LIKE', "%{$query}%");
+                $q->whereRaw("first_name ILIKE ?", ['%' . $query . '%'])
+                    ->orWhereRaw("last_name ILIKE ?", ['%' . $query . '%'])
+                    ->orWhereRaw("email ILIKE ?", ['%' . $query . '%']);
             })
             ->limit(5)
             ->get();
@@ -135,8 +135,8 @@ class GlobalSearchController extends Controller
         // Search Users (by name or email)
         $users = User::query()
             ->where(function ($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%")
-                    ->orWhere('email', 'LIKE', "%{$query}%");
+                $q->whereRaw("name ILIKE ?", ['%' . $query . '%'])
+                    ->orWhereRaw("email ILIKE ?", ['%' . $query . '%']);
             })
             ->limit(5)
             ->get();
@@ -202,10 +202,10 @@ class GlobalSearchController extends Controller
         }
 
         // Search Events (by title - translatable JSON field)
-        // Use whereRaw to bypass Laravel's cast handling for JSON columns
+        // Use whereRaw with ILIKE for case-insensitive search (PostgreSQL)
         $events = Event::query()
             ->where('tenant_id', $tenantId)
-            ->whereRaw("title LIKE ?", ['%' . $query . '%'])
+            ->whereRaw("title ILIKE ?", ['%' . $query . '%'])
             ->limit(5)
             ->get();
 
@@ -221,10 +221,10 @@ class GlobalSearchController extends Controller
         }
 
         // Search Venues (by name - translatable JSON field)
-        // Use whereRaw to bypass Laravel's cast handling for JSON columns
+        // Use whereRaw with ILIKE for case-insensitive search (PostgreSQL)
         $venues = Venue::query()
             ->where('tenant_id', $tenantId)
-            ->whereRaw("name LIKE ?", ['%' . $query . '%'])
+            ->whereRaw("name ILIKE ?", ['%' . $query . '%'])
             ->limit(5)
             ->get();
 
@@ -243,8 +243,8 @@ class GlobalSearchController extends Controller
         $orders = Order::query()
             ->where('tenant_id', $tenantId)
             ->where(function ($q) use ($query) {
-                $q->where('customer_email', 'LIKE', "%{$query}%")
-                    ->orWhere('id', 'LIKE', "%{$query}%");
+                $q->whereRaw("customer_email ILIKE ?", ['%' . $query . '%'])
+                    ->orWhereRaw("CAST(id AS TEXT) ILIKE ?", ['%' . $query . '%']);
             })
             ->limit(5)
             ->get();
@@ -266,9 +266,9 @@ class GlobalSearchController extends Controller
                 $q->where('tenant_id', $tenantId);
             })
             ->where(function ($q) use ($query) {
-                $q->where('code', 'LIKE', "%{$query}%")
+                $q->whereRaw("code ILIKE ?", ['%' . $query . '%'])
                     ->orWhereHas('order', function ($orderQ) use ($query) {
-                        $orderQ->where('customer_email', 'LIKE', "%{$query}%");
+                        $orderQ->whereRaw("customer_email ILIKE ?", ['%' . $query . '%']);
                     });
             })
             ->limit(5)
@@ -289,10 +289,10 @@ class GlobalSearchController extends Controller
         $customers = Customer::query()
             ->where('tenant_id', $tenantId)
             ->where(function ($q) use ($query) {
-                $q->where('first_name', 'LIKE', "%{$query}%")
-                    ->orWhere('last_name', 'LIKE', "%{$query}%")
-                    ->orWhere('email', 'LIKE', "%{$query}%")
-                    ->orWhere('phone', 'LIKE', "%{$query}%");
+                $q->whereRaw("first_name ILIKE ?", ['%' . $query . '%'])
+                    ->orWhereRaw("last_name ILIKE ?", ['%' . $query . '%'])
+                    ->orWhereRaw("email ILIKE ?", ['%' . $query . '%'])
+                    ->orWhereRaw("phone ILIKE ?", ['%' . $query . '%']);
             })
             ->limit(5)
             ->get();
