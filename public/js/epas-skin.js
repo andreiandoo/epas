@@ -18,8 +18,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function getSearchEndpoint() {
         const path = window.location.pathname;
 
-        // Check if we're in tenant panel (URL format: /tenant/{id}/...)
-        const tenantMatch = path.match(/^\/tenant\/(\d+)/);
+        // Check if we're in tenant panel (URL format: /tenant/{id}/... or /tenant/{slug}/...)
+        // Match any tenant identifier (numeric ID or slug)
+        const tenantMatch = path.match(/^\/tenant\/([^\/]+)/);
         if (tenantMatch) {
             return `/api/search/tenant/${tenantMatch[1]}`;
         }
