@@ -38,11 +38,9 @@ class GlobalSearchController extends Controller
         }
 
         // Search Venues (by name - translatable JSON field)
+        // Use whereRaw to bypass Laravel's cast handling for JSON columns
         $venues = Venue::query()
-            ->where(function ($q) use ($query) {
-                // Search in JSON column - MySQL treats JSON as text for LIKE
-                $q->where('name', 'LIKE', '%' . $query . '%');
-            })
+            ->whereRaw("name LIKE ?", ['%' . $query . '%'])
             ->limit(5)
             ->get();
 
@@ -75,11 +73,9 @@ class GlobalSearchController extends Controller
         }
 
         // Search Events (by title - translatable JSON field)
+        // Use whereRaw to bypass Laravel's cast handling for JSON columns
         $events = Event::query()
-            ->where(function ($q) use ($query) {
-                // Search in JSON column - MySQL treats JSON as text for LIKE
-                $q->where('title', 'LIKE', '%' . $query . '%');
-            })
+            ->whereRaw("title LIKE ?", ['%' . $query . '%'])
             ->limit(5)
             ->get();
 
@@ -193,13 +189,10 @@ class GlobalSearchController extends Controller
         }
 
         // Search Events (by title - translatable JSON field)
-        // Search in all language values within JSON
+        // Use whereRaw to bypass Laravel's cast handling for JSON columns
         $events = Event::query()
             ->where('tenant_id', $tenantId)
-            ->where(function ($q) use ($query) {
-                // Search in JSON column - MySQL treats JSON as text for LIKE
-                $q->where('title', 'LIKE', '%' . $query . '%');
-            })
+            ->whereRaw("title LIKE ?", ['%' . $query . '%'])
             ->limit(5)
             ->get();
 
@@ -215,12 +208,10 @@ class GlobalSearchController extends Controller
         }
 
         // Search Venues (by name - translatable JSON field)
+        // Use whereRaw to bypass Laravel's cast handling for JSON columns
         $venues = Venue::query()
             ->where('tenant_id', $tenantId)
-            ->where(function ($q) use ($query) {
-                // Search in JSON column - MySQL treats JSON as text for LIKE
-                $q->where('name', 'LIKE', '%' . $query . '%');
-            })
+            ->whereRaw("name LIKE ?", ['%' . $query . '%'])
             ->limit(5)
             ->get();
 
