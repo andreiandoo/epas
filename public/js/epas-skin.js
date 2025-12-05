@@ -14,15 +14,14 @@ document.addEventListener('DOMContentLoaded', function () {
     let searchTimeout;
     const minSearchLength = 3;
 
-    // Detect which panel we're in based on current URL
+    // Detect which panel we're in based on data attributes on the search input
     function getSearchEndpoint() {
-        const path = window.location.pathname;
+        const panel = searchInput.dataset.panel;
+        const tenant = searchInput.dataset.tenant;
 
-        // Check if we're in tenant panel (URL format: /tenant/{id}/... or /tenant/{slug}/...)
-        // Match any tenant identifier (numeric ID or slug)
-        const tenantMatch = path.match(/^\/tenant\/([^\/]+)/);
-        if (tenantMatch) {
-            return `/api/search/tenant/${tenantMatch[1]}`;
+        // If we're in tenant panel and have tenant slug from data attribute
+        if (panel === 'tenant' && tenant) {
+            return `/api/search/tenant/${tenant}`;
         }
 
         // Default to admin panel

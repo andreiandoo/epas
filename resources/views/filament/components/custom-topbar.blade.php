@@ -20,6 +20,12 @@
     $searchPlaceholder = $isAdminPanel
         ? 'Search pages, events, venues, tenants...'
         : 'Search pages, events, orders, tickets...';
+
+    // Get tenant slug for search API (tenant panel only)
+    $tenantSlug = null;
+    if (!$isAdminPanel && auth()->check() && auth()->user()->tenant) {
+        $tenantSlug = auth()->user()->tenant->slug;
+    }
 @endphp
 <div class="sticky top-0 z-20 px-4 fi-custom-topbar">
     <div class="flex items-center justify-between max-w-full gap-4">
@@ -32,6 +38,8 @@
                     placeholder="{{ $searchPlaceholder }}"
                     class="dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:border-gray-600"
                     autocomplete="off"
+                    data-panel="{{ $isAdminPanel ? 'admin' : 'tenant' }}"
+                    @if($tenantSlug) data-tenant="{{ $tenantSlug }}" @endif
                 >
                 <div class="search-icon">
                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

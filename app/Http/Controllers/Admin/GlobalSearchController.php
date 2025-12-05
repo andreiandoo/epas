@@ -209,13 +209,6 @@ class GlobalSearchController extends Controller
             ->limit(5)
             ->get();
 
-        \Log::info('Events search result', [
-            'tenantId' => $tenantId,
-            'query' => $query,
-            'count' => $events->count(),
-            'sql' => Event::query()->where('tenant_id', $tenantId)->whereRaw("title LIKE ?", ['%' . $query . '%'])->toSql(),
-        ]);
-
         if ($events->isNotEmpty()) {
             $results['events'] = $events->map(function ($event) use ($locale, $tenantSlug) {
                 return [
@@ -315,11 +308,6 @@ class GlobalSearchController extends Controller
                 ];
             })->toArray();
         }
-
-            \Log::info('Tenant search results', [
-                'resultsKeys' => array_keys($results),
-                'totalResults' => count($results),
-            ]);
 
             return response()->json($results);
         } catch (\Exception $e) {
