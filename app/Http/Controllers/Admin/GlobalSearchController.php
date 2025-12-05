@@ -21,14 +21,15 @@ class GlobalSearchController extends Controller
      */
     public function search(Request $request)
     {
-        $query = $request->input('q', '');
+        try {
+            $query = $request->input('q', '');
 
-        if (strlen($query) < 3) {
-            return response()->json([]);
-        }
+            if (strlen($query) < 3) {
+                return response()->json([]);
+            }
 
-        $results = [];
-        $locale = app()->getLocale();
+            $results = [];
+            $locale = app()->getLocale();
 
         // Search Navigation/Pages first
         $pages = $this->searchAdminPages($query);
@@ -148,7 +149,14 @@ class GlobalSearchController extends Controller
             })->toArray();
         }
 
-        return response()->json($results);
+            return response()->json($results);
+        } catch (\Exception $e) {
+            \Log::error('Admin search error: ' . $e->getMessage(), [
+                'query' => $request->input('q'),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -156,15 +164,16 @@ class GlobalSearchController extends Controller
      */
     public function searchTenant(Request $request, $tenant)
     {
-        $query = $request->input('q', '');
+        try {
+            $query = $request->input('q', '');
 
-        if (strlen($query) < 3) {
-            return response()->json([]);
-        }
+            if (strlen($query) < 3) {
+                return response()->json([]);
+            }
 
-        $results = [];
-        $locale = app()->getLocale();
-        $tenantId = $tenant;
+            $results = [];
+            $locale = app()->getLocale();
+            $tenantId = $tenant;
 
         if (!$tenantId) {
             return response()->json([]);
@@ -235,9 +244,11 @@ class GlobalSearchController extends Controller
             })->toArray();
         }
 
-        // Search Tickets (by code or email)
+        // Search Tickets (by code or email) - filter through orders since tickets don't have tenant_id
         $tickets = Ticket::query()
-            ->where('tenant_id', $tenantId)
+            ->whereHas('order', function ($q) use ($tenantId) {
+                $q->where('tenant_id', $tenantId);
+            })
             ->where(function ($q) use ($query) {
                 $q->where('code', 'LIKE', "%{$query}%")
                     ->orWhereHas('order', function ($orderQ) use ($query) {
@@ -280,7 +291,15 @@ class GlobalSearchController extends Controller
             })->toArray();
         }
 
-        return response()->json($results);
+            return response()->json($results);
+        } catch (\Exception $e) {
+            \Log::error('Tenant search error: ' . $e->getMessage(), [
+                'query' => $request->input('q'),
+                'tenant' => $tenant,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     /**
