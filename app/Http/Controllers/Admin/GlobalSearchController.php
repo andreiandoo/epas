@@ -170,25 +170,33 @@ class GlobalSearchController extends Controller
         try {
             $query = $request->input('q', '');
 
-            \Log::info('Tenant search called', [
-                'tenant' => $tenant,
-                'query' => $query,
-            ]);
-
             if (strlen($query) < 3) {
                 return response()->json([]);
             }
 
             $results = [];
             $locale = app()->getLocale();
-            $tenantId = $tenant;
+
+            // Resolve tenant - can be ID or slug
+            // Keep original for URL building, get numeric ID for queries
+            $tenantSlug = $tenant; // Original value for URLs
+            if (is_numeric($tenant)) {
+                $tenantId = (int) $tenant;
+            } else {
+                // Look up tenant by slug
+                $tenantRecord = Tenant::where('slug', $tenant)->first();
+                if (!$tenantRecord) {
+                    return response()->json([]);
+                }
+                $tenantId = $tenantRecord->id;
+            }
 
         if (!$tenantId) {
             return response()->json([]);
         }
 
         // Search Navigation/Pages first
-        $pages = $this->searchTenantPages($query, $tenantId);
+        $pages = $this->searchTenantPages($query, $tenantSlug);
         if (!empty($pages)) {
             $results['pages'] = $pages;
         }
@@ -209,12 +217,12 @@ class GlobalSearchController extends Controller
         ]);
 
         if ($events->isNotEmpty()) {
-            $results['events'] = $events->map(function ($event) use ($locale) {
+            $results['events'] = $events->map(function ($event) use ($locale, $tenantSlug) {
                 return [
                     'id' => $event->id,
                     'name' => $event->getTranslation('title', $locale) ?? $event->getTranslation('title', 'en') ?? 'Unnamed',
                     'subtitle' => $event->start_date ? $event->start_date->format('Y-m-d') : '',
-                    'url' => route('filament.tenant.resources.events.edit', ['record' => $event, 'tenant' => $tenantId]),
+                    'url' => route('filament.tenant.resources.events.edit', ['record' => $event, 'tenant' => $tenantSlug]),
                 ];
             })->toArray();
         }
@@ -228,12 +236,12 @@ class GlobalSearchController extends Controller
             ->get();
 
         if ($venues->isNotEmpty()) {
-            $results['venues'] = $venues->map(function ($venue) use ($locale, $tenantId) {
+            $results['venues'] = $venues->map(function ($venue) use ($locale, $tenantSlug) {
                 return [
                     'id' => $venue->id,
                     'name' => $venue->getTranslation('name', $locale) ?? $venue->getTranslation('name', 'en') ?? 'Unnamed',
                     'subtitle' => $venue->city ?? '',
-                    'url' => route('filament.tenant.resources.venues.edit', ['record' => $venue, 'tenant' => $tenantId]),
+                    'url' => route('filament.tenant.resources.venues.edit', ['record' => $venue, 'tenant' => $tenantSlug]),
                 ];
             })->toArray();
         }
@@ -249,12 +257,12 @@ class GlobalSearchController extends Controller
             ->get();
 
         if ($orders->isNotEmpty()) {
-            $results['orders'] = $orders->map(function ($order) use ($tenantId) {
+            $results['orders'] = $orders->map(function ($order) use ($tenantSlug) {
                 return [
                     'id' => $order->id,
                     'name' => "Order #{$order->id}",
                     'subtitle' => $order->customer_email ?? '',
-                    'url' => route('filament.tenant.resources.orders.view', ['record' => $order, 'tenant' => $tenantId]),
+                    'url' => route('filament.tenant.resources.orders.view', ['record' => $order, 'tenant' => $tenantSlug]),
                 ];
             })->toArray();
         }
@@ -274,12 +282,12 @@ class GlobalSearchController extends Controller
             ->get();
 
         if ($tickets->isNotEmpty()) {
-            $results['tickets'] = $tickets->map(function ($ticket) use ($tenantId) {
+            $results['tickets'] = $tickets->map(function ($ticket) use ($tenantSlug) {
                 return [
                     'id' => $ticket->id,
                     'name' => $ticket->code,
                     'subtitle' => $ticket->order?->customer_email ?? '',
-                    'url' => route('filament.tenant.resources.tickets.view', ['record' => $ticket, 'tenant' => $tenantId]),
+                    'url' => route('filament.tenant.resources.tickets.view', ['record' => $ticket, 'tenant' => $tenantSlug]),
                 ];
             })->toArray();
         }
@@ -297,13 +305,13 @@ class GlobalSearchController extends Controller
             ->get();
 
         if ($customers->isNotEmpty()) {
-            $results['customers'] = $customers->map(function ($customer) use ($tenantId) {
+            $results['customers'] = $customers->map(function ($customer) use ($tenantSlug) {
                 $name = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
                 return [
                     'id' => $customer->id,
                     'name' => $name ?: ($customer->email ?? 'Unnamed'),
                     'subtitle' => $customer->email ?? '',
-                    'url' => route('filament.tenant.resources.customers.edit', ['record' => $customer, 'tenant' => $tenantId]),
+                    'url' => route('filament.tenant.resources.customers.edit', ['record' => $customer, 'tenant' => $tenantSlug]),
                 ];
             })->toArray();
         }
