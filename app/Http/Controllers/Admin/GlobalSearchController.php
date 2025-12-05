@@ -108,10 +108,11 @@ class GlobalSearchController extends Controller
             })->toArray();
         }
 
-        // Search Customers (by name or email)
+        // Search Customers (by first_name, last_name, or email)
         $customers = Customer::query()
             ->where(function ($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%")
+                $q->where('first_name', 'LIKE', "%{$query}%")
+                    ->orWhere('last_name', 'LIKE', "%{$query}%")
                     ->orWhere('email', 'LIKE', "%{$query}%");
             })
             ->limit(5)
@@ -119,9 +120,10 @@ class GlobalSearchController extends Controller
 
         if ($customers->isNotEmpty()) {
             $results['customers'] = $customers->map(function ($customer) {
+                $name = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
                 return [
                     'id' => $customer->id,
-                    'name' => $customer->name ?? $customer->email ?? 'Unnamed',
+                    'name' => $name ?: ($customer->email ?? 'Unnamed'),
                     'subtitle' => $customer->email ?? '',
                     'url' => route('filament.admin.resources.customers.edit', ['record' => $customer]),
                 ];
@@ -268,11 +270,12 @@ class GlobalSearchController extends Controller
             })->toArray();
         }
 
-        // Search Customers
+        // Search Customers (by first_name, last_name, email, or phone)
         $customers = Customer::query()
             ->where('tenant_id', $tenantId)
             ->where(function ($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%")
+                $q->where('first_name', 'LIKE', "%{$query}%")
+                    ->orWhere('last_name', 'LIKE', "%{$query}%")
                     ->orWhere('email', 'LIKE', "%{$query}%")
                     ->orWhere('phone', 'LIKE', "%{$query}%");
             })
@@ -281,9 +284,10 @@ class GlobalSearchController extends Controller
 
         if ($customers->isNotEmpty()) {
             $results['customers'] = $customers->map(function ($customer) use ($tenantId) {
+                $name = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
                 return [
                     'id' => $customer->id,
-                    'name' => $customer->name ?? $customer->email ?? 'Unnamed',
+                    'name' => $name ?: ($customer->email ?? 'Unnamed'),
                     'subtitle' => $customer->email ?? '',
                     'url' => route('filament.tenant.resources.customers.edit', ['record' => $customer, 'tenant' => $tenantId]),
                 ];

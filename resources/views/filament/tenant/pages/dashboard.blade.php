@@ -105,7 +105,7 @@
         </div>
 
         <!-- Charts Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" wire:key="charts-{{ $chartPeriod }}">
             <!-- Sales Chart -->
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
                 <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
@@ -125,7 +125,7 @@
                 </div>
 
                 <div class="h-64">
-                    <canvas id="salesChart"></canvas>
+                    <canvas id="salesChart" data-chart='@json($chartData)'></canvas>
                 </div>
             </div>
 
@@ -137,7 +137,7 @@
                 </div>
 
                 <div class="h-64">
-                    <canvas id="ticketsChart"></canvas>
+                    <canvas id="ticketsChart" data-chart='@json($ticketChartData)'></canvas>
                 </div>
             </div>
         </div>
@@ -155,10 +155,13 @@
         });
 
         // Re-init charts when Livewire updates
-        Livewire.hook('morph.updated', ({ el, component }) => {
-            if (el.querySelector('#salesChart') || el.querySelector('#ticketsChart')) {
-                setTimeout(() => initCharts(), 100);
-            }
+        document.addEventListener('livewire:morph', function() {
+            setTimeout(() => initCharts(), 50);
+        });
+
+        // Also listen for the updated event
+        document.addEventListener('livewire:updated', function() {
+            setTimeout(() => initCharts(), 50);
         });
 
         function initCharts() {
@@ -177,7 +180,12 @@
             }
 
             const isDark = document.documentElement.classList.contains('dark');
-            const chartData = @json($chartData ?? ['labels' => [], 'data' => []]);
+
+            // Read data from data attribute
+            const chartDataStr = ctx.getAttribute('data-chart');
+            if (!chartDataStr) return;
+
+            const chartData = JSON.parse(chartDataStr);
 
             new Chart(ctx, {
                 type: 'line',
@@ -265,7 +273,12 @@
             }
 
             const isDark = document.documentElement.classList.contains('dark');
-            const ticketData = @json($ticketChartData ?? ['labels' => [], 'data' => [], 'tooltipData' => []]);
+
+            // Read data from data attribute
+            const ticketDataStr = ctx.getAttribute('data-chart');
+            if (!ticketDataStr) return;
+
+            const ticketData = JSON.parse(ticketDataStr);
 
             new Chart(ctx, {
                 type: 'bar',
