@@ -118,11 +118,18 @@ class PaymentConfig extends Page
         $config = $tenant->activePaymentConfig();
 
         if ($config) {
+            $additionalConfig = $config->additional_config ?? [];
+
             switch ($this->activeProcessor) {
                 case 'stripe':
-                    $formData['stripe_publishable_key'] = $config->stripe_publishable_key;
-                    $formData['stripe_secret_key'] = $config->stripe_secret_key;
-                    $formData['stripe_webhook_secret'] = $config->stripe_webhook_secret;
+                    // Live credentials (stored in main columns)
+                    $formData['stripe_live_publishable_key'] = $config->stripe_publishable_key;
+                    $formData['stripe_live_secret_key'] = $config->stripe_secret_key;
+                    $formData['stripe_live_webhook_secret'] = $config->stripe_webhook_secret;
+                    // Test credentials (stored in additional_config)
+                    $formData['stripe_test_publishable_key'] = $additionalConfig['stripe_test_publishable_key'] ?? null;
+                    $formData['stripe_test_secret_key'] = $additionalConfig['stripe_test_secret_key'] ?? null;
+                    $formData['stripe_test_webhook_secret'] = $additionalConfig['stripe_test_webhook_secret'] ?? null;
                     break;
 
                 case 'netopia':
@@ -221,49 +228,98 @@ class PaymentConfig extends Page
                             ->helperText('This processor is enabled via your microservices subscription'),
 
                         Forms\Components\Select::make('payment_processor_mode')
-                            ->label('Mode')
+                            ->label('Active Mode')
                             ->options([
                                 'test' => 'Test / Sandbox',
                                 'live' => 'Live / Production',
                             ])
                             ->required()
                             ->default('test')
-                            ->helperText('Start in test mode and switch to live when ready'),
+                            ->live()
+                            ->helperText('Select which credentials to use for payments'),
                     ])->columns(2),
 
-                // Stripe Configuration
-                SC\Section::make('Stripe Configuration')
-                    ->description('Enter your Stripe API keys from the Stripe Dashboard')
+                // Stripe Test Configuration
+                SC\Section::make('Test Credentials (Sandbox)')
+                    ->description('Enter your Stripe TEST API keys (pk_test_..., sk_test_...)')
+                    ->icon('heroicon-o-beaker')
                     ->schema([
-                        Forms\Components\TextInput::make('stripe_publishable_key')
-                            ->label('Publishable Key')
-                            ->placeholder('pk_test_... or pk_live_...')
-                            ->helperText('Public key for frontend integration')
-                            ->maxLength(255),
+                        Forms\Components\TextInput::make('stripe_test_publishable_key')
+                            ->label('Test Publishable Key')
+                            ->placeholder('pk_test_...')
+                            ->helperText('Public key for frontend integration (test mode)')
+                            ->maxLength(255)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
-                        Forms\Components\TextInput::make('stripe_secret_key')
-                            ->label('Secret Key')
+                        Forms\Components\TextInput::make('stripe_test_secret_key')
+                            ->label('Test Secret Key')
                             ->password()
                             ->revealable()
-                            ->placeholder('sk_test_... or sk_live_...')
-                            ->helperText('Secret key for backend API calls')
-                            ->maxLength(255),
+                            ->placeholder('sk_test_...')
+                            ->helperText('Secret key for backend API calls (test mode)')
+                            ->maxLength(255)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
-                        Forms\Components\TextInput::make('stripe_webhook_secret')
-                            ->label('Webhook Secret (Optional)')
+                        Forms\Components\TextInput::make('stripe_test_webhook_secret')
+                            ->label('Test Webhook Secret')
                             ->password()
                             ->revealable()
                             ->placeholder('whsec_...')
-                            ->helperText('For webhook signature verification')
-                            ->maxLength(255),
-
-                        Forms\Components\Placeholder::make('stripe_webhook_url')
-                            ->label('Webhook URL')
-                            ->content(fn () => $tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'stripe']) : '-')
-                            ->helperText('Add this URL to your Stripe webhook settings'),
+                            ->helperText('For webhook signature verification (test mode)')
+                            ->maxLength(255)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
                     ])
                     ->visible(fn () => $processor === 'stripe')
-                    ->columns(1),
+                    ->columns(1)
+                    ->collapsible(),
+
+                // Stripe Live Configuration
+                SC\Section::make('Live Credentials (Production)')
+                    ->description('Enter your Stripe LIVE API keys (pk_live_..., sk_live_...)')
+                    ->icon('heroicon-o-bolt')
+                    ->schema([
+                        Forms\Components\TextInput::make('stripe_live_publishable_key')
+                            ->label('Live Publishable Key')
+                            ->placeholder('pk_live_...')
+                            ->helperText('Public key for frontend integration (live mode)')
+                            ->maxLength(255)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
+
+                        Forms\Components\TextInput::make('stripe_live_secret_key')
+                            ->label('Live Secret Key')
+                            ->password()
+                            ->revealable()
+                            ->placeholder('sk_live_...')
+                            ->helperText('Secret key for backend API calls (live mode)')
+                            ->maxLength(255)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
+
+                        Forms\Components\TextInput::make('stripe_live_webhook_secret')
+                            ->label('Live Webhook Secret')
+                            ->password()
+                            ->revealable()
+                            ->placeholder('whsec_...')
+                            ->helperText('For webhook signature verification (live mode)')
+                            ->maxLength(255)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
+                    ])
+                    ->visible(fn () => $processor === 'stripe')
+                    ->columns(1)
+                    ->collapsible(),
+
+                // Stripe Webhook URL
+                SC\Section::make('Webhook Configuration')
+                    ->schema([
+                        Forms\Components\Placeholder::make('stripe_webhook_url')
+                            ->label('Webhook URL')
+                            ->content(fn () => new HtmlString(
+                                '<code class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm select-all">' .
+                                ($tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'stripe']) : '-') .
+                                '</code>'
+                            ))
+                            ->helperText('Add this URL to your Stripe webhook settings for both test and live modes'),
+                    ])
+                    ->visible(fn () => $processor === 'stripe'),
 
                 // Netopia Configuration
                 SC\Section::make('Netopia Payments Configuration')
@@ -273,23 +329,30 @@ class PaymentConfig extends Page
                             ->label('Merchant Signature')
                             ->placeholder('Your Netopia signature')
                             ->helperText('Merchant signature from Netopia dashboard')
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
                         Forms\Components\Textarea::make('netopia_api_key')
                             ->label('Private Key (PEM)')
                             ->placeholder('-----BEGIN PRIVATE KEY-----' . "\n" . '...' . "\n" . '-----END PRIVATE KEY-----')
                             ->helperText('Your private key in PEM format')
-                            ->rows(6),
+                            ->rows(6)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
                         Forms\Components\Textarea::make('netopia_public_key')
                             ->label('Public Certificate (PEM)')
                             ->placeholder('-----BEGIN CERTIFICATE-----' . "\n" . '...' . "\n" . '-----END CERTIFICATE-----')
                             ->helperText('Your public certificate in PEM format')
-                            ->rows(6),
+                            ->rows(6)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
                         Forms\Components\Placeholder::make('netopia_callback_url')
                             ->label('Callback URL')
-                            ->content(fn () => $tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'netopia']) : '-')
+                            ->content(fn () => new HtmlString(
+                                '<code class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm select-all">' .
+                                ($tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'netopia']) : '-') .
+                                '</code>'
+                            ))
                             ->helperText('Add this URL to your Netopia account settings'),
                     ])
                     ->visible(fn () => $processor === 'netopia')
@@ -303,7 +366,8 @@ class PaymentConfig extends Page
                             ->label('Merchant ID')
                             ->placeholder('Your EuPlatesc merchant ID')
                             ->helperText('Merchant ID from EuPlatesc account')
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
                         Forms\Components\TextInput::make('euplatesc_secret_key')
                             ->label('Secret Key')
@@ -311,11 +375,16 @@ class PaymentConfig extends Page
                             ->revealable()
                             ->placeholder('Your secret key')
                             ->helperText('Secret key for HMAC signature generation')
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
                         Forms\Components\Placeholder::make('euplatesc_callback_url')
                             ->label('Callback URL')
-                            ->content(fn () => $tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'euplatesc']) : '-')
+                            ->content(fn () => new HtmlString(
+                                '<code class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm select-all">' .
+                                ($tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'euplatesc']) : '-') .
+                                '</code>'
+                            ))
                             ->helperText('Add this URL to your EuPlatesc account settings'),
                     ])
                     ->visible(fn () => $processor === 'euplatesc')
@@ -329,7 +398,8 @@ class PaymentConfig extends Page
                             ->label('Merchant Code')
                             ->placeholder('Your PayU merchant code')
                             ->helperText('Merchant code from PayU account')
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
                         Forms\Components\TextInput::make('payu_secret_key')
                             ->label('Secret Key')
@@ -337,11 +407,16 @@ class PaymentConfig extends Page
                             ->revealable()
                             ->placeholder('Your secret key')
                             ->helperText('Secret key for HMAC signature generation')
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
                         Forms\Components\Placeholder::make('payu_callback_url')
                             ->label('IPN/IOS URL')
-                            ->content(fn () => $tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'payu']) : '-')
+                            ->content(fn () => new HtmlString(
+                                '<code class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm select-all">' .
+                                ($tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'payu']) : '-') .
+                                '</code>'
+                            ))
                             ->helperText('Add this URL to your PayU account for IPN/IOS notifications'),
                     ])
                     ->visible(fn () => $processor === 'payu')
@@ -393,9 +468,16 @@ class PaymentConfig extends Page
         // Add processor-specific fields
         switch ($processor) {
             case 'stripe':
-                $configData['stripe_publishable_key'] = $data['stripe_publishable_key'] ?? null;
-                $configData['stripe_secret_key'] = $data['stripe_secret_key'] ?? null;
-                $configData['stripe_webhook_secret'] = $data['stripe_webhook_secret'] ?? null;
+                // Live credentials go in main columns
+                $configData['stripe_publishable_key'] = $data['stripe_live_publishable_key'] ?? null;
+                $configData['stripe_secret_key'] = $data['stripe_live_secret_key'] ?? null;
+                $configData['stripe_webhook_secret'] = $data['stripe_live_webhook_secret'] ?? null;
+                // Test credentials go in additional_config
+                $configData['additional_config'] = [
+                    'stripe_test_publishable_key' => $data['stripe_test_publishable_key'] ?? null,
+                    'stripe_test_secret_key' => $data['stripe_test_secret_key'] ?? null,
+                    'stripe_test_webhook_secret' => $data['stripe_test_webhook_secret'] ?? null,
+                ];
                 break;
 
             case 'netopia':

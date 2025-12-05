@@ -18,8 +18,8 @@ class VenueResource extends Resource
 {
     protected static ?string $model = Venue::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office';
-    protected static \UnitEnum|string|null $navigationGroup = 'Content';
-    protected static ?int $navigationSort = 2;
+    protected static \UnitEnum|string|null $navigationGroup = null;
+    protected static ?int $navigationSort = 3;
 
     public static function getEloquentQuery(): Builder
     {

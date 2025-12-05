@@ -22,9 +22,8 @@ class PageResource extends Resource
 
     protected static ?string $navigationLabel = 'Pages';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Content';
-
-    protected static ?int $navigationSort = 5;
+    protected static \UnitEnum|string|null $navigationGroup = null;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $modelLabel = 'Page';
 
