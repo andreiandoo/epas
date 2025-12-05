@@ -37,9 +37,11 @@ class GlobalSearchController extends Controller
             $results['pages'] = $pages;
         }
 
-        // Search Venues (by name - translatable)
+        // Search Venues (by name - translatable JSON field)
         $venues = Venue::query()
-            ->where('name', 'LIKE', "%{$query}%")
+            ->where(function ($q) use ($query) {
+                $q->whereRaw("LOWER(CAST(name AS CHAR)) LIKE ?", ['%' . mb_strtolower($query) . '%']);
+            })
             ->limit(5)
             ->get();
 
@@ -71,9 +73,11 @@ class GlobalSearchController extends Controller
             })->toArray();
         }
 
-        // Search Events (by title - translatable)
+        // Search Events (by title - translatable JSON field)
         $events = Event::query()
-            ->where('title', 'LIKE', "%{$query}%")
+            ->where(function ($q) use ($query) {
+                $q->whereRaw("LOWER(CAST(title AS CHAR)) LIKE ?", ['%' . mb_strtolower($query) . '%']);
+            })
             ->limit(5)
             ->get();
 
@@ -186,10 +190,13 @@ class GlobalSearchController extends Controller
             $results['pages'] = $pages;
         }
 
-        // Search Events (by title - translatable)
+        // Search Events (by title - translatable JSON field)
+        // Search in all language values within JSON
         $events = Event::query()
             ->where('tenant_id', $tenantId)
-            ->where('title', 'LIKE', "%{$query}%")
+            ->where(function ($q) use ($query) {
+                $q->whereRaw("LOWER(CAST(title AS CHAR)) LIKE ?", ['%' . mb_strtolower($query) . '%']);
+            })
             ->limit(5)
             ->get();
 
@@ -204,10 +211,12 @@ class GlobalSearchController extends Controller
             })->toArray();
         }
 
-        // Search Venues
+        // Search Venues (by name - translatable JSON field)
         $venues = Venue::query()
             ->where('tenant_id', $tenantId)
-            ->where('name', 'LIKE', "%{$query}%")
+            ->where(function ($q) use ($query) {
+                $q->whereRaw("LOWER(CAST(name AS CHAR)) LIKE ?", ['%' . mb_strtolower($query) . '%']);
+            })
             ->limit(5)
             ->get();
 
@@ -222,14 +231,12 @@ class GlobalSearchController extends Controller
             })->toArray();
         }
 
-        // Search Orders (by email, order number, or customer name)
+        // Search Orders (by customer_email or ID)
         $orders = Order::query()
             ->where('tenant_id', $tenantId)
             ->where(function ($q) use ($query) {
-                $q->where('email', 'LIKE', "%{$query}%")
-                    ->orWhere('order_number', 'LIKE', "%{$query}%")
-                    ->orWhere('first_name', 'LIKE', "%{$query}%")
-                    ->orWhere('last_name', 'LIKE', "%{$query}%");
+                $q->where('customer_email', 'LIKE', "%{$query}%")
+                    ->orWhere('id', 'LIKE', "%{$query}%");
             })
             ->limit(5)
             ->get();
@@ -238,14 +245,14 @@ class GlobalSearchController extends Controller
             $results['orders'] = $orders->map(function ($order) use ($tenantId) {
                 return [
                     'id' => $order->id,
-                    'name' => $order->order_number ?? "Order #{$order->id}",
-                    'subtitle' => $order->email ?? '',
+                    'name' => "Order #{$order->id}",
+                    'subtitle' => $order->customer_email ?? '',
                     'url' => route('filament.tenant.resources.orders.view', ['record' => $order, 'tenant' => $tenantId]),
                 ];
             })->toArray();
         }
 
-        // Search Tickets (by code or email) - filter through orders since tickets don't have tenant_id
+        // Search Tickets (by code or customer_email) - filter through orders since tickets don't have tenant_id
         $tickets = Ticket::query()
             ->whereHas('order', function ($q) use ($tenantId) {
                 $q->where('tenant_id', $tenantId);
@@ -253,7 +260,7 @@ class GlobalSearchController extends Controller
             ->where(function ($q) use ($query) {
                 $q->where('code', 'LIKE', "%{$query}%")
                     ->orWhereHas('order', function ($orderQ) use ($query) {
-                        $orderQ->where('email', 'LIKE', "%{$query}%");
+                        $orderQ->where('customer_email', 'LIKE', "%{$query}%");
                     });
             })
             ->limit(5)
@@ -264,7 +271,7 @@ class GlobalSearchController extends Controller
                 return [
                     'id' => $ticket->id,
                     'name' => $ticket->code,
-                    'subtitle' => $ticket->order?->email ?? '',
+                    'subtitle' => $ticket->order?->customer_email ?? '',
                     'url' => route('filament.tenant.resources.tickets.view', ['record' => $ticket, 'tenant' => $tenantId]),
                 ];
             })->toArray();

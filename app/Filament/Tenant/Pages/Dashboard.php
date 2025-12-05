@@ -41,7 +41,8 @@ class Dashboard extends Page
 
     public function updatedChartPeriod(): void
     {
-        // Livewire will automatically re-render with new period
+        // Dispatch browser event to trigger chart re-initialization
+        $this->dispatch('charts-updated');
     }
 
     public function getViewData(): array

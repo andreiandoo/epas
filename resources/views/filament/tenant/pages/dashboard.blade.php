@@ -154,14 +154,16 @@
             initCharts();
         });
 
-        // Re-init charts when Livewire updates
-        document.addEventListener('livewire:morph', function() {
-            setTimeout(() => initCharts(), 50);
+        // Listen for custom event from Livewire when period changes
+        document.addEventListener('charts-updated', function() {
+            setTimeout(() => initCharts(), 100);
         });
 
-        // Also listen for the updated event
-        document.addEventListener('livewire:updated', function() {
-            setTimeout(() => initCharts(), 50);
+        // Also listen for Livewire navigation
+        Livewire.hook('morph.updated', ({ el }) => {
+            if (el.querySelector && (el.querySelector('#salesChart') || el.querySelector('#ticketsChart'))) {
+                setTimeout(() => initCharts(), 100);
+            }
         });
 
         function initCharts() {
