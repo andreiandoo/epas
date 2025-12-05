@@ -73,10 +73,10 @@ class Dashboard extends Page
             ->where('is_cancelled', false)
             ->count();
 
-        // Total sales (sum of paid orders)
+        // Total sales (sum of paid orders) - total_cents / 100
         $totalSales = Order::where('tenant_id', $tenantId)
             ->where('status', 'completed')
-            ->sum('total');
+            ->sum('total_cents') / 100;
 
         // Total tickets sold
         $totalTickets = Ticket::where('tenant_id', $tenantId)
@@ -88,10 +88,10 @@ class Dashboard extends Page
         // Total customers
         $totalCustomers = Customer::where('tenant_id', $tenantId)->count();
 
-        // Unpaid invoices VALUE
+        // Unpaid invoices VALUE - uses 'amount' decimal column
         $unpaidInvoicesValue = $tenant->invoices()
             ->whereIn('status', ['pending', 'overdue'])
-            ->sum('total');
+            ->sum('amount');
 
         // Chart data - daily sales for the selected period
         $chartData = $this->getChartData($tenantId, $startDate, $endDate, $days);
@@ -115,11 +115,11 @@ class Dashboard extends Page
         $labels = [];
         $data = [];
 
-        // Get daily totals
+        // Get daily totals (total_cents / 100)
         $dailySales = Order::where('tenant_id', $tenantId)
             ->where('status', 'completed')
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('DATE(created_at) as date, SUM(total) as total')
+            ->selectRaw('DATE(created_at) as date, SUM(total_cents) / 100 as total')
             ->groupBy('date')
             ->pluck('total', 'date')
             ->toArray();
