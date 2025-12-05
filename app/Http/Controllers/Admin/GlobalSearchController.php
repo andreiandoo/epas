@@ -51,7 +51,7 @@ class GlobalSearchController extends Controller
                     'id' => $venue->id,
                     'name' => $venue->getTranslation('name', $locale) ?? $venue->getTranslation('name', 'en') ?? 'Unnamed',
                     'subtitle' => $venue->city ?? '',
-                    'url' => route('filament.admin.resources.venues.edit', ['record' => $venue]),
+                    'url' => "/admin/venues/{$venue->id}/edit",
                 ];
             })->toArray();
         }
@@ -68,7 +68,7 @@ class GlobalSearchController extends Controller
                     'id' => $artist->id,
                     'name' => $artist->name ?? 'Unnamed',
                     'subtitle' => '',
-                    'url' => route('filament.admin.resources.artists.edit', ['record' => $artist]),
+                    'url' => "/admin/artists/{$artist->id}/edit",
                 ];
             })->toArray();
         }
@@ -86,7 +86,7 @@ class GlobalSearchController extends Controller
                     'id' => $event->id,
                     'name' => $event->getTranslation('title', $locale) ?? $event->getTranslation('title', 'en') ?? 'Unnamed',
                     'subtitle' => $event->start_date ? $event->start_date->format('Y-m-d') : '',
-                    'url' => route('filament.admin.resources.events.edit', ['record' => $event]),
+                    'url' => "/admin/events/{$event->id}/edit",
                 ];
             })->toArray();
         }
@@ -106,7 +106,7 @@ class GlobalSearchController extends Controller
                     'id' => $tenant->id,
                     'name' => $tenant->public_name ?? $tenant->name ?? 'Unnamed',
                     'subtitle' => $tenant->email ?? '',
-                    'url' => route('filament.admin.resources.tenants.edit', ['record' => $tenant]),
+                    'url' => "/admin/tenants/{$tenant->id}/edit",
                 ];
             })->toArray();
         }
@@ -128,7 +128,7 @@ class GlobalSearchController extends Controller
                     'id' => $customer->id,
                     'name' => $name ?: ($customer->email ?? 'Unnamed'),
                     'subtitle' => $customer->email ?? '',
-                    'url' => route('filament.admin.resources.customers.edit', ['record' => $customer]),
+                    'url' => "/admin/customers/{$customer->id}/edit",
                 ];
             })->toArray();
         }
@@ -148,7 +148,7 @@ class GlobalSearchController extends Controller
                     'id' => $user->id,
                     'name' => $user->name,
                     'subtitle' => $user->email,
-                    'url' => route('filament.admin.resources.users.edit', ['record' => $user]),
+                    'url' => "/admin/users/{$user->id}/edit",
                 ];
             })->toArray();
         }
@@ -180,8 +180,6 @@ class GlobalSearchController extends Controller
             $lowerQuery = '%' . mb_strtolower($query) . '%';
 
             // Resolve tenant - can be ID or slug
-            // Keep original for URL building, get numeric ID for queries
-            $tenantSlug = $tenant; // Original value for URLs
             if (is_numeric($tenant)) {
                 $tenantId = (int) $tenant;
             } else {
@@ -198,13 +196,12 @@ class GlobalSearchController extends Controller
         }
 
         // Search Navigation/Pages first
-        $pages = $this->searchTenantPages($query, $tenantSlug);
+        $pages = $this->searchTenantPages($query);
         if (!empty($pages)) {
             $results['pages'] = $pages;
         }
 
         // Search Events (by title - translatable JSON field)
-        // Use LOWER() for case-insensitive search (works on MySQL and PostgreSQL)
         $events = Event::query()
             ->where('tenant_id', $tenantId)
             ->whereRaw("LOWER(title) LIKE ?", [$lowerQuery])
@@ -212,18 +209,17 @@ class GlobalSearchController extends Controller
             ->get();
 
         if ($events->isNotEmpty()) {
-            $results['events'] = $events->map(function ($event) use ($locale, $tenantSlug) {
+            $results['events'] = $events->map(function ($event) use ($locale) {
                 return [
                     'id' => $event->id,
                     'name' => $event->getTranslation('title', $locale) ?? $event->getTranslation('title', 'en') ?? 'Unnamed',
                     'subtitle' => $event->start_date ? $event->start_date->format('Y-m-d') : '',
-                    'url' => route('filament.tenant.resources.events.edit', ['record' => $event, 'tenant' => $tenantSlug]),
+                    'url' => "/tenant/events/{$event->id}/edit",
                 ];
             })->toArray();
         }
 
         // Search Venues (by name - translatable JSON field)
-        // Use LOWER() for case-insensitive search (works on MySQL and PostgreSQL)
         $venues = Venue::query()
             ->where('tenant_id', $tenantId)
             ->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
@@ -231,12 +227,12 @@ class GlobalSearchController extends Controller
             ->get();
 
         if ($venues->isNotEmpty()) {
-            $results['venues'] = $venues->map(function ($venue) use ($locale, $tenantSlug) {
+            $results['venues'] = $venues->map(function ($venue) use ($locale) {
                 return [
                     'id' => $venue->id,
                     'name' => $venue->getTranslation('name', $locale) ?? $venue->getTranslation('name', 'en') ?? 'Unnamed',
                     'subtitle' => $venue->city ?? '',
-                    'url' => route('filament.tenant.resources.venues.edit', ['record' => $venue, 'tenant' => $tenantSlug]),
+                    'url' => "/tenant/venues/{$venue->id}/edit",
                 ];
             })->toArray();
         }
@@ -252,17 +248,17 @@ class GlobalSearchController extends Controller
             ->get();
 
         if ($orders->isNotEmpty()) {
-            $results['orders'] = $orders->map(function ($order) use ($tenantSlug) {
+            $results['orders'] = $orders->map(function ($order) {
                 return [
                     'id' => $order->id,
                     'name' => "Order #{$order->id}",
                     'subtitle' => $order->customer_email ?? '',
-                    'url' => route('filament.tenant.resources.orders.view', ['record' => $order, 'tenant' => $tenantSlug]),
+                    'url' => "/tenant/orders/{$order->id}",
                 ];
             })->toArray();
         }
 
-        // Search Tickets (by code or customer_email) - filter through orders since tickets don't have tenant_id
+        // Search Tickets (by code or customer_email)
         $tickets = Ticket::query()
             ->whereHas('order', function ($q) use ($tenantId) {
                 $q->where('tenant_id', $tenantId);
@@ -277,12 +273,12 @@ class GlobalSearchController extends Controller
             ->get();
 
         if ($tickets->isNotEmpty()) {
-            $results['tickets'] = $tickets->map(function ($ticket) use ($tenantSlug) {
+            $results['tickets'] = $tickets->map(function ($ticket) {
                 return [
                     'id' => $ticket->id,
                     'name' => $ticket->code,
                     'subtitle' => $ticket->order?->customer_email ?? '',
-                    'url' => route('filament.tenant.resources.tickets.view', ['record' => $ticket, 'tenant' => $tenantSlug]),
+                    'url' => "/tenant/tickets/{$ticket->id}",
                 ];
             })->toArray();
         }
@@ -300,13 +296,13 @@ class GlobalSearchController extends Controller
             ->get();
 
         if ($customers->isNotEmpty()) {
-            $results['customers'] = $customers->map(function ($customer) use ($tenantSlug) {
+            $results['customers'] = $customers->map(function ($customer) {
                 $name = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
                 return [
                     'id' => $customer->id,
                     'name' => $name ?: ($customer->email ?? 'Unnamed'),
                     'subtitle' => $customer->email ?? '',
-                    'url' => route('filament.tenant.resources.customers.edit', ['record' => $customer, 'tenant' => $tenantSlug]),
+                    'url' => "/tenant/customers/{$customer->id}/edit",
                 ];
             })->toArray();
         }
@@ -387,37 +383,36 @@ class GlobalSearchController extends Controller
     /**
      * Search tenant panel navigation pages
      */
-    private function searchTenantPages(string $query, $tenantId): array
+    private function searchTenantPages(string $query): array
     {
-        $baseUrl = "/tenant/{$tenantId}";
-
         $pages = [
             // Top level
-            ['name' => 'Dashboard', 'keywords' => ['dashboard', 'acasa', 'home', 'panou'], 'url' => $baseUrl, 'subtitle' => 'Overview dashboard'],
-            ['name' => 'Events', 'keywords' => ['events', 'event', 'evenimente'], 'url' => "{$baseUrl}/events", 'subtitle' => 'Manage your events'],
-            ['name' => 'Venues', 'keywords' => ['venues', 'venue', 'locatii', 'location'], 'url' => "{$baseUrl}/venues", 'subtitle' => 'Manage venues'],
-            ['name' => 'Pages', 'keywords' => ['pages', 'page', 'pagini', 'content'], 'url' => "{$baseUrl}/pages", 'subtitle' => 'Website pages'],
+            ['name' => 'Dashboard', 'keywords' => ['dashboard', 'acasa', 'home', 'panou'], 'url' => '/tenant', 'subtitle' => 'Overview dashboard'],
+            ['name' => 'Events', 'keywords' => ['events', 'event', 'evenimente'], 'url' => '/tenant/events', 'subtitle' => 'Manage your events'],
+            ['name' => 'Venues', 'keywords' => ['venues', 'venue', 'locatii', 'location'], 'url' => '/tenant/venues', 'subtitle' => 'Manage venues'],
+            ['name' => 'Pages', 'keywords' => ['pages', 'page', 'pagini', 'content'], 'url' => '/tenant/pages', 'subtitle' => 'Website pages'],
 
             // Sales
-            ['name' => 'Orders', 'keywords' => ['orders', 'order', 'comenzi', 'comanda', 'sales'], 'url' => "{$baseUrl}/orders", 'subtitle' => 'View customer orders'],
-            ['name' => 'Tickets', 'keywords' => ['tickets', 'ticket', 'bilete', 'bilet'], 'url' => "{$baseUrl}/tickets", 'subtitle' => 'View issued tickets'],
-            ['name' => 'Customers', 'keywords' => ['customers', 'customer', 'clienti', 'client'], 'url' => "{$baseUrl}/customers", 'subtitle' => 'Customer database'],
+            ['name' => 'Orders', 'keywords' => ['orders', 'order', 'comenzi', 'comanda', 'sales', 'vanzari'], 'url' => '/tenant/orders', 'subtitle' => 'View customer orders'],
+            ['name' => 'Tickets', 'keywords' => ['tickets', 'ticket', 'bilete', 'bilet'], 'url' => '/tenant/tickets', 'subtitle' => 'View issued tickets'],
+            ['name' => 'Customers', 'keywords' => ['customers', 'customer', 'clienti', 'client'], 'url' => '/tenant/customers', 'subtitle' => 'Customer database'],
 
             // Services
-            ['name' => 'Affiliates', 'keywords' => ['affiliates', 'affiliate', 'afiliati', 'partners'], 'url' => "{$baseUrl}/affiliates", 'subtitle' => 'Affiliate management'],
+            ['name' => 'Affiliates', 'keywords' => ['affiliates', 'affiliate', 'afiliati', 'partners', 'parteneri'], 'url' => '/tenant/affiliates', 'subtitle' => 'Affiliate management'],
+            ['name' => 'Microservices', 'keywords' => ['microservices', 'micro', 'services', 'servicii', 'integrations', 'integrari'], 'url' => '/tenant/microservices', 'subtitle' => 'Integrations & services'],
 
             // Website
-            ['name' => 'Theme Editor', 'keywords' => ['theme', 'editor', 'design', 'culori', 'colors', 'style'], 'url' => "{$baseUrl}/theme-editor", 'subtitle' => 'Customize website theme'],
+            ['name' => 'Theme Editor', 'keywords' => ['theme', 'editor', 'design', 'culori', 'colors', 'style', 'tema'], 'url' => '/tenant/theme-editor', 'subtitle' => 'Customize website theme'],
 
             // Settings
-            ['name' => 'Settings', 'keywords' => ['settings', 'setari', 'configuration', 'config'], 'url' => "{$baseUrl}/settings", 'subtitle' => 'Account settings'],
-            ['name' => 'Payment Config', 'keywords' => ['payment', 'plati', 'stripe', 'processor', 'gateway'], 'url' => "{$baseUrl}/payment-config", 'subtitle' => 'Payment configuration'],
-            ['name' => 'Domains', 'keywords' => ['domains', 'domain', 'domenii', 'dns'], 'url' => "{$baseUrl}/settings", 'subtitle' => 'Domain management (in Settings)'],
-            ['name' => 'Invoices', 'keywords' => ['invoices', 'invoice', 'facturi', 'factura', 'billing'], 'url' => "{$baseUrl}/invoices", 'subtitle' => 'View invoices'],
+            ['name' => 'Settings', 'keywords' => ['settings', 'setari', 'configuration', 'config'], 'url' => '/tenant/settings', 'subtitle' => 'Account settings'],
+            ['name' => 'Payment Config', 'keywords' => ['payment', 'plati', 'stripe', 'processor', 'gateway'], 'url' => '/tenant/payment-config', 'subtitle' => 'Payment configuration'],
+            ['name' => 'Domains', 'keywords' => ['domains', 'domain', 'domenii', 'dns'], 'url' => '/tenant/settings', 'subtitle' => 'Domain management (in Settings)'],
+            ['name' => 'Invoices', 'keywords' => ['invoices', 'invoice', 'facturi', 'factura', 'billing'], 'url' => '/tenant/invoices', 'subtitle' => 'View invoices'],
 
             // Bottom
-            ['name' => 'Documentation', 'keywords' => ['documentation', 'docs', 'documentatie', 'help', 'ajutor'], 'url' => "{$baseUrl}/documentation", 'subtitle' => 'Help & documentation'],
-            ['name' => 'Activity Log', 'keywords' => ['activity', 'log', 'activitate', 'jurnal', 'history'], 'url' => "{$baseUrl}/activity-log", 'subtitle' => 'View activity history'],
+            ['name' => 'Documentation', 'keywords' => ['documentation', 'docs', 'documentatie', 'help', 'ajutor'], 'url' => '/tenant/documentation', 'subtitle' => 'Help & documentation'],
+            ['name' => 'Activity Log', 'keywords' => ['activity', 'log', 'activitate', 'jurnal', 'history', 'istoric'], 'url' => '/tenant/activity-log', 'subtitle' => 'View activity history'],
         ];
 
         $lowerQuery = mb_strtolower($query);
