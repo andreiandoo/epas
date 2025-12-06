@@ -409,7 +409,7 @@ class Settings extends Page
 
                                         // Test Connection Button (shown only when provider is selected)
                                         SC\Actions::make([
-                                            SC\Actions\Action::make('testConnection')
+                                            \Filament\Actions\Action::make('testConnection')
                                                 ->label('Test Email Connection')
                                                 ->icon('heroicon-o-paper-airplane')
                                                 ->color('gray')
