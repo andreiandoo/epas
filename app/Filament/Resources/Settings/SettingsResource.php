@@ -162,55 +162,65 @@ class SettingsResource extends Resource
                     ->columnSpanFull()
                     ->hint('Text displayed at the bottom of invoices'),
 
-                SC\Grid::make(2)->schema([
-                    Forms\Components\FileUpload::make('meta.logo_admin_light')
-                        ->label('Admin Panel Logo (Light Mode)')
-                        ->image()
-                        ->directory('logos')
-                        ->visibility('public')
-                        ->acceptedFileTypes(['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'])
-                        ->hint('Logo for admin panel on light backgrounds'),
+                SC\Group::make()
+                    ->statePath('meta')
+                    ->schema([
+                        SC\Grid::make(2)->schema([
+                            Forms\Components\FileUpload::make('logo_admin_light')
+                                ->label('Admin Panel Logo (Light Mode)')
+                                ->image()
+                                ->imagePreviewHeight('80')
+                                ->directory('logos')
+                                ->visibility('public')
+                                ->acceptedFileTypes(['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'])
+                                ->hint('Logo for admin panel on light backgrounds'),
 
-                    Forms\Components\FileUpload::make('meta.logo_admin_dark')
-                        ->label('Admin Panel Logo (Dark Mode)')
-                        ->image()
-                        ->directory('logos')
-                        ->visibility('public')
-                        ->acceptedFileTypes(['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'])
-                        ->hint('Logo for admin panel on dark backgrounds'),
+                            Forms\Components\FileUpload::make('logo_admin_dark')
+                                ->label('Admin Panel Logo (Dark Mode)')
+                                ->image()
+                                ->imagePreviewHeight('80')
+                                ->directory('logos')
+                                ->visibility('public')
+                                ->acceptedFileTypes(['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'])
+                                ->hint('Logo for admin panel on dark backgrounds'),
 
-                    Forms\Components\FileUpload::make('meta.logo_tenant_light')
-                        ->label('Tenant Panel Logo (Light Mode)')
-                        ->image()
-                        ->directory('logos')
-                        ->visibility('public')
-                        ->acceptedFileTypes(['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'])
-                        ->hint('Logo for tenant panel on light backgrounds'),
+                            Forms\Components\FileUpload::make('logo_tenant_light')
+                                ->label('Tenant Panel Logo (Light Mode)')
+                                ->image()
+                                ->imagePreviewHeight('80')
+                                ->directory('logos')
+                                ->visibility('public')
+                                ->acceptedFileTypes(['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'])
+                                ->hint('Logo for tenant panel on light backgrounds'),
 
-                    Forms\Components\FileUpload::make('meta.logo_tenant_dark')
-                        ->label('Tenant Panel Logo (Dark Mode)')
-                        ->image()
-                        ->directory('logos')
-                        ->visibility('public')
-                        ->acceptedFileTypes(['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'])
-                        ->hint('Logo for tenant panel on dark backgrounds'),
+                            Forms\Components\FileUpload::make('logo_tenant_dark')
+                                ->label('Tenant Panel Logo (Dark Mode)')
+                                ->image()
+                                ->imagePreviewHeight('80')
+                                ->directory('logos')
+                                ->visibility('public')
+                                ->acceptedFileTypes(['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'])
+                                ->hint('Logo for tenant panel on dark backgrounds'),
 
-                    Forms\Components\FileUpload::make('meta.logo_public_light')
-                        ->label('Public Site Logo (Light Mode)')
-                        ->image()
-                        ->directory('logos')
-                        ->visibility('public')
-                        ->acceptedFileTypes(['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'])
-                        ->hint('Logo for public website on light backgrounds'),
+                            Forms\Components\FileUpload::make('logo_public_light')
+                                ->label('Public Site Logo (Light Mode)')
+                                ->image()
+                                ->imagePreviewHeight('80')
+                                ->directory('logos')
+                                ->visibility('public')
+                                ->acceptedFileTypes(['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'])
+                                ->hint('Logo for public website on light backgrounds'),
 
-                    Forms\Components\FileUpload::make('meta.logo_public_dark')
-                        ->label('Public Site Logo (Dark Mode)')
-                        ->image()
-                        ->directory('logos')
-                        ->visibility('public')
-                        ->acceptedFileTypes(['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'])
-                        ->hint('Logo for public website on dark backgrounds'),
-                ]),
+                            Forms\Components\FileUpload::make('logo_public_dark')
+                                ->label('Public Site Logo (Dark Mode)')
+                                ->image()
+                                ->imagePreviewHeight('80')
+                                ->directory('logos')
+                                ->visibility('public')
+                                ->acceptedFileTypes(['image/svg+xml', 'image/png', 'image/jpeg', 'image/webp'])
+                                ->hint('Logo for public website on dark backgrounds'),
+                        ]),
+                    ]),
             ])->columns(1),
 
             SC\Section::make('Email Settings')->schema([

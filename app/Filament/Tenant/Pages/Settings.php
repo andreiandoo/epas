@@ -408,8 +408,8 @@ class Settings extends Page
                                             ->columnSpanFull(),
 
                                         // Test Connection Button (shown only when provider is selected)
-                                        Forms\Components\Actions::make([
-                                            Forms\Components\Actions\Action::make('testConnection')
+                                        SC\Actions::make([
+                                            SC\Actions\Action::make('testConnection')
                                                 ->label('Test Email Connection')
                                                 ->icon('heroicon-o-paper-airplane')
                                                 ->color('gray')
