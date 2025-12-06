@@ -249,10 +249,12 @@ class BillingOverview extends Page
         $this->loadStats();
         $this->loadTenantData();
 
+        $tenantDisplayName = $tenant->public_name ?? $tenant->name;
+
         Notification::make()
             ->success()
             ->title('Proforma Generated')
-            ->body("Invoice {$invoice->number} created for {$tenant->public_name ?? $tenant->name} - " . number_format($totalAmount, 2) . ' ' . $invoice->currency)
+            ->body("Invoice {$invoice->number} created for {$tenantDisplayName} - " . number_format($totalAmount, 2) . ' ' . $invoice->currency)
             ->send();
     }
 
