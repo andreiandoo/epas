@@ -29,6 +29,8 @@ use Illuminate\Support\Str;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Support\Facades\DB;
+use Filament\Notifications\Notification;
+use App\Jobs\FetchArtistSocialStats;
 
 class ArtistResource extends Resource
 {
@@ -478,6 +480,62 @@ class ArtistResource extends Resource
                     ->getStateUsing(fn ($record) => $record->artistGenres->map(fn($g) => $g->getTranslation('name', app()->getLocale()))->implode(', '))
                     ->toggleable(),
 
+                // Social Stats columns
+                Tables\Columns\TextColumn::make('followers_youtube')
+                    ->label('YT Subs')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state) : '—'),
+
+                Tables\Columns\TextColumn::make('youtube_total_views')
+                    ->label('YT Views')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state) : '—'),
+
+                Tables\Columns\TextColumn::make('spotify_monthly_listeners')
+                    ->label('Spotify')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state) : '—'),
+
+                Tables\Columns\TextColumn::make('spotify_popularity')
+                    ->label('SP Pop')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(fn ($state) => $state !== null ? $state . '/100' : '—'),
+
+                Tables\Columns\TextColumn::make('followers_facebook')
+                    ->label('Facebook')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state) : '—'),
+
+                Tables\Columns\TextColumn::make('followers_instagram')
+                    ->label('Instagram')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state) : '—'),
+
+                Tables\Columns\TextColumn::make('followers_tiktok')
+                    ->label('TikTok')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state) : '—'),
+
+                Tables\Columns\TextColumn::make('social_stats_updated_at')
+                    ->label('Stats Updated')
+                    ->dateTime('d M Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 // Edit link
                 Tables\Columns\TextColumn::make('edit_link')
                     ->label('')
@@ -637,6 +695,39 @@ class ArtistResource extends Resource
                                     $artist->artistGenres()->syncWithoutDetaching($data['artist_genres']);
                                 }
                             }
+                        })
+                        ->deselectRecordsAfterCompletion(),
+                    BulkAction::make('fetchSocialStats')
+                        ->label('Fetch Social Stats')
+                        ->icon('heroicon-o-arrow-path')
+                        ->color('info')
+                        ->requiresConfirmation()
+                        ->modalHeading('Fetch Social Stats')
+                        ->modalDescription(fn (Collection $records) => "This will queue jobs to fetch YouTube, Spotify, and Facebook/Instagram stats for {$records->count()} selected artists. Artists without social profile IDs will be skipped.")
+                        ->action(function (Collection $records) {
+                            $queued = 0;
+                            $skipped = 0;
+
+                            foreach ($records as $artist) {
+                                // Check if artist has any social IDs
+                                $hasSocialIds = !empty($artist->youtube_id)
+                                    || !empty($artist->spotify_id)
+                                    || !empty($artist->facebook_url)
+                                    || !empty($artist->instagram_url);
+
+                                if ($hasSocialIds) {
+                                    FetchArtistSocialStats::dispatch($artist->id);
+                                    $queued++;
+                                } else {
+                                    $skipped++;
+                                }
+                            }
+
+                            Notification::make()
+                                ->title('Social Stats Fetch Queued')
+                                ->body("Queued {$queued} artists for stats update." . ($skipped > 0 ? " Skipped {$skipped} without social profiles." : ''))
+                                ->success()
+                                ->send();
                         })
                         ->deselectRecordsAfterCompletion(),
                 ]),
