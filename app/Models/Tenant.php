@@ -305,6 +305,17 @@ class Tenant extends Model
         return $this->hasMany(TenantPage::class);
     }
 
+    protected static function booted(): void
+    {
+        static::saving(function (Tenant $tenant) {
+            // Auto-calculate next_billing_date if empty but billing_starts_at is set
+            if (empty($tenant->next_billing_date) && $tenant->billing_starts_at) {
+                $cycleDays = $tenant->billing_cycle_days ?? 30;
+                $tenant->next_billing_date = $tenant->billing_starts_at->copy()->addDays($cycleDays);
+            }
+        });
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active';

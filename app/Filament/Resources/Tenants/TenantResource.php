@@ -378,11 +378,12 @@ class TenantResource extends Resource
                                         ->native(false)
                                         ->default(now())
                                         ->required()
-                                        ->reactive()
+                                        ->live()
                                         ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                                             $cycleDays = $get('billing_cycle_days') ?? 30;
                                             if ($state) {
-                                                $set('due_at', \Carbon\Carbon::parse($state)->addDays($cycleDays));
+                                                $nextBilling = \Carbon\Carbon::parse($state)->addDays($cycleDays);
+                                                $set('next_billing_date', $nextBilling->toDateString());
                                             }
                                         }),
 
@@ -392,20 +393,20 @@ class TenantResource extends Resource
                                         ->default(30)
                                         ->minValue(1)
                                         ->required()
-                                        ->reactive()
+                                        ->live()
                                         ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) {
                                             $billingStart = $get('billing_starts_at');
                                             if ($billingStart && $state) {
-                                                $set('due_at', \Carbon\Carbon::parse($billingStart)->addDays($state));
+                                                $nextBilling = \Carbon\Carbon::parse($billingStart)->addDays($state);
+                                                $set('next_billing_date', $nextBilling->toDateString());
                                             }
                                         }),
 
-                                    Forms\Components\DateTimePicker::make('due_at')
+                                    Forms\Components\DatePicker::make('next_billing_date')
                                         ->label('Next Billing Date')
                                         ->native(false)
                                         ->nullable()
-                                        ->disabled()
-                                        ->dehydrated(),
+                                        ->helperText('Auto-calculated from Billing Start + Cycle Days. Can be manually adjusted.'),
                                 ])->columns(3),
                         ]),
 
