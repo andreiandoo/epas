@@ -1,17 +1,33 @@
 @php
     use App\Models\Setting;
+    use Illuminate\Support\Facades\Storage;
 
     $settings = Setting::current();
     $meta = $settings->meta ?? [];
     $isAdminPanel = request()->is('admin*');
 
+    // Helper to get logo URL from stored value
+    $getLogoUrl = function ($value) {
+        if (empty($value)) return null;
+        // Handle array (FileUpload can store as array)
+        if (is_array($value)) {
+            $value = reset($value);
+        }
+        if (empty($value)) return null;
+        // Return storage URL
+        return Storage::disk('public')->url($value);
+    };
+
     // Get logos based on panel type
-    $logoLight = $isAdminPanel
+    $logoLightRaw = $isAdminPanel
         ? ($meta['logo_admin_light'] ?? null)
         : ($meta['logo_tenant_light'] ?? null);
-    $logoDark = $isAdminPanel
+    $logoDarkRaw = $isAdminPanel
         ? ($meta['logo_admin_dark'] ?? null)
         : ($meta['logo_tenant_dark'] ?? null);
+
+    $logoLight = $getLogoUrl($logoLightRaw);
+    $logoDark = $getLogoUrl($logoDarkRaw);
 
     $panelLabel = $isAdminPanel ? 'Admin Panel' : 'Tenant Panel';
     $brandName = 'Tixello';
@@ -23,26 +39,26 @@
             @if($logoLight && $logoDark)
                 {{-- Both logos provided: show appropriate one based on theme --}}
                 <img
-                    src="{{ asset('storage/' . $logoLight) }}"
+                    src="{{ $logoLight }}"
                     alt="{{ $brandName }}"
                     class="h-10 w-auto max-w-[180px] object-contain dark:hidden"
                 >
                 <img
-                    src="{{ asset('storage/' . $logoDark) }}"
+                    src="{{ $logoDark }}"
                     alt="{{ $brandName }}"
                     class="h-10 w-auto max-w-[180px] object-contain hidden dark:block"
                 >
             @elseif($logoLight)
                 {{-- Only light logo --}}
                 <img
-                    src="{{ asset('storage/' . $logoLight) }}"
+                    src="{{ $logoLight }}"
                     alt="{{ $brandName }}"
                     class="h-10 w-auto max-w-[180px] object-contain"
                 >
             @elseif($logoDark)
                 {{-- Only dark logo --}}
                 <img
-                    src="{{ asset('storage/' . $logoDark) }}"
+                    src="{{ $logoDark }}"
                     alt="{{ $brandName }}"
                     class="h-10 w-auto max-w-[180px] object-contain"
                 >

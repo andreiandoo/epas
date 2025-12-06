@@ -394,7 +394,7 @@ class Settings extends Page
                                         // Conditional fields based on mail provider
                                         SC\Group::make()
                                             ->key('mailProviderFields')
-                                            ->schema(fn (Forms\Get $get): array => match ($get('mail_driver')) {
+                                            ->schema(fn (\Filament\Schemas\Components\Utilities\Get $get): array => match ($get('mail_driver')) {
                                                 'smtp' => $this->getSmtpFields(),
                                                 'brevo' => $this->getBrevoFields(),
                                                 'postmark' => $this->getPostmarkFields(),
@@ -422,7 +422,7 @@ class Settings extends Page
                                                         ->send();
                                                 }),
                                         ])
-                                        ->visible(fn (Forms\Get $get): bool => filled($get('mail_driver')))
+                                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get): bool => filled($get('mail_driver')))
                                         ->columnSpanFull(),
                                     ])->columns(2),
                             ]),
