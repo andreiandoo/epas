@@ -6,6 +6,7 @@ use App\Models\Artist;
 use App\Services\YouTubeService;
 use App\Services\SpotifyService;
 use App\Services\FacebookService;
+use App\Services\TikTokService;
 use App\Jobs\FetchArtistSocialStats;
 use Illuminate\Console\Command;
 
@@ -18,20 +19,22 @@ class UpdateArtistSocialStats extends Command
                             {--batch-size=100 : Number of artists per batch when using queue}
                             {--limit= : Limit total number of artists to process}
                             {--skip-updated= : Skip artists updated within N days (default: 7)}
-                            {--platform= : Only fetch specific platform (youtube, spotify, facebook, all)}
+                            {--platform= : Only fetch specific platform (youtube, spotify, facebook, tiktok, all)}
                             {--dry-run : Show what would be processed without actually fetching}';
 
-    protected $description = 'Fetch and update social media stats (YouTube, Spotify, Facebook) for artists';
+    protected $description = 'Fetch and update social media stats (YouTube, Spotify, Facebook, TikTok) for artists';
 
     protected YouTubeService $youtubeService;
     protected SpotifyService $spotifyService;
     protected FacebookService $facebookService;
+    protected TikTokService $tiktokService;
 
     public function handle(): int
     {
         $this->youtubeService = new YouTubeService();
         $this->spotifyService = new SpotifyService();
         $this->facebookService = new FacebookService();
+        $this->tiktokService = new TikTokService();
 
         $platform = $this->option('platform') ?? 'all';
         $useQueue = $this->option('queue');
@@ -89,6 +92,10 @@ class UpdateArtistSocialStats extends Command
             $query->where(function ($q) {
                 $q->whereNotNull('facebook_url')->where('facebook_url', '!=', '');
             });
+        } elseif ($platform === 'tiktok') {
+            $query->where(function ($q) {
+                $q->whereNotNull('tiktok_url')->where('tiktok_url', '!=', '');
+            });
         } else {
             // All platforms - artist must have at least one social profile
             $query->where(function ($q) {
@@ -98,6 +105,8 @@ class UpdateArtistSocialStats extends Command
                     $sub->whereNotNull('spotify_id')->where('spotify_id', '!=', '');
                 })->orWhere(function ($sub) {
                     $sub->whereNotNull('facebook_url')->where('facebook_url', '!=', '');
+                })->orWhere(function ($sub) {
+                    $sub->whereNotNull('tiktok_url')->where('tiktok_url', '!=', '');
                 });
             });
         }
@@ -123,6 +132,7 @@ class UpdateArtistSocialStats extends Command
             'youtube' => 0,
             'spotify' => 0,
             'facebook' => 0,
+            'tiktok' => 0,
             'total' => $artists->count(),
         ];
 
@@ -130,6 +140,7 @@ class UpdateArtistSocialStats extends Command
             if (!empty($artist->youtube_id)) $stats['youtube']++;
             if (!empty($artist->spotify_id)) $stats['spotify']++;
             if (!empty($artist->facebook_url)) $stats['facebook']++;
+            if (!empty($artist->tiktok_url)) $stats['tiktok']++;
         }
 
         $this->table(
@@ -138,10 +149,14 @@ class UpdateArtistSocialStats extends Command
                 ['YouTube', $stats['youtube']],
                 ['Spotify', $stats['spotify']],
                 ['Facebook', $stats['facebook']],
+                ['TikTok', $stats['tiktok'] . ' (API limited*)'],
                 ['---', '---'],
                 ['Total Unique Artists', $stats['total']],
             ]
         );
+
+        $this->newLine();
+        $this->warn('* TikTok API does not provide public access to follower counts. Manual entry or third-party API (Social Blade) required.');
 
         $this->newLine();
         $this->info("Use --queue to process via jobs (recommended for large datasets)");
@@ -274,6 +289,29 @@ class UpdateArtistSocialStats extends Command
                     }
                 } catch (\Exception $e) {
                     $this->error("\nFacebook error for {$artist->name}: {$e->getMessage()}");
+                    $errorCount++;
+                }
+            }
+        }
+
+        // TikTok
+        // Note: TikTok API does NOT provide public access to user follower counts
+        // This will only work if TikTokService is extended with a third-party API
+        if (($platform === 'all' || $platform === 'tiktok') && !empty($artist->tiktok_url)) {
+            if ($this->tiktokService->isConfigured()) {
+                try {
+                    $username = TikTokService::extractUsername($artist->tiktok_url);
+
+                    if ($username) {
+                        $this->tiktokService->clearCache($username);
+                        $followers = $this->tiktokService->getFollowerCount($username);
+
+                        if ($followers !== null) {
+                            $changes['followers_tiktok'] = $followers;
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $this->error("\nTikTok error for {$artist->name}: {$e->getMessage()}");
                     $errorCount++;
                 }
             }

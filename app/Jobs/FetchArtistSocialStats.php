@@ -6,6 +6,7 @@ use App\Models\Artist;
 use App\Services\YouTubeService;
 use App\Services\SpotifyService;
 use App\Services\FacebookService;
+use App\Services\TikTokService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -103,6 +104,31 @@ class FetchArtistSocialStats implements ShouldQueue
             } catch (\Exception $e) {
                 $errors[] = "Facebook: {$e->getMessage()}";
                 Log::error("FetchArtistSocialStats Facebook error for {$artist->name}: {$e->getMessage()}");
+            }
+        }
+
+        // TikTok stats
+        // Note: TikTok API does NOT provide public access to user follower counts
+        // This will only work if TikTokService is extended with a third-party API (e.g., Social Blade)
+        if (!empty($artist->tiktok_url)) {
+            try {
+                $tiktokService = new TikTokService();
+
+                if ($tiktokService->isConfigured()) {
+                    $username = TikTokService::extractUsername($artist->tiktok_url);
+
+                    if ($username) {
+                        $tiktokService->clearCache($username);
+                        $followers = $tiktokService->getFollowerCount($username);
+
+                        if ($followers !== null) {
+                            $changes['followers_tiktok'] = $followers;
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                $errors[] = "TikTok: {$e->getMessage()}";
+                Log::error("FetchArtistSocialStats TikTok error for {$artist->name}: {$e->getMessage()}");
             }
         }
 

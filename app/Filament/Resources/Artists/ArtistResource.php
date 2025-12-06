@@ -703,7 +703,7 @@ class ArtistResource extends Resource
                         ->color('info')
                         ->requiresConfirmation()
                         ->modalHeading('Fetch Social Stats')
-                        ->modalDescription(fn (Collection $records) => "This will queue jobs to fetch YouTube, Spotify, and Facebook/Instagram stats for {$records->count()} selected artists. Artists without social profile IDs will be skipped.")
+                        ->modalDescription(fn (Collection $records) => "This will queue jobs to fetch YouTube, Spotify, Facebook, and TikTok stats for {$records->count()} selected artists. Artists without social profile IDs will be skipped. Note: TikTok API has limitations.")
                         ->action(function (Collection $records) {
                             $queued = 0;
                             $skipped = 0;
@@ -713,7 +713,8 @@ class ArtistResource extends Resource
                                 $hasSocialIds = !empty($artist->youtube_id)
                                     || !empty($artist->spotify_id)
                                     || !empty($artist->facebook_url)
-                                    || !empty($artist->instagram_url);
+                                    || !empty($artist->instagram_url)
+                                    || !empty($artist->tiktok_url);
 
                                 if ($hasSocialIds) {
                                     FetchArtistSocialStats::dispatch($artist->id);
