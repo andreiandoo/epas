@@ -2,12 +2,16 @@
 
 namespace App\Services;
 
+use App\Models\Invoice;
 use App\Models\Setting;
 use App\Models\Microservice;
 use App\Models\Tenant;
 use Stripe\Stripe;
 use Stripe\Checkout\Session;
 use Stripe\Customer;
+use Stripe\PaymentLink;
+use Stripe\Price;
+use Stripe\Product;
 use Stripe\Webhook;
 use Stripe\Exception\SignatureVerificationException;
 
@@ -290,5 +294,146 @@ class StripeService
     public function getPublishableKey(): ?string
     {
         return $this->settings->getStripePublicKey();
+    }
+
+    /**
+     * Create a checkout session for invoice payment
+     */
+    public function createInvoiceCheckoutSession(Invoice $invoice, string $successUrl, string $cancelUrl): Session
+    {
+        $this->ensureInitialized();
+
+        $tenant = $invoice->tenant;
+        $tenantName = $tenant->public_name ?? $tenant->name;
+        $invoiceType = $invoice->isProforma() ? 'Factura Proforma' : 'Factura Fiscala';
+
+        // Create checkout session
+        $session = Session::create([
+            'payment_method_types' => ['card'],
+            'line_items' => [
+                [
+                    'price_data' => [
+                        'currency' => strtolower($invoice->currency ?? 'ron'),
+                        'product_data' => [
+                            'name' => "{$invoiceType} #{$invoice->number}",
+                            'description' => $invoice->description,
+                        ],
+                        'unit_amount' => (int) round($invoice->amount * 100), // Convert to cents
+                    ],
+                    'quantity' => 1,
+                ],
+            ],
+            'mode' => 'payment',
+            'success_url' => $successUrl . '?session_id={CHECKOUT_SESSION_ID}',
+            'cancel_url' => $cancelUrl,
+            'client_reference_id' => (string) $invoice->id,
+            'customer_email' => $tenant->contact_email ?? $tenant->owner?->email,
+            'metadata' => [
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->number,
+                'tenant_id' => $tenant->id,
+                'payment_type' => 'invoice',
+            ],
+            'billing_address_collection' => 'required',
+            'invoice_creation' => [
+                'enabled' => false, // We handle our own invoices
+            ],
+        ]);
+
+        // Update invoice with checkout session info
+        $invoice->update([
+            'stripe_checkout_session_id' => $session->id,
+            'stripe_payment_link_url' => $session->url,
+        ]);
+
+        return $session;
+    }
+
+    /**
+     * Create a reusable payment link for an invoice
+     */
+    public function createInvoicePaymentLink(Invoice $invoice): PaymentLink
+    {
+        $this->ensureInitialized();
+
+        $tenant = $invoice->tenant;
+        $invoiceType = $invoice->isProforma() ? 'Factura Proforma' : 'Factura Fiscala';
+
+        // First, create a product for this invoice
+        $product = Product::create([
+            'name' => "{$invoiceType} #{$invoice->number}",
+            'description' => $invoice->description,
+            'metadata' => [
+                'invoice_id' => $invoice->id,
+                'tenant_id' => $tenant->id,
+            ],
+        ]);
+
+        // Create a price for the product
+        $price = Price::create([
+            'product' => $product->id,
+            'unit_amount' => (int) round($invoice->amount * 100), // Convert to cents
+            'currency' => strtolower($invoice->currency ?? 'ron'),
+        ]);
+
+        // Create the payment link
+        $paymentLink = PaymentLink::create([
+            'line_items' => [
+                [
+                    'price' => $price->id,
+                    'quantity' => 1,
+                ],
+            ],
+            'metadata' => [
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->number,
+                'tenant_id' => $tenant->id,
+                'payment_type' => 'invoice',
+            ],
+            'after_completion' => [
+                'type' => 'redirect',
+                'redirect' => [
+                    'url' => config('app.url') . '/invoice-payment/success?invoice=' . $invoice->id,
+                ],
+            ],
+        ]);
+
+        // Update invoice with payment link info
+        $invoice->update([
+            'stripe_payment_link_id' => $paymentLink->id,
+            'stripe_payment_link_url' => $paymentLink->url,
+        ]);
+
+        return $paymentLink;
+    }
+
+    /**
+     * Process invoice payment completed (from webhook)
+     */
+    public function processInvoicePaymentCompleted(Session $session): ?Invoice
+    {
+        $metadata = $session->metadata->toArray();
+
+        // Check if this is an invoice payment
+        if (($metadata['payment_type'] ?? '') !== 'invoice') {
+            return null;
+        }
+
+        $invoiceId = $metadata['invoice_id'] ?? $session->client_reference_id;
+
+        if (!$invoiceId) {
+            throw new \Exception('Invoice ID not found in session metadata');
+        }
+
+        $invoice = Invoice::find($invoiceId);
+
+        if (!$invoice) {
+            throw new \Exception("Invoice not found: {$invoiceId}");
+        }
+
+        // Mark invoice as paid
+        $invoice->markAsPaid('stripe', $session->id);
+
+        return $invoice;
     }
 }

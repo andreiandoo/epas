@@ -6,6 +6,7 @@ use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\Setting;
 use App\Models\Tenant;
+use App\Services\StripeService;
 use Carbon\Carbon;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -213,17 +214,14 @@ class BillingOverview extends Page
         // Generate invoice number
         $invoiceNumber = $settings->getNextInvoiceNumber();
 
-        // Build description
-        $description = "Comision servicii digitale";
-        if ($tenant->contract_number) {
-            $description .= " conform contract nr. {$tenant->contract_number}";
-        }
-        $description .= " - Perioada {$periodStart->format('d.m.Y')} - {$periodEnd->format('d.m.Y')}";
+        // Build description using the Invoice helper method
+        $description = Invoice::generateDescription($tenant, $periodStart, $periodEnd);
 
         // Create proforma invoice
         $invoice = Invoice::create([
             'tenant_id' => $tenant->id,
             'number' => 'PF-' . $invoiceNumber, // Prefix with PF for Proforma
+            'type' => 'proforma',
             'description' => $description,
             'issue_date' => now(),
             'period_start' => $periodStart,
@@ -236,11 +234,22 @@ class BillingOverview extends Page
             'currency' => $tenant->currency ?? 'EUR',
             'status' => 'new',
             'meta' => [
-                'type' => 'proforma',
                 'gross_revenue' => $grossRevenue,
                 'commission_rate' => $commissionRate,
             ],
         ]);
+
+        // Create Stripe payment link
+        $paymentLinkUrl = null;
+        try {
+            $stripeService = app(StripeService::class);
+            if ($stripeService->isConfigured()) {
+                $stripeService->createInvoicePaymentLink($invoice);
+                $paymentLinkUrl = $invoice->stripe_payment_link_url;
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Failed to create Stripe payment link for invoice ' . $invoice->number . ': ' . $e->getMessage());
+        }
 
         // Advance billing cycle
         $tenant->advanceBillingCycle();
@@ -251,10 +260,15 @@ class BillingOverview extends Page
 
         $tenantDisplayName = $tenant->public_name ?? $tenant->name;
 
+        $message = "Invoice {$invoice->number} created for {$tenantDisplayName} - " . number_format($totalAmount, 2) . ' ' . $invoice->currency;
+        if ($paymentLinkUrl) {
+            $message .= "\n\nPayment link created successfully.";
+        }
+
         Notification::make()
             ->success()
             ->title('Proforma Generated')
-            ->body("Invoice {$invoice->number} created for {$tenantDisplayName} - " . number_format($totalAmount, 2) . ' ' . $invoice->currency)
+            ->body($message)
             ->send();
     }
 

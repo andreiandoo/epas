@@ -80,7 +80,15 @@ class StripeWebhookController extends Controller
     {
         Log::info('Processing checkout.session.completed', ['session_id' => $session->id]);
 
-        // Process the order and activate microservices
+        $metadata = $session->metadata?->toArray() ?? [];
+
+        // Check if this is an invoice payment
+        if (($metadata['payment_type'] ?? '') === 'invoice') {
+            $this->handleInvoicePaymentCompleted($session);
+            return;
+        }
+
+        // Otherwise, process as microservice purchase
         $result = $this->stripeService->processCheckoutCompleted($session);
 
         $tenant = $result['tenant'];
@@ -109,6 +117,42 @@ class StripeWebhookController extends Controller
             'invoice_id' => $invoice->id,
             'microservices' => $microservices->pluck('id'),
         ]);
+    }
+
+    /**
+     * Handle invoice payment completed
+     */
+    protected function handleInvoicePaymentCompleted($session)
+    {
+        Log::info('Processing invoice payment', ['session_id' => $session->id]);
+
+        $invoice = $this->stripeService->processInvoicePaymentCompleted($session);
+
+        if (!$invoice) {
+            Log::warning('No invoice found for payment session', ['session_id' => $session->id]);
+            return;
+        }
+
+        $tenant = $invoice->tenant;
+
+        // Log activity
+        activity()
+            ->performedOn($invoice)
+            ->withProperties([
+                'invoice_number' => $invoice->number,
+                'amount' => $invoice->amount,
+                'currency' => $invoice->currency,
+                'session_id' => $session->id,
+            ])
+            ->log('Invoice paid via Stripe');
+
+        Log::info('Invoice payment processed successfully', [
+            'invoice_id' => $invoice->id,
+            'invoice_number' => $invoice->number,
+            'tenant_id' => $tenant->id,
+        ]);
+
+        // TODO: Send payment confirmation email to tenant
     }
 
     /**
