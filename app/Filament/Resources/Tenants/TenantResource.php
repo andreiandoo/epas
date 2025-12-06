@@ -356,6 +356,18 @@ class TenantResource extends Resource
                                             '10000' => 'Over 10,000 tickets/month',
                                         ])
                                         ->helperText('Expected monthly ticket volume'),
+
+                                    Forms\Components\Select::make('currency')
+                                        ->label('Default Currency')
+                                        ->options([
+                                            'RON' => 'RON - Romanian Leu',
+                                            'EUR' => 'EUR - Euro',
+                                            'USD' => 'USD - US Dollar',
+                                            'GBP' => 'GBP - British Pound',
+                                        ])
+                                        ->default('EUR')
+                                        ->required()
+                                        ->helperText('Default currency for sales and invoices'),
                                 ])->columns(2),
 
                             SC\Section::make('Billing')

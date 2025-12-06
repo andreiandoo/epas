@@ -50,6 +50,7 @@ class Settings extends Page
                 'website' => $tenant->website ?? '',
                 'bank_name' => $tenant->bank_name,
                 'bank_account' => $tenant->bank_account,
+                'currency' => $tenant->currency ?? 'EUR',
 
                 // Personalization
                 'site_title' => $settings['site_title'] ?? $tenant->public_name ?? $tenant->name ?? '',
@@ -130,6 +131,18 @@ class Settings extends Page
                                         Forms\Components\TextInput::make('bank_account')
                                             ->label('IBAN')
                                             ->maxLength(50),
+
+                                        Forms\Components\Select::make('currency')
+                                            ->label('Currency')
+                                            ->options([
+                                                'RON' => 'RON - Romanian Leu',
+                                                'EUR' => 'EUR - Euro',
+                                                'USD' => 'USD - US Dollar',
+                                                'GBP' => 'GBP - British Pound',
+                                            ])
+                                            ->default('EUR')
+                                            ->required()
+                                            ->helperText('Default currency for sales and invoices'),
                                     ])->columns(3),
 
                                 SC\Section::make('Address')
@@ -464,6 +477,7 @@ class Settings extends Page
             'website' => $data['website'],
             'bank_name' => $data['bank_name'],
             'bank_account' => $data['bank_account'],
+            'currency' => $data['currency'],
             'ticket_terms' => $data['ticket_terms'],
         ]);
 
