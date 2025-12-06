@@ -256,12 +256,13 @@ class InvoiceResource extends Resource
                         'gray'    => 'cancelled',
                     ])
                     ->sortable(),
-                Tables\Columns\TextColumn::make('stripe_payment_link_url')
-                    ->label('Payment')
-                    ->formatStateUsing(fn ($state) => $state ? 'Link' : '-')
+                Tables\Columns\IconColumn::make('stripe_payment_link_url')
+                    ->label('Pay')
+                    ->icon(fn ($state) => $state ? 'heroicon-o-credit-card' : 'heroicon-o-minus')
+                    ->color(fn ($state) => $state ? 'success' : 'gray')
                     ->url(fn ($record) => $record->stripe_payment_link_url)
                     ->openUrlInNewTab()
-                    ->color(fn ($state) => $state ? 'primary' : 'gray')
+                    ->tooltip(fn ($record) => $record->stripe_payment_link_url ? 'Open payment link' : 'No payment link')
                     ->toggleable(isToggledHiddenByDefault: false),
             ])
             ->defaultSort('issue_date', 'desc')
@@ -274,48 +275,6 @@ class InvoiceResource extends Resource
                     'proforma' => 'Proforma',
                     'fiscal' => 'Fiscal',
                 ]),
-            ])
-            ->actions([
-                Tables\Actions\Action::make('copyPaymentLink')
-                    ->label('Copy Payment Link')
-                    ->icon('heroicon-o-clipboard-document')
-                    ->visible(fn ($record) => $record->stripe_payment_link_url && $record->status !== 'paid')
-                    ->action(function ($record) {
-                        // The copy will be handled by the frontend
-                    })
-                    ->extraAttributes(fn ($record) => [
-                        'x-on:click' => "navigator.clipboard.writeText('{$record->stripe_payment_link_url}'); \$tooltip('Link copiat!')",
-                    ]),
-                Tables\Actions\Action::make('createPaymentLink')
-                    ->label('Create Payment Link')
-                    ->icon('heroicon-o-credit-card')
-                    ->visible(fn ($record) => !$record->stripe_payment_link_url && $record->status !== 'paid')
-                    ->requiresConfirmation()
-                    ->action(function ($record) {
-                        try {
-                            $stripeService = app(\App\Services\StripeService::class);
-                            if ($stripeService->isConfigured()) {
-                                $stripeService->createInvoicePaymentLink($record);
-                                \Filament\Notifications\Notification::make()
-                                    ->success()
-                                    ->title('Payment Link Created')
-                                    ->body('Stripe payment link has been created successfully.')
-                                    ->send();
-                            } else {
-                                \Filament\Notifications\Notification::make()
-                                    ->danger()
-                                    ->title('Stripe Not Configured')
-                                    ->body('Please configure Stripe API keys in Settings.')
-                                    ->send();
-                            }
-                        } catch (\Exception $e) {
-                            \Filament\Notifications\Notification::make()
-                                ->danger()
-                                ->title('Error')
-                                ->body('Failed to create payment link: ' . $e->getMessage())
-                                ->send();
-                        }
-                    }),
             ])
             ->bulkActions([]);
     }
