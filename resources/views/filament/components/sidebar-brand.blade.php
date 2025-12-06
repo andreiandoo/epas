@@ -31,29 +31,35 @@
 
     $brandName = 'Tixello';
 @endphp
+<style>
+    /* Light mode: show light logo, hide dark logo */
+    .ep-logo-light { display: block; }
+    .ep-logo-dark { display: none; }
+
+    /* Dark mode: hide light logo, show dark logo */
+    .dark .ep-logo-light { display: none; }
+    .dark .ep-logo-dark { display: block; }
+</style>
 @if($logoLight || $logoDark)
-    {{-- Logo with dark mode support using inline styles for reliability --}}
     @if($logoLight && $logoDark)
-        {{-- Both logos provided: show appropriate one based on theme --}}
+        {{-- Both logos provided --}}
         <img
             src="{{ $logoLight }}"
             alt="{{ $brandName }}"
-            class="h-8 w-auto max-w-[180px] object-contain block dark:!hidden"
+            class="ep-logo-light h-8 w-auto max-w-[180px] object-contain"
         >
         <img
             src="{{ $logoDark }}"
             alt="{{ $brandName }}"
-            class="h-8 w-auto max-w-[180px] object-contain !hidden dark:!block"
+            class="ep-logo-dark h-8 w-auto max-w-[180px] object-contain"
         >
     @elseif($logoLight)
-        {{-- Only light logo --}}
         <img
             src="{{ $logoLight }}"
             alt="{{ $brandName }}"
             class="h-8 w-auto max-w-[180px] object-contain"
         >
     @elseif($logoDark)
-        {{-- Only dark logo --}}
         <img
             src="{{ $logoDark }}"
             alt="{{ $brandName }}"
