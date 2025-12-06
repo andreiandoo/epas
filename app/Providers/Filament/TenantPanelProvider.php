@@ -99,7 +99,7 @@ class TenantPanelProvider extends PanelProvider
 
             // Custom brand with dynamic logos from settings
             ->brandLogo(fn () => view('filament.components.sidebar-brand'))
-            ->brandLogoHeight('2.5rem')
+            ->brandLogoHeight('2rem')
             ->renderHook('panels::topbar.end', fn (): string => view('filament.components.custom-topbar')->render())
             ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.tenant-support-card')->render());
     }

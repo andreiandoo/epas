@@ -69,7 +69,7 @@ class AdminPanelProvider extends PanelProvider
 
             // Custom brand with dynamic logos from settings
             ->brandLogo(fn () => view('filament.components.sidebar-brand'))
-            ->brandLogoHeight('2.5rem')
+            ->brandLogoHeight('2rem')
 
             // Custom topbar in actual topbar (not in content)
             ->renderHook('panels::topbar.end', fn (): string => view('filament.components.custom-topbar')->render())
