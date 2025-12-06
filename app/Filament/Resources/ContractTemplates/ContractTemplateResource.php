@@ -79,7 +79,7 @@ class ContractTemplateResource extends Resource
                                 'fr' => 'French (Français)',
                             ])
                             ->default('en')
-                            ->hintIcon('heroicon-o-translate', tooltip: 'Template language - matched to tenant locale'),
+                            ->hintIcon('heroicon-o-language', tooltip: 'Template language - matched to tenant locale'),
 
                         Forms\Components\Toggle::make('is_default')
                             ->label('Default Template')

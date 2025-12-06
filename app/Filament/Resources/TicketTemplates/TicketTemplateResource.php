@@ -282,7 +282,7 @@ class TicketTemplateResource extends Resource
                     ->searchable()
                     ->preload(),
             ])
-            ->defaultSort('updated_at', 'desc');
+            ->defaultSort('id', 'desc'); // Using id instead of updated_at to avoid MySQL sort buffer memory issues
     }
 
     public static function getRelations(): array
