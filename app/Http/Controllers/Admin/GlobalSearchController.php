@@ -308,12 +308,15 @@ class GlobalSearchController extends Controller
             })->toArray();
         }
 
-        // Search Invitations (by code or recipient name/email)
+        // Search Invitations (by code or recipient name/email in JSON)
         $invites = Invite::query()
             ->where('tenant_id', $tenantId)
-            ->where(function ($q) use ($lowerQuery, $query) {
+            ->where(function ($q) use ($lowerQuery) {
+                // Search by invite_code (case insensitive)
                 $q->whereRaw("LOWER(invite_code) LIKE ?", [$lowerQuery])
-                    ->orWhereRaw("LOWER(recipient) LIKE ?", [$lowerQuery]);
+                    // Search in recipient JSON field for name or email
+                    ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(recipient, '$.name'))) LIKE ?", [$lowerQuery])
+                    ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(recipient, '$.email'))) LIKE ?", [$lowerQuery]);
             })
             ->with('batch')
             ->limit(5)
@@ -375,19 +378,19 @@ class GlobalSearchController extends Controller
             })->values()->toArray();
         }
 
-        // Search Artists (public site URL)
+        // Search Artists (public site URL - external domain)
         $artists = Artist::query()
             ->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
             ->limit(5)
             ->get();
 
         if ($artists->isNotEmpty()) {
-            $results['artists'] = $artists->map(function ($artist) use ($locale) {
+            $results['artists'] = $artists->map(function ($artist) {
                 return [
                     'id' => $artist->id,
                     'name' => $artist->name ?? 'Unnamed',
                     'subtitle' => 'Public artist page',
-                    'url' => "/{$locale}/artist/{$artist->slug}",
+                    'url' => "https://tixello.com/artist/{$artist->slug}",
                 ];
             })->toArray();
         }

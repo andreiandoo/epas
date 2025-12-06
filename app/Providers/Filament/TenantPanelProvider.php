@@ -51,7 +51,7 @@ class TenantPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Indigo,
             ])
-            ->brandName('Tixello Tenant')
+            // brandName removed - using custom sidebar-brand view with uploaded logos
 
             // Discover tenant-specific resources, pages, and widgets
             ->discoverResources(in: app_path('Filament/Tenant/Resources'), for: 'App\\Filament\\Tenant\\Resources')

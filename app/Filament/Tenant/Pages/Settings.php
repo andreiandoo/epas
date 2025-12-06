@@ -84,9 +84,13 @@ class Settings extends Page
                 'mail_port' => $settings['mail']['port'] ?? '',
                 'mail_username' => $settings['mail']['username'] ?? '',
                 'mail_password' => '', // Never load password from DB for security
+                'mail_api_key' => '', // Never load API key from DB for security
+                'mail_api_secret' => '', // Never load secret from DB for security
                 'mail_encryption' => $settings['mail']['encryption'] ?? '',
                 'mail_from_address' => $settings['mail']['from_address'] ?? '',
                 'mail_from_name' => $settings['mail']['from_name'] ?? '',
+                'mail_domain' => $settings['mail']['domain'] ?? '',
+                'mail_region' => $settings['mail']['region'] ?? '',
             ]);
         }
     }
@@ -362,75 +366,64 @@ class Settings extends Page
                             ->icon('heroicon-o-envelope')
                             ->schema([
                                 SC\Section::make('Email Configuration')
-                                    ->description('Configure custom SMTP settings for sending emails. Leave empty to use core mail (Brevo).')
+                                    ->description('Configure custom mail settings for sending emails. Leave empty to use platform default.')
                                     ->schema([
                                         Forms\Components\Select::make('mail_driver')
                                             ->label('Mail Provider')
                                             ->options([
+                                                '' => 'Use Platform Default',
                                                 'smtp' => 'SMTP (Generic)',
-                                                'brevo' => 'Brevo',
+                                                'brevo' => 'Brevo (Sendinblue)',
+                                                'postmark' => 'Postmark',
+                                                'mailgun' => 'Mailgun',
+                                                'sendgrid' => 'SendGrid',
+                                                'ses' => 'Amazon SES',
                                                 'gmail' => 'Gmail',
                                                 'outlook' => 'Microsoft 365 / Outlook',
-                                                'mailgun' => 'Mailgun',
-                                                'ses' => 'Amazon SES',
-                                                'postmark' => 'Postmark',
-                                                'sendgrid' => 'SendGrid',
                                             ])
-                                            ->default('smtp')
                                             ->placeholder('Select mail provider')
-                                            ->helperText('Select your email service provider'),
+                                            ->live()
+                                            ->afterStateUpdated(fn (Forms\Components\Select $component) => $component
+                                                ->getContainer()
+                                                ->getComponent('mailProviderFields')
+                                                ?->getChildComponentContainer()
+                                                ->fill())
+                                            ->helperText('Select your email service provider')
+                                            ->columnSpanFull(),
 
-                                        Forms\Components\TextInput::make('mail_host')
-                                            ->label('SMTP Host')
-                                            ->placeholder('smtp.gmail.com')
-                                            ->maxLength(255)
-                                            ->helperText('Your mail server hostname'),
+                                        // Conditional fields based on mail provider
+                                        Forms\Components\Group::make()
+                                            ->key('mailProviderFields')
+                                            ->schema(fn (Forms\Get $get): array => match ($get('mail_driver')) {
+                                                'smtp' => $this->getSmtpFields(),
+                                                'brevo' => $this->getBrevoFields(),
+                                                'postmark' => $this->getPostmarkFields(),
+                                                'mailgun' => $this->getMailgunFields(),
+                                                'sendgrid' => $this->getSendgridFields(),
+                                                'ses' => $this->getSesFields(),
+                                                'gmail' => $this->getGmailFields(),
+                                                'outlook' => $this->getOutlookFields(),
+                                                default => [],
+                                            })
+                                            ->columnSpanFull(),
 
-                                        Forms\Components\TextInput::make('mail_port')
-                                            ->label('SMTP Port')
-                                            ->numeric()
-                                            ->default(587)
-                                            ->placeholder('587')
-                                            ->helperText('Usually 587 for TLS, 465 for SSL'),
-
-                                        Forms\Components\TextInput::make('mail_username')
-                                            ->label('Username / Email')
-                                            ->email()
-                                            ->maxLength(255)
-                                            ->placeholder('your-email@example.com')
-                                            ->helperText('Your SMTP username or email address'),
-
-                                        Forms\Components\TextInput::make('mail_password')
-                                            ->label('Password / App Password')
-                                            ->password()
-                                            ->maxLength(255)
-                                            ->placeholder('••••••••')
-                                            ->helperText('For Gmail/Outlook, use App Password. Leave empty to keep existing password.')
-                                            ->dehydrated(fn ($state) => filled($state)),
-
-                                        Forms\Components\Select::make('mail_encryption')
-                                            ->label('Encryption')
-                                            ->options([
-                                                'tls' => 'TLS (Recommended)',
-                                                'ssl' => 'SSL',
-                                                null => 'None',
-                                            ])
-                                            ->default('tls')
-                                            ->placeholder('Select encryption')
-                                            ->helperText('Security protocol for mail connection'),
-
-                                        Forms\Components\TextInput::make('mail_from_address')
-                                            ->label('From Email Address')
-                                            ->email()
-                                            ->maxLength(255)
-                                            ->placeholder('noreply@yourdomain.com')
-                                            ->helperText('Email address shown as sender'),
-
-                                        Forms\Components\TextInput::make('mail_from_name')
-                                            ->label('From Name')
-                                            ->maxLength(255)
-                                            ->placeholder('Your Company Name')
-                                            ->helperText('Display name shown as sender'),
+                                        // Test Connection Button (shown only when provider is selected)
+                                        Forms\Components\Actions::make([
+                                            Forms\Components\Actions\Action::make('testConnection')
+                                                ->label('Test Email Connection')
+                                                ->icon('heroicon-o-paper-airplane')
+                                                ->color('gray')
+                                                ->action(function () {
+                                                    // TODO: Implement test email
+                                                    \Filament\Notifications\Notification::make()
+                                                        ->info()
+                                                        ->title('Test email feature')
+                                                        ->body('Test email functionality coming soon.')
+                                                        ->send();
+                                                }),
+                                        ])
+                                        ->visible(fn (Forms\Get $get): bool => filled($get('mail_driver')))
+                                        ->columnSpanFull(),
                                     ])->columns(2),
                             ]),
 
@@ -507,30 +500,54 @@ class Settings extends Page
 
         // Update mail settings
         $mailSettings = $settings['mail'] ?? [];
+
+        // Always save driver (even if empty, to clear settings)
+        $mailSettings['driver'] = $data['mail_driver'] ?? '';
+
+        // Only save settings if a driver is selected
         if (!empty($data['mail_driver'])) {
-            $mailSettings['driver'] = $data['mail_driver'];
+            // Common fields for all providers
+            if (!empty($data['mail_from_address'])) {
+                $mailSettings['from_address'] = $data['mail_from_address'];
+            }
+            if (!empty($data['mail_from_name'])) {
+                $mailSettings['from_name'] = $data['mail_from_name'];
+            }
+
+            // SMTP-specific fields
+            if (!empty($data['mail_host'])) {
+                $mailSettings['host'] = $data['mail_host'];
+            }
+            if (!empty($data['mail_port'])) {
+                $mailSettings['port'] = $data['mail_port'];
+            }
+            if (!empty($data['mail_username'])) {
+                $mailSettings['username'] = $data['mail_username'];
+            }
+            if (!empty($data['mail_password'])) {
+                $mailSettings['password'] = encrypt($data['mail_password']);
+            }
+            if (isset($data['mail_encryption'])) {
+                $mailSettings['encryption'] = $data['mail_encryption'];
+            }
+
+            // API-based providers
+            if (!empty($data['mail_api_key'])) {
+                $mailSettings['api_key'] = encrypt($data['mail_api_key']);
+            }
+            if (!empty($data['mail_api_secret'])) {
+                $mailSettings['api_secret'] = encrypt($data['mail_api_secret']);
+            }
+
+            // Mailgun/SES specific
+            if (!empty($data['mail_domain'])) {
+                $mailSettings['domain'] = $data['mail_domain'];
+            }
+            if (!empty($data['mail_region'])) {
+                $mailSettings['region'] = $data['mail_region'];
+            }
         }
-        if (!empty($data['mail_host'])) {
-            $mailSettings['host'] = $data['mail_host'];
-        }
-        if (!empty($data['mail_port'])) {
-            $mailSettings['port'] = $data['mail_port'];
-        }
-        if (!empty($data['mail_username'])) {
-            $mailSettings['username'] = $data['mail_username'];
-        }
-        if (!empty($data['mail_password'])) {
-            $mailSettings['password'] = encrypt($data['mail_password']);
-        }
-        if (isset($data['mail_encryption'])) {
-            $mailSettings['encryption'] = $data['mail_encryption'];
-        }
-        if (!empty($data['mail_from_address'])) {
-            $mailSettings['from_address'] = $data['mail_from_address'];
-        }
-        if (!empty($data['mail_from_name'])) {
-            $mailSettings['from_name'] = $data['mail_from_name'];
-        }
+
         $settings['mail'] = $mailSettings;
 
         $tenant->update([
@@ -547,5 +564,394 @@ class Settings extends Page
     public function getTitle(): string
     {
         return 'Settings';
+    }
+
+    /**
+     * SMTP provider fields
+     */
+    private function getSmtpFields(): array
+    {
+        return [
+            Forms\Components\Grid::make(2)->schema([
+                Forms\Components\TextInput::make('mail_host')
+                    ->label('SMTP Host')
+                    ->placeholder('smtp.example.com')
+                    ->maxLength(255)
+                    ->required()
+                    ->helperText('Your mail server hostname'),
+
+                Forms\Components\TextInput::make('mail_port')
+                    ->label('SMTP Port')
+                    ->numeric()
+                    ->default(587)
+                    ->placeholder('587')
+                    ->required()
+                    ->helperText('Usually 587 for TLS, 465 for SSL'),
+
+                Forms\Components\TextInput::make('mail_username')
+                    ->label('Username')
+                    ->maxLength(255)
+                    ->placeholder('your-username')
+                    ->helperText('SMTP authentication username'),
+
+                Forms\Components\TextInput::make('mail_password')
+                    ->label('Password')
+                    ->password()
+                    ->maxLength(255)
+                    ->autocomplete('new-password')
+                    ->placeholder('••••••••')
+                    ->helperText('Leave empty to keep existing')
+                    ->dehydrated(fn ($state) => filled($state)),
+
+                Forms\Components\Select::make('mail_encryption')
+                    ->label('Encryption')
+                    ->options([
+                        'tls' => 'TLS (Recommended)',
+                        'ssl' => 'SSL',
+                        '' => 'None',
+                    ])
+                    ->default('tls')
+                    ->helperText('Security protocol'),
+
+                Forms\Components\TextInput::make('mail_from_address')
+                    ->label('From Email')
+                    ->email()
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('noreply@yourdomain.com')
+                    ->helperText('Sender email address'),
+
+                Forms\Components\TextInput::make('mail_from_name')
+                    ->label('From Name')
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('Your Company')
+                    ->helperText('Sender display name'),
+            ]),
+        ];
+    }
+
+    /**
+     * Brevo (Sendinblue) provider fields
+     */
+    private function getBrevoFields(): array
+    {
+        return [
+            Forms\Components\Grid::make(2)->schema([
+                Forms\Components\TextInput::make('mail_api_key')
+                    ->label('API Key')
+                    ->password()
+                    ->maxLength(255)
+                    ->autocomplete('new-password')
+                    ->placeholder('xkeysib-...')
+                    ->required()
+                    ->helperText('Your Brevo API key (v3)')
+                    ->dehydrated(fn ($state) => filled($state))
+                    ->columnSpanFull(),
+
+                Forms\Components\TextInput::make('mail_from_address')
+                    ->label('From Email')
+                    ->email()
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('noreply@yourdomain.com')
+                    ->helperText('Must be verified in Brevo'),
+
+                Forms\Components\TextInput::make('mail_from_name')
+                    ->label('From Name')
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('Your Company')
+                    ->helperText('Sender display name'),
+            ]),
+        ];
+    }
+
+    /**
+     * Postmark provider fields
+     */
+    private function getPostmarkFields(): array
+    {
+        return [
+            Forms\Components\Grid::make(2)->schema([
+                Forms\Components\TextInput::make('mail_api_key')
+                    ->label('Server API Token')
+                    ->password()
+                    ->maxLength(255)
+                    ->autocomplete('new-password')
+                    ->placeholder('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
+                    ->required()
+                    ->helperText('Found in Server → API Tokens')
+                    ->dehydrated(fn ($state) => filled($state))
+                    ->columnSpanFull(),
+
+                Forms\Components\TextInput::make('mail_from_address')
+                    ->label('From Email')
+                    ->email()
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('noreply@yourdomain.com')
+                    ->helperText('Must be verified sender signature'),
+
+                Forms\Components\TextInput::make('mail_from_name')
+                    ->label('From Name')
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('Your Company')
+                    ->helperText('Sender display name'),
+            ]),
+        ];
+    }
+
+    /**
+     * Mailgun provider fields
+     */
+    private function getMailgunFields(): array
+    {
+        return [
+            Forms\Components\Grid::make(2)->schema([
+                Forms\Components\TextInput::make('mail_api_key')
+                    ->label('API Key')
+                    ->password()
+                    ->maxLength(255)
+                    ->autocomplete('new-password')
+                    ->placeholder('key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+                    ->required()
+                    ->helperText('Private API key from Mailgun')
+                    ->dehydrated(fn ($state) => filled($state)),
+
+                Forms\Components\TextInput::make('mail_domain')
+                    ->label('Sending Domain')
+                    ->maxLength(255)
+                    ->placeholder('mg.yourdomain.com')
+                    ->required()
+                    ->helperText('Verified sending domain'),
+
+                Forms\Components\Select::make('mail_region')
+                    ->label('Region')
+                    ->options([
+                        'us' => 'US (api.mailgun.net)',
+                        'eu' => 'EU (api.eu.mailgun.net)',
+                    ])
+                    ->default('us')
+                    ->required()
+                    ->helperText('Mailgun API region'),
+
+                Forms\Components\TextInput::make('mail_from_address')
+                    ->label('From Email')
+                    ->email()
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('noreply@mg.yourdomain.com')
+                    ->helperText('Must use verified domain'),
+
+                Forms\Components\TextInput::make('mail_from_name')
+                    ->label('From Name')
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('Your Company')
+                    ->helperText('Sender display name'),
+            ]),
+        ];
+    }
+
+    /**
+     * SendGrid provider fields
+     */
+    private function getSendgridFields(): array
+    {
+        return [
+            Forms\Components\Grid::make(2)->schema([
+                Forms\Components\TextInput::make('mail_api_key')
+                    ->label('API Key')
+                    ->password()
+                    ->maxLength(255)
+                    ->autocomplete('new-password')
+                    ->placeholder('SG.xxxxxxxxxxxxxxxxxxxx')
+                    ->required()
+                    ->helperText('SendGrid API key with Mail Send permission')
+                    ->dehydrated(fn ($state) => filled($state))
+                    ->columnSpanFull(),
+
+                Forms\Components\TextInput::make('mail_from_address')
+                    ->label('From Email')
+                    ->email()
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('noreply@yourdomain.com')
+                    ->helperText('Must be verified sender'),
+
+                Forms\Components\TextInput::make('mail_from_name')
+                    ->label('From Name')
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('Your Company')
+                    ->helperText('Sender display name'),
+            ]),
+        ];
+    }
+
+    /**
+     * Amazon SES provider fields
+     */
+    private function getSesFields(): array
+    {
+        return [
+            Forms\Components\Grid::make(2)->schema([
+                Forms\Components\TextInput::make('mail_api_key')
+                    ->label('Access Key ID')
+                    ->password()
+                    ->maxLength(255)
+                    ->autocomplete('new-password')
+                    ->placeholder('AKIAIOSFODNN7EXAMPLE')
+                    ->required()
+                    ->helperText('AWS IAM access key')
+                    ->dehydrated(fn ($state) => filled($state)),
+
+                Forms\Components\TextInput::make('mail_api_secret')
+                    ->label('Secret Access Key')
+                    ->password()
+                    ->maxLength(255)
+                    ->autocomplete('new-password')
+                    ->placeholder('••••••••')
+                    ->required()
+                    ->helperText('AWS IAM secret key')
+                    ->dehydrated(fn ($state) => filled($state)),
+
+                Forms\Components\Select::make('mail_region')
+                    ->label('AWS Region')
+                    ->options([
+                        'us-east-1' => 'US East (N. Virginia)',
+                        'us-east-2' => 'US East (Ohio)',
+                        'us-west-1' => 'US West (N. California)',
+                        'us-west-2' => 'US West (Oregon)',
+                        'eu-west-1' => 'EU (Ireland)',
+                        'eu-west-2' => 'EU (London)',
+                        'eu-west-3' => 'EU (Paris)',
+                        'eu-central-1' => 'EU (Frankfurt)',
+                    ])
+                    ->required()
+                    ->helperText('SES region'),
+
+                Forms\Components\TextInput::make('mail_from_address')
+                    ->label('From Email')
+                    ->email()
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('noreply@yourdomain.com')
+                    ->helperText('Verified email or domain'),
+
+                Forms\Components\TextInput::make('mail_from_name')
+                    ->label('From Name')
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('Your Company')
+                    ->helperText('Sender display name'),
+            ]),
+        ];
+    }
+
+    /**
+     * Gmail provider fields
+     */
+    private function getGmailFields(): array
+    {
+        return [
+            Forms\Components\Grid::make(2)->schema([
+                Forms\Components\Placeholder::make('gmail_info')
+                    ->label('')
+                    ->content(new HtmlString('
+                        <div class="text-sm text-gray-600 dark:text-gray-400 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <strong>Important:</strong> Use an App Password, not your regular Gmail password.
+                            <a href="https://myaccount.google.com/apppasswords" target="_blank" class="text-primary-600 underline">Generate App Password</a>
+                        </div>
+                    '))
+                    ->columnSpanFull(),
+
+                Forms\Components\TextInput::make('mail_username')
+                    ->label('Gmail Address')
+                    ->email()
+                    ->maxLength(255)
+                    ->placeholder('your-email@gmail.com')
+                    ->required()
+                    ->helperText('Your Gmail address'),
+
+                Forms\Components\TextInput::make('mail_password')
+                    ->label('App Password')
+                    ->password()
+                    ->maxLength(255)
+                    ->autocomplete('new-password')
+                    ->placeholder('xxxx xxxx xxxx xxxx')
+                    ->required()
+                    ->helperText('16-character app password')
+                    ->dehydrated(fn ($state) => filled($state)),
+
+                Forms\Components\TextInput::make('mail_from_address')
+                    ->label('From Email')
+                    ->email()
+                    ->maxLength(255)
+                    ->placeholder('your-email@gmail.com')
+                    ->helperText('Usually same as Gmail address'),
+
+                Forms\Components\TextInput::make('mail_from_name')
+                    ->label('From Name')
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('Your Company')
+                    ->helperText('Sender display name'),
+            ]),
+        ];
+    }
+
+    /**
+     * Microsoft 365 / Outlook provider fields
+     */
+    private function getOutlookFields(): array
+    {
+        return [
+            Forms\Components\Grid::make(2)->schema([
+                Forms\Components\Placeholder::make('outlook_info')
+                    ->label('')
+                    ->content(new HtmlString('
+                        <div class="text-sm text-gray-600 dark:text-gray-400 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <strong>Important:</strong> Use an App Password if 2FA is enabled.
+                            <a href="https://account.live.com/proofs/AppPassword" target="_blank" class="text-primary-600 underline">Generate App Password</a>
+                        </div>
+                    '))
+                    ->columnSpanFull(),
+
+                Forms\Components\TextInput::make('mail_username')
+                    ->label('Email Address')
+                    ->email()
+                    ->maxLength(255)
+                    ->placeholder('your-email@outlook.com')
+                    ->required()
+                    ->helperText('Your Microsoft 365 / Outlook email'),
+
+                Forms\Components\TextInput::make('mail_password')
+                    ->label('Password / App Password')
+                    ->password()
+                    ->maxLength(255)
+                    ->autocomplete('new-password')
+                    ->placeholder('••••••••')
+                    ->required()
+                    ->helperText('Account or app password')
+                    ->dehydrated(fn ($state) => filled($state)),
+
+                Forms\Components\TextInput::make('mail_from_address')
+                    ->label('From Email')
+                    ->email()
+                    ->maxLength(255)
+                    ->placeholder('your-email@outlook.com')
+                    ->helperText('Usually same as login email'),
+
+                Forms\Components\TextInput::make('mail_from_name')
+                    ->label('From Name')
+                    ->maxLength(255)
+                    ->required()
+                    ->placeholder('Your Company')
+                    ->helperText('Sender display name'),
+            ]),
+        ];
     }
 }
