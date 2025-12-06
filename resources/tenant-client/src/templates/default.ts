@@ -117,6 +117,7 @@ const defaultTemplate: TemplateConfig = {
                             <h4 class="font-semibold text-gray-900 mb-4">Linkuri rapide</h4>
                             <ul class="space-y-2 text-sm">
                                 <li><a href="/events" class="text-gray-600 hover:text-primary">Evenimente</a></li>
+                                <li><a href="/past-events" class="text-gray-600 hover:text-primary">Evenimente trecute</a></li>
                                 <li><a href="/account" class="text-gray-600 hover:text-primary">Contul meu</a></li>
                             </ul>
                         </div>
@@ -129,9 +130,17 @@ const defaultTemplate: TemplateConfig = {
                             </ul>
                         </div>
                     </div>
-                    <div class="border-t mt-8 pt-8 text-center text-sm text-gray-500">
+                    <div class="border-t mt-8 pt-8 flex flex-col items-center justify-center text-sm text-gray-500">
                         <p>&copy; ${year} ${siteName}. Toate drepturile rezervate.</p>
-                        <p class="mt-2">Powered by <a href="https://tixello.com" class="text-primary hover:underline" target="_blank">Tixello</a></p>
+                        <div class="mt-3 flex items-center gap-2">
+                            <span>Powered by</span>
+                            <a href="${config.platform?.url || 'https://tixello.com'}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center">
+                                ${config.platform?.logo_light
+                                    ? `<img src="${config.platform.logo_light}" alt="${config.platform?.name || 'Tixello'}" class="h-5 w-auto">`
+                                    : `<span class="text-primary font-semibold hover:underline">${config.platform?.name || 'Tixello'}</span>`
+                                }
+                            </a>
+                        </div>
                     </div>
                 </div>
             </footer>

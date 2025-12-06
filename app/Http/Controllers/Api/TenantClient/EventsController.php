@@ -486,11 +486,41 @@ class EventsController extends Controller
 
         $search = $request->query('search');
         $category = $request->query('category');
+        $year = $request->query('year');
+        $month = $request->query('month');
         $page = $request->query('page', 1);
-        $perPage = $request->query('per_page', 12);
+        $perPage = $request->query('per_page', 50);
+
+        // Base query for past events
+        $baseQuery = Event::where('tenant_id', $tenant->id)->past();
+
+        // Get available years and months for filters
+        $allPastEvents = (clone $baseQuery)->get();
+        $availableFilters = $this->getAvailableYearsAndMonths($allPastEvents);
 
         $query = Event::where('tenant_id', $tenant->id)
             ->past(); // Use past scope
+
+        // Year filter
+        if ($year) {
+            $query->where(function ($q) use ($year) {
+                $q->whereYear('event_date', $year)
+                  ->orWhereYear('range_start_date', $year);
+            });
+        }
+
+        // Month filter (requires year)
+        if ($month && $year) {
+            $query->where(function ($q) use ($month, $year) {
+                $q->where(function ($subQ) use ($month, $year) {
+                    $subQ->whereYear('event_date', $year)
+                         ->whereMonth('event_date', $month);
+                })->orWhere(function ($subQ) use ($month, $year) {
+                    $subQ->whereYear('range_start_date', $year)
+                         ->whereMonth('range_start_date', $month);
+                });
+            });
+        }
 
         // Search
         if ($search) {
@@ -567,6 +597,7 @@ class EventsController extends Controller
                         // Note: No ticket_types for past events - they can't be purchased
                     ];
                 }),
+                'filters' => $availableFilters,
                 'meta' => [
                     'total' => $total,
                     'page' => $page,
@@ -574,5 +605,41 @@ class EventsController extends Controller
                 ],
             ],
         ]);
+    }
+
+    /**
+     * Get available years and months from past events
+     */
+    protected function getAvailableYearsAndMonths($events): array
+    {
+        $yearMonths = [];
+
+        foreach ($events as $event) {
+            $date = $event->event_date ?? $event->range_start_date;
+            if ($date) {
+                $year = $date->year;
+                $month = $date->month;
+
+                if (!isset($yearMonths[$year])) {
+                    $yearMonths[$year] = [];
+                }
+                if (!in_array($month, $yearMonths[$year])) {
+                    $yearMonths[$year][] = $month;
+                }
+            }
+        }
+
+        // Sort years descending
+        krsort($yearMonths);
+
+        // Sort months within each year
+        foreach ($yearMonths as $year => $months) {
+            sort($yearMonths[$year]);
+        }
+
+        return [
+            'years' => array_keys($yearMonths),
+            'months_by_year' => $yearMonths,
+        ];
     }
 }

@@ -8,8 +8,16 @@ export interface TixelloConfig {
     site: SiteConfig;
     social: SocialConfig;
     menus: MenusConfig;
+    platform: PlatformConfig;
     version: string;
     packageHash: string;
+}
+
+export interface PlatformConfig {
+    name: string;
+    url: string;
+    logo_light: string | null;
+    logo_dark: string | null;
 }
 
 export interface MenusConfig {
@@ -164,6 +172,12 @@ export class ConfigManager {
                     header: [],
                     footer: [],
                 },
+                platform: baseConfig.platform || {
+                    name: 'Tixello',
+                    url: 'https://tixello.com',
+                    logo_light: null,
+                    logo_dark: null,
+                },
             };
 
             // Fetch full config from API to get latest data
@@ -186,6 +200,9 @@ export class ConfigManager {
                     }
                     if (data.menus) {
                         this.config.menus = data.menus;
+                    }
+                    if (data.platform) {
+                        this.config.platform = { ...this.config.platform, ...data.platform };
                     }
                 }
             } catch {
@@ -235,6 +252,12 @@ export class ConfigManager {
                 header: [],
                 footer: [],
             },
+            platform: {
+                name: 'Tixello',
+                url: 'https://tixello.com',
+                logo_light: null,
+                logo_dark: null,
+            },
             version: '1.2.0',
             packageHash: '',
         };
@@ -258,6 +281,9 @@ export class ConfigManager {
                 }
                 if (data.menus) {
                     this.config.menus = data.menus;
+                }
+                if (data.platform) {
+                    this.config.platform = { ...this.config.platform, ...data.platform };
                 }
             }
         } catch {
@@ -304,6 +330,12 @@ export class ConfigManager {
                 header: [],
                 footer: [],
             },
+            platform: {
+                name: 'Tixello',
+                url: 'https://tixello.com',
+                logo_light: null,
+                logo_dark: null,
+            },
             version: '1.1.0',
             packageHash: '',
         };
@@ -327,6 +359,9 @@ export class ConfigManager {
                 }
                 if (data.menus) {
                     this.config.menus = data.menus;
+                }
+                if (data.platform) {
+                    this.config.platform = { ...this.config.platform, ...data.platform };
                 }
                 if (data.tenant) {
                     this.config.tenantId = data.tenant.id;

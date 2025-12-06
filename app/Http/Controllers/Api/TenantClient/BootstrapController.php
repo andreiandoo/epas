@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\TenantClient;
 
 use App\Http\Controllers\Controller;
+use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class BootstrapController extends Controller
 {
@@ -50,6 +52,9 @@ class BootstrapController extends Controller
         if ($hasAffiliates) {
             $data['affiliate_tracking'] = $this->getAffiliateConfig($tenant);
         }
+
+        // Add platform branding (Powered by logo)
+        $data['platform'] = $this->getPlatformBranding();
 
         return response()->json([
             'success' => true,
@@ -99,6 +104,36 @@ class BootstrapController extends Controller
             'cookie_name' => $config['cookie_name'] ?? 'aff_ref',
             'cookie_duration_days' => $config['cookie_duration_days'] ?? 90,
             'api_url' => config('app.url') . '/api/affiliates/track-click',
+        ];
+    }
+
+    /**
+     * Get platform branding (public logos for "Powered by" section)
+     */
+    protected function getPlatformBranding(): array
+    {
+        $settings = Setting::current();
+        $meta = $settings->meta ?? [];
+
+        $getLogoUrl = function ($value) {
+            if (empty($value)) {
+                return null;
+            }
+            // Handle array (FileUpload can store as array)
+            if (is_array($value)) {
+                $value = reset($value);
+            }
+            if (empty($value)) {
+                return null;
+            }
+            return Storage::disk('public')->url($value);
+        };
+
+        return [
+            'name' => 'Tixello',
+            'url' => 'https://tixello.com',
+            'logo_light' => $getLogoUrl($meta['logo_public_light'] ?? null),
+            'logo_dark' => $getLogoUrl($meta['logo_public_dark'] ?? null),
         ];
     }
 }

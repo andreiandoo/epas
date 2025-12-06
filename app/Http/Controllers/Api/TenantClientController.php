@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Domain;
 use App\Models\Event;
 use App\Models\EventType;
+use App\Models\Setting;
 use App\Models\Tenant;
 use App\Models\TenantPage;
 use Illuminate\Http\JsonResponse;
@@ -109,6 +110,7 @@ class TenantClientController extends Controller
                 'name' => $tenant->public_name ?? $tenant->name,
                 'locale' => $settings['site_language'] ?? 'en',
             ],
+            'platform' => $this->getPlatformBranding(),
         ]);
     }
 
@@ -522,5 +524,35 @@ class TenantClientController extends Controller
         }
 
         return array_unique($modules);
+    }
+
+    /**
+     * Get platform branding (public logos for "Powered by" section)
+     */
+    private function getPlatformBranding(): array
+    {
+        $settings = Setting::current();
+        $meta = $settings->meta ?? [];
+
+        $getLogoUrl = function ($value) {
+            if (empty($value)) {
+                return null;
+            }
+            // Handle array (FileUpload can store as array)
+            if (is_array($value)) {
+                $value = reset($value);
+            }
+            if (empty($value)) {
+                return null;
+            }
+            return Storage::disk('public')->url($value);
+        };
+
+        return [
+            'name' => 'Tixello',
+            'url' => 'https://tixello.com',
+            'logo_light' => $getLogoUrl($meta['logo_public_light'] ?? null),
+            'logo_dark' => $getLogoUrl($meta['logo_public_dark'] ?? null),
+        ];
     }
 }

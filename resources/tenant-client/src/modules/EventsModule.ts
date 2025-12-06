@@ -25,11 +25,18 @@ interface TicketType {
     description: string;
 }
 
+interface PastEventsFilters {
+    year?: number;
+    month?: number;
+}
+
 export class EventsModule {
     name = 'events';
     private apiClient: ApiClient | null = null;
     private eventBus: EventBus | null = null;
     private events: Event[] = [];
+    private pastEvents: Event[] = [];
+    private pastEventsFilters: PastEventsFilters = {};
 
     async init(apiClient: ApiClient, eventBus: EventBus): Promise<void> {
         this.apiClient = apiClient;
@@ -38,6 +45,7 @@ export class EventsModule {
         // Listen for route changes
         this.eventBus.on('route:events', () => this.loadEvents());
         this.eventBus.on('route:event-detail', (slug: string) => this.loadEventDetail(slug));
+        this.eventBus.on('route:past-events', () => this.loadPastEvents());
 
         console.log('Events module initialized');
     }
@@ -263,6 +271,195 @@ export class EventsModule {
                     this.eventBus.emit('cart:add', { event, items });
                     window.location.hash = '/cart';
                 }
+            });
+        }
+    }
+
+    // ==========================================
+    // PAST EVENTS SECTION
+    // ==========================================
+
+    async loadPastEvents(): Promise<void> {
+        if (!this.apiClient) return;
+
+        const container = document.getElementById('past-events-container');
+        if (!container) return;
+
+        try {
+            // Build query params from filters
+            const params: Record<string, string> = {};
+            if (this.pastEventsFilters.year) {
+                params.year = String(this.pastEventsFilters.year);
+            }
+            if (this.pastEventsFilters.month) {
+                params.month = String(this.pastEventsFilters.month);
+            }
+
+            const queryString = new URLSearchParams(params).toString();
+            const url = `/events/past${queryString ? `?${queryString}` : ''}`;
+
+            const response = await this.apiClient.get(url);
+            this.pastEvents = response.data.events || [];
+
+            container.innerHTML = this.renderPastEventsPage();
+            this.bindPastEventsFilters();
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500">Nu s-au putut încărca evenimentele trecute.</p>';
+            console.error('Failed to load past events:', error);
+        }
+    }
+
+    private renderPastEventsPage(): string {
+        const currentYear = new Date().getFullYear();
+        const years = [];
+        for (let y = currentYear; y >= currentYear - 10; y--) {
+            years.push(y);
+        }
+
+        const months = [
+            { value: 1, name: 'Ianuarie' },
+            { value: 2, name: 'Februarie' },
+            { value: 3, name: 'Martie' },
+            { value: 4, name: 'Aprilie' },
+            { value: 5, name: 'Mai' },
+            { value: 6, name: 'Iunie' },
+            { value: 7, name: 'Iulie' },
+            { value: 8, name: 'August' },
+            { value: 9, name: 'Septembrie' },
+            { value: 10, name: 'Octombrie' },
+            { value: 11, name: 'Noiembrie' },
+            { value: 12, name: 'Decembrie' },
+        ];
+
+        // Group events by month
+        const eventsByMonth = this.groupEventsByMonth(this.pastEvents);
+
+        return `
+            <div class="past-events-page">
+                <h1 style="font-size: 2rem; font-weight: 700; margin-bottom: 1.5rem;">Evenimente trecute</h1>
+
+                <!-- Filters -->
+                <div class="past-events-filters" style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+                    <select id="filter-year" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background: white; min-width: 120px;">
+                        <option value="">Toți anii</option>
+                        ${years.map(y => `<option value="${y}" ${this.pastEventsFilters.year === y ? 'selected' : ''}>${y}</option>`).join('')}
+                    </select>
+                    <select id="filter-month" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background: white; min-width: 150px;">
+                        <option value="">Toate lunile</option>
+                        ${months.map(m => `<option value="${m.value}" ${this.pastEventsFilters.month === m.value ? 'selected' : ''}>${m.name}</option>`).join('')}
+                    </select>
+                    <button id="clear-filters" style="padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background: #f3f4f6; cursor: pointer;">
+                        Resetează filtrele
+                    </button>
+                </div>
+
+                <!-- Events grouped by month -->
+                <div class="past-events-list">
+                    ${this.pastEvents.length === 0
+                        ? '<p style="color: #6b7280;">Nu există evenimente pentru perioada selectată.</p>'
+                        : this.renderEventsByMonth(eventsByMonth)
+                    }
+                </div>
+            </div>
+        `;
+    }
+
+    private groupEventsByMonth(events: Event[]): Map<string, Event[]> {
+        const grouped = new Map<string, Event[]>();
+
+        events.forEach(event => {
+            const date = new Date(event.event_date);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+            if (!grouped.has(monthKey)) {
+                grouped.set(monthKey, []);
+            }
+            grouped.get(monthKey)!.push(event);
+        });
+
+        // Sort by month descending (most recent first)
+        return new Map([...grouped.entries()].sort((a, b) => b[0].localeCompare(a[0])));
+    }
+
+    private renderEventsByMonth(eventsByMonth: Map<string, Event[]>): string {
+        const monthNames = [
+            'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+            'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
+        ];
+
+        let html = '';
+
+        eventsByMonth.forEach((events, monthKey) => {
+            const [year, month] = monthKey.split('-');
+            const monthName = monthNames[parseInt(month) - 1];
+
+            html += `
+                <div class="month-section" style="margin-bottom: 2.5rem;">
+                    <h2 style="font-size: 1.25rem; font-weight: 600; color: #374151; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e5e7eb;">
+                        ${monthName} ${year}
+                    </h2>
+                    <div class="events-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem;">
+                        ${events.map(event => this.renderPastEventCard(event)).join('')}
+                    </div>
+                </div>
+            `;
+        });
+
+        return html;
+    }
+
+    private renderPastEventCard(event: Event): string {
+        const date = new Date(event.event_date);
+        const formattedDate = date.toLocaleDateString('ro-RO', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
+
+        return `
+            <div class="tixello-card past-event-card" style="opacity: 0.9;">
+                ${event.image_url
+                    ? `<div style="position: relative;">
+                        <img src="${event.image_url}" alt="${event.title}" style="width: 100%; height: 160px; object-fit: cover; border-radius: 0.5rem 0.5rem 0 0; filter: grayscale(30%);">
+                        <span style="position: absolute; top: 0.5rem; right: 0.5rem; background: #374151; color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">Încheiat</span>
+                       </div>`
+                    : ''
+                }
+                <div style="padding: 1rem;">
+                    <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: #1f2937;">${event.title}</h3>
+                    <p style="color: #6b7280; font-size: 0.875rem;">
+                        ${formattedDate}
+                    </p>
+                    ${event.venue ? `<p style="color: #9ca3af; font-size: 0.875rem;">${event.venue}</p>` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    private bindPastEventsFilters(): void {
+        const yearSelect = document.getElementById('filter-year') as HTMLSelectElement;
+        const monthSelect = document.getElementById('filter-month') as HTMLSelectElement;
+        const clearBtn = document.getElementById('clear-filters');
+
+        if (yearSelect) {
+            yearSelect.addEventListener('change', () => {
+                this.pastEventsFilters.year = yearSelect.value ? parseInt(yearSelect.value) : undefined;
+                this.loadPastEvents();
+            });
+        }
+
+        if (monthSelect) {
+            monthSelect.addEventListener('change', () => {
+                this.pastEventsFilters.month = monthSelect.value ? parseInt(monthSelect.value) : undefined;
+                this.loadPastEvents();
+            });
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                this.pastEventsFilters = {};
+                this.loadPastEvents();
             });
         }
     }

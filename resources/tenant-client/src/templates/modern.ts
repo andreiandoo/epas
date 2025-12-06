@@ -104,6 +104,7 @@ const modernTemplate: TemplateConfig = {
                             <h4 class="font-bold text-lg mb-6">Navigare</h4>
                             <ul class="space-y-3">
                                 <li><a href="/events" class="text-gray-400 hover:text-white transition">Evenimente</a></li>
+                                <li><a href="/past-events" class="text-gray-400 hover:text-white transition">Evenimente trecute</a></li>
                                 <li><a href="/account" class="text-gray-400 hover:text-white transition">Contul meu</a></li>
                             </ul>
                         </div>
@@ -117,7 +118,15 @@ const modernTemplate: TemplateConfig = {
                     </div>
                     <div class="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
                         <p>&copy; ${year} ${siteName}</p>
-                        <p class="mt-4 md:mt-0">Powered by <a href="https://tixello.com" class="text-primary hover:underline" target="_blank">Tixello</a></p>
+                        <div class="mt-4 md:mt-0 flex items-center gap-2">
+                            <span>Powered by</span>
+                            <a href="${config.platform?.url || 'https://tixello.com'}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center">
+                                ${config.platform?.logo_dark
+                                    ? `<img src="${config.platform.logo_dark}" alt="${config.platform?.name || 'Tixello'}" class="h-5 w-auto">`
+                                    : `<span class="text-primary font-semibold hover:underline">${config.platform?.name || 'Tixello'}</span>`
+                                }
+                            </a>
+                        </div>
                     </div>
                 </div>
             </footer>
