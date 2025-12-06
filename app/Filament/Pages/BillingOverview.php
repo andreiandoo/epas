@@ -4,8 +4,10 @@ namespace App\Filament\Pages;
 
 use App\Models\Invoice;
 use App\Models\Order;
+use App\Models\Setting;
 use App\Models\Tenant;
 use Carbon\Carbon;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
 
@@ -34,7 +36,7 @@ class BillingOverview extends Page
         $startOfMonth = $today->copy()->startOfMonth();
 
         // Total unpaid invoices
-        $unpaidInvoices = Invoice::whereIn('status', ['pending', 'overdue', 'outstanding'])
+        $unpaidInvoices = Invoice::whereIn('status', ['pending', 'overdue', 'outstanding', 'new'])
             ->selectRaw('currency, SUM(amount) as total, COUNT(*) as count')
             ->groupBy('currency')
             ->get();
@@ -81,10 +83,10 @@ class BillingOverview extends Page
             ->orderBy('next_billing_date', 'asc')
             ->get()
             ->map(function (Tenant $tenant) use ($today) {
-                // Calculate current billing period
-                $periodEnd = $tenant->next_billing_date;
+                // Get billing period using tenant helper methods
+                $periodStart = $tenant->getCurrentPeriodStart();
+                $periodEnd = $tenant->getCurrentPeriodEnd();
                 $billingCycleDays = $tenant->billing_cycle_days ?? 30;
-                $periodStart = $periodEnd ? $periodEnd->copy()->subDays($billingCycleDays) : null;
 
                 // Calculate gross revenue from orders in current period (total_cents / 100)
                 $grossRevenueQuery = Order::where('tenant_id', $tenant->id)
@@ -92,6 +94,9 @@ class BillingOverview extends Page
 
                 if ($periodStart) {
                     $grossRevenueQuery->where('created_at', '>=', $periodStart);
+                }
+                if ($periodEnd) {
+                    $grossRevenueQuery->where('created_at', '<=', $periodEnd->endOfDay());
                 }
 
                 $grossRevenue = $grossRevenueQuery->sum('total_cents') / 100;
@@ -108,11 +113,11 @@ class BillingOverview extends Page
 
                 // Count unpaid invoices for this tenant
                 $unpaidInvoicesCount = Invoice::where('tenant_id', $tenant->id)
-                    ->whereIn('status', ['pending', 'overdue', 'outstanding'])
+                    ->whereIn('status', ['pending', 'overdue', 'outstanding', 'new'])
                     ->count();
 
                 $unpaidInvoicesTotal = Invoice::where('tenant_id', $tenant->id)
-                    ->whereIn('status', ['pending', 'overdue', 'outstanding'])
+                    ->whereIn('status', ['pending', 'overdue', 'outstanding', 'new'])
                     ->sum('amount');
 
                 return [
@@ -123,14 +128,18 @@ class BillingOverview extends Page
                     'commission_rate' => $commissionRate,
                     'currency' => $tenant->currency ?? 'EUR',
                     'billing_cycle_days' => $billingCycleDays,
+                    'billing_starts_at' => $tenant->billing_starts_at,
+                    'last_billing_date' => $tenant->last_billing_date,
                     'next_billing_date' => $periodEnd,
                     'period_start' => $periodStart,
+                    'period_end' => $periodEnd,
                     'gross_revenue' => $grossRevenue,
                     'expected_amount' => $expectedAmount,
                     'days_until_billing' => $daysUntilBilling,
                     'is_overdue' => $daysUntilBilling !== null && $daysUntilBilling < 0,
                     'is_due_soon' => $daysUntilBilling !== null && $daysUntilBilling >= 0 && $daysUntilBilling <= 7,
                     'has_billing' => $periodEnd !== null,
+                    'contract_number' => $tenant->contract_number,
                     'last_invoice' => $lastInvoice ? [
                         'id' => $lastInvoice->id,
                         'number' => $lastInvoice->number,
@@ -142,6 +151,109 @@ class BillingOverview extends Page
                     'unpaid_invoices_total' => $unpaidInvoicesTotal,
                 ];
             });
+    }
+
+    /**
+     * Generate proforma invoice for a tenant
+     */
+    public function generateProformaInvoice(int $tenantId): void
+    {
+        $tenant = Tenant::find($tenantId);
+
+        if (!$tenant) {
+            Notification::make()
+                ->danger()
+                ->title('Error')
+                ->body('Tenant not found.')
+                ->send();
+            return;
+        }
+
+        // Get period dates
+        $periodStart = $tenant->getCurrentPeriodStart();
+        $periodEnd = $tenant->getCurrentPeriodEnd();
+
+        if (!$periodStart || !$periodEnd) {
+            Notification::make()
+                ->danger()
+                ->title('Error')
+                ->body('Billing period not configured for this tenant.')
+                ->send();
+            return;
+        }
+
+        // Calculate gross revenue for the period
+        $grossRevenue = Order::where('tenant_id', $tenant->id)
+            ->whereIn('status', ['paid', 'confirmed'])
+            ->where('created_at', '>=', $periodStart)
+            ->where('created_at', '<=', $periodEnd->endOfDay())
+            ->sum('total_cents') / 100;
+
+        // Calculate commission
+        $commissionRate = $tenant->commission_rate ?? 0;
+        $subtotal = round($grossRevenue * ($commissionRate / 100), 2);
+
+        if ($subtotal <= 0) {
+            Notification::make()
+                ->warning()
+                ->title('No Commission')
+                ->body('No commission to invoice for this period (gross revenue: ' . number_format($grossRevenue, 2) . ' ' . ($tenant->currency ?? 'EUR') . ')')
+                ->send();
+            return;
+        }
+
+        // Get settings for VAT and invoice number
+        $settings = Setting::current();
+
+        // Calculate VAT
+        $vatRate = $settings->vat_enabled ? ($settings->vat_rate ?? 19) : 0;
+        $vatAmount = round($subtotal * ($vatRate / 100), 2);
+        $totalAmount = $subtotal + $vatAmount;
+
+        // Generate invoice number
+        $invoiceNumber = $settings->getNextInvoiceNumber();
+
+        // Build description
+        $description = "Comision servicii digitale";
+        if ($tenant->contract_number) {
+            $description .= " conform contract nr. {$tenant->contract_number}";
+        }
+        $description .= " - Perioada {$periodStart->format('d.m.Y')} - {$periodEnd->format('d.m.Y')}";
+
+        // Create proforma invoice
+        $invoice = Invoice::create([
+            'tenant_id' => $tenant->id,
+            'number' => 'PF-' . $invoiceNumber, // Prefix with PF for Proforma
+            'description' => $description,
+            'issue_date' => now(),
+            'period_start' => $periodStart,
+            'period_end' => $periodEnd,
+            'due_date' => now()->addDays($settings->default_payment_terms_days ?? 14),
+            'subtotal' => $subtotal,
+            'vat_rate' => $vatRate,
+            'vat_amount' => $vatAmount,
+            'amount' => $totalAmount,
+            'currency' => $tenant->currency ?? 'EUR',
+            'status' => 'new',
+            'meta' => [
+                'type' => 'proforma',
+                'gross_revenue' => $grossRevenue,
+                'commission_rate' => $commissionRate,
+            ],
+        ]);
+
+        // Advance billing cycle
+        $tenant->advanceBillingCycle();
+
+        // Reload data
+        $this->loadStats();
+        $this->loadTenantData();
+
+        Notification::make()
+            ->success()
+            ->title('Proforma Generated')
+            ->body("Invoice {$invoice->number} created for {$tenant->public_name ?? $tenant->name} - " . number_format($totalAmount, 2) . ' ' . $invoice->currency)
+            ->send();
     }
 
     public function getTotalExpectedRevenue(): array

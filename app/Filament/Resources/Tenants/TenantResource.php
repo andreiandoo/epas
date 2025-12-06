@@ -402,12 +402,18 @@ class TenantResource extends Resource
                                             }
                                         }),
 
+                                    Forms\Components\DatePicker::make('last_billing_date')
+                                        ->label('Last Billing Date')
+                                        ->native(false)
+                                        ->nullable()
+                                        ->helperText('Date of last invoice generation'),
+
                                     Forms\Components\DatePicker::make('next_billing_date')
                                         ->label('Next Billing Date')
                                         ->native(false)
                                         ->nullable()
-                                        ->helperText('Auto-calculated from Billing Start + Cycle Days. Can be manually adjusted.'),
-                                ])->columns(3),
+                                        ->helperText('Auto-calculated. Can be manually adjusted.'),
+                                ])->columns(4),
                         ]),
 
                     // TAB 4: Domains & Deployment

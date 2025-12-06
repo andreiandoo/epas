@@ -50,6 +50,7 @@ class Tenant extends Model
         'billing_starts_at',
         'billing_cycle_days',
         'next_billing_date',
+        'last_billing_date',
         // Onboarding
         'locale',
         'vat_payer',
@@ -78,6 +79,7 @@ class Tenant extends Model
         'due_at' => 'datetime',
         'billing_starts_at' => 'datetime',
         'next_billing_date' => 'date',
+        'last_billing_date' => 'date',
         'onboarding_completed_at' => 'datetime',
         'contract_generated_at' => 'datetime',
         'contract_sent_at' => 'datetime',
@@ -308,10 +310,16 @@ class Tenant extends Model
     protected static function booted(): void
     {
         static::saving(function (Tenant $tenant) {
-            // Auto-calculate next_billing_date if empty but billing_starts_at is set
-            if (empty($tenant->next_billing_date) && $tenant->billing_starts_at) {
+            // Auto-calculate next_billing_date if empty
+            if (empty($tenant->next_billing_date)) {
                 $cycleDays = $tenant->billing_cycle_days ?? 30;
-                $tenant->next_billing_date = $tenant->billing_starts_at->copy()->addDays($cycleDays);
+
+                // Use last_billing_date if available, otherwise billing_starts_at
+                if ($tenant->last_billing_date) {
+                    $tenant->next_billing_date = $tenant->last_billing_date->copy()->addDays($cycleDays);
+                } elseif ($tenant->billing_starts_at) {
+                    $tenant->next_billing_date = $tenant->billing_starts_at->copy()->addDays($cycleDays);
+                }
             }
         });
     }
@@ -319,6 +327,70 @@ class Tenant extends Model
     public function isActive(): bool
     {
         return $this->status === 'active';
+    }
+
+    /**
+     * Calculate next billing date based on last billing or billing start
+     */
+    public function calculateNextBillingDate(): ?\Carbon\Carbon
+    {
+        $cycleDays = $this->billing_cycle_days ?? 30;
+
+        if ($this->last_billing_date) {
+            return $this->last_billing_date->copy()->addDays($cycleDays);
+        }
+
+        if ($this->billing_starts_at) {
+            return $this->billing_starts_at->copy()->addDays($cycleDays);
+        }
+
+        return null;
+    }
+
+    /**
+     * Advance billing cycle after invoice generation
+     */
+    public function advanceBillingCycle(): void
+    {
+        $this->last_billing_date = $this->next_billing_date ?? now();
+        $this->next_billing_date = $this->calculateNextBillingDate();
+        $this->save();
+    }
+
+    /**
+     * Get current billing period start date
+     */
+    public function getCurrentPeriodStart(): ?\Carbon\Carbon
+    {
+        if ($this->last_billing_date) {
+            return $this->last_billing_date->copy();
+        }
+
+        if ($this->billing_starts_at) {
+            return $this->billing_starts_at->copy();
+        }
+
+        return null;
+    }
+
+    /**
+     * Get current billing period end date
+     */
+    public function getCurrentPeriodEnd(): ?\Carbon\Carbon
+    {
+        return $this->next_billing_date?->copy();
+    }
+
+    /**
+     * Check if billing is overdue
+     */
+    public function isBillingOverdue(): bool
+    {
+        if (!$this->next_billing_date) {
+            return false;
+        }
+
+        return $this->next_billing_date->isPast();
     }
 
     public function getActiveMicroservices()
