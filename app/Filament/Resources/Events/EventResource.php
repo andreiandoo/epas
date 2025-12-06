@@ -1385,30 +1385,32 @@ class EventResource extends Resource
                     ->sortable()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('starts_at')
-                    ->label('Starts')
-                    ->dateTime('Y-m-d H:i')
+                Tables\Columns\TextColumn::make('start_date')
+                    ->label('Event Date')
+                    ->date('d M Y')
+                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderByRaw("COALESCE(event_date, range_start_date, starts_at) {$direction}"))
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('venue.name')
+                    ->label('Venue')
+                    ->getStateUsing(fn (Event $record) => $record->venue?->getTranslation('name', 'en') ?? $record->venue?->getTranslation('name', 'ro') ?? '-')
                     ->sortable()
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('ends_at')
-                    ->label('Ends')
-                    ->dateTime('Y-m-d H:i')
+                Tables\Columns\TextColumn::make('venue.city')
+                    ->label('City')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('venue.country')
+                    ->label('Country')
+                    ->sortable()
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->badge()
                     ->sortable(),
-
-                Tables\Columns\TextColumn::make('city')
-                    ->label('City')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\TextColumn::make('country')
-                    ->label('Country')
-                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Created')
@@ -1425,7 +1427,12 @@ class EventResource extends Resource
                     ]),
                 Tables\Filters\Filter::make('upcoming')
                     ->label('Upcoming only')
-                    ->query(fn ($q) => $q->where('starts_at', '>=', now())),
+                    ->query(fn ($q) => $q->where(function ($query) {
+                        $now = now()->toDateString();
+                        $query->where('event_date', '>=', $now)
+                            ->orWhere('range_start_date', '>=', $now)
+                            ->orWhere('range_end_date', '>=', $now);
+                    })),
             ])
             ->defaultSort('created_at', 'desc');
     }

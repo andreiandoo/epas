@@ -2697,6 +2697,9 @@ nav.fi-topbar .fi-topbar-end {
 .float-right{
   float: right;
 }
+.m-0 {
+  margin:0;
+}
 .m-8{
   margin: 2rem;
 }
@@ -3270,7 +3273,7 @@ html.dark {
 }
 
 /* Alternative Filament 4 action selectors */
-.fi-page-edit-record .fi-form > .fi-ac,
+/* .fi-page-edit-record .fi-form > .fi-ac,
 .fi-page-create-record .fi-form > .fi-ac,
 .fi-section-content > .fi-ac,
 [wire\:id] > form > .fi-ac,
@@ -3284,7 +3287,7 @@ html.dark {
   width: calc(100% + 3rem) !important;
   border-top: 1px solid var(--metro-border) !important;
   border-radius: 0 !important;
-}
+} */
 
 .dark .fi-page-edit-record .fi-form > .fi-ac,
 .dark .fi-page-create-record .fi-form > .fi-ac,

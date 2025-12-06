@@ -68,6 +68,7 @@ class Tenant extends Model
         // Payment processor
         'payment_processor',
         'payment_processor_mode',
+        'currency',
     ];
 
     protected $casts = [

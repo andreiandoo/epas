@@ -22,7 +22,7 @@
         <div class="p-6">
             <div class="flex items-start justify-between mb-4">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Order #{{ $order->id }}</h2>
+                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Order #{{ str_pad($order->id, 6, '0', STR_PAD_LEFT) }}</h2>
                     <p class="text-sm text-gray-500 dark:text-gray-400">{{ $order->created_at->format('F j, Y \a\t H:i') }}</p>
                 </div>
                 <div>

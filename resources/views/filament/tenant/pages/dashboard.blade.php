@@ -53,10 +53,10 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                 <div class="flex items-center gap-3">
                     <div class="p-2.5 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                        <x-heroicon-o-currency-euro class="w-5 h-5 text-green-600 dark:text-green-400" />
+                        <x-heroicon-o-banknotes class="w-5 h-5 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
-                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_sales'], 2) }}</p>
+                        <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['total_sales'], 2) }} <span class="text-base font-medium text-gray-500 dark:text-gray-400">{{ $tenant->currency ?? 'EUR' }}</span></p>
                         <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Total Sales</p>
                     </div>
                 </div>
@@ -96,7 +96,7 @@
                     </div>
                     <div>
                         <p class="text-2xl font-bold {{ $stats['unpaid_invoices_value'] > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white' }}">
-                            {{ number_format($stats['unpaid_invoices_value'], 2) }}
+                            {{ number_format($stats['unpaid_invoices_value'], 2) }} <span class="text-base font-medium {{ $stats['unpaid_invoices_value'] > 0 ? 'text-red-400 dark:text-red-500' : 'text-gray-500 dark:text-gray-400' }}">{{ $tenant->currency ?? 'EUR' }}</span>
                         </p>
                         <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Unpaid Invoices</p>
                     </div>
@@ -125,7 +125,7 @@
                 </div>
 
                 <div class="h-64">
-                    <canvas id="salesChart" data-chart='@json($chartData)'></canvas>
+                    <canvas id="salesChart" data-chart='@json($chartData)' data-currency="{{ $tenant->currency ?? 'EUR' }}"></canvas>
                 </div>
             </div>
 
@@ -188,6 +188,7 @@
             if (!chartDataStr) return;
 
             const chartData = JSON.parse(chartDataStr);
+            const currency = ctx.getAttribute('data-currency') || 'EUR';
 
             new Chart(ctx, {
                 type: 'line',
@@ -229,7 +230,7 @@
                                     return 'Sales: ' + new Intl.NumberFormat('en-US', {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2
-                                    }).format(context.parsed.y);
+                                    }).format(context.parsed.y) + ' ' + currency;
                                 }
                             }
                         }

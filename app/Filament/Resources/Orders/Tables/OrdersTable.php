@@ -17,7 +17,8 @@ class OrdersTable
         return $table
             ->columns([
                 TextColumn::make('id')
-                    ->label('ID')
+                    ->label('Order #')
+                    ->formatStateUsing(fn ($state) => '#' . str_pad($state, 6, '0', STR_PAD_LEFT))
                     ->sortable()
                     ->searchable()
                     ->url(fn ($record) => \App\Filament\Resources\Orders\OrderResource::getUrl('view', ['record' => $record])),
@@ -65,16 +66,16 @@ class OrdersTable
                     ->sortable(),
 
                 // Event column (via tickets relationship)
-                TextColumn::make('event')
+                TextColumn::make('event_name')
                     ->label('Event')
-                    ->formatStateUsing(function ($record) {
+                    ->getStateUsing(function ($record) {
                         $firstTicket = $record->tickets()->with('ticketType.event')->first();
                         if ($firstTicket && $firstTicket->ticketType && $firstTicket->ticketType->event) {
                             $event = $firstTicket->ticketType->event;
                             $title = is_array($event->title) ? ($event->title['en'] ?? $event->title['ro'] ?? reset($event->title)) : $event->title;
                             return $title;
                         }
-                        return 'N/A';
+                        return '-';
                     })
                     ->url(function ($record) {
                         $firstTicket = $record->tickets()->with('ticketType.event')->first();
