@@ -392,7 +392,7 @@ class Settings extends Page
                                             ->columnSpanFull(),
 
                                         // Conditional fields based on mail provider
-                                        Forms\Components\Group::make()
+                                        SC\Group::make()
                                             ->key('mailProviderFields')
                                             ->schema(fn (Forms\Get $get): array => match ($get('mail_driver')) {
                                                 'smtp' => $this->getSmtpFields(),
