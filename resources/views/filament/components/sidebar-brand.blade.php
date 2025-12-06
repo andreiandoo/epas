@@ -31,7 +31,16 @@
 
     $panelLabel = $isAdminPanel ? 'Admin Panel' : 'Tenant Panel';
     $brandName = 'Tixello';
+
+    // Debug: see what's stored (TEMPORARY - remove after fixing)
+    if (request()->has('debug_logo')) {
+        dd(['meta' => $meta, 'logoLightRaw' => $logoLightRaw, 'logoDarkRaw' => $logoDarkRaw, 'logoLight' => $logoLight, 'logoDark' => $logoDark]);
+    }
 @endphp
+{{-- Debug info (remove after testing) --}}
+@if(config('app.debug') && ($logoLightRaw || $logoDarkRaw))
+    <!-- Logo debug: light={{ $logoLightRaw ?? 'null' }} dark={{ $logoDarkRaw ?? 'null' }} url={{ $logoLight ?? 'null' }} -->
+@endif
 <div class="fi-sidebar-brand flex items-center justify-center px-6 py-4 border-b border-gray-200 dark:border-gray-700">
     <a href="{{ filament()->getUrl() }}" class="flex items-center gap-3">
         @if($logoLight || $logoDark)
