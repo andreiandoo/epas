@@ -67,8 +67,9 @@ class AdminPanelProvider extends PanelProvider
                 Js::make('epas-skin', asset('js/epas-skin.js')),
             ])
 
-            // Render hooks for custom layout elements
-            ->renderHook('panels::sidebar.header', fn (): string => view('filament.components.sidebar-brand')->render())
+            // Custom brand with dynamic logos from settings
+            ->brandLogo(fn () => view('filament.components.sidebar-brand'))
+            ->brandLogoHeight('2.5rem')
 
             // Custom topbar in actual topbar (not in content)
             ->renderHook('panels::topbar.end', fn (): string => view('filament.components.custom-topbar')->render())

@@ -572,7 +572,7 @@ class Settings extends Page
     private function getSmtpFields(): array
     {
         return [
-            Forms\Components\Grid::make(2)->schema([
+            SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make('mail_host')
                     ->label('SMTP Host')
                     ->placeholder('smtp.example.com')
@@ -637,7 +637,7 @@ class Settings extends Page
     private function getBrevoFields(): array
     {
         return [
-            Forms\Components\Grid::make(2)->schema([
+            SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make('mail_api_key')
                     ->label('API Key')
                     ->password()
@@ -673,7 +673,7 @@ class Settings extends Page
     private function getPostmarkFields(): array
     {
         return [
-            Forms\Components\Grid::make(2)->schema([
+            SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make('mail_api_key')
                     ->label('Server API Token')
                     ->password()
@@ -709,7 +709,7 @@ class Settings extends Page
     private function getMailgunFields(): array
     {
         return [
-            Forms\Components\Grid::make(2)->schema([
+            SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make('mail_api_key')
                     ->label('API Key')
                     ->password()
@@ -761,7 +761,7 @@ class Settings extends Page
     private function getSendgridFields(): array
     {
         return [
-            Forms\Components\Grid::make(2)->schema([
+            SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make('mail_api_key')
                     ->label('API Key')
                     ->password()
@@ -797,7 +797,7 @@ class Settings extends Page
     private function getSesFields(): array
     {
         return [
-            Forms\Components\Grid::make(2)->schema([
+            SC\Grid::make(2)->schema([
                 Forms\Components\TextInput::make('mail_api_key')
                     ->label('Access Key ID')
                     ->password()
@@ -857,7 +857,7 @@ class Settings extends Page
     private function getGmailFields(): array
     {
         return [
-            Forms\Components\Grid::make(2)->schema([
+            SC\Grid::make(2)->schema([
                 Forms\Components\Placeholder::make('gmail_info')
                     ->label('')
                     ->content(new HtmlString('
@@ -909,7 +909,7 @@ class Settings extends Page
     private function getOutlookFields(): array
     {
         return [
-            Forms\Components\Grid::make(2)->schema([
+            SC\Grid::make(2)->schema([
                 Forms\Components\Placeholder::make('outlook_info')
                     ->label('')
                     ->content(new HtmlString('

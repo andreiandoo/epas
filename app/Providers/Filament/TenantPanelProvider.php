@@ -97,8 +97,9 @@ class TenantPanelProvider extends PanelProvider
                 Js::make('epas-skin', asset('js/epas-skin.js')),
             ])
 
-            // Render hooks for custom layout elements
-            ->renderHook('panels::sidebar.header', fn (): string => view('filament.components.sidebar-brand')->render())
+            // Custom brand with dynamic logos from settings
+            ->brandLogo(fn () => view('filament.components.sidebar-brand'))
+            ->brandLogoHeight('2.5rem')
             ->renderHook('panels::topbar.end', fn (): string => view('filament.components.custom-topbar')->render())
             ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.tenant-support-card')->render());
     }
