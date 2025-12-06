@@ -1,123 +1,317 @@
 <x-filament-panels::page>
-    {{-- Summary Cards --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Active Tenants</div>
-            <div class="text-3xl font-bold text-primary-600 dark:text-primary-400 mt-2">{{ $tenants->count() }}</div>
+    {{-- Summary Stats Cards - Row 1 --}}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {{-- Active Tenants --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                    <x-heroicon-o-building-office class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $tenants->count() }}</p>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Active Tenants</p>
+                </div>
+            </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Overdue Billings</div>
-            <div class="text-3xl font-bold text-danger-600 dark:text-danger-400 mt-2">{{ $tenants->where('is_overdue', true)->count() }}</div>
+        {{-- With Billing Configured --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                    <x-heroicon-o-check-circle class="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $tenants->where('has_billing', true)->count() }}</p>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">With Billing</p>
+                </div>
+            </div>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">Due This Week</div>
-            <div class="text-3xl font-bold text-warning-600 dark:text-warning-400 mt-2">{{ $tenants->where('is_due_soon', true)->count() }}</div>
+        {{-- Overdue Billings --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 {{ $tenants->where('is_overdue', true)->count() > 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-gray-100 dark:bg-gray-700' }} rounded-lg">
+                    <x-heroicon-o-exclamation-triangle class="w-5 h-5 {{ $tenants->where('is_overdue', true)->count() > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400' }}" />
+                </div>
+                <div>
+                    <p class="text-2xl font-bold {{ $tenants->where('is_overdue', true)->count() > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white' }}">{{ $tenants->where('is_overdue', true)->count() }}</p>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Overdue</p>
+                </div>
+            </div>
+        </div>
+
+        {{-- Due This Week --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 {{ $tenants->where('is_due_soon', true)->count() > 0 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-gray-100 dark:bg-gray-700' }} rounded-lg">
+                    <x-heroicon-o-clock class="w-5 h-5 {{ $tenants->where('is_due_soon', true)->count() > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400' }}" />
+                </div>
+                <div>
+                    <p class="text-2xl font-bold {{ $tenants->where('is_due_soon', true)->count() > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white' }}">{{ $tenants->where('is_due_soon', true)->count() }}</p>
+                    <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Due This Week</p>
+                </div>
+            </div>
         </div>
     </div>
 
-    {{-- Expected Revenue Summary --}}
-    @php
-        $totals = $this->getTotalExpectedRevenue();
-    @endphp
-    @if(count($totals) > 0)
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Expected Revenue (Current Period)</h3>
-            <div class="flex flex-wrap gap-3">
-                @foreach($totals as $currency => $amount)
-                    <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-success-100 text-success-800 dark:bg-success-800 dark:text-success-100">
-                        {{ number_format($amount, 2) }} {{ $currency }}
-                    </span>
-                @endforeach
+    {{-- Financial Stats Cards - Row 2 --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {{-- Unpaid Invoices --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Unpaid Invoices</h3>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $stats['unpaid_count'] > 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300' }}">
+                    {{ $stats['unpaid_count'] }} {{ $stats['unpaid_count'] === 1 ? 'invoice' : 'invoices' }}
+                </span>
+            </div>
+            @if(count($stats['unpaid_total']) > 0)
+                <div class="space-y-1">
+                    @foreach($stats['unpaid_total'] as $currency => $amount)
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-500 dark:text-gray-400">{{ $currency }}</span>
+                            <span class="text-lg font-bold text-red-600 dark:text-red-400">{{ number_format($amount, 2) }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <p class="text-sm text-gray-500 dark:text-gray-400">No unpaid invoices</p>
+            @endif
+        </div>
+
+        {{-- Expected Revenue (Current Period) --}}
+        @php
+            $expectedTotals = $this->getTotalExpectedRevenue();
+        @endphp
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Expected Commission</h3>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Current period</span>
+            </div>
+            @if(count($expectedTotals) > 0)
+                <div class="space-y-1">
+                    @foreach($expectedTotals as $currency => $amount)
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-500 dark:text-gray-400">{{ $currency }}</span>
+                            <span class="text-lg font-bold text-green-600 dark:text-green-400">{{ number_format($amount, 2) }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <p class="text-sm text-gray-500 dark:text-gray-400">No data</p>
+            @endif
+        </div>
+
+        {{-- Total Gross Revenue (Current Period) --}}
+        @php
+            $grossTotals = $this->getTotalGrossRevenue();
+        @endphp
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Gross Revenue</h3>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Current period</span>
+            </div>
+            @if(count($grossTotals) > 0)
+                <div class="space-y-1">
+                    @foreach($grossTotals as $currency => $amount)
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-500 dark:text-gray-400">{{ $currency }}</span>
+                            <span class="text-lg font-bold text-gray-900 dark:text-white">{{ number_format($amount, 2) }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <p class="text-sm text-gray-500 dark:text-gray-400">No data</p>
+            @endif
+        </div>
+    </div>
+
+    {{-- This Month Stats --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-6">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-4">This Month ({{ now()->format('F Y') }})</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {{-- Platform Revenue --}}
+            <div>
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Platform Revenue</p>
+                <p class="text-xl font-bold text-gray-900 dark:text-white">{{ number_format($stats['monthly_revenue'], 2) }} <span class="text-sm font-normal text-gray-500">RON</span></p>
+            </div>
+            {{-- Invoiced --}}
+            <div>
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Invoiced</p>
+                @if(count($stats['monthly_invoiced']) > 0)
+                    @foreach($stats['monthly_invoiced'] as $currency => $amount)
+                        <p class="text-xl font-bold text-gray-900 dark:text-white">{{ number_format($amount, 2) }} <span class="text-sm font-normal text-gray-500">{{ $currency }}</span></p>
+                    @endforeach
+                @else
+                    <p class="text-xl font-bold text-gray-400">0.00</p>
+                @endif
+            </div>
+            {{-- Paid --}}
+            <div>
+                <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Paid</p>
+                @if(count($stats['monthly_paid']) > 0)
+                    @foreach($stats['monthly_paid'] as $currency => $amount)
+                        <p class="text-xl font-bold text-green-600 dark:text-green-400">{{ number_format($amount, 2) }} <span class="text-sm font-normal text-gray-500">{{ $currency }}</span></p>
+                    @endforeach
+                @else
+                    <p class="text-xl font-bold text-gray-400">0.00</p>
+                @endif
             </div>
         </div>
-    @endif
+    </div>
 
     {{-- Tenants Billing Table --}}
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Tenants Billing Schedule</h3>
+            <span class="text-sm text-gray-500 dark:text-gray-400">{{ $tenants->count() }} tenants</span>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
-                <thead class="bg-gray-50 dark:bg-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-900/50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Tenant</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Gross Revenue</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Commission</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Expected Invoice</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Billing Period</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Next Billing</th>
-                        <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Countdown</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Tenant</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Gross Revenue</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Commission</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Expected</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Period</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Next Billing</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Last Invoice</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Unpaid</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse($tenants as $tenant)
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                             {{-- Tenant Name --}}
-                            <td class="px-6 py-4">
-                                <div class="font-medium text-gray-900 dark:text-white">
-                                    {{ $tenant['public_name'] ?? $tenant['name'] }}
-                                </div>
-                                @if($tenant['public_name'] && $tenant['public_name'] !== $tenant['name'])
-                                    <div class="text-xs text-gray-500 dark:text-gray-400">{{ $tenant['name'] }}</div>
-                                @endif
+                            <td class="px-4 py-3">
+                                <a href="{{ \App\Filament\Resources\Tenants\TenantResource::getUrl('edit', ['record' => $tenant['id']]) }}" class="group">
+                                    <div class="font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                                        {{ $tenant['public_name'] ?? $tenant['name'] }}
+                                    </div>
+                                    @if($tenant['public_name'] && $tenant['public_name'] !== $tenant['name'])
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">{{ $tenant['name'] }}</div>
+                                    @endif
+                                </a>
                             </td>
 
                             {{-- Gross Revenue --}}
-                            <td class="px-6 py-4 text-right text-gray-900 dark:text-white">
-                                {{ number_format($tenant['gross_revenue'], 2) }} {{ $tenant['currency'] }}
+                            <td class="px-4 py-3 text-right font-medium text-gray-900 dark:text-white">
+                                {{ number_format($tenant['gross_revenue'], 2) }} <span class="text-gray-500">{{ $tenant['currency'] }}</span>
                             </td>
 
                             {{-- Commission Rate --}}
-                            <td class="px-6 py-4 text-center">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200">
+                            <td class="px-4 py-3 text-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-200">
                                     {{ $tenant['commission_rate'] }}%
                                 </span>
                             </td>
 
                             {{-- Expected Invoice Amount --}}
-                            <td class="px-6 py-4 text-right">
-                                <span class="font-semibold text-gray-900 dark:text-white">
-                                    {{ number_format($tenant['expected_amount'], 2) }} {{ $tenant['currency'] }}
+                            <td class="px-4 py-3 text-right">
+                                <span class="font-semibold text-green-600 dark:text-green-400">
+                                    {{ number_format($tenant['expected_amount'], 2) }} <span class="text-gray-500 font-normal">{{ $tenant['currency'] }}</span>
                                 </span>
                             </td>
 
                             {{-- Billing Period --}}
-                            <td class="px-6 py-4 text-center">
-                                <div class="text-gray-900 dark:text-white">
-                                    {{ $tenant['period_start']->format('M d') }} - {{ $tenant['next_billing_date']->format('M d, Y') }}
-                                </div>
-                                <div class="text-xs text-gray-500 dark:text-gray-400">({{ $tenant['billing_cycle_days'] }} days)</div>
+                            <td class="px-4 py-3 text-center">
+                                @if($tenant['has_billing'])
+                                    <div class="text-gray-900 dark:text-white text-xs">
+                                        {{ $tenant['period_start']->format('M d') }} - {{ $tenant['next_billing_date']->format('M d') }}
+                                    </div>
+                                    <div class="text-xs text-gray-500 dark:text-gray-400">({{ $tenant['billing_cycle_days'] }}d)</div>
+                                @else
+                                    <span class="text-gray-400 text-xs">Not configured</span>
+                                @endif
                             </td>
 
                             {{-- Next Billing Date --}}
-                            <td class="px-6 py-4 text-center text-gray-900 dark:text-white">
-                                {{ $tenant['next_billing_date']->format('M d, Y') }}
+                            <td class="px-4 py-3 text-center">
+                                @if($tenant['has_billing'])
+                                    <span class="text-gray-900 dark:text-white">{{ $tenant['next_billing_date']->format('M d, Y') }}</span>
+                                @else
+                                    <span class="text-gray-400">-</span>
+                                @endif
                             </td>
 
-                            {{-- Countdown --}}
-                            <td class="px-6 py-4 text-center">
-                                @if($tenant['is_overdue'])
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-danger-100 text-danger-800 dark:bg-danger-800 dark:text-danger-100">
-                                        {{ abs($tenant['days_until_billing']) }} days OVERDUE
+                            {{-- Status / Countdown --}}
+                            <td class="px-4 py-3 text-center">
+                                @if(!$tenant['has_billing'])
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                                        No billing
+                                    </span>
+                                @elseif($tenant['is_overdue'])
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200">
+                                        {{ abs($tenant['days_until_billing']) }}d OVERDUE
                                     </span>
                                 @elseif($tenant['is_due_soon'])
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning-100 text-warning-800 dark:bg-warning-800 dark:text-warning-100">
-                                        {{ $tenant['days_until_billing'] }} days
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
+                                        {{ $tenant['days_until_billing'] }}d left
                                     </span>
                                 @else
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200">
-                                        {{ $tenant['days_until_billing'] }} days
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-600 dark:text-gray-300">
+                                        {{ $tenant['days_until_billing'] }}d left
                                     </span>
                                 @endif
+                            </td>
+
+                            {{-- Last Invoice --}}
+                            <td class="px-4 py-3 text-center">
+                                @if($tenant['last_invoice'])
+                                    <a href="{{ \App\Filament\Resources\Billing\InvoiceResource::getUrl('edit', ['record' => $tenant['last_invoice']['id']]) }}" class="group">
+                                        <div class="text-xs font-medium text-gray-900 dark:text-white group-hover:text-primary-600">
+                                            {{ $tenant['last_invoice']['number'] ?? '#'.$tenant['last_invoice']['id'] }}
+                                        </div>
+                                        <div class="text-xs">
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium
+                                                {{ $tenant['last_invoice']['status'] === 'paid' ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' : '' }}
+                                                {{ $tenant['last_invoice']['status'] === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300' : '' }}
+                                                {{ in_array($tenant['last_invoice']['status'], ['overdue', 'outstanding']) ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' : '' }}
+                                            ">
+                                                {{ ucfirst($tenant['last_invoice']['status']) }}
+                                            </span>
+                                        </div>
+                                    </a>
+                                @else
+                                    <span class="text-gray-400 text-xs">No invoices</span>
+                                @endif
+                            </td>
+
+                            {{-- Unpaid Invoices --}}
+                            <td class="px-4 py-3 text-center">
+                                @if($tenant['unpaid_invoices_count'] > 0)
+                                    <div class="text-xs font-medium text-red-600 dark:text-red-400">
+                                        {{ $tenant['unpaid_invoices_count'] }} ({{ number_format($tenant['unpaid_invoices_total'], 2) }})
+                                    </div>
+                                @else
+                                    <span class="text-green-600 dark:text-green-400 text-xs">-</span>
+                                @endif
+                            </td>
+
+                            {{-- Actions --}}
+                            <td class="px-4 py-3 text-right">
+                                <div class="flex items-center justify-end gap-1">
+                                    <a href="{{ \App\Filament\Resources\Tenants\TenantResource::getUrl('edit', ['record' => $tenant['id']]) }}"
+                                       class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                                       title="Edit Tenant">
+                                        <x-heroicon-o-pencil-square class="w-4 h-4" />
+                                    </a>
+                                    <a href="{{ \App\Filament\Resources\Billing\InvoiceResource::getUrl('index', ['tableFilters[tenant_id][value]' => $tenant['id']]) }}"
+                                       class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                                       title="View Invoices">
+                                        <x-heroicon-o-document-text class="w-4 h-4" />
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                                No active tenants with billing dates configured.
+                            <td colspan="10" class="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                <x-heroicon-o-building-office class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" />
+                                <p class="font-medium">No active tenants found</p>
+                                <p class="text-sm">Create a tenant to get started with billing.</p>
                             </td>
                         </tr>
                     @endforelse
@@ -126,23 +320,24 @@
         </div>
     </div>
 
-    {{-- Info Section --}}
+    {{-- Legend / Help Section --}}
     <div class="mt-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 text-sm text-gray-600 dark:text-gray-400">
-        <p class="mb-2">
-            <strong class="text-gray-900 dark:text-white">Note:</strong> Expected invoice amounts are calculated based on current period revenue (from last billing date to today).
+        <p class="mb-3">
+            <strong class="text-gray-900 dark:text-white">Note:</strong> Expected commission is calculated as Gross Revenue × Commission Rate for the current billing period.
         </p>
-        <div class="flex flex-wrap gap-4 mt-3">
+        <div class="flex flex-wrap gap-4">
             <div class="flex items-center gap-2">
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-danger-100 text-danger-800 dark:bg-danger-800 dark:text-danger-100">OVERDUE</span>
-                <span>Next billing date has passed</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200">OVERDUE</span>
+                <span>Billing date has passed</span>
             </div>
             <div class="flex items-center gap-2">
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-warning-100 text-warning-800 dark:bg-warning-800 dark:text-warning-100">DUE SOON</span>
-                <span>Next billing within 7 days</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">DUE SOON</span>
+                <span>Within 7 days</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">No billing</span>
+                <span>Billing not configured</span>
             </div>
         </div>
-        <p class="mt-3">
-            Run <code class="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono">php artisan invoices:generate-tenant</code> to generate invoices for all overdue tenants.
-        </p>
     </div>
 </x-filament-panels::page>
