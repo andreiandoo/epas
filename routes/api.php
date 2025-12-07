@@ -1098,8 +1098,9 @@ Route::prefix('v1/analytics')->middleware(['throttle:api', 'api.key'])->group(fu
     Route::get('/ltv/tiers', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'ltvTiers'])
         ->name('api.analytics.ltv.tiers');
 
-    // Export
+    // Export - with stricter rate limiting (60 exports per hour)
     Route::get('/export', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'export'])
+        ->middleware('throttle:60,60')
         ->name('api.analytics.export');
 
     Route::get('/export/options', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'exportOptions'])

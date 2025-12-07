@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Platform;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\ValidatesTenantAccess;
 use App\Models\Platform\CoreCustomer;
 use App\Models\Platform\CohortMetric;
 use App\Services\Platform\AnalyticsCacheService;
@@ -18,6 +19,8 @@ use Carbon\Carbon;
 
 class AnalyticsController extends Controller
 {
+    use ValidatesTenantAccess;
+
     public function __construct(
         protected AnalyticsCacheService $cacheService,
         protected AttributionModelService $attributionService,
@@ -39,7 +42,7 @@ class AnalyticsController extends Controller
      */
     public function dashboard(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
+        $tenantId = $this->getAuthorizedTenantId($request);
 
         $data = [
             'overview' => $this->cacheService->getDashboardStats($tenantId),
@@ -58,7 +61,12 @@ class AnalyticsController extends Controller
      */
     public function funnel(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
+        $tenantId = $this->getAuthorizedTenantId($request);
         $startDate = $request->input('start_date')
             ? Carbon::parse($request->input('start_date'))
             : null;
@@ -79,7 +87,7 @@ class AnalyticsController extends Controller
      */
     public function segments(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
+        $tenantId = $this->getAuthorizedTenantId($request);
         $data = $this->cacheService->getCustomerSegments($tenantId);
 
         return response()->json([
@@ -93,9 +101,9 @@ class AnalyticsController extends Controller
      */
     public function cohorts(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
-        $cohortType = $request->input('type', 'month');
-        $cohorts = $request->input('cohorts', 6);
+        $tenantId = $this->getAuthorizedTenantId($request);
+        $cohortType = $this->getSafeCohortType($request);
+        $cohorts = $this->getSafeCohorts($request);
 
         $data = $this->cacheService->getCohortRetention($cohortType, $cohorts, $tenantId);
 
@@ -110,7 +118,12 @@ class AnalyticsController extends Controller
      */
     public function trafficSources(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
+        $tenantId = $this->getAuthorizedTenantId($request);
         $startDate = $request->input('start_date')
             ? Carbon::parse($request->input('start_date'))
             : null;
@@ -131,7 +144,12 @@ class AnalyticsController extends Controller
      */
     public function geography(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
+        $tenantId = $this->getAuthorizedTenantId($request);
         $startDate = $request->input('start_date')
             ? Carbon::parse($request->input('start_date'))
             : null;
@@ -152,9 +170,9 @@ class AnalyticsController extends Controller
      */
     public function topCustomers(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
-        $limit = $request->input('limit', 10);
-        $orderBy = $request->input('order_by', 'total_spent');
+        $tenantId = $this->getAuthorizedTenantId($request);
+        $limit = $this->getSafeLimit($request, 10, 100);
+        $orderBy = $this->getSafeOrderBy($request);
 
         $data = $this->cacheService->getTopCustomers($limit, $orderBy, $tenantId);
 
@@ -172,14 +190,15 @@ class AnalyticsController extends Controller
         $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
+            'attribution_window' => 'nullable|integer|min:1|max:90',
         ]);
 
         $startDate = Carbon::parse($request->input('start_date'));
         $endDate = Carbon::parse($request->input('end_date'));
-        $tenantId = $request->input('tenant_id');
+        $tenantId = $this->getAuthorizedTenantId($request);
 
         if ($request->input('attribution_window')) {
-            $this->attributionService->setAttributionWindow($request->input('attribution_window'));
+            $this->attributionService->setAttributionWindow((int) $request->input('attribution_window'));
         }
 
         $data = $this->attributionService->compareModels($startDate, $endDate, $tenantId);
@@ -196,7 +215,7 @@ class AnalyticsController extends Controller
     public function channelAttribution(Request $request): JsonResponse
     {
         $request->validate([
-            'model' => 'required|string',
+            'model' => 'required|string|in:first_touch,last_touch,linear,time_decay,position_based',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
         ]);
@@ -204,7 +223,7 @@ class AnalyticsController extends Controller
         $model = $request->input('model');
         $startDate = Carbon::parse($request->input('start_date'));
         $endDate = Carbon::parse($request->input('end_date'));
-        $tenantId = $request->input('tenant_id');
+        $tenantId = $this->getAuthorizedTenantId($request);
 
         $data = $this->attributionService->getChannelAttributionReport(
             $model,
@@ -224,6 +243,12 @@ class AnalyticsController extends Controller
      */
     public function customerJourney(Request $request, int $customerId): JsonResponse
     {
+        $customer = $this->findCustomerWithTenantCheck($customerId, $request);
+
+        if (!$customer) {
+            return $this->customerNotFoundResponse();
+        }
+
         $data = $this->attributionService->analyzeCustomerJourney($customerId);
 
         if (isset($data['error'])) {
@@ -255,7 +280,7 @@ class AnalyticsController extends Controller
      */
     public function churnDashboard(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
+        $tenantId = $this->getAuthorizedTenantId($request);
         $data = $this->churnService->getChurnDashboard($tenantId);
 
         return response()->json([
@@ -269,9 +294,9 @@ class AnalyticsController extends Controller
      */
     public function atRiskCustomers(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
-        $minRisk = $request->input('min_risk', 'high');
-        $limit = $request->input('limit', 50);
+        $tenantId = $this->getAuthorizedTenantId($request);
+        $minRisk = $this->getSafeRiskLevel($request);
+        $limit = $this->getSafeLimit($request);
 
         $data = $this->churnService->getAtRiskCustomers($minRisk, $limit, $tenantId);
 
@@ -286,13 +311,10 @@ class AnalyticsController extends Controller
      */
     public function predictCustomerChurn(Request $request, int $customerId): JsonResponse
     {
-        $customer = CoreCustomer::find($customerId);
+        $customer = $this->findCustomerWithTenantCheck($customerId, $request);
 
         if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Customer not found',
-            ], 404);
+            return $this->customerNotFoundResponse();
         }
 
         $data = $this->churnService->predictChurn($customer);
@@ -308,7 +330,7 @@ class AnalyticsController extends Controller
      */
     public function churnBySegment(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
+        $tenantId = $this->getAuthorizedTenantId($request);
         $data = $this->churnService->getChurnStatsBySegment($tenantId);
 
         return response()->json([
@@ -322,9 +344,9 @@ class AnalyticsController extends Controller
      */
     public function cohortChurnAnalysis(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
-        $cohortType = $request->input('type', 'month');
-        $cohortsBack = $request->input('cohorts', 12);
+        $tenantId = $this->getAuthorizedTenantId($request);
+        $cohortType = $this->getSafeCohortType($request);
+        $cohortsBack = $this->getSafeCohorts($request, 12);
 
         $data = $this->churnService->getCohortChurnAnalysis($cohortType, $cohortsBack, $tenantId);
 
@@ -339,7 +361,8 @@ class AnalyticsController extends Controller
      */
     public function duplicateStats(Request $request): JsonResponse
     {
-        $data = $this->duplicateService->getStatistics();
+        $tenantId = $this->getAuthorizedTenantId($request);
+        $data = $this->duplicateService->getStatistics($tenantId);
 
         return response()->json([
             'success' => true,
@@ -352,10 +375,11 @@ class AnalyticsController extends Controller
      */
     public function duplicates(Request $request): JsonResponse
     {
-        $threshold = $request->input('threshold', 0.7);
-        $limit = $request->input('limit', 50);
+        $tenantId = $this->getAuthorizedTenantId($request);
+        $threshold = $this->getSafeThreshold($request);
+        $limit = $this->getSafeLimit($request);
 
-        $data = $this->duplicateService->findAllDuplicates($threshold, $limit);
+        $data = $this->duplicateService->findAllDuplicates($threshold, $limit, $tenantId);
 
         return response()->json([
             'success' => true,
@@ -368,7 +392,8 @@ class AnalyticsController extends Controller
                     'customers' => $group['customers']->map(fn($c) => [
                         'id' => $c->id,
                         'uuid' => $c->uuid,
-                        'display_name' => $c->getDisplayName(),
+                        // Return masked identifier instead of display name for privacy
+                        'identifier' => substr($c->uuid, 0, 8) . '...',
                         'email_hash' => substr($c->email_hash ?? '', 0, 8) . '...',
                         'total_orders' => $c->total_orders,
                         'total_spent' => $c->total_spent,
@@ -384,16 +409,13 @@ class AnalyticsController extends Controller
      */
     public function customerDuplicates(Request $request, int $customerId): JsonResponse
     {
-        $customer = CoreCustomer::find($customerId);
+        $customer = $this->findCustomerWithTenantCheck($customerId, $request);
 
         if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Customer not found',
-            ], 404);
+            return $this->customerNotFoundResponse();
         }
 
-        $threshold = $request->input('threshold', 0.5);
+        $threshold = $this->getSafeThreshold($request, 0.5);
         $data = $this->duplicateService->findDuplicatesFor($customer, $threshold);
 
         return response()->json([
@@ -401,7 +423,8 @@ class AnalyticsController extends Controller
             'data' => $data->map(fn($d) => [
                 'customer_id' => $d['customer']->id,
                 'customer_uuid' => $d['customer']->uuid,
-                'display_name' => $d['customer']->getDisplayName(),
+                // Return masked identifier instead of display name for privacy
+                'identifier' => substr($d['customer']->uuid, 0, 8) . '...',
                 'score' => round($d['score'], 3),
                 'match_type' => $d['match_type'],
                 'confidence' => $d['confidence'],
@@ -414,13 +437,10 @@ class AnalyticsController extends Controller
      */
     public function customerProfile(Request $request, int $customerId): JsonResponse
     {
-        $customer = CoreCustomer::find($customerId);
+        $customer = $this->findCustomerWithTenantCheck($customerId, $request);
 
         if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Customer not found',
-            ], 404);
+            return $this->customerNotFoundResponse();
         }
 
         $churnPrediction = $this->churnService->predictChurn($customer);
@@ -433,7 +453,8 @@ class AnalyticsController extends Controller
                 'customer' => [
                     'id' => $customer->id,
                     'uuid' => $customer->uuid,
-                    'display_name' => $customer->getDisplayName(),
+                    // Mask PII - only return truncated identifiers
+                    'identifier' => substr($customer->uuid, 0, 8) . '...',
                     'segment' => $customer->customer_segment,
                     'rfm_segment' => $customer->rfm_segment,
                     'rfm_score' => $customer->rfm_score,
@@ -462,7 +483,7 @@ class AnalyticsController extends Controller
      */
     public function ltvDashboard(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
+        $tenantId = $this->getAuthorizedTenantId($request);
         $data = $this->ltvService->getLtvDashboard($tenantId);
 
         return response()->json([
@@ -476,13 +497,10 @@ class AnalyticsController extends Controller
      */
     public function predictCustomerLtv(Request $request, int $customerId): JsonResponse
     {
-        $customer = CoreCustomer::find($customerId);
+        $customer = $this->findCustomerWithTenantCheck($customerId, $request);
 
         if (!$customer) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Customer not found',
-            ], 404);
+            return $this->customerNotFoundResponse();
         }
 
         $data = $this->ltvService->predictLtv($customer);
@@ -498,8 +516,8 @@ class AnalyticsController extends Controller
      */
     public function highPotentialCustomers(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
-        $limit = $request->input('limit', 50);
+        $tenantId = $this->getAuthorizedTenantId($request);
+        $limit = $this->getSafeLimit($request);
 
         $data = $this->ltvService->getHighPotentialCustomers($limit, $tenantId);
 
@@ -514,7 +532,7 @@ class AnalyticsController extends Controller
      */
     public function ltvBySegment(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
+        $tenantId = $this->getAuthorizedTenantId($request);
         $data = $this->ltvService->getLtvBySegment($tenantId);
 
         return response()->json([
@@ -528,9 +546,9 @@ class AnalyticsController extends Controller
      */
     public function ltvByCohort(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
-        $cohortType = $request->input('type', 'month');
-        $cohortsBack = $request->input('cohorts', 12);
+        $tenantId = $this->getAuthorizedTenantId($request);
+        $cohortType = $this->getSafeCohortType($request);
+        $cohortsBack = $this->getSafeCohorts($request, 12);
 
         $data = $this->ltvService->getLtvByCohort($cohortType, $cohortsBack, $tenantId);
 
@@ -545,7 +563,7 @@ class AnalyticsController extends Controller
      */
     public function ltvTiers(Request $request): JsonResponse
     {
-        $tenantId = $request->input('tenant_id');
+        $tenantId = $this->getAuthorizedTenantId($request);
         $data = $this->ltvService->getLtvTierDistribution($tenantId);
 
         return response()->json([
@@ -573,11 +591,12 @@ class AnalyticsController extends Controller
             'format' => 'in:csv,xlsx,json',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
+            'limit' => 'nullable|integer|min:1|max:5000',
         ]);
 
         $type = $request->input('type');
         $format = $request->input('format', 'csv');
-        $tenantId = $request->input('tenant_id');
+        $tenantId = $this->getAuthorizedTenantId($request);
         $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date')) : null;
         $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date')) : null;
 
