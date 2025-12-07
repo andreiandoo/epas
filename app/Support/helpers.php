@@ -63,3 +63,27 @@ if (!function_exists('feature_disabled')) {
         return !feature_enabled($featureKey, $tenantId, $context);
     }
 }
+
+/**
+ * Convert a 2-letter country code to a flag emoji
+ *
+ * @param string $countryCode ISO 3166-1 alpha-2 country code (e.g., 'US', 'GB')
+ * @return string Flag emoji or empty string
+ */
+if (!function_exists('country_flag')) {
+    function country_flag(string $countryCode): string
+    {
+        if (strlen($countryCode) !== 2) {
+            return '';
+        }
+
+        $countryCode = strtoupper($countryCode);
+
+        // Convert country code to regional indicator symbols
+        // A = 127462, B = 127463, etc.
+        $firstLetter = ord($countryCode[0]) - ord('A') + 127462;
+        $secondLetter = ord($countryCode[1]) - ord('A') + 127462;
+
+        return mb_chr($firstLetter) . mb_chr($secondLetter);
+    }
+}

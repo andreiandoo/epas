@@ -226,6 +226,45 @@ Schedule::command('promo:cleanup --days=365')
 
 /*
 |--------------------------------------------------------------------------
+| Platform Tracking Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Process pending platform conversions (every 5 minutes)
+Schedule::job(new \App\Jobs\ProcessPlatformConversionsJob)
+    ->everyFiveMinutes()
+    ->onSuccess(function () {
+        \Log::info('Platform conversions processing completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to process platform conversions');
+    });
+
+// Refresh token alerts for expiring platform ad accounts (daily at 8 AM)
+Schedule::call(function () {
+    $expiringSoon = \App\Models\Platform\PlatformAdAccount::active()
+        ->whereNotNull('token_expires_at')
+        ->where('token_expires_at', '<=', now()->addDays(3))
+        ->get();
+
+    foreach ($expiringSoon as $account) {
+        \Log::warning('Platform ad account token expiring', [
+            'account_id' => $account->id,
+            'platform' => $account->platform,
+            'expires_at' => $account->token_expires_at,
+        ]);
+    }
+})->dailyAt('08:00')->timezone('Europe/Bucharest');
+
+// Clean up old platform tracking sessions (daily at 4:30 AM)
+Schedule::call(function () {
+    $deleted = \App\Models\Platform\CoreSession::where('last_activity_at', '<', now()->subDays(90))
+        ->delete();
+    \Log::info('Old platform tracking sessions cleaned up', ['deleted' => $deleted]);
+})->dailyAt('04:30')->timezone('Europe/Bucharest');
+
+/*
+|--------------------------------------------------------------------------
 | Exchange Rates Scheduled Tasks
 |--------------------------------------------------------------------------
 */
