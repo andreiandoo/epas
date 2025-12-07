@@ -9,8 +9,11 @@ use App\Services\Platform\AnalyticsCacheService;
 use App\Services\Platform\AttributionModelService;
 use App\Services\Platform\ChurnPredictionService;
 use App\Services\Platform\DuplicateDetectionService;
+use App\Services\Platform\AnalyticsExportService;
+use App\Services\Platform\LtvPredictionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Carbon\Carbon;
 
 class AnalyticsController extends Controller
@@ -19,7 +22,9 @@ class AnalyticsController extends Controller
         protected AnalyticsCacheService $cacheService,
         protected AttributionModelService $attributionService,
         protected ChurnPredictionService $churnService,
-        protected DuplicateDetectionService $duplicateService
+        protected DuplicateDetectionService $duplicateService,
+        protected AnalyticsExportService $exportService,
+        protected LtvPredictionService $ltvService
     ) {}
 
     /**
@@ -453,36 +458,160 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Export analytics data
+     * Get LTV prediction dashboard
      */
-    public function export(Request $request): JsonResponse
+    public function ltvDashboard(Request $request): JsonResponse
     {
-        $request->validate([
-            'report_type' => 'required|in:dashboard,cohorts,attribution,churn,customers',
-            'format' => 'in:json,csv',
-        ]);
-
-        $reportType = $request->input('report_type');
         $tenantId = $request->input('tenant_id');
-
-        $data = match ($reportType) {
-            'dashboard' => $this->cacheService->getDashboardStats($tenantId),
-            'cohorts' => $this->cacheService->getCohortRetention('month', 12, $tenantId),
-            'attribution' => $this->attributionService->compareModels(
-                Carbon::now()->subDays(30),
-                Carbon::now(),
-                $tenantId
-            ),
-            'churn' => $this->churnService->getChurnDashboard($tenantId),
-            'customers' => $this->cacheService->getTopCustomers(100, 'total_spent', $tenantId),
-            default => [],
-        };
+        $data = $this->ltvService->getLtvDashboard($tenantId);
 
         return response()->json([
             'success' => true,
-            'report_type' => $reportType,
-            'generated_at' => now()->toIso8601String(),
             'data' => $data,
+        ]);
+    }
+
+    /**
+     * Predict LTV for a specific customer
+     */
+    public function predictCustomerLtv(Request $request, int $customerId): JsonResponse
+    {
+        $customer = CoreCustomer::find($customerId);
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Customer not found',
+            ], 404);
+        }
+
+        $data = $this->ltvService->predictLtv($customer);
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * Get high-potential customers
+     */
+    public function highPotentialCustomers(Request $request): JsonResponse
+    {
+        $tenantId = $request->input('tenant_id');
+        $limit = $request->input('limit', 50);
+
+        $data = $this->ltvService->getHighPotentialCustomers($limit, $tenantId);
+
+        return response()->json([
+            'success' => true,
+            'data' => $data->toArray(),
+        ]);
+    }
+
+    /**
+     * Get LTV by segment
+     */
+    public function ltvBySegment(Request $request): JsonResponse
+    {
+        $tenantId = $request->input('tenant_id');
+        $data = $this->ltvService->getLtvBySegment($tenantId);
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * Get LTV by cohort
+     */
+    public function ltvByCohort(Request $request): JsonResponse
+    {
+        $tenantId = $request->input('tenant_id');
+        $cohortType = $request->input('type', 'month');
+        $cohortsBack = $request->input('cohorts', 12);
+
+        $data = $this->ltvService->getLtvByCohort($cohortType, $cohortsBack, $tenantId);
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * Get LTV tier distribution
+     */
+    public function ltvTiers(Request $request): JsonResponse
+    {
+        $tenantId = $request->input('tenant_id');
+        $data = $this->ltvService->getLtvTierDistribution($tenantId);
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * Export analytics data
+     *
+     * @OA\Get(
+     *     path="/api/v1/analytics/export",
+     *     summary="Export analytics data in various formats",
+     *     tags={"Analytics"},
+     *     @OA\Parameter(name="type", in="query", required=true, description="Export type"),
+     *     @OA\Parameter(name="format", in="query", description="Export format (csv, xlsx, json)"),
+     *     @OA\Response(response=200, description="Exported data")
+     * )
+     */
+    public function export(Request $request): JsonResponse|StreamedResponse
+    {
+        $request->validate([
+            'type' => 'required|in:customers,churn_report,cohort_retention,attribution,segments,conversions,traffic_sources',
+            'format' => 'in:csv,xlsx,json',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
+        $type = $request->input('type');
+        $format = $request->input('format', 'csv');
+        $tenantId = $request->input('tenant_id');
+        $startDate = $request->input('start_date') ? Carbon::parse($request->input('start_date')) : null;
+        $endDate = $request->input('end_date') ? Carbon::parse($request->input('end_date')) : null;
+
+        $this->exportService
+            ->setTenantId($tenantId)
+            ->setDateRange($startDate, $endDate);
+
+        $result = $this->exportService->export($type, $format);
+
+        // If JSON format, wrap in standard response
+        if ($format === 'json') {
+            return response()->json([
+                'success' => true,
+                'export_type' => $type,
+                'format' => $format,
+                'data' => $result,
+            ]);
+        }
+
+        // For CSV/XLSX, return the streamed response directly
+        return $result;
+    }
+
+    /**
+     * Get available export types and formats
+     */
+    public function exportOptions(): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'types' => AnalyticsExportService::getAvailableTypes(),
+                'formats' => AnalyticsExportService::getAvailableFormats(),
+            ],
         ]);
     }
 }

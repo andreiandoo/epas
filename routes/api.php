@@ -1079,9 +1079,31 @@ Route::prefix('v1/analytics')->middleware(['throttle:api', 'api.key'])->group(fu
     Route::get('/customers/{customerId}/duplicates', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'customerDuplicates'])
         ->name('api.analytics.customer.duplicates');
 
+    Route::get('/customers/{customerId}/ltv-prediction', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'predictCustomerLtv'])
+        ->name('api.analytics.customer.ltv-prediction');
+
+    // LTV Prediction
+    Route::get('/ltv/dashboard', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'ltvDashboard'])
+        ->name('api.analytics.ltv.dashboard');
+
+    Route::get('/ltv/high-potential', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'highPotentialCustomers'])
+        ->name('api.analytics.ltv.high-potential');
+
+    Route::get('/ltv/by-segment', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'ltvBySegment'])
+        ->name('api.analytics.ltv.by-segment');
+
+    Route::get('/ltv/by-cohort', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'ltvByCohort'])
+        ->name('api.analytics.ltv.by-cohort');
+
+    Route::get('/ltv/tiers', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'ltvTiers'])
+        ->name('api.analytics.ltv.tiers');
+
     // Export
     Route::get('/export', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'export'])
         ->name('api.analytics.export');
+
+    Route::get('/export/options', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'exportOptions'])
+        ->name('api.analytics.export.options');
 });
 
 /*
