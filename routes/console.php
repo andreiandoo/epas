@@ -263,6 +263,48 @@ Schedule::call(function () {
     \Log::info('Old platform tracking sessions cleaned up', ['deleted' => $deleted]);
 })->dailyAt('04:30')->timezone('Europe/Bucharest');
 
+// Retry failed conversions (every 15 minutes)
+Schedule::job(new \App\Jobs\RetryFailedConversionsJob)
+    ->everyFifteenMinutes()
+    ->onSuccess(function () {
+        \Log::info('Failed conversions retry completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed conversions retry job failed');
+    });
+
+// Calculate RFM scores for customers (daily at 2 AM)
+Schedule::job(new \App\Jobs\CalculateRfmScoresJob)
+    ->dailyAt('02:00')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('RFM score calculation completed');
+    })
+    ->onFailure(function () {
+        \Log::error('RFM score calculation failed');
+    });
+
+// Sync audiences that need syncing (every hour)
+Schedule::call(function () {
+    $audiences = \App\Models\Platform\PlatformAudience::active()
+        ->needsSync()
+        ->get();
+
+    $trackingService = app(\App\Services\Platform\PlatformTrackingService::class);
+
+    foreach ($audiences as $audience) {
+        try {
+            $trackingService->syncAudience($audience);
+            \Log::info('Audience auto-synced', ['audience_id' => $audience->id]);
+        } catch (\Exception $e) {
+            \Log::error('Audience auto-sync failed', [
+                'audience_id' => $audience->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+})->hourly();
+
 /*
 |--------------------------------------------------------------------------
 | Exchange Rates Scheduled Tasks

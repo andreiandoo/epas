@@ -28,6 +28,7 @@ class PlatformConversion extends Model
         'status',
         'platform_response',
         'error_message',
+        'retry_count',
         'sent_at',
         'confirmed_at',
     ];
@@ -37,6 +38,7 @@ class PlatformConversion extends Model
         'user_data' => 'array',
         'event_data' => 'array',
         'platform_response' => 'array',
+        'retry_count' => 'integer',
         'sent_at' => 'datetime',
         'confirmed_at' => 'datetime',
     ];
@@ -177,6 +179,16 @@ class PlatformConversion extends Model
             'status' => self::STATUS_SKIPPED,
             'error_message' => $reason,
         ]);
+    }
+
+    public function incrementRetryCount(): void
+    {
+        $this->increment('retry_count');
+    }
+
+    public function canRetry(int $maxRetries = 5): bool
+    {
+        return $this->retry_count < $maxRetries && $this->status === self::STATUS_FAILED;
     }
 
     // Helpers

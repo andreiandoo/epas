@@ -21,6 +21,35 @@ class PlatformAnalytics extends Page
     protected static ?string $title = 'Platform Analytics';
     protected static ?string $navigationLabel = 'Analytics Dashboard';
 
+    // Enable real-time polling every 30 seconds
+    protected $listeners = ['refreshData' => 'refreshRealTimeData'];
+
+    public function refreshRealTimeData(): void
+    {
+        // Only refresh real-time metrics (active visitors, recent conversions)
+        $tenantId = $this->tenantId ? (int) $this->tenantId : null;
+
+        $this->activeVisitors = CoreSession::notBot()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->active()
+            ->count();
+
+        $this->recentConversions = CoreCustomerEvent::with('coreCustomer')
+            ->purchases()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get()
+            ->map(fn($event) => [
+                'id' => $event->id,
+                'value' => $event->conversion_value,
+                'source' => $event->getAttributionSource(),
+                'customer' => $event->coreCustomer?->email ?? 'Anonymous',
+                'time_ago' => $event->created_at->diffForHumans(),
+            ])
+            ->toArray();
+    }
+
     public array $overview = [];
     public array $trafficSources = [];
     public array $conversionStats = [];

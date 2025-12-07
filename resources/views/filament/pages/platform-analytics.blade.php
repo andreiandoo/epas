@@ -1,4 +1,7 @@
 <x-filament-panels::page>
+    {{-- Enable real-time polling for active visitors and recent conversions --}}
+    <div wire:poll.30s="refreshRealTimeData"></div>
+
     {{-- Filters --}}
     <div class="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
