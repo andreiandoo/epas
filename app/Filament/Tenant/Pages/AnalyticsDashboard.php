@@ -5,6 +5,10 @@ namespace App\Filament\Tenant\Pages;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Models\Platform\CoreSession;
+use App\Models\Platform\CoreCustomerEvent;
+use App\Models\Platform\CoreCustomer;
+use App\Services\Platform\PlatformTrackingService;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Notifications\Notification;
@@ -235,112 +239,297 @@ class AnalyticsDashboard extends Page
     }
 
     /**
-     * Get real-time analytics data
-     * Note: This returns simulated data. In production, connect to actual tracking service.
+     * Get real-time analytics data from platform tracking
      */
     public function getRealtimeData(): array
     {
-        // Simulated real-time data - would come from tracking service in production
-        $baseUsers = rand(5, 25);
+        $tenant = auth()->user()->tenant;
+        $tenantId = $tenant?->id;
 
-        // Generate users per minute for last 30 minutes
+        // Get real active sessions
+        $activeUsers = CoreSession::active()
+            ->notBot()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->count();
+
+        // Get users per minute for last 30 minutes
         $usersPerMinute = [];
-        for ($i = 0; $i < 30; $i++) {
-            $usersPerMinute[] = max(0, $baseUsers + rand(-8, 12));
+        for ($i = 29; $i >= 0; $i--) {
+            $start = now()->subMinutes($i + 1);
+            $end = now()->subMinutes($i);
+            $count = CoreSession::notBot()
+                ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+                ->whereBetween('last_activity_at', [$start, $end])
+                ->count();
+            $usersPerMinute[] = $count;
         }
 
+        // Get active pages with user counts
+        $activePages = CoreCustomerEvent::pageViews()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->where('created_at', '>=', now()->subMinutes(30))
+            ->selectRaw('page_url as path, COUNT(DISTINCT session_id) as users')
+            ->groupBy('page_url')
+            ->orderByDesc('users')
+            ->limit(5)
+            ->get()
+            ->map(fn($page) => [
+                'path' => parse_url($page->path, PHP_URL_PATH) ?: '/',
+                'users' => $page->users,
+            ])
+            ->toArray();
+
+        // Fill with defaults if no data
+        if (empty($activePages)) {
+            $activePages = [['path' => '/', 'users' => 0]];
+        }
+
+        // Get recent events from real tracking
+        $recentEvents = $this->getRealRecentEvents();
+
+        // Today's totals
+        $todayUsers = CoreSession::notBot()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->whereDate('started_at', today())
+            ->count();
+
+        $yesterdayUsers = CoreSession::notBot()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->whereDate('started_at', today()->subDay())
+            ->count();
+
+        $usersChange = $yesterdayUsers > 0
+            ? round((($todayUsers - $yesterdayUsers) / $yesterdayUsers) * 100, 1)
+            : 0;
+
+        // Sessions today
+        $todaySessions = CoreSession::notBot()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->whereDate('started_at', today())
+            ->count();
+
+        $yesterdaySessions = CoreSession::notBot()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->whereDate('started_at', today()->subDay())
+            ->count();
+
+        $sessionsChange = $yesterdaySessions > 0
+            ? round((($todaySessions - $yesterdaySessions) / $yesterdaySessions) * 100, 1)
+            : 0;
+
+        // Bounce rate (sessions with only 1 page view)
+        $bouncedSessions = CoreSession::notBot()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->whereDate('started_at', today())
+            ->where('bounce', true)
+            ->count();
+
+        $bounceRate = $todaySessions > 0
+            ? round(($bouncedSessions / $todaySessions) * 100, 1)
+            : 0;
+
+        // Average session duration
+        $avgDurationSeconds = CoreSession::notBot()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->whereDate('started_at', today())
+            ->whereNotNull('total_time_seconds')
+            ->avg('total_time_seconds') ?? 0;
+
+        $minutes = floor($avgDurationSeconds / 60);
+        $seconds = $avgDurationSeconds % 60;
+
         return [
-            'active_users' => $baseUsers,
+            'active_users' => $activeUsers,
             'users_per_minute' => $usersPerMinute,
-            'active_pages' => [
-                ['path' => '/events', 'users' => rand(3, 12)],
-                ['path' => '/checkout', 'users' => rand(1, 5)],
-                ['path' => '/event/concert-xyz', 'users' => rand(2, 8)],
-                ['path' => '/tickets', 'users' => rand(1, 4)],
-                ['path' => '/', 'users' => rand(2, 6)],
-            ],
-            'recent_events' => $this->generateRecentEvents(),
-            'total_users' => rand(1200, 2500),
-            'users_change' => rand(-5, 15) + (rand(0, 100) / 10),
-            'total_sessions' => rand(1800, 4000),
-            'sessions_change' => rand(0, 20) + (rand(0, 100) / 10),
-            'bounce_rate' => 35 + rand(0, 20) + (rand(0, 100) / 100),
-            'avg_duration' => sprintf('%d:%02d', rand(2, 5), rand(0, 59)),
+            'active_pages' => $activePages,
+            'recent_events' => $recentEvents,
+            'total_users' => $todayUsers,
+            'users_change' => $usersChange,
+            'total_sessions' => $todaySessions,
+            'sessions_change' => $sessionsChange,
+            'bounce_rate' => $bounceRate,
+            'avg_duration' => sprintf('%d:%02d', $minutes, $seconds),
         ];
     }
 
     /**
-     * Generate simulated recent activity events
+     * Get real recent activity events from tracking
      */
-    protected function generateRecentEvents(): array
+    protected function getRealRecentEvents(): array
     {
-        $events = [];
-        $types = ['purchase', 'view', 'cart', 'view', 'view', 'purchase', 'cart'];
-        $locations = ['Bucharest, RO', 'Cluj-Napoca, RO', 'Timișoara, RO', 'Berlin, DE', 'Vienna, AT', 'Budapest, HU'];
-        $pages = ['Summer Festival 2025', 'Jazz Night', 'Rock Concert', 'Classical Evening', 'Electronic Party'];
+        $tenant = auth()->user()->tenant;
+        $tenantId = $tenant?->id;
 
-        for ($i = 0; $i < 8; $i++) {
-            $type = $types[array_rand($types)];
-            $page = $pages[array_rand($pages)];
+        $events = CoreCustomerEvent::with(['session', 'coreCustomer'])
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get();
 
-            $description = match ($type) {
-                'purchase' => "Purchased 2 tickets for {$page}",
-                'view' => "Viewing {$page}",
-                'cart' => "Added {$page} to cart",
-                default => "Browsing events",
+        return $events->map(function ($event) {
+            $type = match ($event->event_type) {
+                'purchase' => 'purchase',
+                'add_to_cart' => 'cart',
+                'begin_checkout' => 'checkout',
+                'sign_up' => 'signup',
+                'page_view' => 'view',
+                default => 'view',
             };
 
-            $events[] = [
+            $pageName = $event->page_title ?: basename(parse_url($event->page_url ?? '/', PHP_URL_PATH));
+
+            $description = match ($event->event_type) {
+                'purchase' => "Purchased tickets" . ($event->order_total ? " (€" . number_format($event->order_total, 2) . ")" : ""),
+                'add_to_cart' => "Added to cart: {$pageName}",
+                'begin_checkout' => "Started checkout",
+                'sign_up' => "New user registration",
+                'page_view' => "Viewing {$pageName}",
+                'view_item' => "Viewing event: {$pageName}",
+                'search' => "Searched: " . ($event->event_data['searchTerm'] ?? 'events'),
+                default => "Browsing {$pageName}",
+            };
+
+            // Build location string
+            $locationParts = array_filter([
+                $event->city,
+                $event->country_code,
+            ]);
+            $location = !empty($locationParts) ? implode(', ', $locationParts) : 'Unknown';
+
+            return [
                 'type' => $type,
                 'description' => $description,
-                'location' => $locations[array_rand($locations)],
-                'time' => rand(1, 15) . ' sec ago',
+                'location' => $location,
+                'time' => $event->created_at->diffForHumans(short: true),
             ];
-        }
-
-        return $events;
+        })->toArray();
     }
 
     /**
-     * Get traffic sources data
+     * Get traffic sources data from real tracking
      */
     public function getTrafficSources(): array
     {
-        return [
-            ['name' => 'Direct', 'percentage' => 42, 'color' => 'bg-blue-500'],
-            ['name' => 'Organic Search', 'percentage' => 28, 'color' => 'bg-green-500'],
-            ['name' => 'Social Media', 'percentage' => 18, 'color' => 'bg-purple-500'],
-            ['name' => 'Referral', 'percentage' => 8, 'color' => 'bg-orange-500'],
-            ['name' => 'Email', 'percentage' => 4, 'color' => 'bg-pink-500'],
+        $tenant = auth()->user()->tenant;
+        $tenantId = $tenant?->id;
+
+        $days = match ($this->dateRange) {
+            '7d' => 7,
+            '30d' => 30,
+            '90d' => 90,
+            default => 30,
+        };
+
+        $sources = CoreSession::notBot()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->where('started_at', '>=', now()->subDays($days))
+            ->selectRaw("
+                CASE
+                    WHEN gclid IS NOT NULL THEN 'Google Ads'
+                    WHEN fbclid IS NOT NULL THEN 'Facebook'
+                    WHEN ttclid IS NOT NULL THEN 'TikTok'
+                    WHEN li_fat_id IS NOT NULL THEN 'LinkedIn'
+                    WHEN utm_source = 'google' AND utm_medium = 'organic' THEN 'Organic Search'
+                    WHEN utm_source IS NOT NULL THEN CONCAT(UPPER(SUBSTRING(utm_source, 1, 1)), LOWER(SUBSTRING(utm_source, 2)))
+                    WHEN referrer IS NOT NULL AND referrer != '' THEN 'Referral'
+                    ELSE 'Direct'
+                END as source,
+                COUNT(*) as count
+            ")
+            ->groupBy('source')
+            ->orderByDesc('count')
+            ->get();
+
+        $total = $sources->sum('count') ?: 1;
+
+        $colors = [
+            'Direct' => 'bg-blue-500',
+            'Organic Search' => 'bg-green-500',
+            'Google Ads' => 'bg-red-500',
+            'Facebook' => 'bg-indigo-500',
+            'TikTok' => 'bg-pink-500',
+            'LinkedIn' => 'bg-sky-500',
+            'Referral' => 'bg-orange-500',
+            'Email' => 'bg-yellow-500',
         ];
+
+        return $sources->map(fn($source) => [
+            'name' => $source->source,
+            'percentage' => round(($source->count / $total) * 100, 1),
+            'color' => $colors[$source->source] ?? 'bg-gray-500',
+        ])->take(6)->toArray();
     }
 
     /**
-     * Get top pages data
+     * Get top pages data from real tracking
      */
     public function getTopPages(): array
     {
-        return [
-            ['path' => '/events', 'views' => rand(800, 1500)],
-            ['path' => '/events/summer-fest', 'views' => rand(400, 800)],
-            ['path' => '/checkout', 'views' => rand(200, 500)],
-            ['path' => '/artists', 'views' => rand(150, 400)],
-            ['path' => '/about', 'views' => rand(80, 200)],
-        ];
+        $tenant = auth()->user()->tenant;
+        $tenantId = $tenant?->id;
+
+        $days = match ($this->dateRange) {
+            '7d' => 7,
+            '30d' => 30,
+            '90d' => 90,
+            default => 30,
+        };
+
+        return CoreCustomerEvent::pageViews()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->where('created_at', '>=', now()->subDays($days))
+            ->selectRaw('page_url, COUNT(*) as views')
+            ->groupBy('page_url')
+            ->orderByDesc('views')
+            ->limit(5)
+            ->get()
+            ->map(fn($page) => [
+                'path' => parse_url($page->page_url, PHP_URL_PATH) ?: '/',
+                'views' => $page->views,
+            ])
+            ->toArray();
     }
 
     /**
-     * Get geographic distribution data
+     * Get geographic distribution data from real tracking
      */
     public function getGeographicData(): array
     {
-        return [
-            ['flag' => '🇷🇴', 'name' => 'Romania', 'users' => rand(800, 1500)],
-            ['flag' => '🇩🇪', 'name' => 'Germany', 'users' => rand(200, 500)],
-            ['flag' => '🇦🇹', 'name' => 'Austria', 'users' => rand(100, 300)],
-            ['flag' => '🇭🇺', 'name' => 'Hungary', 'users' => rand(80, 200)],
-            ['flag' => '🇬🇧', 'name' => 'UK', 'users' => rand(50, 150)],
+        $tenant = auth()->user()->tenant;
+        $tenantId = $tenant?->id;
+
+        $days = match ($this->dateRange) {
+            '7d' => 7,
+            '30d' => 30,
+            '90d' => 90,
+            default => 30,
+        };
+
+        // Country code to flag emoji mapping
+        $flags = [
+            'RO' => '🇷🇴', 'DE' => '🇩🇪', 'AT' => '🇦🇹', 'HU' => '🇭🇺',
+            'GB' => '🇬🇧', 'US' => '🇺🇸', 'FR' => '🇫🇷', 'IT' => '🇮🇹',
+            'ES' => '🇪🇸', 'NL' => '🇳🇱', 'BE' => '🇧🇪', 'PL' => '🇵🇱',
+            'CZ' => '🇨🇿', 'SK' => '🇸🇰', 'CH' => '🇨🇭', 'SE' => '🇸🇪',
+            'BG' => '🇧🇬', 'GR' => '🇬🇷', 'RS' => '🇷🇸', 'UA' => '🇺🇦',
+            'MD' => '🇲🇩', 'HR' => '🇭🇷', 'SI' => '🇸🇮', 'BA' => '🇧🇦',
         ];
+
+        return CoreSession::notBot()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->where('started_at', '>=', now()->subDays($days))
+            ->whereNotNull('country_code')
+            ->selectRaw('country_code, country_name, COUNT(*) as users')
+            ->groupBy('country_code', 'country_name')
+            ->orderByDesc('users')
+            ->limit(5)
+            ->get()
+            ->map(fn($country) => [
+                'flag' => $flags[$country->country_code] ?? '🏳️',
+                'name' => $country->country_name ?: $country->country_code,
+                'users' => $country->users,
+            ])
+            ->toArray();
     }
 
     /**

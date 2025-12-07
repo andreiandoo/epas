@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Public\SeatingController;
 use App\Http\Controllers\Api\PublicDataController;
 use App\Http\Controllers\Api\AffiliateController;
 use App\Http\Controllers\Api\TrackingController;
+use App\Http\Controllers\Api\PlatformTrackingController;
 use App\Http\Controllers\Api\TicketTemplateController;
 use App\Http\Controllers\Api\InviteController;
 use App\Http\Controllers\Api\InsuranceController;
@@ -238,6 +239,25 @@ Route::prefix('tracking')->middleware(['throttle:api'])->group(function () {
     // Debug: Preview script injection
     Route::get('/debug/preview', [TrackingController::class, 'debugPreview'])
         ->name('api.tracking.debug.preview');
+
+    // Platform real-time tracking events (from tenant websites)
+    Route::post('/events', [PlatformTrackingController::class, 'trackEvents'])
+        ->name('api.tracking.events')
+        ->withoutMiddleware(['throttle:api'])
+        ->middleware('throttle:300,1'); // Higher rate limit for tracking
+
+    // Real-time analytics
+    Route::get('/realtime', [PlatformTrackingController::class, 'getRealTimeStats'])
+        ->name('api.tracking.realtime');
+
+    Route::get('/active-visitors', [PlatformTrackingController::class, 'getActiveVisitors'])
+        ->name('api.tracking.active-visitors');
+
+    Route::get('/events/stream', [PlatformTrackingController::class, 'getEventStream'])
+        ->name('api.tracking.events.stream');
+
+    Route::get('/customers/insights', [PlatformTrackingController::class, 'getCustomerInsights'])
+        ->name('api.tracking.customers.insights');
 });
 
 /*
