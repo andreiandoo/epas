@@ -118,6 +118,24 @@ class CoreCustomer extends Model
         'custom_attributes',
         'tags',
         'notes',
+        // Health Score fields
+        'health_score',
+        'health_score_breakdown',
+        'health_score_calculated_at',
+        // Cross-device & Merge fields
+        'primary_device_id',
+        'linked_device_ids',
+        'linked_customer_ids',
+        'is_merged',
+        'merged_into_id',
+        'merged_at',
+        // Cohort fields
+        'cohort_month',
+        'cohort_week',
+        // Additional fields
+        'visitor_id',
+        'has_cart_abandoned',
+        'last_cart_abandoned_at',
     ];
 
     protected $casts = [
@@ -151,6 +169,14 @@ class CoreCustomer extends Model
         'external_ids' => 'array',
         'custom_attributes' => 'array',
         'tags' => 'array',
+        'health_score_breakdown' => 'array',
+        'health_score_calculated_at' => 'datetime',
+        'linked_device_ids' => 'array',
+        'linked_customer_ids' => 'array',
+        'is_merged' => 'boolean',
+        'merged_at' => 'datetime',
+        'has_cart_abandoned' => 'boolean',
+        'last_cart_abandoned_at' => 'datetime',
     ];
 
     protected $hidden = [
@@ -527,5 +553,269 @@ class CoreCustomer extends Model
             'zp' => $this->postal_code ? hash('sha256', $this->postal_code) : null,
             'country' => $this->country_code,
         ];
+    }
+
+    // Display name helper
+    public function getDisplayName(): string
+    {
+        if ($this->first_name || $this->last_name) {
+            return trim($this->first_name . ' ' . $this->last_name);
+        }
+
+        if ($this->email) {
+            return explode('@', $this->email)[0];
+        }
+
+        return 'Customer #' . substr($this->uuid, 0, 8);
+    }
+
+    // Health Score helpers
+    public function getHealthScoreLabel(): string
+    {
+        return match (true) {
+            $this->health_score >= 80 => 'Excellent',
+            $this->health_score >= 60 => 'Good',
+            $this->health_score >= 40 => 'Fair',
+            $this->health_score >= 20 => 'Poor',
+            default => 'Critical',
+        };
+    }
+
+    public function getHealthScoreColor(): string
+    {
+        return match (true) {
+            $this->health_score >= 80 => 'success',
+            $this->health_score >= 60 => 'info',
+            $this->health_score >= 40 => 'warning',
+            default => 'danger',
+        };
+    }
+
+    // Cross-device linking
+    public function linkDevice(string $deviceId): void
+    {
+        $linkedDevices = $this->linked_device_ids ?? [];
+
+        if (!in_array($deviceId, $linkedDevices)) {
+            $linkedDevices[] = $deviceId;
+            $this->update([
+                'linked_device_ids' => $linkedDevices,
+                'primary_device_id' => $this->primary_device_id ?? $deviceId,
+            ]);
+        }
+    }
+
+    public function linkCustomer(int $customerId): void
+    {
+        $linkedCustomers = $this->linked_customer_ids ?? [];
+
+        if (!in_array($customerId, $linkedCustomers)) {
+            $linkedCustomers[] = $customerId;
+            $this->update(['linked_customer_ids' => $linkedCustomers]);
+        }
+    }
+
+    // Customer Merge functionality
+    public function mergeInto(self $targetCustomer): void
+    {
+        // Transfer purchase data
+        $targetCustomer->total_orders += $this->total_orders;
+        $targetCustomer->total_spent += $this->total_spent;
+        $targetCustomer->total_tickets += $this->total_tickets;
+        $targetCustomer->total_visits += $this->total_visits;
+        $targetCustomer->total_pageviews += $this->total_pageviews;
+
+        // Keep earliest dates
+        if ($this->first_seen_at && (!$targetCustomer->first_seen_at || $this->first_seen_at < $targetCustomer->first_seen_at)) {
+            $targetCustomer->first_seen_at = $this->first_seen_at;
+        }
+        if ($this->first_purchase_at && (!$targetCustomer->first_purchase_at || $this->first_purchase_at < $targetCustomer->first_purchase_at)) {
+            $targetCustomer->first_purchase_at = $this->first_purchase_at;
+        }
+
+        // Keep latest dates
+        if ($this->last_seen_at && (!$targetCustomer->last_seen_at || $this->last_seen_at > $targetCustomer->last_seen_at)) {
+            $targetCustomer->last_seen_at = $this->last_seen_at;
+        }
+        if ($this->last_purchase_at && (!$targetCustomer->last_purchase_at || $this->last_purchase_at > $targetCustomer->last_purchase_at)) {
+            $targetCustomer->last_purchase_at = $this->last_purchase_at;
+        }
+
+        // Merge tenant IDs
+        $mergedTenantIds = array_unique(array_merge(
+            $targetCustomer->tenant_ids ?? [],
+            $this->tenant_ids ?? []
+        ));
+        $targetCustomer->tenant_ids = array_values($mergedTenantIds);
+        $targetCustomer->tenant_count = count($mergedTenantIds);
+
+        // Merge device IDs
+        $mergedDeviceIds = array_unique(array_merge(
+            $targetCustomer->linked_device_ids ?? [],
+            $this->linked_device_ids ?? [],
+            $this->primary_device_id ? [$this->primary_device_id] : []
+        ));
+        $targetCustomer->linked_device_ids = array_values($mergedDeviceIds);
+
+        // Link this customer to target
+        $targetCustomer->linkCustomer($this->id);
+
+        // Recalculate average order value
+        if ($targetCustomer->total_orders > 0) {
+            $targetCustomer->average_order_value = $targetCustomer->total_spent / $targetCustomer->total_orders;
+        }
+
+        $targetCustomer->save();
+
+        // Update events to point to target customer
+        CoreCustomerEvent::where('core_customer_id', $this->id)
+            ->update(['core_customer_id' => $targetCustomer->id]);
+
+        // Update sessions to point to target customer
+        CoreSession::where('core_customer_id', $this->id)
+            ->update(['core_customer_id' => $targetCustomer->id]);
+
+        // Mark this customer as merged
+        $this->update([
+            'is_merged' => true,
+            'merged_into_id' => $targetCustomer->id,
+            'merged_at' => now(),
+        ]);
+    }
+
+    // Cohort assignment
+    public function assignCohort(): void
+    {
+        if ($this->first_seen_at) {
+            $this->cohort_month = $this->first_seen_at->format('Y-m');
+            $this->cohort_week = $this->first_seen_at->format('Y-W');
+            $this->save();
+        }
+    }
+
+    // Scopes for merged customers
+    public function scopeNotMerged($query)
+    {
+        return $query->where('is_merged', false);
+    }
+
+    public function scopeMerged($query)
+    {
+        return $query->where('is_merged', true);
+    }
+
+    // Scope for health score
+    public function scopeHealthy($query, int $minScore = 60)
+    {
+        return $query->where('health_score', '>=', $minScore);
+    }
+
+    public function scopeAtRisk($query, int $maxScore = 40)
+    {
+        return $query->where('health_score', '<', $maxScore);
+    }
+
+    // Scope for cohort analysis
+    public function scopeInCohort($query, string $cohortPeriod, string $type = 'month')
+    {
+        $field = $type === 'week' ? 'cohort_week' : 'cohort_month';
+        return $query->where($field, $cohortPeriod);
+    }
+
+    // Get the customer this was merged into
+    public function mergedInto(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'merged_into_id');
+    }
+
+    // Get customers that were merged into this one
+    public function mergedCustomers(): HasMany
+    {
+        return $this->hasMany(self::class, 'merged_into_id');
+    }
+
+    // GDPR Data Export
+    public function exportPersonalData(): array
+    {
+        return [
+            'identity' => [
+                'uuid' => $this->uuid,
+                'email' => $this->email,
+                'phone' => $this->phone,
+                'first_name' => $this->first_name,
+                'last_name' => $this->last_name,
+            ],
+            'demographics' => [
+                'country_code' => $this->country_code,
+                'region' => $this->region,
+                'city' => $this->city,
+                'postal_code' => $this->postal_code,
+                'language' => $this->language,
+                'timezone' => $this->timezone,
+                'gender' => $this->gender,
+                'birth_date' => $this->birth_date?->toDateString(),
+            ],
+            'activity' => [
+                'first_seen_at' => $this->first_seen_at?->toIso8601String(),
+                'last_seen_at' => $this->last_seen_at?->toIso8601String(),
+                'total_visits' => $this->total_visits,
+                'total_pageviews' => $this->total_pageviews,
+            ],
+            'purchases' => [
+                'first_purchase_at' => $this->first_purchase_at?->toIso8601String(),
+                'last_purchase_at' => $this->last_purchase_at?->toIso8601String(),
+                'total_orders' => $this->total_orders,
+                'total_spent' => $this->total_spent,
+            ],
+            'marketing' => [
+                'first_utm_source' => $this->first_utm_source,
+                'first_utm_medium' => $this->first_utm_medium,
+                'first_utm_campaign' => $this->first_utm_campaign,
+                'email_subscribed' => $this->email_subscribed,
+            ],
+            'consent' => [
+                'marketing_consent' => $this->marketing_consent,
+                'analytics_consent' => $this->analytics_consent,
+                'personalization_consent' => $this->personalization_consent,
+            ],
+            'events' => $this->events()
+                ->orderByDesc('created_at')
+                ->limit(1000)
+                ->get()
+                ->map(fn($e) => [
+                    'type' => $e->event_type,
+                    'page_url' => $e->page_url,
+                    'created_at' => $e->created_at->toIso8601String(),
+                ])
+                ->toArray(),
+        ];
+    }
+
+    // GDPR Data Deletion
+    public function anonymizeForGdpr(): void
+    {
+        $this->update([
+            'email' => null,
+            'email_hash' => 'deleted_' . Str::random(32),
+            'phone' => null,
+            'phone_hash' => null,
+            'first_name' => null,
+            'last_name' => null,
+            'ip_address' => null,
+            'city' => null,
+            'postal_code' => null,
+            'stripe_customer_id' => null,
+            'facebook_user_id' => null,
+            'google_user_id' => null,
+            'external_ids' => null,
+            'custom_attributes' => null,
+            'notes' => 'Data deleted per GDPR request at ' . now()->toIso8601String(),
+        ]);
+
+        // Anonymize related events
+        $this->events()->update([
+            'ip_address' => null,
+            'event_data' => null,
+        ]);
     }
 }

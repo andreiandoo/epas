@@ -21,6 +21,10 @@ class PlatformAdAccount extends Model
         'is_active',
         'last_sync_at',
         'sync_errors',
+        // Attribution windows
+        'attribution_window_days',
+        'click_attribution_window_days',
+        'view_attribution_window_days',
     ];
 
     protected $casts = [
@@ -30,6 +34,9 @@ class PlatformAdAccount extends Model
         'is_active' => 'boolean',
         'token_expires_at' => 'datetime',
         'last_sync_at' => 'datetime',
+        'attribution_window_days' => 'integer',
+        'click_attribution_window_days' => 'integer',
+        'view_attribution_window_days' => 'integer',
     ];
 
     protected $hidden = [
@@ -239,5 +246,43 @@ class PlatformAdAccount extends Model
     public static function getAllActive(): \Illuminate\Database\Eloquent\Collection
     {
         return static::active()->get();
+    }
+
+    // Attribution Window helpers
+    public function getAttributionWindowDays(): int
+    {
+        return $this->attribution_window_days ?? 28;
+    }
+
+    public function getClickAttributionWindowDays(): int
+    {
+        return $this->click_attribution_window_days ?? 7;
+    }
+
+    public function getViewAttributionWindowDays(): int
+    {
+        return $this->view_attribution_window_days ?? 1;
+    }
+
+    public function isWithinAttributionWindow(\DateTime $eventTime, string $type = 'click'): bool
+    {
+        $windowDays = match ($type) {
+            'click' => $this->getClickAttributionWindowDays(),
+            'view' => $this->getViewAttributionWindowDays(),
+            default => $this->getAttributionWindowDays(),
+        };
+
+        return $eventTime >= now()->subDays($windowDays);
+    }
+
+    public function getAttributionWindowCutoff(string $type = 'click'): \DateTime
+    {
+        $windowDays = match ($type) {
+            'click' => $this->getClickAttributionWindowDays(),
+            'view' => $this->getViewAttributionWindowDays(),
+            default => $this->getAttributionWindowDays(),
+        };
+
+        return now()->subDays($windowDays);
     }
 }

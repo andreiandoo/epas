@@ -106,6 +106,56 @@ class PlatformAudienceResource extends Resource
                     ])
                     ->columns(3),
 
+                Forms\Components\Section::make('Lookalike Configuration')
+                    ->description('Configure the source and targeting for your lookalike audience')
+                    ->schema([
+                        Forms\Components\Select::make('lookalike_source_type')
+                            ->label('Seed Source')
+                            ->options(PlatformAudience::LOOKALIKE_SOURCE_TYPES)
+                            ->required()
+                            ->live()
+                            ->helperText('Choose the customer segment to base your lookalike on'),
+
+                        Forms\Components\Select::make('lookalike_source_audience_id')
+                            ->label('Source Audience')
+                            ->options(fn () => PlatformAudience::canBeSeed()
+                                ->get()
+                                ->mapWithKeys(fn ($aud) => [$aud->id => "{$aud->name} ({$aud->member_count} members)"]))
+                            ->searchable()
+                            ->visible(fn ($get) => $get('lookalike_source_type') === PlatformAudience::LOOKALIKE_SOURCE_AUDIENCE)
+                            ->helperText('Select an existing audience to use as seed'),
+
+                        Forms\Components\Select::make('lookalike_percentage')
+                            ->label('Audience Size')
+                            ->options(PlatformAudience::getLookalikePercentageOptions())
+                            ->default(1)
+                            ->required()
+                            ->helperText('Lower percentages = more similar to seed, higher = broader reach'),
+
+                        Forms\Components\Select::make('lookalike_country')
+                            ->label('Target Country')
+                            ->options(PlatformAudience::getLookalikeCountryOptions())
+                            ->default('US')
+                            ->required()
+                            ->searchable()
+                            ->helperText('The country where you want to find similar users'),
+
+                        Forms\Components\Placeholder::make('lookalike_preview')
+                            ->label('Estimated Reach')
+                            ->content(function ($get, $record) {
+                                if (!$record || !$record->isLookalike()) {
+                                    $percentage = $get('lookalike_percentage') ?? 1;
+                                    $country = $get('lookalike_country') ?? 'US';
+                                    return "After saving, reach estimates will be shown for {$percentage}% lookalike in {$country}";
+                                }
+                                $estimate = $record->estimateLookalikeReach();
+                                return view('filament.resources.platform-audience.lookalike-estimate', ['estimate' => $estimate]);
+                            })
+                            ->visibleOn('edit'),
+                    ])
+                    ->columns(2)
+                    ->visible(fn ($get) => $get('audience_type') === PlatformAudience::TYPE_LOOKALIKE),
+
                 Forms\Components\Section::make('Custom Segment Rules')
                     ->description('Define custom rules for this audience')
                     ->schema([
@@ -208,7 +258,10 @@ class PlatformAudienceResource extends Resource
                     ->label('Type')
                     ->formatStateUsing(fn ($state) => PlatformAudience::AUDIENCE_TYPES[$state] ?? $state)
                     ->badge()
-                    ->color('gray'),
+                    ->color(fn ($state) => $state === PlatformAudience::TYPE_LOOKALIKE ? 'info' : 'gray')
+                    ->description(fn ($record) => $record->isLookalike()
+                        ? "{$record->lookalike_percentage}% in {$record->lookalike_country}"
+                        : null),
 
                 Tables\Columns\TextColumn::make('member_count')
                     ->label('Members')
@@ -311,6 +364,49 @@ class PlatformAudienceResource extends Resource
                     ]))
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Close'),
+
+                Tables\Actions\Action::make('create_lookalike')
+                    ->label('Create Lookalike')
+                    ->icon('heroicon-o-user-plus')
+                    ->color('success')
+                    ->visible(fn ($record) => !$record->isLookalike() && $record->member_count >= 100)
+                    ->form([
+                        Forms\Components\Select::make('platform_ad_account_id')
+                            ->label('Ad Account')
+                            ->options(PlatformAdAccount::active()->get()->mapWithKeys(fn ($account) => [
+                                $account->id => $account->account_name . ' (' . (PlatformAdAccount::PLATFORMS[$account->platform] ?? $account->platform) . ')',
+                            ]))
+                            ->required(),
+                        Forms\Components\Select::make('percentage')
+                            ->label('Audience Size')
+                            ->options(PlatformAudience::getLookalikePercentageOptions())
+                            ->default(1)
+                            ->required(),
+                        Forms\Components\Select::make('country')
+                            ->label('Target Country')
+                            ->options(PlatformAudience::getLookalikeCountryOptions())
+                            ->default('US')
+                            ->required()
+                            ->searchable(),
+                        Forms\Components\TextInput::make('name')
+                            ->label('Audience Name (optional)')
+                            ->placeholder('Leave blank for auto-generated name'),
+                    ])
+                    ->action(function ($record, array $data) {
+                        $account = PlatformAdAccount::find($data['platform_ad_account_id']);
+                        $lookalike = $record->createLookalike(
+                            $account,
+                            $data['percentage'],
+                            $data['country'],
+                            $data['name'] ?: null
+                        );
+
+                        Notification::make()
+                            ->success()
+                            ->title('Lookalike Created')
+                            ->body("Created lookalike audience: {$lookalike->name}")
+                            ->send();
+                    }),
 
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),

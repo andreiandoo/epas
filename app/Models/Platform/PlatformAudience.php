@@ -14,6 +14,10 @@ class PlatformAudience extends Model
         'name',
         'description',
         'audience_type',
+        'lookalike_source_type',
+        'lookalike_source_audience_id',
+        'lookalike_percentage',
+        'lookalike_country',
         'segment_rules',
         'member_count',
         'matched_count',
@@ -31,6 +35,7 @@ class PlatformAudience extends Model
         'last_synced_at' => 'datetime',
         'member_count' => 'integer',
         'matched_count' => 'integer',
+        'lookalike_percentage' => 'integer',
     ];
 
     // Audience types
@@ -42,6 +47,7 @@ class PlatformAudience extends Model
     const TYPE_ENGAGED_USERS = 'engaged_users';
     const TYPE_INACTIVE = 'inactive';
     const TYPE_CUSTOM = 'custom';
+    const TYPE_LOOKALIKE = 'lookalike';
 
     const AUDIENCE_TYPES = [
         self::TYPE_ALL_CUSTOMERS => 'All Customers',
@@ -52,6 +58,22 @@ class PlatformAudience extends Model
         self::TYPE_ENGAGED_USERS => 'Engaged Users',
         self::TYPE_INACTIVE => 'Inactive Customers',
         self::TYPE_CUSTOM => 'Custom Segment',
+        self::TYPE_LOOKALIKE => 'Lookalike Audience',
+    ];
+
+    // Lookalike source types
+    const LOOKALIKE_SOURCE_AUDIENCE = 'audience';
+    const LOOKALIKE_SOURCE_PURCHASERS = 'purchasers';
+    const LOOKALIKE_SOURCE_HIGH_VALUE = 'high_value';
+    const LOOKALIKE_SOURCE_TOP_SPENDERS = 'top_spenders';
+    const LOOKALIKE_SOURCE_ENGAGED = 'engaged';
+
+    const LOOKALIKE_SOURCE_TYPES = [
+        self::LOOKALIKE_SOURCE_AUDIENCE => 'Existing Audience',
+        self::LOOKALIKE_SOURCE_PURCHASERS => 'All Purchasers',
+        self::LOOKALIKE_SOURCE_HIGH_VALUE => 'High-Value Customers (RFM 12+)',
+        self::LOOKALIKE_SOURCE_TOP_SPENDERS => 'Top 10% Spenders',
+        self::LOOKALIKE_SOURCE_ENGAGED => 'Highly Engaged (50+ score)',
     ];
 
     // Sync frequencies
@@ -298,5 +320,245 @@ class PlatformAudience extends Model
             default:
                 return false;
         }
+    }
+
+    // Lookalike audience methods
+
+    /**
+     * Get the source audience for a lookalike audience
+     */
+    public function sourceAudience(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'lookalike_source_audience_id');
+    }
+
+    /**
+     * Get lookalike audiences created from this audience
+     */
+    public function derivedLookalikes(): HasMany
+    {
+        return $this->hasMany(self::class, 'lookalike_source_audience_id');
+    }
+
+    /**
+     * Check if this is a lookalike audience
+     */
+    public function isLookalike(): bool
+    {
+        return $this->audience_type === self::TYPE_LOOKALIKE;
+    }
+
+    /**
+     * Get the seed customers query for lookalike audience creation
+     */
+    public function getLookalikeSeedQuery()
+    {
+        $query = CoreCustomer::query();
+
+        switch ($this->lookalike_source_type) {
+            case self::LOOKALIKE_SOURCE_AUDIENCE:
+                // Use the source audience's customer query
+                if ($this->sourceAudience) {
+                    return $this->sourceAudience->getCustomersQuery();
+                }
+                break;
+
+            case self::LOOKALIKE_SOURCE_PURCHASERS:
+                $query->where('total_orders', '>', 0);
+                break;
+
+            case self::LOOKALIKE_SOURCE_HIGH_VALUE:
+                $query->where('rfm_score', '>=', 12);
+                break;
+
+            case self::LOOKALIKE_SOURCE_TOP_SPENDERS:
+                // Get top 10% by total spent
+                $threshold = CoreCustomer::where('total_spent', '>', 0)
+                    ->orderByDesc('total_spent')
+                    ->limit(1)
+                    ->offset((int) (CoreCustomer::where('total_spent', '>', 0)->count() * 0.1))
+                    ->value('total_spent') ?? 1000;
+                $query->where('total_spent', '>=', $threshold);
+                break;
+
+            case self::LOOKALIKE_SOURCE_ENGAGED:
+                $query->where('engagement_score', '>=', 50);
+                break;
+        }
+
+        // Only include customers with hashable data for matching
+        $query->where(function ($q) {
+            $q->whereNotNull('email_hash')
+              ->orWhereNotNull('phone_hash');
+        });
+
+        return $query;
+    }
+
+    /**
+     * Get seed customer count for lookalike preview
+     */
+    public function getLookalikeSeedCount(): int
+    {
+        return $this->getLookalikeSeedQuery()?->count() ?? 0;
+    }
+
+    /**
+     * Build the lookalike configuration for platform API
+     */
+    public function buildLookalikeConfig(): array
+    {
+        return [
+            'source_type' => $this->lookalike_source_type,
+            'source_audience_id' => $this->lookalike_source_audience_id,
+            'percentage' => $this->lookalike_percentage ?? 1,
+            'country' => $this->lookalike_country,
+            'seed_count' => $this->getLookalikeSeedCount(),
+            'seed_customers' => $this->getLookalikeSeedQuery()
+                ->select('email_hash', 'phone_hash', 'country_code')
+                ->get()
+                ->toArray(),
+        ];
+    }
+
+    /**
+     * Get lookalike percentage options based on platform
+     */
+    public static function getLookalikePercentageOptions(string $platform = null): array
+    {
+        // Facebook/Meta supports 1-10%
+        // Google supports 1-10% (similar audiences)
+        // TikTok supports 1-10%
+        // LinkedIn supports narrow, balanced, broad
+
+        return [
+            1 => '1% (Most Similar)',
+            2 => '2%',
+            3 => '3%',
+            4 => '4%',
+            5 => '5% (Balanced)',
+            6 => '6%',
+            7 => '7%',
+            8 => '8%',
+            9 => '9%',
+            10 => '10% (Broadest Reach)',
+        ];
+    }
+
+    /**
+     * Get available countries for lookalike targeting
+     */
+    public static function getLookalikeCountryOptions(): array
+    {
+        return [
+            'US' => 'United States',
+            'GB' => 'United Kingdom',
+            'CA' => 'Canada',
+            'AU' => 'Australia',
+            'DE' => 'Germany',
+            'FR' => 'France',
+            'ES' => 'Spain',
+            'IT' => 'Italy',
+            'NL' => 'Netherlands',
+            'BR' => 'Brazil',
+            'MX' => 'Mexico',
+            'JP' => 'Japan',
+            'KR' => 'South Korea',
+            'IN' => 'India',
+            'SG' => 'Singapore',
+        ];
+    }
+
+    /**
+     * Get the display label for lookalike source
+     */
+    public function getLookalikeSourceLabel(): string
+    {
+        if ($this->lookalike_source_type === self::LOOKALIKE_SOURCE_AUDIENCE && $this->sourceAudience) {
+            return $this->sourceAudience->name;
+        }
+
+        return self::LOOKALIKE_SOURCE_TYPES[$this->lookalike_source_type] ?? 'Unknown';
+    }
+
+    /**
+     * Estimate lookalike audience reach
+     */
+    public function estimateLookalikeReach(): array
+    {
+        $seedCount = $this->getLookalikeSeedCount();
+        $percentage = $this->lookalike_percentage ?? 1;
+
+        // Rough estimates based on typical platform data
+        $countryPopulations = [
+            'US' => 330_000_000,
+            'GB' => 67_000_000,
+            'CA' => 38_000_000,
+            'AU' => 26_000_000,
+            'DE' => 84_000_000,
+            'FR' => 67_000_000,
+            'BR' => 214_000_000,
+            'IN' => 1_400_000_000,
+        ];
+
+        $country = $this->lookalike_country ?? 'US';
+        $population = $countryPopulations[$country] ?? 100_000_000;
+
+        // Estimate ~70% internet penetration, ~60% social media usage
+        $addressableMarket = (int) ($population * 0.7 * 0.6);
+        $estimatedReach = (int) ($addressableMarket * ($percentage / 100));
+
+        return [
+            'seed_count' => $seedCount,
+            'percentage' => $percentage,
+            'country' => $country,
+            'estimated_reach_min' => (int) ($estimatedReach * 0.8),
+            'estimated_reach_max' => (int) ($estimatedReach * 1.2),
+            'quality_indicator' => $seedCount >= 1000 ? 'high' : ($seedCount >= 100 ? 'medium' : 'low'),
+            'recommendation' => $seedCount < 100
+                ? 'Seed audience is small. Consider using a broader source for better results.'
+                : ($seedCount >= 1000 ? 'Excellent seed size for quality matching.' : 'Good seed size.'),
+        ];
+    }
+
+    /**
+     * Scope for lookalike audiences
+     */
+    public function scopeLookalike($query)
+    {
+        return $query->where('audience_type', self::TYPE_LOOKALIKE);
+    }
+
+    /**
+     * Scope for audiences that can be used as lookalike seeds
+     */
+    public function scopeCanBeSeed($query)
+    {
+        return $query->where('audience_type', '!=', self::TYPE_LOOKALIKE)
+            ->where('status', self::STATUS_ACTIVE)
+            ->where('member_count', '>=', 100);
+    }
+
+    /**
+     * Create a lookalike audience from this audience
+     */
+    public function createLookalike(
+        PlatformAdAccount $account,
+        int $percentage = 1,
+        string $country = 'US',
+        ?string $name = null
+    ): self {
+        return self::create([
+            'platform_ad_account_id' => $account->id,
+            'name' => $name ?? "{$this->name} - {$percentage}% Lookalike ({$country})",
+            'description' => "Lookalike audience based on: {$this->name}",
+            'audience_type' => self::TYPE_LOOKALIKE,
+            'lookalike_source_type' => self::LOOKALIKE_SOURCE_AUDIENCE,
+            'lookalike_source_audience_id' => $this->id,
+            'lookalike_percentage' => $percentage,
+            'lookalike_country' => $country,
+            'status' => self::STATUS_DRAFT,
+            'is_auto_sync' => false,
+        ]);
     }
 }

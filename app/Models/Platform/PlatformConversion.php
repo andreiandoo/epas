@@ -17,6 +17,8 @@ class PlatformConversion extends Model
         'order_id',
         'conversion_type',
         'conversion_action_id',
+        'deduplication_key',
+        'original_event_time',
         'value',
         'currency',
         'click_id',
@@ -41,6 +43,7 @@ class PlatformConversion extends Model
         'retry_count' => 'integer',
         'sent_at' => 'datetime',
         'confirmed_at' => 'datetime',
+        'original_event_time' => 'datetime',
     ];
 
     // Conversion types
@@ -260,13 +263,76 @@ class PlatformConversion extends Model
         return $data;
     }
 
-    // Static factory for creating conversions
+    // Deduplication methods
+
+    /**
+     * Generate a deduplication key for this conversion
+     */
+    public static function generateDeduplicationKey(
+        int $accountId,
+        string $conversionType,
+        ?int $orderId = null,
+        ?int $eventId = null,
+        ?string $customerId = null,
+        ?\DateTime $eventTime = null
+    ): string {
+        // For purchases, dedupe by order_id (most reliable)
+        if ($orderId && in_array($conversionType, [self::TYPE_PURCHASE])) {
+            return hash('sha256', "{$accountId}:{$conversionType}:order:{$orderId}");
+        }
+
+        // For other events, dedupe by event_id if available
+        if ($eventId) {
+            return hash('sha256', "{$accountId}:{$conversionType}:event:{$eventId}");
+        }
+
+        // Fallback: dedupe by customer + type + time window (1 hour)
+        $timeWindow = $eventTime ? $eventTime->format('Y-m-d-H') : now()->format('Y-m-d-H');
+        return hash('sha256', "{$accountId}:{$conversionType}:customer:{$customerId}:{$timeWindow}");
+    }
+
+    /**
+     * Check if a conversion with this deduplication key already exists
+     */
+    public static function isDuplicate(int $accountId, string $deduplicationKey): bool
+    {
+        return static::where('platform_ad_account_id', $accountId)
+            ->where('deduplication_key', $deduplicationKey)
+            ->exists();
+    }
+
+    /**
+     * Find existing conversion by deduplication key
+     */
+    public static function findByDeduplicationKey(int $accountId, string $deduplicationKey): ?self
+    {
+        return static::where('platform_ad_account_id', $accountId)
+            ->where('deduplication_key', $deduplicationKey)
+            ->first();
+    }
+
+    /**
+     * Create conversion only if not duplicate
+     */
+    public static function createIfNotDuplicate(array $data): ?self
+    {
+        $deduplicationKey = $data['deduplication_key'] ?? null;
+        $accountId = $data['platform_ad_account_id'] ?? null;
+
+        if ($deduplicationKey && $accountId && static::isDuplicate($accountId, $deduplicationKey)) {
+            return null; // Duplicate detected
+        }
+
+        return static::create($data);
+    }
+
+    // Static factory for creating conversions with deduplication
     public static function createFromEvent(
         PlatformAdAccount $account,
         CoreCustomerEvent $event,
         CoreCustomer $customer,
         string $conversionType = self::TYPE_PURCHASE
-    ): self {
+    ): ?self {
         $clickId = null;
         $clickIdType = null;
 
@@ -285,6 +351,26 @@ class PlatformConversion extends Model
             $clickIdType = self::CLICK_LI_FAT_ID;
         }
 
+        // Generate deduplication key
+        $deduplicationKey = static::generateDeduplicationKey(
+            $account->id,
+            $conversionType,
+            $event->order_id,
+            $event->id,
+            $customer->uuid,
+            $event->created_at
+        );
+
+        // Check for duplicate
+        if (static::isDuplicate($account->id, $deduplicationKey)) {
+            \Illuminate\Support\Facades\Log::info('Duplicate conversion detected, skipping', [
+                'account_id' => $account->id,
+                'deduplication_key' => $deduplicationKey,
+                'conversion_type' => $conversionType,
+            ]);
+            return null;
+        }
+
         return static::create([
             'platform_ad_account_id' => $account->id,
             'core_customer_id' => $customer->id,
@@ -292,6 +378,8 @@ class PlatformConversion extends Model
             'tenant_id' => $event->tenant_id,
             'order_id' => $event->order_id,
             'conversion_type' => $conversionType,
+            'deduplication_key' => $deduplicationKey,
+            'original_event_time' => $event->created_at,
             'value' => $event->conversion_value ?? $event->order_total ?? 0,
             'currency' => $event->currency ?? 'USD',
             'click_id' => $clickId,
@@ -299,11 +387,20 @@ class PlatformConversion extends Model
             'hashed_email' => $customer->email_hash,
             'hashed_phone' => $customer->phone_hash,
             'status' => self::STATUS_PENDING,
+            'retry_count' => 0,
             'event_data' => [
                 'event_type' => $event->event_type,
                 'page_url' => $event->page_url,
                 'ip_address' => $event->ip_address,
             ],
         ]);
+    }
+
+    // Scope for finding duplicate conversions
+    public function scopeDuplicates($query)
+    {
+        return $query->selectRaw('deduplication_key, COUNT(*) as count')
+            ->groupBy('deduplication_key')
+            ->havingRaw('COUNT(*) > 1');
     }
 }
