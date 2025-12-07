@@ -763,7 +763,7 @@ class PlatformTrackingService
             'city' => $data['city'] ?? null,
             'ip_address' => $data['ip_address'] ?? null,
             'total_visits' => 1,
-            'total_page_views' => 1,
+            'total_pageviews' => 1,
         ];
 
         if ($email) {

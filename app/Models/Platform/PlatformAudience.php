@@ -169,7 +169,7 @@ class PlatformAudience extends Model
 
             case self::TYPE_ENGAGED_USERS:
                 $query->where('engagement_score', '>=', 50)
-                      ->orWhere('total_page_views', '>=', 10);
+                      ->orWhere('total_pageviews', '>=', 10);
                 break;
 
             case self::TYPE_INACTIVE:
