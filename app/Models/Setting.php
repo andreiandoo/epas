@@ -87,6 +87,14 @@ class Setting extends Model
         'zoom_client_id',
         'zoom_client_secret',
         'zoom_webhook_secret_token',
+        // Ad Platform Connectors
+        'google_ads_client_id',
+        'google_ads_client_secret',
+        'google_ads_developer_token',
+        'tiktok_ads_app_id',
+        'tiktok_ads_app_secret',
+        'linkedin_ads_client_id',
+        'linkedin_ads_client_secret',
     ];
 
     protected $casts = [
@@ -125,6 +133,11 @@ class Setting extends Model
         'square_webhook_signature_key' => 'encrypted',
         'zoom_client_secret' => 'encrypted',
         'zoom_webhook_secret_token' => 'encrypted',
+        // Ad Platform Connectors - encrypted
+        'google_ads_client_secret' => 'encrypted',
+        'google_ads_developer_token' => 'encrypted',
+        'tiktok_ads_app_secret' => 'encrypted',
+        'linkedin_ads_client_secret' => 'encrypted',
     ];
 
     /**

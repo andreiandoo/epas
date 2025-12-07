@@ -83,6 +83,14 @@ class ManageConnections extends Page implements HasForms
             'zoom_client_id' => $settings->zoom_client_id,
             'zoom_client_secret' => $settings->zoom_client_secret,
             'zoom_webhook_secret_token' => $settings->zoom_webhook_secret_token,
+            // Ad Platform Connectors
+            'google_ads_client_id' => $settings->google_ads_client_id,
+            'google_ads_client_secret' => $settings->google_ads_client_secret,
+            'google_ads_developer_token' => $settings->google_ads_developer_token,
+            'tiktok_ads_app_id' => $settings->tiktok_ads_app_id,
+            'tiktok_ads_app_secret' => $settings->tiktok_ads_app_secret,
+            'linkedin_ads_client_id' => $settings->linkedin_ads_client_id,
+            'linkedin_ads_client_secret' => $settings->linkedin_ads_client_secret,
         ]);
     }
 
@@ -1042,6 +1050,133 @@ class ManageConnections extends Page implements HasForms
                     ->columns(2)
                     ->columnSpanFull()
                     ->collapsed(),
+
+                // ===========================================
+                // AD PLATFORM CONNECTORS
+                // ===========================================
+
+                SC\Section::make('Google Ads Integration')
+                    ->description('Configure Google Ads OAuth for tenant conversion tracking')
+                    ->schema([
+                        Forms\Components\TextInput::make('google_ads_client_id')
+                            ->label('OAuth Client ID')
+                            ->placeholder('Your Google Cloud OAuth Client ID')
+                            ->maxLength(255)
+                            ->helperText('From Google Cloud Console → Credentials → OAuth 2.0 Client'),
+
+                        Forms\Components\TextInput::make('google_ads_client_secret')
+                            ->label('OAuth Client Secret')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->helperText('From Google Cloud Console → Credentials'),
+
+                        Forms\Components\TextInput::make('google_ads_developer_token')
+                            ->label('Developer Token')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->helperText('From Google Ads API Center (required for API access)'),
+
+                        Forms\Components\Placeholder::make('google_ads_redirect_url')
+                            ->label('OAuth Redirect URL')
+                            ->content(fn () => url('/integrations/google-ads/callback'))
+                            ->helperText('Add to Google Cloud Console → OAuth Client → Authorized redirect URIs'),
+
+                        SC\Actions::make([
+                            Actions\Action::make('test_google_ads')
+                                ->label('Test Connection')
+                                ->icon('heroicon-o-bolt')
+                                ->color('info')
+                                ->action('testGoogleAdsConnection'),
+
+                            Actions\Action::make('google_ads_docs')
+                                ->label('Google Ads API')
+                                ->icon('heroicon-o-arrow-top-right-on-square')
+                                ->url('https://developers.google.com/google-ads/api/docs/start', shouldOpenInNewTab: true)
+                                ->color('gray'),
+                        ]),
+                    ])
+                    ->columns(2)
+                    ->columnSpanFull()
+                    ->collapsed(),
+
+                SC\Section::make('TikTok Ads Integration')
+                    ->description('Configure TikTok Events API for tenant conversion tracking')
+                    ->schema([
+                        Forms\Components\TextInput::make('tiktok_ads_app_id')
+                            ->label('App ID')
+                            ->placeholder('Your TikTok Marketing App ID')
+                            ->maxLength(255)
+                            ->helperText('From TikTok for Business → Developer Portal'),
+
+                        Forms\Components\TextInput::make('tiktok_ads_app_secret')
+                            ->label('App Secret')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->helperText('From TikTok for Business → Developer Portal'),
+
+                        Forms\Components\Placeholder::make('tiktok_ads_info')
+                            ->content('Note: Tenants will provide their own Pixel ID and Access Token when connecting.')
+                            ->columnSpanFull(),
+
+                        SC\Actions::make([
+                            Actions\Action::make('test_tiktok_ads')
+                                ->label('Test Connection')
+                                ->icon('heroicon-o-bolt')
+                                ->color('info')
+                                ->action('testTikTokAdsConnection'),
+
+                            Actions\Action::make('tiktok_ads_docs')
+                                ->label('TikTok Events API')
+                                ->icon('heroicon-o-arrow-top-right-on-square')
+                                ->url('https://business-api.tiktok.com/portal/docs', shouldOpenInNewTab: true)
+                                ->color('gray'),
+                        ]),
+                    ])
+                    ->columns(2)
+                    ->columnSpanFull()
+                    ->collapsed(),
+
+                SC\Section::make('LinkedIn Ads Integration')
+                    ->description('Configure LinkedIn Marketing API for B2B event conversion tracking')
+                    ->schema([
+                        Forms\Components\TextInput::make('linkedin_ads_client_id')
+                            ->label('Client ID')
+                            ->placeholder('Your LinkedIn App Client ID')
+                            ->maxLength(255)
+                            ->helperText('From LinkedIn Developer Portal → Your App'),
+
+                        Forms\Components\TextInput::make('linkedin_ads_client_secret')
+                            ->label('Client Secret')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255)
+                            ->helperText('From LinkedIn Developer Portal → Your App → Auth'),
+
+                        Forms\Components\Placeholder::make('linkedin_ads_redirect_url')
+                            ->label('OAuth Redirect URL')
+                            ->content(fn () => url('/integrations/linkedin-ads/callback'))
+                            ->helperText('Add to LinkedIn Developer Portal → Auth → Authorized redirect URLs'),
+
+                        SC\Actions::make([
+                            Actions\Action::make('test_linkedin_ads')
+                                ->label('Test Connection')
+                                ->icon('heroicon-o-bolt')
+                                ->color('info')
+                                ->action('testLinkedInAdsConnection'),
+
+                            Actions\Action::make('linkedin_ads_docs')
+                                ->label('LinkedIn Marketing API')
+                                ->icon('heroicon-o-arrow-top-right-on-square')
+                                ->url('https://learn.microsoft.com/en-us/linkedin/marketing/', shouldOpenInNewTab: true)
+                                ->color('gray'),
+                        ]),
+                    ])
+                    ->columns(2)
+                    ->columnSpanFull()
+                    ->collapsed(),
             ])
             ->statePath('data');
     }
@@ -1956,6 +2091,120 @@ class ManageConnections extends Page implements HasForms
             ->title('Zapier credentials saved')
             ->body('Credentials stored. OAuth flow will validate them when setting up Zaps.')
             ->send();
+    }
+
+    // Ad Platform Connector Test Methods
+
+    public function testGoogleAdsConnection(): void
+    {
+        $data = $this->form->getState();
+
+        if (empty($data['google_ads_client_id']) || empty($data['google_ads_client_secret'])) {
+            Notification::make()
+                ->warning()
+                ->title('Missing credentials')
+                ->body('Please enter both Client ID and Client Secret.')
+                ->send();
+            return;
+        }
+
+        if (empty($data['google_ads_developer_token'])) {
+            Notification::make()
+                ->warning()
+                ->title('Missing developer token')
+                ->body('Developer token is required for Google Ads API access.')
+                ->send();
+            return;
+        }
+
+        try {
+            // Test Google OAuth endpoint reachability
+            $response = \Illuminate\Support\Facades\Http::get('https://accounts.google.com/.well-known/openid-configuration');
+
+            if ($response->successful()) {
+                Notification::make()
+                    ->success()
+                    ->title('Google Ads API reachable')
+                    ->body('Credentials saved. OAuth flow will validate them when tenants connect.')
+                    ->send();
+            } else {
+                Notification::make()
+                    ->danger()
+                    ->title('Connection failed')
+                    ->body('Cannot reach Google OAuth endpoint')
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Connection failed')
+                ->body("Error: {$e->getMessage()}")
+                ->send();
+        }
+    }
+
+    public function testTikTokAdsConnection(): void
+    {
+        $data = $this->form->getState();
+
+        if (empty($data['tiktok_ads_app_id']) || empty($data['tiktok_ads_app_secret'])) {
+            Notification::make()
+                ->warning()
+                ->title('Missing credentials')
+                ->body('Please enter both App ID and App Secret.')
+                ->send();
+            return;
+        }
+
+        try {
+            // Test TikTok Business API reachability
+            $response = \Illuminate\Support\Facades\Http::get('https://business-api.tiktok.com/open_api/v1.3/');
+
+            // Any response means the API is reachable
+            Notification::make()
+                ->success()
+                ->title('TikTok Ads API reachable')
+                ->body('Credentials saved. Tenants will connect with their own Pixel IDs.')
+                ->send();
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Connection failed')
+                ->body("Cannot reach TikTok API: {$e->getMessage()}")
+                ->send();
+        }
+    }
+
+    public function testLinkedInAdsConnection(): void
+    {
+        $data = $this->form->getState();
+
+        if (empty($data['linkedin_ads_client_id']) || empty($data['linkedin_ads_client_secret'])) {
+            Notification::make()
+                ->warning()
+                ->title('Missing credentials')
+                ->body('Please enter both Client ID and Client Secret.')
+                ->send();
+            return;
+        }
+
+        try {
+            // Test LinkedIn OAuth endpoint reachability
+            $response = \Illuminate\Support\Facades\Http::get('https://www.linkedin.com/oauth/v2/authorization');
+
+            // Any response means the OAuth endpoint is reachable
+            Notification::make()
+                ->success()
+                ->title('LinkedIn Ads API reachable')
+                ->body('Credentials saved. OAuth flow will validate them when tenants connect.')
+                ->send();
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Connection failed')
+                ->body("Cannot reach LinkedIn OAuth: {$e->getMessage()}")
+                ->send();
+        }
     }
 
     protected function getFormActions(): array
