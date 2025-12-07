@@ -104,7 +104,9 @@ class AnalyticsCacheService
 
         return Cache::remember($cacheKey, self::TTL_MEDIUM, function () use ($tenantId) {
             $query = CoreCustomer::query()
-                ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+                ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
+                ->notMerged()
+                ->notAnonymized()
                 ->whereNotNull('customer_segment');
 
             $segments = $query->groupBy('customer_segment')
@@ -279,11 +281,13 @@ class AnalyticsCacheService
 
         return Cache::remember($cacheKey, self::TTL_MEDIUM, function () use ($limit, $orderBy, $tenantId) {
             $customers = CoreCustomer::query()
-                ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+                ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
+                ->notMerged()
+                ->notAnonymized()
                 ->where($orderBy, '>', 0)
                 ->orderByDesc($orderBy)
                 ->limit($limit)
-                ->get(['uuid', 'email_hash', 'total_spent', 'total_orders', 'rfm_score', 'customer_segment', 'last_seen_at']);
+                ->get(['uuid', 'email_hash', 'total_spent', 'total_orders', 'rfm_score', 'customer_segment', 'last_seen_at', 'first_name', 'last_name']);
 
             return [
                 'customers' => $customers->map(function ($c) {
@@ -388,6 +392,82 @@ class AnalyticsCacheService
                 'cached_at' => now()->toIso8601String(),
             ];
         });
+    }
+
+    /**
+     * Calculate health scores for all active customers
+     */
+    public function calculateAllHealthScores(?int $tenantId = null): array
+    {
+        $updated = 0;
+        $errors = 0;
+
+        CoreCustomer::query()
+            ->when($tenantId, fn($q) => $q->fromTenant($tenantId))
+            ->notMerged()
+            ->notAnonymized()
+            ->chunk(500, function ($customers) use (&$updated, &$errors) {
+                foreach ($customers as $customer) {
+                    try {
+                        $score = $this->calculateHealthScore($customer);
+                        $customer->update([
+                            'health_score' => $score['score'],
+                            'health_score_breakdown' => $score['breakdown'],
+                            'health_score_calculated_at' => now(),
+                        ]);
+                        $updated++;
+                    } catch (\Exception $e) {
+                        $errors++;
+                    }
+                }
+            });
+
+        return [
+            'updated' => $updated,
+            'errors' => $errors,
+        ];
+    }
+
+    /**
+     * Calculate health score for a single customer
+     */
+    protected function calculateHealthScore(CoreCustomer $customer): array
+    {
+        $breakdown = [];
+        $totalWeight = 0;
+        $weightedScore = 0;
+
+        // Recency score (40% weight) - based on days since last seen
+        $daysSinceLastSeen = $customer->last_seen_at
+            ? $customer->last_seen_at->diffInDays(now())
+            : 365;
+        $recencyScore = max(0, 100 - ($daysSinceLastSeen * 1.5));
+        $breakdown['recency'] = ['score' => round($recencyScore), 'weight' => 40];
+        $weightedScore += $recencyScore * 0.4;
+        $totalWeight += 40;
+
+        // Frequency score (25% weight) - based on total orders
+        $frequencyScore = min(100, $customer->total_orders * 10);
+        $breakdown['frequency'] = ['score' => round($frequencyScore), 'weight' => 25];
+        $weightedScore += $frequencyScore * 0.25;
+        $totalWeight += 25;
+
+        // Monetary score (20% weight) - based on total spent
+        $monetaryScore = min(100, ($customer->total_spent / 100) * 10);
+        $breakdown['monetary'] = ['score' => round($monetaryScore), 'weight' => 20];
+        $weightedScore += $monetaryScore * 0.2;
+        $totalWeight += 20;
+
+        // Engagement score (15% weight) - based on existing engagement_score
+        $engagementScore = $customer->engagement_score ?? 50;
+        $breakdown['engagement'] = ['score' => round($engagementScore), 'weight' => 15];
+        $weightedScore += $engagementScore * 0.15;
+        $totalWeight += 15;
+
+        return [
+            'score' => round($weightedScore),
+            'breakdown' => $breakdown,
+        ];
     }
 
     /**

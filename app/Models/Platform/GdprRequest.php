@@ -116,8 +116,29 @@ class GdprRequest extends Model
     {
         $this->update([
             'status' => self::STATUS_FAILED,
-            'notes' => $this->notes . "\nFailed: " . $reason,
+            'notes' => ($this->notes ?? '') . "\nFailed: " . $reason,
         ]);
+    }
+
+    // Status checkers
+    public function isPending(): bool
+    {
+        return $this->status === self::STATUS_PENDING;
+    }
+
+    public function isProcessing(): bool
+    {
+        return $this->status === self::STATUS_PROCESSING;
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED;
+    }
+
+    public function isFailed(): bool
+    {
+        return $this->status === self::STATUS_FAILED;
     }
 
     // Process the request
@@ -154,10 +175,28 @@ class GdprRequest extends Model
                     break;
 
                 case self::TYPE_RECTIFICATION:
-                    // Rectification requires manual handling
-                    $this->update([
-                        'notes' => $this->notes . "\nRequires manual review and correction.",
-                    ]);
+                    // Rectification updates customer data from affected_data field
+                    if ($this->affected_data && is_array($this->affected_data)) {
+                        $allowedFields = [
+                            'first_name', 'last_name', 'email', 'phone',
+                            'country_code', 'region', 'city', 'postal_code',
+                            'language', 'timezone', 'gender', 'birth_date',
+                        ];
+
+                        $updates = [];
+                        foreach ($this->affected_data as $field => $value) {
+                            if (in_array($field, $allowedFields)) {
+                                $updates[$field] = $value;
+                            }
+                        }
+
+                        if (!empty($updates)) {
+                            $customer->update($updates);
+                            $this->update([
+                                'notes' => $this->notes . "\nData rectified: " . implode(', ', array_keys($updates)),
+                            ]);
+                        }
+                    }
                     $this->markCompleted();
                     break;
             }

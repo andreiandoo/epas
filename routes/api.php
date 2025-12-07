@@ -1005,6 +1005,87 @@ Route::post('/tenant-client/checkout/callback/{provider}', [CheckoutController::
 
 /*
 |--------------------------------------------------------------------------
+| Platform Analytics API Routes
+|--------------------------------------------------------------------------
+|
+| REST API endpoints for platform analytics, attribution, churn prediction,
+| and customer data management
+|
+*/
+
+Route::prefix('v1/analytics')->middleware(['throttle:api', 'api.key'])->group(function () {
+    // Dashboard and Overview
+    Route::get('/dashboard', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'dashboard'])
+        ->name('api.analytics.dashboard');
+
+    Route::get('/funnel', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'funnel'])
+        ->name('api.analytics.funnel');
+
+    Route::get('/segments', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'segments'])
+        ->name('api.analytics.segments');
+
+    Route::get('/cohorts', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'cohorts'])
+        ->name('api.analytics.cohorts');
+
+    Route::get('/traffic-sources', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'trafficSources'])
+        ->name('api.analytics.traffic-sources');
+
+    Route::get('/geography', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'geography'])
+        ->name('api.analytics.geography');
+
+    Route::get('/top-customers', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'topCustomers'])
+        ->name('api.analytics.top-customers');
+
+    // Attribution
+    Route::get('/attribution/models', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'attributionModels'])
+        ->name('api.analytics.attribution.models');
+
+    Route::get('/attribution/comparison', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'attributionComparison'])
+        ->name('api.analytics.attribution.comparison');
+
+    Route::get('/attribution/channels', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'channelAttribution'])
+        ->name('api.analytics.attribution.channels');
+
+    // Churn Prediction
+    Route::get('/churn/dashboard', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'churnDashboard'])
+        ->name('api.analytics.churn.dashboard');
+
+    Route::get('/churn/at-risk', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'atRiskCustomers'])
+        ->name('api.analytics.churn.at-risk');
+
+    Route::get('/churn/by-segment', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'churnBySegment'])
+        ->name('api.analytics.churn.by-segment');
+
+    Route::get('/churn/cohort-analysis', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'cohortChurnAnalysis'])
+        ->name('api.analytics.churn.cohort-analysis');
+
+    // Duplicate Detection
+    Route::get('/duplicates/stats', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'duplicateStats'])
+        ->name('api.analytics.duplicates.stats');
+
+    Route::get('/duplicates', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'duplicates'])
+        ->name('api.analytics.duplicates');
+
+    // Customer-specific endpoints
+    Route::get('/customers/{customerId}/profile', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'customerProfile'])
+        ->name('api.analytics.customer.profile');
+
+    Route::get('/customers/{customerId}/journey', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'customerJourney'])
+        ->name('api.analytics.customer.journey');
+
+    Route::get('/customers/{customerId}/churn-prediction', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'predictCustomerChurn'])
+        ->name('api.analytics.customer.churn-prediction');
+
+    Route::get('/customers/{customerId}/duplicates', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'customerDuplicates'])
+        ->name('api.analytics.customer.duplicates');
+
+    // Export
+    Route::get('/export', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'export'])
+        ->name('api.analytics.export');
+});
+
+/*
+|--------------------------------------------------------------------------
 | Admin API Routes
 |--------------------------------------------------------------------------
 |

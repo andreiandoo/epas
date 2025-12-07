@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CoreCustomer extends Model
@@ -136,6 +137,11 @@ class CoreCustomer extends Model
         'visitor_id',
         'has_cart_abandoned',
         'last_cart_abandoned_at',
+        // GDPR anonymization fields
+        'is_anonymized',
+        'anonymized_at',
+        // Computed RFM score
+        'rfm_score',
     ];
 
     protected $casts = [
@@ -177,6 +183,9 @@ class CoreCustomer extends Model
         'merged_at' => 'datetime',
         'has_cart_abandoned' => 'boolean',
         'last_cart_abandoned_at' => 'datetime',
+        'is_anonymized' => 'boolean',
+        'anonymized_at' => 'datetime',
+        'rfm_score' => 'integer',
     ];
 
     protected $hidden = [
@@ -264,17 +273,17 @@ class CoreCustomer extends Model
 
     public function events(): HasMany
     {
-        return $this->hasMany(CoreCustomerEvent::class, 'customer_id');
+        return $this->hasMany(CoreCustomerEvent::class, 'core_customer_id');
     }
 
     public function sessions(): HasMany
     {
-        return $this->hasMany(CoreSession::class, 'customer_id');
+        return $this->hasMany(CoreSession::class, 'core_customer_id');
     }
 
     public function conversions(): HasMany
     {
-        return $this->hasMany(PlatformConversion::class, 'customer_id');
+        return $this->hasMany(PlatformConversion::class, 'core_customer_id');
     }
 
     // Computed attributes
@@ -618,69 +627,96 @@ class CoreCustomer extends Model
     // Customer Merge functionality
     public function mergeInto(self $targetCustomer): void
     {
-        // Transfer purchase data
-        $targetCustomer->total_orders += $this->total_orders;
-        $targetCustomer->total_spent += $this->total_spent;
-        $targetCustomer->total_tickets += $this->total_tickets;
-        $targetCustomer->total_visits += $this->total_visits;
-        $targetCustomer->total_pageviews += $this->total_pageviews;
-
-        // Keep earliest dates
-        if ($this->first_seen_at && (!$targetCustomer->first_seen_at || $this->first_seen_at < $targetCustomer->first_seen_at)) {
-            $targetCustomer->first_seen_at = $this->first_seen_at;
-        }
-        if ($this->first_purchase_at && (!$targetCustomer->first_purchase_at || $this->first_purchase_at < $targetCustomer->first_purchase_at)) {
-            $targetCustomer->first_purchase_at = $this->first_purchase_at;
+        // Prevent merging already merged customers
+        if ($this->is_merged) {
+            throw new \Exception('Cannot merge an already merged customer.');
         }
 
-        // Keep latest dates
-        if ($this->last_seen_at && (!$targetCustomer->last_seen_at || $this->last_seen_at > $targetCustomer->last_seen_at)) {
-            $targetCustomer->last_seen_at = $this->last_seen_at;
-        }
-        if ($this->last_purchase_at && (!$targetCustomer->last_purchase_at || $this->last_purchase_at > $targetCustomer->last_purchase_at)) {
-            $targetCustomer->last_purchase_at = $this->last_purchase_at;
+        if ($targetCustomer->is_merged) {
+            throw new \Exception('Cannot merge into an already merged customer.');
         }
 
-        // Merge tenant IDs
-        $mergedTenantIds = array_unique(array_merge(
-            $targetCustomer->tenant_ids ?? [],
-            $this->tenant_ids ?? []
-        ));
-        $targetCustomer->tenant_ids = array_values($mergedTenantIds);
-        $targetCustomer->tenant_count = count($mergedTenantIds);
+        DB::transaction(function () use ($targetCustomer) {
+            // Transfer purchase data
+            $targetCustomer->total_orders += $this->total_orders;
+            $targetCustomer->total_spent += $this->total_spent;
+            $targetCustomer->total_tickets += $this->total_tickets ?? 0;
+            $targetCustomer->total_visits += $this->total_visits ?? 0;
+            $targetCustomer->total_pageviews += $this->total_pageviews ?? 0;
 
-        // Merge device IDs
-        $mergedDeviceIds = array_unique(array_merge(
-            $targetCustomer->linked_device_ids ?? [],
-            $this->linked_device_ids ?? [],
-            $this->primary_device_id ? [$this->primary_device_id] : []
-        ));
-        $targetCustomer->linked_device_ids = array_values($mergedDeviceIds);
+            // Keep earliest dates
+            if ($this->first_seen_at && (!$targetCustomer->first_seen_at || $this->first_seen_at < $targetCustomer->first_seen_at)) {
+                $targetCustomer->first_seen_at = $this->first_seen_at;
+                // Also update cohort based on earliest first_seen
+                $targetCustomer->cohort_month = $this->first_seen_at->format('Y-m');
+                $targetCustomer->cohort_week = $this->first_seen_at->format('Y-\WW');
+            }
+            if ($this->first_purchase_at && (!$targetCustomer->first_purchase_at || $this->first_purchase_at < $targetCustomer->first_purchase_at)) {
+                $targetCustomer->first_purchase_at = $this->first_purchase_at;
+            }
 
-        // Link this customer to target
-        $targetCustomer->linkCustomer($this->id);
+            // Keep latest dates
+            if ($this->last_seen_at && (!$targetCustomer->last_seen_at || $this->last_seen_at > $targetCustomer->last_seen_at)) {
+                $targetCustomer->last_seen_at = $this->last_seen_at;
+            }
+            if ($this->last_purchase_at && (!$targetCustomer->last_purchase_at || $this->last_purchase_at > $targetCustomer->last_purchase_at)) {
+                $targetCustomer->last_purchase_at = $this->last_purchase_at;
+            }
 
-        // Recalculate average order value
-        if ($targetCustomer->total_orders > 0) {
-            $targetCustomer->average_order_value = $targetCustomer->total_spent / $targetCustomer->total_orders;
-        }
+            // Keep higher scores
+            if (($this->rfm_score ?? 0) > ($targetCustomer->rfm_score ?? 0)) {
+                $targetCustomer->rfm_score = $this->rfm_score;
+            }
+            if (($this->health_score ?? 0) > ($targetCustomer->health_score ?? 0)) {
+                $targetCustomer->health_score = $this->health_score;
+                $targetCustomer->health_score_breakdown = $this->health_score_breakdown;
+            }
 
-        $targetCustomer->save();
+            // Merge tenant IDs
+            $mergedTenantIds = array_unique(array_merge(
+                $targetCustomer->tenant_ids ?? [],
+                $this->tenant_ids ?? []
+            ));
+            $targetCustomer->tenant_ids = array_values($mergedTenantIds);
+            $targetCustomer->tenant_count = count($mergedTenantIds);
 
-        // Update events to point to target customer
-        CoreCustomerEvent::where('core_customer_id', $this->id)
-            ->update(['core_customer_id' => $targetCustomer->id]);
+            // Merge device IDs
+            $mergedDeviceIds = array_unique(array_merge(
+                $targetCustomer->linked_device_ids ?? [],
+                $this->linked_device_ids ?? [],
+                $this->primary_device_id ? [$this->primary_device_id] : []
+            ));
+            $targetCustomer->linked_device_ids = array_values($mergedDeviceIds);
 
-        // Update sessions to point to target customer
-        CoreSession::where('core_customer_id', $this->id)
-            ->update(['core_customer_id' => $targetCustomer->id]);
+            // Link this customer's UUID to target
+            $linkedCustomerIds = $targetCustomer->linked_customer_ids ?? [];
+            if (!in_array($this->uuid, $linkedCustomerIds)) {
+                $linkedCustomerIds[] = $this->uuid;
+                $targetCustomer->linked_customer_ids = $linkedCustomerIds;
+            }
 
-        // Mark this customer as merged
-        $this->update([
-            'is_merged' => true,
-            'merged_into_id' => $targetCustomer->id,
-            'merged_at' => now(),
-        ]);
+            // Recalculate average order value
+            if ($targetCustomer->total_orders > 0) {
+                $targetCustomer->average_order_value = $targetCustomer->total_spent / $targetCustomer->total_orders;
+            }
+
+            $targetCustomer->save();
+
+            // Update events to point to target customer
+            CoreCustomerEvent::where('core_customer_id', $this->id)
+                ->update(['core_customer_id' => $targetCustomer->id]);
+
+            // Update sessions to point to target customer
+            CoreSession::where('core_customer_id', $this->id)
+                ->update(['core_customer_id' => $targetCustomer->id]);
+
+            // Mark this customer as merged
+            $this->update([
+                'is_merged' => true,
+                'merged_into_id' => $targetCustomer->id,
+                'merged_at' => now(),
+            ]);
+        });
     }
 
     // Cohort assignment
@@ -796,12 +832,11 @@ class CoreCustomer extends Model
     {
         $this->update([
             'email' => null,
-            'email_hash' => 'deleted_' . Str::random(32),
+            'email_hash' => 'anonymized_' . Str::random(32),
             'phone' => null,
             'phone_hash' => null,
             'first_name' => null,
             'last_name' => null,
-            'ip_address' => null,
             'city' => null,
             'postal_code' => null,
             'stripe_customer_id' => null,
@@ -810,6 +845,8 @@ class CoreCustomer extends Model
             'external_ids' => null,
             'custom_attributes' => null,
             'notes' => 'Data deleted per GDPR request at ' . now()->toIso8601String(),
+            'is_anonymized' => true,
+            'anonymized_at' => now(),
         ]);
 
         // Anonymize related events
@@ -817,5 +854,30 @@ class CoreCustomer extends Model
             'ip_address' => null,
             'event_data' => null,
         ]);
+
+        // Anonymize related sessions
+        $this->sessions()->update([
+            'ip_address' => null,
+            'visitor_id' => 'anonymized_' . $this->id,
+        ]);
+    }
+
+    // Scope for anonymized customers
+    public function scopeAnonymized($query)
+    {
+        return $query->where('is_anonymized', true);
+    }
+
+    public function scopeNotAnonymized($query)
+    {
+        return $query->where('is_anonymized', false);
+    }
+
+    // Get computed RFM score
+    public function getRfmTotalScore(): int
+    {
+        return ($this->rfm_recency_score ?? 0) +
+               ($this->rfm_frequency_score ?? 0) +
+               ($this->rfm_monetary_score ?? 0);
     }
 }

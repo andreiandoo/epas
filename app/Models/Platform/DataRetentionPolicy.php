@@ -37,6 +37,9 @@ class DataRetentionPolicy extends Model
         self::STRATEGY_ANONYMIZE => 'Anonymize',
     ];
 
+    // Alias for backward compatibility
+    const ARCHIVE_STRATEGIES = self::STRATEGIES;
+
     const DATA_TYPES = [
         self::DATA_TYPE_SESSIONS => 'Sessions',
         self::DATA_TYPE_EVENTS => 'Events',

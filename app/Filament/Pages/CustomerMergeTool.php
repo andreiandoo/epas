@@ -67,10 +67,16 @@ class CustomerMergeTool extends Page implements HasForms
             return [];
         }
 
+        $searchLower = strtolower($search);
+        $searchPattern = '%' . $searchLower . '%';
+
         return CoreCustomer::notMerged()
-            ->where(function ($query) use ($search) {
-                $query->where('uuid', 'like', "%{$search}%")
-                    ->orWhereRaw("LOWER(email) LIKE ?", ['%' . strtolower($search) . '%']);
+            ->notAnonymized()
+            ->where(function ($query) use ($searchPattern) {
+                $query->whereRaw('LOWER(uuid) LIKE ?', [$searchPattern])
+                    ->orWhere('email_hash', '=', hash('sha256', $searchPattern)) // Exact email match
+                    ->orWhereRaw('LOWER(first_name) LIKE ?', [$searchPattern])
+                    ->orWhereRaw('LOWER(last_name) LIKE ?', [$searchPattern]);
             })
             ->limit(20)
             ->get()
