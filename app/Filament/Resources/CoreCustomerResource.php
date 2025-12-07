@@ -10,6 +10,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Infolists;
 use Filament\Infolists\Infolist;
+use Illuminate\Support\Facades\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CoreCustomerResource extends Resource
 {
@@ -216,8 +218,21 @@ class CoreCustomerResource extends Resource
                 Tables\Actions\EditAction::make()
                     ->label('Edit Tags'),
             ])
+            ->headerActions([
+                Tables\Actions\Action::make('export')
+                    ->label('Export CSV')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->action(function () {
+                        return self::exportCustomers();
+                    }),
+            ])
             ->bulkActions([
-                // No bulk actions for customer data
+                Tables\Actions\BulkAction::make('export_selected')
+                    ->label('Export Selected')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->action(function ($records) {
+                        return self::exportCustomers($records);
+                    }),
             ])
             ->defaultSort('last_seen_at', 'desc')
             ->poll('60s');
@@ -409,7 +424,7 @@ class CoreCustomerResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            \App\Filament\Resources\CoreCustomerResource\RelationManagers\EventsRelationManager::class,
         ];
     }
 
@@ -420,5 +435,89 @@ class CoreCustomerResource extends Resource
             'view' => \App\Filament\Resources\CoreCustomerResource\Pages\ViewCoreCustomer::route('/{record}'),
             'edit' => \App\Filament\Resources\CoreCustomerResource\Pages\EditCoreCustomer::route('/{record}/edit'),
         ];
+    }
+
+    public static function exportCustomers($records = null): StreamedResponse
+    {
+        $filename = 'customers_export_' . now()->format('Y-m-d_His') . '.csv';
+
+        return Response::streamDownload(function () use ($records) {
+            $handle = fopen('php://output', 'w');
+
+            // CSV Headers
+            fputcsv($handle, [
+                'UUID',
+                'Segment',
+                'RFM Segment',
+                'Total Orders',
+                'Total Spent',
+                'Avg Order Value',
+                'Lifetime Value',
+                'Total Visits',
+                'Page Views',
+                'Engagement Score',
+                'First UTM Source',
+                'First UTM Medium',
+                'First UTM Campaign',
+                'Has Google Ads',
+                'Has Facebook Ads',
+                'Has TikTok Ads',
+                'Has LinkedIn Ads',
+                'Country',
+                'First Seen',
+                'Last Seen',
+                'First Purchase',
+                'Last Purchase',
+                'Tags',
+            ]);
+
+            $query = $records ?? CoreCustomer::query();
+
+            if ($records === null) {
+                $query->orderByDesc('last_seen_at')->chunk(500, function ($customers) use ($handle) {
+                    foreach ($customers as $customer) {
+                        self::writeCustomerRow($handle, $customer);
+                    }
+                });
+            } else {
+                foreach ($records as $customer) {
+                    self::writeCustomerRow($handle, $customer);
+                }
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    protected static function writeCustomerRow($handle, $customer): void
+    {
+        fputcsv($handle, [
+            $customer->uuid,
+            $customer->customer_segment,
+            $customer->rfm_segment,
+            $customer->total_orders,
+            $customer->total_spent,
+            $customer->average_order_value,
+            $customer->lifetime_value,
+            $customer->total_visits,
+            $customer->total_pageviews,
+            $customer->engagement_score,
+            $customer->first_utm_source,
+            $customer->first_utm_medium,
+            $customer->first_utm_campaign,
+            $customer->first_gclid ? 'Yes' : 'No',
+            $customer->first_fbclid ? 'Yes' : 'No',
+            $customer->first_ttclid ? 'Yes' : 'No',
+            $customer->first_li_fat_id ? 'Yes' : 'No',
+            $customer->country_code,
+            $customer->first_seen_at?->format('Y-m-d H:i:s'),
+            $customer->last_seen_at?->format('Y-m-d H:i:s'),
+            $customer->first_purchase_at?->format('Y-m-d H:i:s'),
+            $customer->last_purchase_at?->format('Y-m-d H:i:s'),
+            is_array($customer->tags) ? implode(', ', $customer->tags) : $customer->tags,
+        ]);
     }
 }

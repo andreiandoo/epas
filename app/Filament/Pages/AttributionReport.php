@@ -6,9 +6,12 @@ use App\Models\Platform\CoreCustomer;
 use App\Models\Platform\CoreCustomerEvent;
 use App\Models\Platform\CoreSession;
 use App\Models\Tenant;
+use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Response;
 use Livewire\Attributes\Url;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AttributionReport extends Page
 {
@@ -311,5 +314,115 @@ class AttributionReport extends Page
             ->orderBy('name')
             ->pluck('name', 'id')
             ->toArray();
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('export_csv')
+                ->label('Export CSV')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->action(fn () => $this->exportAttributionCsv()),
+
+            Action::make('export_channel_comparison')
+                ->label('Export Channel Comparison')
+                ->icon('heroicon-o-table-cells')
+                ->action(fn () => $this->exportChannelComparisonCsv()),
+        ];
+    }
+
+    public function exportAttributionCsv(): StreamedResponse
+    {
+        $filename = 'attribution_report_' . $this->startDate . '_to_' . $this->endDate . '.csv';
+
+        return Response::streamDownload(function () {
+            $handle = fopen('php://output', 'w');
+
+            // Summary section
+            fputcsv($handle, ['ATTRIBUTION REPORT SUMMARY']);
+            fputcsv($handle, ['Period', $this->startDate . ' to ' . $this->endDate]);
+            fputcsv($handle, ['Total Conversions', $this->summary['total_conversions'] ?? 0]);
+            fputcsv($handle, ['Total Revenue', '$' . number_format($this->summary['total_revenue'] ?? 0, 2)]);
+            fputcsv($handle, ['Avg Order Value', '$' . number_format($this->summary['avg_order_value'] ?? 0, 2)]);
+            fputcsv($handle, []);
+
+            // First Touch Attribution
+            fputcsv($handle, ['FIRST TOUCH ATTRIBUTION']);
+            fputcsv($handle, ['Channel', 'Conversions', 'Revenue']);
+            foreach ($this->firstTouchAttribution as $item) {
+                fputcsv($handle, [
+                    $item['channel'],
+                    $item['conversions'],
+                    '$' . number_format($item['revenue'] ?? 0, 2),
+                ]);
+            }
+            fputcsv($handle, []);
+
+            // Last Touch Attribution
+            fputcsv($handle, ['LAST TOUCH ATTRIBUTION']);
+            fputcsv($handle, ['Channel', 'Conversions', 'Revenue']);
+            foreach ($this->lastTouchAttribution as $item) {
+                fputcsv($handle, [
+                    $item['channel'],
+                    $item['conversions'],
+                    '$' . number_format($item['revenue'] ?? 0, 2),
+                ]);
+            }
+            fputcsv($handle, []);
+
+            // Conversion Paths
+            fputcsv($handle, ['TOP CONVERSION PATHS']);
+            fputcsv($handle, ['Path', 'Count']);
+            foreach ($this->conversionPaths as $path) {
+                fputcsv($handle, [$path['path'], $path['count']]);
+            }
+            fputcsv($handle, []);
+
+            // Time to Conversion
+            fputcsv($handle, ['TIME TO CONVERSION']);
+            fputcsv($handle, ['Time Range', 'Count']);
+            foreach ($this->timeToConversion as $time) {
+                fputcsv($handle, [$time['time_range'], $time['count']]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    public function exportChannelComparisonCsv(): StreamedResponse
+    {
+        $filename = 'channel_comparison_' . $this->startDate . '_to_' . $this->endDate . '.csv';
+
+        return Response::streamDownload(function () {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                'Channel',
+                'First Touch Conversions',
+                'First Touch Revenue',
+                'Last Touch Conversions',
+                'Last Touch Revenue',
+                'Conversion Difference',
+            ]);
+
+            foreach ($this->channelComparison as $row) {
+                fputcsv($handle, [
+                    $row['channel'],
+                    $row['first_touch_conversions'],
+                    '$' . number_format($row['first_touch_revenue'] ?? 0, 2),
+                    $row['last_touch_conversions'],
+                    '$' . number_format($row['last_touch_revenue'] ?? 0, 2),
+                    $row['difference'],
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 }
