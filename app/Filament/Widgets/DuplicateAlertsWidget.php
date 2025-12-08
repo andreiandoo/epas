@@ -11,13 +11,13 @@ use Illuminate\Database\Eloquent\Builder;
 
 class DuplicateAlertsWidget extends BaseWidget
 {
-    protected ?string $heading = 'Potential Duplicate Customers';
+    protected static ?string $heading = 'Potential Duplicate Customers';
 
     protected static ?int $sort = 12;
 
     protected int|string|array $columnSpan = 'full';
 
-    protected ?string $pollingInterval = '300s';
+    protected static ?string $pollingInterval = '300s';
 
     public function table(Table $table): Table
     {

@@ -11,13 +11,13 @@ use Filament\Notifications\Notification;
 
 class HighValueAtRiskCustomers extends BaseWidget
 {
-    protected ?string $heading = 'High-Value Customers at Risk';
+    protected static ?string $heading = 'High-Value Customers at Risk';
 
     protected static ?int $sort = 14;
 
     protected int|string|array $columnSpan = 'full';
 
-    protected ?string $pollingInterval = '120s';
+    protected static ?string $pollingInterval = '120s';
 
     public function table(Table $table): Table
     {

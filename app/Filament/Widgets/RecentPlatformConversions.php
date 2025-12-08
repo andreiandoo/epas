@@ -11,11 +11,11 @@ class RecentPlatformConversions extends BaseWidget
 {
     protected static ?int $sort = 4;
 
-    protected ?string $pollingInterval = '30s';
+    protected static ?string $pollingInterval = '30s';
 
     protected int|string|array $columnSpan = 'full';
 
-    protected ?string $heading = 'Recent Conversions';
+    protected static ?string $heading = 'Recent Conversions';
 
     public function table(Table $table): Table
     {
