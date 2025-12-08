@@ -56,7 +56,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('connection_id')->references('id')->on('salesforce_connections')->onDelete('cascade');
-            $table->unique(['connection_id', 'object_type', 'local_field']);
+            $table->unique(['connection_id', 'object_type', 'local_field'], 'sf_field_map_conn_obj_field_unique');
         });
     }
 
