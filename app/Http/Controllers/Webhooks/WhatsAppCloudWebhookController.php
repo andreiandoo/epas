@@ -115,9 +115,9 @@ class WhatsAppCloudWebhookController extends Controller
             ]);
 
             // Handle different event types
+            // Note: 'messages' field contains BOTH incoming messages AND status updates
             match ($field) {
                 'messages' => $this->handleMessages($wabaId, $value),
-                'message_status' => $this->handleMessageStatus($wabaId, $value),
                 'message_template_status_update' => $this->handleTemplateStatus($wabaId, $value),
                 default => Log::info("Unhandled WhatsApp webhook field: {$field}"),
             };
@@ -130,14 +130,20 @@ class WhatsAppCloudWebhookController extends Controller
     }
 
     /**
-     * Handle incoming messages
+     * Handle incoming messages and status updates
+     *
+     * The 'messages' webhook field contains both:
+     * - Incoming messages (in 'messages' array)
+     * - Delivery status updates (in 'statuses' array)
      */
     protected function handleMessages(?string $wabaId, array $value): void
     {
         $messages = $value['messages'] ?? [];
+        $statuses = $value['statuses'] ?? [];
         $contacts = $value['contacts'] ?? [];
         $metadata = $value['metadata'] ?? [];
 
+        // Handle incoming messages
         foreach ($messages as $message) {
             Log::info('WhatsApp message received', [
                 'from' => $message['from'] ?? 'unknown',
@@ -148,15 +154,8 @@ class WhatsAppCloudWebhookController extends Controller
             // TODO: Route message to appropriate tenant based on phone_number_id
             // and process the message (auto-reply, store, etc.)
         }
-    }
 
-    /**
-     * Handle message status updates (sent, delivered, read, failed)
-     */
-    protected function handleMessageStatus(?string $wabaId, array $value): void
-    {
-        $statuses = $value['statuses'] ?? [];
-
+        // Handle delivery status updates (sent, delivered, read, failed)
         foreach ($statuses as $status) {
             $messageId = $status['id'] ?? null;
             $statusValue = $status['status'] ?? 'unknown';
@@ -170,7 +169,7 @@ class WhatsAppCloudWebhookController extends Controller
             ]);
 
             // TODO: Update message status in database
-            // WhatsAppCloudMessage::where('meta_message_id', $messageId)
+            // WhatsAppCloudMessage::where('wamid', $messageId)
             //     ->update(['status' => $statusValue, 'status_updated_at' => now()]);
         }
     }
