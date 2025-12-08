@@ -98,11 +98,10 @@ return new class extends Migration
         // Add indexes for common query patterns
         Schema::table('core_customer_events', function (Blueprint $table) {
             $table->index(['event_type', 'created_at']);
-            $table->index(['is_converted', 'created_at']);
         });
 
         Schema::table('core_sessions', function (Blueprint $table) {
-            $table->index(['is_converted', 'started_at']);
+            $table->index(['converted', 'started_at']);
             $table->index(['country_code', 'started_at']);
         });
 
@@ -141,11 +140,10 @@ return new class extends Migration
 
         Schema::table('core_customer_events', function (Blueprint $table) {
             $table->dropIndex(['event_type', 'created_at']);
-            $table->dropIndex(['is_converted', 'created_at']);
         });
 
         Schema::table('core_sessions', function (Blueprint $table) {
-            $table->dropIndex(['is_converted', 'started_at']);
+            $table->dropIndex(['converted', 'started_at']);
             $table->dropIndex(['country_code', 'started_at']);
         });
     }
