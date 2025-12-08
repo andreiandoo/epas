@@ -113,13 +113,14 @@ class BlogMicroserviceSeeder extends Seeder
         $tenantId = 1; // Demo tenant
 
         // Seed demo categories
+        // Migration has: name (JSON), slug, description (JSON), is_visible, sort_order
         $categories = [
             [
                 'tenant_id' => $tenantId,
                 'name' => json_encode(['en' => 'News', 'ro' => 'Știri']),
                 'slug' => 'news',
                 'description' => json_encode(['en' => 'Latest news and announcements', 'ro' => 'Ultimele știri și anunțuri']),
-                'is_active' => true,
+                'is_visible' => true,
                 'sort_order' => 1,
             ],
             [
@@ -127,7 +128,7 @@ class BlogMicroserviceSeeder extends Seeder
                 'name' => json_encode(['en' => 'Events', 'ro' => 'Evenimente']),
                 'slug' => 'events',
                 'description' => json_encode(['en' => 'Event highlights and recaps', 'ro' => 'Momente și rezumate evenimente']),
-                'is_active' => true,
+                'is_visible' => true,
                 'sort_order' => 2,
             ],
             [
@@ -135,7 +136,7 @@ class BlogMicroserviceSeeder extends Seeder
                 'name' => json_encode(['en' => 'Tutorials', 'ro' => 'Tutoriale']),
                 'slug' => 'tutorials',
                 'description' => json_encode(['en' => 'How-to guides and tutorials', 'ro' => 'Ghiduri și tutoriale']),
-                'is_active' => true,
+                'is_visible' => true,
                 'sort_order' => 3,
             ],
         ];
@@ -148,12 +149,13 @@ class BlogMicroserviceSeeder extends Seeder
         }
 
         // Seed demo tags
+        // Migration has: name (JSON), slug, description (JSON)
         $tags = [
-            ['tenant_id' => $tenantId, 'name' => 'Featured', 'slug' => 'featured'],
-            ['tenant_id' => $tenantId, 'name' => 'Tips', 'slug' => 'tips'],
-            ['tenant_id' => $tenantId, 'name' => 'Guide', 'slug' => 'guide'],
-            ['tenant_id' => $tenantId, 'name' => 'Announcement', 'slug' => 'announcement'],
-            ['tenant_id' => $tenantId, 'name' => 'Community', 'slug' => 'community'],
+            ['tenant_id' => $tenantId, 'name' => json_encode(['en' => 'Featured', 'ro' => 'Recomandat']), 'slug' => 'featured'],
+            ['tenant_id' => $tenantId, 'name' => json_encode(['en' => 'Tips', 'ro' => 'Sfaturi']), 'slug' => 'tips'],
+            ['tenant_id' => $tenantId, 'name' => json_encode(['en' => 'Guide', 'ro' => 'Ghid']), 'slug' => 'guide'],
+            ['tenant_id' => $tenantId, 'name' => json_encode(['en' => 'Announcement', 'ro' => 'Anunț']), 'slug' => 'announcement'],
+            ['tenant_id' => $tenantId, 'name' => json_encode(['en' => 'Community', 'ro' => 'Comunitate']), 'slug' => 'community'],
         ];
 
         foreach ($tags as $tag) {
@@ -164,6 +166,7 @@ class BlogMicroserviceSeeder extends Seeder
         }
 
         // Seed demo author
+        // Migration has: name, slug, email, bio (TEXT not JSON), is_active
         DB::table('blog_authors')->updateOrInsert(
             ['tenant_id' => $tenantId, 'slug' => 'admin'],
             [
@@ -171,7 +174,7 @@ class BlogMicroserviceSeeder extends Seeder
                 'name' => 'Admin',
                 'slug' => 'admin',
                 'email' => 'admin@example.com',
-                'bio' => json_encode(['en' => 'Platform administrator and content creator', 'ro' => 'Administrator platformă și creator de conținut']),
+                'bio' => 'Platform administrator and content creator',
                 'is_active' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -179,15 +182,15 @@ class BlogMicroserviceSeeder extends Seeder
         );
 
         // Seed demo series
+        // Migration has: name (JSON), slug, description (JSON), is_visible (not is_active), no sort_order
         DB::table('blog_series')->updateOrInsert(
             ['tenant_id' => $tenantId, 'slug' => 'getting-started'],
             [
                 'tenant_id' => $tenantId,
-                'title' => json_encode(['en' => 'Getting Started Guide', 'ro' => 'Ghid de Început']),
+                'name' => json_encode(['en' => 'Getting Started Guide', 'ro' => 'Ghid de Început']),
                 'slug' => 'getting-started',
                 'description' => json_encode(['en' => 'A comprehensive guide to help you get started', 'ro' => 'Un ghid cuprinzător pentru a te ajuta să începi']),
-                'is_active' => true,
-                'sort_order' => 1,
+                'is_visible' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]

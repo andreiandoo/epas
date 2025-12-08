@@ -119,196 +119,202 @@ class CouponMicroserviceSeeder extends Seeder
         $tenantId = 1; // Demo tenant
 
         // Seed demo campaigns
+        // Migration: id (UUID), tenant_id, name (JSON), description (JSON), status, starts_at, ends_at,
+        //           budget_limit, budget_used, redemption_limit, redemption_count, metadata, created_by
         $campaigns = [
             [
+                'id' => Str::uuid()->toString(),
                 'tenant_id' => $tenantId,
-                'name' => 'Welcome Discount',
-                'description' => 'Welcome discount for new customers',
-                'discount_type' => 'percentage',
-                'discount_value' => 10.00,
-                'minimum_purchase' => 50.00,
-                'maximum_discount' => 100.00,
-                'applies_to' => 'all',
-                'code_format' => 'alphanumeric',
-                'code_prefix' => 'WELCOME',
-                'code_length' => 6,
-                'max_uses_total' => 1,
-                'max_uses_per_user' => 1,
-                'is_first_purchase_only' => true,
-                'is_combinable' => false,
+                'name' => json_encode(['en' => 'Welcome Discount', 'ro' => 'Reducere de Bun Venit']),
+                'description' => json_encode(['en' => 'Welcome discount for new customers', 'ro' => 'Reducere pentru clienți noi']),
                 'status' => 'active',
                 'starts_at' => now()->subDays(30),
-                'expires_at' => now()->addDays(60),
+                'ends_at' => now()->addDays(60),
+                'redemption_limit' => 1000,
             ],
             [
+                'id' => Str::uuid()->toString(),
                 'tenant_id' => $tenantId,
-                'name' => 'Summer Sale 2025',
-                'description' => 'Summer promotional campaign',
-                'discount_type' => 'percentage',
-                'discount_value' => 20.00,
-                'minimum_purchase' => 100.00,
-                'maximum_discount' => 200.00,
-                'applies_to' => 'all',
-                'code_format' => 'alphanumeric',
-                'code_prefix' => 'SUMMER',
-                'code_length' => 8,
-                'max_uses_total' => null,
-                'max_uses_per_user' => 3,
-                'is_first_purchase_only' => false,
-                'is_combinable' => false,
+                'name' => json_encode(['en' => 'Summer Sale 2025', 'ro' => 'Reduceri de Vară 2025']),
+                'description' => json_encode(['en' => 'Summer promotional campaign', 'ro' => 'Campanie promoțională de vară']),
                 'status' => 'active',
                 'starts_at' => now(),
-                'expires_at' => now()->addMonths(3),
+                'ends_at' => now()->addMonths(3),
+                'budget_limit' => 5000.00,
             ],
             [
+                'id' => Str::uuid()->toString(),
                 'tenant_id' => $tenantId,
-                'name' => 'Free Shipping',
-                'description' => 'Free shipping on orders over 75 EUR',
-                'discount_type' => 'free_shipping',
-                'discount_value' => 0,
-                'minimum_purchase' => 75.00,
-                'maximum_discount' => null,
-                'applies_to' => 'all',
-                'code_format' => 'alphabetic',
-                'code_prefix' => 'SHIP',
-                'code_length' => 4,
-                'max_uses_total' => null,
-                'max_uses_per_user' => 5,
-                'is_first_purchase_only' => false,
-                'is_combinable' => true,
+                'name' => json_encode(['en' => 'Free Shipping', 'ro' => 'Livrare Gratuită']),
+                'description' => json_encode(['en' => 'Free shipping on orders over 75 EUR', 'ro' => 'Livrare gratuită la comenzi peste 75 EUR']),
                 'status' => 'active',
                 'starts_at' => null,
-                'expires_at' => null,
+                'ends_at' => null,
             ],
             [
+                'id' => Str::uuid()->toString(),
                 'tenant_id' => $tenantId,
-                'name' => 'VIP Exclusive',
-                'description' => 'Exclusive codes for VIP customers',
-                'discount_type' => 'fixed',
-                'discount_value' => 25.00,
-                'minimum_purchase' => 100.00,
-                'maximum_discount' => null,
-                'applies_to' => 'all',
-                'code_format' => 'alphanumeric',
-                'code_prefix' => 'VIP',
-                'code_suffix' => '25',
-                'code_length' => 6,
-                'max_uses_total' => 1,
-                'max_uses_per_user' => 1,
-                'is_first_purchase_only' => false,
-                'is_combinable' => false,
+                'name' => json_encode(['en' => 'VIP Exclusive', 'ro' => 'Exclusiv VIP']),
+                'description' => json_encode(['en' => 'Exclusive codes for VIP customers', 'ro' => 'Coduri exclusive pentru clienți VIP']),
                 'status' => 'draft',
                 'starts_at' => null,
-                'expires_at' => null,
+                'ends_at' => null,
             ],
         ];
 
         $campaignIds = [];
         foreach ($campaigns as $campaign) {
+            $name = json_decode($campaign['name'], true)['en'];
             DB::table('coupon_campaigns')->updateOrInsert(
-                ['tenant_id' => $campaign['tenant_id'], 'name' => $campaign['name']],
+                ['id' => $campaign['id']],
                 array_merge($campaign, ['created_at' => now(), 'updated_at' => now()])
             );
-
-            $campaignIds[$campaign['name']] = DB::table('coupon_campaigns')
-                ->where('tenant_id', $tenantId)
-                ->where('name', $campaign['name'])
-                ->value('id');
+            $campaignIds[$name] = $campaign['id'];
         }
 
-        // Seed demo codes for the first campaign
+        // Seed demo codes
+        // Migration: id (UUID), tenant_id, campaign_id, code, code_type, discount_type, discount_value,
+        //           max_discount_amount, min_purchase_amount, max_uses_total, max_uses_per_user,
+        //           current_uses, first_purchase_only, starts_at, expires_at, status, combinable
         $demoCodes = [
-            ['code' => 'WELCOME123ABC', 'status' => 'active', 'uses_remaining' => 1],
-            ['code' => 'WELCOME456DEF', 'status' => 'active', 'uses_remaining' => 1],
-            ['code' => 'WELCOME789GHI', 'status' => 'used', 'uses_remaining' => 0],
-            ['code' => 'WELCOMEJKLMNO', 'status' => 'active', 'uses_remaining' => 1],
-            ['code' => 'WELCOMEPQRSTU', 'status' => 'inactive', 'uses_remaining' => 1],
+            [
+                'id' => Str::uuid()->toString(),
+                'tenant_id' => $tenantId,
+                'campaign_id' => $campaignIds['Welcome Discount'],
+                'code' => 'WELCOME123ABC',
+                'code_type' => 'single_use',
+                'discount_type' => 'percentage',
+                'discount_value' => 10.00,
+                'min_purchase_amount' => 50.00,
+                'max_discount_amount' => 100.00,
+                'max_uses_total' => 1,
+                'max_uses_per_user' => 1,
+                'current_uses' => 0,
+                'first_purchase_only' => true,
+                'status' => 'active',
+                'combinable' => false,
+            ],
+            [
+                'id' => Str::uuid()->toString(),
+                'tenant_id' => $tenantId,
+                'campaign_id' => $campaignIds['Welcome Discount'],
+                'code' => 'WELCOME456DEF',
+                'code_type' => 'single_use',
+                'discount_type' => 'percentage',
+                'discount_value' => 10.00,
+                'min_purchase_amount' => 50.00,
+                'max_discount_amount' => 100.00,
+                'max_uses_total' => 1,
+                'max_uses_per_user' => 1,
+                'current_uses' => 0,
+                'first_purchase_only' => true,
+                'status' => 'active',
+                'combinable' => false,
+            ],
+            [
+                'id' => Str::uuid()->toString(),
+                'tenant_id' => $tenantId,
+                'campaign_id' => $campaignIds['Welcome Discount'],
+                'code' => 'WELCOME789GHI',
+                'code_type' => 'single_use',
+                'discount_type' => 'percentage',
+                'discount_value' => 10.00,
+                'min_purchase_amount' => 50.00,
+                'max_discount_amount' => 100.00,
+                'max_uses_total' => 1,
+                'max_uses_per_user' => 1,
+                'current_uses' => 1,
+                'first_purchase_only' => true,
+                'status' => 'exhausted',
+                'combinable' => false,
+            ],
         ];
 
-        if ($campaignIds['Welcome Discount'] ?? null) {
-            foreach ($demoCodes as $code) {
-                DB::table('coupon_codes')->updateOrInsert(
-                    ['campaign_id' => $campaignIds['Welcome Discount'], 'code' => $code['code']],
-                    array_merge($code, [
-                        'campaign_id' => $campaignIds['Welcome Discount'],
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ])
-                );
-            }
-
-            // Seed one demo redemption
-            $usedCodeId = DB::table('coupon_codes')
-                ->where('campaign_id', $campaignIds['Welcome Discount'])
-                ->where('code', 'WELCOME789GHI')
-                ->value('id');
-
-            if ($usedCodeId) {
-                DB::table('coupon_redemptions')->updateOrInsert(
-                    ['code_id' => $usedCodeId, 'user_id' => 1],
-                    [
-                        'code_id' => $usedCodeId,
-                        'user_id' => 1,
-                        'order_id' => 'demo-order-001',
-                        'order_total' => 150.00,
-                        'discount_amount' => 15.00,
-                        'ip_address' => '192.168.1.100',
-                        'redeemed_at' => now()->subDays(5),
-                        'created_at' => now()->subDays(5),
-                        'updated_at' => now()->subDays(5),
-                    ]
-                );
-            }
+        $codeIds = [];
+        foreach ($demoCodes as $code) {
+            DB::table('coupon_codes')->updateOrInsert(
+                ['tenant_id' => $code['tenant_id'], 'code' => $code['code']],
+                array_merge($code, ['created_at' => now(), 'updated_at' => now()])
+            );
+            $codeIds[$code['code']] = $code['id'];
         }
+
+        // Seed one demo redemption
+        // Migration: id (UUID), tenant_id, coupon_id, user_id, order_id, discount_applied,
+        //           original_amount, final_amount, currency, status
+        DB::table('coupon_redemptions')->updateOrInsert(
+            ['id' => Str::uuid()->toString()],
+            [
+                'id' => Str::uuid()->toString(),
+                'tenant_id' => $tenantId,
+                'coupon_id' => $codeIds['WELCOME789GHI'],
+                'user_id' => 1,
+                'order_id' => 'demo-order-001',
+                'discount_applied' => 15.00,
+                'original_amount' => 150.00,
+                'final_amount' => 135.00,
+                'currency' => 'EUR',
+                'status' => 'completed',
+                'ip_address' => '192.168.1.100',
+                'created_at' => now()->subDays(5),
+                'updated_at' => now()->subDays(5),
+            ]
+        );
 
         // Seed demo codes for Summer Sale
-        $summerCodes = [
-            'SUMMER2025ABC1',
-            'SUMMER2025DEF2',
-            'SUMMER2025GHI3',
-            'SUMMER2025JKL4',
-            'SUMMER2025MNO5',
-        ];
-
-        if ($campaignIds['Summer Sale 2025'] ?? null) {
-            foreach ($summerCodes as $code) {
-                DB::table('coupon_codes')->updateOrInsert(
-                    ['campaign_id' => $campaignIds['Summer Sale 2025'], 'code' => $code],
-                    [
-                        'campaign_id' => $campaignIds['Summer Sale 2025'],
-                        'code' => $code,
-                        'status' => 'active',
-                        'uses_remaining' => null,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]
-                );
-            }
+        $summerCodes = ['SUMMER2025ABC1', 'SUMMER2025DEF2', 'SUMMER2025GHI3'];
+        foreach ($summerCodes as $code) {
+            DB::table('coupon_codes')->updateOrInsert(
+                ['tenant_id' => $tenantId, 'code' => $code],
+                [
+                    'id' => Str::uuid()->toString(),
+                    'tenant_id' => $tenantId,
+                    'campaign_id' => $campaignIds['Summer Sale 2025'],
+                    'code' => $code,
+                    'code_type' => 'multi_use',
+                    'discount_type' => 'percentage',
+                    'discount_value' => 20.00,
+                    'min_purchase_amount' => 100.00,
+                    'max_discount_amount' => 200.00,
+                    'max_uses_per_user' => 3,
+                    'current_uses' => 0,
+                    'status' => 'active',
+                    'combinable' => false,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
         }
 
         // Seed demo codes for Free Shipping
         $freeShipCodes = ['SHIPFREE', 'SHIPNOW', 'SHIPFAST'];
-
-        if ($campaignIds['Free Shipping'] ?? null) {
-            foreach ($freeShipCodes as $code) {
-                DB::table('coupon_codes')->updateOrInsert(
-                    ['campaign_id' => $campaignIds['Free Shipping'], 'code' => $code],
-                    [
-                        'campaign_id' => $campaignIds['Free Shipping'],
-                        'code' => $code,
-                        'status' => 'active',
-                        'uses_remaining' => null,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]
-                );
-            }
+        foreach ($freeShipCodes as $code) {
+            DB::table('coupon_codes')->updateOrInsert(
+                ['tenant_id' => $tenantId, 'code' => $code],
+                [
+                    'id' => Str::uuid()->toString(),
+                    'tenant_id' => $tenantId,
+                    'campaign_id' => $campaignIds['Free Shipping'],
+                    'code' => $code,
+                    'code_type' => 'multi_use',
+                    'discount_type' => 'free_shipping',
+                    'discount_value' => 0,
+                    'min_purchase_amount' => 75.00,
+                    'max_uses_per_user' => 5,
+                    'current_uses' => 0,
+                    'status' => 'active',
+                    'combinable' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            );
         }
 
+        $totalCodes = count($demoCodes) + count($summerCodes) + count($freeShipCodes);
         $this->command->info('✓ Coupon Codes microservice seeded successfully');
         $this->command->info('  - Microservice metadata created');
         $this->command->info('  - ' . count($campaigns) . ' demo campaigns created');
-        $this->command->info('  - ' . (count($demoCodes) + count($summerCodes) + count($freeShipCodes)) . ' demo codes created');
+        $this->command->info('  - ' . $totalCodes . ' demo codes created');
         $this->command->info('  - 1 demo redemption created');
     }
 }
