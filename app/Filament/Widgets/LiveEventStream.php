@@ -8,7 +8,7 @@ use Illuminate\Support\Collection;
 
 class LiveEventStream extends Widget
 {
-    protected static string $view = 'filament.widgets.live-event-stream';
+    protected string $view = 'filament.widgets.live-event-stream';
 
     protected int | string | array $columnSpan = 'full';
 
