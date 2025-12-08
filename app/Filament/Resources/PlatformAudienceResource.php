@@ -10,6 +10,7 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
 use Filament\Notifications\Notification;
 
 class PlatformAudienceResource extends Resource
@@ -320,7 +321,7 @@ class PlatformAudienceResource extends Resource
                     ->label('Auto-Sync'),
             ])
             ->actions([
-                Tables\Actions\Action::make('sync')
+                Action::make('sync')
                     ->label('Sync Now')
                     ->icon('heroicon-o-arrow-path')
                     ->color('info')
@@ -352,7 +353,7 @@ class PlatformAudienceResource extends Resource
                         }
                     }),
 
-                Tables\Actions\Action::make('preview')
+                Action::make('preview')
                     ->label('Preview')
                     ->icon('heroicon-o-eye')
                     ->color('gray')
@@ -365,7 +366,7 @@ class PlatformAudienceResource extends Resource
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Close'),
 
-                Tables\Actions\Action::make('create_lookalike')
+                Action::make('create_lookalike')
                     ->label('Create Lookalike')
                     ->icon('heroicon-o-user-plus')
                     ->color('success')

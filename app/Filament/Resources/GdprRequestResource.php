@@ -9,6 +9,8 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\BulkAction;
 use Filament\Notifications\Notification;
 use Filament\Infolists;
 use Illuminate\Support\Facades\Response;
@@ -128,7 +130,7 @@ class GdprRequestResource extends Resource
                     ->options(GdprRequest::STATUSES),
             ])
             ->actions([
-                Tables\Actions\Action::make('process')
+                Action::make('process')
                     ->label('Process')
                     ->icon('heroicon-o-play')
                     ->color('primary')
@@ -154,7 +156,7 @@ class GdprRequestResource extends Resource
                         }
                     }),
 
-                Tables\Actions\Action::make('download_export')
+                Action::make('download_export')
                     ->label('Download')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
@@ -175,7 +177,7 @@ class GdprRequestResource extends Resource
                 Tables\Actions\ViewAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkAction::make('process_all')
+                BulkAction::make('process_all')
                     ->label('Process Selected')
                     ->icon('heroicon-o-play')
                     ->requiresConfirmation()

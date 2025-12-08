@@ -118,7 +118,7 @@ class PlatformAnalytics extends Page
             'total_visitors' => (clone $sessionQuery)->distinct('visitor_id')->count('visitor_id'),
             'total_page_views' => (clone $eventQuery)->pageViews()->count(),
             'total_purchases' => (clone $eventQuery)->purchases()->count(),
-            'total_revenue' => (clone $eventQuery)->purchases()->sum('conversion_value'),
+            'total_revenue' => (clone $eventQuery)->purchases()->sum('event_value'),
             'total_customers' => (clone $customerQuery)->count(),
             'new_customers' => (clone $customerQuery)->where('first_seen_at', '>=', $startDate)->count(),
             'returning_customers' => (clone $customerQuery)->where('total_visits', '>', 1)->count(),
@@ -176,7 +176,7 @@ class PlatformAnalytics extends Page
                     ELSE 'Direct/Organic'
                 END as source,
                 COUNT(*) as conversions,
-                SUM(conversion_value) as revenue
+                SUM(event_value) as revenue
             ")
             ->groupBy('source')
             ->orderByDesc('revenue')
@@ -206,7 +206,7 @@ class PlatformAnalytics extends Page
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->whereNotNull('tenant_id')
                 ->join('tenants', 'tenants.id', '=', 'core_customer_events.tenant_id')
-                ->selectRaw('tenants.name as tenant_name, tenants.id as tenant_id, COUNT(*) as purchases, SUM(conversion_value) as revenue')
+                ->selectRaw('tenants.name as tenant_name, tenants.id as tenant_id, COUNT(*) as purchases, SUM(event_value) as revenue')
                 ->groupBy('tenant_id', 'tenant_name')
                 ->orderByDesc('revenue')
                 ->limit(10)
@@ -218,10 +218,10 @@ class PlatformAnalytics extends Page
         $this->adPlatformStats = [];
         $accounts = PlatformAdAccount::active()->get();
         foreach ($accounts as $account) {
-            $conversionCount = PlatformConversion::where('platform_ad_account_id', $account->id)
+            $conversionCount = PlatformConversion::where('ad_account_id', $account->id)
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->count();
-            $totalValue = PlatformConversion::where('platform_ad_account_id', $account->id)
+            $totalValue = PlatformConversion::where('ad_account_id', $account->id)
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->sum('value');
 
@@ -240,7 +240,7 @@ class PlatformAnalytics extends Page
             ->selectRaw("DATE(created_at) as date,
                          SUM(CASE WHEN event_type = 'page_view' THEN 1 ELSE 0 END) as page_views,
                          SUM(CASE WHEN event_type = 'purchase' THEN 1 ELSE 0 END) as purchases,
-                         SUM(CASE WHEN event_type = 'purchase' THEN conversion_value ELSE 0 END) as revenue")
+                         SUM(CASE WHEN event_type = 'purchase' THEN event_value ELSE 0 END) as revenue")
             ->groupBy('date')
             ->orderBy('date')
             ->get()

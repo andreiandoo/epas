@@ -6,6 +6,7 @@ use App\Models\Platform\CoreCustomer;
 use App\Services\Platform\ChurnPredictionService;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Notifications\Notification;
 
@@ -80,12 +81,12 @@ class HighValueAtRiskCustomers extends BaseWidget
                     ->sortable(),
             ])
             ->actions([
-                Tables\Actions\Action::make('view')
+                Action::make('view')
                     ->label('View')
                     ->icon('heroicon-o-eye')
                     ->url(fn ($record) => route('filament.admin.resources.core-customers.view', $record)),
 
-                Tables\Actions\Action::make('send_winback')
+                Action::make('send_winback')
                     ->label('Win-back')
                     ->icon('heroicon-o-envelope')
                     ->color('warning')
@@ -101,7 +102,7 @@ class HighValueAtRiskCustomers extends BaseWidget
                             ->send();
                     }),
 
-                Tables\Actions\Action::make('add_note')
+                Action::make('add_note')
                     ->label('Note')
                     ->icon('heroicon-o-chat-bubble-left')
                     ->color('gray')

@@ -8,6 +8,7 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
 use Illuminate\Database\Eloquent\Builder;
 
 class PlatformAdAccountResource extends Resource
@@ -208,7 +209,7 @@ class PlatformAdAccountResource extends Resource
                     ->label('Active'),
             ])
             ->actions([
-                Tables\Actions\Action::make('refresh_token')
+                Action::make('refresh_token')
                     ->label('Refresh Token')
                     ->icon('heroicon-o-arrow-path')
                     ->color('info')
@@ -223,7 +224,7 @@ class PlatformAdAccountResource extends Resource
                     })
                     ->visible(fn ($record) => $record->refresh_token && $record->isTokenExpiringSoon()),
 
-                Tables\Actions\Action::make('test_connection')
+                Action::make('test_connection')
                     ->label('Test')
                     ->icon('heroicon-o-bolt')
                     ->color('gray')

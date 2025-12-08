@@ -8,6 +8,8 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
+use Filament\Tables\Actions\BulkAction;
 use Filament\Infolists;
 use Illuminate\Support\Facades\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -218,7 +220,7 @@ class CoreCustomerResource extends Resource
                     ->label('Edit Tags'),
             ])
             ->headerActions([
-                Tables\Actions\Action::make('export')
+                Action::make('export')
                     ->label('Export CSV')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->action(function () {
@@ -226,7 +228,7 @@ class CoreCustomerResource extends Resource
                     }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkAction::make('export_selected')
+                BulkAction::make('export_selected')
                     ->label('Export Selected')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->action(function ($records) {

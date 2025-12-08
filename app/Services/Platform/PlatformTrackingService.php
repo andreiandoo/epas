@@ -869,7 +869,7 @@ class PlatformTrackingService
         $todayPageViews = (clone $eventQuery)->today()->pageViews()->count();
         $todaySessions = (clone $baseQuery)->today()->count();
         $todayPurchases = (clone $eventQuery)->today()->purchases()->count();
-        $todayRevenue = (clone $eventQuery)->today()->purchases()->sum('conversion_value');
+        $todayRevenue = (clone $eventQuery)->today()->purchases()->sum('event_value');
 
         // Conversion rate
         $conversionRate = $todaySessions > 0

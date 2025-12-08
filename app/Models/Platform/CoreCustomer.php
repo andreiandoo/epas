@@ -273,17 +273,17 @@ class CoreCustomer extends Model
 
     public function events(): HasMany
     {
-        return $this->hasMany(CoreCustomerEvent::class, 'core_customer_id');
+        return $this->hasMany(CoreCustomerEvent::class, 'customer_id');
     }
 
     public function sessions(): HasMany
     {
-        return $this->hasMany(CoreSession::class, 'core_customer_id');
+        return $this->hasMany(CoreSession::class, 'customer_id');
     }
 
     public function conversions(): HasMany
     {
-        return $this->hasMany(PlatformConversion::class, 'core_customer_id');
+        return $this->hasMany(PlatformConversion::class, 'customer_id');
     }
 
     // Computed attributes
@@ -703,12 +703,12 @@ class CoreCustomer extends Model
             $targetCustomer->save();
 
             // Update events to point to target customer
-            CoreCustomerEvent::where('core_customer_id', $this->id)
-                ->update(['core_customer_id' => $targetCustomer->id]);
+            CoreCustomerEvent::where('customer_id', $this->id)
+                ->update(['customer_id' => $targetCustomer->id]);
 
             // Update sessions to point to target customer
-            CoreSession::where('core_customer_id', $this->id)
-                ->update(['core_customer_id' => $targetCustomer->id]);
+            CoreSession::where('customer_id', $this->id)
+                ->update(['customer_id' => $targetCustomer->id]);
 
             // Mark this customer as merged
             $this->update([

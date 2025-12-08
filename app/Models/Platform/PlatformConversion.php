@@ -10,40 +10,30 @@ use App\Models\Order;
 class PlatformConversion extends Model
 {
     protected $fillable = [
-        'platform_ad_account_id',
-        'core_customer_id',
-        'core_customer_event_id',
+        'ad_account_id',
+        'customer_id',
+        'customer_event_id',
         'tenant_id',
-        'order_id',
-        'conversion_type',
-        'conversion_action_id',
-        'deduplication_key',
-        'original_event_time',
+        'conversion_id',
+        'event_type',
+        'conversion_time',
         'value',
         'currency',
+        'order_id',
         'click_id',
-        'click_id_type',
-        'hashed_email',
-        'hashed_phone',
         'user_data',
-        'event_data',
         'status',
-        'platform_response',
         'error_message',
-        'retry_count',
         'sent_at',
-        'confirmed_at',
+        'api_response',
     ];
 
     protected $casts = [
         'value' => 'decimal:2',
         'user_data' => 'array',
-        'event_data' => 'array',
-        'platform_response' => 'array',
-        'retry_count' => 'integer',
+        'api_response' => 'array',
         'sent_at' => 'datetime',
-        'confirmed_at' => 'datetime',
-        'original_event_time' => 'datetime',
+        'conversion_time' => 'datetime',
     ];
 
     // Conversion types
@@ -71,17 +61,17 @@ class PlatformConversion extends Model
 
     public function platformAdAccount(): BelongsTo
     {
-        return $this->belongsTo(PlatformAdAccount::class);
+        return $this->belongsTo(PlatformAdAccount::class, 'ad_account_id');
     }
 
     public function coreCustomer(): BelongsTo
     {
-        return $this->belongsTo(CoreCustomer::class);
+        return $this->belongsTo(CoreCustomer::class, 'customer_id');
     }
 
     public function coreCustomerEvent(): BelongsTo
     {
-        return $this->belongsTo(CoreCustomerEvent::class);
+        return $this->belongsTo(CoreCustomerEvent::class, 'customer_event_id');
     }
 
     public function tenant(): BelongsTo
@@ -117,7 +107,7 @@ class PlatformConversion extends Model
 
     public function scopeForAccount($query, int $accountId)
     {
-        return $query->where('platform_ad_account_id', $accountId);
+        return $query->where('ad_account_id', $accountId);
     }
 
     public function scopeForTenant($query, int $tenantId)
@@ -127,12 +117,12 @@ class PlatformConversion extends Model
 
     public function scopeOfType($query, string $type)
     {
-        return $query->where('conversion_type', $type);
+        return $query->where('event_type', $type);
     }
 
     public function scopePurchases($query)
     {
-        return $query->where('conversion_type', self::TYPE_PURCHASE);
+        return $query->where('event_type', self::TYPE_PURCHASE);
     }
 
     public function scopeWithClickId($query)
@@ -156,7 +146,7 @@ class PlatformConversion extends Model
         $this->update([
             'status' => self::STATUS_SENT,
             'sent_at' => now(),
-            'platform_response' => $response,
+            'api_response' => $response,
         ]);
     }
 
@@ -164,7 +154,6 @@ class PlatformConversion extends Model
     {
         $this->update([
             'status' => self::STATUS_CONFIRMED,
-            'confirmed_at' => now(),
         ]);
     }
 
@@ -182,16 +171,6 @@ class PlatformConversion extends Model
             'status' => self::STATUS_SKIPPED,
             'error_message' => $reason,
         ]);
-    }
-
-    public function incrementRetryCount(): void
-    {
-        $this->increment('retry_count');
-    }
-
-    public function canRetry(int $maxRetries = 5): bool
-    {
-        return $this->retry_count < $maxRetries && $this->status === self::STATUS_FAILED;
     }
 
     // Helpers
@@ -230,29 +209,18 @@ class PlatformConversion extends Model
     {
         $data = [];
 
-        if ($this->hashed_email) {
-            $data['em'] = $this->hashed_email;
-        }
-
-        if ($this->hashed_phone) {
-            $data['ph'] = $this->hashed_phone;
+        // Get user data from related customer if available
+        if ($this->coreCustomer) {
+            if ($this->coreCustomer->email_hash) {
+                $data['em'] = $this->coreCustomer->email_hash;
+            }
+            if ($this->coreCustomer->phone_hash) {
+                $data['ph'] = $this->coreCustomer->phone_hash;
+            }
         }
 
         if ($this->click_id) {
-            switch ($this->click_id_type) {
-                case self::CLICK_GCLID:
-                    $data['gclid'] = $this->click_id;
-                    break;
-                case self::CLICK_FBCLID:
-                    $data['fbc'] = $this->click_id;
-                    break;
-                case self::CLICK_TTCLID:
-                    $data['ttclid'] = $this->click_id;
-                    break;
-                case self::CLICK_LI_FAT_ID:
-                    $data['li_fat_id'] = $this->click_id;
-                    break;
-            }
+            $data['click_id'] = $this->click_id;
         }
 
         // Merge any additional user data
@@ -263,144 +231,56 @@ class PlatformConversion extends Model
         return $data;
     }
 
-    // Deduplication methods
-
-    /**
-     * Generate a deduplication key for this conversion
-     */
-    public static function generateDeduplicationKey(
-        int $accountId,
-        string $conversionType,
-        ?int $orderId = null,
-        ?int $eventId = null,
-        ?string $customerId = null,
-        ?\DateTime $eventTime = null
-    ): string {
-        // For purchases, dedupe by order_id (most reliable)
-        if ($orderId && in_array($conversionType, [self::TYPE_PURCHASE])) {
-            return hash('sha256', "{$accountId}:{$conversionType}:order:{$orderId}");
-        }
-
-        // For other events, dedupe by event_id if available
-        if ($eventId) {
-            return hash('sha256', "{$accountId}:{$conversionType}:event:{$eventId}");
-        }
-
-        // Fallback: dedupe by customer + type + time window (1 hour)
-        $timeWindow = $eventTime ? $eventTime->format('Y-m-d-H') : now()->format('Y-m-d-H');
-        return hash('sha256', "{$accountId}:{$conversionType}:customer:{$customerId}:{$timeWindow}");
-    }
-
-    /**
-     * Check if a conversion with this deduplication key already exists
-     */
-    public static function isDuplicate(int $accountId, string $deduplicationKey): bool
-    {
-        return static::where('platform_ad_account_id', $accountId)
-            ->where('deduplication_key', $deduplicationKey)
-            ->exists();
-    }
-
-    /**
-     * Find existing conversion by deduplication key
-     */
-    public static function findByDeduplicationKey(int $accountId, string $deduplicationKey): ?self
-    {
-        return static::where('platform_ad_account_id', $accountId)
-            ->where('deduplication_key', $deduplicationKey)
-            ->first();
-    }
-
-    /**
-     * Create conversion only if not duplicate
-     */
-    public static function createIfNotDuplicate(array $data): ?self
-    {
-        $deduplicationKey = $data['deduplication_key'] ?? null;
-        $accountId = $data['platform_ad_account_id'] ?? null;
-
-        if ($deduplicationKey && $accountId && static::isDuplicate($accountId, $deduplicationKey)) {
-            return null; // Duplicate detected
-        }
-
-        return static::create($data);
-    }
-
-    // Static factory for creating conversions with deduplication
+    // Static factory for creating conversions
     public static function createFromEvent(
         PlatformAdAccount $account,
         CoreCustomerEvent $event,
         CoreCustomer $customer,
-        string $conversionType = self::TYPE_PURCHASE
+        string $eventType = self::TYPE_PURCHASE
     ): ?self {
         $clickId = null;
-        $clickIdType = null;
 
         // Determine which click ID to use based on platform
         if ($account->isGoogle() && $event->gclid) {
             $clickId = $event->gclid;
-            $clickIdType = self::CLICK_GCLID;
         } elseif ($account->isFacebook() && $event->fbclid) {
             $clickId = $event->fbclid;
-            $clickIdType = self::CLICK_FBCLID;
         } elseif ($account->isTiktok() && $event->ttclid) {
             $clickId = $event->ttclid;
-            $clickIdType = self::CLICK_TTCLID;
         } elseif ($account->isLinkedin() && $event->li_fat_id) {
             $clickId = $event->li_fat_id;
-            $clickIdType = self::CLICK_LI_FAT_ID;
         }
 
-        // Generate deduplication key
-        $deduplicationKey = static::generateDeduplicationKey(
-            $account->id,
-            $conversionType,
-            $event->order_id,
-            $event->id,
-            $customer->uuid,
-            $event->created_at
-        );
+        // Generate unique conversion ID
+        $conversionId = 'conv_' . uniqid() . '_' . $event->id;
 
-        // Check for duplicate
-        if (static::isDuplicate($account->id, $deduplicationKey)) {
+        // Check for duplicate by conversion_id
+        if (static::where('conversion_id', $conversionId)->exists()) {
             \Illuminate\Support\Facades\Log::info('Duplicate conversion detected, skipping', [
                 'account_id' => $account->id,
-                'deduplication_key' => $deduplicationKey,
-                'conversion_type' => $conversionType,
+                'conversion_id' => $conversionId,
+                'event_type' => $eventType,
             ]);
             return null;
         }
 
         return static::create([
-            'platform_ad_account_id' => $account->id,
-            'core_customer_id' => $customer->id,
-            'core_customer_event_id' => $event->id,
+            'ad_account_id' => $account->id,
+            'customer_id' => $customer->id,
+            'customer_event_id' => $event->id,
             'tenant_id' => $event->tenant_id,
+            'conversion_id' => $conversionId,
+            'event_type' => $eventType,
+            'conversion_time' => $event->occurred_at ?? $event->created_at,
+            'value' => $event->event_value ?? 0,
+            'currency' => $event->currency ?? 'EUR',
             'order_id' => $event->order_id,
-            'conversion_type' => $conversionType,
-            'deduplication_key' => $deduplicationKey,
-            'original_event_time' => $event->created_at,
-            'value' => $event->conversion_value ?? $event->order_total ?? 0,
-            'currency' => $event->currency ?? 'USD',
             'click_id' => $clickId,
-            'click_id_type' => $clickIdType,
-            'hashed_email' => $customer->email_hash,
-            'hashed_phone' => $customer->phone_hash,
-            'status' => self::STATUS_PENDING,
-            'retry_count' => 0,
-            'event_data' => [
-                'event_type' => $event->event_type,
-                'page_url' => $event->page_url,
-                'ip_address' => $event->ip_address,
+            'user_data' => [
+                'email_hash' => $customer->email_hash,
+                'phone_hash' => $customer->phone_hash,
             ],
+            'status' => self::STATUS_PENDING,
         ]);
-    }
-
-    // Scope for finding duplicate conversions
-    public function scopeDuplicates($query)
-    {
-        return $query->selectRaw('deduplication_key, COUNT(*) as count')
-            ->groupBy('deduplication_key')
-            ->havingRaw('COUNT(*) > 1');
     }
 }

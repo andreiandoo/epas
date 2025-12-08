@@ -10,14 +10,34 @@ use App\Models\Order;
 class CoreCustomerEvent extends Model
 {
     protected $fillable = [
-        'core_customer_id',
+        'customer_id',
         'tenant_id',
         'session_id',
+        'visitor_id',
         'event_type',
         'event_category',
-        'event_data',
+        'event_action',
+        'event_label',
+        'event_value',
         'page_url',
+        'page_path',
         'page_title',
+        'page_type',
+        'content_id',
+        'content_type',
+        'content_name',
+        'event_id',
+        'order_id',
+        'ticket_id',
+        'product_sku',
+        'product_price',
+        'quantity',
+        'currency',
+        'cart_id',
+        'cart_value',
+        'source',
+        'medium',
+        'campaign',
         'referrer',
         'utm_source',
         'utm_medium',
@@ -28,37 +48,47 @@ class CoreCustomerEvent extends Model
         'fbclid',
         'ttclid',
         'li_fat_id',
-        'order_id',
-        'order_total',
-        'currency',
-        'ticket_count',
-        'event_id',
+        'fbc',
+        'fbp',
+        'ttp',
         'device_type',
+        'device_brand',
+        'device_model',
         'browser',
+        'browser_version',
         'os',
+        'os_version',
+        'screen_width',
+        'screen_height',
         'ip_address',
         'country_code',
         'region',
         'city',
         'latitude',
         'longitude',
-        'time_on_page',
-        'scroll_depth',
-        'is_converted',
-        'conversion_value',
-        'created_at',
+        'occurred_at',
+        'time_on_page_seconds',
+        'scroll_depth_percent',
+        'sent_to_platform',
+        'sent_to_tenant',
+        'processing_log',
     ];
 
     protected $casts = [
-        'event_data' => 'array',
-        'order_total' => 'decimal:2',
-        'conversion_value' => 'decimal:2',
-        'latitude' => 'decimal:8',
-        'longitude' => 'decimal:8',
-        'is_converted' => 'boolean',
-        'time_on_page' => 'integer',
-        'scroll_depth' => 'integer',
-        'ticket_count' => 'integer',
+        'event_value' => 'decimal:2',
+        'product_price' => 'decimal:2',
+        'cart_value' => 'decimal:2',
+        'latitude' => 'decimal:7',
+        'longitude' => 'decimal:7',
+        'quantity' => 'integer',
+        'screen_width' => 'integer',
+        'screen_height' => 'integer',
+        'time_on_page_seconds' => 'integer',
+        'scroll_depth_percent' => 'integer',
+        'sent_to_platform' => 'boolean',
+        'sent_to_tenant' => 'boolean',
+        'processing_log' => 'array',
+        'occurred_at' => 'datetime',
     ];
 
     public $timestamps = false;
@@ -100,7 +130,7 @@ class CoreCustomerEvent extends Model
 
     public function coreCustomer(): BelongsTo
     {
-        return $this->belongsTo(CoreCustomer::class);
+        return $this->belongsTo(CoreCustomer::class, 'customer_id');
     }
 
     public function tenant(): BelongsTo
@@ -110,7 +140,7 @@ class CoreCustomerEvent extends Model
 
     public function session(): BelongsTo
     {
-        return $this->belongsTo(CoreSession::class, 'session_id');
+        return $this->belongsTo(CoreSession::class, 'session_id', 'session_id');
     }
 
     public function order(): BelongsTo
@@ -131,7 +161,7 @@ class CoreCustomerEvent extends Model
 
     public function scopeConversions($query)
     {
-        return $query->where('is_converted', true);
+        return $query->whereIn('event_type', [self::TYPE_PURCHASE, self::TYPE_SIGN_UP, self::TYPE_LEAD]);
     }
 
     public function scopePurchases($query)
@@ -219,18 +249,17 @@ class CoreCustomerEvent extends Model
     {
         return [
             'event_type' => $this->event_type,
-            'event_time' => $this->created_at->timestamp,
+            'event_time' => $this->occurred_at?->timestamp ?? $this->created_at?->timestamp,
             'event_id' => $this->id,
             'order_id' => $this->order_id,
-            'value' => $this->conversion_value ?? $this->order_total,
-            'currency' => $this->currency ?? 'USD',
+            'value' => $this->event_value ?? $this->cart_value ?? 0,
+            'currency' => $this->currency ?? 'EUR',
             'page_url' => $this->page_url,
             'gclid' => $this->gclid,
             'fbclid' => $this->fbclid,
             'ttclid' => $this->ttclid,
             'li_fat_id' => $this->li_fat_id,
             'ip_address' => $this->ip_address,
-            'user_agent' => $this->event_data['user_agent'] ?? null,
         ];
     }
 

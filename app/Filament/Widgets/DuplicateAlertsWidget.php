@@ -6,6 +6,7 @@ use App\Models\Platform\CoreCustomer;
 use App\Services\Platform\DuplicateDetectionService;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\Action;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -77,7 +78,7 @@ class DuplicateAlertsWidget extends BaseWidget
                     ->sortable(),
             ])
             ->actions([
-                Tables\Actions\Action::make('merge')
+                Action::make('merge')
                     ->label('Merge')
                     ->icon('heroicon-o-arrows-pointing-in')
                     ->color('warning')
@@ -98,7 +99,7 @@ class DuplicateAlertsWidget extends BaseWidget
                         }
                     }),
 
-                Tables\Actions\Action::make('dismiss')
+                Action::make('dismiss')
                     ->label('Dismiss')
                     ->icon('heroicon-o-x-mark')
                     ->color('gray')

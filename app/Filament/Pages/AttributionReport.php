@@ -83,7 +83,7 @@ class AttributionReport extends Page
             ->get();
 
         $totalConversions = $conversions->count();
-        $totalRevenue = $conversions->sum('conversion_value');
+        $totalRevenue = $conversions->sum('event_value');
 
         // === FIRST-TOUCH ATTRIBUTION ===
         // Credits the first interaction that brought the customer
@@ -124,7 +124,7 @@ class AttributionReport extends Page
                     ELSE 'Direct'
                 END as channel,
                 COUNT(*) as conversions,
-                SUM(conversion_value) as revenue
+                SUM(event_value) as revenue
             ")
             ->groupBy('channel')
             ->orderByDesc('revenue')

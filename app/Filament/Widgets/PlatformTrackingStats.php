@@ -23,7 +23,7 @@ class PlatformTrackingStats extends StatsOverviewWidget
 
         // Today's stats
         $todayConversions = CoreCustomerEvent::purchases()->today()->count();
-        $todayRevenue = CoreCustomerEvent::purchases()->today()->sum('conversion_value');
+        $todayRevenue = CoreCustomerEvent::purchases()->today()->sum('event_value');
         $todaySessions = CoreSession::today()->count();
 
         // Yesterday comparison
@@ -32,7 +32,7 @@ class PlatformTrackingStats extends StatsOverviewWidget
             ->count();
         $yesterdayRevenue = CoreCustomerEvent::purchases()
             ->whereDate('created_at', now()->subDay())
-            ->sum('conversion_value');
+            ->sum('event_value');
 
         // Conversion trend
         $conversionTrend = $yesterdayConversions > 0
