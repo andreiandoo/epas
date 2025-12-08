@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\Public\SeatingController;
 use App\Http\Controllers\Api\PublicDataController;
 use App\Http\Controllers\Api\AffiliateController;
 use App\Http\Controllers\Api\TrackingController;
+use App\Http\Controllers\Api\PlatformTrackingController;
 use App\Http\Controllers\Api\TicketTemplateController;
 use App\Http\Controllers\Api\InviteController;
 use App\Http\Controllers\Api\InsuranceController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Api\TenantClient\CheckoutController;
 use App\Http\Controllers\Api\TenantClient\AdminController;
 use App\Http\Controllers\Api\TenantClient\ThemeController;
 use App\Http\Controllers\Api\TenantClient\PagesController;
+use App\Http\Controllers\Api\TenantClient\CookieConsentController;
 use App\Http\Controllers\Api\DocSearchController;
 use App\Http\Controllers\Api\TenantClientController;
 
@@ -238,6 +240,25 @@ Route::prefix('tracking')->middleware(['throttle:api'])->group(function () {
     // Debug: Preview script injection
     Route::get('/debug/preview', [TrackingController::class, 'debugPreview'])
         ->name('api.tracking.debug.preview');
+
+    // Platform real-time tracking events (from tenant websites)
+    Route::post('/events', [PlatformTrackingController::class, 'trackEvents'])
+        ->name('api.tracking.events')
+        ->withoutMiddleware(['throttle:api'])
+        ->middleware('throttle:300,1'); // Higher rate limit for tracking
+
+    // Real-time analytics
+    Route::get('/realtime', [PlatformTrackingController::class, 'getRealTimeStats'])
+        ->name('api.tracking.realtime');
+
+    Route::get('/active-visitors', [PlatformTrackingController::class, 'getActiveVisitors'])
+        ->name('api.tracking.active-visitors');
+
+    Route::get('/events/stream', [PlatformTrackingController::class, 'getEventStream'])
+        ->name('api.tracking.events.stream');
+
+    Route::get('/customers/insights', [PlatformTrackingController::class, 'getCustomerInsights'])
+        ->name('api.tracking.customers.insights');
 });
 
 /*
@@ -933,7 +954,45 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.orders.show');
     });
 
-    
+    // Cookie Consent (GDPR compliance)
+    Route::prefix('consent')->group(function () {
+        Route::get('/', [CookieConsentController::class, 'getConsent'])
+            ->name('api.tenant-client.consent.get');
+        Route::post('/', [CookieConsentController::class, 'saveConsent'])
+            ->name('api.tenant-client.consent.save');
+        Route::post('/withdraw', [CookieConsentController::class, 'withdrawConsent'])
+            ->name('api.tenant-client.consent.withdraw');
+        Route::get('/history', [CookieConsentController::class, 'getConsentHistory'])
+            ->name('api.tenant-client.consent.history');
+
+        // Consent Renewal
+        Route::get('/renewal-status', [CookieConsentController::class, 'getRenewalStatus'])
+            ->name('api.tenant-client.consent.renewal-status');
+        Route::post('/renew', [CookieConsentController::class, 'renewConsent'])
+            ->name('api.tenant-client.consent.renew');
+
+        // Consent Analytics (Dashboard)
+        Route::prefix('analytics')->group(function () {
+            Route::get('/overview', [CookieConsentController::class, 'analyticsOverview'])
+                ->name('api.tenant-client.consent.analytics.overview');
+            Route::get('/trends', [CookieConsentController::class, 'analyticsTrends'])
+                ->name('api.tenant-client.consent.analytics.trends');
+            Route::get('/geographic', [CookieConsentController::class, 'analyticsGeographic'])
+                ->name('api.tenant-client.consent.analytics.geographic');
+            Route::get('/devices', [CookieConsentController::class, 'analyticsDevices'])
+                ->name('api.tenant-client.consent.analytics.devices');
+            Route::get('/sources', [CookieConsentController::class, 'analyticsSources'])
+                ->name('api.tenant-client.consent.analytics.sources');
+            Route::get('/activity', [CookieConsentController::class, 'analyticsActivity'])
+                ->name('api.tenant-client.consent.analytics.activity');
+            Route::get('/changes', [CookieConsentController::class, 'analyticsChanges'])
+                ->name('api.tenant-client.consent.analytics.changes');
+            Route::get('/widget', [CookieConsentController::class, 'analyticsWidget'])
+                ->name('api.tenant-client.consent.analytics.widget');
+            Route::get('/expiring', [CookieConsentController::class, 'analyticsExpiring'])
+                ->name('api.tenant-client.consent.analytics.expiring');
+        });
+    });
 
     // Admin (requires admin auth)
     Route::prefix('admin')->group(function () {
@@ -982,6 +1041,110 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
 Route::post('/tenant-client/checkout/callback/{provider}', [CheckoutController::class, 'paymentCallback'])
     ->name('api.tenant-client.checkout.callback')
     ->middleware('throttle:60,1');
+
+/*
+|--------------------------------------------------------------------------
+| Platform Analytics API Routes
+|--------------------------------------------------------------------------
+|
+| REST API endpoints for platform analytics, attribution, churn prediction,
+| and customer data management
+|
+*/
+
+Route::prefix('v1/analytics')->middleware(['throttle:api', 'api.key'])->group(function () {
+    // Dashboard and Overview
+    Route::get('/dashboard', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'dashboard'])
+        ->name('api.analytics.dashboard');
+
+    Route::get('/funnel', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'funnel'])
+        ->name('api.analytics.funnel');
+
+    Route::get('/segments', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'segments'])
+        ->name('api.analytics.segments');
+
+    Route::get('/cohorts', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'cohorts'])
+        ->name('api.analytics.cohorts');
+
+    Route::get('/traffic-sources', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'trafficSources'])
+        ->name('api.analytics.traffic-sources');
+
+    Route::get('/geography', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'geography'])
+        ->name('api.analytics.geography');
+
+    Route::get('/top-customers', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'topCustomers'])
+        ->name('api.analytics.top-customers');
+
+    // Attribution
+    Route::get('/attribution/models', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'attributionModels'])
+        ->name('api.analytics.attribution.models');
+
+    Route::get('/attribution/comparison', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'attributionComparison'])
+        ->name('api.analytics.attribution.comparison');
+
+    Route::get('/attribution/channels', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'channelAttribution'])
+        ->name('api.analytics.attribution.channels');
+
+    // Churn Prediction
+    Route::get('/churn/dashboard', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'churnDashboard'])
+        ->name('api.analytics.churn.dashboard');
+
+    Route::get('/churn/at-risk', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'atRiskCustomers'])
+        ->name('api.analytics.churn.at-risk');
+
+    Route::get('/churn/by-segment', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'churnBySegment'])
+        ->name('api.analytics.churn.by-segment');
+
+    Route::get('/churn/cohort-analysis', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'cohortChurnAnalysis'])
+        ->name('api.analytics.churn.cohort-analysis');
+
+    // Duplicate Detection
+    Route::get('/duplicates/stats', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'duplicateStats'])
+        ->name('api.analytics.duplicates.stats');
+
+    Route::get('/duplicates', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'duplicates'])
+        ->name('api.analytics.duplicates');
+
+    // Customer-specific endpoints
+    Route::get('/customers/{customerId}/profile', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'customerProfile'])
+        ->name('api.analytics.customer.profile');
+
+    Route::get('/customers/{customerId}/journey', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'customerJourney'])
+        ->name('api.analytics.customer.journey');
+
+    Route::get('/customers/{customerId}/churn-prediction', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'predictCustomerChurn'])
+        ->name('api.analytics.customer.churn-prediction');
+
+    Route::get('/customers/{customerId}/duplicates', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'customerDuplicates'])
+        ->name('api.analytics.customer.duplicates');
+
+    Route::get('/customers/{customerId}/ltv-prediction', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'predictCustomerLtv'])
+        ->name('api.analytics.customer.ltv-prediction');
+
+    // LTV Prediction
+    Route::get('/ltv/dashboard', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'ltvDashboard'])
+        ->name('api.analytics.ltv.dashboard');
+
+    Route::get('/ltv/high-potential', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'highPotentialCustomers'])
+        ->name('api.analytics.ltv.high-potential');
+
+    Route::get('/ltv/by-segment', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'ltvBySegment'])
+        ->name('api.analytics.ltv.by-segment');
+
+    Route::get('/ltv/by-cohort', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'ltvByCohort'])
+        ->name('api.analytics.ltv.by-cohort');
+
+    Route::get('/ltv/tiers', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'ltvTiers'])
+        ->name('api.analytics.ltv.tiers');
+
+    // Export - with stricter rate limiting (60 exports per hour)
+    Route::get('/export', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'export'])
+        ->middleware('throttle:60,60')
+        ->name('api.analytics.export');
+
+    Route::get('/export/options', [App\Http\Controllers\Api\Platform\AnalyticsController::class, 'exportOptions'])
+        ->name('api.analytics.export.options');
+});
 
 /*
 |--------------------------------------------------------------------------

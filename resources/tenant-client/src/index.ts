@@ -12,10 +12,12 @@ import { SecurityGuard } from './core/SecurityGuard';
 import { PreviewMode } from './core/PreviewMode';
 import { FontLoader } from './core/FontLoader';
 import { PageBuilderModule } from './modules/PageBuilderModule';
+import { Tracking } from './core/TrackingModule';
 
 declare global {
     interface Window {
         Tixello: TixelloApp;
+        TixelloTracking: typeof Tracking;
         __TIXELLO_CONFIG__: string;
     }
 }
@@ -62,6 +64,9 @@ SecurityGuard.init();
         // Initialize PageBuilder module
         PageBuilderModule.init(config);
 
+        // Initialize real-time tracking
+        Tracking.init(config);
+
         // Preload common fonts
         FontLoader.preloadCommon();
 
@@ -98,8 +103,9 @@ SecurityGuard.init();
 
         await app.mount(mountPoint);
 
-        // Expose global instance
+        // Expose global instances
         window.Tixello = app;
+        window.TixelloTracking = Tracking;
 
         console.log(`Tixello v${config.version} initialized`);
     } catch (error) {

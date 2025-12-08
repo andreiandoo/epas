@@ -55,6 +55,46 @@ class Setting extends Model
         'tiktok_client_key',
         'tiktok_client_secret',
         'meta',
+        // Integration Microservices
+        'slack_client_id',
+        'slack_client_secret',
+        'slack_signing_secret',
+        'discord_client_id',
+        'discord_client_secret',
+        'discord_bot_token',
+        'google_workspace_client_id',
+        'google_workspace_client_secret',
+        'microsoft365_client_id',
+        'microsoft365_client_secret',
+        'microsoft365_tenant_id',
+        'salesforce_client_id',
+        'salesforce_client_secret',
+        'hubspot_client_id',
+        'hubspot_client_secret',
+        'jira_client_id',
+        'jira_client_secret',
+        'zapier_client_id',
+        'zapier_client_secret',
+        'google_sheets_client_id',
+        'google_sheets_client_secret',
+        'whatsapp_cloud_verify_token',
+        'airtable_client_id',
+        'airtable_client_secret',
+        'square_client_id',
+        'square_client_secret',
+        'square_environment',
+        'square_webhook_signature_key',
+        'zoom_client_id',
+        'zoom_client_secret',
+        'zoom_webhook_secret_token',
+        // Ad Platform Connectors
+        'google_ads_client_id',
+        'google_ads_client_secret',
+        'google_ads_developer_token',
+        'tiktok_ads_app_id',
+        'tiktok_ads_app_secret',
+        'linkedin_ads_client_id',
+        'linkedin_ads_client_secret',
     ];
 
     protected $casts = [
@@ -76,6 +116,28 @@ class Setting extends Model
         'tiktok_client_secret' => 'encrypted',
         'vat_enabled' => 'boolean',
         'vat_rate' => 'decimal:2',
+        // Integration Microservices - encrypted secrets
+        'slack_client_secret' => 'encrypted',
+        'slack_signing_secret' => 'encrypted',
+        'discord_client_secret' => 'encrypted',
+        'discord_bot_token' => 'encrypted',
+        'google_workspace_client_secret' => 'encrypted',
+        'microsoft365_client_secret' => 'encrypted',
+        'salesforce_client_secret' => 'encrypted',
+        'hubspot_client_secret' => 'encrypted',
+        'jira_client_secret' => 'encrypted',
+        'zapier_client_secret' => 'encrypted',
+        'google_sheets_client_secret' => 'encrypted',
+        'airtable_client_secret' => 'encrypted',
+        'square_client_secret' => 'encrypted',
+        'square_webhook_signature_key' => 'encrypted',
+        'zoom_client_secret' => 'encrypted',
+        'zoom_webhook_secret_token' => 'encrypted',
+        // Ad Platform Connectors - encrypted
+        'google_ads_client_secret' => 'encrypted',
+        'google_ads_developer_token' => 'encrypted',
+        'tiktok_ads_app_secret' => 'encrypted',
+        'linkedin_ads_client_secret' => 'encrypted',
     ];
 
     /**
@@ -124,5 +186,72 @@ class Setting extends Model
         $secretKey = $this->getStripeSecretKey();
 
         return !empty($publicKey) && !empty($secretKey);
+    }
+
+    // ==========================================
+    // INTEGRATION CONFIGURATION CHECKS
+    // ==========================================
+
+    public function isSlackConfigured(): bool
+    {
+        return !empty($this->slack_client_id) && !empty($this->slack_client_secret);
+    }
+
+    public function isDiscordConfigured(): bool
+    {
+        return !empty($this->discord_client_id) && !empty($this->discord_client_secret);
+    }
+
+    public function isGoogleWorkspaceConfigured(): bool
+    {
+        return !empty($this->google_workspace_client_id) && !empty($this->google_workspace_client_secret);
+    }
+
+    public function isMicrosoft365Configured(): bool
+    {
+        return !empty($this->microsoft365_client_id) && !empty($this->microsoft365_client_secret);
+    }
+
+    public function isSalesforceConfigured(): bool
+    {
+        return !empty($this->salesforce_client_id) && !empty($this->salesforce_client_secret);
+    }
+
+    public function isHubSpotConfigured(): bool
+    {
+        return !empty($this->hubspot_client_id) && !empty($this->hubspot_client_secret);
+    }
+
+    public function isJiraConfigured(): bool
+    {
+        return !empty($this->jira_client_id) && !empty($this->jira_client_secret);
+    }
+
+    public function isGoogleSheetsConfigured(): bool
+    {
+        return !empty($this->google_sheets_client_id) && !empty($this->google_sheets_client_secret);
+    }
+
+    public function isAirtableConfigured(): bool
+    {
+        return !empty($this->airtable_client_id) && !empty($this->airtable_client_secret);
+    }
+
+    public function isSquareConfigured(): bool
+    {
+        return !empty($this->square_client_id) && !empty($this->square_client_secret);
+    }
+
+    public function isZoomConfigured(): bool
+    {
+        return !empty($this->zoom_client_id) && !empty($this->zoom_client_secret);
+    }
+
+    /**
+     * Get the base URL for OAuth callbacks
+     */
+    public function getOAuthCallbackBaseUrl(): string
+    {
+        return rtrim(config('app.url'), '/') . '/integrations';
     }
 }

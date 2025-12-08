@@ -226,6 +226,210 @@ Schedule::command('promo:cleanup --days=365')
 
 /*
 |--------------------------------------------------------------------------
+| Platform Tracking Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Process pending platform conversions (every 5 minutes)
+Schedule::job(new \App\Jobs\ProcessPlatformConversionsJob)
+    ->everyFiveMinutes()
+    ->onSuccess(function () {
+        \Log::info('Platform conversions processing completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to process platform conversions');
+    });
+
+// Refresh token alerts for expiring platform ad accounts (daily at 8 AM)
+Schedule::call(function () {
+    $expiringSoon = \App\Models\Platform\PlatformAdAccount::active()
+        ->whereNotNull('token_expires_at')
+        ->where('token_expires_at', '<=', now()->addDays(3))
+        ->get();
+
+    foreach ($expiringSoon as $account) {
+        \Log::warning('Platform ad account token expiring', [
+            'account_id' => $account->id,
+            'platform' => $account->platform,
+            'expires_at' => $account->token_expires_at,
+        ]);
+    }
+})->dailyAt('08:00')->timezone('Europe/Bucharest');
+
+// Clean up old platform tracking sessions (daily at 4:30 AM)
+Schedule::call(function () {
+    $deleted = \App\Models\Platform\CoreSession::where('last_activity_at', '<', now()->subDays(90))
+        ->delete();
+    \Log::info('Old platform tracking sessions cleaned up', ['deleted' => $deleted]);
+})->dailyAt('04:30')->timezone('Europe/Bucharest');
+
+// Retry failed conversions (every 15 minutes)
+Schedule::job(new \App\Jobs\RetryFailedConversionsJob)
+    ->everyFifteenMinutes()
+    ->onSuccess(function () {
+        \Log::info('Failed conversions retry completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed conversions retry job failed');
+    });
+
+// Calculate RFM scores for customers (daily at 2 AM)
+Schedule::job(new \App\Jobs\CalculateRfmScoresJob)
+    ->dailyAt('02:00')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('RFM score calculation completed');
+    })
+    ->onFailure(function () {
+        \Log::error('RFM score calculation failed');
+    });
+
+// Sync audiences that need syncing (every hour)
+Schedule::call(function () {
+    $audiences = \App\Models\Platform\PlatformAudience::active()
+        ->needsSync()
+        ->get();
+
+    $trackingService = app(\App\Services\Platform\PlatformTrackingService::class);
+
+    foreach ($audiences as $audience) {
+        try {
+            $trackingService->syncAudience($audience);
+            \Log::info('Audience auto-synced', ['audience_id' => $audience->id]);
+        } catch (\Exception $e) {
+            \Log::error('Audience auto-sync failed', [
+                'audience_id' => $audience->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+})->hourly();
+
+/*
+|--------------------------------------------------------------------------
+| Platform Analytics Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Calculate cohort retention metrics (daily at 3 AM)
+Schedule::job(new \App\Jobs\CalculateCohortMetricsJob('month', 12, 12))
+    ->dailyAt('03:00')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('Monthly cohort metrics calculation completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Monthly cohort metrics calculation failed');
+    });
+
+// Calculate weekly cohort metrics (every Monday at 3:30 AM)
+Schedule::job(new \App\Jobs\CalculateCohortMetricsJob('week', 12, 12))
+    ->weeklyOn(1, '03:30')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('Weekly cohort metrics calculation completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Weekly cohort metrics calculation failed');
+    });
+
+// Calculate customer health scores (daily at 2:30 AM)
+Schedule::call(function () {
+    $cacheService = app(\App\Services\Platform\AnalyticsCacheService::class);
+    $cacheService->calculateAllHealthScores();
+    \Log::info('Customer health scores calculated');
+})->dailyAt('02:30')->timezone('Europe/Bucharest');
+
+// Calculate churn predictions for at-risk customers (daily at 4 AM)
+Schedule::call(function () {
+    $churnService = app(\App\Services\Platform\ChurnPredictionService::class);
+    $result = $churnService->updateCustomerChurnScores(500);
+    \Log::info('Churn predictions calculated', ['updated' => $result['updated'], 'errors' => $result['errors']]);
+})->dailyAt('04:00')->timezone('Europe/Bucharest');
+
+// Detect duplicate customers (daily at 5 AM)
+Schedule::call(function () {
+    $duplicateService = app(\App\Services\Platform\DuplicateDetectionService::class);
+
+    // Find high-confidence duplicates
+    $duplicates = $duplicateService->findAllDuplicates(0.85, 100);
+
+    if ($duplicates->count() > 0) {
+        \Log::info('Potential duplicate customers detected', [
+            'count' => $duplicates->count(),
+        ]);
+    }
+})->dailyAt('05:00')->timezone('Europe/Bucharest');
+
+// Auto-merge definite duplicates (weekly on Sunday at 5:30 AM)
+Schedule::call(function () {
+    $duplicateService = app(\App\Services\Platform\DuplicateDetectionService::class);
+    $result = $duplicateService->autoMergeHighConfidenceDuplicates();
+    \Log::info('Auto-merge duplicates completed', $result);
+})->weeklyOn(0, '05:30')->timezone('Europe/Bucharest');
+
+// Process GDPR requests (every 30 minutes)
+Schedule::call(function () {
+    $pendingRequests = \App\Models\Platform\GdprRequest::pending()
+        ->orderBy('requested_at')
+        ->limit(10)
+        ->get();
+
+    foreach ($pendingRequests as $request) {
+        try {
+            $request->process();
+            \Log::info('GDPR request processed', [
+                'id' => $request->id,
+                'type' => $request->request_type,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('GDPR request processing failed', [
+                'id' => $request->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+})->everyThirtyMinutes();
+
+// Data retention cleanup (daily at 5:30 AM)
+Schedule::call(function () {
+    $policies = \App\Models\Platform\DataRetentionPolicy::active()->get();
+
+    foreach ($policies as $policy) {
+        $cutoffDate = $policy->getCutoffDate();
+        $deleted = 0;
+
+        switch ($policy->data_type) {
+            case 'sessions':
+                $deleted = \App\Models\Platform\CoreSession::where('started_at', '<', $cutoffDate)->delete();
+                break;
+            case 'events':
+                $deleted = \App\Models\Platform\CoreCustomerEvent::where('created_at', '<', $cutoffDate)->delete();
+                break;
+            case 'conversions':
+                $deleted = \App\Models\Platform\PlatformConversion::where('conversion_time', '<', $cutoffDate)->delete();
+                break;
+        }
+
+        if ($deleted > 0) {
+            $policy->recordCleanup($deleted);
+            \Log::info('Data retention cleanup completed', [
+                'data_type' => $policy->data_type,
+                'deleted' => $deleted,
+            ]);
+        }
+    }
+})->dailyAt('05:30')->timezone('Europe/Bucharest');
+
+// Warm analytics cache (every 2 hours)
+Schedule::call(function () {
+    $cacheService = app(\App\Services\Platform\AnalyticsCacheService::class);
+    $cacheService->warmUp();
+    \Log::info('Analytics cache warmed');
+})->everyTwoHours();
+
+/*
+|--------------------------------------------------------------------------
 | Exchange Rates Scheduled Tasks
 |--------------------------------------------------------------------------
 */
