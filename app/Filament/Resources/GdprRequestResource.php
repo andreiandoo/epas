@@ -11,7 +11,6 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Notifications\Notification;
 use Filament\Infolists;
-use Filament\Infolists\Infolist;
 use Illuminate\Support\Facades\Response;
 
 class GdprRequestResource extends Resource
@@ -207,9 +206,9 @@ class GdprRequestResource extends Resource
             ->emptyStateIcon('heroicon-o-shield-check');
     }
 
-    public static function infolist(Infolist $infolist): Infolist
+    public static function infolist(Schema $schema): Schema
     {
-        return $infolist
+        return $schema
             ->schema([
                 Infolists\Components\Section::make('Request Details')
                     ->schema([
