@@ -97,7 +97,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('table_sync_id')->references('id')->on('airtable_table_syncs')->onDelete('cascade');
-            $table->unique(['table_sync_id', 'local_type', 'local_id']);
+            $table->unique(['table_sync_id', 'local_type', 'local_id'], 'at_rec_map_sync_type_id_unique');
             $table->index(['airtable_record_id']);
         });
     }

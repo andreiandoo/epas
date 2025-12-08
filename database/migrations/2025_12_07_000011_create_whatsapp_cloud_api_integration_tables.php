@@ -45,7 +45,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('connection_id')->references('id')->on('whatsapp_cloud_connections')->onDelete('cascade');
-            $table->unique(['connection_id', 'template_name', 'language']);
+            $table->unique(['connection_id', 'template_name', 'language'], 'wa_tpl_conn_name_lang_unique');
         });
 
         // Outbound and inbound messages

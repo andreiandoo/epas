@@ -57,7 +57,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('connection_id')->references('id')->on('hubspot_connections')->onDelete('cascade');
-            $table->unique(['connection_id', 'object_type', 'local_property']);
+            $table->unique(['connection_id', 'object_type', 'local_property'], 'hs_prop_map_conn_obj_prop_unique');
         });
     }
 

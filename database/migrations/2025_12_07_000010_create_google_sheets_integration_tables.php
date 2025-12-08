@@ -43,7 +43,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('connection_id')->references('id')->on('google_sheets_connections')->onDelete('cascade');
-            $table->unique(['connection_id', 'spreadsheet_id', 'purpose']);
+            $table->unique(['connection_id', 'spreadsheet_id', 'purpose'], 'gs_sheets_conn_sheet_purpose_unique');
         });
 
         Schema::create('google_sheets_sync_jobs', function (Blueprint $table) {
@@ -79,7 +79,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('spreadsheet_id')->references('id')->on('google_sheets_spreadsheets')->onDelete('cascade');
-            $table->unique(['spreadsheet_id', 'data_type', 'local_field']);
+            $table->unique(['spreadsheet_id', 'data_type', 'local_field'], 'gs_col_map_sheet_type_field_unique');
         });
     }
 
