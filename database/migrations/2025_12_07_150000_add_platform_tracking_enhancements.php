@@ -8,107 +8,172 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // 1. Conversion Deduplication
+        // 1. Conversion Deduplication (idempotent)
         Schema::table('platform_conversions', function (Blueprint $table) {
-            $table->string('deduplication_key', 128)->nullable()->after('conversion_id')->index();
-            $table->timestamp('original_event_time')->nullable()->after('conversion_time');
+            if (!Schema::hasColumn('platform_conversions', 'deduplication_key')) {
+                $table->string('deduplication_key', 128)->nullable()->after('conversion_id')->index();
+            }
+            if (!Schema::hasColumn('platform_conversions', 'original_event_time')) {
+                $table->timestamp('original_event_time')->nullable()->after('conversion_time');
+            }
         });
 
-        // 2. Attribution Windows Configuration
+        // 2. Attribution Windows Configuration (idempotent)
         Schema::table('platform_ad_accounts', function (Blueprint $table) {
-            $table->integer('attribution_window_days')->default(28)->after('conversion_settings');
-            $table->integer('click_attribution_window_days')->default(7)->after('attribution_window_days');
-            $table->integer('view_attribution_window_days')->default(1)->after('click_attribution_window_days');
+            if (!Schema::hasColumn('platform_ad_accounts', 'attribution_window_days')) {
+                $table->integer('attribution_window_days')->default(28)->after('conversion_settings');
+            }
+            if (!Schema::hasColumn('platform_ad_accounts', 'click_attribution_window_days')) {
+                $table->integer('click_attribution_window_days')->default(7)->after('attribution_window_days');
+            }
+            if (!Schema::hasColumn('platform_ad_accounts', 'view_attribution_window_days')) {
+                $table->integer('view_attribution_window_days')->default(1)->after('click_attribution_window_days');
+            }
         });
 
-        // 3. Customer Health Score & Cross-device tracking
+        // 3. Customer Health Score & Cross-device tracking (idempotent)
         Schema::table('core_customers', function (Blueprint $table) {
-            $table->integer('health_score')->default(0)->after('churn_risk_score')->comment('0-100 overall health');
-            $table->json('health_score_breakdown')->nullable()->after('health_score');
-            $table->timestamp('health_score_calculated_at')->nullable()->after('health_score_breakdown');
-            $table->string('primary_device_id', 64)->nullable()->after('primary_browser');
-            $table->json('linked_device_ids')->nullable()->after('primary_device_id');
-            $table->json('linked_customer_ids')->nullable()->after('linked_device_ids')->comment('Merged customer IDs');
-            $table->boolean('is_merged')->default(false)->after('linked_customer_ids');
-            $table->unsignedBigInteger('merged_into_id')->nullable()->after('is_merged');
-            $table->timestamp('merged_at')->nullable()->after('merged_into_id');
-            $table->string('cohort_month', 7)->nullable()->after('merged_at')->comment('YYYY-MM first seen');
-            $table->string('cohort_week', 10)->nullable()->after('cohort_month')->comment('YYYY-WW first seen');
+            if (!Schema::hasColumn('core_customers', 'health_score')) {
+                $table->integer('health_score')->default(0)->after('churn_risk_score')->comment('0-100 overall health');
+            }
+            if (!Schema::hasColumn('core_customers', 'health_score_breakdown')) {
+                $table->json('health_score_breakdown')->nullable()->after('health_score');
+            }
+            if (!Schema::hasColumn('core_customers', 'health_score_calculated_at')) {
+                $table->timestamp('health_score_calculated_at')->nullable()->after('health_score_breakdown');
+            }
+            if (!Schema::hasColumn('core_customers', 'primary_device_id')) {
+                $table->string('primary_device_id', 64)->nullable()->after('primary_browser');
+            }
+            if (!Schema::hasColumn('core_customers', 'linked_device_ids')) {
+                $table->json('linked_device_ids')->nullable()->after('primary_device_id');
+            }
+            if (!Schema::hasColumn('core_customers', 'linked_customer_ids')) {
+                $table->json('linked_customer_ids')->nullable()->after('linked_device_ids')->comment('Merged customer IDs');
+            }
+            if (!Schema::hasColumn('core_customers', 'is_merged')) {
+                $table->boolean('is_merged')->default(false)->after('linked_customer_ids');
+            }
+            if (!Schema::hasColumn('core_customers', 'merged_into_id')) {
+                $table->unsignedBigInteger('merged_into_id')->nullable()->after('is_merged');
+            }
+            if (!Schema::hasColumn('core_customers', 'merged_at')) {
+                $table->timestamp('merged_at')->nullable()->after('merged_into_id');
+            }
+            if (!Schema::hasColumn('core_customers', 'cohort_month')) {
+                $table->string('cohort_month', 7)->nullable()->after('merged_at')->comment('YYYY-MM first seen');
+            }
+            if (!Schema::hasColumn('core_customers', 'cohort_week')) {
+                $table->string('cohort_week', 10)->nullable()->after('cohort_month')->comment('YYYY-WW first seen');
+            }
         });
 
-        // 4. GDPR Compliance
-        Schema::create('gdpr_requests', function (Blueprint $table) {
-            $table->id();
-            $table->string('request_type', 50)->comment('export, deletion, rectification');
-            $table->foreignId('customer_id')->nullable()->constrained('core_customers')->nullOnDelete();
-            $table->string('email')->nullable();
-            $table->string('request_source', 50)->comment('customer, admin, automated');
-            $table->string('status', 50)->default('pending');
-            $table->json('affected_data')->nullable();
-            $table->text('notes')->nullable();
-            $table->timestamp('requested_at');
-            $table->timestamp('processed_at')->nullable();
-            $table->timestamp('completed_at')->nullable();
-            $table->string('processed_by')->nullable();
-            $table->json('export_data')->nullable();
-            $table->timestamps();
+        // 4. GDPR Compliance (idempotent)
+        if (!Schema::hasTable('gdpr_requests')) {
+            Schema::create('gdpr_requests', function (Blueprint $table) {
+                $table->id();
+                $table->string('request_type', 50)->comment('export, deletion, rectification');
+                $table->foreignId('customer_id')->nullable()->constrained('core_customers')->nullOnDelete();
+                $table->string('email')->nullable();
+                $table->string('request_source', 50)->comment('customer, admin, automated');
+                $table->string('status', 50)->default('pending');
+                $table->json('affected_data')->nullable();
+                $table->text('notes')->nullable();
+                $table->timestamp('requested_at');
+                $table->timestamp('processed_at')->nullable();
+                $table->timestamp('completed_at')->nullable();
+                $table->string('processed_by')->nullable();
+                $table->json('export_data')->nullable();
+                $table->timestamps();
 
-            $table->index(['status', 'requested_at']);
-            $table->index(['customer_id', 'request_type']);
-        });
+                $table->index(['status', 'requested_at']);
+                $table->index(['customer_id', 'request_type']);
+            });
+        }
 
-        // 5. Data Retention Configuration
-        Schema::create('data_retention_policies', function (Blueprint $table) {
-            $table->id();
-            $table->string('data_type', 50)->unique()->comment('sessions, events, conversions, etc.');
-            $table->integer('retention_days')->default(365);
-            $table->boolean('is_active')->default(true);
-            $table->string('archive_strategy', 50)->default('delete')->comment('delete, archive, anonymize');
-            $table->timestamp('last_cleanup_at')->nullable();
-            $table->integer('last_cleanup_count')->default(0);
-            $table->timestamps();
-        });
+        // 5. Data Retention Configuration (idempotent)
+        if (!Schema::hasTable('data_retention_policies')) {
+            Schema::create('data_retention_policies', function (Blueprint $table) {
+                $table->id();
+                $table->string('data_type', 50)->unique()->comment('sessions, events, conversions, etc.');
+                $table->integer('retention_days')->default(365);
+                $table->boolean('is_active')->default(true);
+                $table->string('archive_strategy', 50)->default('delete')->comment('delete, archive, anonymize');
+                $table->timestamp('last_cleanup_at')->nullable();
+                $table->integer('last_cleanup_count')->default(0);
+                $table->timestamps();
+            });
+        }
 
-        // 6. Cohort Analysis - pre-aggregate data
-        Schema::create('cohort_metrics', function (Blueprint $table) {
-            $table->id();
-            $table->string('cohort_period', 10)->comment('YYYY-MM or YYYY-WW');
-            $table->string('cohort_type', 10)->default('month')->comment('month, week');
-            $table->integer('period_offset')->comment('0 = cohort period, 1 = next period, etc.');
-            $table->integer('customers_count')->default(0);
-            $table->integer('active_customers')->default(0);
-            $table->integer('purchasers_count')->default(0);
-            $table->decimal('total_revenue', 12, 2)->default(0);
-            $table->decimal('retention_rate', 5, 2)->default(0);
-            $table->decimal('avg_revenue_per_customer', 10, 2)->default(0);
-            $table->timestamps();
+        // 6. Cohort Analysis - pre-aggregate data (idempotent)
+        if (!Schema::hasTable('cohort_metrics')) {
+            Schema::create('cohort_metrics', function (Blueprint $table) {
+                $table->id();
+                $table->string('cohort_period', 10)->comment('YYYY-MM or YYYY-WW');
+                $table->string('cohort_type', 10)->default('month')->comment('month, week');
+                $table->integer('period_offset')->comment('0 = cohort period, 1 = next period, etc.');
+                $table->integer('customers_count')->default(0);
+                $table->integer('active_customers')->default(0);
+                $table->integer('purchasers_count')->default(0);
+                $table->decimal('total_revenue', 12, 2)->default(0);
+                $table->decimal('retention_rate', 5, 2)->default(0);
+                $table->decimal('avg_revenue_per_customer', 10, 2)->default(0);
+                $table->timestamps();
 
-            $table->unique(['cohort_period', 'cohort_type', 'period_offset']);
-            $table->index(['cohort_type', 'period_offset']);
-        });
+                $table->unique(['cohort_period', 'cohort_type', 'period_offset']);
+                $table->index(['cohort_type', 'period_offset']);
+            });
+        }
 
-        // 7. Lookalike Audience Seeds
+        // 7. Lookalike Audience Seeds (idempotent)
         Schema::table('platform_audiences', function (Blueprint $table) {
-            $table->string('lookalike_source_type', 50)->nullable()->after('audience_type');
-            $table->unsignedBigInteger('lookalike_source_audience_id')->nullable()->after('lookalike_source_type');
-            $table->integer('lookalike_percentage')->nullable()->after('lookalike_source_audience_id')->comment('1-10%');
-            $table->string('lookalike_country')->nullable()->after('lookalike_percentage');
+            if (!Schema::hasColumn('platform_audiences', 'lookalike_source_type')) {
+                $table->string('lookalike_source_type', 50)->nullable()->after('audience_type');
+            }
+            if (!Schema::hasColumn('platform_audiences', 'lookalike_source_audience_id')) {
+                $table->unsignedBigInteger('lookalike_source_audience_id')->nullable()->after('lookalike_source_type');
+            }
+            if (!Schema::hasColumn('platform_audiences', 'lookalike_percentage')) {
+                $table->integer('lookalike_percentage')->nullable()->after('lookalike_source_audience_id')->comment('1-10%');
+            }
+            if (!Schema::hasColumn('platform_audiences', 'lookalike_country')) {
+                $table->string('lookalike_country')->nullable()->after('lookalike_percentage');
+            }
         });
 
-        // Add indexes for common query patterns
-        Schema::table('core_customer_events', function (Blueprint $table) {
-            $table->index(['event_type', 'created_at']);
-        });
+        // Add indexes for common query patterns (idempotent - using try-catch for index existence)
+        try {
+            Schema::table('core_customer_events', function (Blueprint $table) {
+                $table->index(['event_type', 'created_at']);
+            });
+        } catch (\Exception $e) {
+            // Index already exists, continue
+        }
 
-        Schema::table('core_sessions', function (Blueprint $table) {
-            $table->index(['converted', 'started_at']);
-            $table->index(['country_code', 'started_at']);
-        });
+        try {
+            Schema::table('core_sessions', function (Blueprint $table) {
+                $table->index(['converted', 'started_at']);
+            });
+        } catch (\Exception $e) {
+            // Index already exists, continue
+        }
 
-        // Add unique constraint for deduplication
-        Schema::table('platform_conversions', function (Blueprint $table) {
-            $table->unique(['platform_ad_account_id', 'deduplication_key'], 'unique_conversion_per_account');
-        });
+        try {
+            Schema::table('core_sessions', function (Blueprint $table) {
+                $table->index(['country_code', 'started_at']);
+            });
+        } catch (\Exception $e) {
+            // Index already exists, continue
+        }
+
+        // Add unique constraint for deduplication (idempotent)
+        try {
+            Schema::table('platform_conversions', function (Blueprint $table) {
+                $table->unique(['platform_ad_account_id', 'deduplication_key'], 'unique_conversion_per_account');
+            });
+        } catch (\Exception $e) {
+            // Unique index already exists, continue
+        }
     }
 
     public function down(): void
