@@ -40,7 +40,7 @@ return new class extends Migration
             $table->json('value_settings')->nullable();
             $table->timestamps();
 
-            $table->unique(['connection_id', 'conversion_rule_id']);
+            $table->unique(['connection_id', 'conversion_rule_id'], 'li_ads_conv_rules_conn_rule_unique');
         });
 
         // Conversions sent to LinkedIn
