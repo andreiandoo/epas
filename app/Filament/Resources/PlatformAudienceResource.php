@@ -6,7 +6,7 @@ use App\Models\Platform\PlatformAudience;
 use App\Models\Platform\PlatformAdAccount;
 use App\Services\Platform\PlatformTrackingService;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -33,9 +33,9 @@ class PlatformAudienceResource extends Resource
         return static::getModel()::active()->count() ?: null;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\Section::make('Audience Details')
                     ->description('Define your marketing audience')
