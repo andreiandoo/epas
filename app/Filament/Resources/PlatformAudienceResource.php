@@ -10,8 +10,8 @@ use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Forms;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components as Schemas;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -42,10 +42,10 @@ class PlatformAudienceResource extends Resource
     {
         return $schema
             ->schema([
-                Forms\Components\Section::make('Audience Details')
+                Schemas\Section::make('Audience Details')
                     ->description('Define your marketing audience')
                     ->schema([
-                        Forms\Components\Select::make('platform_ad_account_id')
+                        Schemas\Select::make('platform_ad_account_id')
                             ->label('Ad Account')
                             ->options(PlatformAdAccount::active()->get()->mapWithKeys(fn ($account) => [
                                 $account->id => $account->account_name . ' (' . (PlatformAdAccount::PLATFORMS[$account->platform] ?? $account->platform) . ')',
@@ -53,26 +53,26 @@ class PlatformAudienceResource extends Resource
                             ->required()
                             ->searchable(),
 
-                        Forms\Components\TextInput::make('name')
+                        Schemas\TextInput::make('name')
                             ->label('Audience Name')
                             ->required()
                             ->maxLength(255)
                             ->placeholder('e.g., High-Value Event Attendees'),
 
-                        Forms\Components\Textarea::make('description')
+                        Schemas\Textarea::make('description')
                             ->label('Description')
                             ->rows(2)
                             ->maxLength(500)
                             ->placeholder('Describe who this audience targets'),
 
-                        Forms\Components\Select::make('audience_type')
+                        Schemas\Select::make('audience_type')
                             ->label('Audience Type')
                             ->options(PlatformAudience::AUDIENCE_TYPES)
                             ->required()
                             ->live()
                             ->afterStateUpdated(fn ($set) => $set('segment_rules', [])),
 
-                        Forms\Components\Select::make('status')
+                        Schemas\Select::make('status')
                             ->label('Status')
                             ->options([
                                 PlatformAudience::STATUS_DRAFT => 'Draft',
@@ -84,15 +84,15 @@ class PlatformAudienceResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Sync Settings')
+                Schemas\Section::make('Sync Settings')
                     ->schema([
-                        Forms\Components\Toggle::make('is_auto_sync')
+                        Schemas\Toggle::make('is_auto_sync')
                             ->label('Auto-Sync')
                             ->helperText('Automatically sync this audience to the ad platform')
                             ->default(false)
                             ->live(),
 
-                        Forms\Components\Select::make('sync_frequency')
+                        Schemas\Select::make('sync_frequency')
                             ->label('Sync Frequency')
                             ->options([
                                 PlatformAudience::SYNC_HOURLY => 'Hourly',
@@ -103,7 +103,7 @@ class PlatformAudienceResource extends Resource
                             ->default(PlatformAudience::SYNC_DAILY)
                             ->visible(fn ($get) => $get('is_auto_sync')),
 
-                        Forms\Components\TextInput::make('platform_audience_id')
+                        Schemas\TextInput::make('platform_audience_id')
                             ->label('Platform Audience ID')
                             ->helperText('The ID of this audience in the ad platform (auto-populated after first sync)')
                             ->disabled()
@@ -111,17 +111,17 @@ class PlatformAudienceResource extends Resource
                     ])
                     ->columns(3),
 
-                Forms\Components\Section::make('Lookalike Configuration')
+                Schemas\Section::make('Lookalike Configuration')
                     ->description('Configure the source and targeting for your lookalike audience')
                     ->schema([
-                        Forms\Components\Select::make('lookalike_source_type')
+                        Schemas\Select::make('lookalike_source_type')
                             ->label('Seed Source')
                             ->options(PlatformAudience::LOOKALIKE_SOURCE_TYPES)
                             ->required()
                             ->live()
                             ->helperText('Choose the customer segment to base your lookalike on'),
 
-                        Forms\Components\Select::make('lookalike_source_audience_id')
+                        Schemas\Select::make('lookalike_source_audience_id')
                             ->label('Source Audience')
                             ->options(fn () => PlatformAudience::canBeSeed()
                                 ->get()
@@ -130,14 +130,14 @@ class PlatformAudienceResource extends Resource
                             ->visible(fn ($get) => $get('lookalike_source_type') === PlatformAudience::LOOKALIKE_SOURCE_AUDIENCE)
                             ->helperText('Select an existing audience to use as seed'),
 
-                        Forms\Components\Select::make('lookalike_percentage')
+                        Schemas\Select::make('lookalike_percentage')
                             ->label('Audience Size')
                             ->options(PlatformAudience::getLookalikePercentageOptions())
                             ->default(1)
                             ->required()
                             ->helperText('Lower percentages = more similar to seed, higher = broader reach'),
 
-                        Forms\Components\Select::make('lookalike_country')
+                        Schemas\Select::make('lookalike_country')
                             ->label('Target Country')
                             ->options(PlatformAudience::getLookalikeCountryOptions())
                             ->default('US')
@@ -145,7 +145,7 @@ class PlatformAudienceResource extends Resource
                             ->searchable()
                             ->helperText('The country where you want to find similar users'),
 
-                        Forms\Components\Placeholder::make('lookalike_preview')
+                        Schemas\Placeholder::make('lookalike_preview')
                             ->label('Estimated Reach')
                             ->content(function ($get, $record) {
                                 if (!$record || !$record->isLookalike()) {
@@ -161,13 +161,13 @@ class PlatformAudienceResource extends Resource
                     ->columns(2)
                     ->visible(fn ($get) => $get('audience_type') === PlatformAudience::TYPE_LOOKALIKE),
 
-                Forms\Components\Section::make('Custom Segment Rules')
+                Schemas\Section::make('Custom Segment Rules')
                     ->description('Define custom rules for this audience')
                     ->schema([
-                        Forms\Components\Repeater::make('segment_rules')
+                        Schemas\Repeater::make('segment_rules')
                             ->label('Rules')
                             ->schema([
-                                Forms\Components\Select::make('field')
+                                Schemas\Select::make('field')
                                     ->label('Field')
                                     ->options([
                                         'total_orders' => 'Total Orders',
@@ -187,7 +187,7 @@ class PlatformAudienceResource extends Resource
                                     ->required()
                                     ->searchable(),
 
-                                Forms\Components\Select::make('operator')
+                                Schemas\Select::make('operator')
                                     ->label('Operator')
                                     ->options([
                                         '=' => 'Equals',
@@ -203,7 +203,7 @@ class PlatformAudienceResource extends Resource
                                     ])
                                     ->required(),
 
-                                Forms\Components\TextInput::make('value')
+                                Schemas\TextInput::make('value')
                                     ->label('Value')
                                     ->placeholder('Value to compare'),
                             ])
@@ -215,21 +215,21 @@ class PlatformAudienceResource extends Resource
                     ->visible(fn ($get) => $get('audience_type') === PlatformAudience::TYPE_CUSTOM)
                     ->collapsible(),
 
-                Forms\Components\Section::make('Statistics')
+                Schemas\Section::make('Statistics')
                     ->schema([
-                        Forms\Components\Placeholder::make('member_count_display')
+                        Schemas\Placeholder::make('member_count_display')
                             ->label('Members')
                             ->content(fn ($record) => number_format($record?->member_count ?? 0)),
 
-                        Forms\Components\Placeholder::make('matched_count_display')
+                        Schemas\Placeholder::make('matched_count_display')
                             ->label('Matched')
                             ->content(fn ($record) => number_format($record?->matched_count ?? 0)),
 
-                        Forms\Components\Placeholder::make('match_rate_display')
+                        Schemas\Placeholder::make('match_rate_display')
                             ->label('Match Rate')
                             ->content(fn ($record) => ($record?->getMatchRate() ?? 0) . '%'),
 
-                        Forms\Components\Placeholder::make('last_synced_display')
+                        Schemas\Placeholder::make('last_synced_display')
                             ->label('Last Synced')
                             ->content(fn ($record) => $record?->last_synced_at?->diffForHumans() ?? 'Never'),
                     ])
@@ -376,24 +376,24 @@ class PlatformAudienceResource extends Resource
                     ->color('success')
                     ->visible(fn ($record) => !$record->isLookalike() && $record->member_count >= 100)
                     ->form([
-                        Forms\Components\Select::make('platform_ad_account_id')
+                        Schemas\Select::make('platform_ad_account_id')
                             ->label('Ad Account')
                             ->options(PlatformAdAccount::active()->get()->mapWithKeys(fn ($account) => [
                                 $account->id => $account->account_name . ' (' . (PlatformAdAccount::PLATFORMS[$account->platform] ?? $account->platform) . ')',
                             ]))
                             ->required(),
-                        Forms\Components\Select::make('percentage')
+                        Schemas\Select::make('percentage')
                             ->label('Audience Size')
                             ->options(PlatformAudience::getLookalikePercentageOptions())
                             ->default(1)
                             ->required(),
-                        Forms\Components\Select::make('country')
+                        Schemas\Select::make('country')
                             ->label('Target Country')
                             ->options(PlatformAudience::getLookalikeCountryOptions())
                             ->default('US')
                             ->required()
                             ->searchable(),
-                        Forms\Components\TextInput::make('name')
+                        Schemas\TextInput::make('name')
                             ->label('Audience Name (optional)')
                             ->placeholder('Leave blank for auto-generated name'),
                     ])

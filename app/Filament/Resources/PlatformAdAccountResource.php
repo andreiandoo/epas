@@ -8,8 +8,8 @@ use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
-use Filament\Forms;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components as Schemas;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -40,10 +40,10 @@ class PlatformAdAccountResource extends Resource
     {
         return $schema
             ->schema([
-                Forms\Components\Section::make('Account Information')
+                Schemas\Section::make('Account Information')
                     ->description('Configure your platform ad account for dual-tracking')
                     ->schema([
-                        Forms\Components\Select::make('platform')
+                        Schemas\Select::make('platform')
                             ->label('Ad Platform')
                             ->options([
                                 PlatformAdAccount::PLATFORM_GOOGLE_ADS => 'Google Ads',
@@ -55,7 +55,7 @@ class PlatformAdAccountResource extends Resource
                             ->live()
                             ->afterStateUpdated(fn ($set) => $set('conversion_action_ids', [])),
 
-                        Forms\Components\TextInput::make('account_id')
+                        Schemas\TextInput::make('account_id')
                             ->label('Account ID')
                             ->required()
                             ->maxLength(255)
@@ -67,48 +67,48 @@ class PlatformAdAccountResource extends Resource
                                 default => 'The platform-specific account identifier',
                             }),
 
-                        Forms\Components\TextInput::make('account_name')
+                        Schemas\TextInput::make('account_name')
                             ->label('Account Name')
                             ->maxLength(255)
                             ->helperText('A friendly name for this account'),
 
-                        Forms\Components\Toggle::make('is_active')
+                        Schemas\Toggle::make('is_active')
                             ->label('Active')
                             ->default(true)
                             ->helperText('Enable/disable dual-tracking to this account'),
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Authentication')
+                Schemas\Section::make('Authentication')
                     ->description('OAuth tokens for API access')
                     ->schema([
-                        Forms\Components\Textarea::make('access_token')
+                        Schemas\Textarea::make('access_token')
                             ->label('Access Token')
                             ->required()
                             ->rows(3)
                             ->helperText('The OAuth access token for API calls'),
 
-                        Forms\Components\Textarea::make('refresh_token')
+                        Schemas\Textarea::make('refresh_token')
                             ->label('Refresh Token')
                             ->rows(3)
                             ->helperText('The OAuth refresh token (for auto-renewal)'),
 
-                        Forms\Components\DateTimePicker::make('token_expires_at')
+                        Schemas\DateTimePicker::make('token_expires_at')
                             ->label('Token Expires At')
                             ->helperText('When the access token expires'),
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Platform-Specific Configuration')
+                Schemas\Section::make('Platform-Specific Configuration')
                     ->schema([
                         // Google Ads specific
-                        Forms\Components\TagsInput::make('conversion_action_ids')
+                        Schemas\TagsInput::make('conversion_action_ids')
                             ->label('Conversion Action IDs')
                             ->visible(fn ($get) => $get('platform') === PlatformAdAccount::PLATFORM_GOOGLE_ADS)
                             ->helperText('Google Ads conversion action IDs to send conversions to'),
 
                         // Facebook specific
-                        Forms\Components\TextInput::make('pixel_id')
+                        Schemas\TextInput::make('pixel_id')
                             ->label('Pixel ID')
                             ->visible(fn ($get) => in_array($get('platform'), [
                                 PlatformAdAccount::PLATFORM_FACEBOOK,
@@ -121,19 +121,19 @@ class PlatformAdAccountResource extends Resource
                             }),
 
                         // LinkedIn specific
-                        Forms\Components\TextInput::make('settings.conversion_rule_id')
+                        Schemas\TextInput::make('settings.conversion_rule_id')
                             ->label('Conversion Rule ID')
                             ->visible(fn ($get) => $get('platform') === PlatformAdAccount::PLATFORM_LINKEDIN)
                             ->helperText('LinkedIn conversion rule ID'),
                     ]),
 
-                Forms\Components\Section::make('Status')
+                Schemas\Section::make('Status')
                     ->schema([
-                        Forms\Components\Placeholder::make('last_sync_info')
+                        Schemas\Placeholder::make('last_sync_info')
                             ->label('Last Sync')
                             ->content(fn ($record) => $record?->last_sync_at?->diffForHumans() ?? 'Never'),
 
-                        Forms\Components\Placeholder::make('sync_errors_display')
+                        Schemas\Placeholder::make('sync_errors_display')
                             ->label('Recent Errors')
                             ->content(function ($record) {
                                 if (!$record || empty($record->sync_errors)) {

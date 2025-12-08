@@ -4,8 +4,8 @@ namespace App\Filament\Resources;
 
 use App\Models\Platform\GdprRequest;
 use App\Models\Platform\CoreCustomer;
-use Filament\Forms;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components as Schemas;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -46,20 +46,20 @@ class GdprRequestResource extends Resource
     {
         return $schema
             ->schema([
-                Forms\Components\Section::make('Request Details')
+                Schemas\Section::make('Request Details')
                     ->schema([
-                        Forms\Components\Select::make('request_type')
+                        Schemas\Select::make('request_type')
                             ->label('Request Type')
                             ->options(GdprRequest::REQUEST_TYPES)
                             ->required(),
 
-                        Forms\Components\TextInput::make('email')
+                        Schemas\TextInput::make('email')
                             ->label('Customer Email')
                             ->email()
                             ->required()
                             ->helperText('The email address of the data subject'),
 
-                        Forms\Components\Select::make('request_source')
+                        Schemas\Select::make('request_source')
                             ->label('Request Source')
                             ->options([
                                 GdprRequest::SOURCE_CUSTOMER => 'Customer Request',
@@ -68,7 +68,7 @@ class GdprRequestResource extends Resource
                             ->default(GdprRequest::SOURCE_ADMIN)
                             ->required(),
 
-                        Forms\Components\Textarea::make('notes')
+                        Schemas\Textarea::make('notes')
                             ->label('Notes')
                             ->rows(3)
                             ->helperText('Any additional context for this request'),
@@ -213,18 +213,18 @@ class GdprRequestResource extends Resource
     {
         return $schema
             ->schema([
-                Infolists\Forms\Components\Section::make('Request Details')
+                Infolists\Components\Section::make('Request Details')
                     ->schema([
-                        Infolists\Forms\Components\TextEntry::make('request_type')
+                        Infolists\Components\TextEntry::make('request_type')
                             ->badge()
                             ->formatStateUsing(fn ($state) => GdprRequest::REQUEST_TYPES[$state] ?? $state),
 
-                        Infolists\Forms\Components\TextEntry::make('email'),
+                        Infolists\Components\TextEntry::make('email'),
 
-                        Infolists\Forms\Components\TextEntry::make('request_source')
+                        Infolists\Components\TextEntry::make('request_source')
                             ->badge(),
 
-                        Infolists\Forms\Components\TextEntry::make('status')
+                        Infolists\Components\TextEntry::make('status')
                             ->badge()
                             ->color(fn ($state) => match ($state) {
                                 GdprRequest::STATUS_PENDING => 'warning',
@@ -236,35 +236,35 @@ class GdprRequestResource extends Resource
                     ])
                     ->columns(2),
 
-                Infolists\Forms\Components\Section::make('Timeline')
+                Infolists\Components\Section::make('Timeline')
                     ->schema([
-                        Infolists\Forms\Components\TextEntry::make('requested_at')
+                        Infolists\Components\TextEntry::make('requested_at')
                             ->dateTime(),
 
-                        Infolists\Forms\Components\TextEntry::make('processed_at')
+                        Infolists\Components\TextEntry::make('processed_at')
                             ->dateTime()
                             ->placeholder('Not yet processed'),
 
-                        Infolists\Forms\Components\TextEntry::make('completed_at')
+                        Infolists\Components\TextEntry::make('completed_at')
                             ->dateTime()
                             ->placeholder('Not yet completed'),
 
-                        Infolists\Forms\Components\TextEntry::make('processed_by')
+                        Infolists\Components\TextEntry::make('processed_by')
                             ->placeholder('System'),
                     ])
                     ->columns(2),
 
-                Infolists\Forms\Components\Section::make('Affected Data')
+                Infolists\Components\Section::make('Affected Data')
                     ->schema([
-                        Infolists\Forms\Components\KeyValueEntry::make('affected_data')
+                        Infolists\Components\KeyValueEntry::make('affected_data')
                             ->label('')
                             ->placeholder('No data recorded'),
                     ])
                     ->visible(fn ($record) => !empty($record->affected_data)),
 
-                Infolists\Forms\Components\Section::make('Notes')
+                Infolists\Components\Section::make('Notes')
                     ->schema([
-                        Infolists\Forms\Components\TextEntry::make('notes')
+                        Infolists\Components\TextEntry::make('notes')
                             ->label('')
                             ->placeholder('No notes'),
                     ])
