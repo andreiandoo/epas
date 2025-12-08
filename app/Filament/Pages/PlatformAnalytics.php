@@ -221,11 +221,11 @@ class PlatformAnalytics extends Page
         // === TENANT BREAKDOWN (only for platform-wide view) ===
         if (!$tenantId) {
             $this->tenantBreakdown = CoreCustomerEvent::purchases()
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereNotNull('tenant_id')
+                ->whereBetween('core_customer_events.created_at', [$startDate, $endDate])
+                ->whereNotNull('core_customer_events.tenant_id')
                 ->join('tenants', 'tenants.id', '=', 'core_customer_events.tenant_id')
                 ->selectRaw('tenants.name as tenant_name, tenants.id as tenant_id, COUNT(*) as purchases, SUM(event_value) as revenue')
-                ->groupBy('tenant_id', 'tenant_name')
+                ->groupBy('tenants.id', 'tenants.name')
                 ->orderByDesc('revenue')
                 ->limit(10)
                 ->get()

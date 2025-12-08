@@ -4,8 +4,8 @@ namespace App\Filament\Resources;
 
 use App\Models\Platform\GdprRequest;
 use App\Models\Platform\CoreCustomer;
-use Filament\Forms;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -46,20 +46,20 @@ class GdprRequestResource extends Resource
     {
         return $schema
             ->schema([
-                Forms\Components\Section::make('Request Details')
+                Components\Section::make('Request Details')
                     ->schema([
-                        Forms\Components\Select::make('request_type')
+                        Components\Select::make('request_type')
                             ->label('Request Type')
                             ->options(GdprRequest::REQUEST_TYPES)
                             ->required(),
 
-                        Forms\Components\TextInput::make('email')
+                        Components\TextInput::make('email')
                             ->label('Customer Email')
                             ->email()
                             ->required()
                             ->helperText('The email address of the data subject'),
 
-                        Forms\Components\Select::make('request_source')
+                        Components\Select::make('request_source')
                             ->label('Request Source')
                             ->options([
                                 GdprRequest::SOURCE_CUSTOMER => 'Customer Request',
@@ -68,7 +68,7 @@ class GdprRequestResource extends Resource
                             ->default(GdprRequest::SOURCE_ADMIN)
                             ->required(),
 
-                        Forms\Components\Textarea::make('notes')
+                        Components\Textarea::make('notes')
                             ->label('Notes')
                             ->rows(3)
                             ->helperText('Any additional context for this request'),
