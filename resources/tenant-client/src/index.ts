@@ -13,6 +13,8 @@ import { PreviewMode } from './core/PreviewMode';
 import { FontLoader } from './core/FontLoader';
 import { PageBuilderModule } from './modules/PageBuilderModule';
 import { Tracking } from './core/TrackingModule';
+import { CookieConsentModule } from './modules/CookieConsentModule';
+import { EventBus } from './core/EventBus';
 
 declare global {
     interface Window {
@@ -102,6 +104,11 @@ SecurityGuard.init();
         }
 
         await app.mount(mountPoint);
+
+        // Initialize Cookie Consent module (GDPR compliance)
+        const eventBus = new EventBus();
+        const cookieConsent = CookieConsentModule.getInstance();
+        await cookieConsent.init(apiClient, eventBus, config);
 
         // Expose global instances
         window.Tixello = app;

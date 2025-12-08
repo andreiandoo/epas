@@ -416,6 +416,7 @@ export class Router {
         this.addRoute('/account/watchlist', this.renderWatchlist.bind(this));
         this.addRoute('/terms', this.renderTerms.bind(this));
         this.addRoute('/privacy', this.renderPrivacy.bind(this));
+        this.addRoute('/past-events', this.renderPastEvents.bind(this));
         this.addRoute('/page/:slug', this.renderPage.bind(this));
     }
 
@@ -3149,6 +3150,143 @@ private async renderProfile(): Promise<void> {
                 </div>
             `;
         }
+    }
+
+    private async renderPastEvents(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        // Set up the container for past events
+        content.innerHTML = `
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div id="past-events-container">
+                    <div class="animate-pulse space-y-6">
+                        <div class="bg-gray-200 h-10 w-1/4 rounded"></div>
+                        <div class="flex gap-4 mb-8">
+                            <div class="bg-gray-200 h-10 w-32 rounded"></div>
+                            <div class="bg-gray-200 h-10 w-40 rounded"></div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="bg-gray-200 h-64 rounded-lg"></div>
+                            <div class="bg-gray-200 h-64 rounded-lg"></div>
+                            <div class="bg-gray-200 h-64 rounded-lg"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Fetch and render past events
+        try {
+            const response = await this.fetchApi('/events/past');
+            const events = response.data?.events || response.data || [];
+
+            const container = document.getElementById('past-events-container');
+            if (!container) return;
+
+            if (events.length === 0) {
+                container.innerHTML = `
+                    <h1 class="text-3xl font-bold text-gray-900 mb-8">Evenimente trecute</h1>
+                    <p class="text-gray-500">Nu există evenimente trecute.</p>
+                `;
+                return;
+            }
+
+            // Group events by month
+            const eventsByMonth = this.groupEventsByMonth(events);
+
+            container.innerHTML = `
+                <h1 class="text-3xl font-bold text-gray-900 mb-8">Evenimente trecute</h1>
+                ${this.renderPastEventsByMonth(eventsByMonth)}
+            `;
+        } catch (error) {
+            console.error('Failed to load past events:', error);
+            const container = document.getElementById('past-events-container');
+            if (container) {
+                container.innerHTML = `
+                    <h1 class="text-3xl font-bold text-gray-900 mb-8">Evenimente trecute</h1>
+                    <p class="text-red-500">Nu s-au putut încărca evenimentele trecute.</p>
+                `;
+            }
+        }
+    }
+
+    private groupEventsByMonth(events: any[]): Map<string, any[]> {
+        const grouped = new Map<string, any[]>();
+
+        events.forEach(event => {
+            const date = new Date(event.start_date || event.event_date);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+            if (!grouped.has(monthKey)) {
+                grouped.set(monthKey, []);
+            }
+            grouped.get(monthKey)!.push(event);
+        });
+
+        // Sort by month descending (most recent first)
+        return new Map([...grouped.entries()].sort((a, b) => b[0].localeCompare(a[0])));
+    }
+
+    private renderPastEventsByMonth(eventsByMonth: Map<string, any[]>): string {
+        const monthNames = [
+            'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+            'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
+        ];
+
+        let html = '';
+
+        eventsByMonth.forEach((events, monthKey) => {
+            const [year, month] = monthKey.split('-');
+            const monthName = monthNames[parseInt(month) - 1];
+
+            html += `
+                <div class="mb-10">
+                    <h2 class="text-xl font-semibold text-gray-700 mb-4 pb-2 border-b-2 border-gray-200">
+                        ${monthName} ${year}
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${events.map(event => this.renderPastEventCard(event)).join('')}
+                    </div>
+                </div>
+            `;
+        });
+
+        return html;
+    }
+
+    private renderPastEventCard(event: any): string {
+        const date = new Date(event.start_date || event.event_date);
+        const formattedDate = date.toLocaleDateString('ro-RO', {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
+
+        const imageUrl = event.poster_url || event.hero_image_url || event.image;
+
+        return `
+            <div class="bg-white rounded-lg shadow-sm border overflow-hidden opacity-90 hover:opacity-100 transition">
+                ${imageUrl
+                    ? `<div class="relative">
+                        <img src="${imageUrl}" alt="${event.title}" class="w-full h-40 object-cover" style="filter: grayscale(30%);">
+                        <span class="absolute top-2 right-2 bg-gray-700 text-white text-xs px-2 py-1 rounded">Încheiat</span>
+                       </div>`
+                    : `<div class="relative h-40 bg-gray-200 flex items-center justify-center">
+                        <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <span class="absolute top-2 right-2 bg-gray-700 text-white text-xs px-2 py-1 rounded">Încheiat</span>
+                       </div>`
+                }
+                <div class="p-4">
+                    <h3 class="font-semibold text-gray-900 mb-1 truncate">${event.title}</h3>
+                    <p class="text-sm text-gray-500">${formattedDate}</p>
+                    ${event.venue?.name ? `<p class="text-sm text-gray-400">${event.venue.name}</p>` : ''}
+                </div>
+            </div>
+        `;
     }
 
     private async renderPage(params: Record<string, string>): Promise<void> {
