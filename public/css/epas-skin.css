@@ -3232,7 +3232,7 @@ html.dark {
 }
 
 /* Sticky Form Actions Bar - Fixed at bottom */
-.fi-form-actions,
+/* .fi-form-actions,
 .fi-fo-actions,
 .fi-ac {
   position: fixed !important;
@@ -3243,7 +3243,7 @@ html.dark {
   margin-right: -1.5rem !important;
   width: calc(100% + 3rem) !important;
   border-top: 1px solid var(--metro-border) !important;
-}
+} */
 
 .dark .fi-form-actions,
 .dark .fi-fo-actions,
