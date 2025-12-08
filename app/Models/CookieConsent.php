@@ -63,6 +63,8 @@ class CookieConsent extends Model
         'consented_at',
         'expires_at',
         'withdrawn_at',
+        'renewal_first_notified_at',
+        'renewal_reminder_notified_at',
     ];
 
     protected $casts = [
@@ -74,6 +76,8 @@ class CookieConsent extends Model
         'consented_at' => 'datetime',
         'expires_at' => 'datetime',
         'withdrawn_at' => 'datetime',
+        'renewal_first_notified_at' => 'datetime',
+        'renewal_reminder_notified_at' => 'datetime',
     ];
 
     /**

@@ -964,6 +964,34 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.consent.withdraw');
         Route::get('/history', [CookieConsentController::class, 'getConsentHistory'])
             ->name('api.tenant-client.consent.history');
+
+        // Consent Renewal
+        Route::get('/renewal-status', [CookieConsentController::class, 'getRenewalStatus'])
+            ->name('api.tenant-client.consent.renewal-status');
+        Route::post('/renew', [CookieConsentController::class, 'renewConsent'])
+            ->name('api.tenant-client.consent.renew');
+
+        // Consent Analytics (Dashboard)
+        Route::prefix('analytics')->group(function () {
+            Route::get('/overview', [CookieConsentController::class, 'analyticsOverview'])
+                ->name('api.tenant-client.consent.analytics.overview');
+            Route::get('/trends', [CookieConsentController::class, 'analyticsTrends'])
+                ->name('api.tenant-client.consent.analytics.trends');
+            Route::get('/geographic', [CookieConsentController::class, 'analyticsGeographic'])
+                ->name('api.tenant-client.consent.analytics.geographic');
+            Route::get('/devices', [CookieConsentController::class, 'analyticsDevices'])
+                ->name('api.tenant-client.consent.analytics.devices');
+            Route::get('/sources', [CookieConsentController::class, 'analyticsSources'])
+                ->name('api.tenant-client.consent.analytics.sources');
+            Route::get('/activity', [CookieConsentController::class, 'analyticsActivity'])
+                ->name('api.tenant-client.consent.analytics.activity');
+            Route::get('/changes', [CookieConsentController::class, 'analyticsChanges'])
+                ->name('api.tenant-client.consent.analytics.changes');
+            Route::get('/widget', [CookieConsentController::class, 'analyticsWidget'])
+                ->name('api.tenant-client.consent.analytics.widget');
+            Route::get('/expiring', [CookieConsentController::class, 'analyticsExpiring'])
+                ->name('api.tenant-client.consent.analytics.expiring');
+        });
     });
 
     // Admin (requires admin auth)

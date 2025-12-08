@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api\TenantClient;
 use App\Http\Controllers\Controller;
 use App\Models\CookieConsent;
 use App\Models\CookieConsentHistory;
+use App\Services\Tracking\ConsentAnalyticsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
 
 class CookieConsentController extends Controller
@@ -314,6 +316,119 @@ class CookieConsentController extends Controller
     }
 
     /**
+     * Get renewal status for consent
+     * GET /api/tenant-client/consent/renewal-status
+     */
+    public function getRenewalStatus(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+        $visitorId = $request->query('visitor_id');
+        $customerId = $request->attributes->get('customer')?->id;
+
+        if (!$visitorId && !$customerId) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'needs_renewal' => false,
+                ],
+            ]);
+        }
+
+        $consent = CookieConsent::where('tenant_id', $tenant->id)
+            ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+            ->when(!$customerId && $visitorId, fn($q) => $q->where('visitor_id', $visitorId))
+            ->whereNull('withdrawn_at')
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->first();
+
+        if (!$consent || !$consent->expires_at) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'needs_renewal' => false,
+                ],
+            ]);
+        }
+
+        $daysUntilExpiry = now()->diffInDays($consent->expires_at, false);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'needs_renewal' => $daysUntilExpiry <= 30,
+                'is_urgent' => $daysUntilExpiry <= 7,
+                'expires_at' => $consent->expires_at->toIso8601String(),
+                'days_until_expiry' => max(0, $daysUntilExpiry),
+            ],
+        ]);
+    }
+
+    /**
+     * Renew consent (extend expiration)
+     * POST /api/tenant-client/consent/renew
+     */
+    public function renewConsent(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+        $visitorId = $request->input('visitor_id');
+        $customerId = $request->attributes->get('customer')?->id;
+
+        if (!$visitorId && !$customerId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Visitor ID or customer authentication required.',
+            ], 400);
+        }
+
+        $consent = CookieConsent::where('tenant_id', $tenant->id)
+            ->when($customerId, fn($q) => $q->where('customer_id', $customerId))
+            ->when(!$customerId && $visitorId, fn($q) => $q->where('visitor_id', $visitorId))
+            ->whereNull('withdrawn_at')
+            ->first();
+
+        if (!$consent) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No active consent found.',
+            ], 404);
+        }
+
+        // Record renewal in history
+        CookieConsentHistory::create([
+            'cookie_consent_id' => $consent->id,
+            'previous_analytics' => $consent->analytics,
+            'previous_marketing' => $consent->marketing,
+            'previous_preferences' => $consent->preferences,
+            'new_analytics' => $consent->analytics,
+            'new_marketing' => $consent->marketing,
+            'new_preferences' => $consent->preferences,
+            'change_type' => 'renewal',
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'change_source' => 'settings',
+            'changed_at' => now(),
+        ]);
+
+        // Extend expiration
+        $consent->update([
+            'expires_at' => now()->addYear(),
+            'renewal_first_notified_at' => null,
+            'renewal_reminder_notified_at' => null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Consent renewed successfully.',
+            'data' => [
+                'expires_at' => $consent->expires_at->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
      * Parse user agent string for device info
      */
     private function parseUserAgent(?string $userAgent): array
@@ -366,5 +481,208 @@ class CookieConsentController extends Controller
         // In production, integrate with MaxMind GeoIP or similar
         // For now, return null
         return null;
+    }
+
+    // =====================================================================
+    // CONSENT ANALYTICS ENDPOINTS (Tenant Dashboard)
+    // =====================================================================
+
+    /**
+     * Get consent analytics overview
+     * GET /api/tenant-client/consent/analytics/overview
+     */
+    public function analyticsOverview(Request $request, ConsentAnalyticsService $analyticsService): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $startDate = $request->query('start_date')
+            ? Carbon::parse($request->query('start_date'))
+            : null;
+        $endDate = $request->query('end_date')
+            ? Carbon::parse($request->query('end_date'))
+            : null;
+
+        $overview = $analyticsService->getOverview($tenant->id, $startDate, $endDate);
+
+        return response()->json([
+            'success' => true,
+            'data' => $overview,
+        ]);
+    }
+
+    /**
+     * Get consent trends over time
+     * GET /api/tenant-client/consent/analytics/trends
+     */
+    public function analyticsTrends(Request $request, ConsentAnalyticsService $analyticsService): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $startDate = $request->query('start_date')
+            ? Carbon::parse($request->query('start_date'))
+            : null;
+        $endDate = $request->query('end_date')
+            ? Carbon::parse($request->query('end_date'))
+            : null;
+
+        $trends = $analyticsService->getTrends($tenant->id, $startDate, $endDate);
+
+        return response()->json([
+            'success' => true,
+            'data' => $trends,
+        ]);
+    }
+
+    /**
+     * Get geographic breakdown of consents
+     * GET /api/tenant-client/consent/analytics/geographic
+     */
+    public function analyticsGeographic(Request $request, ConsentAnalyticsService $analyticsService): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $startDate = $request->query('start_date')
+            ? Carbon::parse($request->query('start_date'))
+            : null;
+        $endDate = $request->query('end_date')
+            ? Carbon::parse($request->query('end_date'))
+            : null;
+
+        $geographic = $analyticsService->getGeographicBreakdown($tenant->id, $startDate, $endDate);
+
+        return response()->json([
+            'success' => true,
+            'data' => $geographic,
+        ]);
+    }
+
+    /**
+     * Get device breakdown of consents
+     * GET /api/tenant-client/consent/analytics/devices
+     */
+    public function analyticsDevices(Request $request, ConsentAnalyticsService $analyticsService): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $startDate = $request->query('start_date')
+            ? Carbon::parse($request->query('start_date'))
+            : null;
+        $endDate = $request->query('end_date')
+            ? Carbon::parse($request->query('end_date'))
+            : null;
+
+        $devices = $analyticsService->getDeviceBreakdown($tenant->id, $startDate, $endDate);
+
+        return response()->json([
+            'success' => true,
+            'data' => $devices,
+        ]);
+    }
+
+    /**
+     * Get consent source breakdown
+     * GET /api/tenant-client/consent/analytics/sources
+     */
+    public function analyticsSources(Request $request, ConsentAnalyticsService $analyticsService): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $startDate = $request->query('start_date')
+            ? Carbon::parse($request->query('start_date'))
+            : null;
+        $endDate = $request->query('end_date')
+            ? Carbon::parse($request->query('end_date'))
+            : null;
+
+        $sources = $analyticsService->getSourceBreakdown($tenant->id, $startDate, $endDate);
+
+        return response()->json([
+            'success' => true,
+            'data' => $sources,
+        ]);
+    }
+
+    /**
+     * Get recent consent activity
+     * GET /api/tenant-client/consent/analytics/activity
+     */
+    public function analyticsActivity(Request $request, ConsentAnalyticsService $analyticsService): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+        $limit = min((int) $request->query('limit', 50), 100);
+
+        $activity = $analyticsService->getRecentActivity($tenant->id, $limit);
+
+        return response()->json([
+            'success' => true,
+            'data' => $activity,
+        ]);
+    }
+
+    /**
+     * Get consent change analytics
+     * GET /api/tenant-client/consent/analytics/changes
+     */
+    public function analyticsChanges(Request $request, ConsentAnalyticsService $analyticsService): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $startDate = $request->query('start_date')
+            ? Carbon::parse($request->query('start_date'))
+            : null;
+        $endDate = $request->query('end_date')
+            ? Carbon::parse($request->query('end_date'))
+            : null;
+
+        $changes = $analyticsService->getChangeAnalytics($tenant->id, $startDate, $endDate);
+
+        return response()->json([
+            'success' => true,
+            'data' => $changes,
+        ]);
+    }
+
+    /**
+     * Get dashboard widget data
+     * GET /api/tenant-client/consent/analytics/widget
+     */
+    public function analyticsWidget(Request $request, ConsentAnalyticsService $analyticsService): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $widget = $analyticsService->getDashboardWidget($tenant->id);
+
+        return response()->json([
+            'success' => true,
+            'data' => $widget,
+        ]);
+    }
+
+    /**
+     * Get expiring consents (for renewal notifications)
+     * GET /api/tenant-client/consent/analytics/expiring
+     */
+    public function analyticsExpiring(Request $request, ConsentAnalyticsService $analyticsService): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+        $days = min((int) $request->query('days', 30), 90);
+
+        $expiring = $analyticsService->getExpiringConsents($tenant->id, $days);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'count' => $expiring->count(),
+                'consents' => $expiring->map(function ($consent) {
+                    return [
+                        'id' => $consent->id,
+                        'visitor_id' => substr($consent->visitor_id, 0, 8) . '...',
+                        'customer_id' => $consent->customer_id,
+                        'expires_at' => $consent->expires_at->toIso8601String(),
+                        'days_until_expiry' => now()->diffInDays($consent->expires_at, false),
+                    ];
+                })->toArray(),
+            ],
+        ]);
     }
 }
