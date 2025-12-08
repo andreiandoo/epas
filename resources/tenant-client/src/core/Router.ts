@@ -577,107 +577,408 @@ export class Router {
         const content = this.getContentElement();
         if (!content) return;
 
-        // Get query params
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentCategory = urlParams.get('category') || '';
-        const currentSearch = urlParams.get('search') || '';
-
         content.innerHTML = `
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-                    <h1 class="text-3xl font-bold text-gray-900 mb-4 md:mb-0">Evenimente</h1>
-                    <div class="flex flex-col sm:flex-row gap-4">
-                        <input type="search" id="event-search" placeholder="Caută evenimente..."
-                               value="${currentSearch}"
-                               class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                        <select id="event-filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
-                            <option value="">Toate categoriile</option>
-                        </select>
+                <h1 class="text-3xl font-bold text-gray-900 mb-6">Evenimente</h1>
+
+                <!-- Calendar Timeline -->
+                <div id="events-calendar" class="space-y-4 mb-8">
+                    <!-- Year/Month Navigator -->
+                    <div id="month-navigator" class="flex items-center gap-2 flex-wrap">
+                        <div class="animate-pulse bg-gray-200 h-8 w-full rounded"></div>
+                    </div>
+
+                    <!-- Days Strip -->
+                    <div class="relative">
+                        <div id="days-scroller" class="flex items-stretch gap-6 overflow-x-auto pb-2 whitespace-nowrap" style="scrollbar-width: thin;">
+                            <div class="animate-pulse flex gap-2">
+                                ${Array(14).fill(0).map(() => '<div class="w-14 h-16 bg-gray-200 rounded-xl shrink-0"></div>').join('')}
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div id="events-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div class="animate-pulse bg-gray-200 rounded-lg h-80"></div>
-                    <div class="animate-pulse bg-gray-200 rounded-lg h-80"></div>
-                    <div class="animate-pulse bg-gray-200 rounded-lg h-80"></div>
-                    <div class="animate-pulse bg-gray-200 rounded-lg h-80"></div>
-                    <div class="animate-pulse bg-gray-200 rounded-lg h-80"></div>
-                    <div class="animate-pulse bg-gray-200 rounded-lg h-80"></div>
+
+                <!-- Events List -->
+                <div id="events-container" class="border border-gray-200 rounded-2xl p-4 min-h-[80px] bg-white/70">
+                    <div class="animate-pulse space-y-3">
+                        <div class="bg-gray-200 h-20 rounded-xl"></div>
+                        <div class="bg-gray-200 h-20 rounded-xl"></div>
+                        <div class="bg-gray-200 h-20 rounded-xl"></div>
+                    </div>
                 </div>
             </div>
         `;
 
-        // Fetch events and categories
+        // Fetch events
         try {
-            const params: Record<string, string> = {};
-            if (currentCategory) params.category = currentCategory;
-            if (currentSearch) params.search = currentSearch;
+            const eventsData = await this.fetchApi('/events');
+            const events = eventsData.data?.events || eventsData.data || [];
 
-            const [eventsData, categoriesData] = await Promise.all([
-                this.fetchApi('/events', params),
-                this.fetchApi('/categories')
-            ]);
-
-            // Populate category filter
-            const filterEl = document.getElementById('event-filter') as HTMLSelectElement;
-            if (filterEl && categoriesData.data) {
-                const categories = categoriesData.data.categories || categoriesData.data || [];
-                categories.forEach((cat: any) => {
-                    const option = document.createElement('option');
-                    option.value = cat.slug;
-                    option.textContent = cat.name;
-                    if (cat.slug === currentCategory) option.selected = true;
-                    filterEl.appendChild(option);
-                });
-
-                // Category change handler
-                filterEl.addEventListener('change', () => {
-                    const params = new URLSearchParams();
-                    if (filterEl.value) params.set('category', filterEl.value);
-                    const searchInput = document.getElementById('event-search') as HTMLInputElement;
-                    if (searchInput?.value) params.set('search', searchInput.value);
-                    this.navigate('/events' + (params.toString() ? '?' + params.toString() : ''));
-                });
-            }
-
-            // Search handler
-            const searchEl = document.getElementById('event-search') as HTMLInputElement;
-            if (searchEl) {
-                let timeout: number;
-                searchEl.addEventListener('input', () => {
-                    clearTimeout(timeout);
-                    timeout = window.setTimeout(() => {
-                        const params = new URLSearchParams();
-                        if (searchEl.value) params.set('search', searchEl.value);
-                        if (filterEl?.value) params.set('category', filterEl.value);
-                        this.navigate('/events' + (params.toString() ? '?' + params.toString() : ''));
-                    }, 500);
-                });
-            }
-
-            // Render events
-            const eventsEl = document.getElementById('events-list');
-            if (eventsEl && eventsData.data) {
-                const events = eventsData.data.events || eventsData.data || [];
-                if (events.length === 0) {
-                    eventsEl.innerHTML = `
-                        <div class="col-span-3 text-center py-12">
-                            <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                            <p class="text-gray-500">Nu au fost găsite evenimente.</p>
-                        </div>
-                    `;
-                } else {
-                    eventsEl.innerHTML = events.map((event: any) => this.renderEventCard(event)).join('');
-                }
-            }
+            // Initialize calendar with events
+            this.initEventsCalendar(events);
         } catch (error) {
             console.error('Failed to load events:', error);
-            const eventsEl = document.getElementById('events-list');
-            if (eventsEl) {
-                eventsEl.innerHTML = `<p class="col-span-3 text-center text-red-500">Eroare la încărcarea evenimentelor.</p>`;
+            const container = document.getElementById('events-container');
+            if (container) {
+                container.innerHTML = `<p class="text-center text-red-500 py-4">Eroare la încărcarea evenimentelor.</p>`;
             }
         }
+    }
+
+    private initEventsCalendar(rawEvents: any[]): void {
+        const MONTHS_AHEAD = 3;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // State
+        let selectedType: 'all' | 'day' | 'month' = 'all';
+        let selectedDateStr: string | null = null;
+        let selectedYear: number | null = null;
+        let selectedMonthIndex: number | null = null;
+
+        const monthNamesShort = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const monthNamesFull = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'];
+        const weekdayNamesShort = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm'];
+
+        // Helper functions
+        const formatYmd = (date: Date): string => {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        };
+
+        const todayStr = formatYmd(today);
+
+        // Parse event date
+        const parseEventDate = (ev: any): Date => {
+            const usePostponed = ev.is_postponed && ev.postponed_date;
+            const dateRaw = usePostponed ? ev.postponed_date : ev.start_date;
+            const timeRaw = usePostponed ? ev.postponed_start_time : ev.start_time;
+
+            if (!dateRaw) return today;
+
+            const datePart = String(dateRaw).split('T')[0];
+            const parts = datePart.split('-').map(Number);
+            if (parts.length !== 3) return today;
+
+            const [y, m, d] = parts;
+            let hh = 0, mm = 0;
+            if (timeRaw) {
+                const tParts = String(timeRaw).split(':');
+                if (tParts.length >= 2) {
+                    hh = parseInt(tParts[0]) || 0;
+                    mm = parseInt(tParts[1]) || 0;
+                }
+            }
+
+            return new Date(y, m - 1, d, hh, mm);
+        };
+
+        // Normalize events
+        const eventsByDate: Record<string, any[]> = {};
+        const allEvents = rawEvents.map((ev) => {
+            const date = parseEventDate(ev);
+            const dateStr = formatYmd(date);
+
+            const prettyDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' });
+            const prettyTime = date.toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+
+            const normalized = {
+                id: ev.id,
+                title: ev.title || ev.name || 'Untitled',
+                slug: ev.slug,
+                venue: ev.venue?.name || '',
+                city: ev.venue?.city || '',
+                posterUrl: ev.poster_url || ev.hero_image_url,
+                date,
+                dateStr,
+                dateLabel: prettyDate,
+                timeLabel: prettyTime,
+                isPostponed: !!ev.is_postponed,
+                isCancelled: !!ev.is_cancelled,
+                isSoldOut: !!ev.is_sold_out,
+                doorSalesOnly: !!ev.door_sales_only,
+                priceFrom: ev.price_from || null,
+            };
+
+            if (!eventsByDate[dateStr]) eventsByDate[dateStr] = [];
+            eventsByDate[dateStr].push(normalized);
+
+            return normalized;
+        });
+
+        // Build days range
+        interface DayInfo {
+            date: Date;
+            dateStr: string;
+            year: number;
+            monthIndex: number;
+            weekdayShort: string;
+            day: number;
+            isToday: boolean;
+            hasEvents: boolean;
+            hasPostponed: boolean;
+            hasCancelled: boolean;
+        }
+
+        const days: DayInfo[] = [];
+        const end = new Date(today);
+        end.setMonth(end.getMonth() + MONTHS_AHEAD);
+
+        for (let d = new Date(today); d <= end; d.setDate(d.getDate() + 1)) {
+            const date = new Date(d);
+            const dateStr = formatYmd(date);
+            const eventsForDay = eventsByDate[dateStr] || [];
+
+            days.push({
+                date,
+                dateStr,
+                year: date.getFullYear(),
+                monthIndex: date.getMonth(),
+                weekdayShort: weekdayNamesShort[date.getDay()],
+                day: date.getDate(),
+                isToday: dateStr === todayStr,
+                hasEvents: eventsForDay.length > 0,
+                hasPostponed: eventsForDay.some(e => e.isPostponed),
+                hasCancelled: eventsForDay.some(e => e.isCancelled),
+            });
+        }
+
+        // Build year/month groups
+        interface MonthInfo { index: number; label: string; eventCount: number; }
+        interface YearGroup { year: number; months: MonthInfo[]; }
+
+        const byYear: Record<number, Record<number, MonthInfo>> = {};
+        days.forEach((day) => {
+            if (!byYear[day.year]) byYear[day.year] = {};
+            if (!byYear[day.year][day.monthIndex]) {
+                byYear[day.year][day.monthIndex] = {
+                    index: day.monthIndex,
+                    label: monthNamesShort[day.monthIndex],
+                    eventCount: 0,
+                };
+            }
+            if (eventsByDate[day.dateStr]) {
+                byYear[day.year][day.monthIndex].eventCount += eventsByDate[day.dateStr].length;
+            }
+        });
+
+        const years: YearGroup[] = Object.keys(byYear).sort().map((yearStr) => {
+            const yearNum = Number(yearStr);
+            const months = Object.values(byYear[yearNum]).sort((a, b) => a.index - b.index);
+            return { year: yearNum, months };
+        });
+
+        // Build month blocks for days strip
+        interface MonthBlock { year: number; monthIndex: number; label: string; days: DayInfo[]; }
+        const monthBlocks: MonthBlock[] = [];
+        const blocksMap: Record<string, MonthBlock> = {};
+
+        days.forEach((day) => {
+            const key = `${day.year}-${day.monthIndex}`;
+            if (!blocksMap[key]) {
+                blocksMap[key] = {
+                    year: day.year,
+                    monthIndex: day.monthIndex,
+                    label: monthNamesFull[day.monthIndex],
+                    days: [],
+                };
+                monthBlocks.push(blocksMap[key]);
+            }
+            blocksMap[key].days.push(day);
+        });
+
+        // Render functions
+        const renderMonthNavigator = () => {
+            const nav = document.getElementById('month-navigator');
+            if (!nav) return;
+
+            nav.innerHTML = years.map(year => `
+                <div class="flex items-center gap-x-4">
+                    <div class="w-10 text-xs font-bold text-gray-800">${year.year}</div>
+                    <div class="flex flex-wrap gap-2">
+                        ${year.months.map(month => {
+                            const isSelected = selectedType === 'month' && selectedYear === year.year && selectedMonthIndex === month.index;
+                            return `
+                                <button type="button" data-year="${year.year}" data-month="${month.index}"
+                                    class="month-btn px-2 py-1 rounded-lg text-[11px] uppercase font-semibold transition
+                                    ${isSelected ? 'bg-gray-900 text-white border border-gray-900' : 'border border-gray-200 text-gray-600 hover:border-gray-400 hover:bg-gray-50'}">
+                                    <span>${month.label}</span>
+                                    ${month.eventCount ? `<span class="ml-1 text-[9px] font-semibold text-gray-400">· ${month.eventCount}</span>` : ''}
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            nav.querySelectorAll('.month-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const year = parseInt((btn as HTMLElement).dataset.year || '0');
+                    const month = parseInt((btn as HTMLElement).dataset.month || '0');
+                    selectMonth(year, month);
+                });
+            });
+        };
+
+        const getDayClasses = (day: DayInfo): string => {
+            const isSelected = selectedType === 'day' && selectedDateStr === day.dateStr;
+            if (isSelected) return 'border-gray-900 bg-gray-900 text-white';
+            if (day.hasCancelled) return 'border-red-300 bg-red-50 text-red-900';
+            if (day.hasPostponed) return 'border-amber-300 bg-amber-50 text-amber-900';
+            if (day.hasEvents) return 'border-emerald-300 bg-emerald-50 text-gray-900';
+            return 'border-gray-200 text-gray-700 hover:border-gray-400';
+        };
+
+        const getDotClass = (day: DayInfo): string => {
+            if (day.hasCancelled) return 'bg-red-500';
+            if (day.hasPostponed) return 'bg-amber-500';
+            if (day.hasEvents) return 'bg-emerald-500';
+            return 'bg-transparent';
+        };
+
+        const renderDaysStrip = () => {
+            const scroller = document.getElementById('days-scroller');
+            if (!scroller) return;
+
+            scroller.innerHTML = monthBlocks.map(month => `
+                <div class="flex flex-col items-start gap-1 shrink-0">
+                    <div class="text-xs font-semibold text-gray-600 capitalize">${month.label}</div>
+                    <div class="flex items-stretch gap-2">
+                        ${month.days.map(day => {
+                            const isSelected = selectedType === 'day' && selectedDateStr === day.dateStr;
+                            return `
+                                <button type="button" data-date="${day.dateStr}"
+                                    class="day-btn flex flex-col items-center justify-between w-14 h-16 p-3 rounded-xl border text-xs leading-tight shrink-0 transition ${getDayClasses(day)}">
+                                    <span class="text-xl font-bold">${day.day}</span>
+                                    <span class="text-[11px] capitalize">${day.weekdayShort}</span>
+                                    ${day.isToday ? `<span class="mt-0.5 text-[9px] uppercase tracking-wide ${isSelected ? 'text-white' : 'text-blue-600'}">Azi</span>` : ''}
+                                    <span class="mt-0.5 h-1.5 w-1.5 rounded-full ${getDotClass(day)}"></span>
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click handlers
+            scroller.querySelectorAll('.day-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const dateStr = (btn as HTMLElement).dataset.date || '';
+                    selectDay(dateStr);
+                });
+            });
+        };
+
+        const renderEventsList = () => {
+            const container = document.getElementById('events-container');
+            if (!container) return;
+
+            // Filter events
+            let filtered = [...allEvents];
+
+            if (selectedType === 'day' && selectedDateStr) {
+                filtered = eventsByDate[selectedDateStr] || [];
+            } else if (selectedType === 'month' && selectedYear !== null && selectedMonthIndex !== null) {
+                filtered = allEvents.filter(ev =>
+                    ev.date.getFullYear() === selectedYear && ev.date.getMonth() === selectedMonthIndex
+                );
+            }
+
+            // Sort by date ascending
+            filtered.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p class="text-sm text-gray-500 py-4">Nu există evenimente care să corespundă filtrelor selectate.</p>`;
+                return;
+            }
+
+            container.innerHTML = `
+                <ul class="space-y-3">
+                    ${filtered.map(event => `
+                        <li class="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-3 hover:border-gray-400 hover:bg-gray-50 transition cursor-pointer"
+                            onclick="window.location.href='/event/${event.slug}'">
+                            ${event.posterUrl ? `
+                                <div class="h-16 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                                    <img src="${event.posterUrl}" alt="${event.title}" class="h-full w-full object-cover" loading="lazy">
+                                </div>
+                            ` : ''}
+                            <div class="flex-1 flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-900">${event.title}</p>
+                                    <p class="mt-0.5 text-xs text-gray-500">
+                                        ${event.venue}${event.city ? ` · ${event.city}` : ''}
+                                    </p>
+                                    <div class="mt-1 flex flex-wrap gap-1">
+                                        ${event.isCancelled ? `<span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-700">Anulat</span>` : ''}
+                                        ${!event.isCancelled && event.isPostponed ? `<span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">Amânat</span>` : ''}
+                                        ${event.isSoldOut ? `<span class="inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-800">Sold-out</span>` : ''}
+                                        ${event.doorSalesOnly ? `<span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">Doar la intrare</span>` : ''}
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs font-medium text-gray-700">${event.timeLabel}</p>
+                                    <p class="text-[11px] text-gray-400">${event.dateLabel}</p>
+                                    ${event.priceFrom ? `<p class="mt-1 text-xs text-gray-600">De la <span class="font-semibold">${event.priceFrom} RON</span></p>` : ''}
+                                </div>
+                            </div>
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
+        };
+
+        // Selection handlers
+        const selectDay = (dateStr: string) => {
+            const day = days.find(d => d.dateStr === dateStr);
+            if (!day) return;
+
+            selectedType = 'day';
+            selectedDateStr = dateStr;
+            selectedYear = day.year;
+            selectedMonthIndex = day.monthIndex;
+
+            renderMonthNavigator();
+            renderDaysStrip();
+            renderEventsList();
+        };
+
+        const selectMonth = (year: number, monthIndex: number) => {
+            selectedType = 'month';
+            selectedYear = year;
+            selectedMonthIndex = monthIndex;
+            selectedDateStr = null;
+
+            renderMonthNavigator();
+            renderDaysStrip();
+            renderEventsList();
+
+            // Scroll to first day of month
+            const firstDay = days.find(d => d.year === year && d.monthIndex === monthIndex);
+            if (firstDay) {
+                const scroller = document.getElementById('days-scroller');
+                const el = scroller?.querySelector(`[data-date="${firstDay.dateStr}"]`);
+                el?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+            }
+        };
+
+        const scrollToToday = () => {
+            const scroller = document.getElementById('days-scroller');
+            const todayEl = scroller?.querySelector(`[data-date="${todayStr}"]`);
+            if (todayEl && scroller) {
+                scroller.scrollLeft = (todayEl as HTMLElement).offsetLeft - 24;
+            }
+        };
+
+        // Initial render
+        renderMonthNavigator();
+        renderDaysStrip();
+        renderEventsList();
+
+        // Scroll to today after render
+        setTimeout(scrollToToday, 100);
     }
 
     private async renderEventDetail(params: Record<string, string>): Promise<void> {
@@ -746,10 +1047,14 @@ export class Router {
             // Use poster_url or hero_image_url from new API
             const imageUrl = event.poster_url || event.hero_image_url || event.image;
 
+            // Check if event is in the past
+            const eventDateObj = displayDate ? new Date(displayDate) : null;
+            const isPastEvent = eventDateObj ? eventDateObj < new Date() : false;
+
             const eventDetailEl = document.getElementById('event-detail');
             if (eventDetailEl) {
                 eventDetailEl.innerHTML = `
-                    <div class="lg:col-span-2">
+                    <div class="${isPastEvent ? 'lg:col-span-3' : 'lg:col-span-2'}">
                         ${imageUrl
                             ? `<img src="${imageUrl}" alt="${event.title}" class="w-full h-96 object-cover rounded-lg mb-6">`
                             : `<div class="w-full h-96 bg-gray-200 rounded-lg mb-6 flex items-center justify-center">
@@ -770,6 +1075,12 @@ export class Router {
                         ${isPostponed ? `
                         <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
                             <strong>Eveniment amânat${event.postponed_date ? ` pentru ${date}${displayStartTime ? ` ora ${displayStartTime}` : ''}` : ''}:</strong> ${event.postponed_reason || 'Acest eveniment a fost amânat.'}
+                        </div>
+                        ` : ''}
+
+                        ${isPastEvent && !event.is_cancelled ? `
+                        <div class="bg-gray-100 border border-gray-300 text-gray-700 px-4 py-3 rounded mb-4">
+                            <strong>Eveniment încheiat</strong> - Acest eveniment a avut loc în ${date}.
                         </div>
                         ` : ''}
 
@@ -1080,6 +1391,7 @@ export class Router {
                         ` : ''}
                     </div>
 
+                    ${!isPastEvent ? `
                     <div class="lg:col-span-1">
                         <div class="bg-white rounded-lg shadow-lg p-6 sticky top-24">
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Bilete</h2>
@@ -1211,10 +1523,13 @@ export class Router {
                             `}
                         </div>
                     </div>
+                    ` : ''}
                 `;
 
                 // Setup ticket quantity handlers
-                this.setupTicketHandlers();
+                if (!isPastEvent) {
+                    this.setupTicketHandlers();
+                }
 
                 // Initialize countdown timer
                 this.initCountdown();
@@ -1852,7 +2167,7 @@ export class Router {
                                             class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
                                         >
                                         <label for="agree_privacy" class="ml-2 text-sm text-gray-700">
-                                            Sunt de acord cu <a href="/privacy" target="_blank" class="text-primary hover:underline">Politica de Confidențialitate</a> și procesarea datelor personale *
+                                            Sunt de acord cu <a href="/privacy" target="_blank" class="text-primary hover:underline">Politica de Confidențialitate</a> a organizatorului, <a href="https://tixello.com/data-privacy-client" target="_blank" class="text-primary hover:underline">Politica Tixello</a> și procesarea datelor personale *
                                         </label>
                                     </div>
                                     ${!this.authToken ? `
@@ -3265,9 +3580,10 @@ private async renderProfile(): Promise<void> {
         });
 
         const imageUrl = event.poster_url || event.hero_image_url || event.image;
+        const eventUrl = `/event/${event.slug}`;
 
         return `
-            <div class="bg-white rounded-lg shadow-sm border overflow-hidden opacity-90 hover:opacity-100 transition">
+            <a href="${eventUrl}" class="block bg-white rounded-lg shadow-sm border overflow-hidden opacity-90 hover:opacity-100 hover:shadow-md transition cursor-pointer">
                 ${imageUrl
                     ? `<div class="relative">
                         <img src="${imageUrl}" alt="${event.title}" class="w-full h-40 object-cover" style="filter: grayscale(30%);">
@@ -3285,7 +3601,7 @@ private async renderProfile(): Promise<void> {
                     <p class="text-sm text-gray-500">${formattedDate}</p>
                     ${event.venue?.name ? `<p class="text-sm text-gray-400">${event.venue.name}</p>` : ''}
                 </div>
-            </div>
+            </a>
         `;
     }
 
