@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\TenantClient\CheckoutController;
 use App\Http\Controllers\Api\TenantClient\AdminController;
 use App\Http\Controllers\Api\TenantClient\ThemeController;
 use App\Http\Controllers\Api\TenantClient\PagesController;
+use App\Http\Controllers\Api\TenantClient\CookieConsentController;
 use App\Http\Controllers\Api\DocSearchController;
 use App\Http\Controllers\Api\TenantClientController;
 
@@ -953,7 +954,17 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.orders.show');
     });
 
-    
+    // Cookie Consent (GDPR compliance)
+    Route::prefix('consent')->group(function () {
+        Route::get('/', [CookieConsentController::class, 'getConsent'])
+            ->name('api.tenant-client.consent.get');
+        Route::post('/', [CookieConsentController::class, 'saveConsent'])
+            ->name('api.tenant-client.consent.save');
+        Route::post('/withdraw', [CookieConsentController::class, 'withdrawConsent'])
+            ->name('api.tenant-client.consent.withdraw');
+        Route::get('/history', [CookieConsentController::class, 'getConsentHistory'])
+            ->name('api.tenant-client.consent.history');
+    });
 
     // Admin (requires admin auth)
     Route::prefix('admin')->group(function () {

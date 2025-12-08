@@ -3,10 +3,13 @@
  *
  * Collects visitor behavior, engagement metrics, and conversion events
  * Sends data to platform for real-time analytics and dual-tracking
+ *
+ * GDPR Compliant: Respects user cookie consent preferences
  */
 
 import { TixelloConfig } from './ConfigManager';
 import { EventBus } from './EventBus';
+import { CookieConsentModule, ConsentPreferences } from '../modules/CookieConsentModule';
 
 interface TrackingConfig {
     enabled: boolean;
@@ -79,6 +82,13 @@ export class TrackingModule {
     private heartbeatTimer?: number;
     private flushTimer?: number;
     private isInitialized: boolean = false;
+    private consentModule: CookieConsentModule | null = null;
+    private consentPreferences: ConsentPreferences = {
+        necessary: true,
+        analytics: false,
+        marketing: false,
+        preferences: false,
+    };
 
     private constructor() {
         this.config = {
@@ -121,11 +131,16 @@ export class TrackingModule {
             return;
         }
 
+        // Initialize cookie consent integration
+        this.initConsentIntegration();
+
         // Extract URL parameters
         this.extractUrlParameters();
 
-        // Track initial page view
-        this.trackPageView();
+        // Track initial page view (only if analytics consent given)
+        if (this.hasAnalyticsConsent()) {
+            this.trackPageView();
+        }
 
         // Setup event listeners
         this.setupEventListeners();
@@ -137,7 +152,58 @@ export class TrackingModule {
         this.startFlushTimer();
 
         this.isInitialized = true;
-        console.log('Tixello Tracking: Initialized');
+        console.log('Tixello Tracking: Initialized (consent-aware)');
+    }
+
+    /**
+     * Initialize integration with cookie consent module
+     */
+    private initConsentIntegration(): void {
+        try {
+            this.consentModule = CookieConsentModule.getInstance();
+            this.consentPreferences = this.consentModule.getConsent();
+
+            // Listen for consent changes
+            window.addEventListener('tixello:consent', ((event: CustomEvent<ConsentPreferences>) => {
+                this.consentPreferences = event.detail;
+                console.log('Tixello Tracking: Consent updated', this.consentPreferences);
+
+                // If analytics consent was just granted, send page view
+                if (this.consentPreferences.analytics && !this.isInitialized) {
+                    this.trackPageView();
+                }
+            }) as EventListener);
+        } catch (error) {
+            // Consent module not available, default to opted-out
+            console.warn('Tixello Tracking: Cookie consent module not available, tracking disabled');
+            this.consentPreferences = {
+                necessary: true,
+                analytics: false,
+                marketing: false,
+                preferences: false,
+            };
+        }
+    }
+
+    /**
+     * Check if analytics consent is granted
+     */
+    hasAnalyticsConsent(): boolean {
+        return this.consentPreferences.analytics === true;
+    }
+
+    /**
+     * Check if marketing consent is granted
+     */
+    hasMarketingConsent(): boolean {
+        return this.consentPreferences.marketing === true;
+    }
+
+    /**
+     * Check if specific consent category is granted
+     */
+    hasConsent(category: keyof ConsentPreferences): boolean {
+        return this.consentPreferences[category] === true;
     }
 
     /**
@@ -647,6 +713,27 @@ export class TrackingModule {
     }
 
     private queueEvent(event: EventData): void {
+        // Check consent before queuing events
+        // Essential events (necessary category) are always allowed
+        // Analytics events require analytics consent
+        // Marketing-related events require marketing consent
+
+        const essentialEvents = ['error', 'session_start'];
+        const marketingEvents = ['outbound_click'];
+
+        // Allow essential events without consent check
+        if (!essentialEvents.includes(event.eventType)) {
+            // Marketing events require marketing consent
+            if (marketingEvents.includes(event.eventType) && !this.hasMarketingConsent()) {
+                return; // Skip - no marketing consent
+            }
+
+            // All other events require analytics consent
+            if (!marketingEvents.includes(event.eventType) && !this.hasAnalyticsConsent()) {
+                return; // Skip - no analytics consent
+            }
+        }
+
         this.eventQueue.push(event);
 
         // Auto-flush if queue is full
@@ -667,6 +754,12 @@ export class TrackingModule {
             deviceInfo: this.deviceInfo,
             events,
             timestamp: Date.now(),
+            // Include consent status for GDPR compliance
+            consent: {
+                analytics: this.consentPreferences.analytics,
+                marketing: this.consentPreferences.marketing,
+                preferences: this.consentPreferences.preferences,
+            },
         };
 
         if (sync && navigator.sendBeacon) {
