@@ -26,9 +26,9 @@ class InvoiceResource extends Resource
     {
         return $schema->schema([
             SC\Section::make('Invoice Details')
-                ->extraAttributes([
-                    'style' => '--cols-lg: 1 !important; --cols-default: 1 !important;',
-                ])
+                // ->extraAttributes([
+                //     'style' => '--cols-lg: 1 !important; --cols-default: 1 !important;',
+                // ])
                 ->schema([
                     Forms\Components\Select::make('tenant_id')
                         ->relationship('tenant','name')
@@ -195,7 +195,7 @@ class InvoiceResource extends Resource
                         ->addable()
                         ->deletable()
                         ->reorderable(),
-                ])->columns(1),
+                ])->columns(2),
         ]);
     }
 

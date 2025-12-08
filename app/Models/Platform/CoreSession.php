@@ -10,86 +10,54 @@ use App\Models\Tenant;
 class CoreSession extends Model
 {
     protected $fillable = [
-        'session_token',
-        'core_customer_id',
+        'session_id',
+        'customer_id',
         'tenant_id',
         'visitor_id',
         'started_at',
-        'last_activity_at',
         'ended_at',
-        'page_views',
-        'total_time_seconds',
-        'entry_page',
-        'exit_page',
+        'duration_seconds',
+        'pageviews',
+        'events',
+        'is_bounce',
         'landing_page',
+        'landing_page_type',
+        'exit_page',
+        'exit_page_type',
+        'source',
+        'medium',
+        'campaign',
         'referrer',
         'utm_source',
         'utm_medium',
         'utm_campaign',
-        'utm_term',
-        'utm_content',
         'gclid',
         'fbclid',
         'ttclid',
-        'li_fat_id',
-        'device_type',
-        'device_brand',
-        'device_model',
-        'browser',
-        'browser_version',
-        'os',
-        'os_version',
-        'screen_width',
-        'screen_height',
-        'viewport_width',
-        'viewport_height',
-        'ip_address',
-        'country_code',
-        'country_name',
-        'region',
-        'city',
-        'postal_code',
-        'latitude',
-        'longitude',
-        'timezone',
-        'isp',
-        'is_bot',
-        'is_mobile',
-        'is_tablet',
-        'is_desktop',
-        'is_converted',
+        'converted',
         'conversion_value',
-        'events_count',
-        'bounce',
-        'engaged',
+        'conversion_type',
+        'device_type',
+        'browser',
+        'os',
+        'country_code',
+        'city',
     ];
 
     protected $casts = [
         'started_at' => 'datetime',
-        'last_activity_at' => 'datetime',
         'ended_at' => 'datetime',
-        'page_views' => 'integer',
-        'total_time_seconds' => 'integer',
-        'screen_width' => 'integer',
-        'screen_height' => 'integer',
-        'viewport_width' => 'integer',
-        'viewport_height' => 'integer',
-        'latitude' => 'decimal:8',
-        'longitude' => 'decimal:8',
-        'is_bot' => 'boolean',
-        'is_mobile' => 'boolean',
-        'is_tablet' => 'boolean',
-        'is_desktop' => 'boolean',
-        'is_converted' => 'boolean',
+        'duration_seconds' => 'integer',
+        'pageviews' => 'integer',
+        'events' => 'integer',
+        'is_bounce' => 'boolean',
+        'converted' => 'boolean',
         'conversion_value' => 'decimal:2',
-        'events_count' => 'integer',
-        'bounce' => 'boolean',
-        'engaged' => 'boolean',
     ];
 
-    public function coreCustomer(): BelongsTo
+    public function customer(): BelongsTo
     {
-        return $this->belongsTo(CoreCustomer::class);
+        return $this->belongsTo(CoreCustomer::class, 'customer_id');
     }
 
     public function tenant(): BelongsTo
@@ -97,15 +65,16 @@ class CoreSession extends Model
         return $this->belongsTo(Tenant::class);
     }
 
-    public function events(): HasMany
+    public function customerEvents(): HasMany
     {
-        return $this->hasMany(CoreCustomerEvent::class, 'session_id');
+        return $this->hasMany(CoreCustomerEvent::class, 'session_id', 'session_id');
     }
 
     // Scopes
     public function scopeActive($query)
     {
-        return $query->where('last_activity_at', '>=', now()->subMinutes(30))
+        // Active = started recently (within 30 min) and not ended
+        return $query->where('started_at', '>=', now()->subMinutes(30))
                      ->whereNull('ended_at');
     }
 
@@ -116,17 +85,12 @@ class CoreSession extends Model
 
     public function scopeConverted($query)
     {
-        return $query->where('is_converted', true);
+        return $query->where('converted', true);
     }
 
     public function scopeBounced($query)
     {
-        return $query->where('bounce', true);
-    }
-
-    public function scopeEngaged($query)
-    {
-        return $query->where('engaged', true);
+        return $query->where('is_bounce', true);
     }
 
     public function scopeForTenant($query, int $tenantId)
@@ -141,17 +105,17 @@ class CoreSession extends Model
 
     public function scopeMobile($query)
     {
-        return $query->where('is_mobile', true);
+        return $query->where('device_type', 'mobile');
     }
 
     public function scopeDesktop($query)
     {
-        return $query->where('is_desktop', true);
+        return $query->where('device_type', 'desktop');
     }
 
-    public function scopeNotBot($query)
+    public function scopeTablet($query)
     {
-        return $query->where('is_bot', false);
+        return $query->where('device_type', 'tablet');
     }
 
     public function scopeToday($query)
@@ -174,8 +138,7 @@ class CoreSession extends Model
         return $query->where(function ($q) {
             $q->whereNotNull('gclid')
               ->orWhereNotNull('fbclid')
-              ->orWhereNotNull('ttclid')
-              ->orWhereNotNull('li_fat_id');
+              ->orWhereNotNull('ttclid');
         });
     }
 
@@ -185,16 +148,10 @@ class CoreSession extends Model
     }
 
     // Activity tracking
-    public function recordActivity(): void
-    {
-        $this->update(['last_activity_at' => now()]);
-    }
-
     public function recordPageView(string $pageUrl): void
     {
-        $this->increment('page_views');
+        $this->increment('pageviews');
         $this->update([
-            'last_activity_at' => now(),
             'exit_page' => $pageUrl,
         ]);
     }
@@ -205,17 +162,17 @@ class CoreSession extends Model
 
         $this->update([
             'ended_at' => now(),
-            'total_time_seconds' => $duration,
-            'bounce' => $this->page_views <= 1,
-            'engaged' => $duration >= 10 || $this->page_views >= 2,
+            'duration_seconds' => $duration,
+            'is_bounce' => $this->pageviews <= 1,
         ]);
     }
 
-    public function markConverted(float $value = 0): void
+    public function markConverted(float $value = 0, ?string $type = null): void
     {
         $this->update([
-            'is_converted' => true,
+            'converted' => true,
             'conversion_value' => $value,
+            'conversion_type' => $type,
         ]);
     }
 
@@ -223,7 +180,7 @@ class CoreSession extends Model
     public function isActive(): bool
     {
         return is_null($this->ended_at) &&
-               $this->last_activity_at >= now()->subMinutes(30);
+               $this->started_at >= now()->subMinutes(30);
     }
 
     public function getDurationMinutes(): float
@@ -234,7 +191,7 @@ class CoreSession extends Model
 
     public function getDurationFormatted(): string
     {
-        $seconds = $this->total_time_seconds ?? $this->started_at->diffInSeconds(now());
+        $seconds = $this->duration_seconds ?? $this->started_at->diffInSeconds(now());
 
         if ($seconds < 60) {
             return $seconds . 's';
@@ -258,7 +215,6 @@ class CoreSession extends Model
         if ($this->gclid) return 'Google Ads';
         if ($this->fbclid) return 'Facebook Ads';
         if ($this->ttclid) return 'TikTok Ads';
-        if ($this->li_fat_id) return 'LinkedIn Ads';
 
         if ($this->utm_source) {
             $source = ucfirst($this->utm_source);
@@ -268,10 +224,13 @@ class CoreSession extends Model
             return $source;
         }
 
+        if ($this->source) {
+            return ucfirst($this->source);
+        }
+
         if ($this->referrer) {
             $host = parse_url($this->referrer, PHP_URL_HOST);
             if ($host) {
-                // Clean up common referrers
                 $host = preg_replace('/^(www\.|m\.)/', '', $host);
                 return ucfirst(explode('.', $host)[0]);
             }
@@ -284,26 +243,16 @@ class CoreSession extends Model
     {
         $parts = [];
 
-        if ($this->device_brand && $this->device_model) {
-            $parts[] = $this->device_brand . ' ' . $this->device_model;
-        } elseif ($this->device_type) {
+        if ($this->device_type) {
             $parts[] = ucfirst($this->device_type);
         }
 
         if ($this->browser) {
-            $browser = $this->browser;
-            if ($this->browser_version) {
-                $browser .= ' ' . explode('.', $this->browser_version)[0];
-            }
-            $parts[] = $browser;
+            $parts[] = $this->browser;
         }
 
         if ($this->os) {
-            $os = $this->os;
-            if ($this->os_version) {
-                $os .= ' ' . $this->os_version;
-            }
-            $parts[] = $os;
+            $parts[] = $this->os;
         }
 
         return implode(' • ', $parts);
@@ -311,27 +260,26 @@ class CoreSession extends Model
 
     public function getLocation(): string
     {
-        $parts = array_filter([$this->city, $this->region, $this->country_code]);
+        $parts = array_filter([$this->city, $this->country_code]);
         return implode(', ', $parts) ?: 'Unknown';
     }
 
     // Static helpers
-    public static function findOrCreateByToken(string $token, array $attributes = []): self
+    public static function findOrCreateBySessionId(string $sessionId, array $attributes = []): self
     {
         return static::firstOrCreate(
-            ['session_token' => $token],
+            ['session_id' => $sessionId],
             array_merge($attributes, [
                 'started_at' => now(),
-                'last_activity_at' => now(),
-                'page_views' => 0,
-                'events_count' => 0,
+                'pageviews' => 0,
+                'events' => 0,
             ])
         );
     }
 
     public static function getActiveCount(?int $tenantId = null): int
     {
-        $query = static::active()->notBot();
+        $query = static::active();
 
         if ($tenantId) {
             $query->forTenant($tenantId);

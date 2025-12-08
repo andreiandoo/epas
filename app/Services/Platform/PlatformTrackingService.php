@@ -651,52 +651,32 @@ class PlatformTrackingService
         }
 
         // Create new session
-        $sessionToken = $sessionToken ?? Str::uuid()->toString();
+        $sessionId = $sessionToken ?? Str::uuid()->toString();
 
         return CoreSession::create([
-            'session_token' => $sessionToken,
+            'session_id' => $sessionId,
             'tenant_id' => $data['tenant_id'] ?? null,
             'visitor_id' => $data['visitor_id'] ?? null,
             'started_at' => now(),
-            'last_activity_at' => now(),
-            'entry_page' => $data['page_url'] ?? null,
             'landing_page' => $data['page_url'] ?? null,
+            'landing_page_type' => $data['page_type'] ?? null,
+            'source' => $data['source'] ?? null,
+            'medium' => $data['medium'] ?? null,
+            'campaign' => $data['campaign'] ?? null,
             'referrer' => $data['referrer'] ?? null,
             'utm_source' => $data['utm_source'] ?? null,
             'utm_medium' => $data['utm_medium'] ?? null,
             'utm_campaign' => $data['utm_campaign'] ?? null,
-            'utm_term' => $data['utm_term'] ?? null,
-            'utm_content' => $data['utm_content'] ?? null,
             'gclid' => $data['gclid'] ?? null,
             'fbclid' => $data['fbclid'] ?? null,
             'ttclid' => $data['ttclid'] ?? null,
-            'li_fat_id' => $data['li_fat_id'] ?? null,
             'device_type' => $data['device_type'] ?? null,
-            'device_brand' => $data['device_brand'] ?? null,
-            'device_model' => $data['device_model'] ?? null,
             'browser' => $data['browser'] ?? null,
-            'browser_version' => $data['browser_version'] ?? null,
             'os' => $data['os'] ?? null,
-            'os_version' => $data['os_version'] ?? null,
-            'screen_width' => $data['screen_width'] ?? null,
-            'screen_height' => $data['screen_height'] ?? null,
-            'viewport_width' => $data['viewport_width'] ?? null,
-            'viewport_height' => $data['viewport_height'] ?? null,
-            'ip_address' => $data['ip_address'] ?? null,
             'country_code' => $data['country_code'] ?? null,
-            'country_name' => $data['country_name'] ?? null,
-            'region' => $data['region'] ?? null,
             'city' => $data['city'] ?? null,
-            'postal_code' => $data['postal_code'] ?? null,
-            'latitude' => $data['latitude'] ?? null,
-            'longitude' => $data['longitude'] ?? null,
-            'timezone' => $data['timezone'] ?? null,
-            'is_bot' => $data['is_bot'] ?? false,
-            'is_mobile' => $data['is_mobile'] ?? false,
-            'is_tablet' => $data['is_tablet'] ?? false,
-            'is_desktop' => $data['is_desktop'] ?? true,
-            'page_views' => 0,
-            'events_count' => 0,
+            'pageviews' => 0,
+            'events' => 0,
         ]);
     }
 
@@ -874,7 +854,7 @@ class PlatformTrackingService
      */
     public function getRealTimeStats(?int $tenantId = null): array
     {
-        $baseQuery = CoreSession::notBot();
+        $baseQuery = CoreSession::query();
         $eventQuery = CoreCustomerEvent::query();
 
         if ($tenantId) {
@@ -897,7 +877,7 @@ class PlatformTrackingService
             : 0;
 
         // Traffic sources (last 24 hours)
-        $trafficSources = CoreSession::notBot()
+        $trafficSources = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->lastHours(24)
             ->selectRaw("
@@ -905,7 +885,6 @@ class PlatformTrackingService
                     WHEN gclid IS NOT NULL THEN 'Google Ads'
                     WHEN fbclid IS NOT NULL THEN 'Facebook Ads'
                     WHEN ttclid IS NOT NULL THEN 'TikTok Ads'
-                    WHEN li_fat_id IS NOT NULL THEN 'LinkedIn Ads'
                     WHEN utm_source IS NOT NULL THEN CONCAT(UPPER(SUBSTRING(utm_source, 1, 1)), LOWER(SUBSTRING(utm_source, 2)))
                     WHEN referrer IS NOT NULL AND referrer != '' THEN 'Referral'
                     ELSE 'Direct'
@@ -919,7 +898,7 @@ class PlatformTrackingService
             ->toArray();
 
         // Device breakdown
-        $devices = CoreSession::notBot()
+        $devices = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->today()
             ->selectRaw('device_type, COUNT(*) as count')
@@ -956,12 +935,12 @@ class PlatformTrackingService
             ->get();
 
         // Geographic distribution
-        $geoDistribution = CoreSession::notBot()
+        $geoDistribution = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->today()
             ->whereNotNull('country_code')
-            ->selectRaw('country_code, country_name, COUNT(*) as visitors')
-            ->groupBy('country_code', 'country_name')
+            ->selectRaw('country_code, COUNT(*) as visitors')
+            ->groupBy('country_code')
             ->orderByDesc('visitors')
             ->limit(10)
             ->get();

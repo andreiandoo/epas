@@ -19,7 +19,7 @@ class ConversionFunnelChart extends ChartWidget
     protected function getData(): array
     {
         // Get today's funnel data
-        $sessions = CoreSession::notBot()->today()->count();
+        $sessions = CoreSession::today()->count();
         $pageViews = CoreCustomerEvent::pageViews()->today()->distinct('session_id')->count('session_id');
         $addToCarts = CoreCustomerEvent::where('event_type', 'add_to_cart')->today()->distinct('session_id')->count('session_id');
         $checkouts = CoreCustomerEvent::where('event_type', 'begin_checkout')->today()->distinct('session_id')->count('session_id');

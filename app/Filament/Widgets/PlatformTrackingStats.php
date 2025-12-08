@@ -19,12 +19,12 @@ class PlatformTrackingStats extends StatsOverviewWidget
     protected function getStats(): array
     {
         // Active visitors (real-time)
-        $activeVisitors = CoreSession::notBot()->active()->count();
+        $activeVisitors = CoreSession::active()->count();
 
         // Today's stats
         $todayConversions = CoreCustomerEvent::purchases()->today()->count();
         $todayRevenue = CoreCustomerEvent::purchases()->today()->sum('conversion_value');
-        $todaySessions = CoreSession::notBot()->today()->count();
+        $todaySessions = CoreSession::today()->count();
 
         // Yesterday comparison
         $yesterdayConversions = CoreCustomerEvent::purchases()
@@ -131,7 +131,7 @@ class PlatformTrackingStats extends StatsOverviewWidget
         $trend = [];
         for ($i = 5; $i >= 0; $i--) {
             $hour = now()->subHours($i);
-            $count = CoreSession::notBot()
+            $count = CoreSession::query()
                 ->whereBetween('started_at', [$hour->copy()->startOfHour(), $hour->copy()->endOfHour()])
                 ->count();
             $trend[] = $count;

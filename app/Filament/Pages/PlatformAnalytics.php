@@ -29,7 +29,7 @@ class PlatformAnalytics extends Page
         // Only refresh real-time metrics (active visitors, recent conversions)
         $tenantId = $this->tenantId ? (int) $this->tenantId : null;
 
-        $this->activeVisitors = CoreSession::notBot()
+        $this->activeVisitors = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->active()
             ->count();
@@ -101,7 +101,7 @@ class PlatformAnalytics extends Page
         $tenantId = $this->tenantId ? (int) $this->tenantId : null;
 
         // Base queries with optional tenant filter
-        $sessionQuery = CoreSession::notBot()
+        $sessionQuery = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->whereBetween('started_at', [$startDate, $endDate]);
 
@@ -135,13 +135,13 @@ class PlatformAnalytics extends Page
             : 0;
 
         // === ACTIVE VISITORS (real-time) ===
-        $this->activeVisitors = CoreSession::notBot()
+        $this->activeVisitors = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->active()
             ->count();
 
         // === TRAFFIC SOURCES ===
-        $this->trafficSources = CoreSession::notBot()
+        $this->trafficSources = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->whereBetween('started_at', [$startDate, $endDate])
             ->selectRaw("
@@ -149,7 +149,6 @@ class PlatformAnalytics extends Page
                     WHEN gclid IS NOT NULL THEN 'Google Ads'
                     WHEN fbclid IS NOT NULL THEN 'Facebook Ads'
                     WHEN ttclid IS NOT NULL THEN 'TikTok Ads'
-                    WHEN li_fat_id IS NOT NULL THEN 'LinkedIn Ads'
                     WHEN utm_source IS NOT NULL THEN CONCAT(UPPER(SUBSTRING(utm_source, 1, 1)), LOWER(SUBSTRING(utm_source, 2)))
                     WHEN referrer IS NOT NULL AND referrer != '' THEN 'Referral'
                     ELSE 'Direct'
@@ -248,19 +247,19 @@ class PlatformAnalytics extends Page
             ->toArray();
 
         // === GEO DATA ===
-        $this->geoData = CoreSession::notBot()
+        $this->geoData = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->whereBetween('started_at', [$startDate, $endDate])
             ->whereNotNull('country_code')
-            ->selectRaw('country_code, country_name, COUNT(*) as visitors')
-            ->groupBy('country_code', 'country_name')
+            ->selectRaw('country_code, COUNT(*) as visitors')
+            ->groupBy('country_code')
             ->orderByDesc('visitors')
             ->limit(10)
             ->get()
             ->toArray();
 
         // === DEVICE DATA ===
-        $this->deviceData = CoreSession::notBot()
+        $this->deviceData = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->whereBetween('started_at', [$startDate, $endDate])
             ->selectRaw("device_type, COUNT(*) as count")
@@ -307,7 +306,7 @@ class PlatformAnalytics extends Page
 
     public static function getNavigationBadge(): ?string
     {
-        $active = CoreSession::notBot()->active()->count();
+        $active = CoreSession::active()->count();
         return $active > 0 ? (string) $active : null;
     }
 

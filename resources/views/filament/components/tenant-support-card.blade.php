@@ -1,5 +1,5 @@
-<div class="p-4 m-0 border-t border-gray-200 fi-sidebar-footer dark:border-gray-700">
-    <div class="flex flex-col gap-y-2 bg-primary-50 dark:bg-primary-900/20">
+<div class="m-0 border-t border-gray-200 fi-sidebar-footer dark:border-gray-700">
+    <div class="flex flex-col p-4 gap-y-2 bg-primary-50 dark:bg-primary-900/20">
         <div class="flex items-start gap-3">
             <div class="flex-shrink-0">
                 <svg class="w-5 h-5 text-primary-700 dark:text-primary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">

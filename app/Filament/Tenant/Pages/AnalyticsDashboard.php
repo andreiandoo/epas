@@ -248,7 +248,6 @@ class AnalyticsDashboard extends Page
 
         // Get real active sessions
         $activeUsers = CoreSession::active()
-            ->notBot()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->count();
 
@@ -257,9 +256,9 @@ class AnalyticsDashboard extends Page
         for ($i = 29; $i >= 0; $i--) {
             $start = now()->subMinutes($i + 1);
             $end = now()->subMinutes($i);
-            $count = CoreSession::notBot()
+            $count = CoreSession::query()
                 ->when($tenantId, fn($q) => $q->forTenant($tenantId))
-                ->whereBetween('last_activity_at', [$start, $end])
+                ->whereBetween('started_at', [$start, $end])
                 ->count();
             $usersPerMinute[] = $count;
         }
@@ -288,12 +287,12 @@ class AnalyticsDashboard extends Page
         $recentEvents = $this->getRealRecentEvents();
 
         // Today's totals
-        $todayUsers = CoreSession::notBot()
+        $todayUsers = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->whereDate('started_at', today())
             ->count();
 
-        $yesterdayUsers = CoreSession::notBot()
+        $yesterdayUsers = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->whereDate('started_at', today()->subDay())
             ->count();
@@ -303,12 +302,12 @@ class AnalyticsDashboard extends Page
             : 0;
 
         // Sessions today
-        $todaySessions = CoreSession::notBot()
+        $todaySessions = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->whereDate('started_at', today())
             ->count();
 
-        $yesterdaySessions = CoreSession::notBot()
+        $yesterdaySessions = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->whereDate('started_at', today()->subDay())
             ->count();
@@ -318,10 +317,10 @@ class AnalyticsDashboard extends Page
             : 0;
 
         // Bounce rate (sessions with only 1 page view)
-        $bouncedSessions = CoreSession::notBot()
+        $bouncedSessions = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->whereDate('started_at', today())
-            ->where('bounce', true)
+            ->where('is_bounce', true)
             ->count();
 
         $bounceRate = $todaySessions > 0
@@ -329,11 +328,11 @@ class AnalyticsDashboard extends Page
             : 0;
 
         // Average session duration
-        $avgDurationSeconds = CoreSession::notBot()
+        $avgDurationSeconds = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->whereDate('started_at', today())
-            ->whereNotNull('total_time_seconds')
-            ->avg('total_time_seconds') ?? 0;
+            ->whereNotNull('duration_seconds')
+            ->avg('duration_seconds') ?? 0;
 
         $minutes = floor($avgDurationSeconds / 60);
         $seconds = $avgDurationSeconds % 60;
@@ -420,7 +419,7 @@ class AnalyticsDashboard extends Page
             default => 30,
         };
 
-        $sources = CoreSession::notBot()
+        $sources = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->where('started_at', '>=', now()->subDays($days))
             ->selectRaw("
@@ -428,7 +427,6 @@ class AnalyticsDashboard extends Page
                     WHEN gclid IS NOT NULL THEN 'Google Ads'
                     WHEN fbclid IS NOT NULL THEN 'Facebook'
                     WHEN ttclid IS NOT NULL THEN 'TikTok'
-                    WHEN li_fat_id IS NOT NULL THEN 'LinkedIn'
                     WHEN utm_source = 'google' AND utm_medium = 'organic' THEN 'Organic Search'
                     WHEN utm_source IS NOT NULL THEN CONCAT(UPPER(SUBSTRING(utm_source, 1, 1)), LOWER(SUBSTRING(utm_source, 2)))
                     WHEN referrer IS NOT NULL AND referrer != '' THEN 'Referral'
@@ -515,18 +513,18 @@ class AnalyticsDashboard extends Page
             'MD' => '🇲🇩', 'HR' => '🇭🇷', 'SI' => '🇸🇮', 'BA' => '🇧🇦',
         ];
 
-        return CoreSession::notBot()
+        return CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->where('started_at', '>=', now()->subDays($days))
             ->whereNotNull('country_code')
-            ->selectRaw('country_code, country_name, COUNT(*) as users')
-            ->groupBy('country_code', 'country_name')
+            ->selectRaw('country_code, COUNT(*) as users')
+            ->groupBy('country_code')
             ->orderByDesc('users')
             ->limit(5)
             ->get()
             ->map(fn($country) => [
                 'flag' => $flags[$country->country_code] ?? '🏳️',
-                'name' => $country->country_name ?: $country->country_code,
+                'name' => $country->country_code,
                 'users' => $country->users,
             ])
             ->toArray();
