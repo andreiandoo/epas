@@ -101,6 +101,13 @@ Route::post('/webhooks/tenant-payment/{tenant}/{processor}', [TenantPaymentWebho
     ->name('webhooks.tenant-payment')
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
+// WhatsApp Cloud API Webhook (Meta/Facebook)
+Route::get('/webhooks/whatsapp-cloud', [\App\Http\Controllers\Webhooks\WhatsAppCloudWebhookController::class, 'verify'])
+    ->name('webhooks.whatsapp-cloud.verify');
+Route::post('/webhooks/whatsapp-cloud', [\App\Http\Controllers\Webhooks\WhatsAppCloudWebhookController::class, 'handle'])
+    ->name('webhooks.whatsapp-cloud.handle')
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
 // Microservices Store Routes
 Route::prefix('store')->middleware(['web'])->group(function () {
     // Public pages

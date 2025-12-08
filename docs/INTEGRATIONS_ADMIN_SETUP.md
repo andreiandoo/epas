@@ -69,7 +69,7 @@ Tenants click "Connect to Slack" → OAuth flow → Select workspace → Done. N
 
 ---
 
-## 2. Discord Integration
+## 2. Discord Integration - NEFINALIZATA (nu mi s-a verificat contul)
 
 ### Admin Setup Steps
 
@@ -139,6 +139,7 @@ Tenants click "Connect to Discord" → OAuth flow → Select server → Bot join
 5. **Submit for Verification (Production)**
    - For production, submit OAuth consent screen for Google verification
    - This can take 2-6 weeks
+   === Nu am gasit unde sa fac asta
 
 6. **Deploy & Verify**
    - Run migrations: `php artisan migrate`
@@ -195,7 +196,7 @@ Tenants click "Connect Microsoft 365" → Microsoft OAuth → Grant permissions 
 
 ---
 
-## 5. Salesforce Integration
+## 5. Salesforce Integration - NEFINALIZATA (cannot create app, sunt pe plan free)
 
 ### Admin Setup Steps
 
@@ -231,7 +232,7 @@ Tenants click "Connect to Salesforce" → Salesforce login → Authorize → Don
 
 ---
 
-## 6. HubSpot Integration
+## 6. HubSpot Integration NETERMINATA (Use the HubSpot CLI to get started)
 
 ### Admin Setup Steps
 
@@ -327,7 +328,7 @@ Tenants enter their Twilio Account SID and Auth Token. They can get these from t
 
 ---
 
-## 9. Zapier Integration
+## 9. Zapier Integration - NETERMINATA
 
 ### Admin Setup Steps
 
