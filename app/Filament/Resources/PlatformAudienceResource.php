@@ -30,7 +30,7 @@ class PlatformAudienceResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::active()->count() ?: null;
+        return static::getModel()::count() ?: null;
     }
 
     public static function form(Schema $schema): Schema
