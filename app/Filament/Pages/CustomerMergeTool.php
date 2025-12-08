@@ -17,7 +17,7 @@ class CustomerMergeTool extends Page implements HasForms
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrows-right-left';
 
-    protected static string $view = 'filament.pages.customer-merge-tool';
+    protected string $view = 'filament.pages.customer-merge-tool';
 
     protected static ?string $navigationLabel = 'Merge Customers';
 
