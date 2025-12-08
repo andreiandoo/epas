@@ -196,7 +196,7 @@ class InvoiceResource extends Resource
                         ->deletable()
                         ->reorderable(),
                 ])->columns(2),
-        ]);
+        ])->columns(1);
     }
 
     public static function table(Table $table): Table

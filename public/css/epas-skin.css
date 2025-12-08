@@ -4247,3 +4247,14 @@ html.dark {
 
 /* Divide Utilities */
 .divide-y > * + * { border-top-width: 1px; }
+
+
+
+/* Invoices Pages Specific */
+h1.invoice-company-name,
+.invoice-details-section,
+.invoice-tenant-billing-section h3,
+.invoice-table tbody td,
+.invoice-total-row {
+  color: #111827;
+}

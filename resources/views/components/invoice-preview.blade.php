@@ -199,7 +199,6 @@
 }
 
 .invoice-preview-content {
-    padding: 2rem;
     overflow-y: auto;
     flex: 1;
     font-size: 0.875rem;
@@ -210,9 +209,8 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 2rem;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #e5e7eb;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
 }
 
 .invoice-logo {
@@ -251,8 +249,7 @@
 }
 
 .invoice-details-section {
-    margin-bottom: 2rem;
-    padding: 1rem;
+    padding: 1.5rem;
     background: #f9fafb;
     border-radius: 8px;
 }
@@ -268,7 +265,6 @@
 }
 
 .invoice-amount-section {
-    margin-bottom: 2rem;
 }
 
 .invoice-table {
@@ -304,7 +300,7 @@
 
 .invoice-total-row {
     background: #f9fafb;
-    border-top: 2px solid #e5e7eb;
+    border-top: 1px solid #e5e7eb;
 }
 
 .invoice-banking-section {
