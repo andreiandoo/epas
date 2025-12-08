@@ -11,7 +11,7 @@ class ChurnRiskStats extends StatsOverviewWidget
 {
     protected static ?int $sort = 10;
 
-    protected static ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '60s';
 
     protected function getStats(): array
     {

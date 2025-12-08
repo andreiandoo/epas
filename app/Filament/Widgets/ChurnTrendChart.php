@@ -12,7 +12,7 @@ class ChurnTrendChart extends ChartWidget
 
     protected static ?int $sort = 11;
 
-    protected static ?string $pollingInterval = '300s';
+    protected ?string $pollingInterval = '300s';
 
     protected int|string|array $columnSpan = 'full';
 

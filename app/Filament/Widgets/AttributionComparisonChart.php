@@ -13,7 +13,7 @@ class AttributionComparisonChart extends ChartWidget
 
     protected static ?int $sort = 13;
 
-    protected static ?string $pollingInterval = '600s';
+    protected ?string $pollingInterval = '600s';
 
     protected int|string|array $columnSpan = 'full';
 

@@ -12,7 +12,7 @@ class ConversionFunnelChart extends ChartWidget
 
     protected static ?int $sort = 3;
 
-    protected static ?string $pollingInterval = '60s';
+    protected ?string $pollingInterval = '60s';
 
     protected int|string|array $columnSpan = 'full';
 

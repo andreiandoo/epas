@@ -11,7 +11,7 @@ class RecentPlatformConversions extends BaseWidget
 {
     protected static ?int $sort = 4;
 
-    protected static ?string $pollingInterval = '30s';
+    protected ?string $pollingInterval = '30s';
 
     protected int|string|array $columnSpan = 'full';
 

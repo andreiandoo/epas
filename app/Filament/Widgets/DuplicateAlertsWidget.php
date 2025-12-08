@@ -17,7 +17,7 @@ class DuplicateAlertsWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $pollingInterval = '300s';
+    protected ?string $pollingInterval = '300s';
 
     public function table(Table $table): Table
     {
