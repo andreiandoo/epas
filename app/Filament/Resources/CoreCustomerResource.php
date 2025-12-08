@@ -17,11 +17,11 @@ class CoreCustomerResource extends Resource
 {
     protected static ?string $model = CoreCustomer::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-users';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';
 
     protected static ?string $navigationLabel = 'Customers';
 
-    protected static ?string $navigationGroup = 'Platform Marketing';
+    protected static \UnitEnum|string|null $navigationGroup = 'Platform Marketing';
 
     protected static ?int $navigationSort = 4;
 

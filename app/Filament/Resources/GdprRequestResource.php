@@ -18,11 +18,11 @@ class GdprRequestResource extends Resource
 {
     protected static ?string $model = GdprRequest::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shield-check';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shield-check';
 
     protected static ?string $navigationLabel = 'GDPR Requests';
 
-    protected static ?string $navigationGroup = 'Platform Marketing';
+    protected static \UnitEnum|string|null $navigationGroup = 'Platform Marketing';
 
     protected static ?int $navigationSort = 9;
 

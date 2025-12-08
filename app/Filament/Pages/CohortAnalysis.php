@@ -10,13 +10,13 @@ use Livewire\Attributes\Url;
 
 class CohortAnalysis extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-table-cells';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-table-cells';
 
     protected static string $view = 'filament.pages.cohort-analysis';
 
     protected static ?string $navigationLabel = 'Cohort Analysis';
 
-    protected static ?string $navigationGroup = 'Platform Marketing';
+    protected static \UnitEnum|string|null $navigationGroup = 'Platform Marketing';
 
     protected static ?int $navigationSort = 6;
 

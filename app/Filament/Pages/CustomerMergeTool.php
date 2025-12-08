@@ -15,13 +15,13 @@ class CustomerMergeTool extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrows-right-left';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-arrows-right-left';
 
     protected static string $view = 'filament.pages.customer-merge-tool';
 
     protected static ?string $navigationLabel = 'Merge Customers';
 
-    protected static ?string $navigationGroup = 'Platform Marketing';
+    protected static \UnitEnum|string|null $navigationGroup = 'Platform Marketing';
 
     protected static ?int $navigationSort = 8;
 

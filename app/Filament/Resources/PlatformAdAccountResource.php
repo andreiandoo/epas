@@ -14,11 +14,11 @@ class PlatformAdAccountResource extends Resource
 {
     protected static ?string $model = PlatformAdAccount::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-megaphone';
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-megaphone';
 
     protected static ?string $navigationLabel = 'Platform Ad Accounts';
 
-    protected static ?string $navigationGroup = 'Platform Marketing';
+    protected static \UnitEnum|string|null $navigationGroup = 'Platform Marketing';
 
     protected static ?int $navigationSort = 1;
 
