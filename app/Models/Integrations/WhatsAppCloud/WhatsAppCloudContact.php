@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WhatsAppCloudContact extends Model
 {
+    protected $table = 'whatsapp_cloud_contacts';
+
     protected $fillable = [
         'connection_id',
         'wa_id',

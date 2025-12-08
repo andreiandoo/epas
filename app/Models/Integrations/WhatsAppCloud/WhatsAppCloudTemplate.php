@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WhatsAppCloudTemplate extends Model
 {
+    protected $table = 'whatsapp_cloud_templates';
+
     protected $fillable = [
         'connection_id',
         'template_name',

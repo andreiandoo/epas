@@ -11,6 +11,8 @@ class WhatsAppCloudConnection extends Model
 {
     use SoftDeletes;
 
+    protected $table = 'whatsapp_cloud_connections';
+
     protected $fillable = [
         'tenant_id',
         'phone_number_id',

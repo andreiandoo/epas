@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WhatsAppCloudWebhookEvent extends Model
 {
+    protected $table = 'whatsapp_cloud_webhook_events';
+
     protected $fillable = [
         'connection_id',
         'event_type',

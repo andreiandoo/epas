@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WhatsAppCloudMessage extends Model
 {
+    protected $table = 'whatsapp_cloud_messages';
+
     protected $fillable = [
         'connection_id',
         'wamid',
