@@ -156,7 +156,16 @@ class PlatformAnalytics extends Page
                 COUNT(*) as sessions,
                 COUNT(DISTINCT visitor_id) as visitors
             ")
-            ->groupBy('source')
+            ->groupByRaw("
+                CASE
+                    WHEN gclid IS NOT NULL THEN 'Google Ads'
+                    WHEN fbclid IS NOT NULL THEN 'Facebook Ads'
+                    WHEN ttclid IS NOT NULL THEN 'TikTok Ads'
+                    WHEN utm_source IS NOT NULL THEN CONCAT(UPPER(SUBSTRING(utm_source, 1, 1)), LOWER(SUBSTRING(utm_source, 2)))
+                    WHEN referrer IS NOT NULL AND referrer != '' THEN 'Referral'
+                    ELSE 'Direct'
+                END
+            ")
             ->orderByDesc('sessions')
             ->limit(10)
             ->get()
@@ -178,7 +187,16 @@ class PlatformAnalytics extends Page
                 COUNT(*) as conversions,
                 SUM(event_value) as revenue
             ")
-            ->groupBy('source')
+            ->groupByRaw("
+                CASE
+                    WHEN gclid IS NOT NULL THEN 'Google Ads'
+                    WHEN fbclid IS NOT NULL THEN 'Facebook Ads'
+                    WHEN ttclid IS NOT NULL THEN 'TikTok Ads'
+                    WHEN li_fat_id IS NOT NULL THEN 'LinkedIn Ads'
+                    WHEN utm_source IS NOT NULL THEN CONCAT(UPPER(SUBSTRING(utm_source, 1, 1)), LOWER(SUBSTRING(utm_source, 2)))
+                    ELSE 'Direct/Organic'
+                END
+            ")
             ->orderByDesc('revenue')
             ->get()
             ->toArray();

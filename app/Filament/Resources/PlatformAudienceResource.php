@@ -5,12 +5,16 @@ namespace App\Filament\Resources;
 use App\Models\Platform\PlatformAudience;
 use App\Models\Platform\PlatformAdAccount;
 use App\Services\Platform\PlatformTrackingService;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Forms;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\Action;
 use Filament\Notifications\Notification;
 
 class PlatformAudienceResource extends Resource
@@ -409,12 +413,12 @@ class PlatformAudienceResource extends Resource
                             ->send();
                     }),
 
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->emptyStateHeading('No Audiences')

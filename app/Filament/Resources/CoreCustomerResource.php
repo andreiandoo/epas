@@ -3,13 +3,15 @@
 namespace App\Filament\Resources;
 
 use App\Models\Platform\CoreCustomer;
+use Filament\Actions\Action;
+use Filament\Actions\ViewAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkAction;
 use Filament\Forms;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\BulkAction;
 use Filament\Infolists;
 use Illuminate\Support\Facades\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -215,8 +217,8 @@ class CoreCustomerResource extends Resource
                     ->query(fn ($query) => $query->where('last_seen_at', '>=', now()->subDays(30))),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make()
+                ViewAction::make(),
+                EditAction::make()
                     ->label('Edit Tags'),
             ])
             ->headerActions([
