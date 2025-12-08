@@ -84,11 +84,14 @@ class PackageGeneratorService
         $baseContent = file_get_contents($preBuiltFile);
 
         // Prepare tenant configuration
+        // Use dedicated tenant_client.api_url config to ensure API calls go to core platform
+        $apiBaseUrl = config('services.tenant_client.api_url');
+
         $config = [
             'tenantId' => $package->tenant_id,
             'domainId' => $package->domain_id,
             'domain' => $package->domain->domain,
-            'apiEndpoint' => config('app.url') . '/api/tenant-client',
+            'apiEndpoint' => rtrim($apiBaseUrl, '/') . '/api/tenant-client',
             'modules' => $package->enabled_modules,
             'theme' => $package->theme_config,
             'version' => $package->version,

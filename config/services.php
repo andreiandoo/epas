@@ -77,4 +77,20 @@ return [
         'api_url' => env('ESIGNATURE_API_URL', 'https://api.opensignlabs.com/v1'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Tenant Client Configuration
+    |--------------------------------------------------------------------------
+    |
+    | API URL for tenant client packages. This MUST be set to the core
+    | platform URL (e.g., https://core.tixello.com) so that tenant websites
+    | can make API calls back to the platform.
+    |
+    | Falls back to APP_URL if not set.
+    |
+    */
+    'tenant_client' => [
+        'api_url' => env('TENANT_CLIENT_API_URL', env('APP_URL', 'http://localhost')),
+    ],
+
 ];

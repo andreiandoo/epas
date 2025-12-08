@@ -419,22 +419,22 @@ class AnalyticsDashboard extends Page
             default => 30,
         };
 
+        $caseExpression = "
+            CASE
+                WHEN gclid IS NOT NULL THEN 'Google Ads'
+                WHEN fbclid IS NOT NULL THEN 'Facebook'
+                WHEN ttclid IS NOT NULL THEN 'TikTok'
+                WHEN utm_source = 'google' AND utm_medium = 'organic' THEN 'Organic Search'
+                WHEN utm_source IS NOT NULL THEN CONCAT(UPPER(SUBSTRING(utm_source, 1, 1)), LOWER(SUBSTRING(utm_source, 2)))
+                WHEN referrer IS NOT NULL AND referrer != '' THEN 'Referral'
+                ELSE 'Direct'
+            END";
+
         $sources = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->where('started_at', '>=', now()->subDays($days))
-            ->selectRaw("
-                CASE
-                    WHEN gclid IS NOT NULL THEN 'Google Ads'
-                    WHEN fbclid IS NOT NULL THEN 'Facebook'
-                    WHEN ttclid IS NOT NULL THEN 'TikTok'
-                    WHEN utm_source = 'google' AND utm_medium = 'organic' THEN 'Organic Search'
-                    WHEN utm_source IS NOT NULL THEN CONCAT(UPPER(SUBSTRING(utm_source, 1, 1)), LOWER(SUBSTRING(utm_source, 2)))
-                    WHEN referrer IS NOT NULL AND referrer != '' THEN 'Referral'
-                    ELSE 'Direct'
-                END as source,
-                COUNT(*) as count
-            ")
-            ->groupBy('source')
+            ->selectRaw("{$caseExpression} as source, COUNT(*) as count")
+            ->groupByRaw($caseExpression)
             ->orderByDesc('count')
             ->get();
 

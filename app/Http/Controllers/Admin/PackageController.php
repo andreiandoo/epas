@@ -201,8 +201,9 @@ class PackageController extends Controller
 
     private function generateIndexHtml(Tenant $tenant, Domain $domain, TenantPackage $package): string
     {
-        // Use local script path for self-contained ZIP package
-        $apiEndpoint = config('app.url') . '/api/tenant-client';
+        // Use dedicated tenant_client.api_url to ensure correct API endpoint
+        $apiBaseUrl = config('services.tenant_client.api_url');
+        $apiEndpoint = rtrim($apiBaseUrl, '/') . '/api/tenant-client';
 
         return <<<HTML
 <!DOCTYPE html>

@@ -407,6 +407,8 @@ export class Router {
         this.addRoute('/thank-you/:orderNumber', this.renderThankYou.bind(this));
         this.addRoute('/login', this.renderLogin.bind(this));
         this.addRoute('/register', this.renderRegister.bind(this));
+        this.addRoute('/forgot-password', this.renderForgotPassword.bind(this));
+        this.addRoute('/reset-password', this.renderResetPassword.bind(this));
         this.addRoute('/account', this.renderAccount.bind(this));
         this.addRoute('/account/orders', this.renderOrders.bind(this));
         this.addRoute('/account/orders/:id', this.renderOrderDetail.bind(this));
@@ -581,16 +583,16 @@ export class Router {
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <h1 class="text-3xl font-bold text-gray-900 mb-6">Evenimente</h1>
 
-                <!-- Calendar Timeline -->
-                <div id="events-calendar" class="space-y-4 mb-8">
+                <!-- Calendar Timeline (Sticky) -->
+                <div id="events-calendar" class="space-y-4 mb-8 sticky top-0 z-20 bg-white pt-4 pb-2 -mt-4 border-b border-gray-100">
                     <!-- Year/Month Navigator -->
                     <div id="month-navigator" class="flex items-center gap-2 flex-wrap">
                         <div class="animate-pulse bg-gray-200 h-8 w-full rounded"></div>
                     </div>
 
-                    <!-- Days Strip -->
+                    <!-- Days Strip (hidden scrollbar, drag to scroll) -->
                     <div class="relative">
-                        <div id="days-scroller" class="flex items-stretch gap-6 overflow-x-auto pb-2 whitespace-nowrap" style="scrollbar-width: thin;">
+                        <div id="days-scroller" class="days-scroller flex items-stretch gap-6 overflow-x-scroll pb-2 whitespace-nowrap cursor-grab active:cursor-grabbing" style="scrollbar-width: none; -ms-overflow-style: none;">
                             <div class="animate-pulse flex gap-2">
                                 ${Array(14).fill(0).map(() => '<div class="w-14 h-16 bg-gray-200 rounded-xl shrink-0"></div>').join('')}
                             </div>
@@ -896,37 +898,38 @@ export class Router {
             }
 
             container.innerHTML = `
-                <ul class="space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     ${filtered.map(event => `
-                        <li class="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-3 hover:border-gray-400 hover:bg-gray-50 transition cursor-pointer"
-                            onclick="window.location.href='/event/${event.slug}'">
+                        <a href="/event/${event.slug}" class="group block rounded-xl border border-gray-200 bg-white overflow-hidden hover:border-gray-400 hover:shadow-md transition">
                             ${event.posterUrl ? `
-                                <div class="h-16 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-gray-100">
-                                    <img src="${event.posterUrl}" alt="${event.title}" class="h-full w-full object-cover" loading="lazy">
+                                <div class="aspect-[3/4] w-full overflow-hidden bg-gray-100">
+                                    <img src="${event.posterUrl}" alt="${event.title}" class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
                                 </div>
-                            ` : ''}
-                            <div class="flex-1 flex items-start justify-between gap-3">
-                                <div>
-                                    <p class="text-sm font-semibold text-gray-900">${event.title}</p>
-                                    <p class="mt-0.5 text-xs text-gray-500">
-                                        ${event.venue}${event.city ? ` · ${event.city}` : ''}
-                                    </p>
-                                    <div class="mt-1 flex flex-wrap gap-1">
-                                        ${event.isCancelled ? `<span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-700">Anulat</span>` : ''}
-                                        ${!event.isCancelled && event.isPostponed ? `<span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">Amânat</span>` : ''}
-                                        ${event.isSoldOut ? `<span class="inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-800">Sold-out</span>` : ''}
-                                        ${event.doorSalesOnly ? `<span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">Doar la intrare</span>` : ''}
+                            ` : `
+                                <div class="aspect-[3/4] w-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                    <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                </div>
+                            `}
+                            <div class="p-3">
+                                <p class="font-semibold text-gray-900 text-sm line-clamp-2 leading-tight">${event.title}</p>
+                                <p class="mt-1 text-xs text-gray-500 truncate">${event.venue}${event.city ? ` · ${event.city}` : ''}</p>
+                                <div class="mt-2 flex items-center justify-between">
+                                    <div class="text-xs text-gray-600">
+                                        <span class="font-medium">${event.dateLabel}</span>
+                                        <span class="text-gray-400 ml-1">${event.timeLabel}</span>
                                     </div>
+                                    ${event.priceFrom ? `<span class="text-xs font-semibold text-gray-900">${event.priceFrom} RON</span>` : ''}
                                 </div>
-                                <div class="text-right">
-                                    <p class="text-xs font-medium text-gray-700">${event.timeLabel}</p>
-                                    <p class="text-[11px] text-gray-400">${event.dateLabel}</p>
-                                    ${event.priceFrom ? `<p class="mt-1 text-xs text-gray-600">De la <span class="font-semibold">${event.priceFrom} RON</span></p>` : ''}
+                                <div class="mt-2 flex flex-wrap gap-1">
+                                    ${event.isCancelled ? `<span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-700">Anulat</span>` : ''}
+                                    ${!event.isCancelled && event.isPostponed ? `<span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">Amânat</span>` : ''}
+                                    ${event.isSoldOut ? `<span class="inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-800">Sold-out</span>` : ''}
+                                    ${event.doorSalesOnly ? `<span class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">Doar la intrare</span>` : ''}
                                 </div>
                             </div>
-                        </li>
+                        </a>
                     `).join('')}
-                </ul>
+                </div>
             `;
         };
 
@@ -979,6 +982,59 @@ export class Router {
 
         // Scroll to today after render
         setTimeout(scrollToToday, 100);
+
+        // Enable drag-to-scroll on days scroller
+        const scroller = document.getElementById('days-scroller');
+        if (scroller) {
+            // Hide webkit scrollbar
+            const styleId = 'days-scroller-style';
+            if (!document.getElementById(styleId)) {
+                const style = document.createElement('style');
+                style.id = styleId;
+                style.textContent = '.days-scroller::-webkit-scrollbar { display: none; }';
+                document.head.appendChild(style);
+            }
+            let isDown = false;
+            let startX = 0;
+            let scrollLeft = 0;
+
+            scroller.addEventListener('mousedown', (e) => {
+                isDown = true;
+                scroller.classList.add('active');
+                startX = e.pageX - scroller.offsetLeft;
+                scrollLeft = scroller.scrollLeft;
+            });
+
+            scroller.addEventListener('mouseleave', () => {
+                isDown = false;
+                scroller.classList.remove('active');
+            });
+
+            scroller.addEventListener('mouseup', () => {
+                isDown = false;
+                scroller.classList.remove('active');
+            });
+
+            scroller.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - scroller.offsetLeft;
+                const walk = (x - startX) * 2; // Scroll speed multiplier
+                scroller.scrollLeft = scrollLeft - walk;
+            });
+
+            // Touch support for mobile
+            scroller.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].pageX - scroller.offsetLeft;
+                scrollLeft = scroller.scrollLeft;
+            }, { passive: true });
+
+            scroller.addEventListener('touchmove', (e) => {
+                const x = e.touches[0].pageX - scroller.offsetLeft;
+                const walk = (x - startX) * 2;
+                scroller.scrollLeft = scrollLeft - walk;
+            }, { passive: true });
+        }
     }
 
     private async renderEventDetail(params: Record<string, string>): Promise<void> {
@@ -1064,7 +1120,7 @@ export class Router {
                               </div>`
                         }
 
-                        <div id="countdown-container" data-event-date="${displayDate || ''}" data-event-time="${displayStartTime || ''}" data-is-cancelled="${event.is_cancelled || false}" data-is-postponed="${event.is_postponed || false}"></div>
+                        ${!isPastEvent ? `<div id="countdown-container" data-event-date="${displayDate || ''}" data-event-time="${displayStartTime || ''}" data-is-cancelled="${event.is_cancelled || false}" data-is-postponed="${event.is_postponed || false}"></div>` : ''}
 
                         ${event.is_cancelled ? `
                         <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -2465,7 +2521,10 @@ export class Router {
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                         </div>
                         <div>
-                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Parolă</label>
+                            <div class="flex justify-between items-center mb-1">
+                                <label for="password" class="block text-sm font-medium text-gray-700">Parolă</label>
+                                <a href="/forgot-password" class="text-xs text-primary hover:text-blue-700">Ai uitat parola?</a>
+                            </div>
                             <input type="password" id="password" required
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                         </div>
@@ -2559,11 +2618,22 @@ export class Router {
                             <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Parolă</label>
                             <input type="password" id="password" required minlength="8"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                            <!-- Password Strength Meter -->
+                            <div id="password-strength" class="mt-2">
+                                <div class="flex gap-1 mb-1">
+                                    <div id="strength-bar-1" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                    <div id="strength-bar-2" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                    <div id="strength-bar-3" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                    <div id="strength-bar-4" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                </div>
+                                <p id="strength-text" class="text-xs text-gray-500"></p>
+                            </div>
                         </div>
                         <div>
                             <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Confirmă parola</label>
                             <input type="password" id="password_confirmation" required
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                            <p id="password-match" class="mt-1 text-xs hidden"></p>
                         </div>
                         <button type="submit" id="register-btn" class="w-full px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
                             Creează cont
@@ -2575,6 +2645,89 @@ export class Router {
                 </div>
             </div>
         `;
+
+        // Password strength meter
+        const passwordInput = document.getElementById('password') as HTMLInputElement;
+        const confirmInput = document.getElementById('password_confirmation') as HTMLInputElement;
+        const strengthText = document.getElementById('strength-text');
+        const matchText = document.getElementById('password-match');
+        const bars = [
+            document.getElementById('strength-bar-1'),
+            document.getElementById('strength-bar-2'),
+            document.getElementById('strength-bar-3'),
+            document.getElementById('strength-bar-4'),
+        ];
+
+        const checkPasswordStrength = (password: string): { score: number; text: string; color: string } => {
+            let score = 0;
+            if (password.length >= 8) score++;
+            if (password.length >= 12) score++;
+            if (/[A-Z]/.test(password)) score++;
+            if (/[a-z]/.test(password)) score++;
+            if (/[0-9]/.test(password)) score++;
+            if (/[^A-Za-z0-9]/.test(password)) score++;
+
+            if (score <= 2) return { score: 1, text: 'Foarte slabă', color: 'bg-red-500' };
+            if (score <= 3) return { score: 2, text: 'Slabă', color: 'bg-orange-500' };
+            if (score <= 4) return { score: 3, text: 'Medie', color: 'bg-yellow-500' };
+            if (score <= 5) return { score: 4, text: 'Puternică', color: 'bg-green-500' };
+            return { score: 4, text: 'Foarte puternică', color: 'bg-green-600' };
+        };
+
+        const updateStrengthMeter = () => {
+            const password = passwordInput?.value || '';
+            if (!password) {
+                bars.forEach(bar => bar?.classList.replace(bar.className.split(' ').find(c => c.startsWith('bg-')) || 'bg-gray-200', 'bg-gray-200'));
+                if (strengthText) strengthText.textContent = '';
+                return;
+            }
+
+            const { score, text, color } = checkPasswordStrength(password);
+            bars.forEach((bar, i) => {
+                if (bar) {
+                    const currentBg = Array.from(bar.classList).find(c => c.startsWith('bg-'));
+                    if (currentBg) bar.classList.remove(currentBg);
+                    bar.classList.add(i < score ? color : 'bg-gray-200');
+                }
+            });
+            if (strengthText) {
+                strengthText.textContent = text;
+                strengthText.className = `text-xs ${color.replace('bg-', 'text-')}`;
+            }
+        };
+
+        const checkPasswordMatch = () => {
+            const password = passwordInput?.value || '';
+            const confirm = confirmInput?.value || '';
+            if (!confirm) {
+                matchText?.classList.add('hidden');
+                confirmInput?.classList.remove('border-red-300', 'border-green-300');
+                return;
+            }
+
+            matchText?.classList.remove('hidden');
+            if (password === confirm) {
+                if (matchText) {
+                    matchText.textContent = '✓ Parolele coincid';
+                    matchText.className = 'mt-1 text-xs text-green-600';
+                }
+                confirmInput?.classList.remove('border-red-300');
+                confirmInput?.classList.add('border-green-300');
+            } else {
+                if (matchText) {
+                    matchText.textContent = '✗ Parolele nu coincid';
+                    matchText.className = 'mt-1 text-xs text-red-600';
+                }
+                confirmInput?.classList.remove('border-green-300');
+                confirmInput?.classList.add('border-red-300');
+            }
+        };
+
+        passwordInput?.addEventListener('input', () => {
+            updateStrengthMeter();
+            checkPasswordMatch();
+        });
+        confirmInput?.addEventListener('input', checkPasswordMatch);
 
         // Setup form handler
         const form = document.getElementById('register-form');
@@ -2625,6 +2778,276 @@ export class Router {
                 }
                 btn.disabled = false;
                 btn.textContent = 'Creează cont';
+            }
+        });
+    }
+
+    private renderForgotPassword(): void {
+        // Redirect if already logged in
+        if (this.isAuthenticated()) {
+            this.navigate('/account');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="min-h-[60vh] flex items-center justify-center px-4">
+                <div class="max-w-md w-full space-y-8">
+                    <div class="text-center">
+                        <h1 class="text-3xl font-bold text-gray-900">Resetează parola</h1>
+                        <p class="mt-2 text-gray-600">Introdu adresa de email pentru a primi un link de resetare</p>
+                    </div>
+                    <div id="forgot-success" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg"></div>
+                    <div id="forgot-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"></div>
+                    <form id="forgot-form" class="space-y-6">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" id="email" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        </div>
+                        <button type="submit" id="forgot-btn" class="w-full px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
+                            Trimite link de resetare
+                        </button>
+                    </form>
+                    <p class="text-center text-gray-600">
+                        <a href="/login" class="text-primary hover:text-blue-700 font-medium">← Înapoi la conectare</a>
+                    </p>
+                </div>
+            </div>
+        `;
+
+        const form = document.getElementById('forgot-form');
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = (document.getElementById('email') as HTMLInputElement).value;
+            const errorEl = document.getElementById('forgot-error');
+            const successEl = document.getElementById('forgot-success');
+            const btn = document.getElementById('forgot-btn') as HTMLButtonElement;
+
+            btn.disabled = true;
+            btn.textContent = 'Se trimite...';
+            errorEl?.classList.add('hidden');
+            successEl?.classList.add('hidden');
+
+            try {
+                const result = await this.postApi('/auth/forgot-password', { email });
+                if (result.success) {
+                    if (successEl) {
+                        successEl.textContent = 'Dacă adresa de email există în sistem, vei primi un link de resetare.';
+                        successEl.classList.remove('hidden');
+                    }
+                    (document.getElementById('email') as HTMLInputElement).value = '';
+                } else {
+                    throw new Error(result.message || 'Eroare la trimitere');
+                }
+            } catch (error: any) {
+                console.error('Forgot password error:', error);
+                if (errorEl) {
+                    errorEl.textContent = error.message || 'Eroare la trimiterea emailului';
+                    errorEl.classList.remove('hidden');
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Trimite link de resetare';
+            }
+        });
+    }
+
+    private renderResetPassword(): void {
+        // Redirect if already logged in
+        if (this.isAuthenticated()) {
+            this.navigate('/account');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        // Get token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const email = urlParams.get('email');
+
+        if (!token || !email) {
+            content.innerHTML = `
+                <div class="min-h-[60vh] flex items-center justify-center px-4">
+                    <div class="text-center">
+                        <h1 class="text-2xl font-bold text-red-600 mb-4">Link invalid</h1>
+                        <p class="text-gray-600 mb-4">Linkul de resetare este invalid sau a expirat.</p>
+                        <a href="/forgot-password" class="text-primary hover:text-blue-700">Solicită un nou link</a>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        content.innerHTML = `
+            <div class="min-h-[60vh] flex items-center justify-center px-4">
+                <div class="max-w-md w-full space-y-8">
+                    <div class="text-center">
+                        <h1 class="text-3xl font-bold text-gray-900">Setează parola nouă</h1>
+                        <p class="mt-2 text-gray-600">Introdu noua parolă pentru contul tău</p>
+                    </div>
+                    <div id="reset-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg"></div>
+                    <form id="reset-form" class="space-y-6">
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Parolă nouă</label>
+                            <input type="password" id="password" required minlength="8"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                            <div id="password-strength" class="mt-2">
+                                <div class="flex gap-1 mb-1">
+                                    <div id="strength-bar-1" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                    <div id="strength-bar-2" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                    <div id="strength-bar-3" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                    <div id="strength-bar-4" class="h-1 flex-1 rounded bg-gray-200"></div>
+                                </div>
+                                <p id="strength-text" class="text-xs text-gray-500"></p>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">Confirmă parola</label>
+                            <input type="password" id="password_confirmation" required
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
+                            <p id="password-match" class="mt-1 text-xs hidden"></p>
+                        </div>
+                        <button type="submit" id="reset-btn" class="w-full px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
+                            Resetează parola
+                        </button>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        // Password strength meter (reuse same logic)
+        const passwordInput = document.getElementById('password') as HTMLInputElement;
+        const confirmInput = document.getElementById('password_confirmation') as HTMLInputElement;
+        const strengthText = document.getElementById('strength-text');
+        const matchText = document.getElementById('password-match');
+        const bars = [
+            document.getElementById('strength-bar-1'),
+            document.getElementById('strength-bar-2'),
+            document.getElementById('strength-bar-3'),
+            document.getElementById('strength-bar-4'),
+        ];
+
+        const checkPasswordStrength = (password: string): { score: number; text: string; color: string } => {
+            let score = 0;
+            if (password.length >= 8) score++;
+            if (password.length >= 12) score++;
+            if (/[A-Z]/.test(password)) score++;
+            if (/[a-z]/.test(password)) score++;
+            if (/[0-9]/.test(password)) score++;
+            if (/[^A-Za-z0-9]/.test(password)) score++;
+
+            if (score <= 2) return { score: 1, text: 'Foarte slabă', color: 'bg-red-500' };
+            if (score <= 3) return { score: 2, text: 'Slabă', color: 'bg-orange-500' };
+            if (score <= 4) return { score: 3, text: 'Medie', color: 'bg-yellow-500' };
+            if (score <= 5) return { score: 4, text: 'Puternică', color: 'bg-green-500' };
+            return { score: 4, text: 'Foarte puternică', color: 'bg-green-600' };
+        };
+
+        const updateStrengthMeter = () => {
+            const password = passwordInput?.value || '';
+            if (!password) {
+                bars.forEach(bar => {
+                    const currentBg = Array.from(bar?.classList || []).find(c => c.startsWith('bg-'));
+                    if (currentBg && bar) bar.classList.replace(currentBg, 'bg-gray-200');
+                });
+                if (strengthText) strengthText.textContent = '';
+                return;
+            }
+
+            const { score, text, color } = checkPasswordStrength(password);
+            bars.forEach((bar, i) => {
+                if (bar) {
+                    const currentBg = Array.from(bar.classList).find(c => c.startsWith('bg-'));
+                    if (currentBg) bar.classList.remove(currentBg);
+                    bar.classList.add(i < score ? color : 'bg-gray-200');
+                }
+            });
+            if (strengthText) {
+                strengthText.textContent = text;
+                strengthText.className = `text-xs ${color.replace('bg-', 'text-')}`;
+            }
+        };
+
+        const checkPasswordMatch = () => {
+            const password = passwordInput?.value || '';
+            const confirm = confirmInput?.value || '';
+            if (!confirm) {
+                matchText?.classList.add('hidden');
+                confirmInput?.classList.remove('border-red-300', 'border-green-300');
+                return;
+            }
+
+            matchText?.classList.remove('hidden');
+            if (password === confirm) {
+                if (matchText) {
+                    matchText.textContent = '✓ Parolele coincid';
+                    matchText.className = 'mt-1 text-xs text-green-600';
+                }
+                confirmInput?.classList.remove('border-red-300');
+                confirmInput?.classList.add('border-green-300');
+            } else {
+                if (matchText) {
+                    matchText.textContent = '✗ Parolele nu coincid';
+                    matchText.className = 'mt-1 text-xs text-red-600';
+                }
+                confirmInput?.classList.remove('border-green-300');
+                confirmInput?.classList.add('border-red-300');
+            }
+        };
+
+        passwordInput?.addEventListener('input', () => {
+            updateStrengthMeter();
+            checkPasswordMatch();
+        });
+        confirmInput?.addEventListener('input', checkPasswordMatch);
+
+        // Form submit handler
+        const form = document.getElementById('reset-form');
+        form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = passwordInput.value;
+            const password_confirmation = confirmInput.value;
+            const errorEl = document.getElementById('reset-error');
+            const btn = document.getElementById('reset-btn') as HTMLButtonElement;
+
+            if (password !== password_confirmation) {
+                if (errorEl) {
+                    errorEl.textContent = 'Parolele nu coincid';
+                    errorEl.classList.remove('hidden');
+                }
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Se resetează...';
+            errorEl?.classList.add('hidden');
+
+            try {
+                const result = await this.postApi('/auth/reset-password', {
+                    token,
+                    email,
+                    password,
+                    password_confirmation,
+                });
+                if (result.success) {
+                    ToastNotification.show('✓ Parola a fost resetată cu succes!', 'success');
+                    this.navigate('/login');
+                } else {
+                    throw new Error(result.message || 'Eroare la resetare');
+                }
+            } catch (error: any) {
+                console.error('Reset password error:', error);
+                if (errorEl) {
+                    errorEl.textContent = error.message || 'Eroare la resetarea parolei';
+                    errorEl.classList.remove('hidden');
+                }
+                btn.disabled = false;
+                btn.textContent = 'Resetează parola';
             }
         });
     }
