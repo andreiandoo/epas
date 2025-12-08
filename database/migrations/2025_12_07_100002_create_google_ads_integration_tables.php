@@ -41,7 +41,7 @@ return new class extends Migration
             $table->json('value_settings')->nullable()->comment('Currency, default value, etc.');
             $table->timestamps();
 
-            $table->unique(['connection_id', 'conversion_action_id']);
+            $table->unique(['connection_id', 'conversion_action_id'], 'gads_conv_actions_conn_action_unique');
         });
 
         // Conversion events sent to Google Ads
