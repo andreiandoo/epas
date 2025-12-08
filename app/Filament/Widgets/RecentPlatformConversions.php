@@ -15,7 +15,7 @@ class RecentPlatformConversions extends BaseWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $heading = 'Recent Conversions';
+    protected ?string $heading = 'Recent Conversions';
 
     public function table(Table $table): Table
     {

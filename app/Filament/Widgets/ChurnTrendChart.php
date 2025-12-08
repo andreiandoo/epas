@@ -8,7 +8,7 @@ use Illuminate\Support\Carbon;
 
 class ChurnTrendChart extends ChartWidget
 {
-    protected static ?string $heading = 'Churn Risk Distribution (Last 12 Weeks)';
+    protected ?string $heading = 'Churn Risk Distribution (Last 12 Weeks)';
 
     protected static ?int $sort = 11;
 

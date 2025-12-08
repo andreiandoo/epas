@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class DuplicateAlertsWidget extends BaseWidget
 {
-    protected static ?string $heading = 'Potential Duplicate Customers';
+    protected ?string $heading = 'Potential Duplicate Customers';
 
     protected static ?int $sort = 12;
 

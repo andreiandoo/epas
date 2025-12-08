@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Cache;
 
 class AttributionComparisonChart extends ChartWidget
 {
-    protected static ?string $heading = 'Attribution Model Comparison (Last 30 Days)';
+    protected ?string $heading = 'Attribution Model Comparison (Last 30 Days)';
 
     protected static ?int $sort = 13;
 

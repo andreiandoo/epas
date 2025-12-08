@@ -8,7 +8,7 @@ use Filament\Widgets\ChartWidget;
 
 class ConversionFunnelChart extends ChartWidget
 {
-    protected static ?string $heading = 'Conversion Funnel (Today)';
+    protected ?string $heading = 'Conversion Funnel (Today)';
 
     protected static ?int $sort = 3;
 

@@ -11,7 +11,7 @@ use Filament\Notifications\Notification;
 
 class HighValueAtRiskCustomers extends BaseWidget
 {
-    protected static ?string $heading = 'High-Value Customers at Risk';
+    protected ?string $heading = 'High-Value Customers at Risk';
 
     protected static ?int $sort = 14;
 

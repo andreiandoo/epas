@@ -9,7 +9,7 @@ use Filament\Widgets\TableWidget as BaseWidget;
 
 class RecentEventsTable extends BaseWidget
 {
-    protected static ?string $heading = 'Recent Events';
+    protected ?string $heading = 'Recent Events';
     protected static ?int $sort = 4;
     protected int | string | array $columnSpan = 1;
 
