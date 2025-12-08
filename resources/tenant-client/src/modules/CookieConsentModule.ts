@@ -3,6 +3,12 @@
  *
  * GDPR-compliant cookie consent management for tenant websites.
  * Displays a customizable cookie banner and manages consent preferences.
+ *
+ * Features:
+ * - Multi-language support (English, Romanian)
+ * - Google Consent Mode v2 integration
+ * - Tenant-configurable settings
+ * - Full GDPR compliance with audit trail
  */
 
 import { ApiClient } from '../core/ApiClient';
@@ -16,14 +22,21 @@ export interface ConsentPreferences {
     preferences: boolean;
 }
 
-interface ConsentConfig {
+export interface ConsentConfig {
     position?: 'bottom' | 'top' | 'center';
     theme?: 'light' | 'dark' | 'auto';
+    language?: 'en' | 'ro' | 'auto';
     showSettingsLink?: boolean;
     privacyPolicyUrl?: string;
     cookiePolicyUrl?: string;
     consentVersion?: string;
     expiryDays?: number;
+    // Tenant customization
+    bannerTitle?: string;
+    bannerDescription?: string;
+    primaryColor?: string;
+    // Google Consent Mode
+    enableGoogleConsentMode?: boolean;
 }
 
 interface StoredConsent {
@@ -33,9 +46,79 @@ interface StoredConsent {
     visitorId: string;
 }
 
+interface Translations {
+    title: string;
+    description: string;
+    acceptAll: string;
+    rejectAll: string;
+    customize: string;
+    savePreferences: string;
+    cookiePreferences: string;
+    necessaryCookies: string;
+    necessaryDescription: string;
+    analyticsCookies: string;
+    analyticsDescription: string;
+    marketingCookies: string;
+    marketingDescription: string;
+    preferenceCookies: string;
+    preferenceDescription: string;
+    privacyPolicy: string;
+    cookiePolicy: string;
+}
+
+// Translation dictionaries
+const translations: Record<string, Translations> = {
+    en: {
+        title: 'We use cookies',
+        description: 'We use cookies to improve your experience on our site. By clicking "Accept All", you consent to the use of all cookies. You can also customize your preferences.',
+        acceptAll: 'Accept All',
+        rejectAll: 'Reject All',
+        customize: 'Customize',
+        savePreferences: 'Save Preferences',
+        cookiePreferences: 'Cookie Preferences',
+        necessaryCookies: 'Necessary Cookies',
+        necessaryDescription: 'Required for the website to function. Cannot be disabled.',
+        analyticsCookies: 'Analytics Cookies',
+        analyticsDescription: 'Help us understand how visitors interact with our website.',
+        marketingCookies: 'Marketing Cookies',
+        marketingDescription: 'Used to deliver relevant advertisements and track ad performance.',
+        preferenceCookies: 'Preference Cookies',
+        preferenceDescription: 'Remember your settings and preferences for a better experience.',
+        privacyPolicy: 'Privacy Policy',
+        cookiePolicy: 'Cookie Policy',
+    },
+    ro: {
+        title: 'Folosim cookie-uri',
+        description: 'Folosim cookie-uri pentru a îmbunătăți experiența dumneavoastră pe site-ul nostru. Apăsând "Acceptă toate", consimțiți la utilizarea tuturor cookie-urilor. Puteți personaliza preferințele.',
+        acceptAll: 'Acceptă toate',
+        rejectAll: 'Refuză toate',
+        customize: 'Personalizează',
+        savePreferences: 'Salvează preferințele',
+        cookiePreferences: 'Preferințe cookie-uri',
+        necessaryCookies: 'Cookie-uri necesare',
+        necessaryDescription: 'Necesare pentru funcționarea site-ului. Nu pot fi dezactivate.',
+        analyticsCookies: 'Cookie-uri de analiză',
+        analyticsDescription: 'Ne ajută să înțelegem cum interacționează vizitatorii cu site-ul nostru.',
+        marketingCookies: 'Cookie-uri de marketing',
+        marketingDescription: 'Utilizate pentru a livra reclame relevante și a urmări performanța.',
+        preferenceCookies: 'Cookie-uri de preferințe',
+        preferenceDescription: 'Rețin setările și preferințele pentru o experiență mai bună.',
+        privacyPolicy: 'Politica de confidențialitate',
+        cookiePolicy: 'Politica de cookie-uri',
+    },
+};
+
 const STORAGE_KEY = 'tixello_cookie_consent';
 const VISITOR_ID_KEY = 'tixello_visitor_id';
 const CONSENT_VERSION = '1.0';
+
+// Declare gtag for TypeScript
+declare global {
+    interface Window {
+        gtag?: (...args: any[]) => void;
+        dataLayer?: any[];
+    }
+}
 
 export class CookieConsentModule {
     name = 'cookie-consent';
@@ -45,9 +128,11 @@ export class CookieConsentModule {
     private config: ConsentConfig = {
         position: 'bottom',
         theme: 'light',
+        language: 'auto',
         showSettingsLink: true,
         consentVersion: CONSENT_VERSION,
         expiryDays: 365,
+        enableGoogleConsentMode: true,
     };
     private consent: ConsentPreferences = {
         necessary: true,
@@ -59,6 +144,8 @@ export class CookieConsentModule {
     private bannerElement: HTMLElement | null = null;
     private settingsModalElement: HTMLElement | null = null;
     private isInitialized: boolean = false;
+    private currentLanguage: string = 'en';
+    private t: Translations = translations.en;
 
     private constructor() {}
 
@@ -69,12 +156,40 @@ export class CookieConsentModule {
         return CookieConsentModule.instance;
     }
 
+    /**
+     * Configure the consent module with tenant settings
+     */
+    configure(config: Partial<ConsentConfig>): void {
+        this.config = { ...this.config, ...config };
+        this.detectLanguage();
+
+        // If already initialized, update the banner
+        if (this.bannerElement) {
+            this.bannerElement.innerHTML = this.getBannerHTML();
+            this.bindBannerEvents();
+        }
+    }
+
     async init(apiClient: ApiClient, eventBus: EventBus, tixelloConfig?: TixelloConfig): Promise<void> {
         if (this.isInitialized) return;
 
         this.apiClient = apiClient;
         this.eventBus = eventBus;
         this.visitorId = this.getOrCreateVisitorId();
+
+        // Apply config from TixelloConfig if available
+        if (tixelloConfig?.site?.language) {
+            this.config.language = tixelloConfig.site.language as 'en' | 'ro' | 'auto';
+        }
+        if (tixelloConfig?.theme?.primaryColor) {
+            this.config.primaryColor = tixelloConfig.theme.primaryColor;
+        }
+
+        // Detect language
+        this.detectLanguage();
+
+        // Initialize Google Consent Mode with defaults (denied)
+        this.initGoogleConsentMode();
 
         // Check for existing consent
         const storedConsent = this.getStoredConsent();
@@ -83,6 +198,7 @@ export class CookieConsentModule {
             // Valid consent exists
             this.consent = storedConsent.preferences;
             this.emitConsentUpdate();
+            this.updateGoogleConsentMode();
         } else {
             // No consent or outdated version - show banner
             this.showBanner();
@@ -94,7 +210,77 @@ export class CookieConsentModule {
         }
 
         this.isInitialized = true;
-        console.log('Cookie Consent module initialized');
+        console.log(`Cookie Consent module initialized (${this.currentLanguage})`);
+    }
+
+    /**
+     * Detect and set the current language
+     */
+    private detectLanguage(): void {
+        let lang = this.config.language || 'auto';
+
+        if (lang === 'auto') {
+            // Try to detect from browser/document
+            const browserLang = navigator.language?.substring(0, 2) || 'en';
+            const htmlLang = document.documentElement.lang?.substring(0, 2);
+            lang = htmlLang || browserLang;
+        }
+
+        // Fall back to English if language not supported
+        this.currentLanguage = translations[lang] ? lang : 'en';
+        this.t = translations[this.currentLanguage];
+    }
+
+    /**
+     * Initialize Google Consent Mode v2 with default denied state
+     */
+    private initGoogleConsentMode(): void {
+        if (!this.config.enableGoogleConsentMode) return;
+
+        // Initialize dataLayer if not exists
+        window.dataLayer = window.dataLayer || [];
+
+        // Define gtag function if not exists
+        if (!window.gtag) {
+            window.gtag = function() {
+                window.dataLayer!.push(arguments);
+            };
+        }
+
+        // Set default consent state (denied until user accepts)
+        window.gtag('consent', 'default', {
+            'analytics_storage': 'denied',
+            'ad_storage': 'denied',
+            'ad_user_data': 'denied',
+            'ad_personalization': 'denied',
+            'functionality_storage': 'denied',
+            'personalization_storage': 'denied',
+            'security_storage': 'granted', // Always granted for necessary cookies
+        });
+
+        console.log('Google Consent Mode v2: Initialized with defaults');
+    }
+
+    /**
+     * Update Google Consent Mode based on current consent state
+     */
+    private updateGoogleConsentMode(): void {
+        if (!this.config.enableGoogleConsentMode || !window.gtag) return;
+
+        window.gtag('consent', 'update', {
+            'analytics_storage': this.consent.analytics ? 'granted' : 'denied',
+            'ad_storage': this.consent.marketing ? 'granted' : 'denied',
+            'ad_user_data': this.consent.marketing ? 'granted' : 'denied',
+            'ad_personalization': this.consent.marketing ? 'granted' : 'denied',
+            'functionality_storage': this.consent.preferences ? 'granted' : 'denied',
+            'personalization_storage': this.consent.preferences ? 'granted' : 'denied',
+        });
+
+        console.log('Google Consent Mode v2: Updated', {
+            analytics: this.consent.analytics,
+            marketing: this.consent.marketing,
+            preferences: this.consent.preferences,
+        });
     }
 
     /**
@@ -119,6 +305,24 @@ export class CookieConsentModule {
     }
 
     /**
+     * Change language dynamically
+     */
+    setLanguage(lang: 'en' | 'ro'): void {
+        this.config.language = lang;
+        this.detectLanguage();
+
+        // Update existing UI
+        if (this.bannerElement) {
+            this.bannerElement.innerHTML = this.getBannerHTML();
+            this.bindBannerEvents();
+        }
+        if (this.settingsModalElement) {
+            this.settingsModalElement.innerHTML = this.getSettingsHTML();
+            this.bindSettingsEvents();
+        }
+    }
+
+    /**
      * Withdraw all consent
      */
     async withdrawConsent(): Promise<void> {
@@ -131,6 +335,7 @@ export class CookieConsentModule {
 
         this.saveConsent('reject_all');
         this.emitConsentUpdate();
+        this.updateGoogleConsentMode();
 
         // Sync withdrawal with server
         if (this.apiClient) {
@@ -227,6 +432,8 @@ export class CookieConsentModule {
                 };
                 // Update local storage
                 this.saveConsent('update');
+                // Update Google Consent Mode
+                this.updateGoogleConsentMode();
             }
         } catch (error) {
             console.warn('Failed to sync consent from server:', error);
@@ -266,25 +473,36 @@ export class CookieConsentModule {
     }
 
     private getBannerHTML(): string {
+        const title = this.config.bannerTitle || this.t.title;
+        const description = this.config.bannerDescription || this.t.description;
+
+        let policyLinks = '';
+        if (this.config.privacyPolicyUrl) {
+            policyLinks += `<a href="${this.config.privacyPolicyUrl}" target="_blank" rel="noopener">${this.t.privacyPolicy}</a>`;
+        }
+        if (this.config.cookiePolicyUrl) {
+            if (policyLinks) policyLinks += ' | ';
+            policyLinks += `<a href="${this.config.cookiePolicyUrl}" target="_blank" rel="noopener">${this.t.cookiePolicy}</a>`;
+        }
+
         return `
             <div class="tixello-consent-content">
                 <div class="tixello-consent-text">
-                    <p class="tixello-consent-title">We use cookies</p>
+                    <p class="tixello-consent-title">${title}</p>
                     <p class="tixello-consent-description">
-                        We use cookies to improve your experience on our site. By clicking "Accept All", you consent to the use of all cookies.
-                        You can also customize your preferences.
-                        ${this.config.privacyPolicyUrl ? `<a href="${this.config.privacyPolicyUrl}" target="_blank" rel="noopener">Privacy Policy</a>` : ''}
+                        ${description}
+                        ${policyLinks ? `<br><span class="tixello-consent-links">${policyLinks}</span>` : ''}
                     </p>
                 </div>
                 <div class="tixello-consent-actions">
                     <button class="tixello-consent-btn tixello-consent-btn-secondary" id="tixello-consent-customize">
-                        Customize
+                        ${this.t.customize}
                     </button>
                     <button class="tixello-consent-btn tixello-consent-btn-outline" id="tixello-consent-reject">
-                        Reject All
+                        ${this.t.rejectAll}
                     </button>
                     <button class="tixello-consent-btn tixello-consent-btn-primary" id="tixello-consent-accept">
-                        Accept All
+                        ${this.t.acceptAll}
                     </button>
                 </div>
             </div>
@@ -337,6 +555,7 @@ export class CookieConsentModule {
         this.saveConsent('accept_all');
         this.hideBanner();
         this.emitConsentUpdate();
+        this.updateGoogleConsentMode();
     }
 
     private rejectAll(): void {
@@ -350,11 +569,14 @@ export class CookieConsentModule {
         this.saveConsent('reject_all');
         this.hideBanner();
         this.emitConsentUpdate();
+        this.updateGoogleConsentMode();
     }
 
     private showSettingsModal(): void {
         if (this.settingsModalElement) {
             this.settingsModalElement.style.display = 'flex';
+            // Update checkbox states
+            this.updateSettingsCheckboxes();
             return;
         }
 
@@ -365,6 +587,16 @@ export class CookieConsentModule {
 
         document.body.appendChild(this.settingsModalElement);
         this.bindSettingsEvents();
+    }
+
+    private updateSettingsCheckboxes(): void {
+        const analyticsToggle = document.getElementById('tixello-toggle-analytics') as HTMLInputElement;
+        const marketingToggle = document.getElementById('tixello-toggle-marketing') as HTMLInputElement;
+        const preferencesToggle = document.getElementById('tixello-toggle-preferences') as HTMLInputElement;
+
+        if (analyticsToggle) analyticsToggle.checked = this.consent.analytics;
+        if (marketingToggle) marketingToggle.checked = this.consent.marketing;
+        if (preferencesToggle) preferencesToggle.checked = this.consent.preferences;
     }
 
     private hideSettingsModal(): void {
@@ -378,15 +610,15 @@ export class CookieConsentModule {
             <div class="tixello-settings-backdrop" id="tixello-settings-backdrop"></div>
             <div class="tixello-settings-modal">
                 <div class="tixello-settings-header">
-                    <h2>Cookie Preferences</h2>
+                    <h2>${this.t.cookiePreferences}</h2>
                     <button class="tixello-settings-close" id="tixello-settings-close">&times;</button>
                 </div>
                 <div class="tixello-settings-body">
                     <div class="tixello-settings-category">
                         <div class="tixello-settings-category-header">
                             <div>
-                                <h3>Necessary Cookies</h3>
-                                <p>Required for the website to function. Cannot be disabled.</p>
+                                <h3>${this.t.necessaryCookies}</h3>
+                                <p>${this.t.necessaryDescription}</p>
                             </div>
                             <label class="tixello-toggle tixello-toggle-disabled">
                                 <input type="checkbox" checked disabled>
@@ -398,8 +630,8 @@ export class CookieConsentModule {
                     <div class="tixello-settings-category">
                         <div class="tixello-settings-category-header">
                             <div>
-                                <h3>Analytics Cookies</h3>
-                                <p>Help us understand how visitors interact with our website.</p>
+                                <h3>${this.t.analyticsCookies}</h3>
+                                <p>${this.t.analyticsDescription}</p>
                             </div>
                             <label class="tixello-toggle">
                                 <input type="checkbox" id="tixello-toggle-analytics" ${this.consent.analytics ? 'checked' : ''}>
@@ -411,8 +643,8 @@ export class CookieConsentModule {
                     <div class="tixello-settings-category">
                         <div class="tixello-settings-category-header">
                             <div>
-                                <h3>Marketing Cookies</h3>
-                                <p>Used to deliver relevant advertisements and track ad performance.</p>
+                                <h3>${this.t.marketingCookies}</h3>
+                                <p>${this.t.marketingDescription}</p>
                             </div>
                             <label class="tixello-toggle">
                                 <input type="checkbox" id="tixello-toggle-marketing" ${this.consent.marketing ? 'checked' : ''}>
@@ -424,8 +656,8 @@ export class CookieConsentModule {
                     <div class="tixello-settings-category">
                         <div class="tixello-settings-category-header">
                             <div>
-                                <h3>Preference Cookies</h3>
-                                <p>Remember your settings and preferences for a better experience.</p>
+                                <h3>${this.t.preferenceCookies}</h3>
+                                <p>${this.t.preferenceDescription}</p>
                             </div>
                             <label class="tixello-toggle">
                                 <input type="checkbox" id="tixello-toggle-preferences" ${this.consent.preferences ? 'checked' : ''}>
@@ -436,10 +668,10 @@ export class CookieConsentModule {
                 </div>
                 <div class="tixello-settings-footer">
                     <button class="tixello-consent-btn tixello-consent-btn-outline" id="tixello-settings-reject-all">
-                        Reject All
+                        ${this.t.rejectAll}
                     </button>
                     <button class="tixello-consent-btn tixello-consent-btn-primary" id="tixello-settings-save">
-                        Save Preferences
+                        ${this.t.savePreferences}
                     </button>
                 </div>
             </div>
@@ -503,6 +735,7 @@ export class CookieConsentModule {
         this.hideSettingsModal();
         this.hideBanner();
         this.emitConsentUpdate();
+        this.updateGoogleConsentMode();
     }
 
     /**
@@ -551,9 +784,16 @@ export class CookieConsentModule {
                 line-height: 1.5;
             }
 
-            .tixello-consent-description a {
+            .tixello-consent-description a,
+            .tixello-consent-links a {
                 color: var(--tixello-primary, #3b82f6);
                 text-decoration: underline;
+            }
+
+            .tixello-consent-links {
+                display: inline-block;
+                margin-top: 0.5rem;
+                font-size: 0.8125rem;
             }
 
             .tixello-consent-actions {
