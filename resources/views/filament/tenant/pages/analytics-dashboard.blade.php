@@ -7,6 +7,10 @@
         $trafficSources = $this->getTrafficSources();
         $pageViews = $this->getTopPages();
         $geoData = $this->getGeographicData();
+        $deviceStats = $this->getDeviceStats();
+        $browserStats = $this->getBrowserStats();
+        $currencySymbol = $this->getCurrencySymbol();
+        $hasTrackingData = $this->hasTrackingData();
     @endphp
 
     <div class="space-y-6">
@@ -16,8 +20,7 @@
                 <div>
                     <h2 class="text-2xl font-bold mb-2">Analytics Dashboard</h2>
                     <p class="text-indigo-100 text-sm max-w-2xl">
-                        Track your sales performance, ticket revenue, and visitor engagement.
-                        Data shown combines your platform sales with simulated traffic data.
+                        Track your sales performance, ticket revenue, and visitor engagement in real-time.
                     </p>
                 </div>
                 <div class="flex items-center gap-3">
@@ -33,20 +36,21 @@
         </div>
 
         {{-- Info Note --}}
+        @if(!$hasTrackingData)
         <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
             <div class="flex gap-3">
                 <x-heroicon-o-information-circle class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                 <div class="text-sm">
-                    <p class="font-medium text-blue-900 dark:text-blue-100">About this dashboard</p>
+                    <p class="font-medium text-blue-900 dark:text-blue-100">Tracking not yet active</p>
                     <p class="text-blue-700 dark:text-blue-300 mt-1">
-                        <strong>Revenue & Orders:</strong> Real data from your platform sales.<br>
-                        <strong>Traffic & Visitors:</strong> Simulated preview. To see real traffic data, configure your tracking pixels in
-                        <a href="{{ route('filament.tenant.pages.tracking-settings') }}" class="underline hover:text-blue-900">Tracking Settings</a>
-                        and view analytics in Google Analytics, Meta Business Suite, or TikTok Ads Manager.
+                        <strong>Revenue & Orders:</strong> Shows real data from your platform sales.<br>
+                        <strong>Traffic & Visitors:</strong> Will show real data once visitors start using your website.
+                        Make sure your website is properly connected and visitors are browsing your site.
                     </p>
                 </div>
             </div>
         </div>
+        @endif
 
         {{-- Main Grid --}}
         <div class="grid grid-cols-12 gap-6">
@@ -54,11 +58,18 @@
             <div class="col-span-12 lg:col-span-4">
                 <div class="bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 rounded-2xl p-6 text-white shadow-xl" wire:poll.10s="refreshRealtime">
                     <div class="flex items-center justify-between mb-6">
-                        <span class="text-purple-100 text-sm font-medium uppercase tracking-wider">Real-time Preview</span>
-                        <span class="flex items-center text-xs text-purple-200 bg-white/10 px-2 py-1 rounded-full">
-                            <span class="w-1.5 h-1.5 rounded-full bg-green-400 mr-1.5 animate-pulse"></span>
-                            DEMO
-                        </span>
+                        <span class="text-purple-100 text-sm font-medium uppercase tracking-wider">Real-time</span>
+                        @if($hasTrackingData)
+                            <span class="flex items-center text-xs text-white bg-green-500/80 px-2 py-1 rounded-full">
+                                <span class="w-1.5 h-1.5 rounded-full bg-white mr-1.5 animate-pulse"></span>
+                                LIVE
+                            </span>
+                        @else
+                            <span class="flex items-center text-xs text-purple-200 bg-white/10 px-2 py-1 rounded-full">
+                                <span class="w-1.5 h-1.5 rounded-full bg-yellow-400 mr-1.5"></span>
+                                No data
+                            </span>
+                        @endif
                     </div>
 
                     <div class="text-center mb-8">
@@ -102,7 +113,11 @@
                 <div class="mt-6 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="font-semibold text-gray-900 dark:text-white">Live Activity</h3>
-                        <span class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">Preview</span>
+                        @if($hasTrackingData)
+                            <span class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded">Live</span>
+                        @else
+                            <span class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">Awaiting data</span>
+                        @endif
                     </div>
                     <div class="space-y-3 max-h-64 overflow-y-auto">
                         @foreach($realtimeData['recent_events'] as $event)
@@ -142,11 +157,11 @@
                         <div class="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-5 text-white shadow-lg">
                             <div class="flex items-center gap-2 mb-3">
                                 <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-                                    <x-heroicon-s-currency-euro class="w-5 h-5" />
+                                    <x-heroicon-s-banknotes class="w-5 h-5" />
                                 </div>
                                 <span class="text-xs text-emerald-100 uppercase tracking-wider">Revenue</span>
                             </div>
-                            <div class="text-3xl font-black">€{{ number_format($metrics['total_revenue'], 0) }}</div>
+                            <div class="text-3xl font-black">{{ $currencySymbol }}{{ number_format($metrics['total_revenue'], 0) }}</div>
                             @if($metrics['revenue_change'] != 0)
                                 <div class="text-xs text-emerald-100 mt-2 flex items-center gap-1">
                                     @if($metrics['revenue_change'] > 0)
@@ -183,16 +198,21 @@
                                 </div>
                                 <span class="text-xs text-purple-100 uppercase tracking-wider">Avg Order</span>
                             </div>
-                            <div class="text-3xl font-black">€{{ number_format($metrics['avg_order_value'], 0) }}</div>
+                            <div class="text-3xl font-black">{{ $currencySymbol }}{{ number_format($metrics['avg_order_value'], 0) }}</div>
                         </div>
                     </div>
                 </div>
 
-                {{-- Traffic Metrics (Demo) --}}
+                {{-- Traffic Metrics --}}
                 <div>
                     <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <x-heroicon-s-sparkles class="w-4 h-4 text-purple-500" />
-                        Traffic Preview (Demo)
+                        @if($hasTrackingData)
+                            <x-heroicon-s-check-badge class="w-4 h-4 text-green-500" />
+                            Traffic Data
+                        @else
+                            <x-heroicon-s-sparkles class="w-4 h-4 text-purple-500" />
+                            Traffic Data (awaiting visitors)
+                        @endif
                     </h3>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -284,7 +304,7 @@
                                         <p class="text-gray-900 dark:text-white font-medium truncate">{{ $event['name'] }}</p>
                                         <p class="text-xs text-gray-500">{{ $event['orders'] }} orders</p>
                                     </div>
-                                    <span class="font-bold text-green-600 dark:text-green-400 ml-2">€{{ number_format($event['revenue'], 0) }}</span>
+                                    <span class="font-bold text-green-600 dark:text-green-400 ml-2">{{ $currencySymbol }}{{ number_format($event['revenue'], 0) }}</span>
                                 </div>
                             @empty
                                 <p class="text-sm text-gray-500 text-center py-4">No sales data yet</p>
@@ -292,11 +312,15 @@
                         </div>
                     </div>
 
-                    {{-- Traffic Sources (Demo) --}}
+                    {{-- Traffic Sources --}}
                     <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="font-semibold text-gray-900 dark:text-white">Traffic Sources</h3>
-                            <span class="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-full">Demo</span>
+                            @if($hasTrackingData && count($trafficSources) > 0)
+                                <span class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">Real</span>
+                            @else
+                                <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 px-2 py-1 rounded-full">No data</span>
+                            @endif
                         </div>
                         <div class="space-y-3">
                             @foreach($trafficSources as $source)
@@ -313,11 +337,15 @@
                         </div>
                     </div>
 
-                    {{-- Geographic (Demo) --}}
+                    {{-- Geographic --}}
                     <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="font-semibold text-gray-900 dark:text-white">Visitors by Country</h3>
-                            <span class="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-full">Demo</span>
+                            @if($hasTrackingData && count($geoData) > 0)
+                                <span class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">Real</span>
+                            @else
+                                <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 px-2 py-1 rounded-full">No data</span>
+                            @endif
                         </div>
                         <div class="space-y-2">
                             @foreach($geoData as $country)
@@ -340,7 +368,11 @@
             <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="font-semibold text-gray-900 dark:text-white">Devices</h3>
-                    <span class="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-full">Demo</span>
+                    @if($deviceStats['hasData'])
+                        <span class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">Real</span>
+                    @else
+                        <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 px-2 py-1 rounded-full">No data</span>
+                    @endif
                 </div>
                 <div class="h-48">
                     <canvas id="devicesChart"></canvas>
@@ -349,7 +381,11 @@
             <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="font-semibold text-gray-900 dark:text-white">Browsers</h3>
-                    <span class="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-full">Demo</span>
+                    @if($browserStats['hasData'])
+                        <span class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">Real</span>
+                    @else
+                        <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 px-2 py-1 rounded-full">No data</span>
+                    @endif
                 </div>
                 <div class="h-48">
                     <canvas id="browsersChart"></canvas>
@@ -375,7 +411,7 @@
                     data: {
                         labels: @json($salesData['labels']),
                         datasets: [{
-                            label: 'Revenue (EUR)',
+                            label: 'Revenue ({{ $currencySymbol }})',
                             data: @json($salesData['revenue']),
                             borderColor: 'rgb(16, 185, 129)',
                             backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -428,10 +464,10 @@
                 new Chart(devicesCtx, {
                     type: 'doughnut',
                     data: {
-                        labels: ['Desktop', 'Mobile', 'Tablet'],
+                        labels: @json($deviceStats['labels']),
                         datasets: [{
-                            data: [58, 35, 7],
-                            backgroundColor: ['rgb(99, 102, 241)', 'rgb(16, 185, 129)', 'rgb(249, 115, 22)'],
+                            data: @json($deviceStats['data']),
+                            backgroundColor: @json($deviceStats['colors']),
                             borderWidth: 0,
                         }]
                     },
@@ -451,10 +487,10 @@
                 new Chart(browsersCtx, {
                     type: 'doughnut',
                     data: {
-                        labels: ['Chrome', 'Safari', 'Firefox', 'Edge', 'Other'],
+                        labels: @json($browserStats['labels']),
                         datasets: [{
-                            data: [64, 18, 8, 6, 4],
-                            backgroundColor: ['rgb(59, 130, 246)', 'rgb(249, 115, 22)', 'rgb(168, 85, 247)', 'rgb(16, 185, 129)', 'rgb(107, 114, 128)'],
+                            data: @json($browserStats['data']),
+                            backgroundColor: @json($browserStats['colors']),
                             borderWidth: 0,
                         }]
                     },

@@ -12,6 +12,10 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Actions;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
 
 class CouponCampaignResource extends Resource
@@ -161,8 +165,8 @@ class CouponCampaignResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('generate_codes')
+                EditAction::make(),
+                Actions\Action::make('generate_codes')
                     ->label('Generate Codes')
                     ->icon('heroicon-o-plus-circle')
                     ->color('success')
@@ -209,8 +213,8 @@ class CouponCampaignResource extends Resource
                     }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

@@ -358,6 +358,7 @@ class AnalyticsDashboard extends Page
     {
         $tenant = auth()->user()->tenant;
         $tenantId = $tenant?->id;
+        $currencySymbol = $this->getCurrencySymbol();
 
         $events = CoreCustomerEvent::with(['session', 'coreCustomer'])
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
@@ -365,7 +366,7 @@ class AnalyticsDashboard extends Page
             ->limit(10)
             ->get();
 
-        return $events->map(function ($event) {
+        return $events->map(function ($event) use ($currencySymbol) {
             $type = match ($event->event_type) {
                 'purchase' => 'purchase',
                 'add_to_cart' => 'cart',
@@ -378,7 +379,7 @@ class AnalyticsDashboard extends Page
             $pageName = $event->page_title ?: basename(parse_url($event->page_url ?? '/', PHP_URL_PATH));
 
             $description = match ($event->event_type) {
-                'purchase' => "Purchased tickets" . ($event->order_total ? " (€" . number_format($event->order_total, 2) . ")" : ""),
+                'purchase' => "Purchased tickets" . ($event->order_total ? " ({$currencySymbol}" . number_format($event->order_total, 2) . ")" : ""),
                 'add_to_cart' => "Added to cart: {$pageName}",
                 'begin_checkout' => "Started checkout",
                 'sign_up' => "New user registration",
@@ -536,5 +537,170 @@ class AnalyticsDashboard extends Page
     public function refreshRealtime(): void
     {
         // This triggers a re-render which will call getRealtimeData() again
+    }
+
+    /**
+     * Get tenant's currency symbol
+     */
+    public function getCurrencySymbol(): string
+    {
+        $tenant = auth()->user()->tenant;
+        $currency = $tenant?->currency ?? 'EUR';
+
+        return match (strtoupper($currency)) {
+            'RON' => 'RON',
+            'USD' => '$',
+            'GBP' => '£',
+            'CHF' => 'CHF',
+            default => '€',
+        };
+    }
+
+    /**
+     * Get device statistics from real tracking data
+     */
+    public function getDeviceStats(): array
+    {
+        $tenant = auth()->user()->tenant;
+        $tenantId = $tenant?->id;
+
+        $days = match ($this->dateRange) {
+            '7d' => 7,
+            '30d' => 30,
+            '90d' => 90,
+            default => 30,
+        };
+
+        $devices = CoreSession::query()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->where('started_at', '>=', now()->subDays($days))
+            ->whereNotNull('device_type')
+            ->selectRaw('device_type, COUNT(*) as count')
+            ->groupBy('device_type')
+            ->get();
+
+        $total = $devices->sum('count') ?: 1;
+
+        $labels = [];
+        $data = [];
+        $colors = [
+            'desktop' => 'rgb(99, 102, 241)',
+            'mobile' => 'rgb(16, 185, 129)',
+            'tablet' => 'rgb(249, 115, 22)',
+        ];
+        $colorValues = [];
+
+        foreach (['desktop', 'mobile', 'tablet'] as $type) {
+            $device = $devices->firstWhere('device_type', $type);
+            $count = $device?->count ?? 0;
+            if ($count > 0 || $devices->count() === 0) {
+                $labels[] = ucfirst($type);
+                $data[] = round(($count / $total) * 100, 1);
+                $colorValues[] = $colors[$type];
+            }
+        }
+
+        // If no data, return demo-like placeholders
+        if (empty($data)) {
+            return [
+                'labels' => ['Desktop', 'Mobile', 'Tablet'],
+                'data' => [0, 0, 0],
+                'colors' => array_values($colors),
+                'hasData' => false,
+            ];
+        }
+
+        return [
+            'labels' => $labels,
+            'data' => $data,
+            'colors' => $colorValues,
+            'hasData' => true,
+        ];
+    }
+
+    /**
+     * Get browser statistics from real tracking data
+     */
+    public function getBrowserStats(): array
+    {
+        $tenant = auth()->user()->tenant;
+        $tenantId = $tenant?->id;
+
+        $days = match ($this->dateRange) {
+            '7d' => 7,
+            '30d' => 30,
+            '90d' => 90,
+            default => 30,
+        };
+
+        $browsers = CoreSession::query()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->where('started_at', '>=', now()->subDays($days))
+            ->whereNotNull('browser')
+            ->where('browser', '!=', '')
+            ->selectRaw('browser, COUNT(*) as count')
+            ->groupBy('browser')
+            ->orderByDesc('count')
+            ->limit(5)
+            ->get();
+
+        $total = $browsers->sum('count') ?: 1;
+
+        $colors = [
+            'chrome' => 'rgb(59, 130, 246)',
+            'safari' => 'rgb(249, 115, 22)',
+            'firefox' => 'rgb(168, 85, 247)',
+            'edge' => 'rgb(16, 185, 129)',
+            'opera' => 'rgb(239, 68, 68)',
+        ];
+        $defaultColors = [
+            'rgb(59, 130, 246)',
+            'rgb(249, 115, 22)',
+            'rgb(168, 85, 247)',
+            'rgb(16, 185, 129)',
+            'rgb(107, 114, 128)',
+        ];
+
+        $labels = [];
+        $data = [];
+        $colorValues = [];
+
+        foreach ($browsers as $index => $browser) {
+            $browserName = ucfirst(strtolower($browser->browser));
+            $labels[] = $browserName;
+            $data[] = round(($browser->count / $total) * 100, 1);
+            $colorValues[] = $colors[strtolower($browser->browser)] ?? $defaultColors[$index] ?? 'rgb(107, 114, 128)';
+        }
+
+        // If no data, return empty state
+        if (empty($data)) {
+            return [
+                'labels' => ['Chrome', 'Safari', 'Firefox', 'Edge', 'Other'],
+                'data' => [0, 0, 0, 0, 0],
+                'colors' => $defaultColors,
+                'hasData' => false,
+            ];
+        }
+
+        return [
+            'labels' => $labels,
+            'data' => $data,
+            'colors' => $colorValues,
+            'hasData' => true,
+        ];
+    }
+
+    /**
+     * Check if we have real tracking data
+     */
+    public function hasTrackingData(): bool
+    {
+        $tenant = auth()->user()->tenant;
+        $tenantId = $tenant?->id;
+
+        return CoreSession::query()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->where('started_at', '>=', now()->subDays(30))
+            ->exists();
     }
 }

@@ -12,6 +12,10 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
@@ -218,8 +222,8 @@ class BlogArticleResource extends Resource
                     ->label('Featured'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('publish')
+                EditAction::make(),
+                Actions\Action::make('publish')
                     ->label('Publish')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
@@ -227,8 +231,8 @@ class BlogArticleResource extends Resource
                     ->action(fn (BlogArticle $record) => $record->publish()),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
