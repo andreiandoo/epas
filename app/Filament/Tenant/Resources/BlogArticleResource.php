@@ -65,95 +65,293 @@ class BlogArticleResource extends Resource
                 Forms\Components\Hidden::make('tenant_id')
                     ->default($tenant?->id),
 
-                SC\Section::make('Article Content')
+                // Two-column layout: Left (2/3) and Right (1/3)
+                SC\Grid::make(3)
                     ->schema([
-                        Forms\Components\TextInput::make("title.{$tenantLanguage}")
-                            ->label('Title')
-                            ->required()
-                            ->maxLength(255)
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
-                                if ($state) $set('slug', Str::slug($state));
-                            }),
+                        // LEFT COLUMN (2/3 width)
+                        SC\Grid::make(1)
+                            ->columnSpan(2)
+                            ->schema([
+                                // Article Content Section
+                                SC\Section::make('Article Content')
+                                    ->schema([
+                                        Forms\Components\TextInput::make("title.{$tenantLanguage}")
+                                            ->label('Title')
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->live(onBlur: true)
+                                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) use ($tenantLanguage) {
+                                                if ($state) {
+                                                    $set('slug', Str::slug($state));
+                                                    // Auto-populate SEO if empty
+                                                    if (!$get("meta_title.{$tenantLanguage}")) {
+                                                        $set("meta_title.{$tenantLanguage}", Str::limit($state, 60));
+                                                    }
+                                                    if (!$get("og_title.{$tenantLanguage}")) {
+                                                        $set("og_title.{$tenantLanguage}", Str::limit($state, 60));
+                                                    }
+                                                }
+                                            }),
 
-                        Forms\Components\TextInput::make('slug')
-                            ->label('Slug')
-                            ->required()
-                            ->maxLength(255)
-                            ->rule('alpha_dash'),
+                                        Forms\Components\TextInput::make('slug')
+                                            ->label('Slug')
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->rule('alpha_dash'),
 
-                        Forms\Components\TextInput::make("subtitle.{$tenantLanguage}")
-                            ->label('Subtitle')
-                            ->maxLength(255),
+                                        Forms\Components\TextInput::make("subtitle.{$tenantLanguage}")
+                                            ->label('Subtitle')
+                                            ->maxLength(255)
+                                            ->columnSpanFull(),
 
-                        Forms\Components\Textarea::make("excerpt.{$tenantLanguage}")
-                            ->label('Excerpt')
-                            ->rows(2)
-                            ->helperText('Short summary for previews'),
+                                        Forms\Components\Textarea::make("excerpt.{$tenantLanguage}")
+                                            ->label('Excerpt')
+                                            ->rows(2)
+                                            ->helperText('Short summary for previews and SEO')
+                                            ->live(onBlur: true)
+                                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) use ($tenantLanguage) {
+                                                if ($state) {
+                                                    // Auto-populate meta description if empty
+                                                    if (!$get("meta_description.{$tenantLanguage}")) {
+                                                        $set("meta_description.{$tenantLanguage}", Str::limit($state, 155));
+                                                    }
+                                                    if (!$get("og_description.{$tenantLanguage}")) {
+                                                        $set("og_description.{$tenantLanguage}", Str::limit($state, 155));
+                                                    }
+                                                }
+                                            })
+                                            ->columnSpanFull(),
 
-                        Forms\Components\RichEditor::make("content.{$tenantLanguage}")
-                            ->label('Content')
-                            ->required()
-                            ->columnSpanFull(),
-                    ])->columns(2),
+                                        Forms\Components\RichEditor::make("content.{$tenantLanguage}")
+                                            ->label('Content')
+                                            ->required()
+                                            ->toolbarButtons([
+                                                'blockquote',
+                                                'bold',
+                                                'bulletList',
+                                                'codeBlock',
+                                                'h2',
+                                                'h3',
+                                                'italic',
+                                                'link',
+                                                'orderedList',
+                                                'redo',
+                                                'strike',
+                                                'underline',
+                                                'undo',
+                                            ])
+                                            ->columnSpanFull(),
+                                    ])->columns(2),
 
-                SC\Section::make('Organization')
-                    ->schema([
-                        Forms\Components\Select::make('category_id')
-                            ->label('Category')
-                            ->options(function () {
-                                $tenant = auth()->user()->tenant;
-                                return BlogCategory::where('tenant_id', $tenant?->id)
-                                    ->get()
-                                    ->mapWithKeys(function ($cat) {
-                                        $lang = $tenant->language ?? $tenant->locale ?? 'en';
-                                        $name = $cat->name[$lang] ?? $cat->name['en'] ?? 'Unnamed';
-                                        return [$cat->id => $name];
-                                    });
-                            })
-                            ->searchable(),
+                                // SEO Section
+                                SC\Section::make('SEO & Meta Tags')
+                                    ->description('Search engine optimization settings')
+                                    ->schema([
+                                        SC\Tabs::make('SEO Tabs')
+                                            ->tabs([
+                                                SC\Tabs\Tab::make('Basic SEO')
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make("meta_title.{$tenantLanguage}")
+                                                            ->label('Meta Title')
+                                                            ->maxLength(60)
+                                                            ->helperText('Recommended: 50-60 characters')
+                                                            ->suffixAction(
+                                                                Forms\Components\Actions\Action::make('generateMetaTitle')
+                                                                    ->icon('heroicon-o-sparkles')
+                                                                    ->action(function (\Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) use ($tenantLanguage) {
+                                                                        $title = $get("title.{$tenantLanguage}");
+                                                                        if ($title) {
+                                                                            $set("meta_title.{$tenantLanguage}", Str::limit($title, 60));
+                                                                        }
+                                                                    })
+                                                            ),
 
-                        Forms\Components\Select::make('status')
-                            ->options([
-                                'draft' => 'Draft',
-                                'published' => 'Published',
-                                'scheduled' => 'Scheduled',
-                                'archived' => 'Archived',
-                            ])
-                            ->default('draft')
-                            ->required(),
+                                                        Forms\Components\Textarea::make("meta_description.{$tenantLanguage}")
+                                                            ->label('Meta Description')
+                                                            ->rows(2)
+                                                            ->maxLength(160)
+                                                            ->helperText('Recommended: 150-160 characters')
+                                                            ->suffixAction(
+                                                                Forms\Components\Actions\Action::make('generateMetaDesc')
+                                                                    ->icon('heroicon-o-sparkles')
+                                                                    ->action(function (\Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) use ($tenantLanguage) {
+                                                                        $excerpt = $get("excerpt.{$tenantLanguage}");
+                                                                        if ($excerpt) {
+                                                                            $set("meta_description.{$tenantLanguage}", Str::limit($excerpt, 155));
+                                                                        }
+                                                                    })
+                                                            ),
 
-                        Forms\Components\DateTimePicker::make('published_at')
-                            ->label('Publish Date'),
+                                                        Forms\Components\TextInput::make('meta_keywords')
+                                                            ->label('Meta Keywords')
+                                                            ->maxLength(255)
+                                                            ->helperText('Comma-separated keywords'),
 
-                        Forms\Components\Toggle::make('is_featured')
-                            ->label('Featured Article'),
-                    ])->columns(2),
+                                                        Forms\Components\TextInput::make('canonical_url')
+                                                            ->label('Canonical URL')
+                                                            ->url()
+                                                            ->maxLength(500)
+                                                            ->helperText('Leave empty to use the article URL'),
+                                                    ])->columns(1),
 
-                SC\Section::make('Featured Image')
-                    ->schema([
-                        Forms\Components\TextInput::make('featured_image_url')
-                            ->label('Image URL')
-                            ->url()
-                            ->maxLength(500),
+                                                SC\Tabs\Tab::make('Open Graph')
+                                                    ->schema([
+                                                        Forms\Components\TextInput::make("og_title.{$tenantLanguage}")
+                                                            ->label('OG Title')
+                                                            ->maxLength(60)
+                                                            ->helperText('Title for social media sharing'),
 
-                        Forms\Components\TextInput::make('featured_image_alt')
-                            ->label('Alt Text')
-                            ->maxLength(255),
-                    ])->columns(2),
+                                                        Forms\Components\Textarea::make("og_description.{$tenantLanguage}")
+                                                            ->label('OG Description')
+                                                            ->rows(2)
+                                                            ->maxLength(200)
+                                                            ->helperText('Description for social media sharing'),
 
-                SC\Section::make('SEO')
-                    ->collapsed()
-                    ->schema([
-                        Forms\Components\TextInput::make("meta_title.{$tenantLanguage}")
-                            ->label('Meta Title')
-                            ->maxLength(70),
+                                                        Forms\Components\TextInput::make('og_image_url')
+                                                            ->label('OG Image URL')
+                                                            ->url()
+                                                            ->maxLength(500)
+                                                            ->helperText('Image for social sharing (1200x630px recommended)'),
 
-                        Forms\Components\Textarea::make("meta_description.{$tenantLanguage}")
-                            ->label('Meta Description')
-                            ->rows(2)
-                            ->maxLength(160),
-                    ])->columns(1),
+                                                        Forms\Components\Select::make('og_type')
+                                                            ->label('OG Type')
+                                                            ->options([
+                                                                'article' => 'Article',
+                                                                'website' => 'Website',
+                                                                'blog' => 'Blog',
+                                                            ])
+                                                            ->default('article'),
+                                                    ])->columns(1),
+
+                                                SC\Tabs\Tab::make('Schema.org')
+                                                    ->schema([
+                                                        Forms\Components\Select::make('schema_type')
+                                                            ->label('Schema Type')
+                                                            ->options([
+                                                                'Article' => 'Article',
+                                                                'BlogPosting' => 'Blog Posting',
+                                                                'NewsArticle' => 'News Article',
+                                                                'TechArticle' => 'Tech Article',
+                                                            ])
+                                                            ->default('BlogPosting'),
+
+                                                        Forms\Components\TextInput::make('schema_author_name')
+                                                            ->label('Author Name')
+                                                            ->maxLength(100),
+
+                                                        Forms\Components\TextInput::make('schema_author_url')
+                                                            ->label('Author URL')
+                                                            ->url()
+                                                            ->maxLength(255),
+
+                                                        Forms\Components\TextInput::make('schema_publisher_name')
+                                                            ->label('Publisher Name')
+                                                            ->maxLength(100)
+                                                            ->default(fn () => $tenant->public_name ?? $tenant->name ?? ''),
+
+                                                        Forms\Components\TextInput::make('schema_publisher_logo')
+                                                            ->label('Publisher Logo URL')
+                                                            ->url()
+                                                            ->maxLength(500),
+                                                    ])->columns(1),
+
+                                                SC\Tabs\Tab::make('Advanced')
+                                                    ->schema([
+                                                        Forms\Components\Select::make('language')
+                                                            ->label('Content Language')
+                                                            ->options([
+                                                                'en' => 'English',
+                                                                'ro' => 'Romanian',
+                                                                'de' => 'German',
+                                                                'fr' => 'French',
+                                                                'es' => 'Spanish',
+                                                                'it' => 'Italian',
+                                                            ])
+                                                            ->default($tenantLanguage),
+
+                                                        Forms\Components\Select::make('robots')
+                                                            ->label('Robots Meta')
+                                                            ->options([
+                                                                'index,follow' => 'Index, Follow (default)',
+                                                                'noindex,follow' => 'No Index, Follow',
+                                                                'index,nofollow' => 'Index, No Follow',
+                                                                'noindex,nofollow' => 'No Index, No Follow',
+                                                            ])
+                                                            ->default('index,follow'),
+
+                                                        Forms\Components\TextInput::make('reading_time_minutes')
+                                                            ->label('Reading Time (minutes)')
+                                                            ->numeric()
+                                                            ->minValue(1)
+                                                            ->helperText('Leave empty for auto-calculation'),
+                                                    ])->columns(1),
+                                            ])
+                                            ->columnSpanFull(),
+                                    ]),
+                            ]),
+
+                        // RIGHT COLUMN (1/3 width)
+                        SC\Grid::make(1)
+                            ->columnSpan(1)
+                            ->schema([
+                                // Organization Section
+                                SC\Section::make('Organization')
+                                    ->schema([
+                                        Forms\Components\Select::make('category_id')
+                                            ->label('Category')
+                                            ->options(function () use ($tenant, $tenantLanguage) {
+                                                return BlogCategory::where('tenant_id', $tenant?->id)
+                                                    ->get()
+                                                    ->mapWithKeys(function ($cat) use ($tenantLanguage) {
+                                                        $name = $cat->name[$tenantLanguage] ?? $cat->name['en'] ?? $cat->name[array_key_first($cat->name ?? [])] ?? 'Unnamed';
+                                                        return [$cat->id => $name];
+                                                    });
+                                            })
+                                            ->searchable()
+                                            ->preload(),
+
+                                        Forms\Components\Select::make('status')
+                                            ->options([
+                                                'draft' => 'Draft',
+                                                'published' => 'Published',
+                                                'scheduled' => 'Scheduled',
+                                                'archived' => 'Archived',
+                                            ])
+                                            ->default('draft')
+                                            ->required(),
+
+                                        Forms\Components\DateTimePicker::make('published_at')
+                                            ->label('Publish Date')
+                                            ->helperText('Leave empty to publish immediately'),
+
+                                        Forms\Components\Toggle::make('is_featured')
+                                            ->label('Featured Article')
+                                            ->helperText('Show on homepage/featured section'),
+                                    ]),
+
+                                // Featured Image Section
+                                SC\Section::make('Featured Image')
+                                    ->schema([
+                                        Forms\Components\FileUpload::make('featured_image')
+                                            ->label('Image')
+                                            ->image()
+                                            ->disk('public')
+                                            ->directory('blog-images')
+                                            ->imageEditor()
+                                            ->imageResizeMode('cover')
+                                            ->imageCropAspectRatio('16:9')
+                                            ->imageResizeTargetWidth('1200')
+                                            ->imageResizeTargetHeight('630')
+                                            ->helperText('Drag & drop or click to upload. Recommended: 1200x630px')
+                                            ->columnSpanFull(),
+
+                                        Forms\Components\TextInput::make('featured_image_alt')
+                                            ->label('Alt Text')
+                                            ->maxLength(255)
+                                            ->helperText('Describe the image for accessibility'),
+                                    ]),
+                            ]),
+                    ]),
             ]);
     }
 
@@ -164,7 +362,7 @@ class BlogArticleResource extends Resource
 
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('featured_image_url')
+                Tables\Columns\ImageColumn::make('featured_image')
                     ->label('Image')
                     ->circular(false)
                     ->size(50),

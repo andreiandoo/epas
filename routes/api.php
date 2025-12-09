@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\TenantClient\AdminController;
 use App\Http\Controllers\Api\TenantClient\ThemeController;
 use App\Http\Controllers\Api\TenantClient\PagesController;
 use App\Http\Controllers\Api\TenantClient\CookieConsentController;
+use App\Http\Controllers\Api\TenantClient\BlogController;
 use App\Http\Controllers\Api\DocSearchController;
 use App\Http\Controllers\Api\TenantClientController;
 
@@ -914,6 +915,16 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.events.tickets');
         Route::get('/{slug}/seating', [EventsController::class, 'seating'])
             ->name('api.tenant-client.events.seating');
+    });
+
+    // Blog (public - requires blog microservice)
+    Route::prefix('blog')->group(function () {
+        Route::get('/', [BlogController::class, 'index'])
+            ->name('api.tenant-client.blog.index');
+        Route::get('/categories', [BlogController::class, 'categories'])
+            ->name('api.tenant-client.blog.categories');
+        Route::get('/{slug}', [BlogController::class, 'show'])
+            ->name('api.tenant-client.blog.show');
     });
 
     // Cart

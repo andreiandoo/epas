@@ -420,6 +420,8 @@ export class Router {
         this.addRoute('/privacy', this.renderPrivacy.bind(this));
         this.addRoute('/past-events', this.renderPastEvents.bind(this));
         this.addRoute('/page/:slug', this.renderPage.bind(this));
+        this.addRoute('/blog', this.renderBlog.bind(this));
+        this.addRoute('/blog/:slug', this.renderBlogArticle.bind(this));
     }
 
     addRoute(path: string, handler: RouteHandler): void {
@@ -584,9 +586,9 @@ export class Router {
                 <h1 class="text-3xl font-bold text-gray-900 mb-6">Evenimente</h1>
 
                 <!-- Calendar Timeline (Sticky) -->
-                <div id="events-calendar" class="space-y-4 mb-8 sticky top-0 z-20 bg-white pt-4 pb-2 -mt-4 border-b border-gray-100">
+                <div id="events-calendar" class="space-y-4 mb-8 sticky top-4 z-20 bg-gray-50 pt-4 px-2 pb-2 -mt-4 border-b border-gray-200">
                     <!-- Year/Month Navigator -->
-                    <div id="month-navigator" class="flex items-center gap-2 flex-wrap">
+                    <div id="month-navigator" class="flex items-center gap-x-8 flex-wrap">
                         <div class="animate-pulse bg-gray-200 h-8 w-full rounded"></div>
                     </div>
 
@@ -594,17 +596,17 @@ export class Router {
                     <div class="relative">
                         <div id="days-scroller" class="days-scroller flex items-stretch gap-6 overflow-x-scroll pb-2 whitespace-nowrap cursor-grab active:cursor-grabbing" style="scrollbar-width: none; -ms-overflow-style: none;">
                             <div class="animate-pulse flex gap-2">
-                                ${Array(14).fill(0).map(() => '<div class="w-14 h-16 bg-gray-200 rounded-xl shrink-0"></div>').join('')}
+                                ${Array(14).fill(0).map(() => '<div class="w-14 h-16 bg-white/70 rounded-xl shrink-0"></div>').join('')}
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Events List -->
-                <div id="events-container" class="border border-gray-200 rounded-2xl p-4 min-h-[80px] bg-white/70">
+                <div id="events-container" class="min-h-[80px]">
                     <div class="animate-pulse space-y-3">
-                        <div class="bg-gray-200 h-20 rounded-xl"></div>
-                        <div class="bg-gray-200 h-20 rounded-xl"></div>
+                        <div class="bg-gray-400 h-20 rounded-xl"></div>
+                        <div class="bg-gray-300 h-20 rounded-xl"></div>
                         <div class="bg-gray-200 h-20 rounded-xl"></div>
                     </div>
                 </div>
@@ -797,17 +799,17 @@ export class Router {
             if (!nav) return;
 
             nav.innerHTML = years.map(year => `
-                <div class="flex items-center gap-x-4">
+                <div class="flex items-center">
                     <div class="w-10 text-xs font-bold text-gray-800">${year.year}</div>
                     <div class="flex flex-wrap gap-2">
                         ${year.months.map(month => {
                             const isSelected = selectedType === 'month' && selectedYear === year.year && selectedMonthIndex === month.index;
                             return `
                                 <button type="button" data-year="${year.year}" data-month="${month.index}"
-                                    class="month-btn px-2 py-1 rounded-lg text-[11px] uppercase font-semibold transition
-                                    ${isSelected ? 'bg-gray-900 text-white border border-gray-900' : 'border border-gray-200 text-gray-600 hover:border-gray-400 hover:bg-gray-50'}">
+                                    class="month-btn px-2 py-1 rounded-md text-[11px] uppercase font-semibold transition
+                                    ${isSelected ? 'bg-gray-900 text-white border border-gray-900' : 'border bg-white/70 border-gray-200 text-gray-800 hover:border-gray-400 hover:bg-gray-50'}">
                                     <span>${month.label}</span>
-                                    ${month.eventCount ? `<span class="ml-1 text-[9px] font-semibold text-gray-400">· ${month.eventCount}</span>` : ''}
+                                    ${month.eventCount ? `<span class="ml-1 text-[11px] font-bold ${isSelected ? 'text-gray-400' : 'text-gray-800'}">${month.eventCount}</span>` : ''}
                                 </button>
                             `;
                         }).join('')}
@@ -847,13 +849,13 @@ export class Router {
 
             scroller.innerHTML = monthBlocks.map(month => `
                 <div class="flex flex-col items-start gap-1 shrink-0">
-                    <div class="text-xs font-semibold text-gray-600 capitalize">${month.label}</div>
+                    <div class="text-xs font-semibold text-gray-800 uppercase">${month.label}</div>
                     <div class="flex items-stretch gap-2">
                         ${month.days.map(day => {
                             const isSelected = selectedType === 'day' && selectedDateStr === day.dateStr;
                             return `
                                 <button type="button" data-date="${day.dateStr}"
-                                    class="day-btn flex flex-col items-center justify-between w-14 h-16 p-3 rounded-xl border text-xs leading-tight shrink-0 transition ${getDayClasses(day)}">
+                                    class="day-btn flex flex-col items-center justify-between w-14 h-16 ${day.isToday ? 'py-1 px-3' : 'p-3'} rounded-xl border text-xs leading-tight shrink-0 transition ${getDayClasses(day)}">
                                     <span class="text-xl font-bold">${day.day}</span>
                                     <span class="text-[11px] capitalize">${day.weekdayShort}</span>
                                     ${day.isToday ? `<span class="mt-0.5 text-[9px] uppercase tracking-wide ${isSelected ? 'text-white' : 'text-blue-600'}">Azi</span>` : ''}
@@ -4074,6 +4076,267 @@ private async renderProfile(): Promise<void> {
         }
     }
 
+    private async renderBlog(): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-8">Blog</h1>
+                <div id="blog-list">
+                    <div class="animate-pulse space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            ${[1,2,3].map(() => `
+                                <div class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden">
+                                    <div class="bg-gray-200 dark:bg-gray-700 h-48"></div>
+                                    <div class="p-5 space-y-3">
+                                        <div class="bg-gray-200 dark:bg-gray-700 h-4 w-1/4 rounded"></div>
+                                        <div class="bg-gray-200 dark:bg-gray-700 h-6 w-3/4 rounded"></div>
+                                        <div class="bg-gray-200 dark:bg-gray-700 h-4 w-full rounded"></div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        try {
+            const data = await this.fetchApi('/blog');
+            const articles = data.data?.articles || [];
+            const pagination = data.data?.pagination;
+
+            // Also fetch categories
+            let categories: any[] = [];
+            try {
+                const catData = await this.fetchApi('/blog/categories');
+                categories = catData.data?.categories || [];
+            } catch (e) {
+                console.log('Could not load blog categories');
+            }
+
+            const blogList = document.getElementById('blog-list');
+            if (!blogList) return;
+
+            if (articles.length === 0) {
+                blogList.innerHTML = `
+                    <div class="text-center py-12">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+                        </svg>
+                        <p class="mt-4 text-gray-500 dark:text-gray-400">No articles yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            blogList.innerHTML = `
+                ${categories.length > 0 ? `
+                    <div class="mb-8 flex flex-wrap gap-2">
+                        <a href="#/blog" class="px-4 py-2 rounded-full text-sm font-medium bg-primary-600 text-white">All</a>
+                        ${categories.map((cat: any) => `
+                            <a href="#/blog?category=${cat.slug}" class="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
+                                ${cat.name} (${cat.articles_count})
+                            </a>
+                        `).join('')}
+                    </div>
+                ` : ''}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    ${articles.map((article: any) => this.renderBlogCard(article)).join('')}
+                </div>
+            `;
+        } catch (error: any) {
+            const blogList = document.getElementById('blog-list');
+            if (blogList) {
+                if (error.response?.status === 403) {
+                    blogList.innerHTML = `
+                        <div class="text-center py-12">
+                            <p class="text-gray-500 dark:text-gray-400">Blog is not available.</p>
+                        </div>
+                    `;
+                } else {
+                    blogList.innerHTML = `
+                        <div class="text-center py-12">
+                            <p class="text-red-500">Failed to load blog. Please try again.</p>
+                        </div>
+                    `;
+                }
+            }
+            console.error('Failed to load blog:', error);
+        }
+    }
+
+    private renderBlogCard(article: any): string {
+        const publishedDate = article.published_at
+            ? new Date(article.published_at).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            })
+            : '';
+
+        return `
+            <article class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow border border-gray-100 dark:border-gray-700">
+                <a href="#/blog/${article.slug}" class="block">
+                    ${article.featured_image
+                        ? `<div class="aspect-[16/9] overflow-hidden">
+                            <img src="${article.featured_image}"
+                                 alt="${article.featured_image_alt || article.title}"
+                                 class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                           </div>`
+                        : `<div class="aspect-[16/9] bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+                            <svg class="w-16 h-16 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+                            </svg>
+                           </div>`
+                    }
+                </a>
+                <div class="p-5">
+                    ${article.category
+                        ? `<span class="inline-block px-3 py-1 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full mb-3">${article.category}</span>`
+                        : ''
+                    }
+                    <a href="#/blog/${article.slug}" class="block group">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2 mb-2">
+                            ${article.title}
+                        </h3>
+                    </a>
+                    ${article.excerpt
+                        ? `<p class="text-gray-600 dark:text-gray-400 text-sm line-clamp-2 mb-4">${article.excerpt}</p>`
+                        : ''
+                    }
+                    <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
+                        <span>${publishedDate}</span>
+                        <span>${article.reading_time || 1} min read</span>
+                    </div>
+                </div>
+            </article>
+        `;
+    }
+
+    private async renderBlogArticle(params: Record<string, string>): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        const slug = params.slug;
+
+        content.innerHTML = `
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-6">
+                    <div class="bg-gray-200 dark:bg-gray-700 h-8 w-3/4 rounded"></div>
+                    <div class="bg-gray-200 dark:bg-gray-700 h-4 w-1/2 rounded"></div>
+                    <div class="bg-gray-200 dark:bg-gray-700 h-64 rounded-xl"></div>
+                    <div class="space-y-3">
+                        <div class="bg-gray-200 dark:bg-gray-700 h-4 w-full rounded"></div>
+                        <div class="bg-gray-200 dark:bg-gray-700 h-4 w-full rounded"></div>
+                        <div class="bg-gray-200 dark:bg-gray-700 h-4 w-2/3 rounded"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        try {
+            const data = await this.fetchApi(`/blog/${slug}`);
+            const article = data.data?.article;
+            const related = data.data?.related || [];
+
+            if (!article) {
+                this.render404();
+                return;
+            }
+
+            const publishedDate = article.published_at
+                ? new Date(article.published_at).toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                })
+                : '';
+
+            content.innerHTML = `
+                <article class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <header class="mb-8">
+                        ${article.category
+                            ? `<a href="#/blog?category=${article.category_slug}" class="inline-block px-3 py-1 text-sm font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full mb-4 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">${article.category}</a>`
+                            : ''
+                        }
+                        <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">${article.title}</h1>
+                        ${article.subtitle
+                            ? `<p class="text-xl text-gray-600 dark:text-gray-400 mb-6">${article.subtitle}</p>`
+                            : ''
+                        }
+                        <div class="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                            ${article.author ? `<span>By ${article.author}</span>` : ''}
+                            <span>${publishedDate}</span>
+                            <span>${article.reading_time || 1} min read</span>
+                            <span>${article.view_count || 0} views</span>
+                        </div>
+                    </header>
+
+                    ${article.featured_image
+                        ? `<figure class="mb-8">
+                            <img src="${article.featured_image}"
+                                 alt="${article.featured_image_alt || article.title}"
+                                 class="w-full rounded-xl">
+                           </figure>`
+                        : ''
+                    }
+
+                    <div class="prose prose-lg dark:prose-invert max-w-none">
+                        ${article.content_html || article.content || ''}
+                    </div>
+
+                    ${article.tags && article.tags.length > 0
+                        ? `<div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                            <div class="flex flex-wrap gap-2">
+                                ${article.tags.map((tag: string) => `
+                                    <span class="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full">#${tag}</span>
+                                `).join('')}
+                            </div>
+                           </div>`
+                        : ''
+                    }
+
+                    ${related.length > 0 ? `
+                        <section class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
+                            <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Related Articles</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                ${related.map((rel: any) => `
+                                    <a href="#/blog/${rel.slug}" class="block group">
+                                        <div class="bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+                                            ${rel.featured_image
+                                                ? `<img src="${rel.featured_image}" alt="${rel.title}" class="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300">`
+                                                : `<div class="w-full h-32 bg-gradient-to-br from-primary-500 to-primary-700"></div>`
+                                            }
+                                        </div>
+                                        <h3 class="mt-3 font-medium text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2">${rel.title}</h3>
+                                    </a>
+                                `).join('')}
+                            </div>
+                        </section>
+                    ` : ''}
+
+                    <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <a href="#/blog" class="inline-flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:underline">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                            </svg>
+                            Back to Blog
+                        </a>
+                    </div>
+                </article>
+            `;
+
+            // Update page title
+            document.title = article.meta_title || article.title;
+        } catch (error) {
+            this.render404();
+            console.error('Failed to load article:', error);
+        }
+    }
+
     private render404(): void {
         const content = this.getContentElement();
         if (!content) return;
@@ -4279,10 +4542,10 @@ private async renderProfile(): Promise<void> {
 
         // Create countdown elements
         const wrapper = document.createElement('div');
-        wrapper.className = 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg shadow-lg p-6 mb-6';
+        wrapper.className = 'p-6 mb-6 text-white rounded-lg shadow-lg bg-gradient-to-r from-blue-500 to-purple-600';
 
         const title = document.createElement('h3');
-        title.className = 'text-lg font-semibold mb-3 text-center';
+        title.className = 'mb-3 text-lg font-semibold text-center';
         title.textContent = isPostponed ? 'Noua dată - Începe în:' : 'Începe în:';
 
         const timeDisplay = document.createElement('div');

@@ -16,7 +16,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
                 <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
                 <div class="space-y-3">
-                    <a href="{{ route('filament.tenant.pages.microservice-settings', ['slug' => 'crm']) }}"
+                    <a href="{{ route('filament.tenant.microservice-settings', ['slug' => 'crm']) }}"
                        class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                         <x-heroicon-o-cog-6-tooth class="w-5 h-5 text-gray-500" />
                         <span class="text-gray-700 dark:text-gray-300">CRM Settings</span>

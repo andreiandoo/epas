@@ -48,8 +48,9 @@ const defaultTemplate: TemplateConfig = {
                         </a>
                         <nav class="hidden md:flex items-center space-x-6">
                             <a href="/events" class="text-gray-600 hover:text-primary transition">Evenimente</a>
+                            <a href="/blog" class="text-gray-600 hover:text-primary transition">Blog</a>
                             ${menuItemsHtml}
-                            <a href="/cart" class="relative text-gray-600 hover:text-primary transition">
+                            <a href="/cart" class="relative text-primary hover:text-gray-900 transition">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 512 512" stroke-width="30">
                                     <path d="M336.333 416.667v-32.134M336.333 320.267v-32.134M336.333 223.867v-32.134M336.333 127.467V95.333M497 191.733c-35.467 0-64.267 28.799-64.267 64.267s28.8 64.267 64.267 64.267v37.435c0 38.214-20.75 58.965-58.965 58.965H73.965C35.75 416.667 15 395.917 15 357.702v-37.435c35.467 0 64.267-28.799 64.267-64.267S50.467 191.733 15 191.733v-37.435c0-38.214 20.75-58.965 58.965-58.965h364.07c38.215 0 58.965 20.75 58.965 58.965v37.435z" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10"/>
                                 </svg>
@@ -118,6 +119,7 @@ const defaultTemplate: TemplateConfig = {
                             <ul class="space-y-2 text-sm">
                                 <li><a href="/events" class="text-gray-600 hover:text-primary">Evenimente</a></li>
                                 <li><a href="/past-events" class="text-gray-600 hover:text-primary">Evenimente trecute</a></li>
+                                <li><a href="/blog" class="text-gray-600 hover:text-primary">Blog</a></li>
                                 <li><a href="/account" class="text-gray-600 hover:text-primary">Contul meu</a></li>
                             </ul>
                         </div>
@@ -130,13 +132,13 @@ const defaultTemplate: TemplateConfig = {
                             </ul>
                         </div>
                     </div>
-                    <div class="border-t mt-8 pt-8 flex flex-col items-center justify-center text-sm text-gray-500">
+                    <div class="border-t mt-8 pt-8 flex gap-4 items-center justify-between text-sm text-gray-700">
                         <p>&copy; ${year} ${siteName}. Toate drepturile rezervate.</p>
-                        <div class="mt-3 flex items-center gap-2">
+                        <div class="mt-3 flex items-center gap-2 text-gray-700 text-[0.875rem] font-bold">
                             <span>Powered by</span>
                             <a href="${config.platform?.url || 'https://tixello.com'}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center">
                                 ${config.platform?.logo_light
-                                    ? `<img src="${config.platform.logo_light}" alt="${config.platform?.name || 'Tixello'}" class="h-5 w-auto">`
+                                    ? `<img src="${config.platform.logo_light}" alt="${config.platform?.name || 'Tixello'}" class="h-3 w-auto">`
                                     : `<span class="text-primary font-semibold hover:underline">${config.platform?.name || 'Tixello'}</span>`
                                 }
                             </a>
