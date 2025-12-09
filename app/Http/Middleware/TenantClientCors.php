@@ -11,6 +11,14 @@ class TenantClientCors
 {
     public function handle(Request $request, Closure $next): Response
     {
+        // DEBUG: Log every request that hits this middleware
+        \Log::info('=== TENANT CLIENT CORS MIDDLEWARE HIT ===', [
+            'method' => $request->method(),
+            'path' => $request->path(),
+            'url' => $request->fullUrl(),
+            'origin' => $request->header('Origin'),
+        ]);
+
         $origin = $request->header('Origin');
 
         if (!$origin) {

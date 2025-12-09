@@ -48,6 +48,17 @@ class AuthController extends Controller
      */
     public function register(Request $request): JsonResponse
     {
+        // DEBUG: Log that the request reached Laravel
+        Log::info('=== REGISTER REQUEST REACHED LARAVEL ===', [
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
+            'hostname' => $request->query('hostname'),
+            'origin' => $request->header('Origin'),
+            'user_agent' => $request->userAgent(),
+            'ip' => $request->ip(),
+            'all_headers' => $request->headers->all(),
+        ]);
+
         $tenant = $this->resolveTenant($request);
 
         if (!$tenant) {
