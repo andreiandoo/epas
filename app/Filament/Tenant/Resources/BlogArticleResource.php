@@ -154,33 +154,13 @@ class BlogArticleResource extends Resource
                                                         Forms\Components\TextInput::make("meta_title.{$tenantLanguage}")
                                                             ->label('Meta Title')
                                                             ->maxLength(60)
-                                                            ->helperText('Recommended: 50-60 characters')
-                                                            ->suffixAction(
-                                                                Forms\Components\Actions\Action::make('generateMetaTitle')
-                                                                    ->icon('heroicon-o-sparkles')
-                                                                    ->action(function (\Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) use ($tenantLanguage) {
-                                                                        $title = $get("title.{$tenantLanguage}");
-                                                                        if ($title) {
-                                                                            $set("meta_title.{$tenantLanguage}", Str::limit($title, 60));
-                                                                        }
-                                                                    })
-                                                            ),
+                                                            ->helperText('Recommended: 50-60 characters. Auto-fills from title.'),
 
                                                         Forms\Components\Textarea::make("meta_description.{$tenantLanguage}")
                                                             ->label('Meta Description')
                                                             ->rows(2)
                                                             ->maxLength(160)
-                                                            ->helperText('Recommended: 150-160 characters')
-                                                            ->suffixAction(
-                                                                Forms\Components\Actions\Action::make('generateMetaDesc')
-                                                                    ->icon('heroicon-o-sparkles')
-                                                                    ->action(function (\Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) use ($tenantLanguage) {
-                                                                        $excerpt = $get("excerpt.{$tenantLanguage}");
-                                                                        if ($excerpt) {
-                                                                            $set("meta_description.{$tenantLanguage}", Str::limit($excerpt, 155));
-                                                                        }
-                                                                    })
-                                                            ),
+                                                            ->helperText('Recommended: 150-160 characters. Auto-fills from excerpt.'),
 
                                                         Forms\Components\TextInput::make('meta_keywords')
                                                             ->label('Meta Keywords')
