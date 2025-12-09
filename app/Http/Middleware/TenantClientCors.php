@@ -11,13 +11,10 @@ class TenantClientCors
 {
     public function handle(Request $request, Closure $next): Response
     {
-        // DEBUG: Log every request that hits this middleware
-        \Log::info('=== TENANT CLIENT CORS MIDDLEWARE HIT ===', [
-            'method' => $request->method(),
-            'path' => $request->path(),
-            'url' => $request->fullUrl(),
-            'origin' => $request->header('Origin'),
-        ]);
+        // Force JSON responses for all tenant-client API requests
+        // This prevents Laravel from redirecting on validation errors
+        // when the client sends Accept: */* instead of Accept: application/json
+        $request->headers->set('Accept', 'application/json');
 
         $origin = $request->header('Origin');
 
