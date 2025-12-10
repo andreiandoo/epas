@@ -26,9 +26,9 @@ class CouponCodeResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-tag';
 
-    protected static ?string $navigationLabel = 'Generated Codes';
+    protected static ?string $navigationLabel = 'Coupon Codes';
 
-    protected static ?string $navigationParentItem = 'Coupon Codes';
+    protected static ?string $navigationParentItem = 'Coupon Campaigns';
 
     protected static ?int $navigationSort = 15;
 

@@ -480,6 +480,9 @@ export class Router {
         const path = window.location.pathname || '/';
         this.currentPath = path;
 
+        // Reset meta tags to defaults on every navigation
+        this.resetMetaTags();
+
         for (const route of this.routes) {
             const match = path.match(route.pattern);
             if (match) {
@@ -499,6 +502,56 @@ export class Router {
 
     private getContentElement(): HTMLElement | null {
         return document.getElementById('tixello-content');
+    }
+
+    /**
+     * Reset meta tags to default site values
+     * Called on every navigation to clear article-specific meta tags
+     */
+    private resetMetaTags(): void {
+        const siteTitle = this.config.site?.title || 'Tixello';
+        const tagline = this.config.site?.tagline;
+        const description = this.config.site?.description || `Events and tickets by ${siteTitle}`;
+
+        // Reset document title
+        document.title = tagline ? `${siteTitle} - ${tagline}` : siteTitle;
+
+        // Reset meta description
+        const metaDescription = document.querySelector('meta[name="description"]');
+        if (metaDescription) {
+            metaDescription.setAttribute('content', description);
+        }
+
+        // Reset Open Graph tags
+        const ogTitle = document.querySelector('meta[property="og:title"]');
+        if (ogTitle) ogTitle.setAttribute('content', siteTitle);
+
+        const ogDescription = document.querySelector('meta[property="og:description"]');
+        if (ogDescription) ogDescription.setAttribute('content', description);
+
+        const ogType = document.querySelector('meta[property="og:type"]');
+        if (ogType) ogType.setAttribute('content', 'website');
+
+        const ogImage = document.querySelector('meta[property="og:image"]');
+        if (ogImage && this.config.theme?.logo) {
+            ogImage.setAttribute('content', this.config.theme.logo);
+        }
+
+        // Reset Twitter Card tags
+        const twitterTitle = document.querySelector('meta[name="twitter:title"]');
+        if (twitterTitle) twitterTitle.setAttribute('content', siteTitle);
+
+        const twitterDescription = document.querySelector('meta[name="twitter:description"]');
+        if (twitterDescription) twitterDescription.setAttribute('content', description);
+
+        const twitterCard = document.querySelector('meta[name="twitter:card"]');
+        if (twitterCard) twitterCard.setAttribute('content', 'summary');
+
+        // Remove article-specific canonical URL
+        const canonical = document.querySelector('link[rel="canonical"]');
+        if (canonical) {
+            canonical.setAttribute('href', window.location.origin);
+        }
     }
 
     // Route handlers
@@ -2163,7 +2216,7 @@ export class Router {
                 (applyBtn as HTMLButtonElement).disabled = true;
 
                 try {
-                    const response = await this.fetchApi('/discount/validate', {
+                    const response = await this.fetchApi('/cart/promo-code', {}, {
                         method: 'POST',
                         body: JSON.stringify({
                             code: code,
@@ -2171,7 +2224,7 @@ export class Router {
                         })
                     });
 
-                    if (response.success && response.data?.valid) {
+                    if (response.success && response.data) {
                         // Store discount in CartService
                         CartService.setDiscount({
                             code: code,

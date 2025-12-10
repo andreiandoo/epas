@@ -24,7 +24,7 @@ class CouponCampaignResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
 
-    protected static ?string $navigationLabel = 'Coupon Codes';
+    protected static ?string $navigationLabel = 'Coupon Campaigns';
 
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
 

@@ -4,6 +4,8 @@ import obfuscatorPlugin from 'rollup-plugin-obfuscator';
 
 export default defineConfig(({ mode }) => {
     const isProduction = mode === 'production';
+    // Set to false to skip obfuscation during development (saves ~8 min build time)
+    const enableObfuscation = false; // Change to: isProduction && !process.env.DEV_BUILD for production
 
     return {
         build: {
@@ -32,7 +34,7 @@ export default defineConfig(({ mode }) => {
                 output: {
                     inlineDynamicImports: true,
                 },
-                plugins: isProduction ? [
+                plugins: enableObfuscation ? [
                     obfuscatorPlugin({
                         global: true,
                         options: {

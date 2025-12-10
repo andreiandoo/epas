@@ -28,6 +28,13 @@ class TenantClientCors
         // Allow localhost for development
         if (in_array($originHost, ['localhost', '127.0.0.1'])) {
             $allowCors = true;
+            // For localhost, try to resolve tenant from X-Tenant-ID header or first active tenant
+            if ($tenantId = $request->header('X-Tenant-ID')) {
+                $tenant = \App\Models\Tenant::find($tenantId);
+                if ($tenant) {
+                    $request->attributes->set('tenant', $tenant);
+                }
+            }
         } else {
             // Check if origin is a verified tenant domain
             $domain = Domain::where('domain', $originHost)
@@ -47,6 +54,9 @@ class TenantClientCors
 
             if ($domain) {
                 $allowCors = true;
+                // Set tenant attribute for controllers
+                $request->attributes->set('tenant', $domain->tenant);
+                $request->attributes->set('domain', $domain);
             }
         }
 
