@@ -233,6 +233,11 @@ class AnalyticsDashboard extends Page
             ->toArray();
     }
 
+    public function getHeading(): string
+    {
+        return '';
+    }
+
     public function getTitle(): string
     {
         return 'Analytics Dashboard';

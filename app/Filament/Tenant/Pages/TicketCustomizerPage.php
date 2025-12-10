@@ -13,6 +13,12 @@ class TicketCustomizerPage extends Page
     protected static ?int $navigationSort = 5;
     protected static ?string $slug = 'ticket-customizer';
     protected string $view = 'filament.tenant.pages.ticket-customizer';
+    protected static bool $shouldRegisterNavigation = true;
+
+    public function getHeading(): string
+    {
+        return '';
+    }
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -28,8 +34,4 @@ class TicketCustomizerPage extends Page
             ->exists();
     }
 
-    public function getTitle(): string
-    {
-        return 'Ticket Customizer';
-    }
 }

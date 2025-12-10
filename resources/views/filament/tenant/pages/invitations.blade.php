@@ -14,6 +14,12 @@
                         Create and manage invitation batches for VIP guests, press passes, and complimentary tickets.
                     </p>
                 </div>
+                <button wire:click="$set('showCreateModal', true)"
+                        class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg shadow-sm transition-colors"
+                        style="background-color: #4f46e5; color: white;">
+                    <x-heroicon-o-plus class="w-4 h-4" />
+                    Create Batch
+                </button>
             </div>
 
             {{-- Workflow Steps --}}
@@ -454,6 +460,99 @@
                         <button type="submit"
                                 style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: white; background-color: #2563eb; border-radius: 0.5rem; border: none; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                             Add & Continue
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
+    {{-- Create Batch Modal --}}
+    @if($showCreateModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center" style="background-color: rgba(0,0,0,0.5);" wire:click.self="$set('showCreateModal', false)">
+            <div class="rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden" style="background-color: white; border: 1px solid #e5e7eb;">
+                <div class="px-6 py-4" style="background: linear-gradient(to right, #4f46e5, #9333ea); border-bottom: 1px solid #e5e7eb;">
+                    <h3 style="font-size: 1.125rem; font-weight: 600; color: white;">Create Invitation Batch</h3>
+                    <p style="font-size: 0.875rem; color: #e0e7ff; margin-top: 0.25rem;">Create a new batch for your event invitations</p>
+                </div>
+
+                <form wire:submit="submitCreateBatch" class="p-6 space-y-4">
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">
+                            Event <span style="color: #ef4444;">*</span>
+                        </label>
+                        <select wire:model="batchData.event_ref" required
+                                style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;">
+                            <option value="">Select an event...</option>
+                            @foreach($this->getEvents() as $id => $title)
+                                <option value="{{ $id }}" @if($preselectedEventId == $id) selected @endif>{{ $title }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">
+                            Batch Name <span style="color: #ef4444;">*</span>
+                        </label>
+                        <input type="text" wire:model="batchData.name" required
+                               placeholder="e.g., VIP Guests - Opening Night"
+                               style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;" />
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">
+                                Planned Quantity <span style="color: #ef4444;">*</span>
+                            </label>
+                            <input type="number" wire:model="batchData.qty_planned" required min="1" max="10000"
+                                   placeholder="50"
+                                   style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;" />
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Ticket Template</label>
+                            <select wire:model="batchData.template_id"
+                                    style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;">
+                                <option value="">None</option>
+                                @foreach($this->getTemplates() as $id => $name)
+                                    <option value="{{ $id }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Watermark Text</label>
+                            <input type="text" wire:model="batchData.watermark"
+                                   placeholder="e.g., VIP INVITATION"
+                                   style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;" />
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Seat Assignment</label>
+                            <select wire:model="batchData.seat_mode"
+                                    style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;">
+                                <option value="none">No seat assignment</option>
+                                <option value="manual">Manual assignment</option>
+                                <option value="auto">Auto-assign</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem;">Notes</label>
+                        <textarea wire:model="batchData.notes" rows="2"
+                                  placeholder="Internal notes about this batch"
+                                  style="width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 0.875rem; color: #111827; background-color: white;"></textarea>
+                    </div>
+
+                    <div class="flex justify-end gap-3 pt-4" style="border-top: 1px solid #e5e7eb;">
+                        <button type="button" wire:click="$set('showCreateModal', false)"
+                                style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: #374151; background-color: #f3f4f6; border-radius: 0.5rem; border: none; cursor: pointer;">
+                            Cancel
+                        </button>
+                        <button type="submit"
+                                style="padding: 0.5rem 1rem; font-size: 0.875rem; font-weight: 500; color: white; background-color: #4f46e5; border-radius: 0.5rem; border: none; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                            Create Batch
                         </button>
                     </div>
                 </form>

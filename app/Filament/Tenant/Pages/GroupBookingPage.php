@@ -14,6 +14,11 @@ class GroupBookingPage extends Page
     protected static ?string $slug = 'group-booking';
     protected string $view = 'filament.tenant.pages.group-booking';
 
+    public function getHeading(): string
+    {
+        return '';
+    }
+
     public static function shouldRegisterNavigation(): bool
     {
         $tenant = auth()->user()?->tenant;
@@ -28,8 +33,4 @@ class GroupBookingPage extends Page
             ->exists();
     }
 
-    public function getTitle(): string
-    {
-        return 'Group Booking';
-    }
 }

@@ -2245,6 +2245,38 @@ export class Router {
                             </div>
 
                             <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Preferințe notificări</h2>
+                                <p class="text-sm text-gray-600 mb-4">Alegeți cum doriți să primiți actualizări despre comandă:</p>
+                                <div class="space-y-3">
+                                    <div class="flex items-start">
+                                        <input
+                                            type="checkbox"
+                                            id="notification_email"
+                                            name="notification_email"
+                                            checked
+                                            class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                        >
+                                        <label for="notification_email" class="ml-2 text-sm text-gray-700">
+                                            Primește notificări pe email (confirmare comandă, bilete, reamintiri)
+                                        </label>
+                                    </div>
+                                    ${this.config?.modules?.includes('whatsapp-notifications') ? `
+                                    <div class="flex items-start">
+                                        <input
+                                            type="checkbox"
+                                            id="notification_whatsapp"
+                                            name="notification_whatsapp"
+                                            class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                        >
+                                        <label for="notification_whatsapp" class="ml-2 text-sm text-gray-700">
+                                            Primește notificări pe WhatsApp (necesită număr de telefon valid)
+                                        </label>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-6">
                                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Plată</h2>
                                 <p class="text-gray-600 mb-4">
                                     Vei primi biletele pe email imediat după finalizarea comenzii.
@@ -2428,6 +2460,8 @@ export class Router {
                 const agreeTerms = (document.getElementById('agree_terms') as HTMLInputElement)?.checked ?? false;
                 const agreePrivacy = (document.getElementById('agree_privacy') as HTMLInputElement)?.checked ?? false;
                 const createAccount = (document.getElementById('create_account') as HTMLInputElement)?.checked ?? false;
+                const notificationEmail = (document.getElementById('notification_email') as HTMLInputElement)?.checked ?? true;
+                const notificationWhatsapp = (document.getElementById('notification_whatsapp') as HTMLInputElement)?.checked ?? false;
 
                 try {
                     const response = await this.postApi('/orders', {
@@ -2437,6 +2471,8 @@ export class Router {
                         agree_terms: agreeTerms,
                         agree_privacy: agreePrivacy,
                         create_account: createAccount,
+                        notification_email: notificationEmail,
+                        notification_whatsapp: notificationWhatsapp,
                         cart: cart.map(item => ({
                             eventId: item.eventId,
                             ticketTypeId: item.ticketTypeId,
@@ -2637,6 +2673,27 @@ export class Router {
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
                             <p id="password-match" class="mt-1 text-xs hidden"></p>
                         </div>
+                        <div class="border-t pt-4">
+                            <p class="text-sm font-medium text-gray-700 mb-3">Preferințe notificări</p>
+                            <div class="space-y-2">
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="reg_notification_email" checked
+                                           class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary">
+                                    <label for="reg_notification_email" class="ml-2 text-sm text-gray-700">
+                                        Primește notificări pe email
+                                    </label>
+                                </div>
+                                ${this.config?.modules?.includes('whatsapp-notifications') ? `
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="reg_notification_whatsapp"
+                                           class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary">
+                                    <label for="reg_notification_whatsapp" class="ml-2 text-sm text-gray-700">
+                                        Primește notificări pe WhatsApp
+                                    </label>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
                         <button type="submit" id="register-btn" class="w-full px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition">
                             Creează cont
                         </button>
@@ -2756,6 +2813,9 @@ export class Router {
             btn.textContent = 'Se creează contul...';
             errorEl?.classList.add('hidden');
 
+            const notificationEmail = (document.getElementById('reg_notification_email') as HTMLInputElement)?.checked ?? true;
+            const notificationWhatsapp = (document.getElementById('reg_notification_whatsapp') as HTMLInputElement)?.checked ?? false;
+
             try {
                 const result = await this.postApi('/auth/register', {
                     first_name,
@@ -2763,6 +2823,8 @@ export class Router {
                     email,
                     phone: phone || null,
                     password,
+                    notification_email: notificationEmail,
+                    notification_whatsapp: notificationWhatsapp,
                 });
                 console.log('Register response:', result);
                 if (result.success && result.data) {

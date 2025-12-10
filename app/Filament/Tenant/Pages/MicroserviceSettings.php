@@ -110,6 +110,7 @@ class MicroserviceSettings extends Page
             'waitlist' => $this->getWaitlistSchema(),
             'door-sales' => $this->getDoorSalesSchema(),
             'affiliate-tracking' => $this->getAffiliateTrackingSchema(),
+            'whatsapp-notifications', 'whatsapp', 'whatsapp-cloud' => $this->getWhatsAppSchema(),
             default => $this->getDefaultSchema(),
         };
     }
@@ -537,6 +538,125 @@ class MicroserviceSettings extends Page
                         ->prefix('€')
                         ->default(50)
                         ->helperText('Minimum balance before payout is available'),
+                ])->columns(1),
+        ];
+    }
+
+    protected function getWhatsAppSchema(): array
+    {
+        return [
+            SC\Section::make('WhatsApp Cloud API')
+                ->description('Configure your WhatsApp Business API credentials')
+                ->schema([
+                    Forms\Components\TextInput::make('phone_number_id')
+                        ->label('Phone Number ID')
+                        ->placeholder('123456789012345')
+                        ->helperText('From Meta Business Suite > WhatsApp > Phone Numbers'),
+
+                    Forms\Components\TextInput::make('business_account_id')
+                        ->label('Business Account ID')
+                        ->placeholder('123456789012345')
+                        ->helperText('From Meta Business Suite > Business Settings'),
+
+                    Forms\Components\TextInput::make('access_token')
+                        ->label('Permanent Access Token')
+                        ->password()
+                        ->revealable()
+                        ->helperText('Generate a permanent token in Meta Business Settings'),
+
+                    Forms\Components\TextInput::make('webhook_verify_token')
+                        ->label('Webhook Verify Token')
+                        ->placeholder('your-custom-verify-token')
+                        ->helperText('Custom token for webhook verification (you create this)'),
+
+                    Forms\Components\Placeholder::make('webhook_url')
+                        ->label('Webhook URL')
+                        ->content(new HtmlString('
+                            <code class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm">
+                                ' . url('/webhooks/whatsapp-cloud') . '
+                            </code>
+                            <p class="text-xs text-gray-500 mt-1">Use this URL in Meta Business Suite webhook configuration</p>
+                        ')),
+                ])->columns(1),
+
+            SC\Section::make('Notification Types')
+                ->description('Choose which notifications to send via WhatsApp')
+                ->schema([
+                    Forms\Components\Toggle::make('notify_order_confirmation')
+                        ->label('Order Confirmation')
+                        ->default(true)
+                        ->helperText('Send confirmation when order is placed'),
+
+                    Forms\Components\Toggle::make('notify_ticket_delivery')
+                        ->label('Ticket Delivery')
+                        ->default(true)
+                        ->helperText('Send tickets as PDF via WhatsApp'),
+
+                    Forms\Components\Toggle::make('notify_event_reminder')
+                        ->label('Event Reminders')
+                        ->default(true)
+                        ->helperText('Send reminders before the event'),
+
+                    Forms\Components\Toggle::make('notify_event_updates')
+                        ->label('Event Updates')
+                        ->default(true)
+                        ->helperText('Notify about event changes or cancellations'),
+                ])->columns(2),
+
+            SC\Section::make('Reminder Settings')
+                ->description('Configure when to send event reminders')
+                ->schema([
+                    Forms\Components\Toggle::make('reminder_1_day')
+                        ->label('1 Day Before')
+                        ->default(true)
+                        ->helperText('Send reminder 24 hours before event'),
+
+                    Forms\Components\Toggle::make('reminder_3_hours')
+                        ->label('3 Hours Before')
+                        ->default(true)
+                        ->helperText('Send reminder 3 hours before event'),
+
+                    Forms\Components\TextInput::make('reminder_custom_hours')
+                        ->label('Custom Reminder (hours)')
+                        ->numeric()
+                        ->minValue(1)
+                        ->maxValue(168)
+                        ->placeholder('e.g., 48 for 2 days')
+                        ->helperText('Optional: Send additional reminder X hours before'),
+                ])->columns(3),
+
+            SC\Section::make('Message Templates')
+                ->description('Configure message templates (must be approved by Meta)')
+                ->schema([
+                    Forms\Components\TextInput::make('template_order_confirmation')
+                        ->label('Order Confirmation Template')
+                        ->placeholder('order_confirmation_v1')
+                        ->helperText('Template name for order confirmations'),
+
+                    Forms\Components\TextInput::make('template_ticket_delivery')
+                        ->label('Ticket Delivery Template')
+                        ->placeholder('ticket_delivery_v1')
+                        ->helperText('Template name for ticket delivery'),
+
+                    Forms\Components\TextInput::make('template_event_reminder')
+                        ->label('Event Reminder Template')
+                        ->placeholder('event_reminder_v1')
+                        ->helperText('Template name for event reminders'),
+                ])->columns(1),
+
+            SC\Section::make('Consent & Opt-in')
+                ->description('GDPR compliance settings')
+                ->schema([
+                    Forms\Components\Toggle::make('require_explicit_optin')
+                        ->label('Require Explicit Opt-in')
+                        ->default(true)
+                        ->helperText('Customers must explicitly opt-in to receive WhatsApp messages'),
+
+                    Forms\Components\Textarea::make('optin_message')
+                        ->label('Opt-in Checkbox Text')
+                        ->rows(2)
+                        ->default('I agree to receive order updates and event reminders via WhatsApp')
+                        ->helperText('Text shown next to the opt-in checkbox during checkout'),
                 ])->columns(1),
         ];
     }

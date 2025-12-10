@@ -24,6 +24,11 @@ class TrackingSettings extends Page
 
     public ?array $data = [];
 
+    public function getHeading(): string
+    {
+        return '';
+    }
+
     /**
      * Only show if tenant has tracking-pixels-manager microservice active
      */

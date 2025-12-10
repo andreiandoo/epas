@@ -63,6 +63,8 @@ class AuthController extends Controller
             'email' => 'required|email|max:255',
             'password' => 'required|string|min:8',
             'phone' => 'nullable|string|max:50',
+            'notification_email' => 'nullable|boolean',
+            'notification_whatsapp' => 'nullable|boolean',
         ]);
 
         // Check if customer already exists for this tenant
@@ -85,6 +87,12 @@ class AuthController extends Controller
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'phone' => $validated['phone'] ?? null,
+            'meta' => [
+                'notification_preferences' => [
+                    'email' => $validated['notification_email'] ?? true,
+                    'whatsapp' => $validated['notification_whatsapp'] ?? false,
+                ],
+            ],
         ]);
 
         // Also add to pivot table for multi-tenant support

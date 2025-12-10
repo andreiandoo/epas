@@ -42,6 +42,7 @@ class BootstrapController extends Controller
                 'affiliates' => $hasAffiliates,
                 'insurance' => $this->hasFeature($tenant, 'insurance'),
                 'promo_codes' => $this->hasFeature($tenant, 'promo-codes'),
+                'whatsapp_notifications' => $this->hasWhatsAppFeature($tenant),
             ],
             'payment_methods' => $this->getPaymentMethods($tenant),
             'currency' => $settings['currency'] ?? 'RON',
@@ -66,6 +67,14 @@ class BootstrapController extends Controller
     {
         return $tenant->microservices()
             ->whereHas('microservice', fn ($q) => $q->where('slug', $slug))
+            ->where('is_active', true)
+            ->exists();
+    }
+
+    protected function hasWhatsAppFeature($tenant): bool
+    {
+        return $tenant->microservices()
+            ->whereHas('microservice', fn ($q) => $q->whereIn('slug', ['whatsapp', 'whatsapp-notifications', 'whatsapp-cloud']))
             ->where('is_active', true)
             ->exists();
     }

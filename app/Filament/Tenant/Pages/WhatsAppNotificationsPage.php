@@ -14,6 +14,11 @@ class WhatsAppNotificationsPage extends Page
     protected static ?string $slug = 'whatsapp-notifications';
     protected string $view = 'filament.tenant.pages.whatsapp-notifications';
 
+    public function getHeading(): string
+    {
+        return '';
+    }
+
     public static function shouldRegisterNavigation(): bool
     {
         $tenant = auth()->user()?->tenant;
@@ -29,8 +34,4 @@ class WhatsAppNotificationsPage extends Page
             ->exists();
     }
 
-    public function getTitle(): string
-    {
-        return 'WhatsApp Notifications';
-    }
 }

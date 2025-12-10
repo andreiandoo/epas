@@ -16,7 +16,9 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\BulkAction;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 
 class CouponCodeResource extends Resource
 {
@@ -259,17 +261,22 @@ class CouponCodeResource extends Resource
                     })
                     ->requiresConfirmation(),
             ])
-            ->bulkActions([
+            ->bulkActions([])
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                    Tables\Actions\BulkAction::make('activate')
+                    BulkAction::make('activate')
                         ->label('Activate Selected')
                         ->icon('heroicon-o-check-circle')
-                        ->action(fn ($records) => $records->each->update(['status' => 'active'])),
-                    Tables\Actions\BulkAction::make('deactivate')
+                        ->color('success')
+                        ->action(fn (Collection $records) => $records->each->update(['status' => 'active']))
+                        ->deselectRecordsAfterCompletion(),
+                    BulkAction::make('deactivate')
                         ->label('Deactivate Selected')
                         ->icon('heroicon-o-x-circle')
-                        ->action(fn ($records) => $records->each->update(['status' => 'inactive'])),
+                        ->color('danger')
+                        ->action(fn (Collection $records) => $records->each->update(['status' => 'inactive']))
+                        ->deselectRecordsAfterCompletion(),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

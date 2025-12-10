@@ -88,10 +88,16 @@ class GroupBookingResource extends Resource
                         Forms\Components\Select::make('event_id')
                             ->label('Event')
                             ->options(function () use ($tenant) {
+                                $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
                                 return Event::where('tenant_id', $tenant?->id)
                                     ->where('status', 'published')
                                     ->get()
-                                    ->mapWithKeys(fn ($e) => [$e->id => $e->title]);
+                                    ->mapWithKeys(function ($e) use ($tenantLanguage) {
+                                        $title = is_array($e->title)
+                                            ? ($e->title[$tenantLanguage] ?? $e->title['en'] ?? array_values($e->title)[0] ?? 'Untitled')
+                                            : ($e->title ?? 'Untitled');
+                                        return [$e->id => $title];
+                                    });
                             })
                             ->searchable()
                             ->preload()

@@ -11,7 +11,6 @@ use App\Models\TicketType;
 use BackedEnum;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Forms;
-use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
@@ -160,67 +159,21 @@ class Invitations extends Page
             ->all();
     }
 
+    public function getHeading(): string
+    {
+        return '';
+    }
+
     protected function getHeaderActions(): array
     {
-        return [
-            Action::make('createBatch')
-                ->label('Create Batch')
-                ->icon('heroicon-o-plus')
-                ->color('primary')
-                ->modalHeading('Create Invitation Batch')
-                ->modalWidth('lg')
-                ->form([
-                    Forms\Components\Select::make('event_ref')
-                        ->label('Event')
-                        ->options(fn () => $this->getEvents())
-                        ->required()
-                        ->searchable()
-                        ->default($this->preselectedEventId),
+        return [];
+    }
 
-                    Forms\Components\TextInput::make('name')
-                        ->label('Batch Name')
-                        ->required()
-                        ->placeholder('e.g., VIP Guests - Opening Night')
-                        ->maxLength(255),
-
-                    Forms\Components\TextInput::make('qty_planned')
-                        ->label('Planned Quantity')
-                        ->required()
-                        ->numeric()
-                        ->minValue(1)
-                        ->maxValue(10000)
-                        ->default(50),
-
-                    Forms\Components\Select::make('template_id')
-                        ->label('Ticket Template')
-                        ->options(fn () => $this->getTemplates())
-                        ->searchable()
-                        ->helperText('Optional: Select a template for invitation design'),
-
-                    Forms\Components\TextInput::make('watermark')
-                        ->label('Watermark Text')
-                        ->placeholder('e.g., VIP INVITATION')
-                        ->maxLength(50)
-                        ->helperText('Text to overlay on the invitation'),
-
-                    Forms\Components\Select::make('seat_mode')
-                        ->label('Seat Assignment')
-                        ->options([
-                            'none' => 'No seat assignment',
-                            'manual' => 'Manual assignment',
-                            'auto' => 'Auto-assign',
-                        ])
-                        ->default('none'),
-
-                    Forms\Components\Textarea::make('notes')
-                        ->label('Notes')
-                        ->placeholder('Internal notes about this batch')
-                        ->rows(2),
-                ])
-                ->action(function (array $data): void {
-                    $this->createBatch($data);
-                }),
-        ];
+    public function submitCreateBatch(): void
+    {
+        $this->createBatch($this->batchData);
+        $this->showCreateModal = false;
+        $this->batchData = [];
     }
 
     public function createBatch(array $data): void

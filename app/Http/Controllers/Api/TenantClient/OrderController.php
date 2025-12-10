@@ -32,6 +32,8 @@ class OrderController extends Controller
             'beneficiaries.*.name' => 'required|string|max:255',
             'beneficiaries.*.email' => 'nullable|email|max:255',
             'beneficiaries.*.phone' => 'nullable|string|max:50',
+            'notification_email' => 'nullable|boolean',
+            'notification_whatsapp' => 'nullable|boolean',
         ]);
 
         // Resolve tenant from hostname
@@ -105,6 +107,10 @@ class OrderController extends Controller
                         'customer_phone' => $validated['customer_phone'] ?? null,
                         'items' => $orderItems,
                         'beneficiaries' => $validated['beneficiaries'] ?? null,
+                        'notification_preferences' => [
+                            'email' => $validated['notification_email'] ?? true,
+                            'whatsapp' => $validated['notification_whatsapp'] ?? false,
+                        ],
                     ],
                 ]);
 

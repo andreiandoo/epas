@@ -14,6 +14,11 @@ class CrmPage extends Page
     protected static ?string $slug = 'crm';
     protected string $view = 'filament.tenant.pages.crm';
 
+    public function getHeading(): string
+    {
+        return '';
+    }
+
     public static function shouldRegisterNavigation(): bool
     {
         $tenant = auth()->user()?->tenant;
@@ -28,8 +33,4 @@ class CrmPage extends Page
             ->exists();
     }
 
-    public function getTitle(): string
-    {
-        return 'Customer Relationship Management';
-    }
 }
