@@ -77,6 +77,7 @@ class CouponCodeResource extends Resource
                         Forms\Components\Select::make('campaign_id')
                             ->label('Campaign')
                             ->relationship('campaign', 'name')
+                            ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?? ($record->name[app()->getLocale()] ?? ($record->name['en'] ?? array_values((array) $record->name)[0] ?? 'Untitled')))
                             ->searchable()
                             ->preload(),
 
@@ -177,6 +178,7 @@ class CouponCodeResource extends Resource
 
                 Tables\Columns\TextColumn::make('campaign.name')
                     ->label('Campaign')
+                    ->getStateUsing(fn ($record) => $record->campaign?->getTranslation('name', app()->getLocale()) ?? ($record->campaign?->name[app()->getLocale()] ?? ($record->campaign?->name['en'] ?? null)))
                     ->searchable()
                     ->sortable()
                     ->limit(20)
@@ -236,6 +238,7 @@ class CouponCodeResource extends Resource
                 Tables\Filters\SelectFilter::make('campaign_id')
                     ->label('Campaign')
                     ->relationship('campaign', 'name')
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?? ($record->name[app()->getLocale()] ?? ($record->name['en'] ?? array_values((array) $record->name)[0] ?? 'Untitled')))
                     ->searchable()
                     ->preload(),
                 Tables\Filters\SelectFilter::make('discount_type')
