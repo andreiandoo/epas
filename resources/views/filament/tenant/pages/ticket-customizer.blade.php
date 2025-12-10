@@ -16,18 +16,20 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
                 <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
                 <div class="space-y-3">
+                    <a href="/tenant/ticket-templates/create"
+                       class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <x-heroicon-o-plus-circle class="w-5 h-5 text-orange-500" />
+                        <span class="text-gray-700 dark:text-gray-300">Create New Template</span>
+                    </a>
+                    <a href="/tenant/ticket-templates"
+                       class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <x-heroicon-o-document-duplicate class="w-5 h-5 text-gray-500" />
+                        <span class="text-gray-700 dark:text-gray-300">Browse Templates</span>
+                    </a>
                     <a href="/tenant/microservices/ticket-customizer/settings"
                        class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                         <x-heroicon-o-cog-6-tooth class="w-5 h-5 text-gray-500" />
                         <span class="text-gray-700 dark:text-gray-300">Configure Settings</span>
-                    </a>
-                    <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                        <x-heroicon-o-plus-circle class="w-5 h-5 text-gray-500" />
-                        <span class="text-gray-700 dark:text-gray-300">Create New Template</span>
-                    </a>
-                    <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                        <x-heroicon-o-document-duplicate class="w-5 h-5 text-gray-500" />
-                        <span class="text-gray-700 dark:text-gray-300">Browse Templates</span>
                     </a>
                 </div>
             </div>
@@ -55,13 +57,13 @@
             </div>
         </div>
 
-        <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
             <div class="flex gap-3">
-                <x-heroicon-o-light-bulb class="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <x-heroicon-o-information-circle class="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                 <div class="text-sm">
-                    <p class="font-medium text-amber-900 dark:text-amber-100">Coming Soon</p>
-                    <p class="text-amber-700 dark:text-amber-300 mt-1">
-                        The full visual ticket editor is being finalized. In the meantime, you can configure your template settings.
+                    <p class="font-medium text-blue-900 dark:text-blue-100">Getting Started</p>
+                    <p class="text-blue-700 dark:text-blue-300 mt-1">
+                        Create a template first, then use the Visual Editor button to design your ticket layout with the drag-and-drop interface.
                     </p>
                 </div>
             </div>

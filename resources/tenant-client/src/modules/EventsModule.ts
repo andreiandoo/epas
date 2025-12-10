@@ -398,7 +398,7 @@ export class EventsModule {
                     <h2 style="font-size: 1.25rem; font-weight: 600; color: #374151; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #e5e7eb;">
                         ${monthName} ${year}
                     </h2>
-                    <div class="events-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem;">
+                    <div class="events-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         ${events.map(event => this.renderPastEventCard(event)).join('')}
                     </div>
                 </div>

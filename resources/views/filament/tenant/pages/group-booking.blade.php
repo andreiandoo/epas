@@ -16,18 +16,20 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
                 <h3 class="font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h3>
                 <div class="space-y-3">
+                    <a href="/tenant/group-bookings/create"
+                       class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <x-heroicon-o-plus-circle class="w-5 h-5 text-blue-500" />
+                        <span class="text-gray-700 dark:text-gray-300">Create Group Booking</span>
+                    </a>
+                    <a href="/tenant/group-bookings"
+                       class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+                        <x-heroicon-o-clipboard-document-list class="w-5 h-5 text-gray-500" />
+                        <span class="text-gray-700 dark:text-gray-300">View All Bookings</span>
+                    </a>
                     <a href="/tenant/microservices/group-booking/settings"
                        class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
                         <x-heroicon-o-cog-6-tooth class="w-5 h-5 text-gray-500" />
                         <span class="text-gray-700 dark:text-gray-300">Configure Settings</span>
-                    </a>
-                    <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                        <x-heroicon-o-plus-circle class="w-5 h-5 text-gray-500" />
-                        <span class="text-gray-700 dark:text-gray-300">Create Group Booking</span>
-                    </a>
-                    <a href="#" class="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition">
-                        <x-heroicon-o-clipboard-document-list class="w-5 h-5 text-gray-500" />
-                        <span class="text-gray-700 dark:text-gray-300">View All Bookings</span>
                     </a>
                 </div>
             </div>
