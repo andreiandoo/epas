@@ -1098,6 +1098,25 @@ class EventResource extends Resource
             SC\Section::make('Tickets')
                 ->extraAttributes(['id'=>'tickets','data-ep-section'=>'','data-ep-id'=>'tickets','data-ep-label'=>'Tickets','data-ep-icon'=>'ticket'])
                 ->schema([
+                    // Ticket Template selector
+                    Forms\Components\Select::make('ticket_template_id')
+                        ->label('Ticket Template')
+                        ->relationship(
+                            name: 'ticketTemplate',
+                            modifyQueryUsing: fn (Builder $query, SGet $get) => $query
+                                ->where('tenant_id', $get('tenant_id'))
+                                ->where('status', 'active')
+                                ->orderBy('name')
+                        )
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ($record->is_default ? ' (Default)' : ''))
+                        ->placeholder('Use default template')
+                        ->helperText('Select a template for tickets generated for this event. Leave empty to use the default template.')
+                        ->searchable()
+                        ->preload()
+                        ->nullable()
+                        ->live()
+                        ->disabled(fn (SGet $get) => !$get('tenant_id')),
+
                     Forms\Components\Repeater::make('ticketTypes')
                         ->relationship()
                         ->label('Ticket types')

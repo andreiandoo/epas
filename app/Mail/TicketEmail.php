@@ -67,6 +67,9 @@ class TicketEmail extends Mailable
         $venue = $event?->venue;
         $tenant = $ticket->order?->tenant;
 
+        // Generate QR code as base64 data URI
+        $qrCodeDataUri = $this->generateQrCodeDataUri($ticket->code);
+
         $pdf = Pdf::loadView('pdf.ticket', [
             'ticket' => $ticket,
             'event' => $event,
@@ -76,8 +79,52 @@ class TicketEmail extends Mailable
             'beneficiary' => $ticket->meta['beneficiary'] ?? null,
             'tenant' => $tenant,
             'ticketTerms' => $tenant?->ticket_terms ?? null,
+            'qrCodeDataUri' => $qrCodeDataUri,
         ]);
 
         return $pdf->output();
+    }
+
+    /**
+     * Generate a QR code as a base64 data URI
+     */
+    protected function generateQrCodeDataUri(string $data): string
+    {
+        try {
+            // Fetch QR code from API and convert to base64
+            $url = 'https://api.qrserver.com/v1/create-qr-code/?' . http_build_query([
+                'size' => '180x180',
+                'data' => $data,
+                'color' => '181622',
+                'margin' => '0',
+                'format' => 'png',
+            ]);
+
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 10,
+                ],
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                ],
+            ]);
+
+            $imageData = @file_get_contents($url, false, $context);
+
+            if ($imageData !== false) {
+                return 'data:image/png;base64,' . base64_encode($imageData);
+            }
+        } catch (\Exception $e) {
+            // Fallback to a simple placeholder if QR generation fails
+        }
+
+        // Return a simple SVG placeholder if external API fails
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
+            <rect width="180" height="180" fill="#f3f4f6"/>
+            <text x="90" y="90" text-anchor="middle" font-family="monospace" font-size="12" fill="#6b7280">QR: ' . htmlspecialchars(substr($data, 0, 10)) . '</text>
+        </svg>';
+
+        return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
 }

@@ -23,6 +23,7 @@ class Event extends Model
     protected $fillable = [
         'tenant_id',
         'venue_id',
+        'ticket_template_id',
         'commission_mode',
         'commission_rate',
         'title',
@@ -155,6 +156,11 @@ class Event extends Model
     public function venue(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Venue::class);
+    }
+
+    public function ticketTemplate(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\TicketTemplate::class);
     }
 
     /**

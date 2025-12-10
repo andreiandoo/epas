@@ -87,7 +87,8 @@ class TicketTemplateResource extends Resource
                             ->helperText('Make this the default template'),
                     ])->columns(2),
 
-                SC\Section::make('Canvas Settings')
+                SC\Section::make('Template Design')
+                    ->description('Canvas settings and dimensions')
                     ->schema([
                         Forms\Components\Select::make('template_data.meta.orientation')
                             ->label('Orientation')
@@ -95,24 +96,49 @@ class TicketTemplateResource extends Resource
                                 'portrait' => 'Portrait',
                                 'landscape' => 'Landscape',
                             ])
-                            ->default('landscape'),
+                            ->default('landscape')
+                            ->required()
+                            ->live(),
 
                         Forms\Components\TextInput::make('template_data.meta.dpi')
                             ->label('DPI')
                             ->numeric()
                             ->default(300)
-                            ->helperText('Print resolution (300 recommended)'),
+                            ->required()
+                            ->minValue(72)
+                            ->maxValue(600)
+                            ->helperText('Print resolution (300 DPI recommended)'),
 
                         Forms\Components\TextInput::make('template_data.meta.size_mm.w')
                             ->label('Width (mm)')
                             ->numeric()
-                            ->default(200),
+                            ->default(200)
+                            ->required()
+                            ->minValue(10)
+                            ->helperText('Canvas width in millimeters'),
 
                         Forms\Components\TextInput::make('template_data.meta.size_mm.h')
                             ->label('Height (mm)')
                             ->numeric()
-                            ->default(100),
-                    ])->columns(4),
+                            ->default(100)
+                            ->required()
+                            ->minValue(10)
+                            ->helperText('Canvas height in millimeters'),
+
+                        Forms\Components\TextInput::make('template_data.meta.bleed_mm')
+                            ->label('Bleed (mm)')
+                            ->numeric()
+                            ->default(3)
+                            ->minValue(0)
+                            ->helperText('Print bleed area in millimeters'),
+
+                        Forms\Components\TextInput::make('template_data.meta.safe_area_mm')
+                            ->label('Safe Area (mm)')
+                            ->numeric()
+                            ->default(5)
+                            ->minValue(0)
+                            ->helperText('Safe area margin in millimeters'),
+                    ])->columns(3),
 
                 SC\Section::make('Preview')
                     ->schema([

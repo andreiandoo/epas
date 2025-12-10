@@ -469,6 +469,27 @@ class EventResource extends Resource
             // TICKETS
             SC\Section::make('Tickets')
                 ->schema([
+                    // Ticket Template selector
+                    Forms\Components\Select::make('ticket_template_id')
+                        ->label('Ticket Template')
+                        ->relationship(
+                            name: 'ticketTemplate',
+                            modifyQueryUsing: fn (Builder $query) => $query
+                                ->where('tenant_id', auth()->user()->tenant?->id)
+                                ->where('status', 'active')
+                                ->orderBy('name')
+                        )
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ($record->is_default ? ' (Default)' : ''))
+                        ->placeholder('Use default template')
+                        ->helperText('Select a template for tickets generated for this event. Leave empty to use the default template.')
+                        ->searchable()
+                        ->preload()
+                        ->nullable()
+                        ->visible(fn () => auth()->user()->tenant?->microservices()
+                            ->where('slug', 'ticket-customizer')
+                            ->wherePivot('is_active', true)
+                            ->exists() ?? false),
+
                     // Commission Mode for event
                     SC\Grid::make(2)->schema([
                         Forms\Components\Select::make('commission_mode')

@@ -140,7 +140,7 @@
         </div>
 
         <div class="qr-section">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ urlencode($ticket->code) }}&color=181622&margin=0" alt="QR Code" class="qr-code">
+            <img src="{{ $qrCodeDataUri ?? 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' . urlencode($ticket->code) . '&color=181622&margin=0' }}" alt="QR Code" class="qr-code">
             <div class="ticket-code">{{ $ticket->code }}</div>
             <span class="status-badge status-{{ $ticket->status }}">
                 @if($ticket->status === 'valid') ✓ VALID

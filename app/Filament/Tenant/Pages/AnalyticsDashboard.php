@@ -208,29 +208,51 @@ class AnalyticsDashboard extends Page
             default => null,
         };
 
-        // Get events with ticket sales through ticket_types -> tickets -> orders
-        return Event::where('events.tenant_id', $tenant->id)
-            ->select('events.id', 'events.title')
-            ->join('ticket_types', 'ticket_types.event_id', '=', 'events.id')
-            ->join('tickets', 'tickets.ticket_type_id', '=', 'ticket_types.id')
-            ->join('orders', function ($join) use ($startDate) {
-                $join->on('orders.id', '=', 'tickets.order_id')
-                    ->where('orders.status', '=', 'paid');
-                if ($startDate) {
-                    $join->where('orders.created_at', '>=', $startDate);
+        // Get events with ticket sales - sum order totals (not ticket prices) to account for discounts
+        // Most orders are for a single event, so we can safely use order totals
+        $orders = Order::where('orders.tenant_id', $tenant->id)
+            ->where('orders.status', 'paid')
+            ->with(['tickets.ticketType:id,event_id'])
+            ->when($startDate, fn ($q) => $q->where('orders.created_at', '>=', $startDate))
+            ->get(['id', 'total_cents']);
+
+        // Group orders by event and sum totals
+        $eventData = [];
+        foreach ($orders as $order) {
+            // Get unique event IDs for this order
+            $eventIds = $order->tickets
+                ->map(fn ($t) => $t->ticketType?->event_id)
+                ->filter()
+                ->unique()
+                ->values();
+
+            // If order has tickets from multiple events, split proportionally
+            $eventCount = $eventIds->count();
+            $revenuePerEvent = $eventCount > 0 ? ($order->total_cents / $eventCount) : 0;
+
+            foreach ($eventIds as $eventId) {
+                if (!isset($eventData[$eventId])) {
+                    $eventData[$eventId] = ['orders' => 0, 'revenue_cents' => 0];
                 }
-            })
-            ->groupBy('events.id', 'events.title')
-            ->selectRaw('COUNT(DISTINCT orders.id) as order_count, SUM(ticket_types.price_cents) as revenue_cents')
-            ->orderByDesc('revenue_cents')
-            ->limit(5)
-            ->get()
-            ->map(fn ($event) => [
-                'name' => is_array($event->title) ? ($event->title['en'] ?? $event->title[array_key_first($event->title)] ?? 'Untitled') : $event->title,
-                'orders' => $event->order_count ?? 0,
-                'revenue' => ($event->revenue_cents ?? 0) / 100,
-            ])
-            ->toArray();
+                $eventData[$eventId]['orders']++;
+                $eventData[$eventId]['revenue_cents'] += $revenuePerEvent;
+            }
+        }
+
+        // Sort by revenue and take top 5
+        uasort($eventData, fn ($a, $b) => $b['revenue_cents'] <=> $a['revenue_cents']);
+        $topEventIds = array_slice(array_keys($eventData), 0, 5);
+
+        // Get event titles
+        $events = Event::whereIn('id', $topEventIds)->get()->keyBy('id');
+
+        return collect($topEventIds)->map(fn ($eventId) => [
+            'name' => is_array($events[$eventId]?->title ?? null)
+                ? ($events[$eventId]->title['en'] ?? $events[$eventId]->title[array_key_first($events[$eventId]->title)] ?? 'Untitled')
+                : ($events[$eventId]?->title ?? 'Untitled'),
+            'orders' => $eventData[$eventId]['orders'] ?? 0,
+            'revenue' => ($eventData[$eventId]['revenue_cents'] ?? 0) / 100,
+        ])->toArray();
     }
 
     public function getHeading(): string
