@@ -31,8 +31,17 @@ interface CartItem {
     bulkDiscounts: any[];
 }
 
+interface AppliedDiscount {
+    code: string;
+    name: string;
+    type: 'percentage' | 'fixed';
+    value: number;
+    discountAmount: number;
+}
+
 class CartService {
     private static STORAGE_KEY = 'tixello_cart';
+    private static DISCOUNT_KEY = 'tixello_discount';
 
     static getCart(): CartItem[] {
         const cartJson = localStorage.getItem(this.STORAGE_KEY);
@@ -137,14 +146,38 @@ class CartService {
             }
         }
 
+        // Apply coupon discount if exists
+        const couponDiscount = this.getDiscount();
+        let couponDiscountAmount = 0;
+        if (couponDiscount) {
+            if (couponDiscount.type === 'percentage') {
+                couponDiscountAmount = subtotal * (couponDiscount.value / 100);
+            } else {
+                couponDiscountAmount = couponDiscount.discountAmount;
+            }
+        }
+
         return {
             subtotal: subtotal + totalDiscount, // Original subtotal before discount
-            discount: totalDiscount,
+            discount: totalDiscount + couponDiscountAmount,
             commission: totalCommission,
-            total: subtotal + totalCommission,  // subtotal already has discount applied, add commission
+            total: Math.max(0, subtotal + totalCommission - couponDiscountAmount),  // subtotal already has bulk discount applied, add commission, subtract coupon
             currency,
             hasCommission
         };
+    }
+
+    static setDiscount(discount: AppliedDiscount): void {
+        localStorage.setItem(this.DISCOUNT_KEY, JSON.stringify(discount));
+    }
+
+    static getDiscount(): AppliedDiscount | null {
+        const discountJson = localStorage.getItem(this.DISCOUNT_KEY);
+        return discountJson ? JSON.parse(discountJson) : null;
+    }
+
+    static removeDiscount(): void {
+        localStorage.removeItem(this.DISCOUNT_KEY);
     }
 }
 
@@ -2000,9 +2033,31 @@ export class Router {
                                 ` : ''}
                             </div>
 
+                            <!-- Discount Code Section -->
+                            <div class="mb-4 pb-4 border-b">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Cod de reducere</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="discount-code-input" placeholder="Introdu codul"
+                                           class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm">
+                                    <button id="apply-discount-btn" class="px-4 py-2 bg-gray-800 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition">
+                                        Aplică
+                                    </button>
+                                </div>
+                                <div id="discount-code-message" class="mt-2 text-sm hidden"></div>
+                                <div id="applied-discount-display" class="hidden mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <span class="text-sm font-medium text-green-800" id="applied-discount-name"></span>
+                                            <span class="text-sm text-green-600 ml-2" id="applied-discount-value"></span>
+                                        </div>
+                                        <button id="remove-discount-btn" class="text-red-600 hover:text-red-700 text-sm">Elimină</button>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="flex justify-between items-center mb-6">
                                 <span class="text-lg font-semibold">Total</span>
-                                <span class="text-2xl font-bold text-primary">${totals.total.toFixed(2)} ${totals.currency}</span>
+                                <span class="text-2xl font-bold text-primary" id="cart-total-amount">${totals.total.toFixed(2)} ${totals.currency}</span>
                             </div>
 
                             <button id="checkout-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition">
@@ -2084,9 +2139,131 @@ export class Router {
                 this.navigate('/checkout');
             });
         }
+
+        // Discount code handlers
+        this.setupDiscountCodeHandlers();
     }
 
-        private async renderCheckout(): Promise<void> {
+    private setupDiscountCodeHandlers(): void {
+        const applyBtn = document.getElementById('apply-discount-btn');
+        const input = document.getElementById('discount-code-input') as HTMLInputElement;
+        const messageDiv = document.getElementById('discount-code-message');
+        const appliedDisplay = document.getElementById('applied-discount-display');
+        const removeBtn = document.getElementById('remove-discount-btn');
+
+        if (applyBtn && input) {
+            applyBtn.addEventListener('click', async () => {
+                const code = input.value.trim();
+                if (!code) {
+                    this.showDiscountMessage('Te rugăm să introduci un cod de reducere.', 'error');
+                    return;
+                }
+
+                applyBtn.textContent = 'Se verifică...';
+                (applyBtn as HTMLButtonElement).disabled = true;
+
+                try {
+                    const response = await this.fetchApi('/discount/validate', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            code: code,
+                            cart: CartService.getCart()
+                        })
+                    });
+
+                    if (response.success && response.data?.valid) {
+                        // Store discount in CartService
+                        CartService.setDiscount({
+                            code: code,
+                            name: response.data.name || code,
+                            type: response.data.discount_type,
+                            value: response.data.discount_value,
+                            discountAmount: response.data.discount_amount
+                        });
+
+                        // Show applied discount
+                        const nameSpan = document.getElementById('applied-discount-name');
+                        const valueSpan = document.getElementById('applied-discount-value');
+                        if (nameSpan) nameSpan.textContent = response.data.name || code;
+                        if (valueSpan) {
+                            valueSpan.textContent = response.data.discount_type === 'percentage'
+                                ? `(-${response.data.discount_value}%)`
+                                : `(-${response.data.discount_amount} ${CartService.getTotal().currency})`;
+                        }
+                        if (appliedDisplay) appliedDisplay.classList.remove('hidden');
+                        if (messageDiv) messageDiv.classList.add('hidden');
+                        input.value = '';
+                        input.disabled = true;
+
+                        // Update total display
+                        this.updateCartTotal();
+                    } else {
+                        this.showDiscountMessage(response.message || 'Cod invalid sau expirat.', 'error');
+                    }
+                } catch (error) {
+                    console.error('Discount validation error:', error);
+                    this.showDiscountMessage('A apărut o eroare. Te rugăm să încerci din nou.', 'error');
+                } finally {
+                    applyBtn.textContent = 'Aplică';
+                    (applyBtn as HTMLButtonElement).disabled = false;
+                }
+            });
+
+            // Allow Enter key to apply
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyBtn.click();
+                }
+            });
+        }
+
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                CartService.removeDiscount();
+                if (appliedDisplay) appliedDisplay.classList.add('hidden');
+                if (input) {
+                    input.disabled = false;
+                    input.value = '';
+                }
+                this.updateCartTotal();
+            });
+        }
+
+        // Check if there's already an applied discount
+        const existingDiscount = CartService.getDiscount();
+        if (existingDiscount && appliedDisplay) {
+            const nameSpan = document.getElementById('applied-discount-name');
+            const valueSpan = document.getElementById('applied-discount-value');
+            if (nameSpan) nameSpan.textContent = existingDiscount.name;
+            if (valueSpan) {
+                valueSpan.textContent = existingDiscount.type === 'percentage'
+                    ? `(-${existingDiscount.value}%)`
+                    : `(-${existingDiscount.discountAmount} ${CartService.getTotal().currency})`;
+            }
+            appliedDisplay.classList.remove('hidden');
+            if (input) input.disabled = true;
+        }
+    }
+
+    private showDiscountMessage(message: string, type: 'success' | 'error'): void {
+        const messageDiv = document.getElementById('discount-code-message');
+        if (messageDiv) {
+            messageDiv.textContent = message;
+            messageDiv.className = `mt-2 text-sm ${type === 'error' ? 'text-red-600' : 'text-green-600'}`;
+            messageDiv.classList.remove('hidden');
+        }
+    }
+
+    private updateCartTotal(): void {
+        const totals = CartService.getTotal();
+        const totalEl = document.getElementById('cart-total-amount');
+        if (totalEl) {
+            totalEl.textContent = `${totals.total.toFixed(2)} ${totals.currency}`;
+        }
+    }
+
+    private async renderCheckout(): Promise<void> {
         const content = this.getContentElement();
         if (!content) return;
 
@@ -4196,9 +4373,9 @@ private async renderProfile(): Promise<void> {
             blogList.innerHTML = `
                 ${categories.length > 0 ? `
                     <div class="mb-8 flex flex-wrap gap-2">
-                        <a href="#/blog" class="px-4 py-2 rounded-full text-sm font-medium bg-primary-600 text-white">All</a>
+                        <a href="/blog" class="px-4 py-2 rounded-full text-sm font-medium bg-primary-600 text-white">All</a>
                         ${categories.map((cat: any) => `
-                            <a href="#/blog?category=${cat.slug}" class="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
+                            <a href="/blog?category=${cat.slug}" class="px-4 py-2 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700">
                                 ${cat.name} (${cat.articles_count})
                             </a>
                         `).join('')}
@@ -4240,7 +4417,7 @@ private async renderProfile(): Promise<void> {
 
         return `
             <article class="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow border border-gray-100 dark:border-gray-700">
-                <a href="#/blog/${article.slug}" class="block">
+                <a href="/blog/${article.slug}" class="block">
                     ${article.featured_image
                         ? `<div class="aspect-[16/9] overflow-hidden">
                             <img src="${article.featured_image}"
@@ -4259,7 +4436,7 @@ private async renderProfile(): Promise<void> {
                         ? `<span class="inline-block px-3 py-1 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full mb-3">${article.category}</span>`
                         : ''
                     }
-                    <a href="#/blog/${article.slug}" class="block group">
+                    <a href="/blog/${article.slug}" class="block group">
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2 mb-2">
                             ${article.title}
                         </h3>
@@ -4321,7 +4498,7 @@ private async renderProfile(): Promise<void> {
                 <article class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <header class="mb-8">
                         ${article.category
-                            ? `<a href="#/blog?category=${article.category_slug}" class="inline-block px-3 py-1 text-sm font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full mb-4 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">${article.category}</a>`
+                            ? `<a href="/blog?category=${article.category_slug}" class="inline-block px-3 py-1 text-sm font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full mb-4 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">${article.category}</a>`
                             : ''
                         }
                         <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">${article.title}</h1>
@@ -4366,7 +4543,7 @@ private async renderProfile(): Promise<void> {
                             <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Related Articles</h2>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 ${related.map((rel: any) => `
-                                    <a href="#/blog/${rel.slug}" class="block group">
+                                    <a href="/blog/${rel.slug}" class="block group">
                                         <div class="bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
                                             ${rel.featured_image
                                                 ? `<img src="${rel.featured_image}" alt="${rel.title}" class="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300">`
@@ -4381,7 +4558,7 @@ private async renderProfile(): Promise<void> {
                     ` : ''}
 
                     <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-                        <a href="#/blog" class="inline-flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:underline">
+                        <a href="/blog" class="inline-flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:underline">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                             </svg>
@@ -4391,11 +4568,49 @@ private async renderProfile(): Promise<void> {
                 </article>
             `;
 
-            // Update page title
-            document.title = article.meta_title || article.title;
+            // Update page title and meta tags
+            this.updateArticleMetaTags(article);
         } catch (error) {
             this.render404();
             console.error('Failed to load article:', error);
+        }
+    }
+
+    private updateArticleMetaTags(article: any): void {
+        document.title = article.meta_title || article.title;
+
+        // Helper to update or create meta tag
+        const setMetaTag = (selector: string, content: string, attr: 'name' | 'property' = 'name', attrValue?: string) => {
+            if (!content) return;
+            let tag = document.querySelector(selector) as HTMLMetaElement;
+            if (!tag) {
+                tag = document.createElement('meta');
+                tag.setAttribute(attr, attrValue || '');
+                document.head.appendChild(tag);
+            }
+            tag.setAttribute('content', content);
+        };
+
+        // Update meta description
+        setMetaTag('meta[name="description"]', article.meta_description || article.excerpt || '', 'name', 'description');
+
+        // Update OG tags
+        setMetaTag('meta[property="og:title"]', article.og_title || article.title, 'property', 'og:title');
+        setMetaTag('meta[property="og:description"]', article.og_description || article.excerpt || '', 'property', 'og:description');
+        setMetaTag('meta[property="og:type"]', 'article', 'property', 'og:type');
+        setMetaTag('meta[property="og:url"]', window.location.href, 'property', 'og:url');
+
+        if (article.og_image || article.featured_image) {
+            setMetaTag('meta[property="og:image"]', article.og_image || article.featured_image || '', 'property', 'og:image');
+        }
+
+        // Update Twitter Card tags
+        setMetaTag('meta[name="twitter:card"]', 'summary_large_image', 'name', 'twitter:card');
+        setMetaTag('meta[name="twitter:title"]', article.og_title || article.title, 'name', 'twitter:title');
+        setMetaTag('meta[name="twitter:description"]', article.og_description || article.excerpt || '', 'name', 'twitter:description');
+
+        if (article.og_image || article.featured_image) {
+            setMetaTag('meta[name="twitter:image"]', article.og_image || article.featured_image || '', 'name', 'twitter:image');
         }
     }
 

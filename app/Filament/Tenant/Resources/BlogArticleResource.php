@@ -25,9 +25,7 @@ class BlogArticleResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-newspaper';
 
-    protected static ?string $navigationLabel = 'Blog Articles';
-
-    protected static ?string $navigationParentItem = 'Pages';
+    protected static ?string $navigationLabel = 'Blog';
 
     protected static ?int $navigationSort = 1;
 
@@ -162,16 +160,15 @@ class BlogArticleResource extends Resource
                                                             ->maxLength(160)
                                                             ->helperText('Recommended: 150-160 characters. Auto-fills from excerpt.'),
 
-                                                        Forms\Components\TextInput::make('meta_keywords')
-                                                            ->label('Meta Keywords')
-                                                            ->maxLength(255)
-                                                            ->helperText('Comma-separated keywords'),
-
                                                         Forms\Components\TextInput::make('canonical_url')
                                                             ->label('Canonical URL')
                                                             ->url()
                                                             ->maxLength(500)
                                                             ->helperText('Leave empty to use the article URL'),
+
+                                                        Forms\Components\Toggle::make('no_index')
+                                                            ->label('Hide from Search Engines')
+                                                            ->helperText('When enabled, search engines will not index this article'),
                                                     ])->columns(1),
 
                                                 SC\Tabs\Tab::make('Open Graph')
@@ -187,25 +184,29 @@ class BlogArticleResource extends Resource
                                                             ->maxLength(200)
                                                             ->helperText('Description for social media sharing'),
 
-                                                        Forms\Components\TextInput::make('og_image_url')
-                                                            ->label('OG Image URL')
-                                                            ->url()
-                                                            ->maxLength(500)
+                                                        Forms\Components\FileUpload::make('og_image_url')
+                                                            ->label('OG Image')
+                                                            ->image()
+                                                            ->disk('public')
+                                                            ->directory('blog-og-images')
+                                                            ->imageResizeMode('cover')
+                                                            ->imageCropAspectRatio('1.91:1')
+                                                            ->imageResizeTargetWidth('1200')
+                                                            ->imageResizeTargetHeight('630')
                                                             ->helperText('Image for social sharing (1200x630px recommended)'),
 
-                                                        Forms\Components\Select::make('og_type')
-                                                            ->label('OG Type')
+                                                        Forms\Components\Select::make('twitter_card')
+                                                            ->label('Twitter Card Type')
                                                             ->options([
-                                                                'article' => 'Article',
-                                                                'website' => 'Website',
-                                                                'blog' => 'Blog',
+                                                                'summary' => 'Summary',
+                                                                'summary_large_image' => 'Summary with Large Image',
                                                             ])
-                                                            ->default('article'),
+                                                            ->default('summary_large_image'),
                                                     ])->columns(1),
 
                                                 SC\Tabs\Tab::make('Schema.org')
                                                     ->schema([
-                                                        Forms\Components\Select::make('schema_type')
+                                                        Forms\Components\Select::make('schema_markup.type')
                                                             ->label('Schema Type')
                                                             ->options([
                                                                 'Article' => 'Article',
@@ -215,21 +216,21 @@ class BlogArticleResource extends Resource
                                                             ])
                                                             ->default('BlogPosting'),
 
-                                                        Forms\Components\TextInput::make('schema_author_name')
+                                                        Forms\Components\TextInput::make('schema_markup.author_name')
                                                             ->label('Author Name')
                                                             ->maxLength(100),
 
-                                                        Forms\Components\TextInput::make('schema_author_url')
+                                                        Forms\Components\TextInput::make('schema_markup.author_url')
                                                             ->label('Author URL')
                                                             ->url()
                                                             ->maxLength(255),
 
-                                                        Forms\Components\TextInput::make('schema_publisher_name')
+                                                        Forms\Components\TextInput::make('schema_markup.publisher_name')
                                                             ->label('Publisher Name')
                                                             ->maxLength(100)
                                                             ->default(fn () => $tenant->public_name ?? $tenant->name ?? ''),
 
-                                                        Forms\Components\TextInput::make('schema_publisher_logo')
+                                                        Forms\Components\TextInput::make('schema_markup.publisher_logo')
                                                             ->label('Publisher Logo URL')
                                                             ->url()
                                                             ->maxLength(500),
@@ -248,16 +249,6 @@ class BlogArticleResource extends Resource
                                                                 'it' => 'Italian',
                                                             ])
                                                             ->default($tenantLanguage),
-
-                                                        Forms\Components\Select::make('robots')
-                                                            ->label('Robots Meta')
-                                                            ->options([
-                                                                'index,follow' => 'Index, Follow (default)',
-                                                                'noindex,follow' => 'No Index, Follow',
-                                                                'index,nofollow' => 'Index, No Follow',
-                                                                'noindex,nofollow' => 'No Index, No Follow',
-                                                            ])
-                                                            ->default('index,follow'),
 
                                                         Forms\Components\TextInput::make('reading_time_minutes')
                                                             ->label('Reading Time (minutes)')
@@ -312,7 +303,7 @@ class BlogArticleResource extends Resource
                                 // Featured Image Section
                                 SC\Section::make('Featured Image')
                                     ->schema([
-                                        Forms\Components\FileUpload::make('featured_image')
+                                        Forms\Components\FileUpload::make('featured_image_url')
                                             ->label('Image')
                                             ->image()
                                             ->disk('public')
@@ -342,7 +333,7 @@ class BlogArticleResource extends Resource
 
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('featured_image')
+                Tables\Columns\ImageColumn::make('featured_image_url')
                     ->label('Image')
                     ->circular(false)
                     ->size(50),

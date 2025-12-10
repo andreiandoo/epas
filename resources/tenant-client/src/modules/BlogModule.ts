@@ -167,7 +167,7 @@ export class BlogModule {
 
         return `
             <article class="blog-card bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow border border-gray-100 dark:border-gray-700">
-                <a href="#/blog/${article.slug}" class="block">
+                <a href="/blog/${article.slug}" class="block">
                     ${article.featured_image
                         ? `<div class="aspect-[16/9] overflow-hidden">
                             <img src="${article.featured_image}"
@@ -186,7 +186,7 @@ export class BlogModule {
                         ? `<span class="inline-block px-3 py-1 text-xs font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full mb-3">${article.category}</span>`
                         : ''
                     }
-                    <a href="#/blog/${article.slug}" class="block group">
+                    <a href="/blog/${article.slug}" class="block group">
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2 mb-2">
                             ${article.title}
                         </h3>
@@ -290,7 +290,7 @@ export class BlogModule {
                     <div class="text-center py-12">
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Article Not Found</h2>
                         <p class="text-gray-500 mb-6">The article you're looking for doesn't exist or has been removed.</p>
-                        <a href="#/blog" class="tixello-btn">Back to Blog</a>
+                        <a href="/blog" class="tixello-btn">Back to Blog</a>
                     </div>
                 `;
             } else {
@@ -314,7 +314,7 @@ export class BlogModule {
             <article class="blog-article max-w-4xl mx-auto">
                 <header class="mb-8">
                     ${article.category
-                        ? `<a href="#/blog?category=${article.category_slug}" class="inline-block px-3 py-1 text-sm font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full mb-4 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">${article.category}</a>`
+                        ? `<a href="/blog?category=${article.category_slug}" class="inline-block px-3 py-1 text-sm font-medium bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full mb-4 hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-colors">${article.category}</a>`
                         : ''
                     }
                     <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">${article.title}</h1>
@@ -357,7 +357,7 @@ export class BlogModule {
                 ${related.length > 0 ? this.renderRelatedArticles(related) : ''}
 
                 <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-                    <a href="#/blog" class="inline-flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:underline">
+                    <a href="/blog" class="inline-flex items-center gap-2 text-primary-600 dark:text-primary-400 hover:underline">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                         </svg>
@@ -374,7 +374,7 @@ export class BlogModule {
                 <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Related Articles</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     ${articles.map(article => `
-                        <a href="#/blog/${article.slug}" class="block group">
+                        <a href="/blog/${article.slug}" class="block group">
                             <div class="bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
                                 ${article.featured_image
                                     ? `<img src="${article.featured_image}" alt="${article.title}" class="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300">`
@@ -393,26 +393,38 @@ export class BlogModule {
         // Update page title
         document.title = article.meta_title || article.title;
 
+        // Helper to update or create meta tag
+        const setMetaTag = (selector: string, content: string, attr: 'name' | 'property' = 'name', attrValue?: string) => {
+            if (!content) return;
+            let tag = document.querySelector(selector) as HTMLMetaElement;
+            if (!tag) {
+                tag = document.createElement('meta');
+                tag.setAttribute(attr, attrValue || selector.match(/\["(.+?)"\]/)?.[1] || '');
+                document.head.appendChild(tag);
+            }
+            tag.setAttribute('content', content);
+        };
+
         // Update meta description
-        const metaDesc = document.querySelector('meta[name="description"]');
-        if (metaDesc) {
-            metaDesc.setAttribute('content', article.meta_description || article.excerpt || '');
-        }
+        setMetaTag('meta[name="description"]', article.meta_description || article.excerpt || '', 'name', 'description');
 
         // Update OG tags
-        const ogTitle = document.querySelector('meta[property="og:title"]');
-        if (ogTitle) {
-            ogTitle.setAttribute('content', article.og_title || article.title);
+        setMetaTag('meta[property="og:title"]', article.og_title || article.title, 'property', 'og:title');
+        setMetaTag('meta[property="og:description"]', article.og_description || article.excerpt || '', 'property', 'og:description');
+        setMetaTag('meta[property="og:type"]', 'article', 'property', 'og:type');
+        setMetaTag('meta[property="og:url"]', window.location.href, 'property', 'og:url');
+
+        if (article.og_image || article.featured_image) {
+            setMetaTag('meta[property="og:image"]', article.og_image || article.featured_image || '', 'property', 'og:image');
         }
 
-        const ogDesc = document.querySelector('meta[property="og:description"]');
-        if (ogDesc) {
-            ogDesc.setAttribute('content', article.og_description || article.excerpt || '');
-        }
+        // Update Twitter Card tags
+        setMetaTag('meta[name="twitter:card"]', 'summary_large_image', 'name', 'twitter:card');
+        setMetaTag('meta[name="twitter:title"]', article.og_title || article.title, 'name', 'twitter:title');
+        setMetaTag('meta[name="twitter:description"]', article.og_description || article.excerpt || '', 'name', 'twitter:description');
 
-        const ogImage = document.querySelector('meta[property="og:image"]');
-        if (ogImage && article.og_image) {
-            ogImage.setAttribute('content', article.og_image);
+        if (article.og_image || article.featured_image) {
+            setMetaTag('meta[name="twitter:image"]', article.og_image || article.featured_image || '', 'name', 'twitter:image');
         }
     }
 }

@@ -263,7 +263,7 @@ class BlogController extends Controller
             'title' => $getTranslation('title'),
             'subtitle' => $getTranslation('subtitle'),
             'excerpt' => $getTranslation('excerpt'),
-            'featured_image' => $article->featured_image_url,
+            'featured_image' => $article->featured_image_url ? asset('storage/' . $article->featured_image_url) : null,
             'featured_image_alt' => $article->featured_image_alt,
             'category' => $categoryName,
             'category_slug' => $article->category?->slug,

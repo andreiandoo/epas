@@ -28,7 +28,7 @@ class CouponCodeResource extends Resource
 
     protected static ?string $navigationLabel = 'Generated Codes';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Sales';
+    protected static ?string $navigationParentItem = 'Coupon Codes';
 
     protected static ?int $navigationSort = 15;
 
