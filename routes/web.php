@@ -222,9 +222,9 @@ Route::middleware(['web', 'auth'])->prefix('admin')->group(function () {
 
 // Tenant Ticket Customizer (Visual Editor) Routes
 Route::middleware(['web', 'auth'])->prefix('tenant')->group(function () {
-    Route::get('/ticket-customizer/{template}', [TenantTicketCustomizerController::class, 'edit'])
+    Route::get('/ticket-customizer/{template}/editor', [TenantTicketCustomizerController::class, 'edit'])
         ->name('tenant.ticket-customizer.edit');
-    Route::put('/ticket-customizer/{template}', [TenantTicketCustomizerController::class, 'update'])
+    Route::put('/ticket-customizer/{template}/editor', [TenantTicketCustomizerController::class, 'update'])
         ->name('tenant.ticket-customizer.update');
 });
 
