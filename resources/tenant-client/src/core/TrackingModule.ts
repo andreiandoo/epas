@@ -130,7 +130,8 @@ export class TrackingModule {
         } catch {
             this.config.endpoint = apiEndpoint.replace(/\/api\/tenant-client\/?$/, '');
         }
-        this.config.tenantId = tixelloConfig.tenantId || '';
+        // Convert tenantId to string - PHP validation requires string type
+        this.config.tenantId = String(tixelloConfig.tenantId || '');
         this.config.enabled = tixelloConfig.tracking?.enabled !== false;
 
         if (!this.config.enabled) {
