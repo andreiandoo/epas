@@ -728,7 +728,7 @@ class PlatformTrackingService
 
         $customerData = [
             'visitor_id' => $data['visitor_id'] ?? $session->visitor_id ?? Str::uuid()->toString(),
-            'tenant_id' => $data['tenant_id'] ?? null,
+            'first_tenant_id' => $data['tenant_id'] ?? null,
             'first_seen_at' => now(),
             'last_seen_at' => now(),
             'first_referrer' => $data['referrer'] ?? null,
