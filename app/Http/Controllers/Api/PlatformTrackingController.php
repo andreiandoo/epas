@@ -12,7 +12,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use Jenssegers\Agent\Agent;
 
 class PlatformTrackingController extends Controller
 {
@@ -55,11 +54,7 @@ class PlatformTrackingController extends Controller
 
             $tenantId = $tenant?->id;
 
-            // Parse user agent for device info
-            $agent = new Agent();
-            $agent->setUserAgent($request->userAgent());
-
-            // Build base event data from request
+            // Build base event data from request - use client-provided device info
             $baseData = [
                 'tenant_id' => $tenantId,
                 'visitor_id' => $request->input('userData.visitorId'),
@@ -70,21 +65,21 @@ class PlatformTrackingController extends Controller
                 'last_name' => $request->input('userData.lastName'),
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
-                'device_type' => $request->input('deviceInfo.deviceType', $this->getDeviceType($agent)),
+                'device_type' => $request->input('deviceInfo.deviceType', 'desktop'),
                 'device_brand' => $request->input('deviceInfo.deviceBrand'),
                 'device_model' => $request->input('deviceInfo.deviceModel'),
-                'browser' => $request->input('deviceInfo.browser', $agent->browser()),
-                'browser_version' => $request->input('deviceInfo.browserVersion', $agent->version($agent->browser())),
-                'os' => $request->input('deviceInfo.os', $agent->platform()),
-                'os_version' => $request->input('deviceInfo.osVersion', $agent->version($agent->platform())),
+                'browser' => $request->input('deviceInfo.browser', 'Unknown'),
+                'browser_version' => $request->input('deviceInfo.browserVersion', ''),
+                'os' => $request->input('deviceInfo.os', 'Unknown'),
+                'os_version' => $request->input('deviceInfo.osVersion', ''),
                 'screen_width' => $request->input('deviceInfo.screenWidth'),
                 'screen_height' => $request->input('deviceInfo.screenHeight'),
                 'viewport_width' => $request->input('deviceInfo.viewportWidth'),
                 'viewport_height' => $request->input('deviceInfo.viewportHeight'),
-                'is_mobile' => $request->input('deviceInfo.isMobile', $agent->isMobile()),
-                'is_tablet' => $request->input('deviceInfo.isTablet', $agent->isTablet()),
-                'is_desktop' => $request->input('deviceInfo.isDesktop', $agent->isDesktop()),
-                'is_bot' => $agent->isRobot(),
+                'is_mobile' => $request->input('deviceInfo.isMobile', false),
+                'is_tablet' => $request->input('deviceInfo.isTablet', false),
+                'is_desktop' => $request->input('deviceInfo.isDesktop', true),
+                'is_bot' => $this->isBot($request->userAgent()),
             ];
 
             // Geolocate IP if possible
@@ -396,13 +391,32 @@ class PlatformTrackingController extends Controller
     }
 
     /**
-     * Get device type from agent
+     * Detect if request is from a bot based on user agent
      */
-    protected function getDeviceType(Agent $agent): string
+    protected function isBot(?string $userAgent): bool
     {
-        if ($agent->isTablet()) return 'tablet';
-        if ($agent->isMobile()) return 'mobile';
-        return 'desktop';
+        if (!$userAgent) {
+            return false;
+        }
+
+        $botPatterns = [
+            'bot', 'crawl', 'spider', 'slurp', 'search', 'fetch',
+            'googlebot', 'bingbot', 'yandex', 'baidu', 'duckduck',
+            'facebookexternalhit', 'twitterbot', 'linkedinbot',
+            'whatsapp', 'telegram', 'slack', 'discord',
+            'headless', 'phantom', 'selenium', 'puppeteer',
+            'curl', 'wget', 'python', 'java/', 'perl', 'ruby',
+        ];
+
+        $userAgentLower = strtolower($userAgent);
+
+        foreach ($botPatterns as $pattern) {
+            if (str_contains($userAgentLower, $pattern)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
