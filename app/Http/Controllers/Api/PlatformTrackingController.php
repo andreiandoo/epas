@@ -427,7 +427,7 @@ class PlatformTrackingController extends Controller
     }
 
     /**
-     * Geolocate IP address
+     * Geolocate IP address using ip-api.com (free for non-commercial use)
      */
     protected function geolocateIp(string $ip): ?array
     {
@@ -436,11 +436,49 @@ class PlatformTrackingController extends Controller
             return null;
         }
 
+        // Check cache first (cache for 24 hours)
+        $cacheKey = 'geoip_' . md5($ip);
+        $cached = cache()->get($cacheKey);
+        if ($cached !== null) {
+            return $cached ?: null;
+        }
+
         try {
-            // Use a simple GeoIP service (could be replaced with MaxMind or similar)
-            // For now, return null - would need GeoIP database integration
-            return null;
+            // Use ip-api.com (free for non-commercial, 45 req/min limit)
+            // For production with high traffic, consider MaxMind GeoLite2
+            $response = @file_get_contents(
+                "http://ip-api.com/json/{$ip}?fields=status,country,countryCode,regionName,city",
+                false,
+                stream_context_create(['http' => ['timeout' => 2]])
+            );
+
+            if (!$response) {
+                cache()->put($cacheKey, false, now()->addHours(1)); // Cache failures for 1 hour
+                return null;
+            }
+
+            $data = json_decode($response, true);
+
+            if (!$data || ($data['status'] ?? '') !== 'success') {
+                cache()->put($cacheKey, false, now()->addHours(1));
+                return null;
+            }
+
+            $geoData = [
+                'country_code' => $data['countryCode'] ?? null,
+                'country' => $data['country'] ?? null,
+                'region' => $data['regionName'] ?? null,
+                'city' => $data['city'] ?? null,
+            ];
+
+            // Cache successful lookups for 24 hours
+            cache()->put($cacheKey, $geoData, now()->addHours(24));
+
+            return $geoData;
+
         } catch (\Exception $e) {
+            Log::warning('GeoIP lookup failed', ['ip' => $ip, 'error' => $e->getMessage()]);
+            cache()->put($cacheKey, false, now()->addHours(1));
             return null;
         }
     }
