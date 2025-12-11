@@ -162,12 +162,15 @@ class PlatformTrackingController extends Controller
         } catch (\Exception $e) {
             Log::error('Platform tracking error', [
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'tenant_id' => $request->tenantId,
             ]);
 
             return response()->json([
                 'success' => false,
                 'error' => 'Failed to process tracking events',
+                'debug' => config('app.debug') ? $e->getMessage() : null,
             ], 500);
         }
     }
