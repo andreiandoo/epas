@@ -122,7 +122,14 @@ export class TrackingModule {
     init(tixelloConfig: TixelloConfig): void {
         if (this.isInitialized) return;
 
-        this.config.endpoint = tixelloConfig.apiEndpoint || '';
+        // Extract base URL from apiEndpoint (remove /api/tenant-client path if present)
+        const apiEndpoint = tixelloConfig.apiEndpoint || '';
+        try {
+            const url = new URL(apiEndpoint);
+            this.config.endpoint = url.origin; // Just use the origin (e.g., https://core.tixello.com)
+        } catch {
+            this.config.endpoint = apiEndpoint.replace(/\/api\/tenant-client\/?$/, '');
+        }
         this.config.tenantId = tixelloConfig.tenantId || '';
         this.config.enabled = tixelloConfig.tracking?.enabled !== false;
 

@@ -219,7 +219,7 @@ Route::prefix('affiliates')->middleware(['throttle:api'])->group(function () {
 |
 */
 
-Route::prefix('tracking')->middleware(['throttle:api'])->group(function () {
+Route::prefix('tracking')->middleware(['throttle:api', 'tenant.client.cors'])->group(function () {
     // Get tracking configuration
     Route::get('/config', [TrackingController::class, 'getConfig'])
         ->name('api.tracking.config');

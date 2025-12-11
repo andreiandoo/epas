@@ -122,10 +122,10 @@ class CartService {
         return { total: bestTotal, discount: bestDiscount };
     }
 
-    static getTotal(): { subtotal: number; discount: number; commission: number; total: number; currency: string; hasCommission: boolean } {
+    static getTotal(): { subtotal: number; bulkDiscount: number; couponDiscount: number; couponName: string | null; discount: number; commission: number; total: number; currency: string; hasCommission: boolean } {
         const cart = this.getCart();
         let subtotal = 0;
-        let totalDiscount = 0;
+        let bulkDiscount = 0;
         let totalCommission = 0;
         let hasCommission = false;
         let currency = 'RON';
@@ -135,7 +135,7 @@ class CartService {
             const itemPrice = item.salePrice || item.price;
             const result = this.calculateBulkDiscount(item.quantity, itemPrice, item.bulkDiscounts);
             subtotal += result.total;  // This is already the discounted total
-            totalDiscount += result.discount;
+            bulkDiscount += result.discount;
             currency = item.currency;
 
             // Calculate commission from BASE price × quantity (not affected by discounts)
@@ -147,19 +147,24 @@ class CartService {
         }
 
         // Apply coupon discount if exists
-        const couponDiscount = this.getDiscount();
+        const couponDiscountData = this.getDiscount();
         let couponDiscountAmount = 0;
-        if (couponDiscount) {
-            if (couponDiscount.type === 'percentage') {
-                couponDiscountAmount = subtotal * (couponDiscount.value / 100);
+        let couponName: string | null = null;
+        if (couponDiscountData) {
+            couponName = couponDiscountData.name;
+            if (couponDiscountData.type === 'percentage') {
+                couponDiscountAmount = subtotal * (couponDiscountData.value / 100);
             } else {
-                couponDiscountAmount = couponDiscount.discountAmount;
+                couponDiscountAmount = couponDiscountData.discountAmount;
             }
         }
 
         return {
-            subtotal: subtotal + totalDiscount, // Original subtotal before discount
-            discount: totalDiscount + couponDiscountAmount,
+            subtotal: subtotal + bulkDiscount, // Original subtotal before discount
+            bulkDiscount,
+            couponDiscount: couponDiscountAmount,
+            couponName,
+            discount: bulkDiscount + couponDiscountAmount,
             commission: totalCommission,
             total: Math.max(0, subtotal + totalCommission - couponDiscountAmount),  // subtotal already has bulk discount applied, add commission, subtract coupon
             currency,
@@ -2072,10 +2077,16 @@ export class Router {
                                     <span>Subtotal bilete</span>
                                     <span>${totals.subtotal.toFixed(2)} ${totals.currency}</span>
                                 </div>
-                                ${totals.discount > 0 ? `
+                                ${totals.bulkDiscount > 0 ? `
                                 <div class="flex justify-between text-green-600">
                                     <span>Discount bulk</span>
-                                    <span>-${totals.discount.toFixed(2)} ${totals.currency}</span>
+                                    <span>-${totals.bulkDiscount.toFixed(2)} ${totals.currency}</span>
+                                </div>
+                                ` : ''}
+                                ${totals.couponDiscount > 0 ? `
+                                <div class="flex justify-between text-green-600">
+                                    <span>Cod promoțional${totals.couponName ? ` (${totals.couponName})` : ''}</span>
+                                    <span>-${totals.couponDiscount.toFixed(2)} ${totals.currency}</span>
                                 </div>
                                 ` : ''}
                                 ${totals.hasCommission ? `
@@ -2556,10 +2567,16 @@ export class Router {
                                     <span>Subtotal bilete</span>
                                     <span>${totals.subtotal.toFixed(2)} ${totals.currency}</span>
                                 </div>
-                                ${totals.discount > 0 ? `
+                                ${totals.bulkDiscount > 0 ? `
                                 <div class="flex justify-between text-green-600">
-                                    <span>Discount</span>
-                                    <span>-${totals.discount.toFixed(2)} ${totals.currency}</span>
+                                    <span>Discount bulk</span>
+                                    <span>-${totals.bulkDiscount.toFixed(2)} ${totals.currency}</span>
+                                </div>
+                                ` : ''}
+                                ${totals.couponDiscount > 0 ? `
+                                <div class="flex justify-between text-green-600">
+                                    <span>Cod promoțional${totals.couponName ? ` (${totals.couponName})` : ''}</span>
+                                    <span>-${totals.couponDiscount.toFixed(2)} ${totals.currency}</span>
                                 </div>
                                 ` : ''}
                                 ${totals.hasCommission ? `
