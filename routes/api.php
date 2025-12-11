@@ -945,6 +945,14 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.cart.promo-code.remove');
     });
 
+    // Payment
+    Route::prefix('payment')->group(function () {
+        Route::get('/config', [CartController::class, 'getPaymentConfig'])
+            ->name('api.tenant-client.payment.config');
+        Route::post('/create-intent', [CartController::class, 'createPaymentIntent'])
+            ->name('api.tenant-client.payment.create-intent');
+    });
+
     // Checkout
     Route::prefix('checkout')->group(function () {
         Route::post('/init', [CheckoutController::class, 'init'])

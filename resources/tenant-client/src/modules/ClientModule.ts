@@ -233,12 +233,19 @@ export class ClientModule {
             container.innerHTML = `
                 <div style="display: grid; grid-template-columns: 1fr 400px; gap: 2rem;">
                     <div>
-                        <h2 style="font-weight: 600; margin-bottom: 1rem;">Billing Information</h2>
+                        <h2 style="font-weight: 600; margin-bottom: 1rem;">Detalii facturare</h2>
                         <form id="checkout-submit-form">
-                            <div style="margin-bottom: 1rem;">
-                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Full Name</label>
-                                <input type="text" name="billing_name" required
-                                    style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Prenume</label>
+                                    <input type="text" name="billing_first_name" required
+                                        style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                                </div>
+                                <div>
+                                    <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Nume</label>
+                                    <input type="text" name="billing_last_name" required
+                                        style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
+                                </div>
                             </div>
                             <div style="margin-bottom: 1rem;">
                                 <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Email</label>
@@ -246,34 +253,30 @@ export class ClientModule {
                                     style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
                             </div>
                             <div style="margin-bottom: 1rem;">
-                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Phone</label>
+                                <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Telefon</label>
                                 <input type="tel" name="billing_phone"
                                     style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
                             </div>
 
-                            <h2 style="font-weight: 600; margin: 1.5rem 0 1rem;">Payment Method</h2>
-                            <div style="display: grid; gap: 0.5rem;">
-                                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 1rem; border: 1px solid #d1d5db; border-radius: 0.375rem; cursor: pointer;">
-                                    <input type="radio" name="payment_method" value="stripe" checked>
-                                    <span>Credit Card (Stripe)</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 1rem; border: 1px solid #d1d5db; border-radius: 0.375rem; cursor: pointer;">
-                                    <input type="radio" name="payment_method" value="netopia">
-                                    <span>Netopia</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 1rem; border: 1px solid #d1d5db; border-radius: 0.375rem; cursor: pointer;">
-                                    <input type="radio" name="payment_method" value="euplatesc">
-                                    <span>EuPlatesc</span>
-                                </label>
-                                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 1rem; border: 1px solid #d1d5db; border-radius: 0.375rem; cursor: pointer;">
-                                    <input type="radio" name="payment_method" value="payu">
-                                    <span>PayU</span>
-                                </label>
+                            <h2 style="font-weight: 600; margin: 1.5rem 0 1rem;">Metodă de plată</h2>
+                            <input type="hidden" name="payment_method" value="stripe">
+
+                            <!-- Stripe Payment Element container -->
+                            <div id="stripe-payment-element" style="padding: 1rem; border: 1px solid #d1d5db; border-radius: 0.375rem; min-height: 100px; background: #fafafa;">
+                                <p style="color: #6b7280; text-align: center;">Se încarcă opțiunile de plată...</p>
                             </div>
 
-                            <button type="submit" class="tixello-btn" style="width: 100%; margin-top: 1.5rem;">
-                                Complete Purchase
+                            <!-- Payment error messages -->
+                            <div id="stripe-payment-errors" style="color: #ef4444; font-size: 0.875rem; margin-top: 0.5rem; display: none;"></div>
+
+                            <button type="submit" id="checkout-submit-btn" class="tixello-btn" style="width: 100%; margin-top: 1.5rem;" disabled>
+                                <span id="btn-text">Plătește ${this.formatCurrency(total, currency)}</span>
+                                <span id="btn-spinner" style="display: none;">Procesare...</span>
                             </button>
+
+                            <p style="font-size: 0.75rem; color: #6b7280; text-align: center; margin-top: 0.75rem;">
+                                🔒 Plata este securizată prin Stripe. Acceptăm card, Apple Pay și Google Pay.
+                            </p>
                         </form>
                     </div>
 
@@ -305,40 +308,11 @@ export class ClientModule {
                 </div>
             `;
 
-            // Handle form submission
-            document.getElementById('checkout-submit-form')?.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const form = e.target as HTMLFormElement;
-                const formData = new FormData(form);
+            // Initialize Stripe
+            await this.initStripeCheckout(total, currency);
 
-                if (this.apiClient) {
-                    try {
-                        this.setAuthHeaders();
-                        const response = await this.apiClient.post('/client/checkout', {
-                            cart_id: cartId,
-                            billing_name: formData.get('billing_name'),
-                            billing_email: formData.get('billing_email'),
-                            billing_phone: formData.get('billing_phone'),
-                            payment_method: formData.get('payment_method'),
-                        });
-
-                        const { order_number, payment_url } = response.data.data;
-
-                        // In production, redirect to payment_url
-                        // For now, simulate successful payment
-                        await this.apiClient.post(`/client/payment/${response.data.data.order_id}/callback`, {
-                            cart_id: cartId
-                        });
-
-                        localStorage.removeItem('cart_id');
-                        window.location.hash = `/thank-you/${order_number}`;
-                    } catch (error: any) {
-                        alert(error.response?.data?.message || 'Checkout failed');
-                    }
-                }
-            });
         } catch (error) {
-            container.innerHTML = '<p class="text-red-500">Failed to load checkout.</p>';
+            container.innerHTML = '<p class="text-red-500">A apărut o eroare la încărcarea checkout-ului.</p>';
         }
     }
 
@@ -739,5 +713,146 @@ export class ClientModule {
             style: 'currency',
             currency: currency
         }).format(amount);
+    }
+
+    /**
+     * Initialize Stripe checkout with Payment Element
+     */
+    private async initStripeCheckout(total: number, currency: string): Promise<void> {
+        if (!this.apiClient) return;
+
+        const paymentElement = document.getElementById('stripe-payment-element');
+        const errorsElement = document.getElementById('stripe-payment-errors');
+        const submitBtn = document.getElementById('checkout-submit-btn') as HTMLButtonElement;
+        const form = document.getElementById('checkout-submit-form') as HTMLFormElement;
+
+        if (!paymentElement) return;
+
+        try {
+            // Load Stripe.js dynamically
+            if (!(window as any).Stripe) {
+                await this.loadStripeJs();
+            }
+
+            // Get payment config and create payment intent
+            const configResponse = await this.apiClient.get('/client/payment/config');
+            const { publishable_key, configured, processor } = configResponse.data.data;
+
+            if (!configured || processor !== 'stripe') {
+                paymentElement.innerHTML = '<p style="color: #ef4444;">Plățile nu sunt configurate pentru acest organizator.</p>';
+                return;
+            }
+
+            // Create Payment Intent
+            const formData = new FormData(form);
+            const intentResponse = await this.apiClient.post('/client/payment/create-intent', {
+                amount: total,
+                currency: currency.toLowerCase(),
+                customer_email: formData.get('billing_email'),
+                customer_name: `${formData.get('billing_first_name')} ${formData.get('billing_last_name')}`.trim(),
+            });
+
+            const { client_secret } = intentResponse.data.data;
+
+            // Initialize Stripe
+            const stripe = (window as any).Stripe(publishable_key);
+            const elements = stripe.elements({
+                clientSecret: client_secret,
+                appearance: {
+                    theme: 'stripe',
+                    variables: {
+                        colorPrimary: '#4f46e5',
+                        colorBackground: '#ffffff',
+                        colorText: '#1f2937',
+                        fontFamily: 'system-ui, sans-serif',
+                        borderRadius: '0.375rem',
+                    },
+                },
+            });
+
+            // Create Payment Element
+            const paymentElementInstance = elements.create('payment', {
+                layout: 'tabs',
+            });
+            paymentElement.innerHTML = '';
+            paymentElementInstance.mount(paymentElement);
+
+            // Enable submit button when payment element is ready
+            paymentElementInstance.on('ready', () => {
+                submitBtn.disabled = false;
+            });
+
+            // Show errors
+            paymentElementInstance.on('change', (event: any) => {
+                if (event.error && errorsElement) {
+                    errorsElement.textContent = event.error.message;
+                    errorsElement.style.display = 'block';
+                } else if (errorsElement) {
+                    errorsElement.style.display = 'none';
+                }
+            });
+
+            // Handle form submission
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                submitBtn.disabled = true;
+                const btnText = document.getElementById('btn-text');
+                const btnSpinner = document.getElementById('btn-spinner');
+                if (btnText) btnText.style.display = 'none';
+                if (btnSpinner) btnSpinner.style.display = 'inline';
+
+                const formData = new FormData(form);
+                const returnUrl = `${window.location.origin}${window.location.pathname}#/payment-complete`;
+
+                const { error } = await stripe.confirmPayment({
+                    elements,
+                    confirmParams: {
+                        return_url: returnUrl,
+                        receipt_email: formData.get('billing_email') as string,
+                        payment_method_data: {
+                            billing_details: {
+                                name: `${formData.get('billing_first_name')} ${formData.get('billing_last_name')}`.trim(),
+                                email: formData.get('billing_email') as string,
+                                phone: formData.get('billing_phone') as string,
+                            },
+                        },
+                    },
+                });
+
+                if (error) {
+                    if (errorsElement) {
+                        errorsElement.textContent = error.message || 'A apărut o eroare la procesarea plății.';
+                        errorsElement.style.display = 'block';
+                    }
+                    submitBtn.disabled = false;
+                    if (btnText) btnText.style.display = 'inline';
+                    if (btnSpinner) btnSpinner.style.display = 'none';
+                }
+                // If no error, Stripe will redirect to return_url
+            });
+
+        } catch (error: any) {
+            console.error('Stripe init error:', error);
+            paymentElement.innerHTML = `<p style="color: #ef4444;">Eroare la încărcarea plății: ${error.response?.data?.message || error.message || 'Eroare necunoscută'}</p>`;
+        }
+    }
+
+    /**
+     * Load Stripe.js dynamically
+     */
+    private loadStripeJs(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if ((window as any).Stripe) {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://js.stripe.com/v3/';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load Stripe.js'));
+            document.head.appendChild(script);
+        });
     }
 }

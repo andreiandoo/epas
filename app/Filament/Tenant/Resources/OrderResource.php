@@ -66,6 +66,38 @@ class OrderResource extends Resource
                             ->content(fn ($record) => $record->updated_at?->format('d M Y H:i')),
                     ]),
 
+                SC\Section::make('Reducere aplicată')
+                    ->icon('heroicon-o-receipt-percent')
+                    ->columns(3)
+                    ->collapsible()
+                    ->visible(fn ($record) => !empty($record->promo_code) || !empty($record->meta['coupon_code']) || !empty($record->meta['discount']))
+                    ->schema([
+                        Forms\Components\Placeholder::make('discount_code')
+                            ->label('Cod promoțional')
+                            ->content(fn ($record) => new HtmlString(
+                                '<span class="px-2 py-1 rounded text-sm font-medium bg-primary-100 text-primary-700">' .
+                                ($record->promo_code ?: $record->meta['coupon_code'] ?? 'N/A') .
+                                '</span>'
+                            )),
+                        Forms\Components\Placeholder::make('discount_amount')
+                            ->label('Reducere')
+                            ->content(function ($record) {
+                                $currency = $record->tickets->first()?->ticketType?->currency ?? 'RON';
+                                $discount = $record->promo_discount ?? $record->meta['discount_amount'] ?? $record->meta['discount'] ?? 0;
+                                if ($discount > 0) {
+                                    return new HtmlString('<span class="text-success-600 font-bold">-' . number_format($discount, 2) . ' ' . $currency . '</span>');
+                                }
+                                return 'N/A';
+                            }),
+                        Forms\Components\Placeholder::make('discount_type')
+                            ->label('Tip reducere')
+                            ->content(fn ($record) => match ($record->meta['discount_type'] ?? null) {
+                                'percentage' => 'Procentual',
+                                'fixed' => 'Sumă fixă',
+                                default => $record->promo_discount > 0 ? 'Sumă fixă' : 'N/A',
+                            }),
+                    ]),
+
                 SC\Section::make('Client')
                     ->icon('heroicon-o-user')
                     ->columns(3)
@@ -164,6 +196,12 @@ class OrderResource extends Resource
                     ->label('Total')
                     ->formatStateUsing(fn ($state, $record) => number_format($state / 100, 2) . ' ' . ($record->tickets->first()?->ticketType?->currency ?? 'RON'))
                     ->sortable(),
+                Tables\Columns\TextColumn::make('promo_code')
+                    ->label('Cod discount')
+                    ->placeholder('-')
+                    ->badge()
+                    ->color('success')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\BadgeColumn::make('status')
                     ->label('Status')
                     ->colors([

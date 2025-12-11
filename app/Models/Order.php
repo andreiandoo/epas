@@ -19,6 +19,9 @@ class Order extends Model
         'status',
         'meta',
         'customer_id',
+        'promo_code_id',
+        'promo_code',
+        'promo_discount',
     ];
 
     protected $casts = [

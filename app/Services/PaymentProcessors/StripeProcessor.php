@@ -299,4 +299,86 @@ class StripeProcessor implements PaymentProcessorInterface
     {
         return $this->keys['publishable_key'] ?? null;
     }
+
+    /**
+     * Create a Payment Intent for inline checkout (Stripe Elements)
+     * Supports card, Apple Pay, and Google Pay
+     */
+    public function createPaymentIntent(array $data): array
+    {
+        if (!$this->isConfigured()) {
+            throw new \Exception('Stripe is not properly configured');
+        }
+
+        // Convert amount to cents (Stripe uses smallest currency unit)
+        $amountInCents = (int) round($data['amount'] * 100);
+
+        $paymentIntentData = [
+            'amount' => $amountInCents,
+            'currency' => strtolower($data['currency'] ?? 'ron'),
+            // Enable automatic payment methods (card, Apple Pay, Google Pay)
+            'automatic_payment_methods' => [
+                'enabled' => true,
+            ],
+            'description' => $data['description'] ?? 'Payment',
+            'metadata' => array_merge(
+                ['order_id' => $data['order_id'] ?? null],
+                $data['metadata'] ?? []
+            ),
+        ];
+
+        // Add customer email if provided
+        if (!empty($data['customer_email'])) {
+            $paymentIntentData['receipt_email'] = $data['customer_email'];
+        }
+
+        // Add customer name to metadata
+        if (!empty($data['customer_name'])) {
+            $paymentIntentData['metadata']['customer_name'] = $data['customer_name'];
+        }
+
+        $paymentIntent = PaymentIntent::create($paymentIntentData);
+
+        return [
+            'payment_intent_id' => $paymentIntent->id,
+            'client_secret' => $paymentIntent->client_secret,
+            'publishable_key' => $this->getPublishableKey(),
+            'amount' => $amountInCents,
+            'currency' => strtolower($data['currency'] ?? 'ron'),
+        ];
+    }
+
+    /**
+     * Confirm a Payment Intent (for server-side confirmation)
+     */
+    public function confirmPaymentIntent(string $paymentIntentId): array
+    {
+        if (!$this->isConfigured()) {
+            throw new \Exception('Stripe is not properly configured');
+        }
+
+        try {
+            $paymentIntent = PaymentIntent::retrieve($paymentIntentId);
+
+            $statusMap = [
+                'succeeded' => 'success',
+                'processing' => 'processing',
+                'requires_payment_method' => 'requires_payment',
+                'requires_confirmation' => 'requires_confirmation',
+                'requires_action' => 'requires_action',
+                'requires_capture' => 'requires_capture',
+                'canceled' => 'cancelled',
+            ];
+
+            return [
+                'status' => $statusMap[$paymentIntent->status] ?? 'pending',
+                'payment_intent_id' => $paymentIntent->id,
+                'amount' => $paymentIntent->amount / 100,
+                'currency' => strtoupper($paymentIntent->currency),
+                'order_id' => $paymentIntent->metadata->order_id ?? null,
+            ];
+        } catch (\Exception $e) {
+            throw new \Exception("Failed to confirm payment: {$e->getMessage()}");
+        }
+    }
 }

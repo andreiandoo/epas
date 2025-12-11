@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\TenantClient;
 
 use App\Http\Controllers\Controller;
 use App\Models\Coupon\CouponCode;
+use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -215,6 +216,112 @@ class CartController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Promo code removed',
+        ]);
+    }
+
+    /**
+     * Create a Stripe Payment Intent for inline checkout
+     */
+    public function createPaymentIntent(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'currency' => 'nullable|string|max:3',
+            'customer_email' => 'nullable|email',
+            'customer_name' => 'nullable|string|max:255',
+            'order_description' => 'nullable|string|max:255',
+            'metadata' => 'nullable|array',
+        ]);
+
+        // Get tenant's active payment config
+        $paymentConfig = $tenant->activePaymentConfig();
+
+        if (!$paymentConfig || $paymentConfig->processor !== 'stripe') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Stripe payment is not configured for this tenant.',
+            ], 400);
+        }
+
+        try {
+            $processor = PaymentProcessorFactory::makeFromConfig($paymentConfig);
+
+            if (!$processor->isConfigured()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Stripe payment is not properly configured.',
+                ], 400);
+            }
+
+            $result = $processor->createPaymentIntent([
+                'amount' => $validated['amount'],
+                'currency' => $validated['currency'] ?? $tenant->settings['currency'] ?? 'ron',
+                'customer_email' => $validated['customer_email'] ?? null,
+                'customer_name' => $validated['customer_name'] ?? null,
+                'description' => $validated['order_description'] ?? 'Ticket purchase',
+                'metadata' => array_merge(
+                    ['tenant_id' => $tenant->id],
+                    $validated['metadata'] ?? []
+                ),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'client_secret' => $result['client_secret'],
+                    'publishable_key' => $result['publishable_key'],
+                    'payment_intent_id' => $result['payment_intent_id'],
+                    'amount' => $result['amount'],
+                    'currency' => $result['currency'],
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create payment intent: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get Stripe publishable key for the tenant
+     */
+    public function getPaymentConfig(Request $request): JsonResponse
+    {
+        $tenant = $request->attributes->get('tenant');
+
+        // Get tenant's active payment config
+        $paymentConfig = $tenant->activePaymentConfig();
+
+        if (!$paymentConfig) {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'processor' => null,
+                    'configured' => false,
+                ],
+            ]);
+        }
+
+        $publishableKey = null;
+        if ($paymentConfig->processor === 'stripe') {
+            try {
+                $processor = PaymentProcessorFactory::makeFromConfig($paymentConfig);
+                $publishableKey = $processor->getPublishableKey();
+            } catch (\Exception $e) {
+                // Ignore
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'processor' => $paymentConfig->processor,
+                'configured' => $paymentConfig->processor === 'stripe' && !empty($publishableKey),
+                'publishable_key' => $publishableKey,
+            ],
         ]);
     }
 }

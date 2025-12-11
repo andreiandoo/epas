@@ -269,7 +269,7 @@
                             </div>
                             <span class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">Real Data</span>
                         </div>
-                        <div class="h-48">
+                        <div class="h-48" wire:ignore>
                             <canvas id="revenueChart"></canvas>
                         </div>
                     </div>
@@ -283,7 +283,7 @@
                             </div>
                             <span class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">Real Data</span>
                         </div>
-                        <div class="h-48">
+                        <div class="h-48" wire:ignore>
                             <canvas id="ordersChart"></canvas>
                         </div>
                     </div>
@@ -374,7 +374,7 @@
                         <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 px-2 py-1 rounded-full">No data</span>
                     @endif
                 </div>
-                <div class="h-48">
+                <div class="h-48" wire:ignore>
                     <canvas id="devicesChart"></canvas>
                 </div>
             </div>
@@ -387,7 +387,7 @@
                         <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 px-2 py-1 rounded-full">No data</span>
                     @endif
                 </div>
-                <div class="h-48">
+                <div class="h-48" wire:ignore>
                     <canvas id="browsersChart"></canvas>
                 </div>
             </div>
@@ -468,115 +468,136 @@
     </div>
 
     {{-- Chart.js Script --}}
-    @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const isDark = document.documentElement.classList.contains('dark');
-            const textColor = isDark ? '#9CA3AF' : '#6B7280';
-            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+        (function() {
+            // Store chart instances to prevent duplicates
+            window.analyticsDashboardCharts = window.analyticsDashboardCharts || {};
 
-            // Revenue Chart
-            const revenueCtx = document.getElementById('revenueChart');
-            if (revenueCtx) {
-                new Chart(revenueCtx, {
-                    type: 'line',
-                    data: {
-                        labels: @json($salesData['labels']),
-                        datasets: [{
-                            label: 'Revenue ({{ $currencySymbol }})',
-                            data: @json($salesData['revenue']),
-                            borderColor: 'rgb(16, 185, 129)',
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            fill: true,
-                            tension: 0.4,
-                            borderWidth: 3,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
-                            x: { grid: { display: false }, ticks: { color: textColor } }
+            function initCharts() {
+                const isDark = document.documentElement.classList.contains('dark');
+                const textColor = isDark ? '#9CA3AF' : '#6B7280';
+                const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
+
+                // Revenue Chart
+                const revenueCtx = document.getElementById('revenueChart');
+                if (revenueCtx && !window.analyticsDashboardCharts.revenue) {
+                    window.analyticsDashboardCharts.revenue = new Chart(revenueCtx, {
+                        type: 'line',
+                        data: {
+                            labels: @json($salesData['labels']),
+                            datasets: [{
+                                label: 'Revenue ({{ $currencySymbol }})',
+                                data: @json($salesData['revenue']),
+                                borderColor: 'rgb(16, 185, 129)',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                fill: true,
+                                tension: 0.4,
+                                borderWidth: 3,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                                x: { grid: { display: false }, ticks: { color: textColor } }
+                            }
                         }
-                    }
-                });
+                    });
+                }
+
+                // Orders Chart
+                const ordersCtx = document.getElementById('ordersChart');
+                if (ordersCtx && !window.analyticsDashboardCharts.orders) {
+                    window.analyticsDashboardCharts.orders = new Chart(ordersCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: @json($salesData['labels']),
+                            datasets: [{
+                                label: 'Orders',
+                                data: @json($salesData['orders']),
+                                backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                                borderRadius: 6,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
+                                x: { grid: { display: false }, ticks: { color: textColor } }
+                            }
+                        }
+                    });
+                }
+
+                // Devices Chart
+                const devicesCtx = document.getElementById('devicesChart');
+                if (devicesCtx && !window.analyticsDashboardCharts.devices) {
+                    window.analyticsDashboardCharts.devices = new Chart(devicesCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: @json($deviceStats['labels']),
+                            datasets: [{
+                                data: @json($deviceStats['data']),
+                                backgroundColor: @json($deviceStats['colors']),
+                                borderWidth: 0,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'right', labels: { color: textColor } }
+                            }
+                        }
+                    });
+                }
+
+                // Browsers Chart
+                const browsersCtx = document.getElementById('browsersChart');
+                if (browsersCtx && !window.analyticsDashboardCharts.browsers) {
+                    window.analyticsDashboardCharts.browsers = new Chart(browsersCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: @json($browserStats['labels']),
+                            datasets: [{
+                                data: @json($browserStats['data']),
+                                backgroundColor: @json($browserStats['colors']),
+                                borderWidth: 0,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { position: 'right', labels: { color: textColor } }
+                            }
+                        }
+                    });
+                }
             }
 
-            // Orders Chart
-            const ordersCtx = document.getElementById('ordersChart');
-            if (ordersCtx) {
-                new Chart(ordersCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: @json($salesData['labels']),
-                        datasets: [{
-                            label: 'Orders',
-                            data: @json($salesData['orders']),
-                            backgroundColor: 'rgba(99, 102, 241, 0.8)',
-                            borderRadius: 6,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: {
-                            y: { beginAtZero: true, grid: { color: gridColor }, ticks: { color: textColor } },
-                            x: { grid: { display: false }, ticks: { color: textColor } }
-                        }
-                    }
-                });
+            // Initialize charts when DOM is ready or immediately if already loaded
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initCharts);
+            } else {
+                // Small delay to ensure canvases are in the DOM
+                setTimeout(initCharts, 100);
             }
 
-            // Devices Chart
-            const devicesCtx = document.getElementById('devicesChart');
-            if (devicesCtx) {
-                new Chart(devicesCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: @json($deviceStats['labels']),
-                        datasets: [{
-                            data: @json($deviceStats['data']),
-                            backgroundColor: @json($deviceStats['colors']),
-                            borderWidth: 0,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'right', labels: { color: textColor } }
-                        }
+            // Clean up charts when navigating away (for SPA navigation)
+            document.addEventListener('livewire:navigating', function() {
+                Object.keys(window.analyticsDashboardCharts).forEach(function(key) {
+                    if (window.analyticsDashboardCharts[key]) {
+                        window.analyticsDashboardCharts[key].destroy();
                     }
                 });
-            }
-
-            // Browsers Chart
-            const browsersCtx = document.getElementById('browsersChart');
-            if (browsersCtx) {
-                new Chart(browsersCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: @json($browserStats['labels']),
-                        datasets: [{
-                            data: @json($browserStats['data']),
-                            backgroundColor: @json($browserStats['colors']),
-                            borderWidth: 0,
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { position: 'right', labels: { color: textColor } }
-                        }
-                    }
-                });
-            }
-        });
+                window.analyticsDashboardCharts = {};
+            });
+        })();
     </script>
-    @endpush
 </x-filament-panels::page>

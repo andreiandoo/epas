@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api\TenantClient;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\TicketType;
 use App\Models\Tenant;
 use App\Models\Domain;
+use App\Services\OrderEmailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +23,10 @@ class OrderController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'customer_name' => 'required|string|max:255',
+            // Support both split name and single name field
+            'customer_name' => 'nullable|string|max:255',
+            'customer_first_name' => 'nullable|string|max:255',
+            'customer_last_name' => 'nullable|string|max:255',
             'customer_email' => 'required|email|max:255',
             'customer_phone' => 'nullable|string|max:50',
             'cart' => 'required|array|min:1',
@@ -34,7 +39,23 @@ class OrderController extends Controller
             'beneficiaries.*.phone' => 'nullable|string|max:50',
             'notification_email' => 'nullable|boolean',
             'notification_whatsapp' => 'nullable|boolean',
+            // Coupon support
+            'coupon_code' => 'nullable|string|max:50',
+            'discount_amount' => 'nullable|numeric|min:0',
         ]);
+
+        // Parse first/last name from either split fields or single field
+        $firstName = $validated['customer_first_name'] ?? null;
+        $lastName = $validated['customer_last_name'] ?? null;
+
+        if (!$firstName && !$lastName && !empty($validated['customer_name'])) {
+            // Split the full name
+            $nameParts = explode(' ', trim($validated['customer_name']), 2);
+            $firstName = $nameParts[0] ?? '';
+            $lastName = $nameParts[1] ?? '';
+        }
+
+        $fullName = trim(($firstName ?? '') . ' ' . ($lastName ?? ''));
 
         // Resolve tenant from hostname
         $hostname = $request->query('hostname');
@@ -57,7 +78,30 @@ class OrderController extends Controller
         }
 
         try {
-            return DB::transaction(function () use ($validated, $tenant) {
+            return DB::transaction(function () use ($validated, $tenant, $firstName, $lastName, $fullName, $request) {
+                // Find or create customer
+                $customer = Customer::firstOrCreate(
+                    [
+                        'tenant_id' => $tenant->id,
+                        'email' => $validated['customer_email'],
+                    ],
+                    [
+                        'first_name' => $firstName,
+                        'last_name' => $lastName,
+                        'phone' => $validated['customer_phone'] ?? null,
+                        'primary_tenant_id' => $tenant->id,
+                    ]
+                );
+
+                // Update customer name if provided and currently empty
+                if ((!$customer->first_name && !$customer->last_name) && ($firstName || $lastName)) {
+                    $customer->update([
+                        'first_name' => $firstName,
+                        'last_name' => $lastName,
+                        'phone' => $validated['customer_phone'] ?? $customer->phone,
+                    ]);
+                }
+
                 // Calculate total with bulk discounts
                 $totalCents = 0;
                 $orderItems = [];
@@ -96,17 +140,30 @@ class OrderController extends Controller
                     $ticketType->increment('quota_sold', $quantity);
                 }
 
+                // Apply coupon discount if provided
+                $discountAmount = isset($validated['discount_amount']) ? (int) ($validated['discount_amount'] * 100) : 0;
+                if ($discountAmount > 0 && $discountAmount < $totalCents) {
+                    $totalCents -= $discountAmount;
+                }
+
                 // Create order
                 $order = Order::create([
                     'tenant_id' => $tenant->id,
+                    'customer_id' => $customer->id,
                     'customer_email' => $validated['customer_email'],
                     'total_cents' => $totalCents,
                     'status' => 'pending',
+                    'promo_code' => $validated['coupon_code'] ?? null,
+                    'promo_discount' => $discountAmount > 0 ? $discountAmount / 100 : 0,
                     'meta' => [
-                        'customer_name' => $validated['customer_name'],
+                        'customer_name' => $fullName,
+                        'customer_first_name' => $firstName,
+                        'customer_last_name' => $lastName,
                         'customer_phone' => $validated['customer_phone'] ?? null,
                         'items' => $orderItems,
                         'beneficiaries' => $validated['beneficiaries'] ?? null,
+                        'coupon_code' => $validated['coupon_code'] ?? null,
+                        'discount_amount' => $discountAmount / 100,
                         'notification_preferences' => [
                             'email' => $validated['notification_email'] ?? true,
                             'whatsapp' => $validated['notification_whatsapp'] ?? false,
@@ -138,17 +195,21 @@ class OrderController extends Controller
                             'status' => 'pending',
                             'meta' => $ticketMeta,
                         ]);
-                        
+
                         $beneficiaryIndex++;
                     }
                 }
+
+                // Send order confirmation email (after transaction commits)
+                $orderEmailService = app(OrderEmailService::class);
+                $orderEmailService->sendOrderConfirmation($order, $tenant);
 
                 return response()->json([
                     'success' => true,
                     'data' => [
                         'order_id' => $order->id,
                         'total' => $totalCents / 100,
-                        'currency' => 'RON', // TODO: Get from tenant settings
+                        'currency' => $tenant->settings['currency'] ?? 'RON',
                     ],
                 ], 201);
             });
