@@ -770,20 +770,23 @@ export class TrackingModule {
         };
 
         if (sync && navigator.sendBeacon) {
-            // Use sendBeacon for page unload
+            // Use sendBeacon for page unload - use Blob for proper JSON content-type
+            const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
             navigator.sendBeacon(
                 `${this.config.endpoint}/api/tracking/events`,
-                JSON.stringify(payload)
+                blob
             );
         } else {
-            // Use fetch for normal sends
+            // Use fetch for normal sends with proper CORS mode
             fetch(`${this.config.endpoint}/api/tracking/events`, {
                 method: 'POST',
+                mode: 'cors',
+                credentials: 'omit',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                 },
                 body: JSON.stringify(payload),
-                keepalive: true,
             }).catch((error) => {
                 // Re-queue events on failure
                 this.eventQueue = [...events, ...this.eventQueue];

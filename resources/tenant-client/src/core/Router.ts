@@ -2,6 +2,7 @@ import { TixelloConfig } from './ConfigManager';
 import { TemplateManager } from '../templates';
 import { PageBuilderModule, PageLayout } from '../modules/PageBuilderModule';
 import { PreviewMode } from './PreviewMode';
+import { Tracking } from './TrackingModule';
 
 type RouteHandler = (params: Record<string, string>) => void | Promise<void>;
 
@@ -487,6 +488,9 @@ export class Router {
 
         // Reset meta tags to defaults on every navigation
         this.resetMetaTags();
+
+        // Track page view on SPA navigation
+        Tracking.trackPageView();
 
         for (const route of this.routes) {
             const match = path.match(route.pattern);
