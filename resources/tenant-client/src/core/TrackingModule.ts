@@ -623,9 +623,10 @@ export class TrackingModule {
             }, 100);
         });
 
-        // Track page unload (send engagement data)
+        // Track page unload (send engagement data and end session)
         window.addEventListener('beforeunload', () => {
             this.trackEngagement();
+            this.trackSessionEnd();
             this.flushEvents(true);
         });
 
@@ -697,6 +698,34 @@ export class TrackingModule {
                 ...this.getAttributionParams(),
             });
         }
+    }
+
+    /**
+     * Track session end (called on page unload)
+     */
+    private trackSessionEnd(): void {
+        // Get session info
+        const storageKey = 'tixello_session';
+        const stored = sessionStorage.getItem(storageKey);
+
+        if (!stored) return;
+
+        const session = JSON.parse(stored);
+        const sessionDuration = Math.round((Date.now() - session.startTime) / 1000);
+
+        this.queueEvent({
+            eventType: 'session_end',
+            eventCategory: 'session',
+            timestamp: Date.now(),
+            pageUrl: window.location.href,
+            pageTitle: document.title,
+            referrer: document.referrer,
+            eventData: {
+                sessionDuration,
+                sessionStartTime: session.startTime,
+            },
+            ...this.getAttributionParams(),
+        });
     }
 
     private startHeartbeat(): void {

@@ -392,6 +392,79 @@
                 </div>
             </div>
         </div>
+
+        {{-- Pages Section --}}
+        @php
+            $landingPages = $this->getLandingPages();
+            $exitPages = $this->getExitPages();
+        @endphp
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {{-- Top Pages Visited --}}
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Top Pages</h3>
+                    @if(count($pageViews) > 0)
+                        <span class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">Real</span>
+                    @else
+                        <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 px-2 py-1 rounded-full">No data</span>
+                    @endif
+                </div>
+                <div class="space-y-2 max-h-64 overflow-y-auto">
+                    @forelse($pageViews as $page)
+                        <div class="flex items-center justify-between text-sm p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                            <span class="text-gray-700 dark:text-gray-300 truncate flex-1" title="{{ $page['path'] }}">{{ $page['path'] }}</span>
+                            <span class="font-medium text-gray-900 dark:text-white ml-2">{{ number_format($page['views']) }}</span>
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No page view data yet</p>
+                    @endforelse
+                </div>
+            </div>
+
+            {{-- Landing Pages (Entry Pages) --}}
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Landing Pages</h3>
+                    @if(count($landingPages) > 0)
+                        <span class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">Real</span>
+                    @else
+                        <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 px-2 py-1 rounded-full">No data</span>
+                    @endif
+                </div>
+                <div class="space-y-2 max-h-64 overflow-y-auto">
+                    @forelse($landingPages as $page)
+                        <div class="flex items-center justify-between text-sm p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                            <span class="text-gray-700 dark:text-gray-300 truncate flex-1" title="{{ $page['path'] }}">{{ $page['path'] }}</span>
+                            <span class="font-medium text-gray-900 dark:text-white ml-2">{{ number_format($page['sessions']) }}</span>
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No landing page data yet</p>
+                    @endforelse
+                </div>
+            </div>
+
+            {{-- Exit Pages --}}
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-semibold text-gray-900 dark:text-white">Exit Pages</h3>
+                    @if(count($exitPages) > 0)
+                        <span class="text-xs bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">Real</span>
+                    @else
+                        <span class="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 px-2 py-1 rounded-full">No data</span>
+                    @endif
+                </div>
+                <div class="space-y-2 max-h-64 overflow-y-auto">
+                    @forelse($exitPages as $page)
+                        <div class="flex items-center justify-between text-sm p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                            <span class="text-gray-700 dark:text-gray-300 truncate flex-1" title="{{ $page['path'] }}">{{ $page['path'] }}</span>
+                            <span class="font-medium text-gray-900 dark:text-white ml-2">{{ number_format($page['sessions']) }}</span>
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">No exit page data yet</p>
+                    @endforelse
+                </div>
+            </div>
+        </div>
     </div>
 
     {{-- Chart.js Script --}}

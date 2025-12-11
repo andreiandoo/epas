@@ -141,6 +141,10 @@ class PlatformTrackingController extends Controller
                         $this->trackingService->trackSignUp($eventData);
                         break;
 
+                    case 'session_end':
+                        $this->trackingService->trackSessionEnd($eventData);
+                        break;
+
                     case 'view_item':
                     case 'engagement':
                     case 'search':

@@ -343,26 +343,64 @@ class AnalyticsDashboard extends Page
             ? round((($todaySessions - $yesterdaySessions) / $yesterdaySessions) * 100, 1)
             : 0;
 
-        // Bounce rate (sessions with only 1 page view)
+        // Bounce rate - calculate from pageviews (sessions with only 1 page view)
+        // For ended sessions, use is_bounce. For active sessions, check pageviews
         $bouncedSessions = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->whereDate('started_at', today())
-            ->where('is_bounce', true)
+            ->where(function($q) {
+                $q->where('is_bounce', true)
+                  ->orWhere(function($q2) {
+                      $q2->whereNull('ended_at')
+                         ->where('pageviews', '<=', 1);
+                  });
+            })
             ->count();
 
         $bounceRate = $todaySessions > 0
             ? round(($bouncedSessions / $todaySessions) * 100, 1)
             : 0;
 
-        // Average session duration
-        $avgDurationSeconds = CoreSession::query()
+        // Average session duration - include active sessions with calculated duration
+        $endedAvg = CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->whereDate('started_at', today())
             ->whereNotNull('duration_seconds')
+            ->where('duration_seconds', '>', 0)
             ->avg('duration_seconds') ?? 0;
 
+        // For active sessions, calculate duration from started_at
+        $activeSessions = CoreSession::query()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->whereDate('started_at', today())
+            ->whereNull('ended_at')
+            ->get();
+
+        $totalDuration = $endedAvg * CoreSession::query()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->whereDate('started_at', today())
+            ->whereNotNull('duration_seconds')
+            ->where('duration_seconds', '>', 0)
+            ->count();
+
+        foreach ($activeSessions as $session) {
+            $totalDuration += $session->started_at->diffInSeconds(now());
+        }
+
+        $totalSessionCount = CoreSession::query()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->whereDate('started_at', today())
+            ->where(function($q) {
+                $q->whereNotNull('duration_seconds')
+                  ->where('duration_seconds', '>', 0)
+                  ->orWhereNull('ended_at');
+            })
+            ->count();
+
+        $avgDurationSeconds = $totalSessionCount > 0 ? $totalDuration / $totalSessionCount : 0;
+
         $minutes = floor($avgDurationSeconds / 60);
-        $seconds = $avgDurationSeconds % 60;
+        $seconds = (int) ($avgDurationSeconds % 60);
 
         return [
             'active_users' => $activeUsers,
@@ -729,5 +767,69 @@ class AnalyticsDashboard extends Page
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
             ->where('started_at', '>=', now()->subDays(30))
             ->exists();
+    }
+
+    /**
+     * Get landing pages (entry pages) from sessions
+     */
+    public function getLandingPages(): array
+    {
+        $tenant = auth()->user()->tenant;
+        $tenantId = $tenant?->id;
+
+        $days = match ($this->dateRange) {
+            '7d' => 7,
+            '30d' => 30,
+            '90d' => 90,
+            default => 30,
+        };
+
+        return CoreSession::query()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->where('started_at', '>=', now()->subDays($days))
+            ->whereNotNull('landing_page')
+            ->where('landing_page', '!=', '')
+            ->selectRaw('landing_page, COUNT(*) as sessions')
+            ->groupBy('landing_page')
+            ->orderByDesc('sessions')
+            ->limit(10)
+            ->get()
+            ->map(fn($page) => [
+                'path' => parse_url($page->landing_page, PHP_URL_PATH) ?: '/',
+                'sessions' => $page->sessions,
+            ])
+            ->toArray();
+    }
+
+    /**
+     * Get exit pages from sessions
+     */
+    public function getExitPages(): array
+    {
+        $tenant = auth()->user()->tenant;
+        $tenantId = $tenant?->id;
+
+        $days = match ($this->dateRange) {
+            '7d' => 7,
+            '30d' => 30,
+            '90d' => 90,
+            default => 30,
+        };
+
+        return CoreSession::query()
+            ->when($tenantId, fn($q) => $q->forTenant($tenantId))
+            ->where('started_at', '>=', now()->subDays($days))
+            ->whereNotNull('exit_page')
+            ->where('exit_page', '!=', '')
+            ->selectRaw('exit_page, COUNT(*) as sessions')
+            ->groupBy('exit_page')
+            ->orderByDesc('sessions')
+            ->limit(10)
+            ->get()
+            ->map(fn($page) => [
+                'path' => parse_url($page->exit_page, PHP_URL_PATH) ?: '/',
+                'sessions' => $page->sessions,
+            ])
+            ->toArray();
     }
 }

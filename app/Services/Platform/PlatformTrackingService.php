@@ -274,6 +274,38 @@ class PlatformTrackingService
     }
 
     /**
+     * Track session end - closes the session and calculates metrics
+     */
+    public function trackSessionEnd(array $data): void
+    {
+        $sessionToken = $data['session_token'] ?? null;
+
+        if (!$sessionToken) {
+            return;
+        }
+
+        $session = CoreSession::where('session_id', $sessionToken)->first();
+
+        if (!$session) {
+            return;
+        }
+
+        // Get session duration from client data or calculate from started_at
+        $duration = $data['event_data']['sessionDuration'] ?? null;
+        if (!$duration && $session->started_at) {
+            $duration = $session->started_at->diffInSeconds(now());
+        }
+
+        // End the session
+        $session->update([
+            'ended_at' => now(),
+            'duration_seconds' => $duration,
+            'is_bounce' => $session->pageviews <= 1,
+            'exit_page' => $data['page_url'] ?? $session->exit_page,
+        ]);
+    }
+
+    /**
      * Send conversions to tenant's connected ad platforms
      */
     protected function sendToTenantPlatforms(
