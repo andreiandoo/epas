@@ -643,9 +643,10 @@ class PlatformTrackingService
         $sessionToken = $data['session_token'] ?? null;
 
         if ($sessionToken) {
-            $session = CoreSession::where('session_token', $sessionToken)->first();
+            $session = CoreSession::where('session_id', $sessionToken)->first();
             if ($session && $session->isActive()) {
-                $session->recordActivity();
+                // Update last activity
+                $session->touch();
                 return $session;
             }
         }
