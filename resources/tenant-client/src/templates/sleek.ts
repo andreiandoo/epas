@@ -4,6 +4,15 @@ import { TemplateConfig, TemplateManager } from './TemplateManager';
 /**
  * SLEEK TEMPLATE - A premium, modern, mobile-first event ticketing experience
  * Designed to feel like a high-end ticketing app (like Dice, Eventbrite, or StubHub)
+ *
+ * This template provides comprehensive styling for ALL pages including:
+ * - Home page with hero and featured events
+ * - Events listing with calendar and grid
+ * - Event detail pages
+ * - Cart and Checkout
+ * - User account dashboard and all sub-pages
+ * - Blog listing and articles
+ * - Admin dashboard (when applicable)
  */
 const sleekTemplate: TemplateConfig = {
     name: 'sleek',
@@ -683,6 +692,444 @@ const sleekTemplate: TemplateConfig = {
 
                 ::-webkit-scrollbar-thumb:hover {
                     background: rgba(255,255,255,0.2);
+                }
+
+                /* ========================================
+                   PAGE STYLES - HOME PAGE
+                   ======================================== */
+                .max-w-7xl {
+                    max-width: 1400px;
+                }
+
+                /* Override Tailwind grays for dark mode */
+                .text-gray-900 { color: var(--sleek-text) !important; }
+                .text-gray-800 { color: var(--sleek-text) !important; }
+                .text-gray-700 { color: rgba(255,255,255,0.9) !important; }
+                .text-gray-600 { color: var(--sleek-text-muted) !important; }
+                .text-gray-500 { color: var(--sleek-text-muted) !important; }
+                .text-gray-400 { color: var(--sleek-text-subtle) !important; }
+
+                .bg-gray-50 { background: var(--sleek-bg) !important; }
+                .bg-gray-100 { background: var(--sleek-surface) !important; }
+                .bg-gray-200 { background: var(--sleek-surface-elevated) !important; }
+                .bg-white { background: var(--sleek-surface) !important; }
+
+                .border-gray-100 { border-color: var(--sleek-border) !important; }
+                .border-gray-200 { border-color: var(--sleek-border) !important; }
+                .border-gray-300 { border-color: var(--sleek-border-light) !important; }
+
+                .shadow-sm, .shadow, .shadow-md, .shadow-lg {
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.3) !important;
+                }
+
+                .hover\\:shadow-md:hover, .hover\\:shadow-lg:hover {
+                    box-shadow: 0 8px 30px rgba(0,0,0,0.4) !important;
+                }
+
+                /* Primary button overrides */
+                .bg-primary, [class*="bg-primary"] {
+                    background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end)) !important;
+                }
+
+                .hover\\:bg-primary-dark:hover {
+                    background: linear-gradient(135deg, var(--sleek-gradient-end), var(--sleek-gradient-start)) !important;
+                }
+
+                /* Home page hero */
+                #tixello-content > div:first-child {
+                    background: var(--sleek-bg);
+                }
+
+                /* ========================================
+                   PAGE STYLES - EVENTS PAGE
+                   ======================================== */
+                #events-calendar {
+                    background: var(--sleek-bg) !important;
+                    border-color: var(--sleek-border) !important;
+                }
+
+                .days-scroller {
+                    scrollbar-width: none;
+                }
+
+                .days-scroller::-webkit-scrollbar {
+                    display: none;
+                }
+
+                /* Day buttons in calendar */
+                #days-scroller button,
+                .day-btn {
+                    background: var(--sleek-surface) !important;
+                    border-color: var(--sleek-border) !important;
+                    color: var(--sleek-text-muted) !important;
+                }
+
+                #days-scroller button:hover,
+                .day-btn:hover {
+                    border-color: var(--sleek-border-light) !important;
+                    background: var(--sleek-surface-elevated) !important;
+                }
+
+                /* Selected day */
+                .day-btn.border-gray-900,
+                [class*="border-gray-900"] {
+                    background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end)) !important;
+                    border-color: var(--sleek-gradient-start) !important;
+                    color: white !important;
+                }
+
+                /* Days with events */
+                .border-emerald-300 {
+                    border-color: rgba(16, 185, 129, 0.5) !important;
+                    background: rgba(16, 185, 129, 0.1) !important;
+                }
+
+                .border-amber-300 {
+                    border-color: rgba(245, 158, 11, 0.5) !important;
+                    background: rgba(245, 158, 11, 0.1) !important;
+                }
+
+                .border-red-300 {
+                    border-color: rgba(239, 68, 68, 0.5) !important;
+                    background: rgba(239, 68, 68, 0.1) !important;
+                }
+
+                /* Month buttons */
+                .month-btn {
+                    background: var(--sleek-surface) !important;
+                    border-color: var(--sleek-border) !important;
+                    color: var(--sleek-text-muted) !important;
+                }
+
+                .month-btn:hover {
+                    border-color: var(--sleek-border-light) !important;
+                }
+
+                .month-btn.bg-gray-900 {
+                    background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end)) !important;
+                    border-color: var(--sleek-gradient-start) !important;
+                    color: white !important;
+                }
+
+                /* Event cards in grid */
+                #events-container a,
+                .event-card {
+                    background: var(--sleek-surface) !important;
+                    border: 1px solid var(--sleek-border) !important;
+                    border-radius: var(--sleek-radius) !important;
+                    transition: var(--sleek-transition) !important;
+                }
+
+                #events-container a:hover,
+                .event-card:hover {
+                    border-color: var(--sleek-border-light) !important;
+                    transform: translateY(-4px) !important;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.3) !important;
+                }
+
+                /* Event card badges */
+                .bg-red-100, .bg-amber-100, .bg-gray-200, .bg-blue-50 {
+                    background: rgba(255,255,255,0.1) !important;
+                }
+
+                .text-red-700 { color: #ef4444 !important; }
+                .text-amber-700 { color: #f59e0b !important; }
+                .text-blue-700 { color: #3b82f6 !important; }
+
+                /* ========================================
+                   PAGE STYLES - EVENT DETAIL PAGE
+                   ======================================== */
+                .event-detail-page,
+                [class*="event-detail"] {
+                    background: var(--sleek-bg) !important;
+                }
+
+                /* Ticket type cards */
+                .ticket-type-card,
+                [class*="ticket-selector"] {
+                    background: var(--sleek-surface) !important;
+                    border: 1px solid var(--sleek-border) !important;
+                    border-radius: var(--sleek-radius) !important;
+                }
+
+                .ticket-type-card:hover {
+                    border-color: var(--sleek-gradient-start) !important;
+                }
+
+                /* Quantity buttons */
+                .qty-btn,
+                button[class*="qty"] {
+                    background: var(--sleek-surface-elevated) !important;
+                    border: 1px solid var(--sleek-border) !important;
+                    color: var(--sleek-text) !important;
+                    border-radius: var(--sleek-radius-xs) !important;
+                }
+
+                /* ========================================
+                   PAGE STYLES - CART PAGE
+                   ======================================== */
+                .cart-item,
+                [class*="cart-item"] {
+                    background: var(--sleek-surface) !important;
+                    border: 1px solid var(--sleek-border) !important;
+                    border-radius: var(--sleek-radius) !important;
+                    padding: 1rem !important;
+                    margin-bottom: 1rem !important;
+                }
+
+                .cart-summary,
+                [class*="cart-summary"],
+                [class*="order-summary"] {
+                    background: var(--sleek-surface) !important;
+                    border: 1px solid var(--sleek-border) !important;
+                    border-radius: var(--sleek-radius) !important;
+                    padding: 1.5rem !important;
+                }
+
+                /* ========================================
+                   PAGE STYLES - CHECKOUT PAGE
+                   ======================================== */
+                .checkout-form,
+                [class*="checkout"] form {
+                    background: var(--sleek-surface) !important;
+                    border: 1px solid var(--sleek-border) !important;
+                    border-radius: var(--sleek-radius) !important;
+                    padding: 1.5rem !important;
+                }
+
+                /* Stripe elements container */
+                #payment-element,
+                .StripeElement,
+                [class*="stripe"] {
+                    background: var(--sleek-surface-elevated) !important;
+                    border: 1px solid var(--sleek-border) !important;
+                    border-radius: var(--sleek-radius-sm) !important;
+                    padding: 1rem !important;
+                }
+
+                /* ========================================
+                   PAGE STYLES - BLOG
+                   ======================================== */
+                .blog-page,
+                .blog-card,
+                .blog-article {
+                    background: transparent !important;
+                }
+
+                .blog-card {
+                    background: var(--sleek-surface) !important;
+                    border: 1px solid var(--sleek-border) !important;
+                    border-radius: var(--sleek-radius) !important;
+                }
+
+                .blog-card:hover {
+                    border-color: var(--sleek-border-light) !important;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.3) !important;
+                }
+
+                /* Category filter buttons */
+                .category-filter {
+                    background: var(--sleek-surface) !important;
+                    border: 1px solid var(--sleek-border) !important;
+                    color: var(--sleek-text-muted) !important;
+                }
+
+                .category-filter:hover {
+                    border-color: var(--sleek-border-light) !important;
+                }
+
+                .category-filter.bg-primary-600 {
+                    background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end)) !important;
+                    border-color: var(--sleek-gradient-start) !important;
+                    color: white !important;
+                }
+
+                /* Blog content prose */
+                .prose, .blog-content {
+                    color: var(--sleek-text-muted) !important;
+                }
+
+                .prose h1, .prose h2, .prose h3, .prose h4,
+                .blog-content h1, .blog-content h2, .blog-content h3 {
+                    color: var(--sleek-text) !important;
+                }
+
+                .prose a, .blog-content a {
+                    color: var(--sleek-gradient-start) !important;
+                }
+
+                .prose code, .blog-content code {
+                    background: var(--sleek-surface-elevated) !important;
+                    color: var(--sleek-gradient-start) !important;
+                }
+
+                .prose pre, .blog-content pre {
+                    background: var(--sleek-surface) !important;
+                    border: 1px solid var(--sleek-border) !important;
+                }
+
+                /* Pagination */
+                .blog-pagination button,
+                .page-btn {
+                    background: var(--sleek-surface) !important;
+                    border: 1px solid var(--sleek-border) !important;
+                    color: var(--sleek-text-muted) !important;
+                }
+
+                .blog-pagination button:hover,
+                .page-btn:hover {
+                    border-color: var(--sleek-border-light) !important;
+                    background: var(--sleek-surface-elevated) !important;
+                }
+
+                /* ========================================
+                   PAGE STYLES - ADMIN DASHBOARD
+                   ======================================== */
+                .admin-sidebar,
+                [class*="admin-sidebar"] {
+                    background: var(--sleek-surface) !important;
+                    border-right: 1px solid var(--sleek-border) !important;
+                }
+
+                .admin-content,
+                [class*="admin-content"] {
+                    background: var(--sleek-bg) !important;
+                }
+
+                /* Admin stat cards */
+                #admin-stats .tixello-card,
+                .admin-stat-card {
+                    background: var(--sleek-surface) !important;
+                    border: 1px solid var(--sleek-border) !important;
+                    border-radius: var(--sleek-radius) !important;
+                }
+
+                /* Admin tables */
+                table {
+                    width: 100%;
+                    border-collapse: separate;
+                    border-spacing: 0;
+                }
+
+                th {
+                    background: var(--sleek-surface-elevated) !important;
+                    color: var(--sleek-text-muted) !important;
+                    font-weight: 600 !important;
+                    text-transform: uppercase !important;
+                    font-size: 0.75rem !important;
+                    letter-spacing: 0.05em !important;
+                    padding: 1rem !important;
+                    text-align: left !important;
+                    border-bottom: 1px solid var(--sleek-border) !important;
+                }
+
+                td {
+                    padding: 1rem !important;
+                    border-bottom: 1px solid var(--sleek-border) !important;
+                    color: var(--sleek-text) !important;
+                }
+
+                tr:hover td {
+                    background: rgba(255,255,255,0.02) !important;
+                }
+
+                /* Admin buttons */
+                .tixello-btn,
+                button.tixello-btn {
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    gap: 0.5rem !important;
+                    padding: 0.75rem 1.25rem !important;
+                    background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end)) !important;
+                    color: white !important;
+                    font-weight: 600 !important;
+                    border: none !important;
+                    border-radius: var(--sleek-radius-sm) !important;
+                    cursor: pointer !important;
+                    transition: var(--sleek-transition) !important;
+                    box-shadow: 0 4px 15px var(--sleek-glow) !important;
+                }
+
+                .tixello-btn:hover {
+                    transform: translateY(-2px) !important;
+                    box-shadow: 0 8px 25px var(--sleek-glow) !important;
+                }
+
+                .tixello-btn-secondary {
+                    background: transparent !important;
+                    border: 1px solid var(--sleek-border-light) !important;
+                    color: var(--sleek-text) !important;
+                    box-shadow: none !important;
+                }
+
+                /* ========================================
+                   PAGE STYLES - ACCOUNT PAGES
+                   ======================================== */
+                .tixello-account,
+                [class*="account-page"] {
+                    background: var(--sleek-bg) !important;
+                    min-height: calc(100vh - 140px) !important;
+                }
+
+                /* Account cards */
+                .account-card,
+                [class*="account-card"] {
+                    background: var(--sleek-surface) !important;
+                    border: 1px solid var(--sleek-border) !important;
+                    border-radius: var(--sleek-radius) !important;
+                }
+
+                /* ========================================
+                   PAGE STYLES - LOADING & EMPTY STATES
+                   ======================================== */
+                .animate-pulse {
+                    background: var(--sleek-surface-elevated) !important;
+                    animation: sleek-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+                }
+
+                /* Empty state styling */
+                .empty-state,
+                [class*="empty-state"] {
+                    text-align: center !important;
+                    padding: 4rem 2rem !important;
+                }
+
+                /* ========================================
+                   PAGE STYLES - SUCCESS/ERROR MESSAGES
+                   ======================================== */
+                .text-red-500, .text-red-600 {
+                    color: var(--sleek-error) !important;
+                }
+
+                .text-green-500, .text-green-600 {
+                    color: var(--sleek-success) !important;
+                }
+
+                .bg-green-100, .bg-green-50 {
+                    background: rgba(16, 185, 129, 0.15) !important;
+                }
+
+                .bg-red-100, .bg-red-50 {
+                    background: rgba(239, 68, 68, 0.15) !important;
+                }
+
+                /* ========================================
+                   RESPONSIVE UTILITIES
+                   ======================================== */
+                @media (max-width: 767px) {
+                    .hidden-mobile {
+                        display: none !important;
+                    }
+
+                    /* Stack cards on mobile */
+                    .grid {
+                        gap: 1rem !important;
+                    }
+
+                    /* Smaller padding on mobile */
+                    .px-4 { padding-left: 1rem !important; padding-right: 1rem !important; }
+                    .py-8 { padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
+                    .py-12 { padding-top: 2rem !important; padding-bottom: 2rem !important; }
                 }
             </style>
 
