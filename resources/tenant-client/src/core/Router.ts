@@ -2936,46 +2936,25 @@ export class Router {
                                             Primește notificări pe email (confirmare comandă, bilete, reamintiri)
                                         </label>
                                     </div>
-                                    ${this.config?.modules?.includes('whatsapp') ? `
-                                    <div class="flex items-start">
-                                        <input
-                                            type="checkbox"
-                                            id="notification_whatsapp"
-                                            name="notification_whatsapp"
-                                            class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
-                                        >
-                                        <label for="notification_whatsapp" class="ml-2 text-sm text-gray-700">
-                                            Primește notificări pe WhatsApp (necesită număr de telefon valid)
-                                        </label>
+                                    <div id="whatsapp-notification-option" class="hidden">
+                                        <div class="flex items-start">
+                                            <input
+                                                type="checkbox"
+                                                id="notification_whatsapp"
+                                                name="notification_whatsapp"
+                                                class="mt-1 h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                            >
+                                            <label for="notification_whatsapp" class="ml-2 text-sm text-gray-700">
+                                                Primește notificări pe WhatsApp (necesită număr de telefon valid)
+                                            </label>
+                                        </div>
                                     </div>
-                                    ` : ''}
                                 </div>
                             </div>
 
                             <div class="bg-white rounded-lg shadow p-6">
                                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Metodă de plată</h2>
-
-                                <!-- Payment method tabs -->
-                                <div class="mb-4">
-                                    <div class="flex border border-gray-200 rounded-lg overflow-hidden">
-                                        <button type="button" id="payment-method-card" class="flex-1 py-3 px-4 text-center text-sm font-medium bg-primary text-white transition payment-method-tab active" data-method="card">
-                                            <span class="flex items-center justify-center gap-2">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-                                                </svg>
-                                                Card
-                                            </span>
-                                        </button>
-                                        <button type="button" id="payment-method-wallet" class="flex-1 py-3 px-4 text-center text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition payment-method-tab" data-method="wallet">
-                                            <span class="flex items-center justify-center gap-2">
-                                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
-                                                </svg>
-                                                Apple Pay / Google Pay
-                                            </span>
-                                        </button>
-                                    </div>
-                                </div>
+                                <p class="text-sm text-gray-600 mb-4">Acceptăm carduri de credit/debit, Apple Pay și Google Pay.</p>
 
                                 <!-- Payment Element container -->
                                 <div id="payment-element-container" class="mb-4">
@@ -3092,16 +3071,13 @@ export class Router {
         // Store Stripe instances
         let stripe: any = null;
         let elements: any = null;
-        let paymentElement: any = null;
         let clientSecret: string = '';
-        let selectedPaymentMethod: 'card' | 'wallet' = 'card';
 
         // Initialize Stripe Payment Element
         this.initializeStripePayment().then(result => {
             if (result) {
                 stripe = result.stripe;
                 elements = result.elements;
-                paymentElement = result.paymentElement;
                 clientSecret = result.clientSecret;
 
                 // Enable submit button once Stripe is ready
@@ -3118,34 +3094,16 @@ export class Router {
             }
         });
 
-        // Payment method tab switching
-        const paymentTabs = document.querySelectorAll('.payment-method-tab');
-        paymentTabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                const method = (tab as HTMLElement).dataset.method as 'card' | 'wallet';
-                selectedPaymentMethod = method;
-
-                // Update tab styles
-                paymentTabs.forEach(t => {
-                    if ((t as HTMLElement).dataset.method === method) {
-                        t.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
-                        t.classList.add('bg-primary', 'text-white');
-                    } else {
-                        t.classList.remove('bg-primary', 'text-white');
-                        t.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
-                    }
-                });
-
-                // Update payment element options if needed
-                if (elements && paymentElement) {
-                    paymentElement.update({
-                        wallets: {
-                            applePay: method === 'wallet' ? 'auto' : 'never',
-                            googlePay: method === 'wallet' ? 'auto' : 'never'
-                        }
-                    });
+        // Check WhatsApp availability from API
+        this.fetchApi('/checkout/init').then(response => {
+            if (response.success && response.data?.has_whatsapp) {
+                const whatsappOption = document.getElementById('whatsapp-notification-option');
+                if (whatsappOption) {
+                    whatsappOption.classList.remove('hidden');
                 }
-            });
+            }
+        }).catch(() => {
+            // Ignore errors, just don't show WhatsApp option
         });
 
         // Handle beneficiaries checkbox toggle
@@ -4138,18 +4096,17 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <a href="/account" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="max-w-4xl mx-auto px-4 py-6 md:py-8">
+                <a href="/account" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 md:mb-6 text-sm">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
-                    Înapoi la Cont
+                    Înapoi
                 </a>
-                <h1 class="text-3xl font-bold text-gray-900 mb-8">Comenzile Mele</h1>
-                <div id="orders-list" class="space-y-4">
-                    <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
-                    <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
-                    <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Comenzile Mele</h1>
+                <div id="orders-list" class="space-y-3">
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-20"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-20"></div>
                 </div>
             </div>
         `;
@@ -4162,15 +4119,15 @@ export class Router {
             if (ordersListEl) {
                 if (orders && orders.length > 0) {
                     ordersListEl.innerHTML = orders.map((order: any) => `
-                        <a href="/account/orders/${order.id}" class="block bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
-                            <div class="flex justify-between items-start mb-4">
+                        <a href="/account/orders/${order.id}" class="block bg-white rounded-lg shadow p-4 md:p-5 hover:shadow-lg transition">
+                            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3">
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-900">${order.order_number}</h3>
-                                    <p class="text-sm text-gray-600">${order.date}</p>
+                                    <h3 class="text-sm md:text-base font-semibold text-gray-900">${order.order_number}</h3>
+                                    <p class="text-xs md:text-sm text-gray-500">${order.date}</p>
                                 </div>
-                                <div class="text-right">
-                                    <p class="text-lg font-bold text-gray-900">${order.total} ${order.currency}</p>
-                                    <span class="inline-block px-3 py-1 text-xs font-medium rounded-full ${
+                                <div class="flex items-center gap-2 sm:flex-col sm:items-end">
+                                    <span class="text-base md:text-lg font-bold text-gray-900">${order.total} ${order.currency}</span>
+                                    <span class="inline-block px-2 py-0.5 text-[10px] md:text-xs font-medium rounded-full ${
                                         order.status === 'paid' ? 'bg-green-100 text-green-800' :
                                         order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                                         order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
@@ -4180,18 +4137,19 @@ export class Router {
                                     </span>
                                 </div>
                             </div>
-                            <div class="border-t pt-4">
-                                <p class="text-sm text-gray-600 mb-2">${order.items_count} bilet${order.items_count > 1 ? 'e' : ''}</p>
-                                <div class="space-y-1">
-                                    ${order.tickets.map((ticket: any) => `
-                                        <p class="text-sm text-gray-700">• ${ticket.event_name} - ${ticket.ticket_type} ${ticket.quantity > 1 ? `(×${ticket.quantity})` : ''}</p>
+                            <div class="border-t pt-3">
+                                <p class="text-xs md:text-sm text-gray-600 mb-1.5">${order.items_count} bilet${order.items_count > 1 ? 'e' : ''}</p>
+                                <div class="space-y-0.5">
+                                    ${order.tickets.slice(0, 2).map((ticket: any) => `
+                                        <p class="text-xs md:text-sm text-gray-600 truncate">• ${ticket.event_name} - ${ticket.ticket_type} ${ticket.quantity > 1 ? `(×${ticket.quantity})` : ''}</p>
                                     `).join('')}
+                                    ${order.tickets.length > 2 ? `<p class="text-xs text-gray-400">+${order.tickets.length - 2} mai multe...</p>` : ''}
                                 </div>
                             </div>
-                            <div class="mt-4 pt-4 border-t flex justify-end">
-                                <span class="text-sm text-primary hover:text-primary-dark font-medium inline-flex items-center">
+                            <div class="mt-3 pt-3 border-t flex justify-end">
+                                <span class="text-xs md:text-sm text-primary hover:text-primary-dark font-medium inline-flex items-center">
                                     Vezi detalii
-                                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-3.5 h-3.5 md:w-4 md:h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                     </svg>
                                 </span>
@@ -4227,17 +4185,17 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <a href="/account" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="max-w-4xl mx-auto px-4 py-6 md:py-8">
+                <a href="/account" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 md:mb-6 text-sm">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
-                    Înapoi la Cont
+                    Înapoi
                 </a>
-                <h1 class="text-3xl font-bold text-gray-900 mb-8">Biletele Mele</h1>
-                <div id="tickets-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="animate-pulse bg-gray-200 rounded-lg h-48"></div>
-                    <div class="animate-pulse bg-gray-200 rounded-lg h-48"></div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-4 md:mb-6">Biletele Mele</h1>
+                <div id="tickets-list" class="space-y-3">
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
+                    <div class="animate-pulse bg-gray-200 rounded-lg h-24"></div>
                 </div>
             </div>
         `;
@@ -4250,34 +4208,37 @@ export class Router {
             if (ticketsListEl) {
                 if (tickets && tickets.length > 0) {
                     ticketsListEl.innerHTML = `
-                        <div class="bg-white rounded-lg shadow overflow-hidden col-span-2">
+                        <div class="bg-white rounded-lg shadow overflow-hidden">
                             <div class="divide-y divide-gray-100">
                                 ${tickets.map((ticket: any) => `
-                                    <div class="p-4 hover:bg-gray-50 transition flex items-center gap-4">
-                                        <img src="${ticket.qr_code}" alt="QR" class="w-16 h-16 border border-gray-200 rounded flex-shrink-0">
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-2 mb-1">
-                                                <h3 class="font-semibold text-gray-900 truncate">${ticket.event_name}</h3>
-                                                <span class="inline-block px-2 py-0.5 text-xs font-medium rounded-full whitespace-nowrap flex-shrink-0 ${
-                                                    ticket.status === 'valid' || ticket.status === 'pending' ? 'bg-green-100 text-green-700' :
-                                                    ticket.status === 'used' ? 'bg-blue-100 text-blue-700' :
-                                                    ticket.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                                                    'bg-gray-100 text-gray-700'
-                                                }">${ticket.status_label}</span>
+                                    <div class="p-3 md:p-4 hover:bg-gray-50 transition">
+                                        <div class="flex items-start gap-3 md:gap-4">
+                                            <img src="${ticket.qr_code}" alt="QR" class="w-14 h-14 md:w-16 md:h-16 border border-gray-200 rounded flex-shrink-0">
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex flex-wrap items-center gap-1.5 md:gap-2 mb-1">
+                                                    <h3 class="font-semibold text-gray-900 text-sm md:text-base line-clamp-1">${ticket.event_name}</h3>
+                                                    <span class="inline-block px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs font-medium rounded-full whitespace-nowrap ${
+                                                        ticket.status === 'valid' || ticket.status === 'pending' ? 'bg-green-100 text-green-700' :
+                                                        ticket.status === 'used' ? 'bg-blue-100 text-blue-700' :
+                                                        ticket.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                                        'bg-gray-100 text-gray-700'
+                                                    }">${ticket.status_label}</span>
+                                                </div>
+                                                <div class="text-xs md:text-sm text-gray-600 space-y-0.5">
+                                                    <p>${ticket.ticket_type}</p>
+                                                    ${ticket.date ? `<p>${new Date(ticket.date).toLocaleDateString('ro-RO', {day: 'numeric', month: 'short', year: 'numeric'})}</p>` : ''}
+                                                    ${ticket.venue ? `<p class="truncate">📍 ${ticket.venue}</p>` : ''}
+                                                    ${ticket.seat_label ? `<p>💺 ${ticket.seat_label}</p>` : ''}
+                                                </div>
+                                                ${ticket.beneficiary?.name ? `
+                                                    <p class="text-xs text-gray-500 mt-1">👤 ${ticket.beneficiary.name}</p>
+                                                ` : ''}
                                             </div>
-                                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600">
-                                                <span>${ticket.ticket_type}</span>
-                                                ${ticket.date ? `<span>${new Date(ticket.date).toLocaleDateString('ro-RO', {day: 'numeric', month: 'short', year: 'numeric'})}</span>` : ''}
-                                                ${ticket.venue ? `<span>📍 ${ticket.venue}</span>` : ''}
-                                                ${ticket.seat_label ? `<span>💺 ${ticket.seat_label}</span>` : ''}
-                                            </div>
-                                            ${ticket.beneficiary?.name ? `
-                                                <p class="text-sm text-gray-600 mt-1">👤 ${ticket.beneficiary.name}</p>
-                                            ` : ''}
-                                            <p class="text-xs text-gray-400 font-mono mt-1">${ticket.code}</p>
                                         </div>
-                                        <button
-                                            class="view-ticket-btn flex-shrink-0 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition text-sm font-medium"
+                                        <div class="mt-3 flex items-center justify-between">
+                                            <p class="text-[10px] md:text-xs text-gray-400 font-mono">${ticket.code}</p>
+                                            <button
+                                                class="view-ticket-btn bg-primary text-white px-3 md:px-4 py-1.5 md:py-2 rounded-lg hover:bg-primary-dark transition text-xs md:text-sm font-medium"
                                             data-ticket-id="${ticket.id}"
                                             data-ticket-code="${ticket.code}"
                                             data-ticket-qr="${ticket.qr_code}"
@@ -4289,9 +4250,10 @@ export class Router {
                                             data-status="${ticket.status || ''}"
                                             data-status-label="${ticket.status_label || ''}"
                                             data-beneficiary-name="${ticket.beneficiary?.name || ''}"
-                                            data-beneficiary-email="${ticket.beneficiary?.email || ''}">
-                                            Detalii
-                                        </button>
+                                                data-beneficiary-email="${ticket.beneficiary?.email || ''}">
+                                                Detalii
+                                            </button>
+                                        </div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -4350,12 +4312,12 @@ export class Router {
         if (!content) return;
 
         content.innerHTML = `
-            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <a href="/account/orders" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-6">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="max-w-4xl mx-auto px-4 py-6 md:py-8">
+                <a href="/account/orders" class="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 md:mb-6 text-sm">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
-                    Înapoi la Comenzi
+                    Înapoi
                 </a>
                 <div id="order-detail-container">
                     <div class="animate-pulse space-y-4">
@@ -4373,13 +4335,13 @@ export class Router {
             const containerEl = document.getElementById('order-detail-container');
             if (containerEl) {
                 containerEl.innerHTML = `
-                    <h1 class="text-3xl font-bold text-gray-900 mb-6">Comanda ${order.order_number}</h1>
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">Comanda ${order.order_number}</h1>
 
-                    <div class="bg-white rounded-lg shadow p-6 mb-6">
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white rounded-lg shadow p-4 md:p-6 mb-4 md:mb-6">
+                        <div class="grid grid-cols-2 gap-3 md:gap-4">
                             <div>
-                                <p class="text-sm text-gray-500">Status</p>
-                                <span class="inline-block px-3 py-1 text-xs font-medium rounded-full ${
+                                <p class="text-xs md:text-sm text-gray-500">Status</p>
+                                <span class="inline-block mt-1 px-2 md:px-3 py-0.5 md:py-1 text-[10px] md:text-xs font-medium rounded-full ${
                                     order.status === 'paid' ? 'bg-green-100 text-green-800' :
                                     order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                                     order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
@@ -4389,36 +4351,36 @@ export class Router {
                                 </span>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-500">Data comenzii</p>
-                                <p class="font-medium text-gray-900">${order.date}</p>
+                                <p class="text-xs md:text-sm text-gray-500">Data</p>
+                                <p class="text-sm md:text-base font-medium text-gray-900">${order.date}</p>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-500">Metodă plată</p>
-                                <p class="font-medium text-gray-900">${order.meta?.payment_method || 'Card'}</p>
+                                <p class="text-xs md:text-sm text-gray-500">Plată</p>
+                                <p class="text-sm md:text-base font-medium text-gray-900">${order.meta?.payment_method || 'Card'}</p>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-500">Total</p>
-                                <p class="font-bold text-lg text-primary">${order.total} ${order.currency || 'RON'}</p>
+                                <p class="text-xs md:text-sm text-gray-500">Total</p>
+                                <p class="text-base md:text-lg font-bold text-primary">${order.total} ${order.currency || 'RON'}</p>
                             </div>
                         </div>
                     </div>
 
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Bilete (${order.items_count})</h2>
-                    <div class="space-y-6">
+                    <h2 class="text-base md:text-lg font-semibold text-gray-900 mb-3">Bilete (${order.items_count})</h2>
+                    <div class="space-y-4">
                         ${(order.events || []).map((eventGroup: any) => `
                             <div class="bg-white rounded-lg shadow overflow-hidden">
-                                <div class="bg-gray-50 p-4 border-b">
-                                    <h3 class="font-semibold text-gray-900">${eventGroup.event?.title || 'Eveniment'}</h3>
+                                <div class="bg-gray-50 p-3 md:p-4 border-b">
+                                    <h3 class="font-semibold text-gray-900 text-sm md:text-base">${eventGroup.event?.title || 'Eveniment'}</h3>
                                     ${eventGroup.venue ? `
-                                        <p class="text-sm text-gray-600">${eventGroup.venue.name}${eventGroup.venue.city ? `, ${eventGroup.venue.city}` : ''}</p>
+                                        <p class="text-xs md:text-sm text-gray-600">${eventGroup.venue.name}${eventGroup.venue.city ? `, ${eventGroup.venue.city}` : ''}</p>
                                     ` : ''}
                                     ${eventGroup.event?.date ? `
-                                        <p class="text-sm text-gray-500">${new Date(eventGroup.event.date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' })}${eventGroup.event.time ? ` • ${eventGroup.event.time}` : ''}</p>
+                                        <p class="text-xs md:text-sm text-gray-500">${new Date(eventGroup.event.date).toLocaleDateString('ro-RO', { day: 'numeric', month: 'short', year: 'numeric' })}${eventGroup.event.time ? ` • ${eventGroup.event.time}` : ''}</p>
                                     ` : ''}
                                 </div>
                                 <div class="divide-y">
                                     ${(eventGroup.tickets || []).map((ticket: any) => `
-                                        <div class="p-4 flex justify-between items-center">
+                                        <div class="p-3 md:p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                                             <div class="flex-1">
                                                 <p class="font-medium text-gray-900">${ticket.ticket_type}</p>
                                                 ${ticket.seat_label ? `<p class="text-sm text-gray-600">💺 Loc: ${ticket.seat_label}</p>` : ''}

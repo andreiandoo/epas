@@ -142,15 +142,15 @@ const defaultTemplate: TemplateConfig = {
 
         return `
             <footer class="bg-gray-50 border-t mt-16">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                        <div class="col-span-1 md:col-span-2">
-                            <h3 class="text-lg font-bold text-gray-900 mb-4">${siteName}</h3>
-                            <p class="text-gray-600 text-sm mb-4">${config.site?.description || ''}</p>
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+                        <div class="col-span-2">
+                            <h3 class="text-base md:text-lg font-bold text-gray-900 mb-3 md:mb-4">${siteName}</h3>
+                            <p class="text-gray-600 text-sm mb-3 md:mb-4 line-clamp-3">${config.site?.description || ''}</p>
                             ${socialHtml}
                         </div>
                         <div>
-                            <h4 class="font-semibold text-gray-900 mb-4">Linkuri rapide</h4>
+                            <h4 class="font-semibold text-gray-900 mb-3 md:mb-4 text-sm md:text-base">Linkuri rapide</h4>
                             <ul class="space-y-2 text-sm">
                                 <li><a href="/events" class="text-gray-600 hover:text-primary">Evenimente</a></li>
                                 <li><a href="/past-events" class="text-gray-600 hover:text-primary">Evenimente trecute</a></li>
@@ -159,17 +159,17 @@ const defaultTemplate: TemplateConfig = {
                             </ul>
                         </div>
                         <div>
-                            <h4 class="font-semibold text-gray-900 mb-4">Legal</h4>
+                            <h4 class="font-semibold text-gray-900 mb-3 md:mb-4 text-sm md:text-base">Legal</h4>
                             <ul class="space-y-2 text-sm">
                                 <li><a href="/terms" class="text-gray-600 hover:text-primary">Termeni și condiții</a></li>
-                                <li><a href="/privacy" class="text-gray-600 hover:text-primary">Politica de confidențialitate</a></li>
+                                <li><a href="/privacy" class="text-gray-600 hover:text-primary">Confidențialitate</a></li>
                                 ${footerMenuHtml}
                             </ul>
                         </div>
                     </div>
-                    <div class="border-t mt-8 pt-8 flex gap-4 items-center justify-between text-sm text-gray-700">
-                        <p>&copy; ${year} ${siteName}. Toate drepturile rezervate.</p>
-                        <div class="mt-3 flex items-center gap-2 text-gray-700 text-[0.875rem] font-bold">
+                    <div class="border-t mt-6 md:mt-8 pt-6 md:pt-8 flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-between text-xs sm:text-sm text-gray-600">
+                        <p class="text-center sm:text-left">&copy; ${year} ${siteName}</p>
+                        <div class="flex items-center gap-2 text-gray-600">
                             <span>Powered by</span>
                             <a href="${config.platform?.url || 'https://tixello.com'}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center">
                                 ${config.platform?.logo_light

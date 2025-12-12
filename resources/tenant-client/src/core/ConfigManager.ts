@@ -659,6 +659,52 @@ export class ConfigManager {
                 footer .grid {
                     gap: 1.5rem !important;
                 }
+
+                /* Account pages mobile improvements */
+                .text-3xl {
+                    font-size: 1.5rem !important;
+                }
+
+                /* Ticket cards on mobile */
+                #tickets-list .p-4 {
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 1rem;
+                }
+                #tickets-list .p-4 img {
+                    width: 100%;
+                    max-width: 120px;
+                    height: auto;
+                    margin: 0 auto;
+                }
+                #tickets-list .view-ticket-btn {
+                    width: 100%;
+                    text-align: center;
+                }
+
+                /* Order cards on mobile */
+                #orders-list a.block {
+                    padding: 1rem;
+                }
+                #orders-list .flex.justify-between {
+                    flex-direction: column;
+                    gap: 0.75rem;
+                }
+                #orders-list .text-right {
+                    text-align: left;
+                }
+
+                /* Order detail grid */
+                .grid.grid-cols-2.md\\:grid-cols-4 {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 0.75rem;
+                }
+
+                /* Profile form */
+                #profile-form input,
+                #profile-form button {
+                    font-size: 16px; /* Prevents iOS zoom */
+                }
             }
 
             /* Small mobile devices */
@@ -669,6 +715,14 @@ export class ConfigManager {
                 .tixello-btn {
                     padding: 0.5rem 1rem;
                     font-size: 0.8125rem;
+                }
+
+                /* Even smaller text on tiny screens */
+                .text-3xl {
+                    font-size: 1.25rem !important;
+                }
+                .text-xl {
+                    font-size: 0.9rem !important;
                 }
             }
         `;
