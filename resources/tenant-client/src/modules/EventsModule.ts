@@ -27,7 +27,9 @@ interface TicketType {
     id: number;
     name: string;
     price: number;
+    display_price?: number;
     available: number;
+    available_quantity?: number;
     description: string;
 }
 
@@ -162,9 +164,98 @@ export class EventsModule {
 
         const eventTime = event.start_time || event.event_time || '';
 
+        // Calculate minimum price for mobile button
+        const minPrice = (event.ticket_types || []).reduce((min, tt) => {
+            const price = tt.display_price ?? tt.price ?? 0;
+            return price > 0 && (min === 0 || price < min) ? price : min;
+        }, 0);
+        const currency = event.currency || 'RON';
+
         return `
+            <style>
+                .event-detail-grid {
+                    display: grid;
+                    grid-template-columns: 1fr;
+                    gap: 2rem;
+                }
+                @media (min-width: 768px) {
+                    .event-detail-grid {
+                        grid-template-columns: 1fr 1fr;
+                    }
+                }
+                .tickets-sidebar {
+                    display: none;
+                }
+                @media (min-width: 768px) {
+                    .tickets-sidebar {
+                        display: block;
+                    }
+                }
+                .mobile-tickets-btn {
+                    display: flex;
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    z-index: 40;
+                    background: linear-gradient(135deg, var(--tixello-primary, #6366f1) 0%, var(--tixello-primary-dark, #4f46e5) 100%);
+                    color: white;
+                    padding: 1rem 1.5rem;
+                    justify-content: space-between;
+                    align-items: center;
+                    cursor: pointer;
+                    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+                }
+                @media (min-width: 768px) {
+                    .mobile-tickets-btn {
+                        display: none;
+                    }
+                }
+                .mobile-tickets-panel {
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    right: 0;
+                    z-index: 50;
+                    background: white;
+                    border-radius: 1.5rem 1.5rem 0 0;
+                    box-shadow: 0 -8px 30px rgba(0,0,0,0.2);
+                    transform: translateY(100%);
+                    transition: transform 0.3s ease-out;
+                    max-height: 85vh;
+                    overflow-y: auto;
+                }
+                .mobile-tickets-panel.open {
+                    transform: translateY(0);
+                }
+                .mobile-tickets-overlay {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(0,0,0,0.5);
+                    z-index: 45;
+                    opacity: 0;
+                    pointer-events: none;
+                    transition: opacity 0.3s ease;
+                }
+                .mobile-tickets-overlay.open {
+                    opacity: 1;
+                    pointer-events: auto;
+                }
+                @media (min-width: 768px) {
+                    .mobile-tickets-panel, .mobile-tickets-overlay {
+                        display: none !important;
+                    }
+                }
+                /* Add bottom padding on mobile for the sticky button */
+                @media (max-width: 767px) {
+                    .event-detail {
+                        padding-bottom: 80px;
+                    }
+                }
+            </style>
+
             <div class="event-detail">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <div class="event-detail-grid">
                     <div>
                         ${heroImage ? `<img src="${heroImage}" alt="${event.title}" style="width: 100%; border-radius: 0.5rem;">` : ''}
                         <h1 style="font-size: 2rem; font-weight: 700; margin: 1rem 0;">${event.title}</h1>
@@ -176,15 +267,15 @@ export class EventsModule {
                             ${event.description || ''}
                         </div>
                     </div>
-                    <div class="tixello-card">
-                        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">Selectează bilete</h2>
+                    <!-- Desktop: Tickets sidebar (no title) -->
+                    <div class="tixello-card tickets-sidebar">
                         <div id="ticket-types">
                             ${(event.ticket_types || []).map(tt => this.renderTicketType(tt)).join('')}
                         </div>
                         <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                                 <span style="font-weight: 600;">Total:</span>
-                                <span id="total-price" style="font-size: 1.5rem; font-weight: 700;">0 RON</span>
+                                <span id="total-price" style="font-size: 1.5rem; font-weight: 700;">0 ${currency}</span>
                             </div>
                             <button id="add-to-cart-btn" class="tixello-btn" style="width: 100%;" disabled>
                                 Adaugă în coș
@@ -193,21 +284,63 @@ export class EventsModule {
                     </div>
                 </div>
             </div>
+
+            <!-- Mobile: Sticky bottom button -->
+            <div class="mobile-tickets-btn" id="mobile-tickets-btn">
+                <div>
+                    <div style="font-weight: 700; font-size: 1.1rem;">Bilete</div>
+                    <div style="font-size: 0.875rem; opacity: 0.9;">Începând de la ${minPrice} ${currency}</div>
+                </div>
+                <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                </svg>
+            </div>
+
+            <!-- Mobile: Tickets panel overlay -->
+            <div class="mobile-tickets-overlay" id="mobile-tickets-overlay"></div>
+
+            <!-- Mobile: Tickets panel -->
+            <div class="mobile-tickets-panel" id="mobile-tickets-panel">
+                <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; border-radius: 1.5rem 1.5rem 0 0;">
+                    <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0;">Selectează bilete</h2>
+                    <button id="mobile-tickets-close" style="padding: 0.5rem; border-radius: 0.5rem; border: none; background: #f3f4f6; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                        <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                </div>
+                <div style="padding: 1rem 1.5rem;">
+                    <div id="ticket-types-mobile">
+                        ${(event.ticket_types || []).map(tt => this.renderTicketType(tt, true)).join('')}
+                    </div>
+                    <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <span style="font-weight: 600;">Total:</span>
+                            <span id="total-price-mobile" style="font-size: 1.5rem; font-weight: 700;">0 ${currency}</span>
+                        </div>
+                        <button id="add-to-cart-btn-mobile" class="tixello-btn" style="width: 100%;" disabled>
+                            Adaugă în coș
+                        </button>
+                    </div>
+                </div>
+            </div>
         `;
     }
 
-    private renderTicketType(ticketType: TicketType): string {
+    private renderTicketType(ticketType: TicketType, isMobile: boolean = false): string {
+        const suffix = isMobile ? '-mobile' : '';
+        const price = ticketType.display_price ?? ticketType.price ?? 0;
         return `
             <div class="ticket-type" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #e5e7eb;">
-                <div>
+                <div style="flex: 1; min-width: 0;">
                     <h4 style="font-weight: 600;">${ticketType.name}</h4>
-                    <p style="font-size: 0.875rem; color: #6b7280;">${ticketType.description || ''}</p>
-                    <p style="font-weight: 600; color: #059669;">RON ${ticketType.price}</p>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin: 0.25rem 0;">${ticketType.description || ''}</p>
+                    <p style="font-weight: 600; color: #059669; margin: 0;">${price} RON</p>
                 </div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button class="qty-btn qty-minus" data-ticket-id="${ticketType.id}" style="width: 32px; height: 32px; border: 1px solid #d1d5db; border-radius: 0.25rem; cursor: pointer;">-</button>
-                    <input type="number" class="qty-input" data-ticket-id="${ticketType.id}" data-price="${ticketType.price}" value="0" min="0" max="${ticketType.available}" style="width: 50px; text-align: center; border: 1px solid #d1d5db; border-radius: 0.25rem; padding: 0.25rem;">
-                    <button class="qty-btn qty-plus" data-ticket-id="${ticketType.id}" style="width: 32px; height: 32px; border: 1px solid #d1d5db; border-radius: 0.25rem; cursor: pointer;">+</button>
+                <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+                    <button class="qty-btn qty-minus${suffix}" data-ticket-id="${ticketType.id}" style="width: 36px; height: 36px; border: 1px solid #d1d5db; border-radius: 0.5rem; cursor: pointer; background: white; font-size: 1.25rem;">-</button>
+                    <input type="number" class="qty-input${suffix}" data-ticket-id="${ticketType.id}" data-price="${price}" value="0" min="0" max="${ticketType.available_quantity ?? 10}" style="width: 50px; text-align: center; border: 1px solid #d1d5db; border-radius: 0.5rem; padding: 0.5rem; font-size: 1rem;">
+                    <button class="qty-btn qty-plus${suffix}" data-ticket-id="${ticketType.id}" style="width: 36px; height: 36px; border: 1px solid #d1d5db; border-radius: 0.5rem; cursor: pointer; background: white; font-size: 1.25rem;">+</button>
                 </div>
             </div>
         `;

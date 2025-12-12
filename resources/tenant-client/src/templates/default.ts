@@ -58,14 +58,85 @@ const defaultTemplate: TemplateConfig = {
                             </a>
                             <a href="/login" id="account-link" class="btn-primary px-4 py-2 rounded-lg text-sm">Contul meu</a>
                         </nav>
-                        <button class="md:hidden p-2" id="mobile-menu-btn">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                            </svg>
-                        </button>
+                        <!-- Mobile: Cart + Menu buttons -->
+                        <div class="md:hidden flex items-center gap-2">
+                            <a href="/cart" class="relative p-2 text-primary">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 512 512" stroke-width="30">
+                                    <path d="M336.333 416.667v-32.134M336.333 320.267v-32.134M336.333 223.867v-32.134M336.333 127.467V95.333M497 191.733c-35.467 0-64.267 28.799-64.267 64.267s28.8 64.267 64.267 64.267v37.435c0 38.214-20.75 58.965-58.965 58.965H73.965C35.75 416.667 15 395.917 15 357.702v-37.435c35.467 0 64.267-28.799 64.267-64.267S50.467 191.733 15 191.733v-37.435c0-38.214 20.75-58.965 58.965-58.965h364.07c38.215 0 58.965 20.75 58.965 58.965v37.435z" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10"/>
+                                </svg>
+                                <span id="cart-badge-mobile" class="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
+                            </a>
+                            <button class="p-2" id="mobile-menu-btn" aria-label="Open menu">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </header>
+
+            <!-- Mobile Menu Drawer -->
+            <div id="mobile-menu-overlay" class="fixed inset-0 bg-black/50 z-[60] hidden opacity-0 transition-opacity duration-300"></div>
+            <div id="mobile-menu-drawer" class="fixed top-0 right-0 h-full w-72 bg-white shadow-xl z-[70] transform translate-x-full transition-transform duration-300 ease-out">
+                <div class="flex items-center justify-between p-4 border-b">
+                    <span class="font-semibold text-gray-900">Meniu</span>
+                    <button id="mobile-menu-close" class="p-2 hover:bg-gray-100 rounded-lg" aria-label="Close menu">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <nav class="p-4 flex flex-col space-y-1">
+                    <a href="/events" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Evenimente</a>
+                    <a href="/blog" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Blog</a>
+                    ${headerMenu.map(item =>
+                        `<a href="${item.url}" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">${item.title}</a>`
+                    ).join('')}
+                    <div class="border-t my-2"></div>
+                    <a href="/account" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Contul meu</a>
+                    <a href="/cart" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition flex items-center justify-between">
+                        <span>Coș</span>
+                        <span id="cart-badge-menu" class="bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
+                    </a>
+                </nav>
+            </div>
+
+            <script>
+            (function() {
+                const menuBtn = document.getElementById('mobile-menu-btn');
+                const closeBtn = document.getElementById('mobile-menu-close');
+                const overlay = document.getElementById('mobile-menu-overlay');
+                const drawer = document.getElementById('mobile-menu-drawer');
+
+                function openMenu() {
+                    overlay.classList.remove('hidden');
+                    requestAnimationFrame(() => {
+                        overlay.classList.remove('opacity-0');
+                        drawer.classList.remove('translate-x-full');
+                    });
+                    document.body.style.overflow = 'hidden';
+                }
+
+                function closeMenu() {
+                    overlay.classList.add('opacity-0');
+                    drawer.classList.add('translate-x-full');
+                    setTimeout(() => {
+                        overlay.classList.add('hidden');
+                    }, 300);
+                    document.body.style.overflow = '';
+                }
+
+                if (menuBtn) menuBtn.addEventListener('click', openMenu);
+                if (closeBtn) closeBtn.addEventListener('click', closeMenu);
+                if (overlay) overlay.addEventListener('click', closeMenu);
+
+                // Close on link click
+                drawer?.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', closeMenu);
+                });
+            })();
+            </script>
         `;
     },
 
