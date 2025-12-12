@@ -19,6 +19,7 @@ use App\Http\Controllers\Public\DocsController as PublicDocsController;
 use App\Http\Controllers\Tenant\PreviewProxyController;
 use App\Http\Controllers\Admin\TicketCustomizerController;
 use App\Http\Controllers\Tenant\TicketCustomizerController as TenantTicketCustomizerController;
+use App\Http\Controllers\ApplePayVerificationController;
 
 Route::pattern('locale', 'en|ro|de|fr|es');
 
@@ -176,6 +177,10 @@ Route::get('/termeni-si-conditii', function () {
 Route::get('/politica-confidentialitate', function () {
     return view('public.legal.privacy');
 })->name('legal.privacy');
+
+// Apple Pay Domain Verification
+Route::get('/.well-known/apple-developer-merchantid-domain-association', ApplePayVerificationController::class)
+    ->name('apple-pay.verification');
 
 // Admin Domain Management Routes
 Route::middleware(['web'])->prefix('admin')->group(function () {

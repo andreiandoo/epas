@@ -4,6 +4,7 @@ namespace App\Filament\Tenant\Pages;
 
 use App\Models\Microservice;
 use App\Models\TenantPaymentConfig;
+use App\Services\ApplePayDomainService;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use BackedEnum;
 use Filament\Forms;
@@ -27,6 +28,8 @@ class PaymentConfig extends Page
     public ?array $data = [];
     public ?string $activeProcessor = null;
     public ?string $processorLabel = null;
+    public array $applePayDomains = [];
+    public ?string $domainToRegister = null;
 
     /**
      * Payment processor microservice slugs mapping
@@ -130,6 +133,8 @@ class PaymentConfig extends Page
                     $formData['stripe_test_publishable_key'] = $additionalConfig['stripe_test_publishable_key'] ?? null;
                     $formData['stripe_test_secret_key'] = $additionalConfig['stripe_test_secret_key'] ?? null;
                     $formData['stripe_test_webhook_secret'] = $additionalConfig['stripe_test_webhook_secret'] ?? null;
+                    // Load Apple Pay domains
+                    $this->loadApplePayDomains($tenant);
                     break;
 
                 case 'netopia':
@@ -516,5 +521,93 @@ class PaymentConfig extends Page
     public function getTitle(): string
     {
         return 'Payment Processor';
+    }
+
+    /**
+     * Load Apple Pay registered domains from Stripe
+     */
+    protected function loadApplePayDomains($tenant): void
+    {
+        try {
+            $service = new ApplePayDomainService();
+            $this->applePayDomains = $service->listDomains($tenant);
+        } catch (\Exception $e) {
+            $this->applePayDomains = [];
+        }
+    }
+
+    /**
+     * Register a domain for Apple Pay
+     */
+    public function registerApplePayDomain(): void
+    {
+        $tenant = auth()->user()->tenant;
+
+        if (!$tenant || !$this->domainToRegister) {
+            Notification::make()
+                ->warning()
+                ->title('Domeniu lipsă')
+                ->body('Te rog introdu un domeniu pentru înregistrare.')
+                ->send();
+            return;
+        }
+
+        // Clean the domain (remove http(s)://, trailing slashes, etc.)
+        $domain = $this->domainToRegister;
+        $domain = preg_replace('#^https?://#', '', $domain);
+        $domain = rtrim($domain, '/');
+
+        $service = new ApplePayDomainService();
+        $result = $service->registerDomain($tenant, $domain);
+
+        if ($result['success']) {
+            Notification::make()
+                ->success()
+                ->title('Domeniu înregistrat')
+                ->body($result['message'])
+                ->send();
+
+            // Reload domains
+            $this->loadApplePayDomains($tenant);
+            $this->domainToRegister = null;
+        } else {
+            Notification::make()
+                ->danger()
+                ->title('Înregistrare eșuată')
+                ->body($result['message'])
+                ->send();
+        }
+    }
+
+    /**
+     * Delete a registered Apple Pay domain
+     */
+    public function deleteApplePayDomain(string $domainId): void
+    {
+        $tenant = auth()->user()->tenant;
+
+        if (!$tenant) {
+            return;
+        }
+
+        $service = new ApplePayDomainService();
+        $result = $service->deleteDomain($tenant, $domainId);
+
+        if ($result['success']) {
+            Notification::make()
+                ->success()
+                ->title('Domeniu șters')
+                ->body($result['message'])
+                ->send();
+
+            // Reload domains
+            $this->loadApplePayDomains($tenant);
+        } else {
+            Notification::make()
+                ->danger()
+                ->title('Ștergere eșuată')
+                ->body($result['message'])
+                ->send();
+        }
     }
 }
