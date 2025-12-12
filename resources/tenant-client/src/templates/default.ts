@@ -88,14 +88,14 @@ const defaultTemplate: TemplateConfig = {
                     </button>
                 </div>
                 <nav class="p-4 flex flex-col space-y-1">
-                    <a href="#/events" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Evenimente</a>
-                    <a href="#/blog" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Blog</a>
+                    <a href="/events" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Evenimente</a>
+                    <a href="/blog" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Blog</a>
                     ${headerMenu.map(item =>
                         `<a href="${item.url}" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">${item.title}</a>`
                     ).join('')}
                     <div class="border-t my-2"></div>
-                    <a href="#/account" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Contul meu</a>
-                    <a href="#/cart" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition flex items-center justify-between">
+                    <a href="/account" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Contul meu</a>
+                    <a href="/cart" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition flex items-center justify-between">
                         <span>Coș</span>
                         <span id="cart-badge-menu" class="bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
                     </a>
