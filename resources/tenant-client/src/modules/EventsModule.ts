@@ -6,9 +6,11 @@ interface Event {
     title: string;
     slug: string;
     description: string;
-    venue: string | { id: number; name: string; city: string };
+    short_description?: string;
+    venue: string | Venue;
     event_date: string;
     start_date: string;
+    end_date?: string;
     event_time: string;
     start_time: string;
     poster_url: string;
@@ -21,16 +23,36 @@ interface Event {
     currency: string;
     status: string;
     ticket_types: TicketType[];
+    artists?: Artist[];
+    gallery?: string[];
 }
 
 interface TicketType {
     id: number;
     name: string;
     price: number;
-    display_price?: number;
+    sale_price?: number;
+    display_price?: number; // Computed: sale_price ?? price
+    discount_percent?: number;
     available: number;
     available_quantity?: number;
     description: string;
+    status?: string;
+}
+
+interface Artist {
+    id: number;
+    name: string;
+    image?: string;
+}
+
+interface Venue {
+    id: number;
+    name: string;
+    address?: string;
+    city?: string;
+    latitude?: number;
+    longitude?: number;
 }
 
 interface PastEventsFilters {
@@ -105,8 +127,18 @@ export class EventsModule {
             ? event.venue
             : (event.venue?.name || '');
 
-        // Use price_from or min_price
-        const price = event.price_from ?? event.min_price ?? 0;
+        // Calculate minimum price from ticket_types using sale_price (discounted) if available
+        let price = 0;
+        if (event.ticket_types && event.ticket_types.length > 0) {
+            price = event.ticket_types.reduce((min, tt) => {
+                const ticketPrice = tt.sale_price ?? tt.price ?? 0;
+                return ticketPrice > 0 && (min === 0 || ticketPrice < min) ? ticketPrice : min;
+            }, 0);
+        }
+        // Fallback to event-level price if no ticket_types
+        if (price === 0) {
+            price = event.price_from ?? event.min_price ?? 0;
+        }
 
         return `
             <div class="tixello-card event-card" data-event-slug="${event.slug}">
@@ -164,12 +196,17 @@ export class EventsModule {
 
         const eventTime = event.start_time || event.event_time || '';
 
-        // Calculate minimum price for mobile button
+        // Calculate minimum price for mobile button (use sale_price if available)
         const minPrice = (event.ticket_types || []).reduce((min, tt) => {
-            const price = tt.display_price ?? tt.price ?? 0;
+            const price = tt.sale_price ?? tt.price ?? 0;
             return price > 0 && (min === 0 || price < min) ? price : min;
         }, 0);
         const currency = event.currency || 'RON';
+
+        // Get venue details for collapsible section
+        const venueObj = typeof event.venue === 'object' ? event.venue : null;
+        const hasVenueDetails = venueObj && (venueObj.address || venueObj.city);
+        const hasArtists = event.artists && event.artists.length > 0;
 
         return `
             <style>
@@ -252,6 +289,92 @@ export class EventsModule {
                         padding-bottom: 80px;
                     }
                 }
+                /* Collapsible sections for mobile */
+                .collapsible-section {
+                    margin-top: 1.5rem;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 0.75rem;
+                    overflow: hidden;
+                }
+                .collapsible-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 1rem;
+                    background: #f9fafb;
+                    cursor: pointer;
+                    user-select: none;
+                }
+                .collapsible-header h3 {
+                    margin: 0;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                .collapsible-icon {
+                    width: 20px;
+                    height: 20px;
+                    transition: transform 0.2s ease;
+                }
+                .collapsible-section.open .collapsible-icon {
+                    transform: rotate(180deg);
+                }
+                .collapsible-content {
+                    max-height: 0;
+                    overflow: hidden;
+                    transition: max-height 0.3s ease;
+                }
+                .collapsible-section.open .collapsible-content {
+                    max-height: 500px;
+                }
+                .collapsible-content-inner {
+                    padding: 1rem;
+                }
+                /* On desktop, sections are always expanded */
+                @media (min-width: 768px) {
+                    .collapsible-section {
+                        border: none;
+                        margin-top: 2rem;
+                    }
+                    .collapsible-header {
+                        background: transparent;
+                        cursor: default;
+                        padding: 0 0 0.75rem 0;
+                        border-bottom: 2px solid #e5e7eb;
+                    }
+                    .collapsible-icon {
+                        display: none;
+                    }
+                    .collapsible-content {
+                        max-height: none !important;
+                    }
+                    .collapsible-content-inner {
+                        padding: 1rem 0;
+                    }
+                }
+                .artist-card {
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                    padding: 0.75rem 0;
+                    border-bottom: 1px solid #f3f4f6;
+                }
+                .artist-card:last-child {
+                    border-bottom: none;
+                }
+                .artist-image {
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    object-fit: cover;
+                    background: #e5e7eb;
+                }
+                .artist-name {
+                    font-weight: 600;
+                    font-size: 0.95rem;
+                }
             </style>
 
             <div class="event-detail">
@@ -266,6 +389,76 @@ export class EventsModule {
                         <div style="margin-top: 1rem;">
                             ${event.description || ''}
                         </div>
+
+                        ${hasArtists ? `
+                        <!-- Artists Section - Collapsible on mobile -->
+                        <div class="collapsible-section" id="artists-section">
+                            <div class="collapsible-header" onclick="this.parentElement.classList.toggle('open')">
+                                <h3>
+                                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    Artiști
+                                </h3>
+                                <svg class="collapsible-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                            <div class="collapsible-content">
+                                <div class="collapsible-content-inner">
+                                    ${event.artists!.map(artist => `
+                                        <div class="artist-card">
+                                            ${artist.image
+                                                ? `<img src="${artist.image}" alt="${artist.name}" class="artist-image">`
+                                                : `<div class="artist-image" style="display: flex; align-items: center; justify-content: center;">
+                                                    <svg style="width: 24px; height: 24px; color: #9ca3af;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                                    </svg>
+                                                   </div>`
+                                            }
+                                            <span class="artist-name">${artist.name}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        ${hasVenueDetails ? `
+                        <!-- Location Section - Collapsible on mobile -->
+                        <div class="collapsible-section" id="location-section">
+                            <div class="collapsible-header" onclick="this.parentElement.classList.toggle('open')">
+                                <h3>
+                                    <svg style="width: 20px; height: 20px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                    Locație
+                                </h3>
+                                <svg class="collapsible-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                            <div class="collapsible-content">
+                                <div class="collapsible-content-inner">
+                                    <p style="font-weight: 600; margin: 0 0 0.5rem 0;">${venueObj!.name}</p>
+                                    ${venueObj!.address ? `<p style="color: #6b7280; margin: 0 0 0.25rem 0;">${venueObj!.address}</p>` : ''}
+                                    ${venueObj!.city ? `<p style="color: #6b7280; margin: 0;">${venueObj!.city}</p>` : ''}
+                                    ${venueObj!.latitude && venueObj!.longitude ? `
+                                        <a href="https://www.google.com/maps?q=${venueObj!.latitude},${venueObj!.longitude}"
+                                           target="_blank"
+                                           rel="noopener noreferrer"
+                                           style="display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 1rem; color: var(--tixello-primary, #6366f1); text-decoration: none; font-weight: 500;">
+                                            <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                            </svg>
+                                            Deschide în Google Maps
+                                        </a>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                     <!-- Desktop: Tickets sidebar (no title) -->
                     <div class="tixello-card tickets-sidebar">
@@ -328,19 +521,19 @@ export class EventsModule {
     }
 
     private renderTicketType(ticketType: TicketType, isMobile: boolean = false): string {
-        const suffix = isMobile ? '-mobile' : '';
-        const price = ticketType.display_price ?? ticketType.price ?? 0;
+        const mobileClass = isMobile ? ' qty-mobile' : '';
+        const price = ticketType.sale_price ?? ticketType.price ?? 0;
         return `
             <div class="ticket-type" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #e5e7eb;">
                 <div style="flex: 1; min-width: 0;">
-                    <h4 style="font-weight: 600;">${ticketType.name}</h4>
-                    <p style="font-size: 0.875rem; color: #6b7280; margin: 0.25rem 0;">${ticketType.description || ''}</p>
-                    <p style="font-weight: 600; color: #059669; margin: 0;">${price} RON</p>
+                    <h4 style="font-weight: 600; font-size: 0.95rem; margin: 0 0 0.25rem 0;">${ticketType.name}</h4>
+                    ${ticketType.description ? `<p style="font-size: 0.8rem; color: #6b7280; margin: 0 0 0.25rem 0;">${ticketType.description}</p>` : ''}
+                    <p style="font-weight: 600; color: #059669; margin: 0; font-size: 0.95rem;">${price} RON</p>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
-                    <button class="qty-btn qty-minus${suffix}" data-ticket-id="${ticketType.id}" style="width: 36px; height: 36px; border: 1px solid #d1d5db; border-radius: 0.5rem; cursor: pointer; background: white; font-size: 1.25rem;">-</button>
-                    <input type="number" class="qty-input${suffix}" data-ticket-id="${ticketType.id}" data-price="${price}" value="0" min="0" max="${ticketType.available_quantity ?? 10}" style="width: 50px; text-align: center; border: 1px solid #d1d5db; border-radius: 0.5rem; padding: 0.5rem; font-size: 1rem;">
-                    <button class="qty-btn qty-plus${suffix}" data-ticket-id="${ticketType.id}" style="width: 36px; height: 36px; border: 1px solid #d1d5db; border-radius: 0.5rem; cursor: pointer; background: white; font-size: 1.25rem;">+</button>
+                    <button class="qty-btn qty-minus${mobileClass}" data-ticket-id="${ticketType.id}" style="width: 32px; height: 32px; border: 1px solid #d1d5db; border-radius: 0.375rem; cursor: pointer; background: white; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">−</button>
+                    <input type="number" class="qty-input${mobileClass}" data-ticket-id="${ticketType.id}" data-price="${price}" value="0" min="0" max="${ticketType.available_quantity ?? 10}" style="width: 44px; text-align: center; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.375rem; font-size: 0.95rem;">
+                    <button class="qty-btn qty-plus${mobileClass}" data-ticket-id="${ticketType.id}" style="width: 32px; height: 32px; border: 1px solid #d1d5db; border-radius: 0.375rem; cursor: pointer; background: white; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">+</button>
                 </div>
             </div>
         `;
@@ -361,11 +554,41 @@ export class EventsModule {
     }
 
     private bindTicketSelectors(event: Event): void {
-        const updateTotal = () => {
+        const currency = event.currency || 'RON';
+
+        // Bind mobile tickets panel open/close
+        const mobileBtn = document.getElementById('mobile-tickets-btn');
+        const mobileClose = document.getElementById('mobile-tickets-close');
+        const mobileOverlay = document.getElementById('mobile-tickets-overlay');
+        const mobilePanel = document.getElementById('mobile-tickets-panel');
+
+        const openMobilePanel = () => {
+            if (mobilePanel && mobileOverlay) {
+                mobileOverlay.classList.add('open');
+                mobilePanel.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            }
+        };
+
+        const closeMobilePanel = () => {
+            if (mobilePanel && mobileOverlay) {
+                mobileOverlay.classList.remove('open');
+                mobilePanel.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+        };
+
+        if (mobileBtn) mobileBtn.addEventListener('click', openMobilePanel);
+        if (mobileClose) mobileClose.addEventListener('click', closeMobilePanel);
+        if (mobileOverlay) mobileOverlay.addEventListener('click', closeMobilePanel);
+
+        // Update totals for both desktop and mobile
+        const updateTotals = () => {
             let total = 0;
             let hasTickets = false;
 
-            document.querySelectorAll('.qty-input').forEach((input: Element) => {
+            // Calculate from desktop inputs (they are the source of truth)
+            document.querySelectorAll('.qty-input:not(.qty-mobile)').forEach((input: Element) => {
                 const htmlInput = input as HTMLInputElement;
                 const qty = parseInt(htmlInput.value) || 0;
                 const price = parseFloat(htmlInput.getAttribute('data-price') || '0');
@@ -373,68 +596,142 @@ export class EventsModule {
                 if (qty > 0) hasTickets = true;
             });
 
+            // Update desktop total
             const totalEl = document.getElementById('total-price');
             if (totalEl) {
-                totalEl.textContent = `${total.toFixed(2)} RON`;
+                totalEl.textContent = `${total.toFixed(2)} ${currency}`;
             }
 
+            // Update mobile total
+            const totalElMobile = document.getElementById('total-price-mobile');
+            if (totalElMobile) {
+                totalElMobile.textContent = `${total.toFixed(2)} ${currency}`;
+            }
+
+            // Enable/disable both buttons
             const addBtn = document.getElementById('add-to-cart-btn') as HTMLButtonElement;
-            if (addBtn) {
-                addBtn.disabled = !hasTickets;
+            if (addBtn) addBtn.disabled = !hasTickets;
+
+            const addBtnMobile = document.getElementById('add-to-cart-btn-mobile') as HTMLButtonElement;
+            if (addBtnMobile) addBtnMobile.disabled = !hasTickets;
+        };
+
+        // Sync mobile input to desktop
+        const syncToDesktop = (ticketId: string, value: string) => {
+            const desktopInput = document.querySelector(`.qty-input:not(.qty-mobile)[data-ticket-id="${ticketId}"]`) as HTMLInputElement;
+            if (desktopInput) {
+                desktopInput.value = value;
             }
         };
 
-        document.querySelectorAll('.qty-minus').forEach(btn => {
+        // Sync desktop input to mobile
+        const syncToMobile = (ticketId: string, value: string) => {
+            const mobileInput = document.querySelector(`.qty-input.qty-mobile[data-ticket-id="${ticketId}"]`) as HTMLInputElement;
+            if (mobileInput) {
+                mobileInput.value = value;
+            }
+        };
+
+        // Desktop quantity buttons (no .qty-mobile class)
+        document.querySelectorAll('.qty-minus:not(.qty-mobile)').forEach(btn => {
             btn.addEventListener('click', () => {
                 const ticketId = btn.getAttribute('data-ticket-id');
-                const input = document.querySelector(`.qty-input[data-ticket-id="${ticketId}"]`) as HTMLInputElement;
+                const input = document.querySelector(`.qty-input:not(.qty-mobile)[data-ticket-id="${ticketId}"]`) as HTMLInputElement;
                 if (input && parseInt(input.value) > 0) {
                     input.value = String(parseInt(input.value) - 1);
-                    updateTotal();
+                    if (ticketId) syncToMobile(ticketId, input.value);
+                    updateTotals();
                 }
             });
         });
 
-        document.querySelectorAll('.qty-plus').forEach(btn => {
+        document.querySelectorAll('.qty-plus:not(.qty-mobile)').forEach(btn => {
             btn.addEventListener('click', () => {
                 const ticketId = btn.getAttribute('data-ticket-id');
-                const input = document.querySelector(`.qty-input[data-ticket-id="${ticketId}"]`) as HTMLInputElement;
+                const input = document.querySelector(`.qty-input:not(.qty-mobile)[data-ticket-id="${ticketId}"]`) as HTMLInputElement;
                 if (input) {
                     const max = parseInt(input.getAttribute('max') || '10');
                     if (parseInt(input.value) < max) {
                         input.value = String(parseInt(input.value) + 1);
-                        updateTotal();
+                        if (ticketId) syncToMobile(ticketId, input.value);
+                        updateTotals();
                     }
                 }
             });
         });
 
-        document.querySelectorAll('.qty-input').forEach(input => {
-            input.addEventListener('change', updateTotal);
+        // Mobile quantity buttons (with .qty-mobile class)
+        document.querySelectorAll('.qty-minus.qty-mobile').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ticketId = btn.getAttribute('data-ticket-id');
+                const input = document.querySelector(`.qty-input.qty-mobile[data-ticket-id="${ticketId}"]`) as HTMLInputElement;
+                if (input && parseInt(input.value) > 0) {
+                    input.value = String(parseInt(input.value) - 1);
+                    if (ticketId) syncToDesktop(ticketId, input.value);
+                    updateTotals();
+                }
+            });
         });
+
+        document.querySelectorAll('.qty-plus.qty-mobile').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ticketId = btn.getAttribute('data-ticket-id');
+                const input = document.querySelector(`.qty-input.qty-mobile[data-ticket-id="${ticketId}"]`) as HTMLInputElement;
+                if (input) {
+                    const max = parseInt(input.getAttribute('max') || '10');
+                    if (parseInt(input.value) < max) {
+                        input.value = String(parseInt(input.value) + 1);
+                        if (ticketId) syncToDesktop(ticketId, input.value);
+                        updateTotals();
+                    }
+                }
+            });
+        });
+
+        // Input change handlers
+        document.querySelectorAll('.qty-input:not(.qty-mobile)').forEach(input => {
+            input.addEventListener('change', () => {
+                const ticketId = (input as HTMLInputElement).getAttribute('data-ticket-id');
+                if (ticketId) syncToMobile(ticketId, (input as HTMLInputElement).value);
+                updateTotals();
+            });
+        });
+
+        document.querySelectorAll('.qty-input.qty-mobile').forEach(input => {
+            input.addEventListener('change', () => {
+                const ticketId = (input as HTMLInputElement).getAttribute('data-ticket-id');
+                if (ticketId) syncToDesktop(ticketId, (input as HTMLInputElement).value);
+                updateTotals();
+            });
+        });
+
+        // Add to cart handlers (both desktop and mobile)
+        const handleAddToCart = () => {
+            const items: any[] = [];
+            document.querySelectorAll('.qty-input:not(.qty-mobile)').forEach((input: Element) => {
+                const htmlInput = input as HTMLInputElement;
+                const qty = parseInt(htmlInput.value) || 0;
+                if (qty > 0) {
+                    items.push({
+                        ticket_type_id: htmlInput.getAttribute('data-ticket-id'),
+                        quantity: qty,
+                        price: parseFloat(htmlInput.getAttribute('data-price') || '0')
+                    });
+                }
+            });
+
+            if (items.length > 0 && this.eventBus) {
+                this.eventBus.emit('cart:add', { event, items });
+                closeMobilePanel();
+                window.location.hash = '/cart';
+            }
+        };
 
         const addToCartBtn = document.getElementById('add-to-cart-btn');
-        if (addToCartBtn) {
-            addToCartBtn.addEventListener('click', () => {
-                const items: any[] = [];
-                document.querySelectorAll('.qty-input').forEach((input: Element) => {
-                    const htmlInput = input as HTMLInputElement;
-                    const qty = parseInt(htmlInput.value) || 0;
-                    if (qty > 0) {
-                        items.push({
-                            ticket_type_id: htmlInput.getAttribute('data-ticket-id'),
-                            quantity: qty,
-                            price: parseFloat(htmlInput.getAttribute('data-price') || '0')
-                        });
-                    }
-                });
+        if (addToCartBtn) addToCartBtn.addEventListener('click', handleAddToCart);
 
-                if (items.length > 0 && this.eventBus) {
-                    this.eventBus.emit('cart:add', { event, items });
-                    window.location.hash = '/cart';
-                }
-            });
-        }
+        const addToCartBtnMobile = document.getElementById('add-to-cart-btn-mobile');
+        if (addToCartBtnMobile) addToCartBtnMobile.addEventListener('click', handleAddToCart);
     }
 
     // ==========================================

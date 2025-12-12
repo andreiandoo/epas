@@ -115,13 +115,39 @@ export class TixelloApp {
     }
 
     private setupMobileMenu(): void {
-        const btn = document.getElementById('mobile-menu-btn');
-        const menu = document.getElementById('mobile-menu');
-        if (btn && menu) {
-            btn.addEventListener('click', () => {
-                menu.classList.toggle('hidden');
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const closeBtn = document.getElementById('mobile-menu-close');
+        const overlay = document.getElementById('mobile-menu-overlay');
+        const drawer = document.getElementById('mobile-menu-drawer');
+
+        if (!menuBtn || !drawer || !overlay) return;
+
+        const openMenu = () => {
+            overlay.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                overlay.classList.remove('opacity-0');
+                drawer.classList.remove('translate-x-full');
             });
-        }
+            document.body.style.overflow = 'hidden';
+        };
+
+        const closeMenu = () => {
+            overlay.classList.add('opacity-0');
+            drawer.classList.add('translate-x-full');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 300);
+            document.body.style.overflow = '';
+        };
+
+        menuBtn.addEventListener('click', openMenu);
+        if (closeBtn) closeBtn.addEventListener('click', closeMenu);
+        overlay.addEventListener('click', closeMenu);
+
+        // Close menu on link click
+        drawer.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', closeMenu);
+        });
     }
 
     private injectStyles(): void {

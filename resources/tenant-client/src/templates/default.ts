@@ -88,55 +88,19 @@ const defaultTemplate: TemplateConfig = {
                     </button>
                 </div>
                 <nav class="p-4 flex flex-col space-y-1">
-                    <a href="/events" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Evenimente</a>
-                    <a href="/blog" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Blog</a>
+                    <a href="#/events" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Evenimente</a>
+                    <a href="#/blog" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Blog</a>
                     ${headerMenu.map(item =>
                         `<a href="${item.url}" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">${item.title}</a>`
                     ).join('')}
                     <div class="border-t my-2"></div>
-                    <a href="/account" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Contul meu</a>
-                    <a href="/cart" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition flex items-center justify-between">
+                    <a href="#/account" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Contul meu</a>
+                    <a href="#/cart" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition flex items-center justify-between">
                         <span>Coș</span>
                         <span id="cart-badge-menu" class="bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
                     </a>
                 </nav>
             </div>
-
-            <script>
-            (function() {
-                const menuBtn = document.getElementById('mobile-menu-btn');
-                const closeBtn = document.getElementById('mobile-menu-close');
-                const overlay = document.getElementById('mobile-menu-overlay');
-                const drawer = document.getElementById('mobile-menu-drawer');
-
-                function openMenu() {
-                    overlay.classList.remove('hidden');
-                    requestAnimationFrame(() => {
-                        overlay.classList.remove('opacity-0');
-                        drawer.classList.remove('translate-x-full');
-                    });
-                    document.body.style.overflow = 'hidden';
-                }
-
-                function closeMenu() {
-                    overlay.classList.add('opacity-0');
-                    drawer.classList.add('translate-x-full');
-                    setTimeout(() => {
-                        overlay.classList.add('hidden');
-                    }, 300);
-                    document.body.style.overflow = '';
-                }
-
-                if (menuBtn) menuBtn.addEventListener('click', openMenu);
-                if (closeBtn) closeBtn.addEventListener('click', closeMenu);
-                if (overlay) overlay.addEventListener('click', closeMenu);
-
-                // Close on link click
-                drawer?.querySelectorAll('a').forEach(link => {
-                    link.addEventListener('click', closeMenu);
-                });
-            })();
-            </script>
         `;
     },
 

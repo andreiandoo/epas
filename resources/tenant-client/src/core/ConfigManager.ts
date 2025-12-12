@@ -568,6 +568,109 @@ export class ConfigManager {
             .focus\\:ring-primary:focus {
                 --tw-ring-color: var(--tixello-primary);
             }
+
+            /* Tixello component styles */
+            .tixello-card {
+                background: white;
+                border-radius: 0.75rem;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                overflow: hidden;
+                transition: box-shadow 0.2s, transform 0.2s;
+            }
+            .tixello-card:hover {
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+            .tixello-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0.75rem 1.5rem;
+                background: var(--tixello-primary);
+                color: white;
+                font-weight: 600;
+                border-radius: 0.5rem;
+                border: none;
+                cursor: pointer;
+                transition: background-color 0.2s;
+            }
+            .tixello-btn:hover {
+                background: var(--tixello-primary-dark);
+            }
+            .tixello-btn:disabled {
+                background: #d1d5db;
+                cursor: not-allowed;
+            }
+
+            /* Mobile-responsive adjustments */
+            @media (max-width: 767px) {
+                /* Reduce container padding */
+                .max-w-7xl {
+                    padding-left: 1rem !important;
+                    padding-right: 1rem !important;
+                }
+
+                /* Smaller hero section */
+                .text-4xl {
+                    font-size: 1.75rem !important;
+                }
+                .text-5xl {
+                    font-size: 2rem !important;
+                }
+                .text-2xl {
+                    font-size: 1.25rem !important;
+                }
+                .text-xl {
+                    font-size: 1rem !important;
+                }
+
+                /* Reduce section padding */
+                .py-16 {
+                    padding-top: 2rem !important;
+                    padding-bottom: 2rem !important;
+                }
+                .py-12 {
+                    padding-top: 1.5rem !important;
+                    padding-bottom: 1.5rem !important;
+                }
+                .mt-16 {
+                    margin-top: 2rem !important;
+                }
+
+                /* Smaller buttons on mobile */
+                .tixello-btn {
+                    padding: 0.625rem 1.25rem;
+                    font-size: 0.875rem;
+                }
+
+                /* Event card adjustments */
+                .event-card img {
+                    height: 160px !important;
+                }
+                .event-card h3 {
+                    font-size: 1.1rem !important;
+                }
+
+                /* Reduce grid gap */
+                .events-grid {
+                    gap: 1rem !important;
+                }
+
+                /* Footer adjustments */
+                footer .grid {
+                    gap: 1.5rem !important;
+                }
+            }
+
+            /* Small mobile devices */
+            @media (max-width: 374px) {
+                .text-4xl, .text-5xl {
+                    font-size: 1.5rem !important;
+                }
+                .tixello-btn {
+                    padding: 0.5rem 1rem;
+                    font-size: 0.8125rem;
+                }
+            }
         `;
         document.head.appendChild(style);
     }
