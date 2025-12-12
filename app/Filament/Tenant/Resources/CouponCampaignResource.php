@@ -102,12 +102,12 @@ class CouponCampaignResource extends Resource
                             ->label('Budget Limit')
                             ->numeric()
                             ->prefix('€')
-                            ->helperText('Maximum total discount amount (leave empty for unlimited)'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Maximum total discount amount (leave empty for unlimited)'),
 
                         Forms\Components\TextInput::make('redemption_limit')
                             ->label('Redemption Limit')
                             ->numeric()
-                            ->helperText('Maximum number of redemptions (leave empty for unlimited)'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Maximum number of redemptions (leave empty for unlimited)'),
                     ])->columns(2),
             ]);
     }
@@ -191,7 +191,7 @@ class CouponCampaignResource extends Resource
                             ->label('Discount Value')
                             ->numeric()
                             ->required()
-                            ->helperText('Percentage (e.g., 10 for 10%) or fixed amount in EUR'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Percentage (e.g., 10 for 10%) or fixed amount in EUR'),
                     ])
                     ->action(function (CouponCampaign $record, array $data): void {
                         $tenant = auth()->user()->tenant;

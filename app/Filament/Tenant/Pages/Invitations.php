@@ -334,14 +334,14 @@ class Invitations extends Page
                 ->label('CSV File')
                 ->acceptedFileTypes(['text/csv', 'application/vnd.ms-excel'])
                 ->required()
-                ->helperText('Upload a CSV with columns: name, email, phone, company'),
+                ->hintIcon('heroicon-o-information-circle', tooltip: 'Upload a CSV with columns: name, email, phone, company'),
 
             Forms\Components\Grid::make(5)->schema([
                 Forms\Components\TextInput::make('col_name')
                     ->label('Name Column')
                     ->numeric()
                     ->default(0)
-                    ->helperText('0-indexed'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: '0-indexed'),
 
                 Forms\Components\TextInput::make('col_email')
                     ->label('Email Column')

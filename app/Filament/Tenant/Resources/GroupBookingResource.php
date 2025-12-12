@@ -112,7 +112,7 @@ class GroupBookingResource extends Resource
                             })
                             ->searchable()
                             ->preload()
-                            ->helperText('Contact person for this group'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Contact person for this group'),
                     ])->columns(2),
 
                 SC\Section::make('Tickets & Pricing')
@@ -123,7 +123,7 @@ class GroupBookingResource extends Resource
                             ->required()
                             ->minValue(2)
                             ->live()
-                            ->helperText('Minimum 2 tickets for group booking'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Minimum 2 tickets for group booking'),
 
                         Forms\Components\TextInput::make('total_amount')
                             ->label('Total Amount')

@@ -106,13 +106,13 @@ class TrackingSettings extends Page
                     ->schema([
                         Forms\Components\Toggle::make('ga4_enabled')
                             ->label('Enable GA4')
-                            ->helperText('Enable Google Analytics 4 tracking')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Enable Google Analytics 4 tracking')
                             ->live(),
 
                         Forms\Components\TextInput::make('ga4_id')
                             ->label('Measurement ID')
                             ->placeholder('G-XXXXXXXXXX')
-                            ->helperText('Your GA4 Measurement ID from Google Analytics')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Your GA4 Measurement ID from Google Analytics')
                             ->maxLength(20)
                             ->visible(fn ($get) => $get('ga4_enabled')),
 
@@ -144,13 +144,13 @@ class TrackingSettings extends Page
                     ->schema([
                         Forms\Components\Toggle::make('gtm_enabled')
                             ->label('Enable GTM')
-                            ->helperText('Enable Google Tag Manager')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Enable Google Tag Manager')
                             ->live(),
 
                         Forms\Components\TextInput::make('gtm_id')
                             ->label('Container ID')
                             ->placeholder('GTM-XXXXXX')
-                            ->helperText('Your GTM Container ID')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Your GTM Container ID')
                             ->maxLength(15)
                             ->visible(fn ($get) => $get('gtm_enabled')),
 
@@ -183,13 +183,13 @@ class TrackingSettings extends Page
                     ->schema([
                         Forms\Components\Toggle::make('meta_enabled')
                             ->label('Enable Meta Pixel')
-                            ->helperText('Enable Facebook/Meta Pixel tracking')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Enable Facebook/Meta Pixel tracking')
                             ->live(),
 
                         Forms\Components\TextInput::make('meta_id')
                             ->label('Pixel ID')
                             ->placeholder('1234567890123456')
-                            ->helperText('Your Meta Pixel ID from Facebook Business Manager')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Meta Pixel ID from Facebook Business Manager')
                             ->maxLength(20)
                             ->visible(fn ($get) => $get('meta_enabled')),
 
@@ -222,13 +222,13 @@ class TrackingSettings extends Page
                     ->schema([
                         Forms\Components\Toggle::make('tiktok_enabled')
                             ->label('Enable TikTok Pixel')
-                            ->helperText('Enable TikTok Pixel tracking')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Enable TikTok Pixel tracking')
                             ->live(),
 
                         Forms\Components\TextInput::make('tiktok_id')
                             ->label('Pixel ID')
                             ->placeholder('CXXXXXXXXXXXXXXXXX')
-                            ->helperText('Your TikTok Pixel ID from TikTok Ads Manager')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Your TikTok Pixel ID from TikTok Ads Manager')
                             ->maxLength(25)
                             ->visible(fn ($get) => $get('tiktok_enabled')),
 
@@ -262,7 +262,7 @@ class TrackingSettings extends Page
                             ->content(new HtmlString('
                                 <div class="space-y-2 text-sm">
                                     <p><strong>Important:</strong> All tracking pixels are GDPR-compliant with opt-in consent.</p>
-                                    <ul class="list-disc list-inside text-gray-600 dark:text-gray-400">
+                                    <ul class="text-gray-600 list-disc list-inside dark:text-gray-400">
                                         <li><strong>Analytics</strong> (GA4, GTM) - Requires "Analytics" consent</li>
                                         <li><strong>Marketing</strong> (Meta, TikTok) - Requires "Marketing" consent</li>
                                     </ul>

@@ -109,13 +109,13 @@ class CouponCodeResource extends Resource
                             ->label('Discount Value')
                             ->numeric()
                             ->required()
-                            ->helperText('Percentage (10 = 10%) or fixed amount'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Percentage (10 = 10%) or fixed amount'),
 
                         Forms\Components\TextInput::make('max_discount_amount')
                             ->label('Max Discount')
                             ->numeric()
                             ->prefix('€')
-                            ->helperText('Cap for percentage discounts'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Cap for percentage discounts'),
 
                         Forms\Components\TextInput::make('min_purchase_amount')
                             ->label('Min. Purchase')
@@ -128,7 +128,7 @@ class CouponCodeResource extends Resource
                         Forms\Components\TextInput::make('max_uses_total')
                             ->label('Max Uses (Total)')
                             ->numeric()
-                            ->helperText('Leave empty for unlimited'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Leave empty for unlimited'),
 
                         Forms\Components\TextInput::make('max_uses_per_user')
                             ->label('Max Uses (Per User)')
@@ -155,14 +155,14 @@ class CouponCodeResource extends Resource
                     ->schema([
                         Forms\Components\Toggle::make('is_public')
                             ->label('Public Code')
-                            ->helperText('Show in public listings'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Show in public listings'),
 
                         Forms\Components\Toggle::make('first_purchase_only')
                             ->label('First Purchase Only'),
 
                         Forms\Components\Toggle::make('combinable')
                             ->label('Combinable')
-                            ->helperText('Can be combined with other codes'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Can be combined with other codes'),
                     ])->columns(3),
             ]);
     }

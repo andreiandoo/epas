@@ -484,7 +484,7 @@ class EventResource extends Resource
                         )
                         ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ($record->is_default ? ' (Default)' : ''))
                         ->placeholder('Use default template')
-                        ->helperText('Select a template for tickets generated for this event. Leave empty to use the default template.')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Select a template for tickets generated for this event. Leave empty to use the default template.')
                         ->searchable()
                         ->preload()
                         ->nullable()
@@ -752,7 +752,7 @@ class EventResource extends Resource
                             'verify'      => 'Verification (Google/Bing/etc.)',
                             'feeds'       => 'Feeds (RSS/Atom/oEmbed)',
                         ])
-                        ->helperText('Select templates to add keys. Values will be pre-filled from event data where available.')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Select templates to add keys. Values will be pre-filled from event data where available.')
                         ->live()
                         ->afterStateUpdated(function ($state, SSet $set, SGet $get) use ($tenantLanguage, $tenant) {
                             $seo = (array) ($get('seo') ?? []);
@@ -931,7 +931,7 @@ class EventResource extends Resource
                             'canonical_url'    => '',
                             'robots'           => 'index,follow',
                         ])
-                        ->helperText('Add custom SEO meta tags. Use templates above to quickly add common sets.'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Add custom SEO meta tags. Use templates above to quickly add common sets.'),
                 ]),
         ])->columns(1);
     }

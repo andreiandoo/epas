@@ -128,7 +128,7 @@ class MicroserviceSettings extends Page
                     Forms\Components\TextInput::make('ga4_measurement_id')
                         ->label('Measurement ID')
                         ->placeholder('G-XXXXXXXXXX')
-                        ->helperText('Find this in your GA4 Admin > Data Streams')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Find this in your GA4 Admin > Data Streams')
                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('ga4_enabled')),
                 ])->columns(1),
 
@@ -142,7 +142,7 @@ class MicroserviceSettings extends Page
                     Forms\Components\TextInput::make('gtm_container_id')
                         ->label('Container ID')
                         ->placeholder('GTM-XXXXXXX')
-                        ->helperText('Find this in GTM > Admin > Container Settings')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Find this in GTM > Admin > Container Settings')
                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('gtm_enabled')),
                 ])->columns(1),
 
@@ -156,7 +156,7 @@ class MicroserviceSettings extends Page
                     Forms\Components\TextInput::make('meta_pixel_id')
                         ->label('Pixel ID')
                         ->placeholder('123456789012345')
-                        ->helperText('Find this in Meta Events Manager')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Find this in Meta Events Manager')
                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('meta_pixel_enabled')),
                 ])->columns(1),
 
@@ -170,7 +170,7 @@ class MicroserviceSettings extends Page
                     Forms\Components\TextInput::make('tiktok_pixel_id')
                         ->label('Pixel ID')
                         ->placeholder('XXXXXXXXXXXXXXXXXX')
-                        ->helperText('Find this in TikTok Ads Manager')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Find this in TikTok Ads Manager')
                         ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('tiktok_pixel_enabled')),
                 ])->columns(1),
 
@@ -180,7 +180,7 @@ class MicroserviceSettings extends Page
                     Forms\Components\Toggle::make('require_consent')
                         ->label('Require Cookie Consent')
                         ->default(true)
-                        ->helperText('Show a consent banner before loading tracking pixels'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Show a consent banner before loading tracking pixels'),
                     Forms\Components\Textarea::make('privacy_policy_url')
                         ->label('Privacy Policy URL')
                         ->placeholder('https://yoursite.com/privacy')
@@ -201,7 +201,7 @@ class MicroserviceSettings extends Page
                         ->default(10)
                         ->minValue(1)
                         ->maxValue(1000)
-                        ->helperText('Default number of invitations when creating a batch'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Default number of invitations when creating a batch'),
 
                     Forms\Components\TextInput::make('invitation_validity_days')
                         ->label('Validity Period (days)')
@@ -209,7 +209,7 @@ class MicroserviceSettings extends Page
                         ->default(30)
                         ->minValue(1)
                         ->maxValue(365)
-                        ->helperText('How long invitations remain valid'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'How long invitations remain valid'),
                 ])->columns(2),
 
             SC\Section::make('Email Settings')
@@ -218,18 +218,18 @@ class MicroserviceSettings extends Page
                     Forms\Components\Toggle::make('auto_send_email')
                         ->label('Auto-send Emails')
                         ->default(false)
-                        ->helperText('Automatically send invitation emails when created'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Automatically send invitation emails when created'),
 
                     Forms\Components\TextInput::make('email_from_name')
                         ->label('From Name')
                         ->placeholder('Your Event Team')
-                        ->helperText('Sender name for invitation emails'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender name for invitation emails'),
 
                     Forms\Components\TextInput::make('email_reply_to')
                         ->label('Reply-to Email')
                         ->email()
                         ->placeholder('events@yourdomain.com')
-                        ->helperText('Where recipients can reply'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Where recipients can reply'),
                 ])->columns(1),
 
             SC\Section::make('PDF Customization')
@@ -239,7 +239,7 @@ class MicroserviceSettings extends Page
                         ->label('Watermark Text')
                         ->placeholder('INVITATION')
                         ->default('INVITATION')
-                        ->helperText('Text shown as watermark on the ticket'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Text shown as watermark on the ticket'),
 
                     Forms\Components\ColorPicker::make('watermark_color')
                         ->label('Watermark Color')
@@ -264,17 +264,17 @@ class MicroserviceSettings extends Page
                         ])
                         ->default('refundable')
                         ->live()
-                        ->helperText('Select your insurance provider'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Select your insurance provider'),
 
                     Forms\Components\TextInput::make('provider_api_key')
                         ->label('API Key')
                         ->password()
                         ->revealable()
-                        ->helperText('Your insurance provider API key'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Your insurance provider API key'),
 
                     Forms\Components\TextInput::make('provider_merchant_id')
                         ->label('Merchant ID')
-                        ->helperText('Your merchant ID with the provider'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Your merchant ID with the provider'),
                 ])->columns(1),
 
             SC\Section::make('Insurance Display')
@@ -283,7 +283,7 @@ class MicroserviceSettings extends Page
                     Forms\Components\Toggle::make('show_by_default')
                         ->label('Pre-select Insurance')
                         ->default(false)
-                        ->helperText('Show insurance as pre-selected during checkout'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Show insurance as pre-selected during checkout'),
 
                     Forms\Components\TextInput::make('insurance_percentage')
                         ->label('Insurance Rate (%)')
@@ -292,13 +292,13 @@ class MicroserviceSettings extends Page
                         ->default(10)
                         ->minValue(1)
                         ->maxValue(50)
-                        ->helperText('Percentage of ticket price for insurance'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Percentage of ticket price for insurance'),
 
                     Forms\Components\Textarea::make('insurance_description')
                         ->label('Description')
                         ->rows(3)
                         ->placeholder('Protect your purchase. Get a full refund if you can\'t attend.')
-                        ->helperText('Shown to customers during checkout'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Shown to customers during checkout'),
                 ])->columns(1),
         ];
     }
@@ -336,18 +336,18 @@ class MicroserviceSettings extends Page
                     Forms\Components\Toggle::make('weekly_report_enabled')
                         ->label('Weekly Report')
                         ->default(false)
-                        ->helperText('Receive a weekly summary every Monday'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Receive a weekly summary every Monday'),
 
                     Forms\Components\Toggle::make('monthly_report_enabled')
                         ->label('Monthly Report')
                         ->default(false)
-                        ->helperText('Receive a monthly summary on the 1st'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Receive a monthly summary on the 1st'),
 
                     Forms\Components\TextInput::make('report_email')
                         ->label('Report Email')
                         ->email()
                         ->placeholder('reports@yourcompany.com')
-                        ->helperText('Where to send automated reports'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Where to send automated reports'),
                 ])->columns(1),
         ];
     }
@@ -360,10 +360,10 @@ class MicroserviceSettings extends Page
                 ->schema([
                     Forms\Components\Placeholder::make('stripe_redirect')
                         ->content(new HtmlString('
-                            <div class="text-center py-4">
-                                <p class="text-gray-600 mb-4">Configure your Stripe API keys in the Payment Processor settings page.</p>
+                            <div class="py-4 text-center">
+                                <p class="mb-4 text-gray-600">Configure your Stripe API keys in the Payment Processor settings page.</p>
                                 <a href="' . route('filament.tenant.pages.payment-config') . '"
-                                   class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                                   class="inline-flex items-center px-4 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">
                                     Go to Payment Settings
                                 </a>
                             </div>
@@ -396,12 +396,12 @@ class MicroserviceSettings extends Page
                     Forms\Components\Toggle::make('auto_create_customers')
                         ->label('Auto-create Customer Profiles')
                         ->default(true)
-                        ->helperText('Automatically create customer profiles from orders'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Automatically create customer profiles from orders'),
 
                     Forms\Components\Toggle::make('track_email_opens')
                         ->label('Track Email Opens')
                         ->default(true)
-                        ->helperText('Track when customers open your emails'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Track when customers open your emails'),
 
                     Forms\Components\Select::make('customer_segments')
                         ->label('Default Segments')
@@ -412,7 +412,7 @@ class MicroserviceSettings extends Page
                             'inactive' => 'Inactive (90+ days)',
                             'high_value' => 'High Value (€500+)',
                         ])
-                        ->helperText('Auto-segment customers based on behavior'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Auto-segment customers based on behavior'),
                 ])->columns(1),
         ];
     }
@@ -426,12 +426,12 @@ class MicroserviceSettings extends Page
                     Forms\Components\TextInput::make('apple_team_id')
                         ->label('Team ID')
                         ->placeholder('XXXXXXXXXX')
-                        ->helperText('Your Apple Developer Team ID'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Apple Developer Team ID'),
 
                     Forms\Components\TextInput::make('apple_pass_type_id')
                         ->label('Pass Type ID')
                         ->placeholder('pass.com.yourcompany.event')
-                        ->helperText('Registered pass type identifier'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Registered pass type identifier'),
                 ])->columns(2),
 
             SC\Section::make('Google Wallet')
@@ -440,12 +440,12 @@ class MicroserviceSettings extends Page
                     Forms\Components\TextInput::make('google_issuer_id')
                         ->label('Issuer ID')
                         ->placeholder('1234567890')
-                        ->helperText('Your Google Pay Issuer ID'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Google Pay Issuer ID'),
 
                     Forms\Components\Textarea::make('google_service_account')
                         ->label('Service Account JSON')
                         ->rows(4)
-                        ->helperText('Paste your Google service account JSON'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Paste your Google service account JSON'),
                 ])->columns(1),
         ];
     }
@@ -459,7 +459,7 @@ class MicroserviceSettings extends Page
                     Forms\Components\Toggle::make('auto_notify')
                         ->label('Auto-notify on Availability')
                         ->default(true)
-                        ->helperText('Automatically email waitlisted customers when tickets become available'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Automatically email waitlisted customers when tickets become available'),
 
                     Forms\Components\TextInput::make('hold_duration_minutes')
                         ->label('Hold Duration (minutes)')
@@ -467,13 +467,13 @@ class MicroserviceSettings extends Page
                         ->default(30)
                         ->minValue(5)
                         ->maxValue(1440)
-                        ->helperText('How long to hold tickets for notified customers'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'How long to hold tickets for notified customers'),
 
                     Forms\Components\TextInput::make('max_waitlist_size')
                         ->label('Max Waitlist Size')
                         ->numeric()
                         ->default(100)
-                        ->helperText('Maximum customers on waitlist per event (0 = unlimited)'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Maximum customers on waitlist per event (0 = unlimited)'),
                 ])->columns(1),
         ];
     }
@@ -495,7 +495,7 @@ class MicroserviceSettings extends Page
                     Forms\Components\Toggle::make('print_receipt')
                         ->label('Auto-print Receipts')
                         ->default(true)
-                        ->helperText('Automatically print receipt after each sale'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Automatically print receipt after each sale'),
 
                     Forms\Components\Select::make('receipt_printer')
                         ->label('Receipt Printer Type')
@@ -522,7 +522,7 @@ class MicroserviceSettings extends Page
                         ->default(10)
                         ->minValue(1)
                         ->maxValue(50)
-                        ->helperText('Default commission rate for affiliates'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Default commission rate for affiliates'),
 
                     Forms\Components\TextInput::make('cookie_duration_days')
                         ->label('Cookie Duration (days)')
@@ -530,14 +530,14 @@ class MicroserviceSettings extends Page
                         ->default(30)
                         ->minValue(1)
                         ->maxValue(365)
-                        ->helperText('How long affiliate cookies last'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'How long affiliate cookies last'),
 
                     Forms\Components\TextInput::make('minimum_payout')
                         ->label('Minimum Payout (€)')
                         ->numeric()
                         ->prefix('€')
                         ->default(50)
-                        ->helperText('Minimum balance before payout is available'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Minimum balance before payout is available'),
                 ])->columns(1),
         ];
     }
@@ -551,31 +551,31 @@ class MicroserviceSettings extends Page
                     Forms\Components\TextInput::make('phone_number_id')
                         ->label('Phone Number ID')
                         ->placeholder('123456789012345')
-                        ->helperText('From Meta Business Suite > WhatsApp > Phone Numbers'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'From Meta Business Suite > WhatsApp > Phone Numbers'),
 
                     Forms\Components\TextInput::make('business_account_id')
                         ->label('Business Account ID')
                         ->placeholder('123456789012345')
-                        ->helperText('From Meta Business Suite > Business Settings'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'From Meta Business Suite > Business Settings'),
 
                     Forms\Components\TextInput::make('access_token')
                         ->label('Permanent Access Token')
                         ->password()
                         ->revealable()
-                        ->helperText('Generate a permanent token in Meta Business Settings'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Generate a permanent token in Meta Business Settings'),
 
                     Forms\Components\TextInput::make('webhook_verify_token')
                         ->label('Webhook Verify Token')
                         ->placeholder('your-custom-verify-token')
-                        ->helperText('Custom token for webhook verification (you create this)'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Custom token for webhook verification (you create this)'),
 
                     Forms\Components\Placeholder::make('webhook_url')
                         ->label('Webhook URL')
                         ->content(new HtmlString('
-                            <code class="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-sm">
+                            <code class="px-2 py-1 text-sm bg-gray-100 rounded dark:bg-gray-700">
                                 ' . url('/webhooks/whatsapp-cloud') . '
                             </code>
-                            <p class="text-xs text-gray-500 mt-1">Use this URL in Meta Business Suite webhook configuration</p>
+                            <p class="mt-1 text-xs text-gray-500">Use this URL in Meta Business Suite webhook configuration</p>
                         ')),
                 ])->columns(1),
 
@@ -585,22 +585,22 @@ class MicroserviceSettings extends Page
                     Forms\Components\Toggle::make('notify_order_confirmation')
                         ->label('Order Confirmation')
                         ->default(true)
-                        ->helperText('Send confirmation when order is placed'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Send confirmation when order is placed'),
 
                     Forms\Components\Toggle::make('notify_ticket_delivery')
                         ->label('Ticket Delivery')
                         ->default(true)
-                        ->helperText('Send tickets as PDF via WhatsApp'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Send tickets as PDF via WhatsApp'),
 
                     Forms\Components\Toggle::make('notify_event_reminder')
                         ->label('Event Reminders')
                         ->default(true)
-                        ->helperText('Send reminders before the event'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Send reminders before the event'),
 
                     Forms\Components\Toggle::make('notify_event_updates')
                         ->label('Event Updates')
                         ->default(true)
-                        ->helperText('Notify about event changes or cancellations'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Notify about event changes or cancellations'),
                 ])->columns(2),
 
             SC\Section::make('Reminder Settings')
@@ -609,12 +609,12 @@ class MicroserviceSettings extends Page
                     Forms\Components\Toggle::make('reminder_1_day')
                         ->label('1 Day Before')
                         ->default(true)
-                        ->helperText('Send reminder 24 hours before event'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Send reminder 24 hours before event'),
 
                     Forms\Components\Toggle::make('reminder_3_hours')
                         ->label('3 Hours Before')
                         ->default(true)
-                        ->helperText('Send reminder 3 hours before event'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Send reminder 3 hours before event'),
 
                     Forms\Components\TextInput::make('reminder_custom_hours')
                         ->label('Custom Reminder (hours)')
@@ -622,7 +622,7 @@ class MicroserviceSettings extends Page
                         ->minValue(1)
                         ->maxValue(168)
                         ->placeholder('e.g., 48 for 2 days')
-                        ->helperText('Optional: Send additional reminder X hours before'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Optional: Send additional reminder X hours before'),
                 ])->columns(3),
 
             SC\Section::make('Message Templates')
@@ -631,17 +631,17 @@ class MicroserviceSettings extends Page
                     Forms\Components\TextInput::make('template_order_confirmation')
                         ->label('Order Confirmation Template')
                         ->placeholder('order_confirmation_v1')
-                        ->helperText('Template name for order confirmations'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Template name for order confirmations'),
 
                     Forms\Components\TextInput::make('template_ticket_delivery')
                         ->label('Ticket Delivery Template')
                         ->placeholder('ticket_delivery_v1')
-                        ->helperText('Template name for ticket delivery'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Template name for ticket delivery'),
 
                     Forms\Components\TextInput::make('template_event_reminder')
                         ->label('Event Reminder Template')
                         ->placeholder('event_reminder_v1')
-                        ->helperText('Template name for event reminders'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Template name for event reminders'),
                 ])->columns(1),
 
             SC\Section::make('Consent & Opt-in')
@@ -650,13 +650,13 @@ class MicroserviceSettings extends Page
                     Forms\Components\Toggle::make('require_explicit_optin')
                         ->label('Require Explicit Opt-in')
                         ->default(true)
-                        ->helperText('Customers must explicitly opt-in to receive WhatsApp messages'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Customers must explicitly opt-in to receive WhatsApp messages'),
 
                     Forms\Components\Textarea::make('optin_message')
                         ->label('Opt-in Checkbox Text')
                         ->rows(2)
                         ->default('I agree to receive order updates and event reminders via WhatsApp')
-                        ->helperText('Text shown next to the opt-in checkbox during checkout'),
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Text shown next to the opt-in checkbox during checkout'),
                 ])->columns(1),
         ];
     }
@@ -668,10 +668,10 @@ class MicroserviceSettings extends Page
                 ->schema([
                     Forms\Components\Placeholder::make('info')
                         ->content(new HtmlString('
-                            <div class="text-center py-8">
-                                <x-heroicon-o-cog-6-tooth class="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                            <div class="py-8 text-center">
+                                <x-heroicon-o-cog-6-tooth class="w-12 h-12 mx-auto mb-4 text-gray-300" />
                                 <p class="text-gray-600">This microservice does not require additional configuration.</p>
-                                <p class="text-sm text-gray-500 mt-2">It\'s ready to use with default settings.</p>
+                                <p class="mt-2 text-sm text-gray-500">It\'s ready to use with default settings.</p>
                             </div>
                         ')),
                 ]),

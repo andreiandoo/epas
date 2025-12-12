@@ -221,11 +221,11 @@ class PaymentConfig extends Page
                         Forms\Components\Placeholder::make('active_processor_display')
                             ->label('Active Processor')
                             ->content(fn () => new HtmlString(
-                                '<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">' .
+                                '<span class="inline-flex items-center px-3 py-1 text-sm font-medium text-green-800 bg-green-100 rounded-full">' .
                                 $this->processorLabel .
                                 '</span>'
                             ))
-                            ->helperText('This processor is enabled via your microservices subscription'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'This processor is enabled via your microservices subscription'),
 
                         Forms\Components\Select::make('payment_processor_mode')
                             ->label('Active Mode')
@@ -236,7 +236,7 @@ class PaymentConfig extends Page
                             ->required()
                             ->default('test')
                             ->live()
-                            ->helperText('Select which credentials to use for payments'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Select which credentials to use for payments'),
                     ])->columns(2),
 
                 // Stripe Test Configuration
@@ -247,7 +247,7 @@ class PaymentConfig extends Page
                         Forms\Components\TextInput::make('stripe_test_publishable_key')
                             ->label('Test Publishable Key')
                             ->placeholder('pk_test_...')
-                            ->helperText('Public key for frontend integration (test mode)')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Public key for frontend integration (test mode)')
                             ->maxLength(255)
                             ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
@@ -256,7 +256,7 @@ class PaymentConfig extends Page
                             ->password()
                             ->revealable()
                             ->placeholder('sk_test_...')
-                            ->helperText('Secret key for backend API calls (test mode)')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Secret key for backend API calls (test mode)')
                             ->maxLength(255)
                             ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
@@ -265,7 +265,7 @@ class PaymentConfig extends Page
                             ->password()
                             ->revealable()
                             ->placeholder('whsec_...')
-                            ->helperText('For webhook signature verification (test mode)')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'For webhook signature verification (test mode)')
                             ->maxLength(255)
                             ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
                     ])
@@ -281,7 +281,7 @@ class PaymentConfig extends Page
                         Forms\Components\TextInput::make('stripe_live_publishable_key')
                             ->label('Live Publishable Key')
                             ->placeholder('pk_live_...')
-                            ->helperText('Public key for frontend integration (live mode)')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Public key for frontend integration (live mode)')
                             ->maxLength(255)
                             ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
@@ -290,7 +290,7 @@ class PaymentConfig extends Page
                             ->password()
                             ->revealable()
                             ->placeholder('sk_live_...')
-                            ->helperText('Secret key for backend API calls (live mode)')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Secret key for backend API calls (live mode)')
                             ->maxLength(255)
                             ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
@@ -299,7 +299,7 @@ class PaymentConfig extends Page
                             ->password()
                             ->revealable()
                             ->placeholder('whsec_...')
-                            ->helperText('For webhook signature verification (live mode)')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'For webhook signature verification (live mode)')
                             ->maxLength(255)
                             ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
                     ])
@@ -313,11 +313,11 @@ class PaymentConfig extends Page
                         Forms\Components\Placeholder::make('stripe_webhook_url')
                             ->label('Webhook URL')
                             ->content(fn () => new HtmlString(
-                                '<code class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm select-all">' .
+                                '<code class="px-2 py-1 text-sm bg-gray-100 rounded select-all dark:bg-gray-800">' .
                                 ($tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'stripe']) : '-') .
                                 '</code>'
                             ))
-                            ->helperText('Add this URL to your Stripe webhook settings for both test and live modes'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Add this URL to your Stripe webhook settings for both test and live modes'),
                     ])
                     ->visible(fn () => $processor === 'stripe'),
 
@@ -328,32 +328,32 @@ class PaymentConfig extends Page
                         Forms\Components\TextInput::make('netopia_signature')
                             ->label('Merchant Signature')
                             ->placeholder('Your Netopia signature')
-                            ->helperText('Merchant signature from Netopia dashboard')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Merchant signature from Netopia dashboard')
                             ->maxLength(255)
                             ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
                         Forms\Components\Textarea::make('netopia_api_key')
                             ->label('Private Key (PEM)')
                             ->placeholder('-----BEGIN PRIVATE KEY-----' . "\n" . '...' . "\n" . '-----END PRIVATE KEY-----')
-                            ->helperText('Your private key in PEM format')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Your private key in PEM format')
                             ->rows(6)
                             ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
                         Forms\Components\Textarea::make('netopia_public_key')
                             ->label('Public Certificate (PEM)')
                             ->placeholder('-----BEGIN CERTIFICATE-----' . "\n" . '...' . "\n" . '-----END CERTIFICATE-----')
-                            ->helperText('Your public certificate in PEM format')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Your public certificate in PEM format')
                             ->rows(6)
                             ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
                         Forms\Components\Placeholder::make('netopia_callback_url')
                             ->label('Callback URL')
                             ->content(fn () => new HtmlString(
-                                '<code class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm select-all">' .
+                                '<code class="px-2 py-1 text-sm bg-gray-100 rounded select-all dark:bg-gray-800">' .
                                 ($tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'netopia']) : '-') .
                                 '</code>'
                             ))
-                            ->helperText('Add this URL to your Netopia account settings'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Add this URL to your Netopia account settings'),
                     ])
                     ->visible(fn () => $processor === 'netopia')
                     ->columns(1),
@@ -365,7 +365,7 @@ class PaymentConfig extends Page
                         Forms\Components\TextInput::make('euplatesc_merchant_id')
                             ->label('Merchant ID')
                             ->placeholder('Your EuPlatesc merchant ID')
-                            ->helperText('Merchant ID from EuPlatesc account')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Merchant ID from EuPlatesc account')
                             ->maxLength(255)
                             ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
@@ -374,18 +374,18 @@ class PaymentConfig extends Page
                             ->password()
                             ->revealable()
                             ->placeholder('Your secret key')
-                            ->helperText('Secret key for HMAC signature generation')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Secret key for HMAC signature generation')
                             ->maxLength(255)
                             ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
                         Forms\Components\Placeholder::make('euplatesc_callback_url')
                             ->label('Callback URL')
                             ->content(fn () => new HtmlString(
-                                '<code class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm select-all">' .
+                                '<code class="px-2 py-1 text-sm bg-gray-100 rounded select-all dark:bg-gray-800">' .
                                 ($tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'euplatesc']) : '-') .
                                 '</code>'
                             ))
-                            ->helperText('Add this URL to your EuPlatesc account settings'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Add this URL to your EuPlatesc account settings'),
                     ])
                     ->visible(fn () => $processor === 'euplatesc')
                     ->columns(1),
@@ -397,7 +397,7 @@ class PaymentConfig extends Page
                         Forms\Components\TextInput::make('payu_merchant_id')
                             ->label('Merchant Code')
                             ->placeholder('Your PayU merchant code')
-                            ->helperText('Merchant code from PayU account')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Merchant code from PayU account')
                             ->maxLength(255)
                             ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
@@ -406,18 +406,18 @@ class PaymentConfig extends Page
                             ->password()
                             ->revealable()
                             ->placeholder('Your secret key')
-                            ->helperText('Secret key for HMAC signature generation')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Secret key for HMAC signature generation')
                             ->maxLength(255)
                             ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
 
                         Forms\Components\Placeholder::make('payu_callback_url')
                             ->label('IPN/IOS URL')
                             ->content(fn () => new HtmlString(
-                                '<code class="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-sm select-all">' .
+                                '<code class="px-2 py-1 text-sm bg-gray-100 rounded select-all dark:bg-gray-800">' .
                                 ($tenant ? route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'payu']) : '-') .
                                 '</code>'
                             ))
-                            ->helperText('Add this URL to your PayU account for IPN/IOS notifications'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Add this URL to your PayU account for IPN/IOS notifications'),
                     ])
                     ->visible(fn () => $processor === 'payu')
                     ->columns(1),

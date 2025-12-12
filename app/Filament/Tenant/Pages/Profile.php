@@ -68,7 +68,7 @@ class Profile extends Page
                             ->email()
                             ->disabled()
                             ->dehydrated(false)
-                            ->helperText('Contact administrator to change email'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Contact administrator to change email'),
 
                         Forms\Components\TextInput::make('phone')
                             ->label('Phone')
@@ -78,7 +78,7 @@ class Profile extends Page
                         Forms\Components\TextInput::make('position')
                             ->label('Position / Title')
                             ->maxLength(255)
-                            ->helperText('Your role in the organization'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Your role in the organization'),
                     ])
                     ->columns(2),
 

@@ -84,7 +84,7 @@ class TicketTemplateResource extends Resource
 
                         Forms\Components\Toggle::make('is_default')
                             ->label('Set as Default')
-                            ->helperText('Make this the default template'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Make this the default template'),
                     ])->columns(2),
 
                 SC\Section::make('Template Design')
@@ -107,7 +107,7 @@ class TicketTemplateResource extends Resource
                             ->required()
                             ->minValue(72)
                             ->maxValue(600)
-                            ->helperText('Print resolution (300 DPI recommended)'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Print resolution (300 DPI recommended)'),
 
                         Forms\Components\TextInput::make('template_data.meta.size_mm.w')
                             ->label('Width (mm)')
@@ -115,7 +115,7 @@ class TicketTemplateResource extends Resource
                             ->default(200)
                             ->required()
                             ->minValue(10)
-                            ->helperText('Canvas width in millimeters'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Canvas width in millimeters'),
 
                         Forms\Components\TextInput::make('template_data.meta.size_mm.h')
                             ->label('Height (mm)')
@@ -123,21 +123,21 @@ class TicketTemplateResource extends Resource
                             ->default(100)
                             ->required()
                             ->minValue(10)
-                            ->helperText('Canvas height in millimeters'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Canvas height in millimeters'),
 
                         Forms\Components\TextInput::make('template_data.meta.bleed_mm')
                             ->label('Bleed (mm)')
                             ->numeric()
                             ->default(3)
                             ->minValue(0)
-                            ->helperText('Print bleed area in millimeters'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Print bleed area in millimeters'),
 
                         Forms\Components\TextInput::make('template_data.meta.safe_area_mm')
                             ->label('Safe Area (mm)')
                             ->numeric()
                             ->default(5)
                             ->minValue(0)
-                            ->helperText('Safe area margin in millimeters'),
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Safe area margin in millimeters'),
                     ])->columns(3),
 
                 SC\Section::make('Preview')
@@ -147,18 +147,18 @@ class TicketTemplateResource extends Resource
                             ->content(function ($record) {
                                 if (!$record) {
                                     return new \Illuminate\Support\HtmlString(
-                                        '<div class="text-gray-500 text-sm">Save the template first to see preview.</div>'
+                                        '<div class="text-sm text-gray-500">Save the template first to see preview.</div>'
                                     );
                                 }
                                 if (!$record->preview_image) {
                                     return new \Illuminate\Support\HtmlString(
-                                        '<div class="text-gray-500 text-sm">No preview yet. Use the Visual Editor to design your ticket.</div>'
+                                        '<div class="text-sm text-gray-500">No preview yet. Use the Visual Editor to design your ticket.</div>'
                                     );
                                 }
                                 $url = \Illuminate\Support\Facades\Storage::disk('public')->url($record->preview_image);
                                 return new \Illuminate\Support\HtmlString(
-                                    '<div class="border rounded-lg p-2 bg-gray-50 inline-block">
-                                        <img src="' . $url . '" class="max-h-64 max-w-full" alt="Template Preview" />
+                                    '<div class="inline-block p-2 border rounded-lg bg-gray-50">
+                                        <img src="' . $url . '" class="max-w-full max-h-64" alt="Template Preview" />
                                     </div>'
                                 );
                             }),
@@ -169,7 +169,7 @@ class TicketTemplateResource extends Resource
                                 ? new \Illuminate\Support\HtmlString(
                                     '<a href="/tenant/ticket-customizer/' . $record->id . '/editor"
                                        target="_blank"
-                                       class="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition">
+                                       class="inline-flex items-center gap-2 px-4 py-2 font-medium text-white transition bg-orange-600 rounded-lg hover:bg-orange-700">
                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                                        Open Visual Editor
                                     </a>'

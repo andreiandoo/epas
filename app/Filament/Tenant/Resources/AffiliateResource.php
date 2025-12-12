@@ -45,7 +45,7 @@ class AffiliateResource extends Resource
 
                         Forms\Components\TextInput::make('code')
                             ->label('Affiliate Code')
-                            ->helperText('Leave empty to auto-generate')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Leave empty to auto-generate')
                             ->maxLength(50)
                             ->unique(ignoreRecord: true)
                             ->disabled(fn ($record) => $record !== null),
@@ -94,7 +94,7 @@ class AffiliateResource extends Resource
                     ->schema([
                         Forms\Components\TextInput::make('coupon_code')
                             ->label('Coupon Code')
-                            ->helperText('If this coupon is used at checkout, the order will be attributed to this affiliate')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'If this coupon is used at checkout, the order will be attributed to this affiliate')
                             ->maxLength(50)
                             ->dehydrated(false)
                             ->afterStateHydrated(function ($state, $set, $record) {

@@ -142,7 +142,7 @@ class Settings extends Page
                                             ])
                                             ->default('EUR')
                                             ->required()
-                                            ->helperText('Default currency for sales and invoices'),
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Default currency for sales and invoices'),
                                     ])->columns(3),
 
                                 SC\Section::make('Address')
@@ -161,7 +161,7 @@ class Settings extends Page
 
                                         Forms\Components\TextInput::make('country')
                                             ->maxLength(100)
-                                            ->helperText('Full country name (e.g., Romania)'),
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Full country name (e.g., Romania)'),
 
                                         Forms\Components\TextInput::make('postal_code')
                                             ->maxLength(20),
@@ -195,7 +195,7 @@ class Settings extends Page
                                             ->disk('public')
                                             ->visibility('public')
                                             ->maxSize(2048)
-                                            ->helperText('Recommended: 200x60px, PNG or SVG'),
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Recommended: 200x60px, PNG or SVG'),
 
                                         Forms\Components\FileUpload::make('favicon')
                                             ->label('Favicon')
@@ -204,7 +204,7 @@ class Settings extends Page
                                             ->disk('public')
                                             ->visibility('public')
                                             ->maxSize(512)
-                                            ->helperText('Recommended: 32x32px or 64x64px, ICO or PNG'),
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Recommended: 32x32px or 64x64px, ICO or PNG'),
                                     ])->columns(2),
 
                                 SC\Section::make('Site Information')
@@ -213,7 +213,7 @@ class Settings extends Page
                                             ->label('Site Title')
                                             ->required()
                                             ->maxLength(255)
-                                            ->helperText('The name of your site displayed in browser tab and header'),
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'The name of your site displayed in browser tab and header'),
 
                                         // Language is set in Core Admin (Tenant Edit page)
                                         // Forms\Components\Select::make('site_language')
@@ -224,18 +224,18 @@ class Settings extends Page
                                         //     ])
                                         //     ->default('en')
                                         //     ->required()
-                                        //     ->helperText('Primary language for your public site'),
+                                        //     ->hintIcon('heroicon-o-information-circle', tooltip: 'Primary language for your public site'),
 
                                         Forms\Components\Textarea::make('site_description')
                                             ->label('Site Description')
                                             ->rows(3)
-                                            ->helperText('Brief description for SEO and social sharing')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Brief description for SEO and social sharing')
                                             ->maxLength(500),
 
                                         Forms\Components\TextInput::make('site_tagline')
                                             ->label('Site Tagline')
                                             ->maxLength(255)
-                                            ->helperText('Short tagline displayed on the site'),
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Short tagline displayed on the site'),
 
                                         Forms\Components\RichEditor::make('ticket_terms')
                                             ->label('Ticket Terms')
@@ -247,7 +247,7 @@ class Settings extends Page
                                                 'orderedList',
                                                 'link',
                                             ])
-                                            ->helperText('Terms displayed on tickets'),
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Terms displayed on tickets'),
                                     ]),
 
                                 SC\Section::make('Theme & Colors')
@@ -280,7 +280,7 @@ class Settings extends Page
                                             ->label('Page Title')
                                             ->default('Terms & Conditions')
                                             ->maxLength(255)
-                                            ->helperText('The title displayed on the Terms page'),
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'The title displayed on the Terms page'),
 
                                         Forms\Components\RichEditor::make('terms_content')
                                             ->label('Content')
@@ -308,7 +308,7 @@ class Settings extends Page
                                             ->label('Page Title')
                                             ->default('Privacy Policy')
                                             ->maxLength(255)
-                                            ->helperText('The title displayed on the Privacy page'),
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'The title displayed on the Privacy page'),
 
                                         Forms\Components\RichEditor::make('privacy_content')
                                             ->label('Content')
@@ -401,7 +401,7 @@ class Settings extends Page
                                                 ->getComponent('mailProviderFields')
                                                 ?->getChildComponentContainer()
                                                 ->fill())
-                                            ->helperText('Select your email service provider')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Select your email service provider')
                                             ->columnSpanFull(),
 
                                         // Conditional fields based on mail provider
@@ -592,7 +592,7 @@ class Settings extends Page
                     ->placeholder('smtp.example.com')
                     ->maxLength(255)
                     ->required()
-                    ->helperText('Your mail server hostname'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Your mail server hostname'),
 
                 Forms\Components\TextInput::make('mail_port')
                     ->label('SMTP Port')
@@ -600,13 +600,13 @@ class Settings extends Page
                     ->default(587)
                     ->placeholder('587')
                     ->required()
-                    ->helperText('Usually 587 for TLS, 465 for SSL'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Usually 587 for TLS, 465 for SSL'),
 
                 Forms\Components\TextInput::make('mail_username')
                     ->label('Username')
                     ->maxLength(255)
                     ->placeholder('your-username')
-                    ->helperText('SMTP authentication username'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'SMTP authentication username'),
 
                 Forms\Components\TextInput::make('mail_password')
                     ->label('Password')
@@ -614,7 +614,7 @@ class Settings extends Page
                     ->maxLength(255)
                     ->autocomplete('new-password')
                     ->placeholder('••••••••')
-                    ->helperText('Leave empty to keep existing')
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Leave empty to keep existing')
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\Select::make('mail_encryption')
@@ -625,7 +625,7 @@ class Settings extends Page
                         '' => 'None',
                     ])
                     ->default('tls')
-                    ->helperText('Security protocol'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Security protocol'),
 
                 Forms\Components\TextInput::make('mail_from_address')
                     ->label('From Email')
@@ -633,14 +633,14 @@ class Settings extends Page
                     ->maxLength(255)
                     ->required()
                     ->placeholder('noreply@yourdomain.com')
-                    ->helperText('Sender email address'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender email address'),
 
                 Forms\Components\TextInput::make('mail_from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
                     ->placeholder('Your Company')
-                    ->helperText('Sender display name'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
     }
@@ -659,7 +659,7 @@ class Settings extends Page
                     ->autocomplete('new-password')
                     ->placeholder('xkeysib-...')
                     ->required()
-                    ->helperText('Your Brevo API key (v3)')
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Brevo API key (v3)')
                     ->dehydrated(fn ($state) => filled($state))
                     ->columnSpanFull(),
 
@@ -669,14 +669,14 @@ class Settings extends Page
                     ->maxLength(255)
                     ->required()
                     ->placeholder('noreply@yourdomain.com')
-                    ->helperText('Must be verified in Brevo'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Must be verified in Brevo'),
 
                 Forms\Components\TextInput::make('mail_from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
                     ->placeholder('Your Company')
-                    ->helperText('Sender display name'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
     }
@@ -695,7 +695,7 @@ class Settings extends Page
                     ->autocomplete('new-password')
                     ->placeholder('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
                     ->required()
-                    ->helperText('Found in Server → API Tokens')
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Found in Server → API Tokens')
                     ->dehydrated(fn ($state) => filled($state))
                     ->columnSpanFull(),
 
@@ -705,14 +705,14 @@ class Settings extends Page
                     ->maxLength(255)
                     ->required()
                     ->placeholder('noreply@yourdomain.com')
-                    ->helperText('Must be verified sender signature'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Must be verified sender signature'),
 
                 Forms\Components\TextInput::make('mail_from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
                     ->placeholder('Your Company')
-                    ->helperText('Sender display name'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
     }
@@ -731,7 +731,7 @@ class Settings extends Page
                     ->autocomplete('new-password')
                     ->placeholder('key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
                     ->required()
-                    ->helperText('Private API key from Mailgun')
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Private API key from Mailgun')
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\TextInput::make('mail_domain')
@@ -739,7 +739,7 @@ class Settings extends Page
                     ->maxLength(255)
                     ->placeholder('mg.yourdomain.com')
                     ->required()
-                    ->helperText('Verified sending domain'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Verified sending domain'),
 
                 Forms\Components\Select::make('mail_region')
                     ->label('Region')
@@ -749,7 +749,7 @@ class Settings extends Page
                     ])
                     ->default('us')
                     ->required()
-                    ->helperText('Mailgun API region'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Mailgun API region'),
 
                 Forms\Components\TextInput::make('mail_from_address')
                     ->label('From Email')
@@ -757,14 +757,14 @@ class Settings extends Page
                     ->maxLength(255)
                     ->required()
                     ->placeholder('noreply@mg.yourdomain.com')
-                    ->helperText('Must use verified domain'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Must use verified domain'),
 
                 Forms\Components\TextInput::make('mail_from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
                     ->placeholder('Your Company')
-                    ->helperText('Sender display name'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
     }
@@ -783,7 +783,7 @@ class Settings extends Page
                     ->autocomplete('new-password')
                     ->placeholder('SG.xxxxxxxxxxxxxxxxxxxx')
                     ->required()
-                    ->helperText('SendGrid API key with Mail Send permission')
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'SendGrid API key with Mail Send permission')
                     ->dehydrated(fn ($state) => filled($state))
                     ->columnSpanFull(),
 
@@ -793,14 +793,14 @@ class Settings extends Page
                     ->maxLength(255)
                     ->required()
                     ->placeholder('noreply@yourdomain.com')
-                    ->helperText('Must be verified sender'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Must be verified sender'),
 
                 Forms\Components\TextInput::make('mail_from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
                     ->placeholder('Your Company')
-                    ->helperText('Sender display name'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
     }
@@ -819,7 +819,7 @@ class Settings extends Page
                     ->autocomplete('new-password')
                     ->placeholder('AKIAIOSFODNN7EXAMPLE')
                     ->required()
-                    ->helperText('AWS IAM access key')
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'AWS IAM access key')
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\TextInput::make('mail_api_secret')
@@ -829,7 +829,7 @@ class Settings extends Page
                     ->autocomplete('new-password')
                     ->placeholder('••••••••')
                     ->required()
-                    ->helperText('AWS IAM secret key')
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'AWS IAM secret key')
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\Select::make('mail_region')
@@ -845,7 +845,7 @@ class Settings extends Page
                         'eu-central-1' => 'EU (Frankfurt)',
                     ])
                     ->required()
-                    ->helperText('SES region'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'SES region'),
 
                 Forms\Components\TextInput::make('mail_from_address')
                     ->label('From Email')
@@ -853,14 +853,14 @@ class Settings extends Page
                     ->maxLength(255)
                     ->required()
                     ->placeholder('noreply@yourdomain.com')
-                    ->helperText('Verified email or domain'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Verified email or domain'),
 
                 Forms\Components\TextInput::make('mail_from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
                     ->placeholder('Your Company')
-                    ->helperText('Sender display name'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
     }
@@ -875,9 +875,9 @@ class Settings extends Page
                 Forms\Components\Placeholder::make('gmail_info')
                     ->label('')
                     ->content(new HtmlString('
-                        <div class="text-sm text-gray-600 dark:text-gray-400 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <div class="p-3 text-sm text-gray-600 rounded-lg dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20">
                             <strong>Important:</strong> Use an App Password, not your regular Gmail password.
-                            <a href="https://myaccount.google.com/apppasswords" target="_blank" class="text-primary-600 underline">Generate App Password</a>
+                            <a href="https://myaccount.google.com/apppasswords" target="_blank" class="underline text-primary-600">Generate App Password</a>
                         </div>
                     '))
                     ->columnSpanFull(),
@@ -888,7 +888,7 @@ class Settings extends Page
                     ->maxLength(255)
                     ->placeholder('your-email@gmail.com')
                     ->required()
-                    ->helperText('Your Gmail address'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Gmail address'),
 
                 Forms\Components\TextInput::make('mail_password')
                     ->label('App Password')
@@ -897,7 +897,7 @@ class Settings extends Page
                     ->autocomplete('new-password')
                     ->placeholder('xxxx xxxx xxxx xxxx')
                     ->required()
-                    ->helperText('16-character app password')
+                    ->hintIcon('heroicon-o-information-circle', tooltip: '16-character app password')
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\TextInput::make('mail_from_address')
@@ -905,14 +905,14 @@ class Settings extends Page
                     ->email()
                     ->maxLength(255)
                     ->placeholder('your-email@gmail.com')
-                    ->helperText('Usually same as Gmail address'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Usually same as Gmail address'),
 
                 Forms\Components\TextInput::make('mail_from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
                     ->placeholder('Your Company')
-                    ->helperText('Sender display name'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
     }
@@ -927,9 +927,9 @@ class Settings extends Page
                 Forms\Components\Placeholder::make('outlook_info')
                     ->label('')
                     ->content(new HtmlString('
-                        <div class="text-sm text-gray-600 dark:text-gray-400 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                        <div class="p-3 text-sm text-gray-600 rounded-lg dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20">
                             <strong>Important:</strong> Use an App Password if 2FA is enabled.
-                            <a href="https://account.live.com/proofs/AppPassword" target="_blank" class="text-primary-600 underline">Generate App Password</a>
+                            <a href="https://account.live.com/proofs/AppPassword" target="_blank" class="underline text-primary-600">Generate App Password</a>
                         </div>
                     '))
                     ->columnSpanFull(),
@@ -940,7 +940,7 @@ class Settings extends Page
                     ->maxLength(255)
                     ->placeholder('your-email@outlook.com')
                     ->required()
-                    ->helperText('Your Microsoft 365 / Outlook email'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Your Microsoft 365 / Outlook email'),
 
                 Forms\Components\TextInput::make('mail_password')
                     ->label('Password / App Password')
@@ -949,7 +949,7 @@ class Settings extends Page
                     ->autocomplete('new-password')
                     ->placeholder('••••••••')
                     ->required()
-                    ->helperText('Account or app password')
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Account or app password')
                     ->dehydrated(fn ($state) => filled($state)),
 
                 Forms\Components\TextInput::make('mail_from_address')
@@ -957,14 +957,14 @@ class Settings extends Page
                     ->email()
                     ->maxLength(255)
                     ->placeholder('your-email@outlook.com')
-                    ->helperText('Usually same as login email'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Usually same as login email'),
 
                 Forms\Components\TextInput::make('mail_from_name')
                     ->label('From Name')
                     ->maxLength(255)
                     ->required()
                     ->placeholder('Your Company')
-                    ->helperText('Sender display name'),
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Sender display name'),
             ]),
         ];
     }
