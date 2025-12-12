@@ -1555,7 +1555,8 @@ export class Router {
                     </div>
 
                     ${!isPastEvent ? `
-                    <div class="lg:col-span-1">
+                    <!-- Desktop tickets sidebar - hidden on mobile -->
+                    <div class="lg:col-span-1 hidden lg:block" id="desktop-tickets-sidebar">
                         <div class="bg-white rounded-lg shadow-lg p-6 sticky top-24">
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Bilete</h2>
 
@@ -1778,36 +1779,105 @@ export class Router {
                                 </button>
                             </div>
                             <div style="padding: 1rem 1.5rem;">
-                                <div id="mobile-ticket-types">
+                                <div id="mobile-ticket-types" class="space-y-4">
                                     ${event.ticket_types.map((ticket: any) => {
                                         const ticketCurrency = ticket.currency || event.currency || 'RON';
                                         const available = ticket.available ?? 0;
                                         const maxQty = Math.min(10, available);
-                                        return ticket.status === 'active' && available > 0 ? `
-                                        <div style="border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
-                                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                                                <span style="font-weight: 600;">${ticket.name}</span>
-                                                <span style="font-weight: 600; color: var(--tixello-primary, #6366f1);">${ticket.sale_price || ticket.price} ${ticketCurrency}</span>
-                                            </div>
-                                            ${ticket.description ? `<p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">${ticket.description}</p>` : ''}
-                                            <div style="display: flex; align-items: center; justify-content: space-between;">
-                                                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                                    <button class="mobile-ticket-minus" data-ticket-id="${ticket.id}" style="width: 2rem; height: 2rem; border: 1px solid #d1d5db; border-radius: 0.25rem; background: white; cursor: pointer;">−</button>
-                                                    <span class="mobile-ticket-qty" data-ticket-id="${ticket.id}" style="width: 2rem; text-align: center; font-weight: 600;">0</span>
-                                                    <button class="mobile-ticket-plus" data-ticket-id="${ticket.id}" data-max="${maxQty}" style="width: 2rem; height: 2rem; border: 1px solid #d1d5db; border-radius: 0.25rem; background: white; cursor: pointer;">+</button>
+                                        const commissionInfo = event.commission;
+                                        const hasCommissionOnTop = commissionInfo?.is_added_on_top && ticket.commission_amount > 0;
+                                        return `
+                                        <div class="border border-gray-200 rounded-lg p-4 ${ticket.status !== 'active' ? 'opacity-50' : ''}">
+                                            <div class="flex justify-between items-start mb-2">
+                                                <div class="flex items-center gap-2">
+                                                    <h3 class="font-semibold text-gray-900">${ticket.name}</h3>
+                                                    ${hasCommissionOnTop ? `
+                                                    <div class="relative group">
+                                                        <svg class="w-4 h-4 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                        </svg>
+                                                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                                            Prețul include comision Tixello de ${ticket.commission_amount} ${ticketCurrency}
+                                                        </div>
+                                                    </div>
+                                                    ` : ''}
                                                 </div>
-                                                <span style="font-size: 0.75rem; color: #9ca3af;">${available} disponibile</span>
                                             </div>
+                                            ${ticket.description ? `<p class="text-sm text-gray-500 mb-2">${ticket.description}</p>` : ''}
+                                            ${ticket.bulk_discounts && ticket.bulk_discounts.length > 0 ? `
+                                            <div class="mt-2 space-y-1">
+                                                ${ticket.bulk_discounts.map((discount: any) => {
+                                                    if (discount.rule_type === 'buy_x_get_y') {
+                                                        return `<div class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                                            🎁 Cumpără ${discount.buy_qty}, primești ${discount.get_qty} GRATUIT
+                                                        </div>`;
+                                                    } else if (discount.rule_type === 'amount_off_per_ticket') {
+                                                        return `<div class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                                            💰 ${discount.amount_off / 100} ${ticketCurrency} reducere/bilet pentru ${discount.min_qty}+ bilete
+                                                        </div>`;
+                                                    } else if (discount.rule_type === 'percent_off') {
+                                                        return `<div class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                                                            📊 ${discount.percent_off}% reducere pentru ${discount.min_qty}+ bilete
+                                                        </div>`;
+                                                    }
+                                                    return '';
+                                                }).join('')}
+                                            </div>
+                                            ` : ''}
+                                            <div class="flex justify-between items-start">
+                                                <div></div>
+                                                <div class="text-right">
+                                                    ${hasCommissionOnTop ? `
+                                                        <div>
+                                                            ${ticket.sale_price ? `
+                                                                <span class="line-through text-gray-400 text-sm">${ticket.price} ${ticketCurrency}</span>
+                                                                <span class="font-bold text-primary block">${(parseFloat(ticket.sale_price) + parseFloat(ticket.commission_amount || 0)).toFixed(2)} ${ticketCurrency}</span>
+                                                                <span class="text-xs text-gray-500">(${ticket.sale_price} + ${ticket.commission_amount} comision)</span>
+                                                            ` : `
+                                                                <span class="font-bold text-primary">${(parseFloat(ticket.price) + parseFloat(ticket.commission_amount || 0)).toFixed(2)} ${ticketCurrency}</span>
+                                                                <span class="text-xs text-gray-500 block">(${ticket.price} + ${ticket.commission_amount} comision)</span>
+                                                            `}
+                                                        </div>
+                                                    ` : ticket.sale_price ? `
+                                                        <div>
+                                                            <span class="line-through text-gray-400 text-sm">${ticket.price} ${ticketCurrency}</span>
+                                                            <span class="font-bold text-red-600 block">${ticket.sale_price} ${ticketCurrency}</span>
+                                                            ${ticket.discount_percent ? `<span class="text-xs text-red-600">-${ticket.discount_percent}%</span>` : ''}
+                                                        </div>
+                                                    ` : `
+                                                        <span class="font-bold text-primary">${ticket.price} ${ticketCurrency}</span>
+                                                    `}
+                                                </div>
+                                            </div>
+                                            ${ticket.status === 'active' && available > 0 ? `
+                                            <div class="flex items-center justify-between mt-3">
+                                                <div class="flex items-center gap-2">
+                                                    <button class="mobile-ticket-minus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-ticket-id="${ticket.id}">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                                                        </svg>
+                                                    </button>
+                                                    <span class="mobile-ticket-qty w-12 text-center font-semibold" data-ticket-id="${ticket.id}" data-price="${ticket.sale_price || ticket.price}" data-base-price="${ticket.price}" data-currency="${ticketCurrency}" data-bulk-discounts='${JSON.stringify(ticket.bulk_discounts || [])}' data-commission-rate="${commissionInfo?.rate || 0}" data-has-commission-on-top="${hasCommissionOnTop}">0</span>
+                                                    <button class="mobile-ticket-plus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-ticket-id="${ticket.id}" data-max="${maxQty}">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                <span class="text-sm text-gray-500">${available} disponibile</span>
+                                            </div>
+                                            ` : `
+                                                <p class="text-sm text-gray-500 mt-2">${ticket.status !== 'active' ? 'Indisponibil' : 'Stoc epuizat'}</p>
+                                            `}
                                         </div>
-                                        ` : '';
-                                    }).join('')}
+                                    `}).join('')}
                                 </div>
-                                <div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem;">
-                                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
-                                        <span style="font-weight: 600;">Total:</span>
-                                        <span id="mobile-cart-total" style="font-size: 1.25rem; font-weight: 700;">0 ${currency}</span>
+                                <div class="border-t pt-4 mt-4">
+                                    <div class="flex justify-between items-center text-lg font-bold mb-4">
+                                        <span>Total</span>
+                                        <span id="mobile-cart-total">0 ${currency}</span>
                                     </div>
-                                    <button id="mobile-add-to-cart-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                                    <button id="mobile-add-to-cart-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
                                         Adaugă în coș
                                     </button>
                                 </div>
