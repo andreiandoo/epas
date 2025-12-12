@@ -54,14 +54,25 @@ class TenantPaymentConfig extends Model
     public function getActiveKeys(): array
     {
         $keys = [];
+        $additionalConfig = $this->additional_config ?? [];
 
         switch ($this->processor) {
             case 'stripe':
-                $keys = [
-                    'publishable_key' => $this->stripe_publishable_key,
-                    'secret_key' => $this->stripe_secret_key,
-                    'webhook_secret' => $this->stripe_webhook_secret,
-                ];
+                // Check mode - use test credentials if in test mode
+                if ($this->mode === 'test') {
+                    $keys = [
+                        'publishable_key' => $additionalConfig['stripe_test_publishable_key'] ?? null,
+                        'secret_key' => $additionalConfig['stripe_test_secret_key'] ?? null,
+                        'webhook_secret' => $additionalConfig['stripe_test_webhook_secret'] ?? null,
+                    ];
+                } else {
+                    // Live mode - use main columns
+                    $keys = [
+                        'publishable_key' => $this->stripe_publishable_key,
+                        'secret_key' => $this->stripe_secret_key,
+                        'webhook_secret' => $this->stripe_webhook_secret,
+                    ];
+                }
                 break;
 
             case 'netopia':

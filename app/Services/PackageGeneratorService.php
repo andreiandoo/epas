@@ -214,7 +214,7 @@ class PackageGeneratorService
                 'seating' => 'seating',
                 'affiliates' => 'affiliates',
                 'insurance' => 'insurance',
-                'whatsapp' => 'whatsapp',
+                'whatsapp-notifications' => 'whatsapp',
                 'promo-codes' => 'promo_codes',
                 'invitations' => 'invitations',
                 'tracking' => 'tracking',
