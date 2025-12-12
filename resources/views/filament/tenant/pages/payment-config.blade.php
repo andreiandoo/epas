@@ -51,14 +51,32 @@
                         <div class="flex gap-3">
                             <x-heroicon-o-exclamation-triangle class="h-5 w-5 flex-shrink-0 text-amber-500" />
                             <div class="text-sm text-amber-800 dark:text-amber-200">
-                                <p class="font-medium mb-1">Important:</p>
-                                <p>Pentru a activa Apple Pay, domeniul trebuie verificat prin Stripe. Asigură-te că:</p>
-                                <ol class="list-decimal list-inside mt-2 space-y-1 text-amber-700 dark:text-amber-300">
-                                    <li>Site-ul folosește HTTPS (certificat SSL valid)</li>
-                                    <li>Fișierul de verificare este accesibil la <code class="bg-amber-100 dark:bg-amber-900 px-1 rounded">https://domeniu.ro/.well-known/apple-developer-merchantid-domain-association</code></li>
+                                <p class="font-medium mb-1">Pași pentru activare Apple Pay:</p>
+                                <ol class="list-decimal list-inside mt-2 space-y-2 text-amber-700 dark:text-amber-300">
+                                    <li>Site-ul trebuie să folosească <strong>HTTPS</strong> (certificat SSL valid)</li>
+                                    <li>Descarcă fișierul de verificare (butonul de mai jos)</li>
+                                    <li>Urcă fișierul pe server la: <code class="bg-amber-100 dark:bg-amber-900 px-1 rounded">/.well-known/apple-developer-merchantid-domain-association</code></li>
+                                    <li>Verifică că fișierul este accesibil: <code class="bg-amber-100 dark:bg-amber-900 px-1 rounded">https://domeniu.ro/.well-known/apple-developer-merchantid-domain-association</code></li>
+                                    <li>Înregistrează domeniul mai jos</li>
                                 </ol>
                             </div>
                         </div>
+                    </div>
+
+                    {{-- Download verification file --}}
+                    <div class="flex items-center gap-4 p-4 rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+                        <div class="flex-1">
+                            <p class="text-sm font-medium text-gray-900 dark:text-white">Fișier verificare Apple Pay</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Descarcă și urcă acest fișier în directorul <code>.well-known</code> de pe server</p>
+                        </div>
+                        <a
+                            href="{{ route('apple-pay.verification') }}"
+                            download="apple-developer-merchantid-domain-association"
+                            class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 dark:bg-gray-600 dark:hover:bg-gray-500"
+                        >
+                            <x-heroicon-o-arrow-down-tray class="h-4 w-4" />
+                            Descarcă fișier
+                        </a>
                     </div>
 
                     {{-- Domain input and register button --}}
