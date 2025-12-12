@@ -1303,9 +1303,14 @@ export class Router {
                         ` : ''}
 
                         ${event.artists && event.artists.length > 0 ? `
-                        <div class="mb-8">
-                            <h2 class="text-xl font-semibold text-gray-900 mb-6">Artiști</h2>
-                            <div class="space-y-8">
+                        <div class="mb-8 collapsible-section" data-section="artists">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-6 collapsible-header cursor-pointer lg:cursor-default flex items-center justify-between" data-target="artists">
+                                <span>Artiști</span>
+                                <svg class="w-5 h-5 collapsible-icon lg:hidden transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </h2>
+                            <div class="space-y-8 collapsible-content" data-content="artists">
                                 ${event.artists.map((artist: any) => {
                                     const formatNumber = (num: number | null | undefined): string => {
                                         if (!num) return '';
@@ -1463,9 +1468,14 @@ export class Router {
                         ` : ''}
 
                         ${event.venue ? `
-                        <div class="mb-8">
-                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Locație</h2>
-                            <div class="bg-gray-50 rounded-lg overflow-hidden">
+                        <div class="mb-8 collapsible-section" data-section="location">
+                            <h2 class="text-xl font-semibold text-gray-900 mb-4 collapsible-header cursor-pointer lg:cursor-default flex items-center justify-between" data-target="location">
+                                <span>Locație</span>
+                                <svg class="w-5 h-5 collapsible-icon lg:hidden transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </h2>
+                            <div class="bg-gray-50 rounded-lg overflow-hidden collapsible-content" data-content="location">
                                 ${event.venue.image_url ? `
                                 <img src="${event.venue.image_url}" alt="${event.venue.name}" class="w-full h-48 object-cover">
                                 ` : ''}
@@ -1679,10 +1689,149 @@ export class Router {
                     ` : ''}
                 `;
 
+                // Add mobile tickets button and panel for non-past events
+                if (!isPastEvent && event.ticket_types && event.ticket_types.length > 0 && !event.is_cancelled && !event.door_sales_only && !event.is_sold_out) {
+                    const minTicketPrice = event.ticket_types.reduce((min: number, t: any) => {
+                        const price = parseFloat(t.sale_price || t.price) || 0;
+                        return price > 0 && (min === 0 || price < min) ? price : min;
+                    }, 0);
+                    const currency = event.currency || 'RON';
+
+                    const mobileTicketsHtml = `
+                        <style>
+                            .mobile-tickets-btn {
+                                display: none;
+                                position: fixed;
+                                bottom: 0;
+                                left: 0;
+                                right: 0;
+                                z-index: 40;
+                                background: linear-gradient(135deg, var(--tixello-primary, #6366f1) 0%, var(--tixello-primary-dark, #4f46e5) 100%);
+                                color: white;
+                                padding: 1rem 1.5rem;
+                                justify-content: space-between;
+                                align-items: center;
+                                cursor: pointer;
+                                box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+                            }
+                            @media (max-width: 1023px) {
+                                .mobile-tickets-btn { display: flex; }
+                                .event-detail-container { padding-bottom: 80px; }
+                            }
+                            .mobile-tickets-overlay {
+                                position: fixed;
+                                inset: 0;
+                                background: rgba(0,0,0,0.5);
+                                z-index: 45;
+                                opacity: 0;
+                                pointer-events: none;
+                                transition: opacity 0.3s ease;
+                            }
+                            .mobile-tickets-overlay.open {
+                                opacity: 1;
+                                pointer-events: auto;
+                            }
+                            .mobile-tickets-panel {
+                                position: fixed;
+                                bottom: 0;
+                                left: 0;
+                                right: 0;
+                                z-index: 50;
+                                background: white;
+                                border-radius: 1.5rem 1.5rem 0 0;
+                                box-shadow: 0 -8px 30px rgba(0,0,0,0.2);
+                                transform: translateY(100%);
+                                transition: transform 0.3s ease-out;
+                                max-height: 85vh;
+                                overflow-y: auto;
+                            }
+                            .mobile-tickets-panel.open {
+                                transform: translateY(0);
+                            }
+                            @media (min-width: 1024px) {
+                                .mobile-tickets-btn, .mobile-tickets-overlay, .mobile-tickets-panel { display: none !important; }
+                            }
+                        </style>
+
+                        <!-- Mobile: Sticky bottom button -->
+                        <div class="mobile-tickets-btn" id="mobile-tickets-btn">
+                            <div>
+                                <div style="font-weight: 700; font-size: 1.1rem;">Bilete</div>
+                                <div style="font-size: 0.875rem; opacity: 0.9;">Începând de la ${minTicketPrice} ${currency}</div>
+                            </div>
+                            <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
+                            </svg>
+                        </div>
+
+                        <!-- Mobile: Overlay -->
+                        <div class="mobile-tickets-overlay" id="mobile-tickets-overlay"></div>
+
+                        <!-- Mobile: Tickets panel -->
+                        <div class="mobile-tickets-panel" id="mobile-tickets-panel">
+                            <div style="padding: 1rem 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 10; border-radius: 1.5rem 1.5rem 0 0;">
+                                <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0;">Selectează bilete</h2>
+                                <button id="mobile-tickets-close" style="padding: 0.5rem; border-radius: 0.5rem; border: none; background: #f3f4f6; cursor: pointer;">
+                                    <svg style="width: 24px; height: 24px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div style="padding: 1rem 1.5rem;">
+                                <div id="mobile-ticket-types">
+                                    ${event.ticket_types.map((ticket: any) => {
+                                        const ticketCurrency = ticket.currency || event.currency || 'RON';
+                                        const available = ticket.available ?? 0;
+                                        const maxQty = Math.min(10, available);
+                                        return ticket.status === 'active' && available > 0 ? `
+                                        <div style="border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
+                                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                                                <span style="font-weight: 600;">${ticket.name}</span>
+                                                <span style="font-weight: 600; color: var(--tixello-primary, #6366f1);">${ticket.sale_price || ticket.price} ${ticketCurrency}</span>
+                                            </div>
+                                            ${ticket.description ? `<p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">${ticket.description}</p>` : ''}
+                                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                                    <button class="mobile-ticket-minus" data-ticket-id="${ticket.id}" style="width: 2rem; height: 2rem; border: 1px solid #d1d5db; border-radius: 0.25rem; background: white; cursor: pointer;">−</button>
+                                                    <span class="mobile-ticket-qty" data-ticket-id="${ticket.id}" style="width: 2rem; text-align: center; font-weight: 600;">0</span>
+                                                    <button class="mobile-ticket-plus" data-ticket-id="${ticket.id}" data-max="${maxQty}" style="width: 2rem; height: 2rem; border: 1px solid #d1d5db; border-radius: 0.25rem; background: white; cursor: pointer;">+</button>
+                                                </div>
+                                                <span style="font-size: 0.75rem; color: #9ca3af;">${available} disponibile</span>
+                                            </div>
+                                        </div>
+                                        ` : '';
+                                    }).join('')}
+                                </div>
+                                <div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                                        <span style="font-weight: 600;">Total:</span>
+                                        <span id="mobile-cart-total" style="font-size: 1.25rem; font-weight: 700;">0 ${currency}</span>
+                                    </div>
+                                    <button id="mobile-add-to-cart-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                                        Adaugă în coș
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Append mobile HTML to body
+                    const mobileContainer = document.createElement('div');
+                    mobileContainer.id = 'mobile-tickets-container';
+                    mobileContainer.innerHTML = mobileTicketsHtml;
+                    document.body.appendChild(mobileContainer);
+
+                    // Setup mobile panel handlers
+                    this.setupMobileTicketsPanel();
+                }
+
                 // Setup ticket quantity handlers
                 if (!isPastEvent) {
                     this.setupTicketHandlers();
                 }
+
+                // Setup collapsible sections for mobile
+                this.setupCollapsibleSections();
 
                 // Initialize countdown timer
                 this.initCountdown();
@@ -1969,6 +2118,218 @@ export class Router {
                         ToastNotification.show('Eroare la actualizarea watchlist-ului', 'error');
                     }
                 }
+            });
+        }
+    }
+
+    private setupMobileTicketsPanel(): void {
+        const btn = document.getElementById('mobile-tickets-btn');
+        const closeBtn = document.getElementById('mobile-tickets-close');
+        const overlay = document.getElementById('mobile-tickets-overlay');
+        const panel = document.getElementById('mobile-tickets-panel');
+        const mobileAddBtn = document.getElementById('mobile-add-to-cart-btn');
+        const mobileTotalEl = document.getElementById('mobile-cart-total');
+
+        if (!btn || !panel || !overlay) return;
+
+        const openPanel = () => {
+            overlay.classList.add('open');
+            panel.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        };
+
+        const closePanel = () => {
+            overlay.classList.remove('open');
+            panel.classList.remove('open');
+            document.body.style.overflow = '';
+        };
+
+        btn.addEventListener('click', openPanel);
+        if (closeBtn) closeBtn.addEventListener('click', closePanel);
+        overlay.addEventListener('click', closePanel);
+
+        // Mobile ticket quantity handling
+        const mobileQuantities: { [key: string]: number } = {};
+        const eventData = (window as any).currentEventData;
+        const currency = eventData?.currency || 'RON';
+
+        const updateMobileTotal = () => {
+            let total = 0;
+            let hasSelection = false;
+
+            document.querySelectorAll('.mobile-ticket-qty').forEach((el) => {
+                const ticketId = (el as HTMLElement).dataset.ticketId || '';
+                const qty = mobileQuantities[ticketId] || 0;
+                if (qty > 0) {
+                    hasSelection = true;
+                    const ticket = eventData?.ticket_types?.find((t: any) => t.id == ticketId);
+                    if (ticket) {
+                        const price = parseFloat(ticket.sale_price || ticket.price) || 0;
+                        total += price * qty;
+                    }
+                }
+            });
+
+            if (mobileTotalEl) mobileTotalEl.textContent = `${total.toFixed(2)} ${currency}`;
+            if (mobileAddBtn) (mobileAddBtn as HTMLButtonElement).disabled = !hasSelection;
+
+            // Sync with desktop quantities
+            Object.keys(mobileQuantities).forEach(ticketId => {
+                const desktopDisplay = document.querySelector(`.ticket-qty-display[data-ticket-id="${ticketId}"]`);
+                if (desktopDisplay) {
+                    desktopDisplay.textContent = mobileQuantities[ticketId].toString();
+                }
+            });
+        };
+
+        // Mobile + buttons
+        document.querySelectorAll('.mobile-ticket-plus').forEach((plusBtn) => {
+            plusBtn.addEventListener('click', () => {
+                const ticketId = (plusBtn as HTMLElement).dataset.ticketId || '';
+                const max = parseInt((plusBtn as HTMLElement).dataset.max || '10');
+                const current = mobileQuantities[ticketId] || 0;
+
+                if (current < max) {
+                    mobileQuantities[ticketId] = current + 1;
+                    const display = document.querySelector(`.mobile-ticket-qty[data-ticket-id="${ticketId}"]`);
+                    if (display) display.textContent = mobileQuantities[ticketId].toString();
+                    updateMobileTotal();
+                }
+            });
+        });
+
+        // Mobile - buttons
+        document.querySelectorAll('.mobile-ticket-minus').forEach((minusBtn) => {
+            minusBtn.addEventListener('click', () => {
+                const ticketId = (minusBtn as HTMLElement).dataset.ticketId || '';
+                const current = mobileQuantities[ticketId] || 0;
+
+                if (current > 0) {
+                    mobileQuantities[ticketId] = current - 1;
+                    const display = document.querySelector(`.mobile-ticket-qty[data-ticket-id="${ticketId}"]`);
+                    if (display) display.textContent = mobileQuantities[ticketId].toString();
+                    updateMobileTotal();
+                }
+            });
+        });
+
+        // Mobile add to cart
+        if (mobileAddBtn) {
+            mobileAddBtn.addEventListener('click', () => {
+                let hasItems = false;
+
+                Object.keys(mobileQuantities).forEach(ticketId => {
+                    const qty = mobileQuantities[ticketId] || 0;
+                    if (qty > 0 && eventData) {
+                        const ticketType = eventData.ticket_types.find((t: any) => t.id == ticketId);
+                        if (ticketType) {
+                            CartService.addItem({
+                                eventId: eventData.id,
+                                eventTitle: eventData.title,
+                                eventSlug: eventData.slug,
+                                eventDate: eventData.start_date,
+                                ticketTypeId: ticketType.id,
+                                ticketTypeName: ticketType.name,
+                                price: ticketType.price,
+                                salePrice: ticketType.sale_price,
+                                finalPrice: ticketType.final_price || ticketType.sale_price || ticketType.price,
+                                commissionAmount: ticketType.commission_amount || 0,
+                                commissionRate: eventData.commission?.rate || 0,
+                                hasCommissionOnTop: eventData.commission?.is_added_on_top && ticketType.commission_amount > 0,
+                                quantity: qty,
+                                currency: ticketType.currency || 'RON',
+                                bulkDiscounts: ticketType.bulk_discounts || []
+                            });
+                            hasItems = true;
+                        }
+                    }
+                });
+
+                if (hasItems) {
+                    closePanel();
+                    ToastNotification.show('✓ Biletele au fost adăugate în coș!', 'success');
+                    this.updateCartBadge();
+                    this.navigate('/cart');
+                } else {
+                    ToastNotification.show('Te rog selectează cel puțin un bilet.', 'error');
+                }
+            });
+        }
+
+        // Clean up on navigation
+        window.addEventListener('popstate', () => {
+            const container = document.getElementById('mobile-tickets-container');
+            if (container) container.remove();
+        }, { once: true });
+    }
+
+    private setupCollapsibleSections(): void {
+        // Only apply collapsible behavior on mobile (< 1024px)
+        const isMobile = window.innerWidth < 1024;
+
+        // Add collapsible CSS if not already added
+        if (!document.getElementById('collapsible-styles')) {
+            const style = document.createElement('style');
+            style.id = 'collapsible-styles';
+            style.textContent = `
+                @media (max-width: 1023px) {
+                    .collapsible-section .collapsible-content {
+                        max-height: 0;
+                        overflow: hidden;
+                        transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+                        opacity: 0;
+                    }
+                    .collapsible-section.expanded .collapsible-content {
+                        max-height: 2000px;
+                        opacity: 1;
+                    }
+                    .collapsible-section .collapsible-icon {
+                        transition: transform 0.3s ease;
+                    }
+                    .collapsible-section.expanded .collapsible-icon {
+                        transform: rotate(180deg);
+                    }
+                    .collapsible-header {
+                        padding: 0.75rem 0;
+                        border-bottom: 1px solid #e5e7eb;
+                        margin-bottom: 0 !important;
+                    }
+                    .collapsible-section.expanded .collapsible-header {
+                        border-bottom-color: transparent;
+                        margin-bottom: 1rem !important;
+                    }
+                }
+                @media (min-width: 1024px) {
+                    .collapsible-section .collapsible-content {
+                        max-height: none !important;
+                        opacity: 1 !important;
+                        overflow: visible !important;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Setup click handlers for headers
+        const headers = document.querySelectorAll('.collapsible-header');
+        headers.forEach(header => {
+            header.addEventListener('click', () => {
+                // Only toggle on mobile
+                if (window.innerWidth >= 1024) return;
+
+                const target = (header as HTMLElement).dataset.target;
+                const section = document.querySelector(`[data-section="${target}"]`);
+
+                if (section) {
+                    section.classList.toggle('expanded');
+                }
+            });
+        });
+
+        // On desktop, ensure all sections are expanded
+        if (!isMobile) {
+            document.querySelectorAll('.collapsible-section').forEach(section => {
+                section.classList.add('expanded');
             });
         }
     }
@@ -2505,7 +2866,7 @@ export class Router {
                                             Primește notificări pe email (confirmare comandă, bilete, reamintiri)
                                         </label>
                                     </div>
-                                    ${this.config?.modules?.includes('whatsapp-notifications') ? `
+                                    ${this.config?.modules?.includes('whatsapp') ? `
                                     <div class="flex items-start">
                                         <input
                                             type="checkbox"
@@ -2522,16 +2883,63 @@ export class Router {
                             </div>
 
                             <div class="bg-white rounded-lg shadow p-6">
-                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Plată</h2>
-                                <p class="text-gray-600 mb-4">
-                                    Vei primi biletele pe email imediat după finalizarea comenzii.
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Metodă de plată</h2>
+
+                                <!-- Payment method tabs -->
+                                <div class="mb-4">
+                                    <div class="flex border border-gray-200 rounded-lg overflow-hidden">
+                                        <button type="button" id="payment-method-card" class="flex-1 py-3 px-4 text-center text-sm font-medium bg-primary text-white transition payment-method-tab active" data-method="card">
+                                            <span class="flex items-center justify-center gap-2">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                                                </svg>
+                                                Card
+                                            </span>
+                                        </button>
+                                        <button type="button" id="payment-method-wallet" class="flex-1 py-3 px-4 text-center text-sm font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition payment-method-tab" data-method="wallet">
+                                            <span class="flex items-center justify-center gap-2">
+                                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                                                </svg>
+                                                Apple Pay / Google Pay
+                                            </span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Payment Element container -->
+                                <div id="payment-element-container" class="mb-4">
+                                    <div id="payment-element" class="min-h-[150px]">
+                                        <!-- Stripe Payment Element will be mounted here -->
+                                        <div class="animate-pulse flex flex-col space-y-3">
+                                            <div class="h-10 bg-gray-200 rounded"></div>
+                                            <div class="flex space-x-3">
+                                                <div class="h-10 bg-gray-200 rounded flex-1"></div>
+                                                <div class="h-10 bg-gray-200 rounded flex-1"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="payment-message" class="hidden text-red-600 text-sm mt-2"></div>
+                                </div>
+
+                                <p class="text-gray-500 text-sm mb-4">
+                                    <svg class="w-4 h-4 inline mr-1 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                    </svg>
+                                    Plată securizată prin Stripe. Vei primi biletele pe email imediat după finalizare.
                                 </p>
+
                                 <button
                                     type="submit"
                                     id="submit-order-btn"
-                                    class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                    class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    disabled
                                 >
-                                    Plasează comanda
+                                    <span id="submit-btn-text">Plasează comanda - ${totals.total.toFixed(2)} ${totals.currency}</span>
+                                    <svg id="submit-btn-spinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
                                 </button>
                                 <p class="text-center text-xs text-gray-400 mt-4">
                                     Ticketing system powered by <a href="https://tixello.com" target="_blank" class="text-primary hover:underline">Tixello</a>
@@ -2607,6 +3015,68 @@ export class Router {
     private setupCheckoutHandlers(): void {
         const form = document.getElementById('checkout-form') as HTMLFormElement;
         const submitBtn = document.getElementById('submit-order-btn') as HTMLButtonElement;
+        const submitBtnText = document.getElementById('submit-btn-text');
+        const submitBtnSpinner = document.getElementById('submit-btn-spinner');
+        const paymentMessage = document.getElementById('payment-message');
+
+        // Store Stripe instances
+        let stripe: any = null;
+        let elements: any = null;
+        let paymentElement: any = null;
+        let clientSecret: string = '';
+        let selectedPaymentMethod: 'card' | 'wallet' = 'card';
+
+        // Initialize Stripe Payment Element
+        this.initializeStripePayment().then(result => {
+            if (result) {
+                stripe = result.stripe;
+                elements = result.elements;
+                paymentElement = result.paymentElement;
+                clientSecret = result.clientSecret;
+
+                // Enable submit button once Stripe is ready
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                }
+            }
+        }).catch(error => {
+            console.error('Failed to initialize Stripe:', error);
+            // Show error message but allow form submission without payment
+            if (paymentMessage) {
+                paymentMessage.textContent = 'Nu s-a putut încărca sistemul de plată. Încercați din nou.';
+                paymentMessage.classList.remove('hidden');
+            }
+        });
+
+        // Payment method tab switching
+        const paymentTabs = document.querySelectorAll('.payment-method-tab');
+        paymentTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const method = (tab as HTMLElement).dataset.method as 'card' | 'wallet';
+                selectedPaymentMethod = method;
+
+                // Update tab styles
+                paymentTabs.forEach(t => {
+                    if ((t as HTMLElement).dataset.method === method) {
+                        t.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+                        t.classList.add('bg-primary', 'text-white');
+                    } else {
+                        t.classList.remove('bg-primary', 'text-white');
+                        t.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+                    }
+                });
+
+                // Update payment element options if needed
+                if (elements && paymentElement) {
+                    paymentElement.update({
+                        wallets: {
+                            applePay: method === 'wallet' ? 'auto' : 'never',
+                            googlePay: method === 'wallet' ? 'auto' : 'never'
+                        }
+                    });
+                }
+            });
+        });
 
         // Handle beneficiaries checkbox toggle
         const beneficiariesCheckbox = document.getElementById('different_beneficiaries') as HTMLInputElement;
@@ -2685,20 +3155,26 @@ export class Router {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
 
+                // Show loading state
                 if (submitBtn) {
                     submitBtn.disabled = true;
-                    submitBtn.textContent = 'Se procesează...';
+                }
+                if (submitBtnText) {
+                    submitBtnText.textContent = 'Se procesează...';
+                }
+                if (submitBtnSpinner) {
+                    submitBtnSpinner.classList.remove('hidden');
                 }
 
                 const formData = new FormData(form);
-                const cart = CartService.getCart();
+                const cartData = CartService.getCart();
 
                 // Collect beneficiaries data if checkbox is checked
                 const beneficiariesData: any[] = [];
-                const beneficiariesCheckbox = document.getElementById('different_beneficiaries') as HTMLInputElement;
-                if (beneficiariesCheckbox?.checked) {
-                    const totalTickets = cart.reduce((sum, item) => sum + item.quantity, 0);
-                    for (let i = 0; i < totalTickets; i++) {
+                const beneficiariesChk = document.getElementById('different_beneficiaries') as HTMLInputElement;
+                if (beneficiariesChk?.checked) {
+                    const totalTix = cartData.reduce((sum, item) => sum + item.quantity, 0);
+                    for (let i = 0; i < totalTix; i++) {
                         beneficiariesData.push({
                             name: formData.get(`beneficiary_${i}_name`),
                             email: formData.get(`beneficiary_${i}_email`) || null,
@@ -2714,7 +3190,42 @@ export class Router {
                 const notificationEmail = (document.getElementById('notification_email') as HTMLInputElement)?.checked ?? true;
                 const notificationWhatsapp = (document.getElementById('notification_whatsapp') as HTMLInputElement)?.checked ?? false;
 
+                const resetButton = () => {
+                    if (submitBtn) submitBtn.disabled = false;
+                    if (submitBtnText) submitBtnText.textContent = 'Plasează comanda';
+                    if (submitBtnSpinner) submitBtnSpinner.classList.add('hidden');
+                };
+
                 try {
+                    // If Stripe is initialized, confirm payment first
+                    if (stripe && elements && clientSecret) {
+                        // Confirm the payment with Stripe
+                        const { error: stripeError } = await stripe.confirmPayment({
+                            elements,
+                            confirmParams: {
+                                return_url: window.location.origin + '/checkout/complete',
+                                payment_method_data: {
+                                    billing_details: {
+                                        name: formData.get('customer_name') as string,
+                                        email: formData.get('customer_email') as string,
+                                        phone: formData.get('customer_phone') as string || undefined,
+                                    },
+                                },
+                            },
+                            redirect: 'if_required',
+                        });
+
+                        if (stripeError) {
+                            // Show error in payment message area
+                            if (paymentMessage) {
+                                paymentMessage.textContent = stripeError.message || 'Eroare la procesarea plății';
+                                paymentMessage.classList.remove('hidden');
+                            }
+                            throw new Error(stripeError.message || 'Plata nu a putut fi procesată');
+                        }
+                    }
+
+                    // Create order after successful payment (or for free orders)
                     const response = await this.postApi('/orders', {
                         customer_name: formData.get('customer_name'),
                         customer_email: formData.get('customer_email'),
@@ -2724,7 +3235,8 @@ export class Router {
                         create_account: createAccount,
                         notification_email: notificationEmail,
                         notification_whatsapp: notificationWhatsapp,
-                        cart: cart.map(item => ({
+                        payment_intent_id: clientSecret ? clientSecret.split('_secret_')[0] : null,
+                        cart: cartData.map(item => ({
                             eventId: item.eventId,
                             ticketTypeId: item.ticketTypeId,
                             quantity: item.quantity,
@@ -2742,16 +3254,122 @@ export class Router {
                     }
                 } catch (error: any) {
                     ToastNotification.show(error.message || 'Eroare la plasarea comenzii', 'error');
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Plasează comanda';
-                    }
+                    resetButton();
                 }
             });
         }
     }
 
+    private async initializeStripePayment(): Promise<{
+        stripe: any;
+        elements: any;
+        paymentElement: any;
+        clientSecret: string;
+    } | null> {
+        const paymentElementContainer = document.getElementById('payment-element');
+        if (!paymentElementContainer) return null;
 
+        try {
+            // Fetch payment configuration
+            const configResponse = await this.fetchApi('/payment/config');
+            if (!configResponse.success || !configResponse.data?.publishable_key) {
+                console.log('Payment not configured or free order');
+                // For free orders, show a message and enable submit
+                paymentElementContainer.innerHTML = `
+                    <div class="text-center py-4 text-gray-600">
+                        <svg class="w-12 h-12 mx-auto text-green-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p>Comanda nu necesită plată online.</p>
+                    </div>
+                `;
+                return null;
+            }
+
+            const publishableKey = configResponse.data.publishable_key;
+
+            // Load Stripe.js
+            if (!(window as any).Stripe) {
+                await this.loadStripeScript();
+            }
+
+            const stripe = (window as any).Stripe(publishableKey);
+
+            // Create payment intent
+            const cart = CartService.getCart();
+            const totals = CartService.getTotal();
+
+            const intentResponse = await this.postApi('/payment/create-intent', {
+                amount: Math.round(totals.total * 100), // Convert to cents
+                currency: totals.currency.toLowerCase(),
+                cart: cart.map(item => ({
+                    eventId: item.eventId,
+                    ticketTypeId: item.ticketTypeId,
+                    quantity: item.quantity,
+                })),
+            });
+
+            if (!intentResponse.success || !intentResponse.data?.client_secret) {
+                throw new Error('Nu s-a putut crea sesiunea de plată');
+            }
+
+            const clientSecret = intentResponse.data.client_secret;
+
+            // Create Payment Element
+            const elements = stripe.elements({
+                clientSecret,
+                appearance: {
+                    theme: 'stripe',
+                    variables: {
+                        colorPrimary: getComputedStyle(document.documentElement).getPropertyValue('--tixello-primary').trim() || '#6366f1',
+                        fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    },
+                },
+            });
+
+            const paymentElement = elements.create('payment', {
+                layout: 'tabs',
+                wallets: {
+                    applePay: 'auto',
+                    googlePay: 'auto',
+                },
+            });
+
+            // Mount the Payment Element
+            paymentElementContainer.innerHTML = '';
+            paymentElement.mount(paymentElementContainer);
+
+            return { stripe, elements, paymentElement, clientSecret };
+        } catch (error: any) {
+            console.error('Stripe initialization error:', error);
+            paymentElementContainer.innerHTML = `
+                <div class="text-center py-4 text-red-600">
+                    <svg class="w-12 h-12 mx-auto text-red-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p>${error.message || 'Eroare la încărcarea sistemului de plată'}</p>
+                    <button onclick="location.reload()" class="mt-2 text-primary hover:underline">Reîncarcă pagina</button>
+                </div>
+            `;
+            throw error;
+        }
+    }
+
+    private loadStripeScript(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if ((window as any).Stripe) {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://js.stripe.com/v3/';
+            script.async = true;
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load Stripe.js'));
+            document.head.appendChild(script);
+        });
+    }
 
     private async renderOrderSuccess(params: Record<string, string>): Promise<void> {
         const content = this.getContentElement();
@@ -2934,7 +3552,7 @@ export class Router {
                                         Primește notificări pe email
                                     </label>
                                 </div>
-                                ${this.config?.modules?.includes('whatsapp-notifications') ? `
+                                ${this.config?.modules?.includes('whatsapp') ? `
                                 <div class="flex items-center">
                                     <input type="checkbox" id="reg_notification_whatsapp"
                                            class="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary">
