@@ -382,7 +382,26 @@ class EventResource extends Resource
                         ->columnSpanFull(),
                     Forms\Components\RichEditor::make("description.{$tenantLanguage}")
                         ->label($tenantLanguage === 'ro' ? 'Descriere' : 'Description')
-                        ->columnSpanFull(),
+                        ->columnSpanFull()
+                        ->fileAttachmentsDisk('public')
+                        ->fileAttachmentsDirectory('event-descriptions')
+                        ->fileAttachmentsVisibility('public')
+                        ->toolbarButtons([
+                            'attachFiles',
+                            'blockquote',
+                            'bold',
+                            'bulletList',
+                            'codeBlock',
+                            'h2',
+                            'h3',
+                            'italic',
+                            'link',
+                            'orderedList',
+                            'redo',
+                            'strike',
+                            'underline',
+                            'undo',
+                        ]),
                     Forms\Components\RichEditor::make("ticket_terms.{$tenantLanguage}")
                         ->label($tenantLanguage === 'ro' ? 'Termeni bilete' : 'Ticket terms')
                         ->columnSpanFull()

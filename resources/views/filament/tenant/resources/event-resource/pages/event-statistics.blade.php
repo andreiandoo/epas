@@ -162,7 +162,8 @@
                 <h2 class="text-sm font-medium text-gray-900 dark:text-white">Page Analytics</h2>
             </div>
             <div class="p-5">
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                {{-- Main Stats --}}
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
                     <div>
                         <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Page Views</p>
                         <p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{{ number_format($analytics['total_views'] ?? 0) }}</p>
@@ -171,12 +172,38 @@
                         <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Unique Visitors</p>
                         <p class="mt-1 text-xl font-semibold text-gray-900 dark:text-white">{{ number_format($analytics['unique_sessions'] ?? 0) }}</p>
                     </div>
+                    @if(!empty($analytics['top_sources']))
+                        <div>
+                            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Traffic Sources</p>
+                            @foreach(array_slice($analytics['top_sources'], 0, 3, true) as $source => $count)
+                                <div class="flex justify-between text-sm py-0.5">
+                                    <span class="text-gray-600 dark:text-gray-300 truncate max-w-[120px]">{{ $source }}</span>
+                                    <span class="text-gray-500 dark:text-gray-400">{{ $count }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                    @if(!empty($analytics['devices']))
+                        <div>
+                            <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Devices</p>
+                            @foreach(array_slice($analytics['devices'], 0, 3, true) as $device => $count)
+                                <div class="flex justify-between text-sm py-0.5">
+                                    <span class="text-gray-600 dark:text-gray-300">{{ ucfirst($device ?? 'Unknown') }}</span>
+                                    <span class="text-gray-500 dark:text-gray-400">{{ $count }}</span>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Additional Stats Row --}}
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 pt-4 border-t border-gray-200 dark:border-gray-700">
                     @if(!empty($analytics['top_referrers']))
                         <div>
                             <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">Top Referrers</p>
                             @foreach(array_slice($analytics['top_referrers'], 0, 3, true) as $referrer => $count)
                                 <div class="flex justify-between text-sm py-0.5">
-                                    <span class="text-gray-600 dark:text-gray-300 truncate max-w-[120px]">{{ $referrer ?: 'Direct' }}</span>
+                                    <span class="text-gray-600 dark:text-gray-300 truncate max-w-[120px]">{{ parse_url($referrer, PHP_URL_HOST) ?: $referrer ?: 'Direct' }}</span>
                                     <span class="text-gray-500 dark:text-gray-400">{{ $count }}</span>
                                 </div>
                             @endforeach
@@ -194,6 +221,16 @@
                         </div>
                     @endif
                 </div>
+            </div>
+        </div>
+    @else
+        <div class="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                <h2 class="text-sm font-medium text-gray-900 dark:text-white">Page Analytics</h2>
+            </div>
+            <div class="p-5 text-center text-gray-500 dark:text-gray-400">
+                <p>No analytics data available yet.</p>
+                <p class="text-sm mt-1">Page view tracking will appear here once visitors view this event page.</p>
             </div>
         </div>
     @endif

@@ -48,7 +48,7 @@ class AccountController extends Controller
                         'name' => $event->venue->getTranslation('name', app()->getLocale()),
                         'city' => $event->venue->city,
                     ] : null,
-                    'price_from' => $event->ticketTypes->min('price_max'),
+                    'price_from' => $event->ticketTypes->min('display_price'),
                     'currency' => $event->ticketTypes->first()->currency ?? 'EUR',
                     'is_sold_out' => $event->ticketTypes->sum('quota_total') <= $event->ticketTypes->sum('quota_sold'),
                 ];

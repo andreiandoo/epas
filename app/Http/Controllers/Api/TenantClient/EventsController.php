@@ -207,7 +207,7 @@ class EventsController extends Controller
                             ])->values(),
                         'price_from' => $event->ticketTypes
                             ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
-                            ->min('price_max'),
+                            ->min('display_price'),
                     ];
                 }),
                 'meta' => [
@@ -433,7 +433,7 @@ class EventsController extends Controller
                     })->values(),
                 'price_from' => $event->ticketTypes
                     ->filter(fn ($type) => !($type->meta['is_invitation'] ?? false))
-                    ->min('price_max'),
+                    ->min('display_price'),
             ],
         ]);
     }

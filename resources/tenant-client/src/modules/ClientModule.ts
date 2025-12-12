@@ -230,6 +230,18 @@ export class ClientModule {
                 return;
             }
 
+            // Fetch checkout init data (payment methods, WhatsApp availability)
+            let paymentMethods: any[] = [];
+            let hasWhatsApp = false;
+            try {
+                const initResponse = await this.apiClient.get('/client/checkout/init');
+                paymentMethods = initResponse.data.data?.payment_methods || [];
+                hasWhatsApp = initResponse.data.data?.has_whatsapp || false;
+            } catch (e) {
+                // Default to stripe if init fails
+                paymentMethods = [{ id: 'stripe', name: 'Card Payment', icon: 'credit-card' }];
+            }
+
             container.innerHTML = `
                 <div style="display: grid; grid-template-columns: 1fr 400px; gap: 2rem;">
                     <div>
@@ -258,8 +270,18 @@ export class ClientModule {
                                     style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
                             </div>
 
+                            <!-- Payment Method Selection -->
                             <h2 style="font-weight: 600; margin: 1.5rem 0 1rem;">Metodă de plată</h2>
-                            <input type="hidden" name="payment_method" value="stripe">
+                            ${paymentMethods.length > 1 ? `
+                                <div id="payment-methods-container" style="display: grid; gap: 0.5rem; margin-bottom: 1rem;">
+                                    ${paymentMethods.map((method: any, index: number) => `
+                                        <label style="display: flex; align-items: center; padding: 1rem; border: 2px solid ${index === 0 ? '#4f46e5' : '#d1d5db'}; border-radius: 0.5rem; cursor: pointer; transition: border-color 0.2s;" class="payment-method-option">
+                                            <input type="radio" name="payment_method" value="${method.id}" ${index === 0 ? 'checked' : ''} style="margin-right: 0.75rem;">
+                                            <span style="font-weight: 500;">${method.name}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            ` : `<input type="hidden" name="payment_method" value="${paymentMethods[0]?.id || 'stripe'}">`}
 
                             <!-- Stripe Payment Element container -->
                             <div id="stripe-payment-element" style="padding: 1rem; border: 1px solid #d1d5db; border-radius: 0.375rem; min-height: 100px; background: #fafafa;">
@@ -268,6 +290,21 @@ export class ClientModule {
 
                             <!-- Payment error messages -->
                             <div id="stripe-payment-errors" style="color: #ef4444; font-size: 0.875rem; margin-top: 0.5rem; display: none;"></div>
+
+                            <!-- Notification Preferences -->
+                            <h2 style="font-weight: 600; margin: 1.5rem 0 1rem;">Preferințe notificări</h2>
+                            <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" name="notification_email" checked style="margin-right: 0.75rem; width: 1rem; height: 1rem;">
+                                    <span>Primește notificări prin email</span>
+                                </label>
+                                ${hasWhatsApp ? `
+                                    <label style="display: flex; align-items: center; cursor: pointer;">
+                                        <input type="checkbox" name="notification_whatsapp" style="margin-right: 0.75rem; width: 1rem; height: 1rem;">
+                                        <span>Primește notificări prin WhatsApp</span>
+                                    </label>
+                                ` : ''}
+                            </div>
 
                             <button type="submit" id="checkout-submit-btn" class="tixello-btn" style="width: 100%; margin-top: 1.5rem;" disabled>
                                 <span id="btn-text">Plătește ${this.formatCurrency(total, currency)}</span>

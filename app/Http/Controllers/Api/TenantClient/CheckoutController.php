@@ -25,6 +25,12 @@ class CheckoutController extends Controller
         // Get cart and validate items
         // Calculate totals
 
+        // Check if tenant has WhatsApp notifications microservice enabled
+        $hasWhatsApp = $tenant->microservices()
+            ->where('slug', 'whatsapp-notifications')
+            ->wherePivot('is_active', true)
+            ->exists();
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -36,6 +42,7 @@ class CheckoutController extends Controller
                 'total' => 0,
                 'currency' => $tenant->settings['currency'] ?? 'RON',
                 'payment_methods' => $this->getPaymentMethods($tenant),
+                'has_whatsapp' => $hasWhatsApp,
                 'requires_billing' => true,
                 'expires_at' => now()->addMinutes(15)->toIso8601String(),
             ],

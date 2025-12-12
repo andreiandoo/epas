@@ -7,6 +7,8 @@ use App\Models\Event;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\AnalyticsEvent;
+use App\Models\Platform\CoreCustomerEvent;
+use App\Models\Platform\CoreSession;
 use Filament\Resources\Pages\Page;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Filament\Infolists\Infolist;
@@ -191,61 +193,90 @@ class EventStatistics extends Page
      */
     public function getPageAnalytics(): array
     {
-        // Check if analytics table exists and has data
-        if (!class_exists(AnalyticsEvent::class)) {
-            return ['available' => false];
-        }
-
         try {
-            $eventId = $this->record->id;
+            $eventSlug = $this->record->slug;
             $tenantId = $this->record->tenant_id;
 
+            // Build URL patterns to match event pages
+            // Event pages can be: /events/{slug}, /ro/events/{slug}, /#/events/{slug}, etc.
+            $urlPatterns = [
+                "%/events/{$eventSlug}%",
+                "%/events/{$eventSlug}/%",
+                "%#/events/{$eventSlug}%",
+            ];
+
+            // Query CoreCustomerEvent for page views matching this event's URL
+            $baseQuery = CoreCustomerEvent::where('tenant_id', $tenantId)
+                ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                ->where(function ($q) use ($urlPatterns) {
+                    foreach ($urlPatterns as $pattern) {
+                        $q->orWhere('page_url', 'like', $pattern);
+                    }
+                });
+
             // Total page views
-            $totalViews = AnalyticsEvent::where('tenant_id', $tenantId)
-                ->where('event_id', $eventId)
-                ->where('event_type', 'page_view')
-                ->count();
+            $totalViews = (clone $baseQuery)->count();
 
             // Unique sessions
-            $uniqueSessions = AnalyticsEvent::where('tenant_id', $tenantId)
-                ->where('event_id', $eventId)
-                ->where('event_type', 'page_view')
-                ->distinct('session_id')
+            $uniqueSessions = (clone $baseQuery)
+                ->distinct()
                 ->count('session_id');
 
             // Views by day (last 7 days)
-            $viewsByDay = AnalyticsEvent::where('tenant_id', $tenantId)
-                ->where('event_id', $eventId)
-                ->where('event_type', 'page_view')
-                ->where('occurred_at', '>=', now()->subDays(7))
-                ->select(DB::raw('DATE(occurred_at) as date'), DB::raw('COUNT(*) as count'))
+            $viewsByDay = (clone $baseQuery)
+                ->where('created_at', '>=', now()->subDays(7))
+                ->select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(*) as count'))
                 ->groupBy('date')
                 ->orderBy('date')
                 ->pluck('count', 'date')
                 ->toArray();
 
             // Top referrers
-            $topReferrers = AnalyticsEvent::where('tenant_id', $tenantId)
-                ->where('event_id', $eventId)
-                ->where('event_type', 'page_view')
-                ->whereNotNull('properties->referrer')
-                ->select(DB::raw("JSON_UNQUOTE(JSON_EXTRACT(properties, '$.referrer')) as referrer"), DB::raw('COUNT(*) as count'))
+            $topReferrers = (clone $baseQuery)
+                ->whereNotNull('referrer')
+                ->where('referrer', '!=', '')
+                ->select('referrer', DB::raw('COUNT(*) as count'))
                 ->groupBy('referrer')
                 ->orderByDesc('count')
                 ->limit(5)
                 ->pluck('count', 'referrer')
                 ->toArray();
 
-            // Top countries (from IP geolocation if stored)
-            $topCountries = AnalyticsEvent::where('tenant_id', $tenantId)
-                ->where('event_id', $eventId)
-                ->where('event_type', 'page_view')
-                ->whereNotNull('properties->country')
-                ->select(DB::raw("JSON_UNQUOTE(JSON_EXTRACT(properties, '$.country')) as country"), DB::raw('COUNT(*) as count'))
-                ->groupBy('country')
+            // Top countries
+            $topCountries = (clone $baseQuery)
+                ->whereNotNull('country_code')
+                ->select('country_code', DB::raw('COUNT(*) as count'))
+                ->groupBy('country_code')
                 ->orderByDesc('count')
                 ->limit(5)
-                ->pluck('count', 'country')
+                ->pluck('count', 'country_code')
+                ->toArray();
+
+            // Top traffic sources
+            $topSources = (clone $baseQuery)
+                ->select(DB::raw("
+                    CASE
+                        WHEN gclid IS NOT NULL THEN 'Google Ads'
+                        WHEN fbclid IS NOT NULL THEN 'Facebook Ads'
+                        WHEN ttclid IS NOT NULL THEN 'TikTok Ads'
+                        WHEN utm_source IS NOT NULL THEN utm_source
+                        WHEN referrer IS NOT NULL AND referrer != '' THEN 'Referral'
+                        ELSE 'Direct'
+                    END as source
+                "), DB::raw('COUNT(*) as count'))
+                ->groupBy('source')
+                ->orderByDesc('count')
+                ->limit(5)
+                ->pluck('count', 'source')
+                ->toArray();
+
+            // Device breakdown
+            $devices = (clone $baseQuery)
+                ->whereNotNull('device_type')
+                ->select('device_type', DB::raw('COUNT(*) as count'))
+                ->groupBy('device_type')
+                ->orderByDesc('count')
+                ->pluck('count', 'device_type')
                 ->toArray();
 
             return [
@@ -255,6 +286,8 @@ class EventStatistics extends Page
                 'views_by_day' => $viewsByDay,
                 'top_referrers' => $topReferrers,
                 'top_countries' => $topCountries,
+                'top_sources' => $topSources,
+                'devices' => $devices,
             ];
         } catch (\Exception $e) {
             return ['available' => false, 'error' => $e->getMessage()];

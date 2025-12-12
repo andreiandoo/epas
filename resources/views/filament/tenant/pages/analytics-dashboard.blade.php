@@ -216,44 +216,50 @@
                     </h3>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-                            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Users</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Users Today</div>
                             <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ number_format($realtimeData['total_users']) }}</div>
-                            <div class="flex items-center mt-2 text-xs">
-                                <span class="text-green-600 dark:text-green-400 flex items-center">
-                                    <x-heroicon-s-arrow-trending-up class="w-3 h-3 mr-0.5" />
-                                    {{ number_format(abs($realtimeData['users_change']), 1) }}%
-                                </span>
-                            </div>
+                            @if($realtimeData['users_change'] != 0)
+                                <div class="flex items-center mt-2 text-xs">
+                                    <span class="{{ $realtimeData['users_change'] >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }} flex items-center">
+                                        @if($realtimeData['users_change'] >= 0)
+                                            <x-heroicon-s-arrow-trending-up class="w-3 h-3 mr-0.5" />
+                                        @else
+                                            <x-heroicon-s-arrow-trending-down class="w-3 h-3 mr-0.5" />
+                                        @endif
+                                        {{ $realtimeData['users_change'] >= 0 ? '+' : '' }}{{ number_format($realtimeData['users_change'], 1) }}% vs yesterday
+                                    </span>
+                                </div>
+                            @else
+                                <div class="mt-2 text-xs text-gray-500">vs yesterday</div>
+                            @endif
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
-                            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sessions</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sessions Today</div>
                             <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ number_format($realtimeData['total_sessions']) }}</div>
-                            <div class="flex items-center mt-2 text-xs">
-                                <span class="text-green-600 dark:text-green-400 flex items-center">
-                                    <x-heroicon-s-arrow-trending-up class="w-3 h-3 mr-0.5" />
-                                    {{ number_format($realtimeData['sessions_change'], 1) }}%
-                                </span>
-                            </div>
+                            @if($realtimeData['sessions_change'] != 0)
+                                <div class="flex items-center mt-2 text-xs">
+                                    <span class="{{ $realtimeData['sessions_change'] >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }} flex items-center">
+                                        @if($realtimeData['sessions_change'] >= 0)
+                                            <x-heroicon-s-arrow-trending-up class="w-3 h-3 mr-0.5" />
+                                        @else
+                                            <x-heroicon-s-arrow-trending-down class="w-3 h-3 mr-0.5" />
+                                        @endif
+                                        {{ $realtimeData['sessions_change'] >= 0 ? '+' : '' }}{{ number_format($realtimeData['sessions_change'], 1) }}% vs yesterday
+                                    </span>
+                                </div>
+                            @else
+                                <div class="mt-2 text-xs text-gray-500">vs yesterday</div>
+                            @endif
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
                             <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Bounce Rate</div>
                             <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ number_format($realtimeData['bounce_rate'], 1) }}%</div>
-                            <div class="flex items-center mt-2 text-xs">
-                                <span class="text-green-600 dark:text-green-400 flex items-center">
-                                    <x-heroicon-s-arrow-trending-down class="w-3 h-3 mr-0.5" />
-                                    2.3%
-                                </span>
-                            </div>
+                            <div class="mt-2 text-xs text-gray-500">today's sessions</div>
                         </div>
                         <div class="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-200 dark:border-gray-700">
                             <div class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avg Duration</div>
                             <div class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ $realtimeData['avg_duration'] }}</div>
-                            <div class="flex items-center mt-2 text-xs">
-                                <span class="text-green-600 dark:text-green-400 flex items-center">
-                                    <x-heroicon-s-arrow-trending-up class="w-3 h-3 mr-0.5" />
-                                    8.5%
-                                </span>
-                            </div>
+                            <div class="mt-2 text-xs text-gray-500">today's sessions</div>
                         </div>
                     </div>
                 </div>

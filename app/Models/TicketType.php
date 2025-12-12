@@ -44,6 +44,7 @@ class TicketType extends Model
         'price',
         'capacity',
         'is_active',
+        'display_price',
     ];
 
     public function event(): BelongsTo
@@ -93,6 +94,19 @@ class TicketType extends Model
     public function getIsActiveAttribute()
     {
         return $this->status === 'active';
+    }
+
+    /**
+     * Get the effective display price (sale price if available, otherwise gross price)
+     * This is the price that should be shown to customers
+     */
+    public function getDisplayPriceAttribute()
+    {
+        // If sale price exists, use it; otherwise use gross price
+        if ($this->sale_price_cents !== null && $this->sale_price_cents > 0) {
+            return $this->sale_price_cents / 100;
+        }
+        return $this->price_cents ? $this->price_cents / 100 : 0;
     }
 
     // Setters

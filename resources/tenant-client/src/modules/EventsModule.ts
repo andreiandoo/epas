@@ -6,12 +6,18 @@ interface Event {
     title: string;
     slug: string;
     description: string;
-    venue: string;
+    venue: string | { id: number; name: string; city: string };
     event_date: string;
+    start_date: string;
     event_time: string;
-    image_url: string;
+    start_time: string;
+    poster_url: string;
+    hero_image_url: string;
+    // Legacy field for backwards compatibility
+    image_url?: string;
     min_price: number;
     max_price: number;
+    price_from: number;
     currency: string;
     status: string;
     ticket_types: TicketType[];
@@ -82,25 +88,37 @@ export class EventsModule {
     }
 
     private renderEventCard(event: Event): string {
-        const formattedDate = new Date(event.event_date).toLocaleDateString('en-US', {
+        const eventDate = event.start_date || event.event_date;
+        const formattedDate = eventDate ? new Date(eventDate).toLocaleDateString('ro-RO', {
             weekday: 'short',
             month: 'short',
             day: 'numeric'
-        });
+        }) : '';
+
+        // Use poster_url for card images (vertical), fallback to hero_image_url or image_url
+        const cardImage = event.poster_url || event.hero_image_url || event.image_url;
+
+        // Get venue name (can be string or object)
+        const venueName = typeof event.venue === 'string'
+            ? event.venue
+            : (event.venue?.name || '');
+
+        // Use price_from or min_price
+        const price = event.price_from ?? event.min_price ?? 0;
 
         return `
             <div class="tixello-card event-card" data-event-slug="${event.slug}">
-                ${event.image_url ? `<img src="${event.image_url}" alt="${event.title}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 0.5rem 0.5rem 0 0;">` : ''}
+                ${cardImage ? `<img src="${cardImage}" alt="${event.title}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 0.5rem 0.5rem 0 0;">` : ''}
                 <div style="padding: 1rem;">
                     <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem;">${event.title}</h3>
                     <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.5rem;">
-                        <span>${formattedDate}</span> • <span>${event.venue}</span>
+                        <span>${formattedDate}</span>${venueName ? ` • <span>${venueName}</span>` : ''}
                     </p>
                     <p style="font-weight: 600; color: #059669; margin-bottom: 1rem;">
-                        From ${event.currency} ${event.min_price}
+                        De la ${price} ${event.currency || 'RON'}
                     </p>
                     <a href="#/events/${event.slug}" class="tixello-btn" style="display: inline-block; text-decoration: none;">
-                        View Details
+                        Detalii
                     </a>
                 </div>
             </div>
@@ -126,39 +144,50 @@ export class EventsModule {
     }
 
     private renderEventDetail(event: Event): string {
-        const formattedDate = new Date(event.event_date).toLocaleDateString('en-US', {
+        const eventDate = event.start_date || event.event_date;
+        const formattedDate = eventDate ? new Date(eventDate).toLocaleDateString('ro-RO', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
             day: 'numeric'
-        });
+        }) : '';
+
+        // Use hero_image_url for single event pages (horizontal), fallback to poster_url or image_url
+        const heroImage = event.hero_image_url || event.poster_url || event.image_url;
+
+        // Get venue name (can be string or object)
+        const venueName = typeof event.venue === 'string'
+            ? event.venue
+            : (event.venue?.name || '');
+
+        const eventTime = event.start_time || event.event_time || '';
 
         return `
             <div class="event-detail">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                     <div>
-                        ${event.image_url ? `<img src="${event.image_url}" alt="${event.title}" style="width: 100%; border-radius: 0.5rem;">` : ''}
+                        ${heroImage ? `<img src="${heroImage}" alt="${event.title}" style="width: 100%; border-radius: 0.5rem;">` : ''}
                         <h1 style="font-size: 2rem; font-weight: 700; margin: 1rem 0;">${event.title}</h1>
                         <p style="color: #6b7280; margin-bottom: 1rem;">
-                            ${formattedDate} at ${event.event_time}<br>
-                            ${event.venue}
+                            ${formattedDate}${eventTime ? ` la ${eventTime}` : ''}<br>
+                            ${venueName}
                         </p>
                         <div style="margin-top: 1rem;">
-                            ${event.description}
+                            ${event.description || ''}
                         </div>
                     </div>
                     <div class="tixello-card">
-                        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">Select Tickets</h2>
+                        <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem;">Selectează bilete</h2>
                         <div id="ticket-types">
-                            ${event.ticket_types.map(tt => this.renderTicketType(tt)).join('')}
+                            ${(event.ticket_types || []).map(tt => this.renderTicketType(tt)).join('')}
                         </div>
                         <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                                 <span style="font-weight: 600;">Total:</span>
-                                <span id="total-price" style="font-size: 1.5rem; font-weight: 700;">0 ${event.ticket_types[0]?.price ? 'RON' : ''}</span>
+                                <span id="total-price" style="font-size: 1.5rem; font-weight: 700;">0 RON</span>
                             </div>
                             <button id="add-to-cart-btn" class="tixello-btn" style="width: 100%;" disabled>
-                                Add to Cart
+                                Adaugă în coș
                             </button>
                         </div>
                     </div>
@@ -417,11 +446,14 @@ export class EventsModule {
             year: 'numeric'
         });
 
+        // Use poster_url for card images (vertical), fallback to hero_image_url or image_url
+        const cardImage = event.poster_url || event.hero_image_url || event.image_url;
+
         return `
             <div class="tixello-card past-event-card" style="opacity: 0.9;">
-                ${event.image_url
+                ${cardImage
                     ? `<div style="position: relative;">
-                        <img src="${event.image_url}" alt="${event.title}" style="width: 100%; height: 160px; object-fit: cover; border-radius: 0.5rem 0.5rem 0 0; filter: grayscale(30%);">
+                        <img src="${cardImage}" alt="${event.title}" style="width: 100%; height: 160px; object-fit: cover; border-radius: 0.5rem 0.5rem 0 0; filter: grayscale(30%);">
                         <span style="position: absolute; top: 0.5rem; right: 0.5rem; background: #374151; color: white; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">Încheiat</span>
                        </div>`
                     : ''

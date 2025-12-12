@@ -52,8 +52,10 @@ class OrderEmailService
                 'email_template_id' => $template?->id,
                 'recipient_email' => $order->customer_email,
                 'subject' => $subject,
+                'body' => $body,
                 'status' => 'sent',
                 'sent_at' => now(),
+                'tenant_id' => $tenant->id,
                 'metadata' => [
                     'order_id' => $order->id,
                     'tenant_id' => $tenant->id,
@@ -73,8 +75,10 @@ class OrderEmailService
             EmailLog::create([
                 'recipient_email' => $order->customer_email,
                 'subject' => 'Order Confirmation',
+                'body' => $body ?? 'Email body generation failed',
                 'status' => 'failed',
                 'error_message' => $e->getMessage(),
+                'tenant_id' => $tenant->id,
                 'metadata' => [
                     'order_id' => $order->id,
                     'tenant_id' => $tenant->id,
