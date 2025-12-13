@@ -263,8 +263,9 @@ class Settings extends Page
                                             ->options([
                                                 'default' => 'Default',
                                                 'modern' => 'Modern',
-                                                'classic' => 'Classic',
-                                                'minimal' => 'Minimal',
+                                                'sleek' => 'Sleek (Minimalist)',
+                                                'theater' => 'Theater (Dark)',
+                                                'pub' => 'Pub (Warm)',
                                             ])
                                             ->default('default'),
                                     ])->columns(3),
