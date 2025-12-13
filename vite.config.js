@@ -15,7 +15,7 @@ export default defineConfig({
     fs: {
       allow: [
         'resources',
-        'vendor',           // <- important pentru importurile din vendor
+        'core/vendor',
       ],
     },
   },

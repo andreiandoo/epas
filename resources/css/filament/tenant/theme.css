@@ -2,12 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Filament theme imports */
-@import "/vendor/filament/support/resources/css/theme.css";
-@import "/vendor/filament/forms/resources/css/theme.css";
-@import "/vendor/filament/tables/resources/css/theme.css";
-@import "/vendor/filament/notifications/resources/css/theme.css";
-
 /*
  * ═══════════════════════════════════════════════════════════════════════════
  * TENANT PANEL THEME
