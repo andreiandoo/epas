@@ -265,6 +265,7 @@ const sleekTemplate: TemplateConfig = {
 
                 /* ========================================
                    MOBILE DRAWER - App-like Navigation
+                   Uses Tailwind classes for App.ts compatibility
                    ======================================== */
                 .sleek-drawer-overlay {
                     position: fixed;
@@ -272,14 +273,15 @@ const sleekTemplate: TemplateConfig = {
                     background: rgba(0,0,0,0.6);
                     backdrop-filter: blur(4px);
                     z-index: 200;
-                    opacity: 0;
-                    visibility: hidden;
-                    transition: var(--sleek-transition);
+                    transition: opacity 0.3s ease;
                 }
 
-                .sleek-drawer-overlay.open {
-                    opacity: 1;
-                    visibility: visible;
+                .sleek-drawer-overlay.opacity-0 {
+                    opacity: 0;
+                }
+
+                .sleek-drawer-overlay.hidden {
+                    display: none;
                 }
 
                 .sleek-drawer {
@@ -291,15 +293,14 @@ const sleekTemplate: TemplateConfig = {
                     max-width: 85vw;
                     background: var(--sleek-surface);
                     z-index: 201;
-                    transform: translateX(100%);
                     transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
                     display: flex;
                     flex-direction: column;
                     border-left: 1px solid var(--sleek-border);
                 }
 
-                .sleek-drawer.open {
-                    transform: translateX(0);
+                .sleek-drawer.translate-x-full {
+                    transform: translateX(100%);
                 }
 
                 .sleek-drawer-header {
@@ -1171,8 +1172,8 @@ const sleekTemplate: TemplateConfig = {
             </header>
 
             <!-- Mobile Drawer -->
-            <div id="mobile-menu-overlay" class="sleek-drawer-overlay"></div>
-            <div id="mobile-menu-drawer" class="sleek-drawer">
+            <div id="mobile-menu-overlay" class="sleek-drawer-overlay hidden opacity-0"></div>
+            <div id="mobile-menu-drawer" class="sleek-drawer translate-x-full">
                 <div class="sleek-drawer-header">
                     <span class="sleek-drawer-title">Menu</span>
                     <button id="mobile-menu-close" class="sleek-drawer-close" aria-label="Close Menu">
