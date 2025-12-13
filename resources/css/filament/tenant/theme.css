@@ -1,4 +1,4 @@
-@tailwind base;
+/* Skip @tailwind base to preserve Filament's styles */
 @tailwind components;
 @tailwind utilities;
 
@@ -9,10 +9,9 @@
  * ═══════════════════════════════════════════════════════════════════════════
  */
 
-@layer base {
-    body {
-        border-top: 2px solid rgba(0,0,0,.06);
-    }
+/* Custom body styling */
+body {
+    border-top: 2px solid rgba(0,0,0,.06);
 }
 
 /* Fix dropdown/select option styling */
