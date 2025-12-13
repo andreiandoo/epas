@@ -4,6 +4,8 @@ namespace App\Filament\Resources\Artists\Pages;
 
 use App\Filament\Resources\Artists\ArtistResource;
 use App\Models\Artist;
+use App\Models\ArtistType;
+use App\Models\ArtistGenre;
 use App\Services\SpotifyService;
 use App\Services\YouTubeService;
 use Filament\Actions\Action;
@@ -77,6 +79,8 @@ class ImportArtists extends Page implements HasForms
                                         <li>youtube_id, spotify_id</li>
                                         <li>main_image, logo_h, logo_v (URLs for images)</li>
                                         <li>bio_en, bio_ro (or bio(en), bio(ro))</li>
+                                        <li><strong>artist_types</strong> (comma-separated slugs, e.g. "band,solo-artist")</li>
+                                        <li><strong>artist_genres</strong> (comma-separated slugs, e.g. "pop,rock,electronic")</li>
                                         <li>manager_f_name, manager_l_name, manager_email, manager_phone, manager_website</li>
                                         <li>agent_f_name, agent_l_name, agent_email, agent_phone, agent_website</li>
                                         <li>youtube_video_1, youtube_video_2, ... youtube_video_5</li>
@@ -277,19 +281,75 @@ class ImportArtists extends Page implements HasForms
             }
         }
 
+        // Parse artist types and genres (comma-separated slugs)
+        $artistTypeSlugs = $this->parseCommaSeparatedSlugs($data['artist_types'] ?? $data['types'] ?? '');
+        $artistGenreSlugs = $this->parseCommaSeparatedSlugs($data['artist_genres'] ?? $data['genres'] ?? '');
+
         // Check if exists
         $existing = Artist::where('slug', $slug)->first();
 
         if ($existing) {
             if ($updateExisting) {
                 $existing->update(array_filter($artistData, fn($v) => $v !== null));
+
+                // Sync artist types if provided
+                if (!empty($artistTypeSlugs)) {
+                    $typeIds = ArtistType::whereIn('slug', $artistTypeSlugs)->pluck('id')->toArray();
+                    if (!empty($typeIds)) {
+                        $existing->artistTypes()->sync($typeIds);
+                    }
+                }
+
+                // Sync artist genres if provided
+                if (!empty($artistGenreSlugs)) {
+                    $genreIds = ArtistGenre::whereIn('slug', $artistGenreSlugs)->pluck('id')->toArray();
+                    if (!empty($genreIds)) {
+                        $existing->artistGenres()->sync($genreIds);
+                    }
+                }
+
                 return 'updated';
             }
             return 'skipped';
         }
 
-        Artist::create($artistData);
+        $artist = Artist::create($artistData);
+
+        // Attach artist types if provided
+        if (!empty($artistTypeSlugs)) {
+            $typeIds = ArtistType::whereIn('slug', $artistTypeSlugs)->pluck('id')->toArray();
+            if (!empty($typeIds)) {
+                $artist->artistTypes()->attach($typeIds);
+            }
+        }
+
+        // Attach artist genres if provided
+        if (!empty($artistGenreSlugs)) {
+            $genreIds = ArtistGenre::whereIn('slug', $artistGenreSlugs)->pluck('id')->toArray();
+            if (!empty($genreIds)) {
+                $artist->artistGenres()->attach($genreIds);
+            }
+        }
+
         return 'imported';
+    }
+
+    /**
+     * Parse comma-separated slugs into an array
+     */
+    protected function parseCommaSeparatedSlugs(string $value): array
+    {
+        if (empty($value)) {
+            return [];
+        }
+
+        return array_filter(
+            array_map(
+                fn($s) => trim(strtolower($s)),
+                explode(',', $value)
+            ),
+            fn($s) => !empty($s)
+        );
     }
 
     protected function downloadImage(string $url, string $slug, string $type): ?string
@@ -366,13 +426,14 @@ class ImportArtists extends Page implements HasForms
                         'youtube_id', 'spotify_id',
                         'main_image', 'logo_h', 'logo_v',
                         'bio_en', 'bio_ro',
+                        'artist_types', 'artist_genres',
                         'manager_f_name', 'manager_l_name', 'manager_email', 'manager_phone', 'manager_website',
                         'agent_f_name', 'agent_l_name', 'agent_email', 'agent_phone', 'agent_website',
                         'youtube_video_1', 'youtube_video_2', 'youtube_video_3', 'youtube_video_4', 'youtube_video_5',
                     ];
 
                     $content = implode(',', $headers) . "\n";
-                    $content .= '"Artist Name","artist-slug","email@example.com","+40123456789","https://website.com","RO","Bucharest","https://facebook.com/artist","https://instagram.com/artist","https://tiktok.com/@artist","https://open.spotify.com/artist/123","https://youtube.com/channel/123","","","https://example.com/image.jpg","https://example.com/logo.png","https://example.com/portrait.jpg","English bio text","Bio în română","John","Doe","manager@email.com","+40123456789","https://manager.com","Jane","Smith","agent@email.com","+40987654321","https://agent.com","https://youtube.com/watch?v=VIDEO1","","","",""';
+                    $content .= '"Artist Name","artist-slug","email@example.com","+40123456789","https://website.com","RO","Bucharest","https://facebook.com/artist","https://instagram.com/artist","https://tiktok.com/@artist","https://open.spotify.com/artist/123","https://youtube.com/channel/123","","","https://example.com/image.jpg","https://example.com/logo.png","https://example.com/portrait.jpg","English bio text","Bio în română","band,solo-artist","pop,rock,electronic","John","Doe","manager@email.com","+40123456789","https://manager.com","Jane","Smith","agent@email.com","+40987654321","https://agent.com","https://youtube.com/watch?v=VIDEO1","","","",""';
 
                     return response()->streamDownload(function () use ($content) {
                         echo $content;
