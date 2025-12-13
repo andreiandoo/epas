@@ -764,6 +764,12 @@ class TenantResource extends Resource
                             SC\Section::make('Email Configuration')
                                 ->description('Configure custom SMTP settings for this tenant. Leave empty to use core mail (Brevo).')
                                 ->schema([
+                                    Forms\Components\Toggle::make('use_core_smtp')
+                                        ->label('Use Core SMTP (Brevo)')
+                                        ->helperText('When enabled, this tenant will use the core platform\'s SMTP server (Brevo) for sending emails. Useful for testing email functionality.')
+                                        ->live()
+                                        ->columnSpanFull(),
+
                                     Forms\Components\Select::make('settings.mail.driver')
                                         ->label('Mail Provider')
                                         ->options([

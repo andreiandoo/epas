@@ -16,6 +16,13 @@ class TenantMailService
      */
     public function send(Tenant $tenant, Closure $callback): void
     {
+        // If tenant is set to use core SMTP, always use core config
+        if ($tenant->use_core_smtp) {
+            Log::info('Tenant configured to use core SMTP', ['tenant_id' => $tenant->id]);
+            $this->sendWithCoreConfig($callback);
+            return;
+        }
+
         if ($this->hasTenantMailConfig($tenant)) {
             $this->sendWithTenantConfig($tenant, $callback);
         } else {
@@ -126,21 +133,19 @@ class TenantMailService
      */
     public function testTenantMailConfig(Tenant $tenant, string $testEmail): array
     {
-        if (!$this->hasTenantMailConfig($tenant)) {
-            return [
-                'success' => false,
-                'message' => 'Tenant does not have mail configuration set up',
-            ];
-        }
+        // Determine which config will be used
+        $usingCore = $tenant->use_core_smtp || !$this->hasTenantMailConfig($tenant);
 
         try {
-            $this->send($tenant, function ($message) use ($testEmail, $tenant) {
+            $this->send($tenant, function ($message) use ($testEmail, $tenant, $usingCore) {
+                $configType = $usingCore ? 'Core SMTP (Brevo)' : 'Tenant SMTP';
                 $message->to($testEmail)
                     ->subject('Test Email - ' . ($tenant->public_name ?? $tenant->name))
                     ->html("
                         <h2>Test Email</h2>
                         <p>This is a test email to verify your mail configuration.</p>
-                        <p>Tenant: {$tenant->name}</p>
+                        <p><strong>Tenant:</strong> {$tenant->name}</p>
+                        <p><strong>Using:</strong> {$configType}</p>
                         <p>If you received this email, your mail configuration is working correctly!</p>
                     ");
             });
@@ -150,7 +155,8 @@ class TenantMailService
                 'message' => 'Test email sent successfully',
                 'details' => [
                     'sent_to' => $testEmail,
-                    'using_config' => $this->hasTenantMailConfig($tenant) ? 'tenant' : 'core',
+                    'using_config' => $usingCore ? 'core' : 'tenant',
+                    'use_core_smtp_enabled' => $tenant->use_core_smtp,
                 ],
             ];
         } catch (\Exception $e) {

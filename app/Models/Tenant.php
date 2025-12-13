@@ -24,6 +24,7 @@ class Tenant extends Model
         'settings',
         'ticket_terms',
         'features',
+        'use_core_smtp',
         // Company details
         'company_name',
         'cui',
@@ -90,6 +91,7 @@ class Tenant extends Model
         'commission_rate' => 'decimal:2',
         'vat_payer' => 'boolean',
         'onboarding_completed' => 'boolean',
+        'use_core_smtp' => 'boolean',
     ];
 
     public function contractTemplate(): BelongsTo
