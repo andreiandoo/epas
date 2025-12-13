@@ -51,7 +51,9 @@ class TenantPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Indigo,
             ])
-            // brandName removed - using custom sidebar-brand view with uploaded logos
+
+            // Vite-compiled theme with Tailwind CSS
+            ->viteTheme('resources/css/filament/tenant/theme.css')
 
             // Discover tenant-specific resources, pages, and widgets
             ->discoverResources(in: app_path('Filament/Tenant/Resources'), for: 'App\\Filament\\Tenant\\Resources')
