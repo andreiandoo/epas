@@ -3342,13 +3342,12 @@ html.dark {
 
 /* Cards, Sections, Modals */
 .dark .fi-section,
-.dark .fi-section-content,
+/* .dark .fi-section-content, */
 .dark .fi-card,
 .dark .fi-modal-window,
 .dark .fi-dropdown-panel {
   background-color: var(--metro-bg-secondary) !important;
   border-color: var(--metro-border) !important;
-  overflow: hidden !important;
 }
 
 .dark .fi-section-header {
