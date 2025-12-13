@@ -52,9 +52,6 @@ class TenantPanelProvider extends PanelProvider
                 'primary' => Color::Indigo,
             ])
 
-            // Vite-compiled theme with Tailwind CSS
-            ->viteTheme('resources/css/filament/tenant/theme.css')
-
             // Discover tenant-specific resources, pages, and widgets
             ->discoverResources(in: app_path('Filament/Tenant/Resources'), for: 'App\\Filament\\Tenant\\Resources')
             ->discoverPages(in: app_path('Filament/Tenant/Pages'), for: 'App\\Filament\\Tenant\\Pages')
@@ -93,8 +90,9 @@ class TenantPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
 
-            // Custom assets (same as admin panel)
+            // Custom assets (Tailwind utilities + custom skin)
             ->assets([
+                Css::make('tailwind-theme', \Illuminate\Support\Facades\Vite::asset('resources/css/filament/tenant/theme.css')),
                 Css::make('epas-skin', asset('css/epas-skin.css')),
                 Js::make('epas-skin', asset('js/epas-skin.js')),
             ])

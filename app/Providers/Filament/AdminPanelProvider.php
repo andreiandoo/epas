@@ -39,9 +39,6 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Amber,
             ])
 
-            // Vite-compiled theme with Tailwind CSS
-            ->viteTheme('resources/css/filament/admin/theme.css')
-
             // Auto-discover resources, pages, and widgets
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
@@ -64,8 +61,9 @@ class AdminPanelProvider extends PanelProvider
                 DebugFilamentAuth::class, // Custom middleware that explicitly checks canAccessPanel()
             ])
 
-            // Custom assets
+            // Custom assets (Tailwind utilities + custom skin)
             ->assets([
+                Css::make('tailwind-theme', \Illuminate\Support\Facades\Vite::asset('resources/css/filament/admin/theme.css')),
                 Css::make('epas-skin', asset('css/epas-skin.css')),
                 Js::make('epas-skin', asset('js/epas-skin.js')),
             ])
