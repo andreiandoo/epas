@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\CustomerToken;
 use App\Models\Order;
 use App\Models\Ticket;
+use App\Models\Shop\ShopOrder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -305,6 +306,113 @@ class AccountController extends Controller
                     'customer_email' => $order->customer_email,
                     'payment_method' => $order->meta['payment_method'] ?? 'Card',
                 ],
+            ],
+        ]);
+    }
+
+    /**
+     * Get customer's shop orders
+     */
+    public function shopOrders(Request $request): JsonResponse
+    {
+        $customer = $this->getAuthenticatedCustomer($request);
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $orders = ShopOrder::where('customer_id', $customer->id)
+            ->with(['items.product', 'items.variant'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $formattedOrders = $orders->map(function ($order) {
+            return [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'status' => $order->status,
+                'total_cents' => $order->total_cents,
+                'currency' => $order->currency,
+                'items_count' => $order->items->sum('quantity'),
+                'items' => $order->items->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'title' => $item->product_title,
+                        'image_url' => $item->product?->image_url,
+                        'quantity' => $item->quantity,
+                    ];
+                }),
+                'created_at' => $order->created_at->toISOString(),
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'orders' => $formattedOrders,
+            ],
+        ]);
+    }
+
+    /**
+     * Get single shop order detail
+     */
+    public function shopOrderDetail(Request $request, string $orderId): JsonResponse
+    {
+        $customer = $this->getAuthenticatedCustomer($request);
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $order = ShopOrder::where('customer_id', $customer->id)
+            ->where('id', $orderId)
+            ->with(['items.product', 'items.variant'])
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Comanda nu a fost gasita',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'status' => $order->status,
+                'subtotal_cents' => $order->subtotal_cents,
+                'discount_cents' => $order->discount_cents,
+                'shipping_cents' => $order->shipping_cents,
+                'tax_cents' => $order->tax_cents,
+                'total_cents' => $order->total_cents,
+                'currency' => $order->currency,
+                'payment_method' => $order->payment_method,
+                'shipping_address' => $order->shipping_address,
+                'billing_address' => $order->billing_address,
+                'tracking_number' => $order->tracking_number,
+                'tracking_url' => $order->tracking_url,
+                'items' => $order->items->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'title' => $item->product_title,
+                        'image_url' => $item->product?->image_url,
+                        'variant_name' => $item->variant?->name ?? $item->variant_title,
+                        'quantity' => $item->quantity,
+                        'unit_price_cents' => $item->unit_price_cents,
+                        'total_cents' => $item->total_cents,
+                    ];
+                }),
+                'created_at' => $order->created_at->toISOString(),
+                'updated_at' => $order->updated_at->toISOString(),
             ],
         ]);
     }

@@ -34,6 +34,14 @@ export class SleekClientModule {
         this.eventBus.on('route:my-events', () => this.renderMyEvents());
         this.eventBus.on('route:profile', () => this.renderProfile());
 
+        // Shop account pages
+        this.eventBus.on('route:shop-orders', () => this.renderShopOrders());
+        this.eventBus.on('route:shop-order-detail', (id: string) => this.renderShopOrderDetail(id));
+        this.eventBus.on('route:wishlist', () => this.renderWishlist());
+        this.eventBus.on('route:stock-alerts', () => this.renderStockAlerts());
+        this.eventBus.on('route:shop-cart', () => this.renderShopCart());
+        this.eventBus.on('route:shop-checkout', () => this.renderShopCheckout());
+
         console.log('Sleek Client module initialized');
     }
 
@@ -576,6 +584,21 @@ export class SleekClientModule {
                     color: #ef4444;
                 }
 
+                .sleek-menu-icon.shop {
+                    background: rgba(16, 185, 129, 0.15);
+                    color: #10b981;
+                }
+
+                .sleek-menu-icon.wishlist {
+                    background: rgba(239, 68, 68, 0.15);
+                    color: #ef4444;
+                }
+
+                .sleek-menu-icon.alerts {
+                    background: rgba(59, 130, 246, 0.15);
+                    color: #3b82f6;
+                }
+
                 .sleek-menu-content {
                     flex: 1;
                     min-width: 0;
@@ -674,6 +697,54 @@ export class SleekClientModule {
                             <div class="sleek-menu-content">
                                 <h3>Evenimentele mele</h3>
                                 <p>Evenimente la care vei participa</p>
+                            </div>
+                            <svg class="sleek-menu-arrow" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="sleek-menu-section">
+                    <h2 class="sleek-menu-title">Magazin</h2>
+                    <div class="sleek-menu-list">
+                        <a href="/account/shop-orders" class="sleek-menu-item">
+                            <div class="sleek-menu-icon shop">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                                </svg>
+                            </div>
+                            <div class="sleek-menu-content">
+                                <h3>Comenzi magazin</h3>
+                                <p>Istoricul comenzilor din magazin</p>
+                            </div>
+                            <svg class="sleek-menu-arrow" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                        <a href="/account/wishlist" class="sleek-menu-item">
+                            <div class="sleek-menu-icon wishlist">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                </svg>
+                            </div>
+                            <div class="sleek-menu-content">
+                                <h3>Lista de dorinte</h3>
+                                <p>Produsele salvate</p>
+                            </div>
+                            <svg class="sleek-menu-arrow" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                        <a href="/account/stock-alerts" class="sleek-menu-item">
+                            <div class="sleek-menu-icon alerts">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                                </svg>
+                            </div>
+                            <div class="sleek-menu-content">
+                                <h3>Alerte stoc</h3>
+                                <p>Notificari pentru produse</p>
                             </div>
                             <svg class="sleek-menu-arrow" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -1546,4 +1617,1102 @@ export class SleekClientModule {
     renderCheckout(): void {}
     renderOrderConfirmation(orderNumber: string): void {}
     renderOrderDetail(id: string): void {}
+
+    // ========================================
+    // SHOP ORDERS PAGE
+    // ========================================
+    async renderShopOrders(): Promise<void> {
+        if (!this.isLoggedIn()) {
+            window.location.hash = '/login';
+            return;
+        }
+
+        const container = document.getElementById('shop-orders-list');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="sleek-page sleek-animate-in">
+                <div class="sleek-page-header">
+                    <h1 class="sleek-page-title">Comenzi magazin</h1>
+                    <p class="sleek-page-subtitle">Istoricul comenzilor tale din magazin</p>
+                </div>
+                <div id="shop-orders-content" class="sleek-loading">
+                    <div class="sleek-spinner"></div>
+                </div>
+            </div>
+        `;
+
+        await this.loadShopOrdersContent();
+    }
+
+    private async loadShopOrdersContent(): Promise<void> {
+        if (!this.apiClient) return;
+
+        const contentEl = document.getElementById('shop-orders-content');
+        if (!contentEl) return;
+
+        try {
+            this.setAuthHeaders();
+            const response = await this.apiClient.get('/account/shop-orders');
+            const orders = response.data.data?.orders || [];
+
+            if (orders.length === 0) {
+                contentEl.innerHTML = `
+                    <div class="sleek-empty-state">
+                        <div class="sleek-empty-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                            </svg>
+                        </div>
+                        <h2 class="sleek-empty-title">Nicio comanda din magazin</h2>
+                        <p class="sleek-empty-desc">Cumpara produse pentru a le vedea aici</p>
+                        <a href="/shop" class="sleek-btn-primary">Descopera produse</a>
+                    </div>
+                `;
+                return;
+            }
+
+            contentEl.innerHTML = `
+                <style>
+                    .shop-order-card {
+                        background: var(--sleek-surface);
+                        border: 1px solid var(--sleek-border);
+                        border-radius: var(--sleek-radius);
+                        padding: 1.25rem;
+                        margin-bottom: 1rem;
+                        display: block;
+                        text-decoration: none;
+                        color: inherit;
+                        transition: var(--sleek-transition);
+                    }
+                    .shop-order-card:hover {
+                        border-color: var(--sleek-border-light);
+                        background: var(--sleek-surface-elevated);
+                    }
+                    .shop-order-top {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        margin-bottom: 0.75rem;
+                    }
+                    .shop-order-number {
+                        font-weight: 600;
+                        color: var(--sleek-text);
+                    }
+                    .shop-order-date {
+                        font-size: 0.8rem;
+                        color: var(--sleek-text-muted);
+                    }
+                    .shop-order-status {
+                        padding: 0.25rem 0.625rem;
+                        font-size: 0.7rem;
+                        font-weight: 600;
+                        border-radius: 50px;
+                        text-transform: uppercase;
+                    }
+                    .shop-order-status.paid, .shop-order-status.shipped, .shop-order-status.delivered {
+                        background: rgba(16, 185, 129, 0.15);
+                        color: #10b981;
+                    }
+                    .shop-order-status.pending, .shop-order-status.processing {
+                        background: rgba(245, 158, 11, 0.15);
+                        color: #f59e0b;
+                    }
+                    .shop-order-status.cancelled, .shop-order-status.refunded {
+                        background: rgba(239, 68, 68, 0.15);
+                        color: #ef4444;
+                    }
+                    .shop-order-items {
+                        display: flex;
+                        gap: 0.5rem;
+                        margin-bottom: 0.75rem;
+                        overflow: hidden;
+                    }
+                    .shop-order-item-thumb {
+                        width: 50px;
+                        height: 50px;
+                        border-radius: 0.375rem;
+                        object-fit: cover;
+                        background: #f3f4f6;
+                    }
+                    .shop-order-bottom {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding-top: 0.75rem;
+                        border-top: 1px solid var(--sleek-border);
+                    }
+                    .shop-order-items-count {
+                        font-size: 0.8rem;
+                        color: var(--sleek-text-muted);
+                    }
+                    .shop-order-total {
+                        font-weight: 700;
+                        color: var(--sleek-text);
+                    }
+                </style>
+                ${orders.map((order: any) => `
+                    <a href="/account/shop-orders/${order.id}" class="shop-order-card">
+                        <div class="shop-order-top">
+                            <div>
+                                <div class="shop-order-number">${order.order_number}</div>
+                                <div class="shop-order-date">${this.formatDate(order.created_at)}</div>
+                            </div>
+                            <span class="shop-order-status ${order.status}">${this.getShopOrderStatusLabel(order.status)}</span>
+                        </div>
+                        <div class="shop-order-items">
+                            ${(order.items || []).slice(0, 4).map((item: any) => `
+                                <img src="${item.image_url || '/placeholder.jpg'}" alt="${item.title}" class="shop-order-item-thumb">
+                            `).join('')}
+                            ${(order.items || []).length > 4 ? `<div class="shop-order-item-thumb" style="display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: #6b7280;">+${order.items.length - 4}</div>` : ''}
+                        </div>
+                        <div class="shop-order-bottom">
+                            <span class="shop-order-items-count">${order.items_count || order.items?.length || 0} produs(e)</span>
+                            <span class="shop-order-total">${this.formatCurrency(order.total_cents / 100, order.currency)}</span>
+                        </div>
+                    </a>
+                `).join('')}
+            `;
+        } catch (e) {
+            contentEl.innerHTML = '<p style="color: var(--sleek-error); text-align: center;">Eroare la incarcarea comenzilor.</p>';
+        }
+    }
+
+    private getShopOrderStatusLabel(status: string): string {
+        const labels: Record<string, string> = {
+            'pending': 'In asteptare',
+            'paid': 'Platita',
+            'processing': 'In procesare',
+            'shipped': 'Expediata',
+            'delivered': 'Livrata',
+            'cancelled': 'Anulata',
+            'refunded': 'Rambursata',
+        };
+        return labels[status] || status;
+    }
+
+    // ========================================
+    // SHOP ORDER DETAIL PAGE
+    // ========================================
+    async renderShopOrderDetail(orderId: string): Promise<void> {
+        if (!this.isLoggedIn()) {
+            window.location.hash = '/login';
+            return;
+        }
+
+        const container = document.getElementById(`shop-order-detail-${orderId}`);
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="sleek-page sleek-animate-in">
+                <div class="sleek-page-header">
+                    <a href="/account/shop-orders" style="color: var(--sleek-text-muted); text-decoration: none; font-size: 0.875rem; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                        Inapoi la comenzi
+                    </a>
+                    <h1 class="sleek-page-title">Detalii comanda</h1>
+                </div>
+                <div id="shop-order-detail-content" class="sleek-loading">
+                    <div class="sleek-spinner"></div>
+                </div>
+            </div>
+        `;
+
+        await this.loadShopOrderDetailContent(orderId);
+    }
+
+    private async loadShopOrderDetailContent(orderId: string): Promise<void> {
+        if (!this.apiClient) return;
+
+        const contentEl = document.getElementById('shop-order-detail-content');
+        if (!contentEl) return;
+
+        try {
+            this.setAuthHeaders();
+            const response = await this.apiClient.get(`/account/shop-orders/${orderId}`);
+            const order = response.data.data;
+
+            contentEl.innerHTML = `
+                <style>
+                    .order-detail-grid {
+                        display: grid;
+                        gap: 1.5rem;
+                    }
+                    @media (min-width: 768px) {
+                        .order-detail-grid {
+                            grid-template-columns: 2fr 1fr;
+                        }
+                    }
+                    .order-detail-section {
+                        background: var(--sleek-surface);
+                        border: 1px solid var(--sleek-border);
+                        border-radius: var(--sleek-radius);
+                        padding: 1.25rem;
+                    }
+                    .order-detail-title {
+                        font-weight: 600;
+                        font-size: 1rem;
+                        color: var(--sleek-text);
+                        margin-bottom: 1rem;
+                        padding-bottom: 0.75rem;
+                        border-bottom: 1px solid var(--sleek-border);
+                    }
+                    .order-item {
+                        display: flex;
+                        gap: 1rem;
+                        padding: 1rem 0;
+                        border-bottom: 1px solid var(--sleek-border);
+                    }
+                    .order-item:last-child {
+                        border-bottom: none;
+                    }
+                    .order-item-image {
+                        width: 80px;
+                        height: 80px;
+                        border-radius: 0.5rem;
+                        object-fit: cover;
+                        background: #f3f4f6;
+                    }
+                    .order-item-info {
+                        flex: 1;
+                    }
+                    .order-item-title {
+                        font-weight: 600;
+                        color: var(--sleek-text);
+                        margin-bottom: 0.25rem;
+                    }
+                    .order-item-variant {
+                        font-size: 0.8rem;
+                        color: var(--sleek-text-muted);
+                        margin-bottom: 0.25rem;
+                    }
+                    .order-item-qty {
+                        font-size: 0.85rem;
+                        color: var(--sleek-text-muted);
+                    }
+                    .order-item-price {
+                        font-weight: 600;
+                        color: var(--sleek-text);
+                        text-align: right;
+                    }
+                    .order-summary-row {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 0.5rem 0;
+                        font-size: 0.9rem;
+                    }
+                    .order-summary-row.total {
+                        font-weight: 700;
+                        font-size: 1.1rem;
+                        border-top: 1px solid var(--sleek-border);
+                        padding-top: 1rem;
+                        margin-top: 0.5rem;
+                    }
+                    .order-info-row {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 0.5rem 0;
+                        font-size: 0.9rem;
+                        border-bottom: 1px solid var(--sleek-border);
+                    }
+                    .order-info-row:last-child {
+                        border-bottom: none;
+                    }
+                    .order-info-label {
+                        color: var(--sleek-text-muted);
+                    }
+                    .order-info-value {
+                        font-weight: 500;
+                        color: var(--sleek-text);
+                    }
+                    .tracking-link {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        margin-top: 1rem;
+                        padding: 0.75rem 1rem;
+                        background: var(--sleek-glow);
+                        color: var(--sleek-gradient-start);
+                        border-radius: 0.5rem;
+                        text-decoration: none;
+                        font-weight: 500;
+                        font-size: 0.9rem;
+                    }
+                </style>
+
+                <div class="order-detail-grid">
+                    <div>
+                        <div class="order-detail-section">
+                            <h3 class="order-detail-title">Produse comandate</h3>
+                            ${(order.items || []).map((item: any) => `
+                                <div class="order-item">
+                                    <img src="${item.image_url || '/placeholder.jpg'}" alt="${item.title}" class="order-item-image">
+                                    <div class="order-item-info">
+                                        <div class="order-item-title">${item.title}</div>
+                                        ${item.variant_name ? `<div class="order-item-variant">${item.variant_name}</div>` : ''}
+                                        <div class="order-item-qty">Cantitate: ${item.quantity}</div>
+                                    </div>
+                                    <div class="order-item-price">${this.formatCurrency(item.total_cents / 100, order.currency)}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        ${order.shipping_address ? `
+                            <div class="order-detail-section" style="margin-top: 1rem;">
+                                <h3 class="order-detail-title">Adresa de livrare</h3>
+                                <p style="color: var(--sleek-text); line-height: 1.6;">
+                                    ${order.shipping_address.name}<br>
+                                    ${order.shipping_address.address}<br>
+                                    ${order.shipping_address.city}, ${order.shipping_address.postal_code}<br>
+                                    ${order.shipping_address.country}
+                                </p>
+                                ${order.tracking_number ? `
+                                    <a href="${order.tracking_url || '#'}" target="_blank" class="tracking-link">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                        </svg>
+                                        Urmareste coletul: ${order.tracking_number}
+                                    </a>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div>
+                        <div class="order-detail-section">
+                            <h3 class="order-detail-title">Detalii comanda</h3>
+                            <div class="order-info-row">
+                                <span class="order-info-label">Numar comanda</span>
+                                <span class="order-info-value">${order.order_number}</span>
+                            </div>
+                            <div class="order-info-row">
+                                <span class="order-info-label">Data</span>
+                                <span class="order-info-value">${this.formatDate(order.created_at, true)}</span>
+                            </div>
+                            <div class="order-info-row">
+                                <span class="order-info-label">Status</span>
+                                <span class="shop-order-status ${order.status}" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; border-radius: 50px;">${this.getShopOrderStatusLabel(order.status)}</span>
+                            </div>
+                            <div class="order-info-row">
+                                <span class="order-info-label">Metoda plata</span>
+                                <span class="order-info-value">${order.payment_method || 'Card'}</span>
+                            </div>
+                        </div>
+
+                        <div class="order-detail-section" style="margin-top: 1rem;">
+                            <h3 class="order-detail-title">Sumar</h3>
+                            <div class="order-summary-row">
+                                <span>Subtotal</span>
+                                <span>${this.formatCurrency(order.subtotal_cents / 100, order.currency)}</span>
+                            </div>
+                            ${order.discount_cents > 0 ? `
+                                <div class="order-summary-row" style="color: #10b981;">
+                                    <span>Reducere</span>
+                                    <span>-${this.formatCurrency(order.discount_cents / 100, order.currency)}</span>
+                                </div>
+                            ` : ''}
+                            ${order.shipping_cents > 0 ? `
+                                <div class="order-summary-row">
+                                    <span>Livrare</span>
+                                    <span>${this.formatCurrency(order.shipping_cents / 100, order.currency)}</span>
+                                </div>
+                            ` : ''}
+                            ${order.tax_cents > 0 ? `
+                                <div class="order-summary-row">
+                                    <span>TVA</span>
+                                    <span>${this.formatCurrency(order.tax_cents / 100, order.currency)}</span>
+                                </div>
+                            ` : ''}
+                            <div class="order-summary-row total">
+                                <span>Total</span>
+                                <span>${this.formatCurrency(order.total_cents / 100, order.currency)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } catch (e) {
+            contentEl.innerHTML = '<p style="color: var(--sleek-error); text-align: center;">Eroare la incarcarea detaliilor comenzii.</p>';
+        }
+    }
+
+    // ========================================
+    // WISHLIST PAGE
+    // ========================================
+    async renderWishlist(): Promise<void> {
+        if (!this.isLoggedIn()) {
+            window.location.hash = '/login';
+            return;
+        }
+
+        const container = document.getElementById('wishlist-container');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="sleek-page sleek-animate-in">
+                <div class="sleek-page-header">
+                    <h1 class="sleek-page-title">Lista de dorinte</h1>
+                    <p class="sleek-page-subtitle">Produsele tale salvate</p>
+                </div>
+                <div id="wishlist-content" class="sleek-loading">
+                    <div class="sleek-spinner"></div>
+                </div>
+            </div>
+        `;
+
+        await this.loadWishlistContent();
+    }
+
+    private async loadWishlistContent(): Promise<void> {
+        if (!this.apiClient) return;
+
+        const contentEl = document.getElementById('wishlist-content');
+        if (!contentEl) return;
+
+        try {
+            this.setAuthHeaders();
+            const response = await this.apiClient.get('/shop/wishlist');
+            const items = response.data.data?.items || [];
+
+            if (items.length === 0) {
+                contentEl.innerHTML = `
+                    <div class="sleek-empty-state">
+                        <div class="sleek-empty-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                            </svg>
+                        </div>
+                        <h2 class="sleek-empty-title">Lista de dorinte este goala</h2>
+                        <p class="sleek-empty-desc">Salveaza produsele preferate pentru mai tarziu</p>
+                        <a href="/shop" class="sleek-btn-primary">Descopera produse</a>
+                    </div>
+                `;
+                return;
+            }
+
+            contentEl.innerHTML = `
+                <style>
+                    .wishlist-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+                        gap: 1.5rem;
+                    }
+                    .wishlist-item {
+                        background: var(--sleek-surface);
+                        border: 1px solid var(--sleek-border);
+                        border-radius: var(--sleek-radius);
+                        overflow: hidden;
+                        transition: var(--sleek-transition);
+                    }
+                    .wishlist-item:hover {
+                        border-color: var(--sleek-border-light);
+                    }
+                    .wishlist-item-image {
+                        position: relative;
+                        aspect-ratio: 1;
+                        background: #f3f4f6;
+                    }
+                    .wishlist-item-image img {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                    }
+                    .wishlist-remove-btn {
+                        position: absolute;
+                        top: 0.5rem;
+                        right: 0.5rem;
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 50%;
+                        background: white;
+                        border: none;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    }
+                    .wishlist-remove-btn:hover {
+                        background: #fef2f2;
+                        color: #ef4444;
+                    }
+                    .wishlist-item-body {
+                        padding: 1rem;
+                    }
+                    .wishlist-item-title {
+                        font-weight: 600;
+                        color: var(--sleek-text);
+                        margin-bottom: 0.5rem;
+                        display: -webkit-box;
+                        -webkit-line-clamp: 2;
+                        -webkit-box-orient: vertical;
+                        overflow: hidden;
+                    }
+                    .wishlist-item-price {
+                        font-weight: 700;
+                        color: var(--sleek-text);
+                        margin-bottom: 0.75rem;
+                    }
+                    .wishlist-item-stock {
+                        font-size: 0.8rem;
+                        margin-bottom: 0.75rem;
+                    }
+                    .wishlist-item-stock.in-stock {
+                        color: #10b981;
+                    }
+                    .wishlist-item-stock.out-of-stock {
+                        color: #ef4444;
+                    }
+                    .wishlist-add-cart-btn {
+                        width: 100%;
+                        padding: 0.75rem;
+                        background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end));
+                        color: white;
+                        border: none;
+                        border-radius: 0.375rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        transition: var(--sleek-transition);
+                    }
+                    .wishlist-add-cart-btn:hover {
+                        transform: translateY(-1px);
+                    }
+                    .wishlist-add-cart-btn:disabled {
+                        opacity: 0.5;
+                        cursor: not-allowed;
+                        transform: none;
+                    }
+                </style>
+                <div class="wishlist-grid">
+                    ${items.map((item: any) => `
+                        <div class="wishlist-item" data-item-id="${item.id}">
+                            <div class="wishlist-item-image">
+                                <a href="/shop/product/${item.product?.slug}">
+                                    <img src="${item.product?.image_url || '/placeholder.jpg'}" alt="${item.product?.title}">
+                                </a>
+                                <button class="wishlist-remove-btn" data-item-id="${item.id}">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="wishlist-item-body">
+                                <a href="/shop/product/${item.product?.slug}" style="text-decoration: none; color: inherit;">
+                                    <h3 class="wishlist-item-title">${item.product?.title}</h3>
+                                </a>
+                                <div class="wishlist-item-price">${this.formatCurrency((item.product?.display_price || item.product?.price_cents) / 100, item.product?.currency)}</div>
+                                <div class="wishlist-item-stock ${item.product?.is_in_stock ? 'in-stock' : 'out-of-stock'}">
+                                    ${item.product?.is_in_stock ? 'In stoc' : 'Stoc epuizat'}
+                                </div>
+                                <button class="wishlist-add-cart-btn" data-product-id="${item.product_id}" ${!item.product?.is_in_stock ? 'disabled' : ''}>
+                                    ${item.product?.is_in_stock ? 'Adauga in cos' : 'Indisponibil'}
+                                </button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            // Bind remove buttons
+            contentEl.querySelectorAll('.wishlist-remove-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const itemId = btn.getAttribute('data-item-id');
+                    if (itemId && this.apiClient) {
+                        try {
+                            this.setAuthHeaders();
+                            await this.apiClient.delete(`/shop/wishlist/items/${itemId}`);
+                            const itemEl = contentEl.querySelector(`[data-item-id="${itemId}"]`);
+                            itemEl?.remove();
+
+                            // Check if list is empty
+                            if (contentEl.querySelectorAll('.wishlist-item').length === 0) {
+                                this.loadWishlistContent();
+                            }
+                        } catch (e) {
+                            console.error('Failed to remove wishlist item:', e);
+                        }
+                    }
+                });
+            });
+
+            // Bind add to cart buttons
+            contentEl.querySelectorAll('.wishlist-add-cart-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const productId = btn.getAttribute('data-product-id');
+                    if (productId && this.apiClient) {
+                        try {
+                            const sessionId = localStorage.getItem('shop_session_id') || 'shop-' + Math.random().toString(36).substr(2, 16);
+                            localStorage.setItem('shop_session_id', sessionId);
+
+                            await this.apiClient.post('/shop/cart/items', {
+                                product_id: productId,
+                                quantity: 1
+                            }, {
+                                headers: { 'X-Session-ID': sessionId }
+                            });
+
+                            btn.textContent = 'Adaugat!';
+                            btn.style.background = '#10b981';
+                            setTimeout(() => {
+                                btn.textContent = 'Adauga in cos';
+                                btn.style.background = '';
+                            }, 2000);
+                        } catch (e) {
+                            console.error('Failed to add to cart:', e);
+                        }
+                    }
+                });
+            });
+        } catch (e) {
+            contentEl.innerHTML = '<p style="color: var(--sleek-error); text-align: center;">Eroare la incarcarea listei de dorinte.</p>';
+        }
+    }
+
+    // ========================================
+    // STOCK ALERTS PAGE
+    // ========================================
+    async renderStockAlerts(): Promise<void> {
+        if (!this.isLoggedIn()) {
+            window.location.hash = '/login';
+            return;
+        }
+
+        const container = document.getElementById('stock-alerts-container');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="sleek-page sleek-animate-in">
+                <div class="sleek-page-header">
+                    <h1 class="sleek-page-title">Alerte stoc</h1>
+                    <p class="sleek-page-subtitle">Vei fi notificat cand produsele revin in stoc</p>
+                </div>
+                <div id="stock-alerts-content" class="sleek-loading">
+                    <div class="sleek-spinner"></div>
+                </div>
+            </div>
+        `;
+
+        await this.loadStockAlertsContent();
+    }
+
+    private async loadStockAlertsContent(): Promise<void> {
+        if (!this.apiClient) return;
+
+        const contentEl = document.getElementById('stock-alerts-content');
+        if (!contentEl) return;
+
+        try {
+            this.setAuthHeaders();
+            const response = await this.apiClient.get('/shop/stock-alerts/my-alerts');
+            const alerts = response.data.data?.alerts || [];
+
+            if (alerts.length === 0) {
+                contentEl.innerHTML = `
+                    <div class="sleek-empty-state">
+                        <div class="sleek-empty-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                            </svg>
+                        </div>
+                        <h2 class="sleek-empty-title">Nicio alerta activa</h2>
+                        <p class="sleek-empty-desc">Aboneaza-te la produsele indisponibile pentru a fi notificat</p>
+                        <a href="/shop" class="sleek-btn-primary">Descopera produse</a>
+                    </div>
+                `;
+                return;
+            }
+
+            contentEl.innerHTML = `
+                <style>
+                    .alerts-list {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 1rem;
+                    }
+                    .alert-item {
+                        display: flex;
+                        gap: 1rem;
+                        padding: 1rem;
+                        background: var(--sleek-surface);
+                        border: 1px solid var(--sleek-border);
+                        border-radius: var(--sleek-radius);
+                        align-items: center;
+                    }
+                    .alert-item-image {
+                        width: 60px;
+                        height: 60px;
+                        border-radius: 0.375rem;
+                        object-fit: cover;
+                        background: #f3f4f6;
+                    }
+                    .alert-item-info {
+                        flex: 1;
+                    }
+                    .alert-item-title {
+                        font-weight: 600;
+                        color: var(--sleek-text);
+                        margin-bottom: 0.25rem;
+                    }
+                    .alert-item-date {
+                        font-size: 0.8rem;
+                        color: var(--sleek-text-muted);
+                    }
+                    .alert-remove-btn {
+                        padding: 0.5rem 1rem;
+                        border: 1px solid var(--sleek-border);
+                        border-radius: 0.375rem;
+                        background: white;
+                        color: var(--sleek-text-muted);
+                        cursor: pointer;
+                        font-size: 0.8rem;
+                    }
+                    .alert-remove-btn:hover {
+                        border-color: #ef4444;
+                        color: #ef4444;
+                    }
+                </style>
+                <div class="alerts-list">
+                    ${alerts.map((alert: any) => `
+                        <div class="alert-item" data-alert-id="${alert.id}">
+                            <img src="${alert.product?.image_url || '/placeholder.jpg'}" alt="${alert.product?.title}" class="alert-item-image">
+                            <div class="alert-item-info">
+                                <div class="alert-item-title">${alert.product?.title}</div>
+                                <div class="alert-item-date">Abonat la ${this.formatDate(alert.created_at)}</div>
+                            </div>
+                            <button class="alert-remove-btn" data-alert-id="${alert.id}">Anuleaza</button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            // Bind remove buttons
+            contentEl.querySelectorAll('.alert-remove-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const alertId = btn.getAttribute('data-alert-id');
+                    if (alertId && this.apiClient) {
+                        try {
+                            this.setAuthHeaders();
+                            await this.apiClient.delete(`/shop/stock-alerts/${alertId}`);
+                            const alertEl = contentEl.querySelector(`[data-alert-id="${alertId}"]`);
+                            alertEl?.remove();
+
+                            // Check if list is empty
+                            if (contentEl.querySelectorAll('.alert-item').length === 0) {
+                                this.loadStockAlertsContent();
+                            }
+                        } catch (e) {
+                            console.error('Failed to remove stock alert:', e);
+                        }
+                    }
+                });
+            });
+        } catch (e) {
+            contentEl.innerHTML = '<p style="color: var(--sleek-error); text-align: center;">Eroare la incarcarea alertelor.</p>';
+        }
+    }
+
+    // ========================================
+    // SHOP CART PAGE
+    // ========================================
+    async renderShopCart(): Promise<void> {
+        const container = document.getElementById('shop-cart-container');
+        if (!container) return;
+
+        const sessionId = localStorage.getItem('shop_session_id') || 'shop-' + Math.random().toString(36).substr(2, 16);
+        localStorage.setItem('shop_session_id', sessionId);
+
+        container.innerHTML = `
+            <div class="sleek-page sleek-animate-in">
+                <div class="sleek-page-header">
+                    <h1 class="sleek-page-title">Cosul tau</h1>
+                </div>
+                <div id="shop-cart-content" class="sleek-loading">
+                    <div class="sleek-spinner"></div>
+                </div>
+            </div>
+        `;
+
+        await this.loadShopCartContent(sessionId);
+    }
+
+    private async loadShopCartContent(sessionId: string): Promise<void> {
+        if (!this.apiClient) return;
+
+        const contentEl = document.getElementById('shop-cart-content');
+        if (!contentEl) return;
+
+        try {
+            const response = await this.apiClient.get('/shop/cart', {
+                headers: { 'X-Session-ID': sessionId }
+            });
+            const cart = response.data.data;
+
+            if (!cart || !cart.items || cart.items.length === 0) {
+                contentEl.innerHTML = `
+                    <div class="sleek-empty-state">
+                        <div class="sleek-empty-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            </svg>
+                        </div>
+                        <h2 class="sleek-empty-title">Cosul este gol</h2>
+                        <p class="sleek-empty-desc">Adauga produse in cos pentru a continua</p>
+                        <a href="/shop" class="sleek-btn-primary">Descopera produse</a>
+                    </div>
+                `;
+                return;
+            }
+
+            contentEl.innerHTML = `
+                <style>
+                    .cart-layout {
+                        display: grid;
+                        gap: 2rem;
+                    }
+                    @media (min-width: 1024px) {
+                        .cart-layout {
+                            grid-template-columns: 1fr 380px;
+                        }
+                    }
+                    .cart-items {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 1rem;
+                    }
+                    .cart-item {
+                        display: flex;
+                        gap: 1rem;
+                        padding: 1rem;
+                        background: var(--sleek-surface);
+                        border: 1px solid var(--sleek-border);
+                        border-radius: var(--sleek-radius);
+                    }
+                    .cart-item-image {
+                        width: 100px;
+                        height: 100px;
+                        border-radius: 0.5rem;
+                        object-fit: cover;
+                        background: #f3f4f6;
+                    }
+                    .cart-item-info {
+                        flex: 1;
+                    }
+                    .cart-item-title {
+                        font-weight: 600;
+                        color: var(--sleek-text);
+                        margin-bottom: 0.25rem;
+                    }
+                    .cart-item-variant {
+                        font-size: 0.85rem;
+                        color: var(--sleek-text-muted);
+                        margin-bottom: 0.5rem;
+                    }
+                    .cart-item-price {
+                        font-weight: 600;
+                        color: var(--sleek-text);
+                    }
+                    .cart-item-qty {
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        margin-top: 0.75rem;
+                    }
+                    .cart-qty-btn {
+                        width: 32px;
+                        height: 32px;
+                        border: 1px solid var(--sleek-border);
+                        border-radius: 0.375rem;
+                        background: white;
+                        cursor: pointer;
+                        font-size: 1rem;
+                    }
+                    .cart-qty-btn:hover {
+                        border-color: var(--sleek-gradient-start);
+                    }
+                    .cart-qty-input {
+                        width: 50px;
+                        text-align: center;
+                        border: 1px solid var(--sleek-border);
+                        border-radius: 0.375rem;
+                        padding: 0.375rem;
+                    }
+                    .cart-item-remove {
+                        color: var(--sleek-text-muted);
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        padding: 0.5rem;
+                    }
+                    .cart-item-remove:hover {
+                        color: #ef4444;
+                    }
+                    .cart-summary {
+                        background: var(--sleek-surface);
+                        border: 1px solid var(--sleek-border);
+                        border-radius: var(--sleek-radius);
+                        padding: 1.5rem;
+                        height: fit-content;
+                        position: sticky;
+                        top: 1rem;
+                    }
+                    .cart-summary-title {
+                        font-weight: 600;
+                        font-size: 1.1rem;
+                        color: var(--sleek-text);
+                        margin-bottom: 1rem;
+                        padding-bottom: 1rem;
+                        border-bottom: 1px solid var(--sleek-border);
+                    }
+                    .cart-summary-row {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 0.5rem 0;
+                        font-size: 0.9rem;
+                    }
+                    .cart-summary-row.total {
+                        font-weight: 700;
+                        font-size: 1.25rem;
+                        border-top: 1px solid var(--sleek-border);
+                        padding-top: 1rem;
+                        margin-top: 0.5rem;
+                    }
+                    .cart-checkout-btn {
+                        width: 100%;
+                        padding: 1rem;
+                        background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end));
+                        color: white;
+                        border: none;
+                        border-radius: 0.5rem;
+                        font-weight: 600;
+                        font-size: 1rem;
+                        cursor: pointer;
+                        margin-top: 1.5rem;
+                        transition: var(--sleek-transition);
+                    }
+                    .cart-checkout-btn:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 4px 12px var(--sleek-glow);
+                    }
+                </style>
+                <div class="cart-layout">
+                    <div class="cart-items">
+                        ${cart.items.map((item: any) => `
+                            <div class="cart-item" data-item-id="${item.id}">
+                                <img src="${item.product?.image_url || '/placeholder.jpg'}" alt="${item.product?.title}" class="cart-item-image">
+                                <div class="cart-item-info">
+                                    <div class="cart-item-title">${item.product?.title}</div>
+                                    ${item.variant ? `<div class="cart-item-variant">${item.variant.name}</div>` : ''}
+                                    <div class="cart-item-price">${this.formatCurrency(item.price_cents / 100, cart.currency)}</div>
+                                    <div class="cart-item-qty">
+                                        <button class="cart-qty-btn cart-qty-minus" data-item-id="${item.id}">-</button>
+                                        <input type="number" class="cart-qty-input" data-item-id="${item.id}" value="${item.quantity}" min="1">
+                                        <button class="cart-qty-btn cart-qty-plus" data-item-id="${item.id}">+</button>
+                                    </div>
+                                </div>
+                                <button class="cart-item-remove" data-item-id="${item.id}">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="cart-summary">
+                        <h3 class="cart-summary-title">Sumar comanda</h3>
+                        <div class="cart-summary-row">
+                            <span>Subtotal</span>
+                            <span>${this.formatCurrency(cart.subtotal_cents / 100, cart.currency)}</span>
+                        </div>
+                        ${cart.discount_cents > 0 ? `
+                            <div class="cart-summary-row" style="color: #10b981;">
+                                <span>Reducere</span>
+                                <span>-${this.formatCurrency(cart.discount_cents / 100, cart.currency)}</span>
+                            </div>
+                        ` : ''}
+                        <div class="cart-summary-row total">
+                            <span>Total</span>
+                            <span>${this.formatCurrency(cart.total_cents / 100, cart.currency)}</span>
+                        </div>
+                        <button class="cart-checkout-btn" onclick="window.location.hash='/shop/checkout'">
+                            Continua spre plata
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Bind quantity buttons
+            contentEl.querySelectorAll('.cart-qty-minus').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const itemId = btn.getAttribute('data-item-id');
+                    const input = contentEl.querySelector(`.cart-qty-input[data-item-id="${itemId}"]`) as HTMLInputElement;
+                    if (input && parseInt(input.value) > 1) {
+                        await this.updateCartItemQuantity(sessionId, itemId!, parseInt(input.value) - 1);
+                    }
+                });
+            });
+
+            contentEl.querySelectorAll('.cart-qty-plus').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const itemId = btn.getAttribute('data-item-id');
+                    const input = contentEl.querySelector(`.cart-qty-input[data-item-id="${itemId}"]`) as HTMLInputElement;
+                    if (input) {
+                        await this.updateCartItemQuantity(sessionId, itemId!, parseInt(input.value) + 1);
+                    }
+                });
+            });
+
+            // Bind remove buttons
+            contentEl.querySelectorAll('.cart-item-remove').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const itemId = btn.getAttribute('data-item-id');
+                    if (itemId && this.apiClient) {
+                        try {
+                            await this.apiClient.delete(`/shop/cart/items/${itemId}`, {
+                                headers: { 'X-Session-ID': sessionId }
+                            });
+                            this.loadShopCartContent(sessionId);
+                        } catch (e) {
+                            console.error('Failed to remove item:', e);
+                        }
+                    }
+                });
+            });
+        } catch (e) {
+            contentEl.innerHTML = '<p style="color: var(--sleek-error); text-align: center;">Eroare la incarcarea cosului.</p>';
+        }
+    }
+
+    private async updateCartItemQuantity(sessionId: string, itemId: string, quantity: number): Promise<void> {
+        if (!this.apiClient) return;
+
+        try {
+            await this.apiClient.put(`/shop/cart/items/${itemId}`, { quantity }, {
+                headers: { 'X-Session-ID': sessionId }
+            });
+            this.loadShopCartContent(sessionId);
+        } catch (e) {
+            console.error('Failed to update quantity:', e);
+        }
+    }
+
+    // ========================================
+    // SHOP CHECKOUT PAGE
+    // ========================================
+    async renderShopCheckout(): Promise<void> {
+        const container = document.getElementById('shop-checkout-container');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="sleek-page sleek-animate-in">
+                <div class="sleek-page-header">
+                    <h1 class="sleek-page-title">Finalizare comanda</h1>
+                </div>
+                <div id="shop-checkout-content">
+                    <p style="text-align: center; color: var(--sleek-text-muted);">Checkout-ul va fi implementat aici...</p>
+                </div>
+            </div>
+        `;
+    }
 }

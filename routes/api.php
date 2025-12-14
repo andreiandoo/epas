@@ -908,6 +908,12 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
         Route::get('/watchlist/{eventId}/check', [AccountController::class, 'checkWatchlist'])
             ->name('api.tenant-client.account.watchlist.check');
 
+        // Shop orders routes
+        Route::get('/shop-orders', [AccountController::class, 'shopOrders'])
+            ->name('api.tenant-client.account.shop-orders');
+        Route::get('/shop-orders/{orderId}', [AccountController::class, 'shopOrderDetail'])
+            ->name('api.tenant-client.account.shop-orders.detail');
+
         // Delete account
         Route::delete('/delete', [AccountController::class, 'deleteAccount'])
             ->name('api.tenant-client.account.delete');
