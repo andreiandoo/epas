@@ -29,11 +29,26 @@ class EventStatistics extends Page
     {
         $this->record = $this->resolveRecord($record);
 
-        // Verify tenant access
+        // Verify tenant access - allow for own events OR events at owned venues
         $tenant = auth()->user()?->tenant;
-        if ($this->record->tenant_id !== $tenant?->id) {
+        $ownedVenueIds = $tenant?->venues()->pluck('id')->toArray() ?? [];
+
+        // Must be either owned by tenant OR happening at tenant's venue
+        $isOwnEvent = $this->record->tenant_id === $tenant?->id;
+        $isAtOwnedVenue = in_array($this->record->venue_id, $ownedVenueIds);
+
+        if (!$isOwnEvent && !$isAtOwnedVenue) {
             abort(403, 'Unauthorized access to this event');
         }
+    }
+
+    /**
+     * Check if this is a guest event (not owned but at owned venue)
+     */
+    public function isGuestEvent(): bool
+    {
+        $tenant = auth()->user()?->tenant;
+        return $this->record->tenant_id !== $tenant?->id;
     }
 
     public function getBreadcrumb(): string
@@ -299,6 +314,15 @@ class EventStatistics extends Page
      */
     protected function getHeaderActions(): array
     {
+        if ($this->isGuestEvent()) {
+            return [
+                \Filament\Actions\Action::make('back_to_view')
+                    ->label('Back to Details')
+                    ->icon('heroicon-o-arrow-left')
+                    ->url(EventResource::getUrl('view-guest', ['record' => $this->record])),
+            ];
+        }
+
         return [
             \Filament\Actions\Action::make('back_to_edit')
                 ->label('Back to Edit')

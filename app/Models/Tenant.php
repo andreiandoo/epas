@@ -309,6 +309,29 @@ class Tenant extends Model
         return $this->hasMany(TenantPage::class);
     }
 
+    public function venues(): HasMany
+    {
+        return $this->hasMany(Venue::class);
+    }
+
+    /**
+     * Check if tenant owns any venues
+     */
+    public function ownsVenues(): bool
+    {
+        return $this->venues()->exists();
+    }
+
+    /**
+     * Get events happening at venues owned by this tenant (but created by other tenants)
+     */
+    public function hostedEvents(): \Illuminate\Database\Eloquent\Builder
+    {
+        return Event::whereHas('venue', function ($query) {
+            $query->where('tenant_id', $this->id);
+        })->where('tenant_id', '!=', $this->id);
+    }
+
     protected static function booted(): void
     {
         static::saving(function (Tenant $tenant) {

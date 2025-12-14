@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\Customer;
+use App\Models\Venue;
 use BackedEnum;
 use Carbon\Carbon;
 use Filament\Pages\Page;
@@ -99,6 +100,9 @@ class Dashboard extends Page
         // Ticket chart data - daily ticket sales with event breakdown
         $ticketChartData = $this->getTicketChartData($tenantId, $startDate, $endDate, $days);
 
+        // Venue activity stats (for tenants who own venues)
+        $venueStats = $this->getVenueActivityStats($tenant);
+
         return [
             'tenant' => $tenant,
             'stats' => [
@@ -111,6 +115,69 @@ class Dashboard extends Page
             'chartData' => $chartData,
             'ticketChartData' => $ticketChartData,
             'chartPeriod' => $this->chartPeriod,
+            'venueStats' => $venueStats,
+        ];
+    }
+
+    /**
+     * Get venue activity statistics for hosted events
+     */
+    private function getVenueActivityStats(Tenant $tenant): ?array
+    {
+        // Check if tenant owns any venues
+        if (!$tenant->ownsVenues()) {
+            return null;
+        }
+
+        $ownedVenueIds = $tenant->venues()->pluck('id')->toArray();
+        $tenantId = $tenant->id;
+
+        // Hosted events (events at owned venues by other tenants)
+        $hostedEventIds = Event::whereIn('venue_id', $ownedVenueIds)
+            ->where('tenant_id', '!=', $tenantId)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($hostedEventIds)) {
+            return [
+                'has_venues' => true,
+                'venues_count' => count($ownedVenueIds),
+                'hosted_events' => 0,
+                'upcoming_hosted_events' => 0,
+                'hosted_tickets_sold' => 0,
+                'hosted_revenue' => 0,
+            ];
+        }
+
+        // Count hosted events
+        $hostedEventsCount = count($hostedEventIds);
+
+        // Upcoming hosted events
+        $upcomingHostedEvents = Event::whereIn('id', $hostedEventIds)
+            ->upcoming()
+            ->count();
+
+        // Tickets sold for hosted events
+        $hostedTicketsSold = Ticket::whereHas('ticketType', function ($query) use ($hostedEventIds) {
+            $query->whereIn('event_id', $hostedEventIds);
+        })->whereHas('order', function ($query) {
+            $query->whereIn('status', ['paid', 'confirmed']);
+        })->count();
+
+        // Revenue from hosted events
+        $hostedRevenue = Order::whereIn('status', ['paid', 'confirmed'])
+            ->whereHas('tickets.ticketType', function ($query) use ($hostedEventIds) {
+                $query->whereIn('event_id', $hostedEventIds);
+            })
+            ->sum('total_cents') / 100;
+
+        return [
+            'has_venues' => true,
+            'venues_count' => count($ownedVenueIds),
+            'hosted_events' => $hostedEventsCount,
+            'upcoming_hosted_events' => $upcomingHostedEvents,
+            'hosted_tickets_sold' => $hostedTicketsSold,
+            'hosted_revenue' => $hostedRevenue,
         ];
     }
 

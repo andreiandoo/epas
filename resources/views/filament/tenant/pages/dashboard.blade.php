@@ -104,6 +104,45 @@
             </div>
         </div>
 
+        <!-- Venue Activity Section (only for venue owners) -->
+        @if($venueStats && $venueStats['has_venues'])
+            <div class="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-xl p-5 mb-6 text-white">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-white/20 rounded-lg">
+                            <x-heroicon-o-building-office-2 class="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-lg">Venue Activity</h3>
+                            <p class="text-white/80 text-sm">Events hosted by other organizers at your {{ $venueStats['venues_count'] }} venue{{ $venueStats['venues_count'] > 1 ? 's' : '' }}</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('filament.tenant.pages.venue-usage') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-600 bg-white rounded-lg hover:bg-purple-50 transition-colors">
+                        <x-heroicon-o-arrow-right class="w-4 h-4" />
+                        View Details
+                    </a>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white/10 rounded-lg p-3">
+                        <p class="text-2xl font-bold">{{ number_format($venueStats['hosted_events']) }}</p>
+                        <p class="text-xs text-white/80 uppercase tracking-wide">Hosted Events</p>
+                    </div>
+                    <div class="bg-white/10 rounded-lg p-3">
+                        <p class="text-2xl font-bold">{{ number_format($venueStats['upcoming_hosted_events']) }}</p>
+                        <p class="text-xs text-white/80 uppercase tracking-wide">Upcoming</p>
+                    </div>
+                    <div class="bg-white/10 rounded-lg p-3">
+                        <p class="text-2xl font-bold">{{ number_format($venueStats['hosted_tickets_sold']) }}</p>
+                        <p class="text-xs text-white/80 uppercase tracking-wide">Tickets Sold</p>
+                    </div>
+                    <div class="bg-white/10 rounded-lg p-3">
+                        <p class="text-2xl font-bold">{{ number_format($venueStats['hosted_revenue'], 2) }} <span class="text-sm font-medium text-white/70">{{ $tenant->currency ?? 'EUR' }}</span></p>
+                        <p class="text-xs text-white/80 uppercase tracking-wide">Revenue</p>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <!-- Charts Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" wire:key="charts-{{ $chartPeriod }}">
             <!-- Sales Chart -->
