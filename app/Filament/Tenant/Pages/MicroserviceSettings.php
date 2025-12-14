@@ -111,6 +111,7 @@ class MicroserviceSettings extends Page
             'door-sales' => $this->getDoorSalesSchema(),
             'affiliate-tracking' => $this->getAffiliateTrackingSchema(),
             'whatsapp-notifications', 'whatsapp', 'whatsapp-cloud' => $this->getWhatsAppSchema(),
+            'shop' => $this->getShopSchema(),
             default => $this->getDefaultSchema(),
         };
     }
@@ -658,6 +659,196 @@ class MicroserviceSettings extends Page
                         ->default('I agree to receive order updates and event reminders via WhatsApp')
                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Text shown next to the opt-in checkbox during checkout'),
                 ])->columns(1),
+        ];
+    }
+
+    protected function getShopSchema(): array
+    {
+        return [
+            SC\Section::make('Shop Pages')
+                ->description('Quick access to shop management pages')
+                ->schema([
+                    Forms\Components\Placeholder::make('shop_links')
+                        ->content(new HtmlString('
+                            <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                <a href="' . route('filament.tenant.resources.shop-products.index') . '"
+                                   class="flex items-center p-4 bg-white border rounded-lg shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                    <svg class="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                    </svg>
+                                    <div class="ml-3">
+                                        <p class="font-medium text-gray-900 dark:text-white">Products</p>
+                                        <p class="text-sm text-gray-500">Manage products & variants</p>
+                                    </div>
+                                </a>
+                                <a href="' . route('filament.tenant.resources.shop-categories.index') . '"
+                                   class="flex items-center p-4 bg-white border rounded-lg shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                    <svg class="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                                    </svg>
+                                    <div class="ml-3">
+                                        <p class="font-medium text-gray-900 dark:text-white">Categories</p>
+                                        <p class="text-sm text-gray-500">Organize your products</p>
+                                    </div>
+                                </a>
+                                <a href="' . route('filament.tenant.resources.shop-orders.index') . '"
+                                   class="flex items-center p-4 bg-white border rounded-lg shadow-sm hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700">
+                                    <svg class="w-8 h-8 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                                    </svg>
+                                    <div class="ml-3">
+                                        <p class="font-medium text-gray-900 dark:text-white">Orders</p>
+                                        <p class="text-sm text-gray-500">View & manage orders</p>
+                                    </div>
+                                </a>
+                            </div>
+                        ')),
+                ]),
+
+            SC\Section::make('Store Settings')
+                ->description('Configure your store defaults')
+                ->schema([
+                    Forms\Components\TextInput::make('store_name')
+                        ->label('Store Name')
+                        ->placeholder('My Online Store')
+                        ->maxLength(100),
+
+                    Forms\Components\Select::make('default_currency')
+                        ->label('Default Currency')
+                        ->options([
+                            'RON' => 'RON - Romanian Leu',
+                            'EUR' => 'EUR - Euro',
+                            'USD' => 'USD - US Dollar',
+                        ])
+                        ->default('RON'),
+
+                    Forms\Components\TextInput::make('tax_rate')
+                        ->label('Default Tax Rate (%)')
+                        ->numeric()
+                        ->suffix('%')
+                        ->default(19)
+                        ->minValue(0)
+                        ->maxValue(100)
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Default VAT rate for products'),
+
+                    Forms\Components\Select::make('tax_mode')
+                        ->label('Tax Mode')
+                        ->options([
+                            'included' => 'Tax Included in Prices',
+                            'added_on_top' => 'Tax Added at Checkout',
+                        ])
+                        ->default('included')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'How tax is calculated for products'),
+                ])->columns(2),
+
+            SC\Section::make('Checkout Settings')
+                ->description('Configure checkout behavior')
+                ->schema([
+                    Forms\Components\Toggle::make('require_account')
+                        ->label('Require Customer Account')
+                        ->default(false)
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Require customers to create an account to checkout'),
+
+                    Forms\Components\Toggle::make('guest_checkout')
+                        ->label('Allow Guest Checkout')
+                        ->default(true)
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Allow customers to checkout without an account'),
+
+                    Forms\Components\Toggle::make('combined_checkout')
+                        ->label('Combined with Tickets')
+                        ->default(true)
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Allow products and tickets in the same checkout'),
+
+                    Forms\Components\TextInput::make('cart_expiry_hours')
+                        ->label('Cart Expiry (hours)')
+                        ->numeric()
+                        ->default(72)
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'How long carts remain active for abandonment recovery'),
+                ])->columns(2),
+
+            SC\Section::make('Inventory Settings')
+                ->description('Configure inventory behavior')
+                ->schema([
+                    Forms\Components\Toggle::make('track_inventory')
+                        ->label('Track Inventory by Default')
+                        ->default(true)
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Default setting for new products'),
+
+                    Forms\Components\TextInput::make('low_stock_threshold')
+                        ->label('Low Stock Alert Threshold')
+                        ->numeric()
+                        ->default(5)
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Default threshold for low stock alerts'),
+
+                    Forms\Components\Toggle::make('allow_backorders')
+                        ->label('Allow Backorders')
+                        ->default(false)
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Allow orders when products are out of stock'),
+
+                    Forms\Components\Toggle::make('stock_alert_emails')
+                        ->label('Low Stock Email Alerts')
+                        ->default(true)
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Receive email when stock is low'),
+                ])->columns(2),
+
+            SC\Section::make('Digital Products')
+                ->description('Settings for digital downloads')
+                ->schema([
+                    Forms\Components\TextInput::make('download_limit')
+                        ->label('Default Download Limit')
+                        ->numeric()
+                        ->default(5)
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Maximum downloads per purchase (0 = unlimited)'),
+
+                    Forms\Components\TextInput::make('download_expiry_days')
+                        ->label('Download Expiry (days)')
+                        ->numeric()
+                        ->default(30)
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Days until download link expires (0 = never)'),
+                ])->columns(2),
+
+            SC\Section::make('Abandoned Cart Recovery')
+                ->description('Recover abandoned carts with email reminders')
+                ->schema([
+                    Forms\Components\Toggle::make('abandoned_cart_enabled')
+                        ->label('Enable Recovery Emails')
+                        ->default(true)
+                        ->live(),
+
+                    Forms\Components\TextInput::make('abandoned_cart_hours')
+                        ->label('Hours Before First Email')
+                        ->numeric()
+                        ->default(1)
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('abandoned_cart_enabled'))
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Wait time before sending first recovery email'),
+
+                    Forms\Components\TextInput::make('abandoned_cart_max_emails')
+                        ->label('Maximum Recovery Emails')
+                        ->numeric()
+                        ->default(3)
+                        ->minValue(1)
+                        ->maxValue(5)
+                        ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => $get('abandoned_cart_enabled'))
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'How many recovery emails to send'),
+                ])->columns(3),
+
+            SC\Section::make('Reviews & Ratings')
+                ->description('Configure product review settings')
+                ->schema([
+                    Forms\Components\Toggle::make('reviews_enabled')
+                        ->label('Enable Product Reviews')
+                        ->default(true),
+
+                    Forms\Components\Toggle::make('reviews_require_purchase')
+                        ->label('Require Purchase to Review')
+                        ->default(true)
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Only customers who purchased can leave reviews'),
+
+                    Forms\Components\Toggle::make('reviews_moderation')
+                        ->label('Moderate Reviews')
+                        ->default(true)
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Require approval before reviews are visible'),
+                ])->columns(3),
         ];
     }
 

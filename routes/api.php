@@ -29,6 +29,11 @@ use App\Http\Controllers\Api\TenantClient\ThemeController;
 use App\Http\Controllers\Api\TenantClient\PagesController;
 use App\Http\Controllers\Api\TenantClient\CookieConsentController;
 use App\Http\Controllers\Api\TenantClient\BlogController;
+use App\Http\Controllers\Api\TenantClient\ShopProductController;
+use App\Http\Controllers\Api\TenantClient\ShopCartController;
+use App\Http\Controllers\Api\TenantClient\ShopOrderController;
+use App\Http\Controllers\Api\TenantClient\ShopReviewController;
+use App\Http\Controllers\Api\TenantClient\ShopEventProductController;
 use App\Http\Controllers\Api\DocSearchController;
 use App\Http\Controllers\Api\TenantClientController;
 
@@ -925,6 +930,59 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.blog.categories');
         Route::get('/{slug}', [BlogController::class, 'show'])
             ->name('api.tenant-client.blog.show');
+    });
+
+    // Shop (public - requires shop microservice)
+    Route::prefix('shop')->group(function () {
+        // Products
+        Route::get('/products', [ShopProductController::class, 'index'])
+            ->name('api.tenant-client.shop.products.index');
+        Route::get('/products/featured', [ShopProductController::class, 'featured'])
+            ->name('api.tenant-client.shop.products.featured');
+        Route::get('/products/{slug}', [ShopProductController::class, 'show'])
+            ->name('api.tenant-client.shop.products.show');
+        Route::get('/categories', [ShopProductController::class, 'categories'])
+            ->name('api.tenant-client.shop.categories');
+
+        // Shop Cart
+        Route::get('/cart', [ShopCartController::class, 'index'])
+            ->name('api.tenant-client.shop.cart.index');
+        Route::post('/cart/items', [ShopCartController::class, 'addItem'])
+            ->name('api.tenant-client.shop.cart.add');
+        Route::put('/cart/items/{itemId}', [ShopCartController::class, 'updateItem'])
+            ->name('api.tenant-client.shop.cart.update');
+        Route::delete('/cart/items/{itemId}', [ShopCartController::class, 'removeItem'])
+            ->name('api.tenant-client.shop.cart.remove');
+        Route::delete('/cart', [ShopCartController::class, 'clear'])
+            ->name('api.tenant-client.shop.cart.clear');
+        Route::post('/cart/coupon', [ShopCartController::class, 'applyCoupon'])
+            ->name('api.tenant-client.shop.cart.coupon.apply');
+        Route::delete('/cart/coupon', [ShopCartController::class, 'removeCoupon'])
+            ->name('api.tenant-client.shop.cart.coupon.remove');
+        Route::post('/cart/gift-card', [ShopCartController::class, 'applyGiftCard'])
+            ->name('api.tenant-client.shop.cart.gift-card');
+
+        // Shop Orders
+        Route::get('/orders', [ShopOrderController::class, 'index'])
+            ->name('api.tenant-client.shop.orders.index');
+        Route::get('/orders/{orderNumber}', [ShopOrderController::class, 'show'])
+            ->name('api.tenant-client.shop.orders.show');
+        Route::get('/orders/{orderNumber}/downloads', [ShopOrderController::class, 'downloads'])
+            ->name('api.tenant-client.shop.orders.downloads');
+
+        // Reviews
+        Route::get('/products/{slug}/reviews', [ShopReviewController::class, 'index'])
+            ->name('api.tenant-client.shop.reviews.index');
+        Route::post('/products/{slug}/reviews', [ShopReviewController::class, 'store'])
+            ->name('api.tenant-client.shop.reviews.store');
+
+        // Event Products (Upsells & Bundles)
+        Route::get('/events/{eventId}/upsells', [ShopEventProductController::class, 'upsells'])
+            ->name('api.tenant-client.shop.events.upsells');
+        Route::get('/ticket-types/{ticketTypeId}/upsells', [ShopEventProductController::class, 'ticketTypeUpsells'])
+            ->name('api.tenant-client.shop.ticket-types.upsells');
+        Route::get('/ticket-types/{ticketTypeId}/bundles', [ShopEventProductController::class, 'bundles'])
+            ->name('api.tenant-client.shop.ticket-types.bundles');
     });
 
     // Cart
