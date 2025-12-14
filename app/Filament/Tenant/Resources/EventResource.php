@@ -1040,9 +1040,14 @@ class EventResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->before(function ($records) use ($tenant) {
+                            // Filter out hosted events - can only delete own events
+                            return $records->filter(fn ($record) => $record->tenant_id === $tenant?->id);
+                        }),
                 ]),
             ])
+            ->checkIfRecordIsSelectableUsing(fn (Event $record) => $record->tenant_id === $tenant?->id)
             ->defaultSort('created_at', 'desc');
     }
 

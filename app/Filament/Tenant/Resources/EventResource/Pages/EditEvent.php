@@ -10,6 +10,17 @@ class EditEvent extends EditRecord
 {
     protected static string $resource = EventResource::class;
 
+    public function mount(int|string $record): void
+    {
+        parent::mount($record);
+
+        // Redirect hosted events to view-guest page (can't edit events you don't own)
+        $tenant = auth()->user()?->tenant;
+        if ($this->record->tenant_id !== $tenant?->id) {
+            redirect(EventResource::getUrl('view-guest', ['record' => $this->record]));
+        }
+    }
+
     protected function getHeaderActions(): array
     {
         $tenant = auth()->user()->tenant;
