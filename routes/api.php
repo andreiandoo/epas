@@ -34,6 +34,9 @@ use App\Http\Controllers\Api\TenantClient\ShopCartController;
 use App\Http\Controllers\Api\TenantClient\ShopOrderController;
 use App\Http\Controllers\Api\TenantClient\ShopReviewController;
 use App\Http\Controllers\Api\TenantClient\ShopEventProductController;
+use App\Http\Controllers\Api\TenantClient\ShopCheckoutController;
+use App\Http\Controllers\Api\TenantClient\ShopWishlistController;
+use App\Http\Controllers\Api\TenantClient\ShopStockAlertController;
 use App\Http\Controllers\Api\DocSearchController;
 use App\Http\Controllers\Api\TenantClientController;
 
@@ -983,6 +986,48 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.shop.ticket-types.upsells');
         Route::get('/ticket-types/{ticketTypeId}/bundles', [ShopEventProductController::class, 'bundles'])
             ->name('api.tenant-client.shop.ticket-types.bundles');
+
+        // Checkout
+        Route::get('/checkout/initialize', [ShopCheckoutController::class, 'initialize'])
+            ->name('api.tenant-client.shop.checkout.initialize');
+        Route::post('/checkout/shipping-methods', [ShopCheckoutController::class, 'shippingMethods'])
+            ->name('api.tenant-client.shop.checkout.shipping-methods');
+        Route::post('/checkout/validate', [ShopCheckoutController::class, 'validate'])
+            ->name('api.tenant-client.shop.checkout.validate');
+        Route::post('/checkout/calculate', [ShopCheckoutController::class, 'calculateTotals'])
+            ->name('api.tenant-client.shop.checkout.calculate');
+        Route::post('/checkout/create-order', [ShopCheckoutController::class, 'createOrder'])
+            ->name('api.tenant-client.shop.checkout.create-order');
+        Route::post('/checkout/orders/{orderNumber}/confirm-payment', [ShopCheckoutController::class, 'confirmPayment'])
+            ->name('api.tenant-client.shop.checkout.confirm-payment');
+
+        // Wishlist
+        Route::get('/wishlist', [ShopWishlistController::class, 'index'])
+            ->name('api.tenant-client.shop.wishlist.index');
+        Route::post('/wishlist/items', [ShopWishlistController::class, 'addItem'])
+            ->name('api.tenant-client.shop.wishlist.add');
+        Route::delete('/wishlist/items/{itemId}', [ShopWishlistController::class, 'removeItem'])
+            ->name('api.tenant-client.shop.wishlist.remove');
+        Route::delete('/wishlist/products/{productId}', [ShopWishlistController::class, 'removeByProduct'])
+            ->name('api.tenant-client.shop.wishlist.remove-by-product');
+        Route::get('/wishlist/check/{productId}', [ShopWishlistController::class, 'check'])
+            ->name('api.tenant-client.shop.wishlist.check');
+        Route::delete('/wishlist', [ShopWishlistController::class, 'clear'])
+            ->name('api.tenant-client.shop.wishlist.clear');
+        Route::post('/wishlist/merge', [ShopWishlistController::class, 'merge'])
+            ->name('api.tenant-client.shop.wishlist.merge');
+
+        // Stock Alerts
+        Route::post('/stock-alerts/subscribe', [ShopStockAlertController::class, 'subscribe'])
+            ->name('api.tenant-client.shop.stock-alerts.subscribe');
+        Route::delete('/stock-alerts/{alertId}', [ShopStockAlertController::class, 'unsubscribe'])
+            ->name('api.tenant-client.shop.stock-alerts.unsubscribe');
+        Route::post('/stock-alerts/unsubscribe-by-product', [ShopStockAlertController::class, 'unsubscribeByProduct'])
+            ->name('api.tenant-client.shop.stock-alerts.unsubscribe-by-product');
+        Route::get('/stock-alerts/my-alerts', [ShopStockAlertController::class, 'myAlerts'])
+            ->name('api.tenant-client.shop.stock-alerts.my-alerts');
+        Route::get('/stock-alerts/check/{productId}', [ShopStockAlertController::class, 'check'])
+            ->name('api.tenant-client.shop.stock-alerts.check');
     });
 
     // Cart

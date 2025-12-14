@@ -9,6 +9,7 @@ use App\Models\Shop\ShopProductVariant;
 use App\Models\Shop\ShopGiftCard;
 use App\Models\Tenant;
 use App\Services\Coupon\CouponService;
+use App\Events\Shop\ShopItemAddedToCart;
 use Illuminate\Support\Facades\DB;
 
 class ShopCartService
@@ -164,6 +165,9 @@ class ShopCartService
         }
 
         $item = $cart->addItem($productId, $variantId, $quantity, $priceCents);
+
+        // Dispatch add to cart event for tracking
+        ShopItemAddedToCart::dispatch($cart->tenant_id, $cart, $item, $product);
 
         return [
             'success' => true,

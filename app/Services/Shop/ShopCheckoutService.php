@@ -12,7 +12,13 @@ use App\Models\Shop\ShopShippingZone;
 use App\Models\Shop\ShopShippingMethod;
 use App\Models\Tenant;
 use App\Services\Coupon\CouponService;
+use App\Events\Shop\ShopOrderCreated;
+use App\Events\Shop\ShopOrderCompleted;
+use App\Events\Shop\ShopOrderRefunded;
+use App\Events\Shop\ShopCheckoutStarted;
+use App\Notifications\Shop\ShopOrderConfirmedNotification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 class ShopCheckoutService
@@ -367,6 +373,9 @@ class ShopCheckoutService
             // Mark cart as converted
             $cart->markAsConverted($order->id);
 
+            // Dispatch order created event for tracking
+            ShopOrderCreated::dispatch($tenant->id, $order->fresh(['items']));
+
             return [
                 'success' => true,
                 'order' => $order->fresh(['items']),
@@ -391,10 +400,18 @@ class ShopCheckoutService
         // Deduct inventory (was reserved during order creation)
         $this->inventoryService->confirmInventoryDeduction($order);
 
-        // Send notifications (to be implemented)
-        // TODO: Dispatch order confirmation notification
+        $order = $order->fresh(['items', 'tenant']);
 
-        return $order->fresh();
+        // Dispatch order completed event for tracking (Purchase event)
+        ShopOrderCompleted::dispatch($order->tenant_id, $order, $paymentData);
+
+        // Send order confirmation notification
+        if ($order->customer_email) {
+            Notification::route('mail', $order->customer_email)
+                ->notify(new ShopOrderConfirmedNotification($order));
+        }
+
+        return $order;
     }
 
     public function markOrderPaymentFailed(ShopOrder $order, ?string $reason = null): ShopOrder
@@ -498,6 +515,9 @@ class ShopCheckoutService
             }
         });
 
+        // Dispatch refund event for tracking
+        ShopOrderRefunded::dispatch($order->tenant_id, $order->fresh(), $amountCents, $reason);
+
         return [
             'success' => true,
             'order' => $order->fresh(),
@@ -529,6 +549,9 @@ class ShopCheckoutService
         $requiresShipping = $cart->items()
             ->whereHas('product', fn($q) => $q->where('type', 'physical'))
             ->exists();
+
+        // Dispatch checkout started event for tracking
+        ShopCheckoutStarted::dispatch($tenant->id, $cart, $cart->customer_id);
 
         return [
             'cart' => $this->cartService->formatCart($cart),
