@@ -103,6 +103,9 @@ class Dashboard extends Page
         // Venue activity stats (for tenants who own venues)
         $venueStats = $this->getVenueActivityStats($tenant);
 
+        // Analytics comparison (own vs hosted) - only for venue owners
+        $comparisonData = $this->getComparisonAnalytics($tenant, $startDate, $endDate, $days);
+
         return [
             'tenant' => $tenant,
             'stats' => [
@@ -116,6 +119,7 @@ class Dashboard extends Page
             'ticketChartData' => $ticketChartData,
             'chartPeriod' => $this->chartPeriod,
             'venueStats' => $venueStats,
+            'comparisonData' => $comparisonData,
         ];
     }
 
@@ -266,6 +270,116 @@ class Dashboard extends Page
             'labels' => $labels,
             'data' => $data,
             'tooltipData' => $tooltipData,
+        ];
+    }
+
+    /**
+     * Get comparison analytics between own events and hosted events
+     */
+    private function getComparisonAnalytics(Tenant $tenant, Carbon $startDate, Carbon $endDate, int $days): ?array
+    {
+        // Only for venue owners
+        if (!$tenant->ownsVenues()) {
+            return null;
+        }
+
+        $tenantId = $tenant->id;
+        $ownedVenueIds = $tenant->venues()->pluck('id')->toArray();
+
+        // Get hosted event IDs
+        $hostedEventIds = Event::whereIn('venue_id', $ownedVenueIds)
+            ->where('tenant_id', '!=', $tenantId)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($hostedEventIds)) {
+            return null;
+        }
+
+        $labels = [];
+        $ownSalesData = [];
+        $hostedSalesData = [];
+        $ownTicketsData = [];
+        $hostedTicketsData = [];
+
+        // Get daily own sales
+        $ownDailySales = Order::where('tenant_id', $tenantId)
+            ->whereIn('status', ['paid', 'confirmed'])
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('DATE(created_at) as date, SUM(total_cents) / 100 as total')
+            ->groupBy('date')
+            ->pluck('total', 'date')
+            ->toArray();
+
+        // Get daily hosted sales (revenue from hosted events)
+        $hostedDailySales = Order::whereIn('status', ['paid', 'confirmed'])
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereHas('tickets.ticketType', function ($query) use ($hostedEventIds) {
+                $query->whereIn('event_id', $hostedEventIds);
+            })
+            ->selectRaw('DATE(created_at) as date, SUM(total_cents) / 100 as total')
+            ->groupBy('date')
+            ->pluck('total', 'date')
+            ->toArray();
+
+        // Get daily own tickets
+        $ownTickets = Ticket::with('order')
+            ->whereHas('order', function ($query) use ($tenantId, $startDate, $endDate) {
+                $query->where('tenant_id', $tenantId)
+                    ->whereIn('status', ['paid', 'confirmed'])
+                    ->whereBetween('created_at', [$startDate, $endDate]);
+            })
+            ->get()
+            ->groupBy(fn ($ticket) => $ticket->order->created_at->format('Y-m-d'))
+            ->map(fn ($group) => $group->count())
+            ->toArray();
+
+        // Get daily hosted tickets
+        $hostedTickets = Ticket::with('order')
+            ->whereHas('ticketType', function ($query) use ($hostedEventIds) {
+                $query->whereIn('event_id', $hostedEventIds);
+            })
+            ->whereHas('order', function ($query) use ($startDate, $endDate) {
+                $query->whereIn('status', ['paid', 'confirmed'])
+                    ->whereBetween('created_at', [$startDate, $endDate]);
+            })
+            ->get()
+            ->groupBy(fn ($ticket) => $ticket->order->created_at->format('Y-m-d'))
+            ->map(fn ($group) => $group->count())
+            ->toArray();
+
+        // Fill in all days
+        $current = $startDate->copy();
+        while ($current <= $endDate) {
+            $dateKey = $current->format('Y-m-d');
+            $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
+            $ownSalesData[] = (float) ($ownDailySales[$dateKey] ?? 0);
+            $hostedSalesData[] = (float) ($hostedDailySales[$dateKey] ?? 0);
+            $ownTicketsData[] = (int) ($ownTickets[$dateKey] ?? 0);
+            $hostedTicketsData[] = (int) ($hostedTickets[$dateKey] ?? 0);
+            $current->addDay();
+        }
+
+        // Calculate totals for the period
+        $ownSalesTotal = array_sum($ownSalesData);
+        $hostedSalesTotal = array_sum($hostedSalesData);
+        $ownTicketsTotal = array_sum($ownTicketsData);
+        $hostedTicketsTotal = array_sum($hostedTicketsData);
+
+        return [
+            'labels' => $labels,
+            'sales' => [
+                'own' => $ownSalesData,
+                'hosted' => $hostedSalesData,
+                'own_total' => $ownSalesTotal,
+                'hosted_total' => $hostedSalesTotal,
+            ],
+            'tickets' => [
+                'own' => $ownTicketsData,
+                'hosted' => $hostedTicketsData,
+                'own_total' => $ownTicketsTotal,
+                'hosted_total' => $hostedTicketsTotal,
+            ],
         ];
     }
 }

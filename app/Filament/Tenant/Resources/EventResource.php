@@ -31,6 +31,36 @@ class EventResource extends Resource
     protected static \UnitEnum|string|null $navigationGroup = null;
     protected static ?int $navigationSort = 2;
 
+    /**
+     * Navigation badge showing hosted events count
+     */
+    public static function getNavigationBadge(): ?string
+    {
+        $tenant = auth()->user()?->tenant;
+        if (!$tenant || !$tenant->ownsVenues()) {
+            return null;
+        }
+
+        $hostedCount = $tenant->hostedEvents()->count();
+        return $hostedCount > 0 ? (string) $hostedCount : null;
+    }
+
+    /**
+     * Navigation badge color
+     */
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'info';
+    }
+
+    /**
+     * Navigation badge tooltip
+     */
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'Hosted events at your venues';
+    }
+
     public static function getEloquentQuery(): Builder
     {
         $tenant = auth()->user()->tenant;

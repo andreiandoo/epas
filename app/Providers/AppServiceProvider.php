@@ -47,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Invoice::observe(\App\Observers\InvoiceObserver::class);
         \App\Models\Artist::observe(\App\Observers\ArtistObserver::class);
         \App\Models\Order::observe(\App\Observers\OrderObserver::class);
+        \App\Models\Event::observe(\App\Observers\EventObserver::class);
 
         // Register microservices event listeners
         \Illuminate\Support\Facades\Event::listen(

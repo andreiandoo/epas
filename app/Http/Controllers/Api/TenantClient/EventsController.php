@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Models\Venue;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class EventsController extends Controller
@@ -41,11 +42,15 @@ class EventsController extends Controller
     }
 
     /**
-     * Get venue IDs owned by a tenant
+     * Get venue IDs owned by a tenant (cached for 10 minutes)
      */
     private function getOwnedVenueIds(Tenant $tenant): array
     {
-        return Venue::where('tenant_id', $tenant->id)->pluck('id')->toArray();
+        $cacheKey = "tenant_{$tenant->id}_owned_venue_ids";
+
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($tenant) {
+            return Venue::where('tenant_id', $tenant->id)->pluck('id')->toArray();
+        });
     }
 
     /**
