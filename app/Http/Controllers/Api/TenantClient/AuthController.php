@@ -7,6 +7,7 @@ use App\Models\Customer;
 use App\Models\CustomerToken;
 use App\Models\Domain;
 use App\Models\Tenant;
+use App\Services\Gamification\GamificationService;
 use App\Services\TenantMailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +18,12 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    protected GamificationService $gamificationService;
+
+    public function __construct(GamificationService $gamificationService)
+    {
+        $this->gamificationService = $gamificationService;
+    }
     /**
      * Resolve tenant from request (hostname preferred, ID fallback)
      */
@@ -65,6 +72,7 @@ class AuthController extends Controller
             'phone' => 'nullable|string|max:50',
             'notification_email' => 'nullable|boolean',
             'notification_whatsapp' => 'nullable|boolean',
+            'referral_code' => 'nullable|string|max:20',
         ]);
 
         // Check if customer already exists for this tenant
@@ -108,6 +116,9 @@ class AuthController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+
+        // Process gamification: signup bonus and referral
+        $this->processGamificationOnSignup($tenant, $customer, $validated['referral_code'] ?? null);
 
         // Generate token
         $token = Str::random(64);
@@ -507,6 +518,44 @@ class AuthController extends Controller
                 'customer_id' => $customer->id,
                 'email' => $customer->email,
                 'tenant_id' => $tenant->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Process gamification rewards on signup (bonus points and referral)
+     */
+    private function processGamificationOnSignup(Tenant $tenant, Customer $customer, ?string $referralCode = null): void
+    {
+        try {
+            // Check if gamification is enabled
+            if (!$this->gamificationService->isEnabled($tenant->id)) {
+                return;
+            }
+
+            // Award signup bonus
+            $this->gamificationService->awardSignupBonus($tenant->id, $customer->id);
+
+            // Process referral if code provided
+            if ($referralCode) {
+                $referral = $this->gamificationService->processReferralSignup($tenant->id, $customer, $referralCode);
+
+                if ($referral) {
+                    Log::info('Referral processed on signup', [
+                        'tenant_id' => $tenant->id,
+                        'customer_id' => $customer->id,
+                        'referral_code' => $referralCode,
+                        'referral_id' => $referral->id,
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            // Log but don't block registration
+            Log::warning('Gamification processing failed on signup', [
+                'customer_id' => $customer->id,
+                'tenant_id' => $tenant->id,
+                'referral_code' => $referralCode,
                 'error' => $e->getMessage(),
             ]);
         }

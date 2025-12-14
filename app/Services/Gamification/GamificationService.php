@@ -269,6 +269,7 @@ class GamificationService
             'max_redeemable' => $maxRedeemable,
             'max_discount_cents' => $config->getPointsValueCents($maxRedeemable),
             'point_value_cents' => $config->point_value_cents,
+            'min_redeem_points' => $config->min_redeem_points,
             'points_name' => $config->points_name,
         ];
     }
@@ -621,7 +622,7 @@ class GamificationService
             ->count();
 
         return [
-            'items' => $transactions->map(function ($t) {
+            'transactions' => $transactions->map(function ($t) {
                 return [
                     'id' => $t->id,
                     'type' => $t->type,
@@ -636,8 +637,12 @@ class GamificationService
                     'expires_at' => $t->expires_at?->toIso8601String(),
                 ];
             }),
-            'total' => $total,
-            'has_more' => ($offset + $limit) < $total,
+            'pagination' => [
+                'total' => $total,
+                'has_more' => ($offset + $limit) < $total,
+                'offset' => $offset,
+                'limit' => $limit,
+            ],
         ];
     }
 }
