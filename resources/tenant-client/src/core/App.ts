@@ -34,6 +34,12 @@ export class TixelloApp {
     async mount(element: HTMLElement): Promise<void> {
         this.mountPoint = element;
 
+        // Use the Router's eventBus for cross-component communication
+        const sharedEventBus = this.router.getEventBus();
+
+        // Set dependencies for modules that need them
+        this.moduleLoader.setDependencies(this.apiClient, sharedEventBus);
+
         // Load enabled modules
         await this.moduleLoader.loadAll();
 

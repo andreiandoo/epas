@@ -3,6 +3,7 @@ import { TemplateManager } from '../templates';
 import { PageBuilderModule, PageLayout } from '../modules/PageBuilderModule';
 import { PreviewMode } from './PreviewMode';
 import { Tracking } from './TrackingModule';
+import { EventBus } from './EventBus';
 
 type RouteHandler = (params: Record<string, string>) => void | Promise<void>;
 
@@ -217,9 +218,11 @@ export class Router {
     private currentPath: string = '';
     private authToken: string | null = null;
     private currentUser: any = null;
+    private eventBus: EventBus;
 
     constructor(config: TixelloConfig) {
         this.config = config;
+        this.eventBus = new EventBus();
         TemplateManager.init(config);
         this.loadAuthState();
         this.setupDefaultRoutes();
@@ -461,6 +464,18 @@ export class Router {
         this.addRoute('/page/:slug', this.renderPage.bind(this));
         this.addRoute('/blog', this.renderBlog.bind(this));
         this.addRoute('/blog/:slug', this.renderBlogArticle.bind(this));
+
+        // Shop routes
+        this.addRoute('/shop', this.renderShop.bind(this));
+        this.addRoute('/shop/category/:slug', this.renderShopCategory.bind(this));
+        this.addRoute('/shop/product/:slug', this.renderShopProduct.bind(this));
+        this.addRoute('/shop/cart', this.renderShopCart.bind(this));
+        this.addRoute('/shop/checkout', this.renderShopCheckout.bind(this));
+        this.addRoute('/shop/thank-you/:orderNumber', this.renderShopThankYou.bind(this));
+        this.addRoute('/account/shop-orders', this.renderAccountShopOrders.bind(this));
+        this.addRoute('/account/shop-orders/:id', this.renderAccountShopOrderDetail.bind(this));
+        this.addRoute('/account/wishlist', this.renderAccountWishlist.bind(this));
+        this.addRoute('/account/stock-alerts', this.renderAccountStockAlerts.bind(this));
     }
 
     addRoute(path: string, handler: RouteHandler): void {
@@ -480,6 +495,10 @@ export class Router {
     navigate(path: string): void {
         window.history.pushState({}, '', path);
         this.handleRoute();
+    }
+
+    getEventBus(): EventBus {
+        return this.eventBus;
     }
 
     private handleRoute(): void {
@@ -5598,5 +5617,228 @@ private async renderProfile(): Promise<void> {
 
         // Update every second
         setInterval(updateCountdown, 1000);
+    }
+
+    // ========================================
+    // SHOP ROUTES
+    // ========================================
+
+    private renderShop(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="shop-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        ${Array(8).fill(0).map(() => '<div class="h-64 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // ShopModule will handle loading via eventBus
+        this.eventBus.emit('route:shop');
+    }
+
+    private renderShopCategory(params: Record<string, string>): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="shop-category-container" data-slug="${params.slug}" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        ${Array(8).fill(0).map(() => '<div class="h-64 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:shop-category', params.slug);
+    }
+
+    private renderShopProduct(params: Record<string, string>): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="shop-product-container" data-slug="${params.slug}" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div class="h-96 bg-gray-200 rounded"></div>
+                        <div class="space-y-4">
+                            <div class="h-8 bg-gray-200 rounded w-3/4"></div>
+                            <div class="h-6 bg-gray-200 rounded w-1/4"></div>
+                            <div class="h-24 bg-gray-200 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:shop-product', params.slug);
+    }
+
+    private renderShopCart(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="shop-cart-container" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="space-y-3">
+                        ${Array(3).fill(0).map(() => '<div class="h-24 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:shop-cart');
+    }
+
+    private renderShopCheckout(): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="shop-checkout-container" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <div class="md:col-span-2 space-y-4">
+                            <div class="h-48 bg-gray-200 rounded"></div>
+                            <div class="h-48 bg-gray-200 rounded"></div>
+                        </div>
+                        <div class="h-64 bg-gray-200 rounded"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:shop-checkout');
+    }
+
+    private renderShopThankYou(params: Record<string, string>): void {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="shop-thank-you-container" data-order="${params.orderNumber}" class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
+                <div class="bg-white rounded-lg shadow-lg p-8">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-900 mb-2">Comanda plasata cu succes!</h1>
+                    <p class="text-gray-600 mb-4">Numarul comenzii: <span class="font-mono font-bold">${params.orderNumber}</span></p>
+                    <p class="text-gray-500 mb-6">Vei primi un email de confirmare cu detaliile comenzii.</p>
+                    <div class="space-y-3">
+                        <a href="/shop" class="block w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition">
+                            Continua cumparaturile
+                        </a>
+                        <a href="/account/shop-orders" class="block w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                            Vezi comenzile mele
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:shop-thank-you', params.orderNumber);
+    }
+
+    private renderAccountShopOrders(): void {
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="shop-orders-container" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="space-y-3">
+                        ${Array(3).fill(0).map(() => '<div class="h-24 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:shop-orders');
+    }
+
+    private renderAccountShopOrderDetail(params: Record<string, string>): void {
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="shop-order-detail-container" data-id="${params.id}" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="h-64 bg-gray-200 rounded"></div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:shop-order-detail', params.id);
+    }
+
+    private renderAccountWishlist(): void {
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="wishlist-container" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        ${Array(4).fill(0).map(() => '<div class="h-48 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:wishlist');
+    }
+
+    private renderAccountStockAlerts(): void {
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="stock-alerts-container" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="space-y-3">
+                        ${Array(3).fill(0).map(() => '<div class="h-16 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:stock-alerts');
     }
 }

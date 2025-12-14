@@ -2704,15 +2704,907 @@ export class SleekClientModule {
         const container = document.getElementById('shop-checkout-container');
         if (!container) return;
 
+        const sessionId = localStorage.getItem('shop_session_id');
+        if (!sessionId) {
+            window.location.hash = '/shop/cart';
+            return;
+        }
+
         container.innerHTML = `
             <div class="sleek-page sleek-animate-in">
                 <div class="sleek-page-header">
                     <h1 class="sleek-page-title">Finalizare comanda</h1>
                 </div>
-                <div id="shop-checkout-content">
-                    <p style="text-align: center; color: var(--sleek-text-muted);">Checkout-ul va fi implementat aici...</p>
+                <div id="shop-checkout-content" class="sleek-loading">
+                    <div class="sleek-spinner"></div>
                 </div>
             </div>
         `;
+
+        await this.loadShopCheckoutContent(sessionId);
+    }
+
+    private async loadShopCheckoutContent(sessionId: string): Promise<void> {
+        if (!this.apiClient) return;
+
+        const contentEl = document.getElementById('shop-checkout-content');
+        if (!contentEl) return;
+
+        try {
+            // Initialize checkout session
+            const initResponse = await this.apiClient.get(`/shop/checkout/initialize?session_id=${sessionId}`);
+
+            const { cart, totals, requires_shipping, currency } = initResponse.data.data;
+
+            if (!cart || !cart.items || cart.items.length === 0) {
+                window.location.hash = '/shop/cart';
+                return;
+            }
+
+            contentEl.innerHTML = `
+                <style>
+                    .checkout-layout {
+                        display: grid;
+                        gap: 2rem;
+                    }
+                    @media (min-width: 1024px) {
+                        .checkout-layout {
+                            grid-template-columns: 1fr 400px;
+                        }
+                    }
+                    .checkout-section {
+                        background: var(--sleek-surface);
+                        border: 1px solid var(--sleek-border);
+                        border-radius: var(--sleek-radius);
+                        padding: 1.5rem;
+                        margin-bottom: 1.5rem;
+                    }
+                    .checkout-section-title {
+                        font-size: 1.125rem;
+                        font-weight: 600;
+                        color: var(--sleek-text);
+                        margin-bottom: 1rem;
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                    }
+                    .checkout-form-row {
+                        display: grid;
+                        gap: 1rem;
+                        margin-bottom: 1rem;
+                    }
+                    @media (min-width: 640px) {
+                        .checkout-form-row.two-cols {
+                            grid-template-columns: 1fr 1fr;
+                        }
+                    }
+                    .checkout-form-group label {
+                        display: block;
+                        font-weight: 500;
+                        color: var(--sleek-text);
+                        margin-bottom: 0.5rem;
+                        font-size: 0.875rem;
+                    }
+                    .checkout-form-group input,
+                    .checkout-form-group select {
+                        width: 100%;
+                        padding: 0.75rem;
+                        border: 1px solid var(--sleek-border);
+                        border-radius: 0.5rem;
+                        background: var(--sleek-bg);
+                        color: var(--sleek-text);
+                        font-size: 1rem;
+                        transition: border-color 0.2s;
+                    }
+                    .checkout-form-group input:focus,
+                    .checkout-form-group select:focus {
+                        outline: none;
+                        border-color: var(--sleek-primary);
+                    }
+                    .shipping-methods {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 0.75rem;
+                    }
+                    .shipping-method {
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 1rem;
+                        padding: 1rem;
+                        border: 2px solid var(--sleek-border);
+                        border-radius: 0.75rem;
+                        cursor: pointer;
+                        transition: all 0.2s;
+                    }
+                    .shipping-method:hover {
+                        border-color: var(--sleek-primary);
+                    }
+                    .shipping-method.selected {
+                        border-color: var(--sleek-primary);
+                        background: rgba(var(--sleek-primary-rgb), 0.05);
+                    }
+                    .shipping-method input {
+                        margin-top: 0.25rem;
+                    }
+                    .shipping-method-info {
+                        flex: 1;
+                    }
+                    .shipping-method-name {
+                        font-weight: 600;
+                        color: var(--sleek-text);
+                    }
+                    .shipping-method-estimate {
+                        font-size: 0.875rem;
+                        color: var(--sleek-primary);
+                        margin-top: 0.25rem;
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                    }
+                    .shipping-method-estimate svg {
+                        width: 16px;
+                        height: 16px;
+                    }
+                    .shipping-method-description {
+                        font-size: 0.8rem;
+                        color: var(--sleek-text-muted);
+                        margin-top: 0.25rem;
+                    }
+                    .shipping-method-price {
+                        font-weight: 600;
+                        color: var(--sleek-text);
+                        white-space: nowrap;
+                    }
+                    .shipping-method-price.free {
+                        color: #10b981;
+                    }
+                    .checkout-summary {
+                        background: var(--sleek-surface);
+                        border: 1px solid var(--sleek-border);
+                        border-radius: var(--sleek-radius);
+                        padding: 1.5rem;
+                        position: sticky;
+                        top: 1rem;
+                    }
+                    .checkout-summary-title {
+                        font-size: 1.125rem;
+                        font-weight: 600;
+                        color: var(--sleek-text);
+                        margin-bottom: 1rem;
+                        padding-bottom: 0.75rem;
+                        border-bottom: 1px solid var(--sleek-border);
+                    }
+                    .checkout-summary-items {
+                        max-height: 200px;
+                        overflow-y: auto;
+                        margin-bottom: 1rem;
+                        padding-bottom: 1rem;
+                        border-bottom: 1px solid var(--sleek-border);
+                    }
+                    .checkout-summary-item {
+                        display: flex;
+                        gap: 0.75rem;
+                        margin-bottom: 0.75rem;
+                    }
+                    .checkout-summary-item:last-child {
+                        margin-bottom: 0;
+                    }
+                    .checkout-summary-item-image {
+                        width: 50px;
+                        height: 50px;
+                        border-radius: 0.5rem;
+                        object-fit: cover;
+                        background: #f3f4f6;
+                    }
+                    .checkout-summary-item-info {
+                        flex: 1;
+                    }
+                    .checkout-summary-item-name {
+                        font-size: 0.875rem;
+                        font-weight: 500;
+                        color: var(--sleek-text);
+                    }
+                    .checkout-summary-item-variant {
+                        font-size: 0.75rem;
+                        color: var(--sleek-text-muted);
+                    }
+                    .checkout-summary-item-qty {
+                        font-size: 0.75rem;
+                        color: var(--sleek-text-muted);
+                    }
+                    .checkout-summary-item-price {
+                        font-size: 0.875rem;
+                        font-weight: 500;
+                        color: var(--sleek-text);
+                        white-space: nowrap;
+                    }
+                    .checkout-summary-row {
+                        display: flex;
+                        justify-content: space-between;
+                        margin-bottom: 0.5rem;
+                        font-size: 0.875rem;
+                    }
+                    .checkout-summary-row.total {
+                        font-size: 1.125rem;
+                        font-weight: 700;
+                        color: var(--sleek-text);
+                        margin-top: 0.75rem;
+                        padding-top: 0.75rem;
+                        border-top: 1px solid var(--sleek-border);
+                    }
+                    .checkout-submit-btn {
+                        width: 100%;
+                        padding: 1rem;
+                        background: linear-gradient(135deg, var(--sleek-gradient-start), var(--sleek-gradient-end));
+                        color: white;
+                        border: none;
+                        border-radius: 0.75rem;
+                        font-size: 1rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                        margin-top: 1rem;
+                        transition: opacity 0.2s, transform 0.2s;
+                    }
+                    .checkout-submit-btn:hover:not(:disabled) {
+                        opacity: 0.9;
+                        transform: translateY(-1px);
+                    }
+                    .checkout-submit-btn:disabled {
+                        opacity: 0.5;
+                        cursor: not-allowed;
+                    }
+                    .checkout-secure-note {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 0.5rem;
+                        margin-top: 1rem;
+                        font-size: 0.75rem;
+                        color: var(--sleek-text-muted);
+                    }
+                    .checkout-secure-note svg {
+                        width: 14px;
+                        height: 14px;
+                    }
+                    #shipping-methods-loading {
+                        padding: 2rem;
+                        text-align: center;
+                        color: var(--sleek-text-muted);
+                    }
+                    #stripe-payment-element {
+                        padding: 1rem;
+                        border: 1px solid var(--sleek-border);
+                        border-radius: 0.5rem;
+                        background: var(--sleek-bg);
+                        min-height: 100px;
+                    }
+                    #stripe-payment-errors {
+                        color: #ef4444;
+                        font-size: 0.875rem;
+                        margin-top: 0.5rem;
+                        display: none;
+                    }
+                </style>
+
+                <form id="shop-checkout-form">
+                    <div class="checkout-layout">
+                        <div class="checkout-form-section">
+                            <!-- Contact Info -->
+                            <div class="checkout-section">
+                                <h2 class="checkout-section-title">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    Informații contact
+                                </h2>
+                                <div class="checkout-form-row two-cols">
+                                    <div class="checkout-form-group">
+                                        <label for="customer_name">Nume complet *</label>
+                                        <input type="text" id="customer_name" name="customer_name" required>
+                                    </div>
+                                    <div class="checkout-form-group">
+                                        <label for="customer_email">Email *</label>
+                                        <input type="email" id="customer_email" name="customer_email" required>
+                                    </div>
+                                </div>
+                                <div class="checkout-form-row">
+                                    <div class="checkout-form-group">
+                                        <label for="customer_phone">Telefon</label>
+                                        <input type="tel" id="customer_phone" name="customer_phone">
+                                    </div>
+                                </div>
+                            </div>
+
+                            ${requires_shipping ? `
+                            <!-- Shipping Address -->
+                            <div class="checkout-section">
+                                <h2 class="checkout-section-title">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                    Adresa de livrare
+                                </h2>
+                                <div class="checkout-form-row">
+                                    <div class="checkout-form-group">
+                                        <label for="shipping_name">Nume destinatar *</label>
+                                        <input type="text" id="shipping_name" name="shipping_name" required>
+                                    </div>
+                                </div>
+                                <div class="checkout-form-row">
+                                    <div class="checkout-form-group">
+                                        <label for="shipping_line1">Adresa (strada, numar) *</label>
+                                        <input type="text" id="shipping_line1" name="shipping_line1" required>
+                                    </div>
+                                </div>
+                                <div class="checkout-form-row">
+                                    <div class="checkout-form-group">
+                                        <label for="shipping_line2">Detalii suplimentare (apartament, bloc, etc.)</label>
+                                        <input type="text" id="shipping_line2" name="shipping_line2">
+                                    </div>
+                                </div>
+                                <div class="checkout-form-row two-cols">
+                                    <div class="checkout-form-group">
+                                        <label for="shipping_city">Oras *</label>
+                                        <input type="text" id="shipping_city" name="shipping_city" required>
+                                    </div>
+                                    <div class="checkout-form-group">
+                                        <label for="shipping_region">Judet/Regiune</label>
+                                        <input type="text" id="shipping_region" name="shipping_region">
+                                    </div>
+                                </div>
+                                <div class="checkout-form-row two-cols">
+                                    <div class="checkout-form-group">
+                                        <label for="shipping_postal_code">Cod postal *</label>
+                                        <input type="text" id="shipping_postal_code" name="shipping_postal_code" required>
+                                    </div>
+                                    <div class="checkout-form-group">
+                                        <label for="shipping_country">Tara *</label>
+                                        <select id="shipping_country" name="shipping_country" required>
+                                            <option value="RO" selected>Romania</option>
+                                            <option value="MD">Moldova</option>
+                                            <option value="BG">Bulgaria</option>
+                                            <option value="HU">Ungaria</option>
+                                            <option value="DE">Germania</option>
+                                            <option value="AT">Austria</option>
+                                            <option value="IT">Italia</option>
+                                            <option value="ES">Spania</option>
+                                            <option value="FR">Franta</option>
+                                            <option value="GB">Marea Britanie</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Shipping Methods -->
+                            <div class="checkout-section" id="shipping-methods-section">
+                                <h2 class="checkout-section-title">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/>
+                                    </svg>
+                                    Metoda de livrare
+                                </h2>
+                                <div id="shipping-methods-container">
+                                    <div id="shipping-methods-loading">
+                                        <p style="color: var(--sleek-text-muted);">Completeaza adresa pentru a vedea optiunile de livrare</p>
+                                    </div>
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            <!-- Payment -->
+                            <div class="checkout-section">
+                                <h2 class="checkout-section-title">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                                    </svg>
+                                    Plata
+                                </h2>
+                                <div id="stripe-payment-element">
+                                    <p style="color: var(--sleek-text-muted); text-align: center;">Se incarca optiunile de plata...</p>
+                                </div>
+                                <div id="stripe-payment-errors"></div>
+                            </div>
+
+                            <!-- Order Notes -->
+                            <div class="checkout-section">
+                                <h2 class="checkout-section-title">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                    Notite comanda (optional)
+                                </h2>
+                                <div class="checkout-form-group">
+                                    <textarea id="order_notes" name="notes" rows="3" placeholder="Instructiuni speciale pentru livrare sau comanda..."
+                                        style="width: 100%; padding: 0.75rem; border: 1px solid var(--sleek-border); border-radius: 0.5rem; background: var(--sleek-bg); color: var(--sleek-text); resize: vertical;"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Order Summary Sidebar -->
+                        <div>
+                            <div class="checkout-summary">
+                                <h3 class="checkout-summary-title">Sumar comanda</h3>
+                                <div class="checkout-summary-items">
+                                    ${cart.items.map((item: any) => `
+                                        <div class="checkout-summary-item">
+                                            <img src="${item.product?.image_url || '/placeholder.jpg'}" alt="${item.product?.title}" class="checkout-summary-item-image">
+                                            <div class="checkout-summary-item-info">
+                                                <div class="checkout-summary-item-name">${item.product?.title}</div>
+                                                ${item.variant ? `<div class="checkout-summary-item-variant">${item.variant.name}</div>` : ''}
+                                                <div class="checkout-summary-item-qty">x ${item.quantity}</div>
+                                            </div>
+                                            <div class="checkout-summary-item-price">${this.formatCurrency(item.line_total_cents / 100, currency)}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <div class="checkout-summary-row">
+                                    <span>Subtotal</span>
+                                    <span>${this.formatCurrency(totals.subtotal_cents / 100, currency)}</span>
+                                </div>
+                                ${totals.discount_cents > 0 ? `
+                                    <div class="checkout-summary-row" style="color: #10b981;">
+                                        <span>Reducere</span>
+                                        <span>-${this.formatCurrency(totals.discount_cents / 100, currency)}</span>
+                                    </div>
+                                ` : ''}
+                                ${totals.tax_cents > 0 ? `
+                                    <div class="checkout-summary-row">
+                                        <span>TVA</span>
+                                        <span>${this.formatCurrency(totals.tax_cents / 100, currency)}</span>
+                                    </div>
+                                ` : ''}
+                                <div class="checkout-summary-row" id="shipping-cost-row" style="${requires_shipping ? '' : 'display: none;'}">
+                                    <span>Livrare</span>
+                                    <span id="shipping-cost-display">-</span>
+                                </div>
+                                <div class="checkout-summary-row" id="delivery-estimate-row" style="display: none; color: var(--sleek-primary);">
+                                    <span>
+                                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: inline; vertical-align: middle; margin-right: 4px;">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        Livrare estimata
+                                    </span>
+                                    <span id="delivery-estimate-display"></span>
+                                </div>
+                                <div class="checkout-summary-row total">
+                                    <span>Total</span>
+                                    <span id="checkout-total-display">${this.formatCurrency(totals.total_cents / 100, currency)}</span>
+                                </div>
+                                <input type="hidden" id="selected_shipping_method" name="shipping_method_id" value="">
+                                <input type="hidden" id="checkout_session_id" value="${sessionId}">
+                                <input type="hidden" id="checkout_currency" value="${currency}">
+                                <input type="hidden" id="checkout_total_cents" value="${totals.total_cents}">
+                                <button type="submit" class="checkout-submit-btn" id="checkout-submit-btn" disabled>
+                                    <span id="btn-text">Plateste ${this.formatCurrency(totals.total_cents / 100, currency)}</span>
+                                    <span id="btn-spinner" style="display: none;">Procesare...</span>
+                                </button>
+                                <div class="checkout-secure-note">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                    </svg>
+                                    Plata securizata prin Stripe
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            `;
+
+            // Initialize Stripe payment
+            await this.initShopStripeCheckout(totals.total_cents, currency);
+
+            // Bind shipping address change listeners if shipping required
+            if (requires_shipping) {
+                this.bindShippingAddressListeners(sessionId, currency);
+            }
+
+            // Bind form submission
+            this.bindShopCheckoutForm(sessionId, requires_shipping);
+
+        } catch (error: any) {
+            console.error('Checkout init error:', error);
+            contentEl.innerHTML = `
+                <div class="sleek-empty-state">
+                    <p style="color: var(--sleek-error);">Eroare la initializarea checkout-ului: ${error.response?.data?.message || error.message}</p>
+                    <a href="/shop/cart" class="sleek-btn-primary" style="margin-top: 1rem;">Inapoi la cos</a>
+                </div>
+            `;
+        }
+    }
+
+    private bindShippingAddressListeners(sessionId: string, currency: string): void {
+        const addressFields = ['shipping_country', 'shipping_city', 'shipping_postal_code'];
+        let debounceTimer: number | null = null;
+
+        const fetchShippingMethods = async () => {
+            const country = (document.getElementById('shipping_country') as HTMLSelectElement)?.value;
+            const city = (document.getElementById('shipping_city') as HTMLInputElement)?.value;
+            const postalCode = (document.getElementById('shipping_postal_code') as HTMLInputElement)?.value;
+            const region = (document.getElementById('shipping_region') as HTMLInputElement)?.value;
+
+            if (!country || !city || !postalCode) {
+                return;
+            }
+
+            const container = document.getElementById('shipping-methods-container');
+            if (!container) return;
+
+            container.innerHTML = `
+                <div id="shipping-methods-loading">
+                    <div class="sleek-spinner" style="width: 24px; height: 24px; margin: 0 auto 0.5rem;"></div>
+                    <p>Se incarca optiunile de livrare...</p>
+                </div>
+            `;
+
+            try {
+                const response = await this.apiClient!.post('/shop/checkout/shipping-methods', {
+                    session_id: sessionId,
+                    country,
+                    region,
+                    city,
+                    postal_code: postalCode
+                });
+
+                const { shipping_methods } = response.data.data;
+
+                if (!shipping_methods || shipping_methods.length === 0) {
+                    container.innerHTML = `
+                        <p style="color: var(--sleek-text-muted); text-align: center; padding: 1rem;">
+                            Nu sunt disponibile metode de livrare pentru aceasta adresa.
+                        </p>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = `
+                    <div class="shipping-methods">
+                        ${shipping_methods.map((method: any, index: number) => `
+                            <label class="shipping-method ${index === 0 ? 'selected' : ''}" data-method-id="${method.id}" data-cost="${method.cost_cents}" data-estimate="${method.estimated_delivery || ''}">
+                                <input type="radio" name="shipping_method" value="${method.id}" ${index === 0 ? 'checked' : ''}>
+                                <div class="shipping-method-info">
+                                    <div class="shipping-method-name">${method.name}</div>
+                                    ${method.estimated_delivery ? `
+                                        <div class="shipping-method-estimate">
+                                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                            ${method.estimated_delivery}
+                                        </div>
+                                    ` : ''}
+                                    ${method.description ? `<div class="shipping-method-description">${method.description}</div>` : ''}
+                                </div>
+                                <div class="shipping-method-price ${method.is_free ? 'free' : ''}">
+                                    ${method.is_free ? 'GRATUIT' : this.formatCurrency(method.cost_cents / 100, currency)}
+                                </div>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+
+                // Bind shipping method selection
+                container.querySelectorAll('.shipping-method').forEach(method => {
+                    method.addEventListener('click', () => {
+                        container.querySelectorAll('.shipping-method').forEach(m => m.classList.remove('selected'));
+                        method.classList.add('selected');
+                        const radio = method.querySelector('input[type="radio"]') as HTMLInputElement;
+                        if (radio) radio.checked = true;
+
+                        // Update totals
+                        this.updateShopCheckoutTotals(sessionId, currency);
+                    });
+                });
+
+                // Select first method by default and update totals
+                if (shipping_methods.length > 0) {
+                    const hiddenInput = document.getElementById('selected_shipping_method') as HTMLInputElement;
+                    if (hiddenInput) {
+                        hiddenInput.value = shipping_methods[0].id;
+                    }
+                    this.updateShopCheckoutTotals(sessionId, currency);
+                }
+
+            } catch (error: any) {
+                console.error('Failed to fetch shipping methods:', error);
+                container.innerHTML = `
+                    <p style="color: var(--sleek-error); text-align: center; padding: 1rem;">
+                        Eroare la incarcarea metodelor de livrare.
+                    </p>
+                `;
+            }
+        };
+
+        addressFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('change', () => {
+                    if (debounceTimer) clearTimeout(debounceTimer);
+                    debounceTimer = window.setTimeout(fetchShippingMethods, 500);
+                });
+                field.addEventListener('blur', () => {
+                    if (debounceTimer) clearTimeout(debounceTimer);
+                    debounceTimer = window.setTimeout(fetchShippingMethods, 300);
+                });
+            }
+        });
+    }
+
+    private async updateShopCheckoutTotals(sessionId: string, currency: string): Promise<void> {
+        if (!this.apiClient) return;
+
+        const selectedMethod = document.querySelector('.shipping-method.selected') as HTMLElement;
+        const shippingMethodId = selectedMethod?.dataset.methodId;
+        const shippingCost = parseInt(selectedMethod?.dataset.cost || '0');
+        const deliveryEstimate = selectedMethod?.dataset.estimate || '';
+
+        // Update hidden input
+        const hiddenInput = document.getElementById('selected_shipping_method') as HTMLInputElement;
+        if (hiddenInput && shippingMethodId) {
+            hiddenInput.value = shippingMethodId;
+        }
+
+        // Update shipping cost display
+        const shippingCostDisplay = document.getElementById('shipping-cost-display');
+        if (shippingCostDisplay) {
+            shippingCostDisplay.textContent = shippingCost === 0 ? 'GRATUIT' : this.formatCurrency(shippingCost / 100, currency);
+        }
+
+        // Update delivery estimate display
+        const estimateRow = document.getElementById('delivery-estimate-row');
+        const estimateDisplay = document.getElementById('delivery-estimate-display');
+        if (estimateRow && estimateDisplay) {
+            if (deliveryEstimate) {
+                estimateRow.style.display = 'flex';
+                estimateDisplay.textContent = deliveryEstimate;
+            } else {
+                estimateRow.style.display = 'none';
+            }
+        }
+
+        // Calculate new total
+        try {
+            const response = await this.apiClient.post('/shop/checkout/calculate', {
+                session_id: sessionId,
+                shipping_method_id: shippingMethodId
+            });
+
+            const { total_cents } = response.data.data;
+
+            // Update total display
+            const totalDisplay = document.getElementById('checkout-total-display');
+            if (totalDisplay) {
+                totalDisplay.textContent = this.formatCurrency(total_cents / 100, currency);
+            }
+
+            // Update hidden total and button
+            const totalInput = document.getElementById('checkout_total_cents') as HTMLInputElement;
+            if (totalInput) {
+                totalInput.value = total_cents.toString();
+            }
+
+            const btnText = document.getElementById('btn-text');
+            if (btnText) {
+                btnText.textContent = `Plateste ${this.formatCurrency(total_cents / 100, currency)}`;
+            }
+
+        } catch (error) {
+            console.error('Failed to calculate totals:', error);
+        }
+    }
+
+    private async initShopStripeCheckout(totalCents: number, currency: string): Promise<void> {
+        if (!this.apiClient) return;
+
+        const paymentElement = document.getElementById('stripe-payment-element');
+        const errorsElement = document.getElementById('stripe-payment-errors');
+        const submitBtn = document.getElementById('checkout-submit-btn') as HTMLButtonElement;
+
+        if (!paymentElement) return;
+
+        try {
+            // Load Stripe.js dynamically
+            if (!(window as any).Stripe) {
+                await this.loadStripeJs();
+            }
+
+            // Get payment config
+            const configResponse = await this.apiClient.get('/client/payment/config');
+            const { publishable_key, configured, processor } = configResponse.data.data;
+
+            if (!configured || processor !== 'stripe') {
+                paymentElement.innerHTML = '<p style="color: var(--sleek-error);">Platile nu sunt configurate pentru acest magazin.</p>';
+                return;
+            }
+
+            // Create Payment Intent
+            const intentResponse = await this.apiClient.post('/client/payment/create-intent', {
+                amount: totalCents / 100,
+                currency: currency.toLowerCase(),
+            });
+
+            const { client_secret } = intentResponse.data.data;
+
+            // Initialize Stripe
+            const stripe = (window as any).Stripe(publishable_key);
+            const elements = stripe.elements({
+                clientSecret: client_secret,
+                appearance: {
+                    theme: 'stripe',
+                    variables: {
+                        colorPrimary: '#6366f1',
+                        colorBackground: '#ffffff',
+                        colorText: '#1f2937',
+                        fontFamily: 'system-ui, sans-serif',
+                        borderRadius: '0.5rem',
+                    },
+                },
+            });
+
+            // Store stripe and elements for form submission
+            (window as any).__shopStripe = stripe;
+            (window as any).__shopElements = elements;
+
+            // Create Payment Element
+            const paymentElementInstance = elements.create('payment', {
+                layout: 'tabs',
+            });
+            paymentElement.innerHTML = '';
+            paymentElementInstance.mount(paymentElement);
+
+            // Enable submit button when payment element is ready
+            paymentElementInstance.on('ready', () => {
+                submitBtn.disabled = false;
+            });
+
+            // Show errors
+            paymentElementInstance.on('change', (event: any) => {
+                if (event.error && errorsElement) {
+                    errorsElement.textContent = event.error.message;
+                    errorsElement.style.display = 'block';
+                } else if (errorsElement) {
+                    errorsElement.style.display = 'none';
+                }
+            });
+
+        } catch (error: any) {
+            console.error('Stripe init error:', error);
+            paymentElement.innerHTML = `<p style="color: var(--sleek-error);">Eroare la incarcarea platii: ${error.response?.data?.message || error.message}</p>`;
+        }
+    }
+
+    private loadStripeJs(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if ((window as any).Stripe) {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            script.src = 'https://js.stripe.com/v3/';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load Stripe.js'));
+            document.head.appendChild(script);
+        });
+    }
+
+    private bindShopCheckoutForm(sessionId: string, requiresShipping: boolean): void {
+        const form = document.getElementById('shop-checkout-form') as HTMLFormElement;
+        if (!form) return;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('checkout-submit-btn') as HTMLButtonElement;
+            const btnText = document.getElementById('btn-text');
+            const btnSpinner = document.getElementById('btn-spinner');
+            const errorsElement = document.getElementById('stripe-payment-errors');
+
+            if (!submitBtn || !this.apiClient) return;
+
+            // Validate shipping method if required
+            if (requiresShipping) {
+                const shippingMethodId = (document.getElementById('selected_shipping_method') as HTMLInputElement)?.value;
+                if (!shippingMethodId) {
+                    if (errorsElement) {
+                        errorsElement.textContent = 'Te rugam sa selectezi o metoda de livrare.';
+                        errorsElement.style.display = 'block';
+                    }
+                    return;
+                }
+            }
+
+            submitBtn.disabled = true;
+            if (btnText) btnText.style.display = 'none';
+            if (btnSpinner) btnSpinner.style.display = 'inline';
+
+            try {
+                const formData = new FormData(form);
+                const currency = (document.getElementById('checkout_currency') as HTMLInputElement)?.value || 'RON';
+
+                // Build shipping address if required
+                let shippingAddress = null;
+                if (requiresShipping) {
+                    shippingAddress = {
+                        name: formData.get('shipping_name'),
+                        line1: formData.get('shipping_line1'),
+                        line2: formData.get('shipping_line2') || null,
+                        city: formData.get('shipping_city'),
+                        region: formData.get('shipping_region') || null,
+                        postal_code: formData.get('shipping_postal_code'),
+                        country: formData.get('shipping_country'),
+                    };
+                }
+
+                // Create order first
+                const orderResponse = await this.apiClient.post('/shop/checkout/create-order', {
+                    session_id: sessionId,
+                    customer_email: formData.get('customer_email'),
+                    customer_phone: formData.get('customer_phone') || null,
+                    customer_name: formData.get('customer_name'),
+                    shipping_address: shippingAddress,
+                    shipping_method_id: formData.get('shipping_method_id') || null,
+                    notes: formData.get('notes') || null,
+                });
+
+                if (!orderResponse.data.success) {
+                    throw new Error(orderResponse.data.message || 'Eroare la crearea comenzii');
+                }
+
+                const { order_number, requires_payment } = orderResponse.data.data;
+
+                // If payment required, process with Stripe
+                if (requires_payment) {
+                    const stripe = (window as any).__shopStripe;
+                    const elements = (window as any).__shopElements;
+
+                    if (!stripe || !elements) {
+                        throw new Error('Sistemul de plata nu este initializat');
+                    }
+
+                    const returnUrl = `${window.location.origin}${window.location.pathname}#/shop/thank-you/${order_number}`;
+
+                    const { error } = await stripe.confirmPayment({
+                        elements,
+                        confirmParams: {
+                            return_url: returnUrl,
+                            receipt_email: formData.get('customer_email') as string,
+                            payment_method_data: {
+                                billing_details: {
+                                    name: formData.get('customer_name') as string,
+                                    email: formData.get('customer_email') as string,
+                                    phone: formData.get('customer_phone') as string || undefined,
+                                },
+                            },
+                        },
+                    });
+
+                    if (error) {
+                        if (errorsElement) {
+                            errorsElement.textContent = error.message || 'A aparut o eroare la procesarea platii.';
+                            errorsElement.style.display = 'block';
+                        }
+                        submitBtn.disabled = false;
+                        if (btnText) btnText.style.display = 'inline';
+                        if (btnSpinner) btnSpinner.style.display = 'none';
+                        return;
+                    }
+                    // If no error, Stripe will redirect to return_url
+                } else {
+                    // No payment needed, redirect to thank you page
+                    window.location.hash = `/shop/thank-you/${order_number}`;
+                }
+
+            } catch (error: any) {
+                console.error('Checkout error:', error);
+                if (errorsElement) {
+                    errorsElement.textContent = error.response?.data?.message || error.message || 'A aparut o eroare.';
+                    errorsElement.style.display = 'block';
+                }
+                submitBtn.disabled = false;
+                if (btnText) btnText.style.display = 'inline';
+                if (btnSpinner) btnSpinner.style.display = 'none';
+            }
+        });
     }
 }

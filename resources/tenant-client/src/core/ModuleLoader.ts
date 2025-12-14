@@ -1,14 +1,24 @@
+import { ApiClient } from './ApiClient';
+import { EventBus } from './EventBus';
+
 interface Module {
     name: string;
-    init: () => Promise<void> | void;
+    init: (apiClient?: ApiClient, eventBus?: EventBus) => Promise<void> | void;
 }
 
 export class ModuleLoader {
     private enabledModules: string[];
     private loadedModules: Map<string, Module> = new Map();
+    private apiClient: ApiClient | null = null;
+    private eventBus: EventBus | null = null;
 
     constructor(enabledModules: string[]) {
         this.enabledModules = enabledModules;
+    }
+
+    setDependencies(apiClient: ApiClient, eventBus: EventBus): void {
+        this.apiClient = apiClient;
+        this.eventBus = eventBus;
     }
 
     async loadAll(): Promise<void> {
@@ -38,11 +48,24 @@ export class ModuleLoader {
                     const { SeatingModule } = await import('../modules/SeatingModule');
                     module = new SeatingModule();
                     break;
+                case 'shop':
+                    const { ShopModule } = await import('../modules/ShopModule');
+                    module = new ShopModule();
+                    break;
+                case 'sleek-client':
+                    const { SleekClientModule } = await import('../modules/SleekClientModule');
+                    module = new SleekClientModule();
+                    break;
                 default:
                     return; // Unknown module
             }
 
-            await module.init();
+            // Pass dependencies to modules that need them (shop and sleek-client)
+            if (this.apiClient && this.eventBus && (name === 'shop' || name === 'sleek-client')) {
+                await module.init(this.apiClient, this.eventBus);
+            } else {
+                await module.init();
+            }
             this.loadedModules.set(name, module);
         } catch (error) {
             console.error(`Failed to load module: ${name}`, error);
