@@ -4,16 +4,21 @@ namespace App\Http\Controllers\Api\TenantClient;
 
 use App\Http\Controllers\Controller;
 use App\Services\AffiliateTrackingService;
+use App\Services\Gamification\GamificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CheckoutController extends Controller
 {
     protected AffiliateTrackingService $affiliateService;
+    protected GamificationService $gamificationService;
 
-    public function __construct(AffiliateTrackingService $affiliateService)
-    {
+    public function __construct(
+        AffiliateTrackingService $affiliateService,
+        GamificationService $gamificationService
+    ) {
         $this->affiliateService = $affiliateService;
+        $this->gamificationService = $gamificationService;
     }
     /**
      * Initialize checkout
@@ -24,12 +29,16 @@ class CheckoutController extends Controller
 
         // Get cart and validate items
         // Calculate totals
+        $subtotal = 0; // TODO: Calculate from cart
 
         // Check if tenant has WhatsApp notifications microservice enabled
         $hasWhatsApp = $tenant->microservices()
             ->where('slug', 'whatsapp-notifications')
             ->wherePivot('is_active', true)
             ->exists();
+
+        // Check gamification microservice and get redemption info
+        $gamificationData = $this->getGamificationCheckoutData($request, $tenant, $subtotal);
 
         return response()->json([
             'success' => true,
@@ -45,6 +54,7 @@ class CheckoutController extends Controller
                 'has_whatsapp' => $hasWhatsApp,
                 'requires_billing' => true,
                 'expires_at' => now()->addMinutes(15)->toIso8601String(),
+                'gamification' => $gamificationData,
             ],
         ]);
     }
@@ -78,6 +88,8 @@ class CheckoutController extends Controller
             'add_insurance' => 'nullable|boolean',
             'affiliate_cookie' => 'nullable|string',
             'coupon_code' => 'nullable|string',
+            // Gamification points redemption
+            'redeem_points' => 'nullable|integer|min:0',
         ]);
 
         // Normalize billing data - support both nested and flat fields
@@ -106,14 +118,49 @@ class CheckoutController extends Controller
         // Create order
         // TODO: Implement actual order creation with $billingData
         $orderId = 'ord_' . uniqid();
-        $orderAmount = 0; // TODO: Calculate from cart
+        $orderAmountCents = 0; // TODO: Calculate from cart
+
+        // Get customer ID for gamification
+        $customerId = $this->getCustomerId($request);
+        $pointsRedemptionData = null;
+
+        // Handle points redemption if requested
+        $redeemPoints = $validated['redeem_points'] ?? 0;
+        if ($redeemPoints > 0 && $customerId) {
+            $hasGamification = $tenant->microservices()
+                ->where('slug', 'gamification')
+                ->wherePivot('is_active', true)
+                ->exists();
+
+            if ($hasGamification) {
+                $redemptionResult = $this->gamificationService->redeemPoints(
+                    $tenant->id,
+                    $customerId,
+                    $redeemPoints,
+                    $orderAmountCents,
+                    'App\\Models\\Order',
+                    0 // Will be updated after order creation
+                );
+
+                if (!$redemptionResult['success']) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $redemptionResult['error'] ?? 'Failed to redeem points',
+                    ], 400);
+                }
+
+                $pointsRedemptionData = $redemptionResult;
+                // Reduce order amount by discount
+                $orderAmountCents = max(0, $orderAmountCents - $redemptionResult['discount_cents']);
+            }
+        }
 
         // Track affiliate conversion if affiliate cookie is present
         if (!empty($validated['affiliate_cookie']) || !empty($validated['coupon_code'])) {
             $this->affiliateService->confirmOrder([
                 'tenant_id' => $tenant->id,
                 'order_ref' => $orderId,
-                'order_amount' => $orderAmount,
+                'order_amount' => $orderAmountCents / 100,
                 'buyer_email' => $billingData['email'],
                 'coupon_code' => $validated['coupon_code'] ?? null,
                 'cookie_value' => $validated['affiliate_cookie'] ?? null,
@@ -132,6 +179,7 @@ class CheckoutController extends Controller
                     // Or for Stripe:
                     // 'client_secret' => 'pi_xxx_secret_xxx',
                 ],
+                'points_redeemed' => $pointsRedemptionData,
             ],
         ]);
     }
@@ -147,11 +195,16 @@ class CheckoutController extends Controller
 
         $orderId = $request->input('order_id');
         $tenantId = $request->input('tenant_id');
+        $customerId = $request->input('customer_id');
+        $orderAmountCents = $request->input('order_amount_cents', 0);
         $paymentStatus = 'paid'; // TODO: Get from provider
 
         // Approve affiliate conversion if payment was successful
         if ($paymentStatus === 'paid' && $tenantId) {
             $this->affiliateService->approveConversion($orderId, $tenantId);
+
+            // Award gamification points for the order
+            $this->awardOrderPoints($tenantId, $customerId, $orderAmountCents, $orderId);
         }
 
         return response()->json([
@@ -228,5 +281,123 @@ class CheckoutController extends Controller
         }
 
         return $methods;
+    }
+
+    /**
+     * Get gamification checkout data for the current customer
+     */
+    protected function getGamificationCheckoutData(Request $request, $tenant, int $orderTotalCents): ?array
+    {
+        // Check if gamification microservice is enabled
+        $hasGamification = $tenant->microservices()
+            ->where('slug', 'gamification')
+            ->wherePivot('is_active', true)
+            ->exists();
+
+        if (!$hasGamification) {
+            return null;
+        }
+
+        $customerId = $this->getCustomerId($request);
+
+        if (!$customerId) {
+            // Return config only for non-authenticated users
+            $config = $this->gamificationService->getConfig($tenant->id);
+            if (!$config || !$config->is_active) {
+                return null;
+            }
+
+            return [
+                'enabled' => true,
+                'can_redeem' => false,
+                'earn_percentage' => $config->earn_percentage,
+                'points_to_earn' => $config->calculateEarnedPoints($orderTotalCents),
+                'points_name' => $config->points_name,
+            ];
+        }
+
+        // Get redemption eligibility for authenticated users
+        $redemptionData = $this->gamificationService->canRedeemPoints(
+            $tenant->id,
+            $customerId,
+            $orderTotalCents
+        );
+
+        $config = $this->gamificationService->getConfig($tenant->id);
+        if (!$config || !$config->is_active) {
+            return null;
+        }
+
+        return [
+            'enabled' => true,
+            'can_redeem' => $redemptionData['can_redeem'],
+            'current_balance' => $redemptionData['current_balance'],
+            'max_redeemable' => $redemptionData['max_redeemable'],
+            'max_discount_cents' => $redemptionData['max_discount_cents'],
+            'min_redeem_points' => $redemptionData['min_redeem_points'],
+            'point_value_cents' => $redemptionData['point_value_cents'],
+            'earn_percentage' => $config->earn_percentage,
+            'points_to_earn' => $config->calculateEarnedPoints($orderTotalCents),
+            'points_name' => $config->points_name,
+            'currency' => $config->currency,
+        ];
+    }
+
+    /**
+     * Get customer ID from request (bearer token or session)
+     */
+    protected function getCustomerId(Request $request): ?int
+    {
+        // Try to get from bearer token
+        $token = $request->bearerToken();
+        if ($token) {
+            $customer = \App\Models\Customer::where('api_token', $token)->first();
+            if ($customer) {
+                return $customer->id;
+            }
+        }
+
+        // Try from request attribute (set by auth middleware)
+        $customer = $request->attributes->get('customer');
+        if ($customer) {
+            return $customer->id;
+        }
+
+        return null;
+    }
+
+    /**
+     * Award gamification points for a completed order
+     */
+    protected function awardOrderPoints(int $tenantId, ?int $customerId, int $orderAmountCents, string $orderId): void
+    {
+        if (!$customerId || $orderAmountCents <= 0) {
+            return;
+        }
+
+        // Check if gamification is enabled
+        $tenant = \App\Models\Tenant::find($tenantId);
+        if (!$tenant) {
+            return;
+        }
+
+        $hasGamification = $tenant->microservices()
+            ->where('slug', 'gamification')
+            ->wherePivot('is_active', true)
+            ->exists();
+
+        if (!$hasGamification) {
+            return;
+        }
+
+        // Award points for the order
+        $this->gamificationService->awardOrderPoints(
+            $tenantId,
+            $customerId,
+            $orderAmountCents,
+            'App\\Models\\Order',
+            (int) str_replace('ord_', '', $orderId),
+            ['order_number' => $orderId]
+        );
     }
 }

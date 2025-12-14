@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\TenantClient\ThemeController;
 use App\Http\Controllers\Api\TenantClient\PagesController;
 use App\Http\Controllers\Api\TenantClient\CookieConsentController;
 use App\Http\Controllers\Api\TenantClient\BlogController;
+use App\Http\Controllers\Api\TenantClient\GamificationController;
 use App\Http\Controllers\Api\DocSearchController;
 use App\Http\Controllers\Api\TenantClientController;
 
@@ -900,6 +901,16 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
         Route::get('/watchlist/{eventId}/check', [AccountController::class, 'checkWatchlist'])
             ->name('api.tenant-client.account.watchlist.check');
 
+        // Gamification / Loyalty points routes
+        Route::get('/points', [AccountController::class, 'points'])
+            ->name('api.tenant-client.account.points');
+        Route::get('/points/history', [AccountController::class, 'pointsHistory'])
+            ->name('api.tenant-client.account.points.history');
+        Route::get('/points/referrals', [AccountController::class, 'referrals'])
+            ->name('api.tenant-client.account.points.referrals');
+        Route::get('/points/tier', [AccountController::class, 'tier'])
+            ->name('api.tenant-client.account.points.tier');
+
         // Delete account
         Route::delete('/delete', [AccountController::class, 'deleteAccount'])
             ->name('api.tenant-client.account.delete');
@@ -925,6 +936,31 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.blog.categories');
         Route::get('/{slug}', [BlogController::class, 'show'])
             ->name('api.tenant-client.blog.show');
+    });
+
+    // Gamification (loyalty points - requires gamification microservice)
+    Route::prefix('gamification')->group(function () {
+        // Public endpoints (no auth required)
+        Route::get('/config', [GamificationController::class, 'config'])
+            ->name('api.tenant-client.gamification.config');
+        Route::get('/how-to-earn', [GamificationController::class, 'howToEarn'])
+            ->name('api.tenant-client.gamification.how-to-earn');
+        Route::post('/referral/{code}/track', [GamificationController::class, 'trackReferral'])
+            ->name('api.tenant-client.gamification.referral.track');
+
+        // Authenticated endpoints (customer auth required)
+        Route::get('/balance', [GamificationController::class, 'balance'])
+            ->name('api.tenant-client.gamification.balance');
+        Route::get('/history', [GamificationController::class, 'history'])
+            ->name('api.tenant-client.gamification.history');
+        Route::get('/referral', [GamificationController::class, 'referral'])
+            ->name('api.tenant-client.gamification.referral');
+
+        // Checkout integration
+        Route::post('/check-redemption', [GamificationController::class, 'checkRedemption'])
+            ->name('api.tenant-client.gamification.check-redemption');
+        Route::post('/redeem', [GamificationController::class, 'redeem'])
+            ->name('api.tenant-client.gamification.redeem');
     });
 
     // Cart
