@@ -30,6 +30,8 @@ class ShopShippingMethod extends Model
     ];
 
     protected $casts = [
+        'name' => 'array',
+        'description' => 'array',
         'cost_cents' => 'integer',
         'cost_per_kg_cents' => 'integer',
         'min_order_cents' => 'integer',

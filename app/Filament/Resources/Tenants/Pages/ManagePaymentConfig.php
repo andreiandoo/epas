@@ -8,6 +8,7 @@ use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use Filament\Forms;
 use Filament\Actions;
 use Filament\Resources\Pages\ManageRecords;
+use Filament\Schemas\Components as SC;
 use Filament\Notifications\Notification;
 
 class ManagePaymentConfig extends ManageRecords
@@ -76,7 +77,7 @@ class ManagePaymentConfig extends ManageRecords
         $tenant = $this->record;
 
         return [
-            Forms\Components\Section::make('Payment Processor Selection')
+            SC\Section::make('Payment Processor Selection')
                 ->description('Select and configure your payment processor for processing customer payments')
                 ->schema([
                     Forms\Components\Select::make('payment_processor')
@@ -107,7 +108,7 @@ class ManagePaymentConfig extends ManageRecords
                 ]),
 
             // Stripe Configuration
-            Forms\Components\Section::make('Stripe Configuration')
+            SC\Section::make('Stripe Configuration')
                 ->description('Enter your Stripe API keys from the Stripe Dashboard')
                 ->schema([
                     Forms\Components\TextInput::make('stripe_publishable_key')
@@ -141,7 +142,7 @@ class ManagePaymentConfig extends ManageRecords
                 ->columns(1),
 
             // Netopia Configuration
-            Forms\Components\Section::make('Netopia Payments Configuration')
+            SC\Section::make('Netopia Payments Configuration')
                 ->description('Enter your Netopia (mobilPay) credentials')
                 ->schema([
                     Forms\Components\TextInput::make('netopia_signature')
@@ -171,7 +172,7 @@ class ManagePaymentConfig extends ManageRecords
                 ->columns(1),
 
             // Euplatesc Configuration
-            Forms\Components\Section::make('EuPlatesc Configuration')
+            SC\Section::make('EuPlatesc Configuration')
                 ->description('Enter your EuPlatesc merchant credentials')
                 ->schema([
                     Forms\Components\TextInput::make('euplatesc_merchant_id')
@@ -197,7 +198,7 @@ class ManagePaymentConfig extends ManageRecords
                 ->columns(1),
 
             // PayU Configuration
-            Forms\Components\Section::make('PayU Configuration')
+            SC\Section::make('PayU Configuration')
                 ->description('Enter your PayU merchant credentials')
                 ->schema([
                     Forms\Components\TextInput::make('payu_merchant_id')
@@ -222,7 +223,7 @@ class ManagePaymentConfig extends ManageRecords
                 ->visible(fn (Forms\Get $get) => $tenant->payment_processor === 'payu')
                 ->columns(1),
 
-            Forms\Components\Section::make('Important Notes')
+            SC\Section::make('Important Notes')
                 ->description('Security and best practices')
                 ->schema([
                     Forms\Components\Placeholder::make('security_notes')

@@ -15,6 +15,7 @@ use Filament\Actions\DeleteBulkAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -62,7 +63,7 @@ class ShopEventProductResource extends Resource
 
         return $schema
             ->schema([
-                Forms\Components\Section::make('Association Details')
+                SC\Section::make('Association Details')
                     ->schema([
                         Forms\Components\Select::make('event_id')
                             ->label('Event')
@@ -130,7 +131,7 @@ class ShopEventProductResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Display Settings')
+                SC\Section::make('Display Settings')
                     ->schema([
                         Forms\Components\TextInput::make('sort_order')
                             ->label('Sort Order')

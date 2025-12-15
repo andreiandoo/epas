@@ -3,8 +3,8 @@
 namespace App\Filament\Resources\Events\Schemas;
 
 use Filament\Forms;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Tabs;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Tabs;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Illuminate\Support\Str;

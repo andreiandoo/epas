@@ -25,16 +25,24 @@ class ShopCategory extends Model
         'slug',
         'description',
         'image_url',
+        'icon',
+        'color',
         'sort_order',
         'is_active',
+        'is_visible',
         'meta',
+        'meta_title',
+        'meta_description',
     ];
 
     protected $casts = [
         'name' => 'array',
         'description' => 'array',
         'meta' => 'array',
+        'meta_title' => 'array',
+        'meta_description' => 'array',
         'is_active' => 'boolean',
+        'is_visible' => 'boolean',
         'sort_order' => 'integer',
     ];
 

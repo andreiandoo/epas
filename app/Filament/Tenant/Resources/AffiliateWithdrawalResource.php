@@ -4,10 +4,14 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\AffiliateWithdrawalResource\Pages;
 use App\Models\AffiliateWithdrawal;
+use Filament\Actions\Action;
+use Filament\Actions\ViewAction;
+use Filament\Actions\BulkAction;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -71,7 +75,7 @@ class AffiliateWithdrawalResource extends Resource
     {
         return $schema
             ->schema([
-                Forms\Components\Section::make('Withdrawal Details')
+                SC\Section::make('Withdrawal Details')
                     ->schema([
                         Forms\Components\TextInput::make('reference')
                             ->label('Reference')
@@ -98,7 +102,7 @@ class AffiliateWithdrawalResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Affiliate Information')
+                SC\Section::make('Affiliate Information')
                     ->schema([
                         Forms\Components\Placeholder::make('affiliate_name')
                             ->label('Affiliate')
@@ -118,7 +122,7 @@ class AffiliateWithdrawalResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Admin Notes')
+                SC\Section::make('Admin Notes')
                     ->schema([
                         Forms\Components\Textarea::make('admin_notes')
                             ->label('Notes')
@@ -209,7 +213,7 @@ class AffiliateWithdrawalResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\Action::make('approve')
+                Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check')
                     ->color('success')
@@ -226,7 +230,7 @@ class AffiliateWithdrawalResource extends Resource
                             ->send();
                     }),
 
-                Tables\Actions\Action::make('complete')
+                Action::make('complete')
                     ->label('Complete')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
@@ -248,7 +252,7 @@ class AffiliateWithdrawalResource extends Resource
                             ->send();
                     }),
 
-                Tables\Actions\Action::make('reject')
+                Action::make('reject')
                     ->label('Reject')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -272,10 +276,10 @@ class AffiliateWithdrawalResource extends Resource
                             ->send();
                     }),
 
-                Tables\Actions\ViewAction::make(),
+                ViewAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkAction::make('bulk_approve')
+                BulkAction::make('bulk_approve')
                     ->label('Approve Selected')
                     ->icon('heroicon-o-check')
                     ->color('success')

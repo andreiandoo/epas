@@ -4,9 +4,11 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\AffiliateSettingsResource\Pages;
 use App\Models\AffiliateSettings;
+use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -50,12 +52,12 @@ class AffiliateSettingsResource extends Resource
     {
         return $schema
             ->schema([
-                Forms\Components\Tabs::make('Settings')
+                SC\Tabs::make('Settings')
                     ->tabs([
-                        Forms\Components\Tabs\Tab::make('Commission')
+                        SC\Tabs\Tab::make('Commission')
                             ->icon('heroicon-o-currency-dollar')
                             ->schema([
-                                Forms\Components\Section::make('Default Commission Settings')
+                                SC\Section::make('Default Commission Settings')
                                     ->description('Set the default commission for new affiliates')
                                     ->schema([
                                         Forms\Components\Select::make('default_commission_type')
@@ -87,7 +89,7 @@ class AffiliateSettingsResource extends Resource
                                     ])
                                     ->columns(3),
 
-                                Forms\Components\Section::make('Commission Rules')
+                                SC\Section::make('Commission Rules')
                                     ->schema([
                                         Forms\Components\Toggle::make('exclude_taxes')
                                             ->label('Exclude Taxes')
@@ -107,10 +109,10 @@ class AffiliateSettingsResource extends Resource
                                     ->columns(3),
                             ]),
 
-                        Forms\Components\Tabs\Tab::make('Registration')
+                        SC\Tabs\Tab::make('Registration')
                             ->icon('heroicon-o-user-plus')
                             ->schema([
-                                Forms\Components\Section::make('Self-Registration')
+                                SC\Section::make('Self-Registration')
                                     ->schema([
                                         Forms\Components\Toggle::make('allow_self_registration')
                                             ->label('Allow Self-Registration')
@@ -126,7 +128,7 @@ class AffiliateSettingsResource extends Resource
                                     ])
                                     ->columns(2),
 
-                                Forms\Components\Section::make('Program Information')
+                                SC\Section::make('Program Information')
                                     ->description('Information shown on the affiliate registration page')
                                     ->schema([
                                         Forms\Components\TextInput::make('program_name')
@@ -156,10 +158,10 @@ class AffiliateSettingsResource extends Resource
                                     ]),
                             ]),
 
-                        Forms\Components\Tabs\Tab::make('Withdrawals')
+                        SC\Tabs\Tab::make('Withdrawals')
                             ->icon('heroicon-o-banknotes')
                             ->schema([
-                                Forms\Components\Section::make('Withdrawal Settings')
+                                SC\Section::make('Withdrawal Settings')
                                     ->schema([
                                         Forms\Components\TextInput::make('min_withdrawal_amount')
                                             ->label('Minimum Withdrawal Amount')
@@ -192,7 +194,7 @@ class AffiliateSettingsResource extends Resource
                                     ])
                                     ->columns(2),
 
-                                Forms\Components\Section::make('Payment Methods')
+                                SC\Section::make('Payment Methods')
                                     ->schema([
                                         Forms\Components\CheckboxList::make('payment_methods')
                                             ->label('Available Payment Methods')
@@ -207,10 +209,10 @@ class AffiliateSettingsResource extends Resource
                                     ]),
                             ]),
 
-                        Forms\Components\Tabs\Tab::make('Tracking')
+                        SC\Tabs\Tab::make('Tracking')
                             ->icon('heroicon-o-chart-bar')
                             ->schema([
-                                Forms\Components\Section::make('Cookie Settings')
+                                SC\Section::make('Cookie Settings')
                                     ->schema([
                                         Forms\Components\TextInput::make('cookie_name')
                                             ->label('Cookie Name')
@@ -272,7 +274,7 @@ class AffiliateSettingsResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                EditAction::make(),
             ])
             ->bulkActions([
                 //

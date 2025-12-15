@@ -231,7 +231,7 @@ class ShopProductResource extends Resource
                                             ->numeric()
                                             ->suffix('g'),
 
-                                        Forms\Components\Grid::make(3)
+                                        SC\Grid::make(3)
                                             ->schema([
                                                 Forms\Components\TextInput::make('dimensions.length')
                                                     ->label('Length (cm)')

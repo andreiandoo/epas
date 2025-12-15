@@ -4,6 +4,10 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\CustomerPointsResource\Pages;
 use App\Models\Gamification\CustomerPoints;
+use Filament\Actions\Action;
+use Filament\Actions\ViewAction;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -205,8 +209,8 @@ class CustomerPointsResource extends Resource
                     ->query(fn (Builder $query) => $query->where('current_balance', '>', 0)),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\Action::make('adjust')
+                ViewAction::make(),
+                Action::make('adjust')
                     ->label('Adjust Points')
                     ->icon('heroicon-o-adjustments-horizontal')
                     ->form([
@@ -233,8 +237,8 @@ class CustomerPointsResource extends Resource
                     }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('bulk_adjust')
+                BulkActionGroup::make([
+                    BulkAction::make('bulk_adjust')
                         ->label('Bulk Adjust Points')
                         ->icon('heroicon-o-adjustments-horizontal')
                         ->form([
