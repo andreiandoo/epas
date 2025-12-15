@@ -16,9 +16,9 @@ class AffiliateWithdrawalResource extends Resource
 {
     protected static ?string $model = AffiliateWithdrawal::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-banknotes';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-banknotes';
 
-    protected static ?string $navigationGroup = 'Marketing';
+    protected static \UnitEnum|string|null $navigationGroup = 'Marketing';
 
     protected static ?string $navigationLabel = 'Withdrawals';
 

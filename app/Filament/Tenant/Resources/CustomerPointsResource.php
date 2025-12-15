@@ -4,7 +4,6 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\CustomerPointsResource\Pages;
 use App\Models\Gamification\CustomerPoints;
-use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -18,7 +17,7 @@ class CustomerPointsResource extends Resource
 {
     protected static ?string $model = CustomerPoints::class;
 
-    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
 
     protected static ?string $navigationLabel = 'Customer Points';
 

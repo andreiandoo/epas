@@ -7,16 +7,15 @@ use App\Models\Event;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\Venue;
-use BackedEnum;
 use Carbon\Carbon;
 use Filament\Pages\Page;
 use Livewire\Attributes\Url;
 
 class VenueUsage extends Page
 {
-    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office-2';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office-2';
     protected static ?string $navigationLabel = 'Venue Usage';
-    protected static ?string $navigationGroup = 'Venue';
+    protected static \UnitEnum|string|null $navigationGroup = 'Venue';
     protected static ?int $navigationSort = 50;
     protected string $view = 'filament.tenant.pages.venue-usage';
 

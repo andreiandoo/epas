@@ -15,9 +15,9 @@ class AffiliateSettingsResource extends Resource
 {
     protected static ?string $model = AffiliateSettings::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
-    protected static ?string $navigationGroup = 'Marketing';
+    protected static \UnitEnum|string|null $navigationGroup = 'Marketing';
 
     protected static ?string $navigationLabel = 'Affiliate Settings';
 

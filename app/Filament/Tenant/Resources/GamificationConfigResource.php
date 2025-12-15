@@ -4,7 +4,6 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\GamificationConfigResource\Pages;
 use App\Models\Gamification\GamificationConfig;
-use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -17,7 +16,7 @@ class GamificationConfigResource extends Resource
 {
     protected static ?string $model = GamificationConfig::class;
 
-    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-star';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-star';
 
     protected static ?string $navigationLabel = 'Gamification Settings';
 
