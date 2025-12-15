@@ -10,7 +10,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Infolists\Infolist;
+use Filament\Schemas\Schema;
 use Filament\Infolists\Components as Info;
 
 class ViewCustomerPoints extends ViewRecord
@@ -50,9 +50,9 @@ class ViewCustomerPoints extends ViewRecord
         ];
     }
 
-    public function infolist(Infolist $infolist): Infolist
+    public function infolist(Schema $schema): Schema
     {
-        return $infolist
+        return $schema
             ->schema([
                 Info\Section::make('Customer')
                     ->schema([

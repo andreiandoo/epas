@@ -5,15 +5,15 @@ namespace App\Filament\Tenant\Resources\AffiliateWithdrawalResource\Pages;
 use App\Filament\Tenant\Resources\AffiliateWithdrawalResource;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Infolists;
-use Filament\Infolists\Infolist;
+use Filament\Schemas\Schema;
 
 class ViewAffiliateWithdrawal extends ViewRecord
 {
     protected static string $resource = AffiliateWithdrawalResource::class;
 
-    public function infolist(Infolist $infolist): Infolist
+    public function infolist(Schema $schema): Schema
     {
-        return $infolist
+        return $schema
             ->schema([
                 Infolists\Components\Section::make('Withdrawal Details')
                     ->schema([
