@@ -37,6 +37,8 @@ use App\Http\Controllers\Api\TenantClient\ShopEventProductController;
 use App\Http\Controllers\Api\TenantClient\ShopCheckoutController;
 use App\Http\Controllers\Api\TenantClient\ShopWishlistController;
 use App\Http\Controllers\Api\TenantClient\ShopStockAlertController;
+use App\Http\Controllers\Api\TenantClient\GamificationController;
+use App\Http\Controllers\Api\TenantClient\AffiliateController as TenantClientAffiliateController;
 use App\Http\Controllers\Api\DocSearchController;
 use App\Http\Controllers\Api\TenantClientController;
 
@@ -914,6 +916,20 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
         Route::get('/shop-orders/{orderId}', [AccountController::class, 'shopOrderDetail'])
             ->name('api.tenant-client.account.shop-orders.detail');
 
+        // Gamification / Loyalty points routes
+        Route::get('/points', [AccountController::class, 'points'])
+            ->name('api.tenant-client.account.points');
+        Route::get('/points/history', [AccountController::class, 'pointsHistory'])
+            ->name('api.tenant-client.account.points.history');
+        Route::get('/points/referrals', [AccountController::class, 'referrals'])
+            ->name('api.tenant-client.account.points.referrals');
+        Route::get('/points/tier', [AccountController::class, 'tier'])
+            ->name('api.tenant-client.account.points.tier');
+
+        // Affiliate status (quick check for account page)
+        Route::get('/affiliate', [AccountController::class, 'affiliateStatus'])
+            ->name('api.tenant-client.account.affiliate');
+
         // Delete account
         Route::delete('/delete', [AccountController::class, 'deleteAccount'])
             ->name('api.tenant-client.account.delete');
@@ -1034,6 +1050,62 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.shop.stock-alerts.my-alerts');
         Route::get('/stock-alerts/check/{productId}', [ShopStockAlertController::class, 'check'])
             ->name('api.tenant-client.shop.stock-alerts.check');
+    });
+
+    // Gamification (loyalty points - requires gamification microservice)
+    Route::prefix('gamification')->group(function () {
+        // Public endpoints (no auth required)
+        Route::get('/config', [GamificationController::class, 'config'])
+            ->name('api.tenant-client.gamification.config');
+        Route::get('/how-to-earn', [GamificationController::class, 'howToEarn'])
+            ->name('api.tenant-client.gamification.how-to-earn');
+        Route::post('/referral/{code}/track', [GamificationController::class, 'trackReferral'])
+            ->name('api.tenant-client.gamification.referral.track');
+
+        // Authenticated endpoints (customer auth required)
+        Route::get('/balance', [GamificationController::class, 'balance'])
+            ->name('api.tenant-client.gamification.balance');
+        Route::get('/history', [GamificationController::class, 'history'])
+            ->name('api.tenant-client.gamification.history');
+        Route::get('/referral', [GamificationController::class, 'referral'])
+            ->name('api.tenant-client.gamification.referral');
+
+        // Checkout integration
+        Route::post('/check-redemption', [GamificationController::class, 'checkRedemption'])
+            ->name('api.tenant-client.gamification.check-redemption');
+        Route::post('/redeem', [GamificationController::class, 'redeem'])
+            ->name('api.tenant-client.gamification.redeem');
+    });
+
+    // Affiliate Program (requires affiliates microservice)
+    Route::prefix('affiliate')->group(function () {
+        // Public endpoints
+        Route::get('/program', [TenantClientAffiliateController::class, 'programInfo'])
+            ->name('api.tenant-client.affiliate.program');
+
+        // Registration (requires customer auth)
+        Route::post('/register', [TenantClientAffiliateController::class, 'register'])
+            ->name('api.tenant-client.affiliate.register');
+
+        // Dashboard and stats (requires customer auth + affiliate account)
+        Route::get('/dashboard', [TenantClientAffiliateController::class, 'dashboard'])
+            ->name('api.tenant-client.affiliate.dashboard');
+        Route::get('/conversions', [TenantClientAffiliateController::class, 'conversions'])
+            ->name('api.tenant-client.affiliate.conversions');
+        Route::get('/clicks', [TenantClientAffiliateController::class, 'clicks'])
+            ->name('api.tenant-client.affiliate.clicks');
+
+        // Payment details management
+        Route::put('/payment-details', [TenantClientAffiliateController::class, 'updatePaymentDetails'])
+            ->name('api.tenant-client.affiliate.payment-details');
+
+        // Withdrawals
+        Route::get('/withdrawals', [TenantClientAffiliateController::class, 'withdrawals'])
+            ->name('api.tenant-client.affiliate.withdrawals');
+        Route::post('/withdrawals', [TenantClientAffiliateController::class, 'requestWithdrawal'])
+            ->name('api.tenant-client.affiliate.withdrawals.request');
+        Route::delete('/withdrawals/{withdrawalId}', [TenantClientAffiliateController::class, 'cancelWithdrawal'])
+            ->name('api.tenant-client.affiliate.withdrawals.cancel');
     });
 
     // Cart

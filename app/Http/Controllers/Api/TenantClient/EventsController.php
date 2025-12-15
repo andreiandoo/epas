@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Domain;
 use App\Models\Event;
 use App\Models\Tenant;
+use App\Models\Venue;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 class EventsController extends Controller
@@ -40,6 +42,18 @@ class EventsController extends Controller
     }
 
     /**
+     * Get venue IDs owned by a tenant (cached for 10 minutes)
+     */
+    private function getOwnedVenueIds(Tenant $tenant): array
+    {
+        $cacheKey = "tenant_{$tenant->id}_owned_venue_ids";
+
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($tenant) {
+            return Venue::where('tenant_id', $tenant->id)->pluck('id')->toArray();
+        });
+    }
+
+    /**
      * List public events for the tenant
      */
     public function index(Request $request): JsonResponse
@@ -58,8 +72,24 @@ class EventsController extends Controller
         $page = $request->query('page', 1);
         $perPage = $request->query('per_page', 12);
         $showAll = $request->query('show_all'); // Debug: show past events
+        $includeHosted = $request->query('include_hosted', true); // Include events at owned venues
 
-        $query = Event::where('tenant_id', $tenant->id);
+        // Get venue IDs owned by this tenant for hosted events
+        $ownedVenueIds = $this->getOwnedVenueIds($tenant);
+
+        // Build query to include both own events and hosted events
+        $query = Event::query();
+
+        if ($includeHosted && !empty($ownedVenueIds)) {
+            // Include events owned by tenant OR events at tenant's venues
+            $query->where(function ($q) use ($tenant, $ownedVenueIds) {
+                $q->where('tenant_id', $tenant->id)
+                    ->orWhereIn('venue_id', $ownedVenueIds);
+            });
+        } else {
+            // Only tenant's own events
+            $query->where('tenant_id', $tenant->id);
+        }
 
         // Use upcoming scope for filtering (excludes past events and cancelled)
         if (!$showAll) {
@@ -95,7 +125,7 @@ class EventsController extends Controller
             $orderColumn = 'start_date';
         }
 
-        $events = $query->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'tags', 'ticketTypes'])
+        $events = $query->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'tags', 'ticketTypes', 'tenant'])
             ->orderBy($orderColumn, 'asc')
             ->skip(($page - 1) * $perPage)
             ->take($perPage)
@@ -106,11 +136,20 @@ class EventsController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'events' => $events->map(function ($event) use ($locale) {
+                'events' => $events->map(function ($event) use ($locale, $tenant) {
+                    $isHosted = $event->tenant_id !== $tenant->id;
+
                     return [
                         'id' => $event->id,
                         'title' => $event->getTranslation('title', $locale),
                         'slug' => $event->slug,
+
+                        // Hosted event info
+                        'is_hosted' => $isHosted,
+                        'organizer' => $isHosted ? [
+                            'name' => $event->tenant?->public_name ?? $event->tenant?->name,
+                            'slug' => $event->tenant?->slug,
+                        ] : null,
 
                         // Status Flags
                         'is_sold_out' => $event->is_sold_out ?? false,
@@ -233,9 +272,18 @@ class EventsController extends Controller
             ], 404);
         }
 
-        $event = Event::where('tenant_id', $tenant->id)
-            ->where('slug', $slug)
-            ->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'ticketTypes', 'tags'])
+        // Get venue IDs owned by this tenant for hosted events
+        $ownedVenueIds = $this->getOwnedVenueIds($tenant);
+
+        // Find event: either owned by tenant OR at tenant's venue
+        $event = Event::where('slug', $slug)
+            ->where(function ($q) use ($tenant, $ownedVenueIds) {
+                $q->where('tenant_id', $tenant->id);
+                if (!empty($ownedVenueIds)) {
+                    $q->orWhereIn('venue_id', $ownedVenueIds);
+                }
+            })
+            ->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'ticketTypes', 'tags', 'tenant'])
             ->first();
 
         if (!$event) {
@@ -244,6 +292,8 @@ class EventsController extends Controller
                 'message' => 'Event not found',
             ], 404);
         }
+
+        $isHosted = $event->tenant_id !== $tenant->id;
 
         $locale = $request->query('locale', 'en');
 
@@ -257,6 +307,16 @@ class EventsController extends Controller
                 'id' => $event->id,
                 'title' => $event->getTranslation('title', $locale),
                 'slug' => $event->slug,
+
+                // Hosted event info
+                'is_hosted' => $isHosted,
+                'organizer' => $isHosted ? [
+                    'name' => $event->tenant?->public_name ?? $event->tenant?->name,
+                    'slug' => $event->tenant?->slug,
+                    'company_name' => $event->tenant?->company_name,
+                    'website' => $event->tenant?->website,
+                ] : null,
+
                 'is_sold_out' => $event->is_sold_out ?? false,
                 'door_sales_only' => $event->door_sales_only ?? false,
                 'is_cancelled' => $event->is_cancelled ?? false,
@@ -490,16 +550,33 @@ class EventsController extends Controller
         $month = $request->query('month');
         $page = $request->query('page', 1);
         $perPage = $request->query('per_page', 50);
+        $includeHosted = $request->query('include_hosted', true);
+
+        // Get venue IDs owned by this tenant for hosted events
+        $ownedVenueIds = $this->getOwnedVenueIds($tenant);
+
+        // Build base query scope
+        $buildQuery = function () use ($tenant, $ownedVenueIds, $includeHosted) {
+            $query = Event::query();
+            if ($includeHosted && !empty($ownedVenueIds)) {
+                $query->where(function ($q) use ($tenant, $ownedVenueIds) {
+                    $q->where('tenant_id', $tenant->id)
+                        ->orWhereIn('venue_id', $ownedVenueIds);
+                });
+            } else {
+                $query->where('tenant_id', $tenant->id);
+            }
+            return $query->past();
+        };
 
         // Base query for past events
-        $baseQuery = Event::where('tenant_id', $tenant->id)->past();
+        $baseQuery = $buildQuery();
 
         // Get available years and months for filters
         $allPastEvents = (clone $baseQuery)->get();
         $availableFilters = $this->getAvailableYearsAndMonths($allPastEvents);
 
-        $query = Event::where('tenant_id', $tenant->id)
-            ->past(); // Use past scope
+        $query = $buildQuery();
 
         // Year filter
         if ($year) {
@@ -540,7 +617,7 @@ class EventsController extends Controller
         $total = $query->count();
 
         // Order by start_date descending (most recent first)
-        $events = $query->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'tags'])
+        $events = $query->with(['venue', 'eventTypes', 'eventGenres', 'artists', 'tags', 'tenant'])
             ->orderBy('event_date', 'desc')
             ->orderBy('range_start_date', 'desc')
             ->skip(($page - 1) * $perPage)
@@ -552,11 +629,20 @@ class EventsController extends Controller
         return response()->json([
             'success' => true,
             'data' => [
-                'events' => $events->map(function ($event) use ($locale) {
+                'events' => $events->map(function ($event) use ($locale, $tenant) {
+                    $isHosted = $event->tenant_id !== $tenant->id;
+
                     return [
                         'id' => $event->id,
                         'title' => $event->getTranslation('title', $locale),
                         'slug' => $event->slug,
+
+                        // Hosted event info
+                        'is_hosted' => $isHosted,
+                        'organizer' => $isHosted ? [
+                            'name' => $event->tenant?->public_name ?? $event->tenant?->name,
+                            'slug' => $event->tenant?->slug,
+                        ] : null,
 
                         // Status Flags
                         'is_cancelled' => $event->is_cancelled ?? false,

@@ -104,6 +104,108 @@
             </div>
         </div>
 
+        <!-- Venue Activity Section (only for venue owners) -->
+        @if($venueStats && $venueStats['has_venues'])
+            <div class="bg-gradient-to-r from-purple-500 to-indigo-600 rounded-xl p-5 mb-6 text-white">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-white/20 rounded-lg">
+                            <x-heroicon-o-building-office-2 class="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-lg">Venue Activity</h3>
+                            <p class="text-white/80 text-sm">Events hosted by other organizers at your {{ $venueStats['venues_count'] }} venue{{ $venueStats['venues_count'] > 1 ? 's' : '' }}</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('filament.tenant.pages.venue-usage') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-600 bg-white rounded-lg hover:bg-purple-50 transition-colors">
+                        <x-heroicon-o-arrow-right class="w-4 h-4" />
+                        View Details
+                    </a>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white/10 rounded-lg p-3">
+                        <p class="text-2xl font-bold">{{ number_format($venueStats['hosted_events']) }}</p>
+                        <p class="text-xs text-white/80 uppercase tracking-wide">Hosted Events</p>
+                    </div>
+                    <div class="bg-white/10 rounded-lg p-3">
+                        <p class="text-2xl font-bold">{{ number_format($venueStats['upcoming_hosted_events']) }}</p>
+                        <p class="text-xs text-white/80 uppercase tracking-wide">Upcoming</p>
+                    </div>
+                    <div class="bg-white/10 rounded-lg p-3">
+                        <p class="text-2xl font-bold">{{ number_format($venueStats['hosted_tickets_sold']) }}</p>
+                        <p class="text-xs text-white/80 uppercase tracking-wide">Tickets Sold</p>
+                    </div>
+                    <div class="bg-white/10 rounded-lg p-3">
+                        <p class="text-2xl font-bold">{{ number_format($venueStats['hosted_revenue'], 2) }} <span class="text-sm font-medium text-white/70">{{ $tenant->currency ?? 'EUR' }}</span></p>
+                        <p class="text-xs text-white/80 uppercase tracking-wide">Revenue</p>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        <!-- Analytics Comparison Section (only for venue owners with hosted events) -->
+        @if($comparisonData)
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 mb-6">
+                <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Own Events vs Hosted Events</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Compare performance between your events and events hosted at your venues</p>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 border border-emerald-200 dark:border-emerald-800">
+                        <div class="flex items-center gap-2 mb-1">
+                            <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                            <span class="text-xs font-medium text-emerald-700 dark:text-emerald-400 uppercase">Own Sales</span>
+                        </div>
+                        <p class="text-xl font-bold text-emerald-700 dark:text-emerald-300">{{ number_format($comparisonData['sales']['own_total'], 2) }} <span class="text-sm font-medium">{{ $tenant->currency ?? 'EUR' }}</span></p>
+                    </div>
+                    <div class="bg-violet-50 dark:bg-violet-900/20 rounded-lg p-3 border border-violet-200 dark:border-violet-800">
+                        <div class="flex items-center gap-2 mb-1">
+                            <div class="w-3 h-3 rounded-full bg-violet-500"></div>
+                            <span class="text-xs font-medium text-violet-700 dark:text-violet-400 uppercase">Hosted Sales</span>
+                        </div>
+                        <p class="text-xl font-bold text-violet-700 dark:text-violet-300">{{ number_format($comparisonData['sales']['hosted_total'], 2) }} <span class="text-sm font-medium">{{ $tenant->currency ?? 'EUR' }}</span></p>
+                    </div>
+                    <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 border border-emerald-200 dark:border-emerald-800">
+                        <div class="flex items-center gap-2 mb-1">
+                            <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                            <span class="text-xs font-medium text-emerald-700 dark:text-emerald-400 uppercase">Own Tickets</span>
+                        </div>
+                        <p class="text-xl font-bold text-emerald-700 dark:text-emerald-300">{{ number_format($comparisonData['tickets']['own_total']) }}</p>
+                    </div>
+                    <div class="bg-violet-50 dark:bg-violet-900/20 rounded-lg p-3 border border-violet-200 dark:border-violet-800">
+                        <div class="flex items-center gap-2 mb-1">
+                            <div class="w-3 h-3 rounded-full bg-violet-500"></div>
+                            <span class="text-xs font-medium text-violet-700 dark:text-violet-400 uppercase">Hosted Tickets</span>
+                        </div>
+                        <p class="text-xl font-bold text-violet-700 dark:text-violet-300">{{ number_format($comparisonData['tickets']['hosted_total']) }}</p>
+                    </div>
+                </div>
+
+                <!-- Comparison Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Sales Comparison Chart -->
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Sales Comparison</h4>
+                        <div class="h-48">
+                            <canvas id="comparisonSalesChart" data-chart='@json($comparisonData)' data-currency="{{ $tenant->currency ?? 'EUR' }}"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Tickets Comparison Chart -->
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Tickets Comparison</h4>
+                        <div class="h-48">
+                            <canvas id="comparisonTicketsChart" data-chart='@json($comparisonData)'></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <!-- Charts Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" wire:key="charts-{{ $chartPeriod }}">
             <!-- Sales Chart -->
@@ -169,6 +271,7 @@
         function initCharts() {
             initSalesChart();
             initTicketsChart();
+            initComparisonCharts();
         }
 
         function initSalesChart() {
@@ -358,6 +461,218 @@
                             grid: {
                                 color: isDark ? '#374151' : '#f3f4f6',
                             },
+                            ticks: {
+                                color: isDark ? '#9ca3af' : '#6b7280',
+                                stepSize: 1,
+                                callback: function(value) {
+                                    if (Number.isInteger(value)) {
+                                        return value;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initComparisonCharts() {
+            initComparisonSalesChart();
+            initComparisonTicketsChart();
+        }
+
+        function initComparisonSalesChart() {
+            const ctx = document.getElementById('comparisonSalesChart');
+            if (!ctx) return;
+
+            // Destroy existing chart
+            const existingChart = Chart.getChart(ctx);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+
+            const isDark = document.documentElement.classList.contains('dark');
+
+            const chartDataStr = ctx.getAttribute('data-chart');
+            if (!chartDataStr) return;
+
+            const chartData = JSON.parse(chartDataStr);
+            const currency = ctx.getAttribute('data-currency') || 'EUR';
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [
+                        {
+                            label: 'Own Events',
+                            data: chartData.sales.own,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                        },
+                        {
+                            label: 'Hosted Events',
+                            data: chartData.sales.hosted,
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 2,
+                            pointHoverRadius: 4,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index',
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 15,
+                                color: isDark ? '#d1d5db' : '#4b5563',
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: isDark ? '#1f2937' : '#fff',
+                            titleColor: isDark ? '#f3f4f6' : '#111827',
+                            bodyColor: isDark ? '#d1d5db' : '#4b5563',
+                            borderColor: isDark ? '#374151' : '#e5e7eb',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + new Intl.NumberFormat('en-US', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2
+                                    }).format(context.parsed.y) + ' ' + currency;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: isDark ? '#9ca3af' : '#6b7280',
+                                maxRotation: 45,
+                                font: { size: 10 }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: isDark ? '#374151' : '#f3f4f6' },
+                            ticks: {
+                                color: isDark ? '#9ca3af' : '#6b7280',
+                                callback: function(value) {
+                                    return new Intl.NumberFormat('en-US', {
+                                        notation: 'compact',
+                                        maximumFractionDigits: 1
+                                    }).format(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initComparisonTicketsChart() {
+            const ctx = document.getElementById('comparisonTicketsChart');
+            if (!ctx) return;
+
+            // Destroy existing chart
+            const existingChart = Chart.getChart(ctx);
+            if (existingChart) {
+                existingChart.destroy();
+            }
+
+            const isDark = document.documentElement.classList.contains('dark');
+
+            const chartDataStr = ctx.getAttribute('data-chart');
+            if (!chartDataStr) return;
+
+            const chartData = JSON.parse(chartDataStr);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.labels,
+                    datasets: [
+                        {
+                            label: 'Own Events',
+                            data: chartData.tickets.own,
+                            backgroundColor: isDark ? 'rgba(16, 185, 129, 0.7)' : 'rgba(16, 185, 129, 0.7)',
+                            borderColor: '#10b981',
+                            borderWidth: 1,
+                            borderRadius: 2,
+                        },
+                        {
+                            label: 'Hosted Events',
+                            data: chartData.tickets.hosted,
+                            backgroundColor: isDark ? 'rgba(139, 92, 246, 0.7)' : 'rgba(139, 92, 246, 0.7)',
+                            borderColor: '#8b5cf6',
+                            borderWidth: 1,
+                            borderRadius: 2,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index',
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                boxWidth: 12,
+                                padding: 15,
+                                color: isDark ? '#d1d5db' : '#4b5563',
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: isDark ? '#1f2937' : '#fff',
+                            titleColor: isDark ? '#f3f4f6' : '#111827',
+                            bodyColor: isDark ? '#d1d5db' : '#4b5563',
+                            borderColor: isDark ? '#374151' : '#e5e7eb',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.parsed.y;
+                                    return context.dataset.label + ': ' + total + ' ticket' + (total !== 1 ? 's' : '');
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: isDark ? '#9ca3af' : '#6b7280',
+                                maxRotation: 45,
+                                font: { size: 10 }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: isDark ? '#374151' : '#f3f4f6' },
                             ticks: {
                                 color: isDark ? '#9ca3af' : '#6b7280',
                                 stepSize: 1,

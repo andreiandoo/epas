@@ -31,10 +31,60 @@ class EventResource extends Resource
     protected static \UnitEnum|string|null $navigationGroup = null;
     protected static ?int $navigationSort = 2;
 
+    /**
+     * Navigation badge showing hosted events count
+     */
+    public static function getNavigationBadge(): ?string
+    {
+        $tenant = auth()->user()?->tenant;
+        if (!$tenant || !$tenant->ownsVenues()) {
+            return null;
+        }
+
+        $hostedCount = $tenant->hostedEvents()->count();
+        return $hostedCount > 0 ? (string) $hostedCount : null;
+    }
+
+    /**
+     * Navigation badge color
+     */
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'info';
+    }
+
+    /**
+     * Navigation badge tooltip
+     */
+    public static function getNavigationBadgeTooltip(): ?string
+    {
+        return 'Hosted events at your venues';
+    }
+
     public static function getEloquentQuery(): Builder
     {
         $tenant = auth()->user()->tenant;
-        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+        $tenantId = $tenant?->id;
+
+        // Get IDs of venues owned by this tenant
+        $ownedVenueIds = \App\Models\Venue::where('tenant_id', $tenantId)->pluck('id')->toArray();
+
+        return parent::getEloquentQuery()
+            ->where(function ($query) use ($tenantId, $ownedVenueIds) {
+                // Own events
+                $query->where('tenant_id', $tenantId)
+                    // OR events happening at owned venues (guest events)
+                    ->orWhereIn('venue_id', $ownedVenueIds);
+            });
+    }
+
+    /**
+     * Check if an event is a guest event (not owned by current tenant but at their venue)
+     */
+    public static function isGuestEvent(Event $event): bool
+    {
+        $tenant = auth()->user()->tenant;
+        return $event->tenant_id !== $tenant?->id;
     }
 
     public static function form(Schema $schema): Schema
@@ -938,11 +988,35 @@ class EventResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $tenant = auth()->user()->tenant;
+
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->description(function (Event $record) use ($tenant) {
+                        if ($record->tenant_id !== $tenant?->id) {
+                            return 'Hosted event by ' . ($record->tenant?->public_name ?? $record->tenant?->name ?? 'Unknown');
+                        }
+                        return null;
+                    }),
+                Tables\Columns\TextColumn::make('ownership')
+                    ->label('Type')
+                    ->badge()
+                    ->getStateUsing(function (Event $record) use ($tenant) {
+                        return $record->tenant_id === $tenant?->id ? 'Your Event' : 'Hosted';
+                    })
+                    ->color(fn (string $state): string => match ($state) {
+                        'Your Event' => 'success',
+                        'Hosted' => 'info',
+                        default => 'gray',
+                    }),
+                Tables\Columns\TextColumn::make('tenant.name')
+                    ->label('Organizer')
+                    ->getStateUsing(fn (Event $record) => $record->tenant?->public_name ?? $record->tenant?->name)
+                    ->visible(fn () => $tenant?->ownsVenues() ?? false)
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('venue.name')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('event_date')
@@ -962,6 +1036,20 @@ class EventResource extends Resource
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_cancelled'),
                 Tables\Filters\TernaryFilter::make('is_sold_out'),
+                Tables\Filters\SelectFilter::make('ownership')
+                    ->label('Event Type')
+                    ->options([
+                        'own' => 'Your Events',
+                        'hosted' => 'Hosted Events',
+                    ])
+                    ->query(function (Builder $query, array $data) use ($tenant) {
+                        return match ($data['value'] ?? null) {
+                            'own' => $query->where('tenant_id', $tenant?->id),
+                            'hosted' => $query->where('tenant_id', '!=', $tenant?->id),
+                            default => $query,
+                        };
+                    })
+                    ->visible(fn () => $tenant?->ownsVenues() ?? false),
             ])
             ->actions([])
             ->bulkActions([])
@@ -971,13 +1059,25 @@ class EventResource extends Resource
                     ->icon('heroicon-o-chart-bar')
                     ->color('info')
                     ->url(fn (Event $record) => static::getUrl('statistics', ['record' => $record])),
-                EditAction::make(),
+                EditAction::make()
+                    ->visible(fn (Event $record) => $record->tenant_id === $tenant?->id),
+                Action::make('view-guest')
+                    ->label('View Details')
+                    ->icon('heroicon-o-eye')
+                    ->color('gray')
+                    ->url(fn (Event $record) => static::getUrl('view-guest', ['record' => $record]))
+                    ->visible(fn (Event $record) => $record->tenant_id !== $tenant?->id),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->before(function ($records) use ($tenant) {
+                            // Filter out hosted events - can only delete own events
+                            return $records->filter(fn ($record) => $record->tenant_id === $tenant?->id);
+                        }),
                 ]),
             ])
+            ->checkIfRecordIsSelectableUsing(fn (Event $record) => $record->tenant_id === $tenant?->id)
             ->defaultSort('created_at', 'desc');
     }
 
@@ -993,6 +1093,7 @@ class EventResource extends Resource
             'create' => Pages\CreateEvent::route('/create'),
             'edit' => Pages\EditEvent::route('/{record}/edit'),
             'statistics' => Pages\EventStatistics::route('/{record}/statistics'),
+            'view-guest' => Pages\ViewGuestEvent::route('/{record}/view'),
         ];
     }
 }

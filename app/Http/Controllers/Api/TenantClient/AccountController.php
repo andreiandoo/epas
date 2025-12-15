@@ -8,6 +8,7 @@ use App\Models\CustomerToken;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\Shop\ShopOrder;
+use App\Services\Gamification\GamificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -16,6 +17,12 @@ use Illuminate\Validation\ValidationException;
 
 class AccountController extends Controller
 {
+    protected GamificationService $gamificationService;
+
+    public function __construct(GamificationService $gamificationService)
+    {
+        $this->gamificationService = $gamificationService;
+    }
 
     /**
      * Get customer's watchlist
@@ -600,6 +607,252 @@ class AccountController extends Controller
         ]);
     }
 
+    // ==========================================
+    // GAMIFICATION / LOYALTY POINTS
+    // ==========================================
+
+    /**
+     * Get customer's points summary
+     */
+    public function points(Request $request): JsonResponse
+    {
+        $customer = $this->getAuthenticatedCustomer($request);
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $tenant = $request->attributes->get('tenant');
+
+        // Check if gamification is enabled
+        $hasGamification = $tenant->microservices()
+            ->where('slug', 'gamification')
+            ->wherePivot('is_active', true)
+            ->exists();
+
+        if (!$hasGamification) {
+            return response()->json([
+                'success' => false,
+                'enabled' => false,
+                'message' => 'Gamification not enabled',
+            ]);
+        }
+
+        $summary = $this->gamificationService->getCustomerSummary($tenant->id, $customer->id);
+        $config = $this->gamificationService->getConfig($tenant->id);
+
+        return response()->json([
+            'success' => true,
+            'enabled' => true,
+            'data' => array_merge($summary, [
+                'points_name' => $config?->points_name ?? 'Points',
+                'points_name_singular' => $config?->points_name_singular ?? 'Point',
+                'point_value_cents' => $config?->point_value_cents ?? 1,
+                'currency' => $config?->currency ?? 'RON',
+                'earn_percentage' => $config?->earn_percentage ?? 0,
+                'min_redeem_points' => $config?->min_redeem_points ?? 0,
+                'icon' => $config?->icon ?? 'star',
+            ]),
+        ]);
+    }
+
+    /**
+     * Get customer's points transaction history
+     */
+    public function pointsHistory(Request $request): JsonResponse
+    {
+        $customer = $this->getAuthenticatedCustomer($request);
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $tenant = $request->attributes->get('tenant');
+
+        // Check if gamification is enabled
+        $hasGamification = $tenant->microservices()
+            ->where('slug', 'gamification')
+            ->wherePivot('is_active', true)
+            ->exists();
+
+        if (!$hasGamification) {
+            return response()->json([
+                'success' => false,
+                'enabled' => false,
+                'message' => 'Gamification not enabled',
+            ]);
+        }
+
+        $limit = min($request->input('limit', 20), 100);
+        $offset = $request->input('offset', 0);
+
+        $history = $this->gamificationService->getPointsHistory($tenant->id, $customer->id, $limit, $offset);
+        $config = $this->gamificationService->getConfig($tenant->id);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'transactions' => $history['transactions'],
+                'pagination' => $history['pagination'],
+                'points_name' => $config?->points_name ?? 'Points',
+                'currency' => $config?->currency ?? 'RON',
+            ],
+        ]);
+    }
+
+    /**
+     * Get customer's referral information and stats
+     */
+    public function referrals(Request $request): JsonResponse
+    {
+        $customer = $this->getAuthenticatedCustomer($request);
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $tenant = $request->attributes->get('tenant');
+
+        // Check if gamification is enabled
+        $hasGamification = $tenant->microservices()
+            ->where('slug', 'gamification')
+            ->wherePivot('is_active', true)
+            ->exists();
+
+        if (!$hasGamification) {
+            return response()->json([
+                'success' => false,
+                'enabled' => false,
+                'message' => 'Gamification not enabled',
+            ]);
+        }
+
+        $config = $this->gamificationService->getConfig($tenant->id);
+        $customerPoints = $this->gamificationService->getCustomerPoints($tenant->id, $customer->id);
+
+        // Get referral stats
+        $referrals = \App\Models\Gamification\Referral::where('tenant_id', $tenant->id)
+            ->where('referrer_customer_id', $customer->id)
+            ->orderBy('created_at', 'desc')
+            ->take(20)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'referral_code' => $customerPoints->referral_code,
+                'referral_link' => $customerPoints->getReferralLink(),
+                'total_referrals' => $customerPoints->referral_count,
+                'points_earned_from_referrals' => $customerPoints->referral_points_earned,
+                'referral_bonus_points' => $config?->referral_bonus_points ?? 0,
+                'referred_bonus_points' => $config?->referred_bonus_points ?? 0,
+                'points_name' => $config?->points_name ?? 'Points',
+                'recent_referrals' => $referrals->map(fn ($r) => [
+                    'status' => $r->status,
+                    'status_label' => $r->getStatusLabel(),
+                    'points_awarded' => $r->referrer_points_awarded,
+                    'created_at' => $r->created_at->toIso8601String(),
+                    'converted_at' => $r->converted_at?->toIso8601String(),
+                ]),
+            ],
+        ]);
+    }
+
+    /**
+     * Get customer's tier information and progress
+     */
+    public function tier(Request $request): JsonResponse
+    {
+        $customer = $this->getAuthenticatedCustomer($request);
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $tenant = $request->attributes->get('tenant');
+
+        // Check if gamification is enabled
+        $hasGamification = $tenant->microservices()
+            ->where('slug', 'gamification')
+            ->wherePivot('is_active', true)
+            ->exists();
+
+        if (!$hasGamification) {
+            return response()->json([
+                'success' => false,
+                'enabled' => false,
+                'message' => 'Gamification not enabled',
+            ]);
+        }
+
+        $config = $this->gamificationService->getConfig($tenant->id);
+        $customerPoints = $this->gamificationService->getCustomerPoints($tenant->id, $customer->id);
+
+        // Get tier configuration
+        $tiers = $config?->tiers ?? [];
+        $currentTier = $customerPoints->current_tier;
+        $tierPoints = $customerPoints->tier_points;
+
+        // Find next tier
+        $nextTier = null;
+        $pointsToNextTier = 0;
+
+        $sortedTiers = collect($tiers)->sortBy('min_points')->values();
+        foreach ($sortedTiers as $index => $tier) {
+            if ($tier['slug'] === $currentTier && isset($sortedTiers[$index + 1])) {
+                $nextTier = $sortedTiers[$index + 1];
+                $pointsToNextTier = max(0, $nextTier['min_points'] - $tierPoints);
+                break;
+            }
+        }
+
+        // Find current tier details
+        $currentTierDetails = collect($tiers)->firstWhere('slug', $currentTier);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'current_tier' => [
+                    'slug' => $currentTier,
+                    'name' => $currentTierDetails['name'] ?? ucfirst($currentTier),
+                    'color' => $currentTierDetails['color'] ?? '#6B7280',
+                    'multiplier' => $currentTierDetails['multiplier'] ?? 1.0,
+                    'benefits' => $currentTierDetails['benefits'] ?? [],
+                ],
+                'tier_points' => $tierPoints,
+                'next_tier' => $nextTier ? [
+                    'slug' => $nextTier['slug'],
+                    'name' => $nextTier['name'],
+                    'color' => $nextTier['color'] ?? '#6B7280',
+                    'min_points' => $nextTier['min_points'],
+                    'points_needed' => $pointsToNextTier,
+                ] : null,
+                'all_tiers' => $sortedTiers->map(fn ($t) => [
+                    'slug' => $t['slug'],
+                    'name' => $t['name'],
+                    'color' => $t['color'] ?? '#6B7280',
+                    'min_points' => $t['min_points'],
+                    'multiplier' => $t['multiplier'] ?? 1.0,
+                    'benefits' => $t['benefits'] ?? [],
+                    'is_current' => $t['slug'] === $currentTier,
+                ]),
+                'points_name' => $config?->points_name ?? 'Points',
+            ],
+        ]);
+    }
+
     /**
      * Helper: Get order status label
      */
@@ -626,5 +879,74 @@ class AccountController extends Controller
             'refunded' => 'Rambursat',
             default => ucfirst($status),
         };
+    }
+
+    // ==========================================
+    // AFFILIATE STATUS (quick check)
+    // ==========================================
+
+    /**
+     * Get customer's affiliate status (quick check for account page)
+     */
+    public function affiliateStatus(Request $request): JsonResponse
+    {
+        $customer = $this->getAuthenticatedCustomer($request);
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $tenant = $request->attributes->get('tenant');
+
+        // Check if affiliates microservice is enabled
+        $hasAffiliates = $tenant->microservices()
+            ->where('slug', 'affiliates')
+            ->wherePivot('is_active', true)
+            ->exists();
+
+        if (!$hasAffiliates) {
+            return response()->json([
+                'success' => true,
+                'enabled' => false,
+                'has_affiliate' => false,
+            ]);
+        }
+
+        // Check if customer has an affiliate account
+        $affiliate = \App\Models\Affiliate::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('customer_id', $customer->id)
+            ->first();
+
+        $settings = \App\Models\AffiliateSettings::where('tenant_id', $tenant->id)->first();
+
+        if (!$affiliate) {
+            return response()->json([
+                'success' => true,
+                'enabled' => true,
+                'has_affiliate' => false,
+                'can_register' => $settings?->allow_self_registration ?? true,
+            ]);
+        }
+
+        // Return quick summary
+        return response()->json([
+            'success' => true,
+            'enabled' => true,
+            'has_affiliate' => true,
+            'data' => [
+                'code' => $affiliate->code,
+                'status' => $affiliate->status,
+                'status_label' => $affiliate->getStatusLabel(),
+                'is_active' => $affiliate->isActive(),
+                'available_balance' => (float) $affiliate->available_balance,
+                'pending_balance' => (float) $affiliate->pending_balance,
+                'total_earned' => $affiliate->total_commission,
+                'currency' => $settings?->currency ?? 'RON',
+            ],
+        ]);
     }
 }
