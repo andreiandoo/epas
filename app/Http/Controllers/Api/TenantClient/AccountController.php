@@ -772,4 +772,73 @@ class AccountController extends Controller
             default => ucfirst($status),
         };
     }
+
+    // ==========================================
+    // AFFILIATE STATUS (quick check)
+    // ==========================================
+
+    /**
+     * Get customer's affiliate status (quick check for account page)
+     */
+    public function affiliateStatus(Request $request): JsonResponse
+    {
+        $customer = $this->getAuthenticatedCustomer($request);
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $tenant = $request->attributes->get('tenant');
+
+        // Check if affiliates microservice is enabled
+        $hasAffiliates = $tenant->microservices()
+            ->where('slug', 'affiliates')
+            ->wherePivot('is_active', true)
+            ->exists();
+
+        if (!$hasAffiliates) {
+            return response()->json([
+                'success' => true,
+                'enabled' => false,
+                'has_affiliate' => false,
+            ]);
+        }
+
+        // Check if customer has an affiliate account
+        $affiliate = \App\Models\Affiliate::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('customer_id', $customer->id)
+            ->first();
+
+        $settings = \App\Models\AffiliateSettings::where('tenant_id', $tenant->id)->first();
+
+        if (!$affiliate) {
+            return response()->json([
+                'success' => true,
+                'enabled' => true,
+                'has_affiliate' => false,
+                'can_register' => $settings?->allow_self_registration ?? true,
+            ]);
+        }
+
+        // Return quick summary
+        return response()->json([
+            'success' => true,
+            'enabled' => true,
+            'has_affiliate' => true,
+            'data' => [
+                'code' => $affiliate->code,
+                'status' => $affiliate->status,
+                'status_label' => $affiliate->getStatusLabel(),
+                'is_active' => $affiliate->isActive(),
+                'available_balance' => (float) $affiliate->available_balance,
+                'pending_balance' => (float) $affiliate->pending_balance,
+                'total_earned' => $affiliate->total_commission,
+                'currency' => $settings?->currency ?? 'RON',
+            ],
+        ]);
+    }
 }
