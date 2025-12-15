@@ -13,7 +13,6 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Schemas\Components as SC;
-use Filament\Infolists\Components as Info;
 use Illuminate\Support\Facades\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -246,11 +245,11 @@ class CoreCustomerResource extends Resource
     {
         return $schema
             ->schema([
-                Info\Section::make('Customer Overview')
+                SC\Section::make('Customer Overview')
                     ->schema([
-                        Info\Grid::make(4)
+                        SC\Grid::make(4)
                             ->schema([
-                                Info\TextEntry::make('customer_segment')
+                                SC\TextEntry::make('customer_segment')
                                     ->label('Segment')
                                     ->badge()
                                     ->color(fn ($state) => match ($state) {
@@ -260,123 +259,123 @@ class CoreCustomerResource extends Resource
                                         default => 'info',
                                     }),
 
-                                Info\TextEntry::make('rfm_segment')
+                                SC\TextEntry::make('rfm_segment')
                                     ->label('RFM Segment')
                                     ->badge(),
 
-                                Info\TextEntry::make('total_orders')
+                                SC\TextEntry::make('total_orders')
                                     ->label('Total Orders'),
 
-                                Info\TextEntry::make('total_spent')
+                                SC\TextEntry::make('total_spent')
                                     ->label('Total Spent')
                                     ->money('USD'),
                             ]),
                     ]),
 
-                Info\Section::make('Contact Information')
+                SC\Section::make('Contact Information')
                     ->schema([
-                        Info\Grid::make(2)
+                        SC\Grid::make(2)
                             ->schema([
-                                Info\TextEntry::make('email')
+                                SC\TextEntry::make('email')
                                     ->label('Email')
                                     ->copyable(),
 
-                                Info\TextEntry::make('phone')
+                                SC\TextEntry::make('phone')
                                     ->label('Phone'),
 
-                                Info\TextEntry::make('full_name')
+                                SC\TextEntry::make('full_name')
                                     ->label('Name'),
 
-                                Info\TextEntry::make('country_code')
+                                SC\TextEntry::make('country_code')
                                     ->label('Country'),
                             ]),
                     ])
                     ->collapsible(),
 
-                Info\Section::make('Engagement Metrics')
+                SC\Section::make('Engagement Metrics')
                     ->schema([
-                        Info\Grid::make(4)
+                        SC\Grid::make(4)
                             ->schema([
-                                Info\TextEntry::make('total_visits')
+                                SC\TextEntry::make('total_visits')
                                     ->label('Total Visits'),
 
-                                Info\TextEntry::make('total_pageviews')
+                                SC\TextEntry::make('total_pageviews')
                                     ->label('Page Views'),
 
-                                Info\TextEntry::make('engagement_score')
+                                SC\TextEntry::make('engagement_score')
                                     ->label('Engagement Score'),
 
-                                Info\TextEntry::make('average_order_value')
+                                SC\TextEntry::make('average_order_value')
                                     ->label('Avg Order Value')
                                     ->money('USD'),
                             ]),
                     ]),
 
-                Info\Section::make('RFM Scores')
+                SC\Section::make('RFM Scores')
                     ->schema([
-                        Info\Grid::make(4)
+                        SC\Grid::make(4)
                             ->schema([
-                                Info\TextEntry::make('rfm_recency_score')
+                                SC\TextEntry::make('rfm_recency_score')
                                     ->label('Recency')
                                     ->badge()
                                     ->color(fn ($state) => $state >= 4 ? 'success' : ($state >= 2 ? 'warning' : 'danger')),
 
-                                Info\TextEntry::make('rfm_frequency_score')
+                                SC\TextEntry::make('rfm_frequency_score')
                                     ->label('Frequency')
                                     ->badge()
                                     ->color(fn ($state) => $state >= 4 ? 'success' : ($state >= 2 ? 'warning' : 'danger')),
 
-                                Info\TextEntry::make('rfm_monetary_score')
+                                SC\TextEntry::make('rfm_monetary_score')
                                     ->label('Monetary')
                                     ->badge()
                                     ->color(fn ($state) => $state >= 4 ? 'success' : ($state >= 2 ? 'warning' : 'danger')),
 
-                                Info\TextEntry::make('lifetime_value')
+                                SC\TextEntry::make('lifetime_value')
                                     ->label('Lifetime Value')
                                     ->money('USD'),
                             ]),
                     ])
                     ->collapsible(),
 
-                Info\Section::make('Attribution')
+                SC\Section::make('Attribution')
                     ->schema([
-                        Info\Grid::make(2)
+                        SC\Grid::make(2)
                             ->schema([
-                                Info\TextEntry::make('first_utm_source')
+                                SC\TextEntry::make('first_utm_source')
                                     ->label('First UTM Source')
                                     ->placeholder('-'),
 
-                                Info\TextEntry::make('first_utm_medium')
+                                SC\TextEntry::make('first_utm_medium')
                                     ->label('First UTM Medium')
                                     ->placeholder('-'),
 
-                                Info\TextEntry::make('first_utm_campaign')
+                                SC\TextEntry::make('first_utm_campaign')
                                     ->label('First Campaign')
                                     ->placeholder('-'),
 
-                                Info\TextEntry::make('first_referrer')
+                                SC\TextEntry::make('first_referrer')
                                     ->label('First Referrer')
                                     ->placeholder('Direct'),
                             ]),
 
-                        Info\Grid::make(4)
+                        SC\Grid::make(4)
                             ->schema([
-                                Info\IconEntry::make('has_gclid')
+                                SC\IconEntry::make('has_gclid')
                                     ->label('Google Ads')
                                     ->getStateUsing(fn ($record) => (bool) $record->first_gclid)
                                     ->boolean(),
 
-                                Info\IconEntry::make('has_fbclid')
+                                SC\IconEntry::make('has_fbclid')
                                     ->label('Facebook Ads')
                                     ->getStateUsing(fn ($record) => (bool) $record->first_fbclid)
                                     ->boolean(),
 
-                                Info\IconEntry::make('has_ttclid')
+                                SC\IconEntry::make('has_ttclid')
                                     ->label('TikTok Ads')
                                     ->getStateUsing(fn ($record) => (bool) $record->first_ttclid)
                                     ->boolean(),
 
-                                Info\IconEntry::make('has_li_fat_id')
+                                SC\IconEntry::make('has_li_fat_id')
                                     ->label('LinkedIn Ads')
                                     ->getStateUsing(fn ($record) => (bool) $record->first_li_fat_id)
                                     ->boolean(),
@@ -384,24 +383,24 @@ class CoreCustomerResource extends Resource
                     ])
                     ->collapsible(),
 
-                Info\Section::make('Timeline')
+                SC\Section::make('Timeline')
                     ->schema([
-                        Info\Grid::make(4)
+                        SC\Grid::make(4)
                             ->schema([
-                                Info\TextEntry::make('first_seen_at')
+                                SC\TextEntry::make('first_seen_at')
                                     ->label('First Seen')
                                     ->dateTime(),
 
-                                Info\TextEntry::make('last_seen_at')
+                                SC\TextEntry::make('last_seen_at')
                                     ->label('Last Seen')
                                     ->dateTime(),
 
-                                Info\TextEntry::make('first_purchase_at')
+                                SC\TextEntry::make('first_purchase_at')
                                     ->label('First Purchase')
                                     ->dateTime()
                                     ->placeholder('Never'),
 
-                                Info\TextEntry::make('last_purchase_at')
+                                SC\TextEntry::make('last_purchase_at')
                                     ->label('Last Purchase')
                                     ->dateTime()
                                     ->placeholder('Never'),
@@ -409,15 +408,15 @@ class CoreCustomerResource extends Resource
                     ])
                     ->collapsible(),
 
-                Info\Section::make('Tags & Notes')
+                SC\Section::make('Tags & Notes')
                     ->schema([
-                        Info\TextEntry::make('tags')
+                        SC\TextEntry::make('tags')
                             ->label('Tags')
                             ->badge()
                             ->separator(',')
                             ->placeholder('No tags'),
 
-                        Info\TextEntry::make('notes')
+                        SC\TextEntry::make('notes')
                             ->label('Notes')
                             ->placeholder('No notes'),
                     ])
