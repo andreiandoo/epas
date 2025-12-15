@@ -7,7 +7,6 @@ use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\BulkAction;
-use Filament\Forms;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -42,33 +41,33 @@ class CoreCustomerResource extends Resource
     {
         return $schema
             ->schema([
-                Forms\Components\Section::make('Customer Information')
+                SC\Section::make('Customer Information')
                     ->schema([
-                        Forms\Components\TextInput::make('email')
+                        SC\TextInput::make('email')
                             ->label('Email')
                             ->email()
                             ->disabled(),
 
-                        Forms\Components\TextInput::make('first_name')
+                        SC\TextInput::make('first_name')
                             ->label('First Name')
                             ->disabled(),
 
-                        Forms\Components\TextInput::make('last_name')
+                        SC\TextInput::make('last_name')
                             ->label('Last Name')
                             ->disabled(),
 
-                        Forms\Components\TextInput::make('phone')
+                        SC\TextInput::make('phone')
                             ->label('Phone')
                             ->disabled(),
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Tags & Notes')
+                SC\Section::make('Tags & Notes')
                     ->schema([
-                        Forms\Components\TagsInput::make('tags')
+                        SC\TagsInput::make('tags')
                             ->label('Tags'),
 
-                        Forms\Components\Textarea::make('notes')
+                        SC\Textarea::make('notes')
                             ->label('Notes')
                             ->rows(3),
                     ]),

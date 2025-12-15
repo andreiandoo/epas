@@ -4,6 +4,8 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\AffiliateResource\Pages;
 use App\Models\Affiliate;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Forms;
@@ -216,7 +218,7 @@ class AffiliateResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\Action::make('approve')
+                Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
@@ -233,7 +235,7 @@ class AffiliateResource extends Resource
                             ->send();
                     }),
 
-                Tables\Actions\Action::make('reject')
+                Action::make('reject')
                     ->label('Reject')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -250,7 +252,7 @@ class AffiliateResource extends Resource
                             ->send();
                     }),
 
-                Tables\Actions\Action::make('suspend')
+                Action::make('suspend')
                     ->label('Suspend')
                     ->icon('heroicon-o-pause-circle')
                     ->color('warning')
@@ -267,7 +269,7 @@ class AffiliateResource extends Resource
                             ->send();
                     }),
 
-                Tables\Actions\Action::make('reactivate')
+                Action::make('reactivate')
                     ->label('Reactivate')
                     ->icon('heroicon-o-play-circle')
                     ->color('success')
@@ -283,7 +285,7 @@ class AffiliateResource extends Resource
                     }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkAction::make('bulk_approve')
+                BulkAction::make('bulk_approve')
                     ->label('Approve Selected')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
