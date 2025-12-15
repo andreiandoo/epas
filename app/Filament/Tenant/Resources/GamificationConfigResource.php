@@ -60,12 +60,13 @@ class GamificationConfigResource extends Resource
                 SC\Section::make('Point Value Configuration')
                     ->description('Configure how points are valued and earned')
                     ->schema([
-                        Forms\Components\TextInput::make('point_value_cents')
-                            ->label('Point Value (in cents)')
+                        Forms\Components\TextInput::make('point_value')
+                            ->label('Point Value')
                             ->numeric()
-                            ->default(1)
+                            ->step(0.01)
+                            ->default(0.01)
                             ->required()
-                            ->helperText('How many cents is 1 point worth for redemption'),
+                            ->helperText('How much is 1 point worth for redemption (e.g., 0.01 = 1 point = 0.01 RON)'),
 
                         Forms\Components\Select::make('currency')
                             ->options([
@@ -89,11 +90,12 @@ class GamificationConfigResource extends Resource
                             ->default(true)
                             ->helperText('Calculate points based on subtotal (vs total with fees)'),
 
-                        Forms\Components\TextInput::make('min_order_cents_for_earning')
-                            ->label('Minimum Order (cents)')
+                        Forms\Components\TextInput::make('min_order_for_earning')
+                            ->label('Minimum Order')
                             ->numeric()
+                            ->step(0.01)
                             ->default(0)
-                            ->helperText('Minimum order value to earn points'),
+                            ->helperText('Minimum order value to earn points (e.g., 10.00)'),
                     ])->columns(3),
 
                 SC\Section::make('Redemption Settings')
@@ -233,9 +235,9 @@ class GamificationConfigResource extends Resource
                     ->label('Earn %')
                     ->suffix('%'),
 
-                Tables\Columns\TextColumn::make('point_value_cents')
+                Tables\Columns\TextColumn::make('point_value')
                     ->label('Point Value')
-                    ->suffix(' cents'),
+                    ->formatStateUsing(fn ($state, $record) => number_format($state, 2) . ' ' . ($record->currency ?? 'RON')),
 
                 Tables\Columns\TextColumn::make('min_redeem_points')
                     ->label('Min Redeem'),

@@ -14,11 +14,11 @@ class GamificationConfig extends Model
 
     protected $fillable = [
         'tenant_id',
-        'point_value_cents',
+        'point_value',
         'currency',
         'earn_percentage',
         'earn_on_subtotal',
-        'min_order_cents_for_earning',
+        'min_order_for_earning',
         'min_redeem_points',
         'max_redeem_percentage',
         'max_redeem_points_per_order',
@@ -37,8 +37,10 @@ class GamificationConfig extends Model
     ];
 
     protected $casts = [
+        'point_value' => 'decimal:2',
         'earn_percentage' => 'decimal:2',
         'earn_on_subtotal' => 'boolean',
+        'min_order_for_earning' => 'decimal:2',
         'max_redeem_percentage' => 'decimal:2',
         'expire_on_inactivity' => 'boolean',
         'tiers' => 'array',
@@ -75,42 +77,42 @@ class GamificationConfig extends Model
     /**
      * Calculate points earned from an order amount
      */
-    public function calculateEarnedPoints(int $amountCents): int
+    public function calculateEarnedPoints(float $amount): int
     {
-        if ($amountCents < $this->min_order_cents_for_earning) {
+        if ($amount < ($this->min_order_for_earning ?? 0)) {
             return 0;
         }
 
-        return (int) floor(($amountCents * $this->earn_percentage) / 100);
+        return (int) floor($amount * $this->earn_percentage / 100);
     }
 
     /**
-     * Calculate the monetary value of points in cents
+     * Calculate the monetary value of points
      */
-    public function getPointsValueCents(int $points): int
+    public function getPointsValue(int $points): float
     {
-        return $points * $this->point_value_cents;
+        return round($points * ($this->point_value ?? 0.01), 2);
     }
 
     /**
      * Calculate how many points are needed for a given amount
      */
-    public function getPointsForAmount(int $amountCents): int
+    public function getPointsForAmount(float $amount): int
     {
-        if ($this->point_value_cents <= 0) {
+        if (!$this->point_value || $this->point_value <= 0) {
             return 0;
         }
 
-        return (int) ceil($amountCents / $this->point_value_cents);
+        return (int) ceil($amount / $this->point_value);
     }
 
     /**
      * Get maximum redeemable points for an order
      */
-    public function getMaxRedeemablePoints(int $orderTotalCents, int $availablePoints): int
+    public function getMaxRedeemablePoints(float $orderTotal, int $availablePoints): int
     {
         // Calculate max based on percentage
-        $maxByPercentage = (int) floor(($orderTotalCents * $this->max_redeem_percentage) / 100);
+        $maxByPercentage = $orderTotal * $this->max_redeem_percentage / 100;
 
         // Convert to points
         $maxPointsByPercentage = $this->getPointsForAmount($maxByPercentage);
@@ -189,9 +191,10 @@ class GamificationConfig extends Model
         return self::firstOrCreate(
             ['tenant_id' => $tenantId],
             [
-                'point_value_cents' => 1,
+                'point_value' => 0.01,
                 'currency' => 'RON',
                 'earn_percentage' => 5.00,
+                'min_order_for_earning' => 0,
                 'min_redeem_points' => 100,
                 'max_redeem_percentage' => 50.00,
                 'birthday_bonus_points' => 100,

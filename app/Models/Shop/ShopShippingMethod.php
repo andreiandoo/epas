@@ -19,10 +19,10 @@ class ShopShippingMethod extends Model
         'description',
         'provider',
         'calculation_type',
-        'cost_cents',
-        'cost_per_kg_cents',
-        'min_order_cents',
-        'max_order_cents',
+        'cost',
+        'cost_per_kg',
+        'min_order',
+        'max_order',
         'estimated_days_min',
         'estimated_days_max',
         'is_active',
@@ -32,10 +32,10 @@ class ShopShippingMethod extends Model
     protected $casts = [
         'name' => 'array',
         'description' => 'array',
-        'cost_cents' => 'integer',
-        'cost_per_kg_cents' => 'integer',
-        'min_order_cents' => 'integer',
-        'max_order_cents' => 'integer',
+        'cost' => 'decimal:2',
+        'cost_per_kg' => 'decimal:2',
+        'min_order' => 'decimal:2',
+        'max_order' => 'decimal:2',
         'estimated_days_min' => 'integer',
         'estimated_days_max' => 'integer',
         'is_active' => 'boolean',
@@ -58,38 +58,38 @@ class ShopShippingMethod extends Model
 
     // Cost Calculation
 
-    public function calculateCost(int $orderTotalCents, int $totalWeightGrams = 0): int
+    public function calculateCost(float $orderTotal, int $totalWeightGrams = 0): float
     {
         switch ($this->calculation_type) {
             case 'free':
                 return 0;
 
             case 'flat':
-                return $this->cost_cents;
+                return $this->cost ?? 0;
 
             case 'weight_based':
-                if (!$this->cost_per_kg_cents || $totalWeightGrams <= 0) {
-                    return $this->cost_cents;
+                if (!$this->cost_per_kg || $totalWeightGrams <= 0) {
+                    return $this->cost ?? 0;
                 }
                 $weightKg = ceil($totalWeightGrams / 1000);
-                return (int) ($this->cost_cents + ($weightKg * $this->cost_per_kg_cents));
+                return round(($this->cost ?? 0) + ($weightKg * $this->cost_per_kg), 2);
 
             case 'price_based':
                 // Tiered pricing based on order total
-                if ($this->min_order_cents && $orderTotalCents < $this->min_order_cents) {
-                    return $this->cost_cents;
+                if ($this->min_order && $orderTotal < $this->min_order) {
+                    return $this->cost ?? 0;
                 }
-                if ($this->max_order_cents && $orderTotalCents > $this->max_order_cents) {
+                if ($this->max_order && $orderTotal > $this->max_order) {
                     return 0; // Free shipping above threshold
                 }
-                return $this->cost_cents;
+                return $this->cost ?? 0;
 
             default:
-                return $this->cost_cents;
+                return $this->cost ?? 0;
         }
     }
 
-    public function isAvailableForOrder(int $orderTotalCents, int $totalWeightGrams = 0, bool $hasPhysicalProducts = true): bool
+    public function isAvailableForOrder(float $orderTotal, int $totalWeightGrams = 0, bool $hasPhysicalProducts = true): bool
     {
         if (!$this->is_active) {
             return false;
@@ -103,15 +103,15 @@ class ShopShippingMethod extends Model
         return true;
     }
 
-    public function isFreeShipping(int $orderTotalCents): bool
+    public function isFreeShipping(float $orderTotal): bool
     {
         if ($this->calculation_type === 'free') {
             return true;
         }
 
         // Check free shipping threshold
-        if ($this->min_order_cents && $orderTotalCents >= $this->min_order_cents) {
-            return $this->calculation_type === 'price_based' && $this->max_order_cents === null;
+        if ($this->min_order && $orderTotal >= $this->min_order) {
+            return $this->calculation_type === 'price_based' && $this->max_order === null;
         }
 
         return false;
@@ -136,22 +136,5 @@ class ShopShippingMethod extends Model
         }
 
         return "Up to {$this->estimated_days_max} days";
-    }
-
-    // Accessors
-
-    public function getCostAttribute(): float
-    {
-        return $this->cost_cents / 100;
-    }
-
-    public function getCostPerKgAttribute(): ?float
-    {
-        return $this->cost_per_kg_cents ? $this->cost_per_kg_cents / 100 : null;
-    }
-
-    public function getMinOrderAttribute(): ?float
-    {
-        return $this->min_order_cents ? $this->min_order_cents / 100 : null;
     }
 }

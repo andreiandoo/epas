@@ -17,8 +17,8 @@ class ShopProductVariant extends Model
     protected $fillable = [
         'product_id',
         'sku',
-        'price_cents',
-        'sale_price_cents',
+        'price',
+        'sale_price',
         'stock_quantity',
         'weight_grams',
         'image_url',
@@ -27,8 +27,8 @@ class ShopProductVariant extends Model
     ];
 
     protected $casts = [
-        'price_cents' => 'integer',
-        'sale_price_cents' => 'integer',
+        'price' => 'decimal:2',
+        'sale_price' => 'decimal:2',
         'stock_quantity' => 'integer',
         'weight_grams' => 'integer',
         'is_active' => 'boolean',
@@ -69,42 +69,22 @@ class ShopProductVariant extends Model
 
     // Price Accessors
 
-    public function getPriceAttribute(): float
+    public function getEffectivePriceAttribute(): float
     {
-        $cents = $this->price_cents ?? $this->product->price_cents;
-        return $cents / 100;
+        return $this->price ?? $this->product->price ?? 0;
     }
 
-    public function getSalePriceAttribute(): ?float
+    public function getEffectiveSalePriceAttribute(): ?float
     {
-        $cents = $this->sale_price_cents ?? $this->product->sale_price_cents;
-        return $cents ? $cents / 100 : null;
+        return $this->sale_price ?? $this->product->sale_price;
     }
 
     public function getDisplayPriceAttribute(): float
     {
-        $saleCents = $this->sale_price_cents ?? $this->product->sale_price_cents;
-        $priceCents = $this->price_cents ?? $this->product->price_cents;
+        $salePrice = $this->sale_price ?? $this->product->sale_price;
+        $price = $this->price ?? $this->product->price;
 
-        return ($saleCents ?? $priceCents) / 100;
-    }
-
-    public function getDisplayPriceCentsAttribute(): int
-    {
-        $saleCents = $this->sale_price_cents ?? $this->product->sale_price_cents;
-        $priceCents = $this->price_cents ?? $this->product->price_cents;
-
-        return $saleCents ?? $priceCents;
-    }
-
-    public function getEffectivePriceCentsAttribute(): int
-    {
-        return $this->price_cents ?? $this->product->price_cents;
-    }
-
-    public function getEffectiveSalePriceCentsAttribute(): ?int
-    {
-        return $this->sale_price_cents ?? $this->product->sale_price_cents;
+        return $salePrice ?? $price ?? 0;
     }
 
     // Inventory Methods

@@ -19,8 +19,8 @@ class ShopOrderItem extends Model
         'product_id',
         'variant_id',
         'quantity',
-        'unit_price_cents',
-        'total_cents',
+        'unit_price',
+        'total',
         'product_snapshot',
         'variant_snapshot',
         'is_bundled',
@@ -29,8 +29,8 @@ class ShopOrderItem extends Model
 
     protected $casts = [
         'quantity' => 'integer',
-        'unit_price_cents' => 'integer',
-        'total_cents' => 'integer',
+        'unit_price' => 'decimal:2',
+        'total' => 'decimal:2',
         'product_snapshot' => 'array',
         'variant_snapshot' => 'array',
         'is_bundled' => 'boolean',
@@ -69,16 +69,6 @@ class ShopOrderItem extends Model
     }
 
     // Accessors
-
-    public function getUnitPriceAttribute(): float
-    {
-        return $this->unit_price_cents / 100;
-    }
-
-    public function getTotalAttribute(): float
-    {
-        return $this->total_cents / 100;
-    }
 
     public function getProductTitleAttribute(): string
     {

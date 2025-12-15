@@ -150,23 +150,29 @@ class ShopProductResource extends Resource
                             ->schema([
                                 SC\Section::make('Prices')
                                     ->schema([
-                                        Forms\Components\TextInput::make('price_cents')
-                                            ->label('Price (cents)')
+                                        Forms\Components\TextInput::make('price')
+                                            ->label('Price')
                                             ->required()
                                             ->numeric()
-                                            ->suffix('cents')
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Enter price in cents (e.g., 1999 = €19.99)'),
+                                            ->step(0.01)
+                                            ->minValue(0)
+                                            ->prefix(fn ($get) => $get('currency') ?? 'RON')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Enter price (e.g., 19.99)'),
 
-                                        Forms\Components\TextInput::make('sale_price_cents')
-                                            ->label('Sale Price (cents)')
+                                        Forms\Components\TextInput::make('sale_price')
+                                            ->label('Sale Price')
                                             ->numeric()
-                                            ->suffix('cents')
+                                            ->step(0.01)
+                                            ->minValue(0)
+                                            ->prefix(fn ($get) => $get('currency') ?? 'RON')
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Leave empty if not on sale'),
 
-                                        Forms\Components\TextInput::make('cost_cents')
-                                            ->label('Cost (cents)')
+                                        Forms\Components\TextInput::make('cost')
+                                            ->label('Cost')
                                             ->numeric()
-                                            ->suffix('cents')
+                                            ->step(0.01)
+                                            ->minValue(0)
+                                            ->prefix(fn ($get) => $get('currency') ?? 'RON')
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Your cost for profit calculation'),
 
                                         Forms\Components\Select::make('currency')
@@ -176,7 +182,8 @@ class ShopProductResource extends Resource
                                                 'USD' => 'USD - US Dollar',
                                             ])
                                             ->default('RON')
-                                            ->required(),
+                                            ->required()
+                                            ->live(),
                                     ])->columns(4),
 
                                 SC\Section::make('Tax Settings')
@@ -271,26 +278,35 @@ class ShopProductResource extends Resource
                             ->schema([
                                 SC\Section::make('Product Images')
                                     ->schema([
-                                        Forms\Components\TextInput::make('image_url')
-                                            ->label('Main Image URL')
-                                            ->url()
-                                            ->maxLength(500),
+                                        Forms\Components\FileUpload::make('image_url')
+                                            ->label('Main Product Image')
+                                            ->image()
+                                            ->imageEditor()
+                                            ->imageResizeMode('cover')
+                                            ->imageCropAspectRatio('1:1')
+                                            ->imageResizeTargetWidth('800')
+                                            ->imageResizeTargetHeight('800')
+                                            ->directory('shop-products')
+                                            ->visibility('public')
+                                            ->maxSize(5120)
+                                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                                            ->helperText('Drag & drop or click to upload. Recommended: 800x800px, max 5MB'),
 
-                                        Forms\Components\Repeater::make('gallery')
+                                        Forms\Components\FileUpload::make('gallery')
                                             ->label('Gallery Images')
-                                            ->schema([
-                                                Forms\Components\TextInput::make('url')
-                                                    ->label('Image URL')
-                                                    ->url()
-                                                    ->required(),
-                                                Forms\Components\TextInput::make('alt')
-                                                    ->label('Alt Text')
-                                                    ->maxLength(200),
-                                            ])
-                                            ->columns(2)
-                                            ->defaultItems(0)
-                                            ->addActionLabel('Add Image')
-                                            ->collapsible(),
+                                            ->image()
+                                            ->multiple()
+                                            ->reorderable()
+                                            ->imageEditor()
+                                            ->imageResizeMode('cover')
+                                            ->imageResizeTargetWidth('800')
+                                            ->imageResizeTargetHeight('800')
+                                            ->directory('shop-products/gallery')
+                                            ->visibility('public')
+                                            ->maxSize(5120)
+                                            ->maxFiles(10)
+                                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                                            ->helperText('Drag & drop multiple images. Max 10 images, 5MB each'),
                                     ]),
                             ]),
 
@@ -407,14 +423,14 @@ class ShopProductResource extends Resource
                         'success' => 'digital',
                     ]),
 
-                Tables\Columns\TextColumn::make('price_cents')
+                Tables\Columns\TextColumn::make('price')
                     ->label('Price')
-                    ->formatStateUsing(fn ($state, $record) => number_format($state / 100, 2) . ' ' . $record->currency)
+                    ->formatStateUsing(fn ($state, $record) => number_format($state, 2) . ' ' . $record->currency)
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('sale_price_cents')
+                Tables\Columns\TextColumn::make('sale_price')
                     ->label('Sale')
-                    ->formatStateUsing(fn ($state, $record) => $state ? number_format($state / 100, 2) . ' ' . $record->currency : '-')
+                    ->formatStateUsing(fn ($state, $record) => $state ? number_format($state, 2) . ' ' . $record->currency : '-')
                     ->color('success')
                     ->toggleable(isToggledHiddenByDefault: true),
 

@@ -26,14 +26,14 @@ class ShopOrder extends Model
         'status',
         'payment_status',
         'fulfillment_status',
-        'subtotal_cents',
-        'discount_cents',
-        'shipping_cents',
-        'tax_cents',
-        'total_cents',
+        'subtotal',
+        'discount',
+        'shipping',
+        'tax',
+        'total',
         'currency',
         'coupon_code',
-        'coupon_discount_cents',
+        'coupon_discount',
         'billing_address',
         'shipping_address',
         'shipping_method',
@@ -55,12 +55,12 @@ class ShopOrder extends Model
     ];
 
     protected $casts = [
-        'subtotal_cents' => 'integer',
-        'discount_cents' => 'integer',
-        'shipping_cents' => 'integer',
-        'tax_cents' => 'integer',
-        'total_cents' => 'integer',
-        'coupon_discount_cents' => 'integer',
+        'subtotal' => 'decimal:2',
+        'discount' => 'decimal:2',
+        'shipping' => 'decimal:2',
+        'tax' => 'decimal:2',
+        'total' => 'decimal:2',
+        'coupon_discount' => 'decimal:2',
         'billing_address' => 'array',
         'shipping_address' => 'array',
         'meta' => 'array',
@@ -250,33 +250,6 @@ class ShopOrder extends Model
         }
     }
 
-    // Amount Accessors
-
-    public function getSubtotalAttribute(): float
-    {
-        return $this->subtotal_cents / 100;
-    }
-
-    public function getDiscountAttribute(): float
-    {
-        return $this->discount_cents / 100;
-    }
-
-    public function getShippingAttribute(): float
-    {
-        return $this->shipping_cents / 100;
-    }
-
-    public function getTaxAttribute(): float
-    {
-        return $this->tax_cents / 100;
-    }
-
-    public function getTotalAttribute(): float
-    {
-        return $this->total_cents / 100;
-    }
-
     // Helpers
 
     public function hasPhysicalProducts(): bool
@@ -307,15 +280,15 @@ class ShopOrder extends Model
 
     public function recalculateTotals(): void
     {
-        $subtotal = $this->items->sum('total_cents');
-        $discount = $this->coupon_discount_cents ?? 0;
-        $shipping = $this->shipping_cents ?? 0;
-        $tax = $this->tax_cents ?? 0;
+        $subtotal = $this->items->sum('total');
+        $discount = $this->coupon_discount ?? 0;
+        $shipping = $this->shipping ?? 0;
+        $tax = $this->tax ?? 0;
 
         $this->update([
-            'subtotal_cents' => $subtotal,
-            'discount_cents' => $discount,
-            'total_cents' => max(0, $subtotal - $discount + $shipping + $tax),
+            'subtotal' => $subtotal,
+            'discount' => $discount,
+            'total' => max(0, round($subtotal - $discount + $shipping + $tax, 2)),
         ]);
     }
 

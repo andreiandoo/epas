@@ -30,9 +30,9 @@ class ShopProduct extends Model
         'short_description',
         'type',
         'sku',
-        'price_cents',
-        'sale_price_cents',
-        'cost_cents',
+        'price',
+        'sale_price',
+        'cost',
         'currency',
         'tax_rate',
         'tax_mode',
@@ -61,9 +61,9 @@ class ShopProduct extends Model
         'title' => 'array',
         'description' => 'array',
         'short_description' => 'array',
-        'price_cents' => 'integer',
-        'sale_price_cents' => 'integer',
-        'cost_cents' => 'integer',
+        'price' => 'decimal:2',
+        'sale_price' => 'decimal:2',
+        'cost' => 'decimal:2',
         'tax_rate' => 'decimal:2',
         'stock_quantity' => 'integer',
         'low_stock_threshold' => 'integer',
@@ -193,50 +193,23 @@ class ShopProduct extends Model
 
     // Price Accessors
 
-    public function getPriceAttribute(): float
-    {
-        return $this->price_cents / 100;
-    }
-
-    public function setSalePriceAttribute(?float $value): void
-    {
-        $this->attributes['sale_price_cents'] = $value ? (int) ($value * 100) : null;
-    }
-
-    public function getSalePriceAttribute(): ?float
-    {
-        return $this->sale_price_cents ? $this->sale_price_cents / 100 : null;
-    }
-
-    public function getCostAttribute(): ?float
-    {
-        return $this->cost_cents ? $this->cost_cents / 100 : null;
-    }
-
     public function getDisplayPriceAttribute(): float
     {
-        return $this->sale_price_cents
-            ? $this->sale_price_cents / 100
-            : $this->price_cents / 100;
-    }
-
-    public function getDisplayPriceCentsAttribute(): int
-    {
-        return $this->sale_price_cents ?? $this->price_cents;
+        return $this->sale_price ?? $this->price ?? 0;
     }
 
     public function isOnSale(): bool
     {
-        return $this->sale_price_cents !== null && $this->sale_price_cents < $this->price_cents;
+        return $this->sale_price !== null && $this->sale_price < $this->price;
     }
 
     public function getDiscountPercentage(): ?float
     {
-        if (!$this->isOnSale()) {
+        if (!$this->isOnSale() || !$this->price) {
             return null;
         }
 
-        return round((1 - ($this->sale_price_cents / $this->price_cents)) * 100, 1);
+        return round((1 - ($this->sale_price / $this->price)) * 100, 1);
     }
 
     // Tax Methods
@@ -272,31 +245,31 @@ class ShopProduct extends Model
         return $config['tax_mode'] ?? 'included';
     }
 
-    public function calculateTax(int $priceCents): int
+    public function calculateTax(float $price): float
     {
         $taxRate = $this->getEffectiveTaxRate();
         $taxMode = $this->getEffectiveTaxMode();
 
         if ($taxMode === 'included') {
             // Tax is included, extract it
-            return (int) round($priceCents - ($priceCents / (1 + $taxRate / 100)));
+            return round($price - ($price / (1 + $taxRate / 100)), 2);
         }
 
         // Tax is added on top
-        return (int) round($priceCents * ($taxRate / 100));
+        return round($price * ($taxRate / 100), 2);
     }
 
-    public function getPriceWithTax(): int
+    public function getPriceWithTax(): float
     {
-        $priceCents = $this->display_price_cents;
+        $price = $this->display_price;
         $taxMode = $this->getEffectiveTaxMode();
 
         if ($taxMode === 'included') {
-            return $priceCents;
+            return $price;
         }
 
         // Add tax on top
-        return $priceCents + $this->calculateTax($priceCents);
+        return round($price + $this->calculateTax($price), 2);
     }
 
     // Inventory Methods
