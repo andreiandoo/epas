@@ -218,6 +218,8 @@ class PackageGeneratorService
                 'promo-codes' => 'promo_codes',
                 'invitations' => 'invitations',
                 'tracking' => 'tracking',
+                'shop' => 'shop',
+                'gamification' => 'gamification',
             ];
 
             if (isset($moduleMap[$slug])) {
