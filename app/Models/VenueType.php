@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class VenueType extends Model
@@ -15,6 +16,7 @@ class VenueType extends Model
     public array $translatable = ['name', 'description'];
 
     protected $fillable = [
+        'venue_category_id',
         'name',
         'slug',
         'icon',
@@ -27,6 +29,11 @@ class VenueType extends Model
         'description' => 'array',
         'sort_order' => 'integer',
     ];
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(VenueCategory::class, 'venue_category_id');
+    }
 
     public function venues(): HasMany
     {
