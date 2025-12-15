@@ -288,7 +288,11 @@ class PublicDataController extends Controller
 
         $perPage = min((int) $request->get('per_page', 50), 500);
         $paginator = $query
-            ->with(['artistTypes', 'artistGenres'])
+            ->with([
+                'artistTypes',
+                'artistGenres',
+                'events' => fn($q) => $q->where('event_date', '>=', now())->orderBy('event_date')->select('events.id'),
+            ])
             ->paginate($perPage);
 
         $formattedArtists = collect($paginator->items())->map(function ($artist) {
@@ -361,6 +365,7 @@ class PublicDataController extends Controller
                     'phone' => $artist->agent_phone,
                     'website' => $artist->agent_website,
                 ],
+                'upcoming_event_ids' => $artist->events->pluck('id')->toArray(),
                 'created_at' => $artist->created_at?->toIso8601String(),
                 'updated_at' => $artist->updated_at?->toIso8601String(),
             ];
