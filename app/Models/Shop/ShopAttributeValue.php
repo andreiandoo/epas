@@ -6,15 +6,15 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Spatie\Translatable\HasTranslations;
+use App\Support\Translatable;
 
 class ShopAttributeValue extends Model
 {
-    use HasUuids, HasTranslations;
+    use HasUuids, Translatable;
 
     protected $table = 'shop_attribute_values';
 
-    public $translatable = ['value'];
+    public array $translatable = ['value'];
 
     protected $fillable = [
         'attribute_id',

@@ -11,15 +11,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\Translatable\HasTranslations;
+use App\Support\Translatable;
 
 class ShopProduct extends Model
 {
-    use HasUuids, HasTranslations, SoftDeletes;
+    use HasUuids, Translatable, SoftDeletes;
 
     protected $table = 'shop_products';
 
-    public $translatable = ['title', 'description', 'short_description'];
+    public array $translatable = ['title', 'description', 'short_description'];
 
     protected $fillable = [
         'tenant_id',

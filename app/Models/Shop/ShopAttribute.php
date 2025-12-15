@@ -9,15 +9,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
-use Spatie\Translatable\HasTranslations;
+use App\Support\Translatable;
 
 class ShopAttribute extends Model
 {
-    use HasUuids, HasTranslations;
+    use HasUuids, Translatable;
 
     protected $table = 'shop_attributes';
 
-    public $translatable = ['name'];
+    public array $translatable = ['name'];
 
     protected $fillable = [
         'tenant_id',

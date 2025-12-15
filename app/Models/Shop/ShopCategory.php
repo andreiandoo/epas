@@ -8,15 +8,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
-use Spatie\Translatable\HasTranslations;
+use App\Support\Translatable;
 
 class ShopCategory extends Model
 {
-    use HasUuids, HasTranslations;
+    use HasUuids, Translatable;
 
     protected $table = 'shop_categories';
 
-    public $translatable = ['name', 'description'];
+    public array $translatable = ['name', 'description'];
 
     protected $fillable = [
         'tenant_id',
