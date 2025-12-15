@@ -286,6 +286,7 @@ class ShopProductResource extends Resource
                                             ->imageCropAspectRatio('1:1')
                                             ->imageResizeTargetWidth('800')
                                             ->imageResizeTargetHeight('800')
+                                            ->disk('public')
                                             ->directory('shop-products')
                                             ->visibility('public')
                                             ->maxSize(5120)
@@ -301,6 +302,7 @@ class ShopProductResource extends Resource
                                             ->imageResizeMode('cover')
                                             ->imageResizeTargetWidth('800')
                                             ->imageResizeTargetHeight('800')
+                                            ->disk('public')
                                             ->directory('shop-products/gallery')
                                             ->visibility('public')
                                             ->maxSize(5120)
@@ -393,6 +395,7 @@ class ShopProductResource extends Resource
             ->columns([
                 Tables\Columns\ImageColumn::make('image_url')
                     ->label('Image')
+                    ->disk('public')
                     ->circular()
                     ->defaultImageUrl(fn () => 'https://placehold.co/100x100/EEE/31343C?text=No+Image'),
 

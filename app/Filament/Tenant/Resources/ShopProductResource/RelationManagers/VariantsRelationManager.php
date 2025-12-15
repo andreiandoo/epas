@@ -39,16 +39,21 @@ class VariantsRelationManager extends RelationManager
                     ->maxLength(200)
                     ->placeholder('Auto-generated from attributes'),
 
-                Forms\Components\TextInput::make('price_cents')
-                    ->label('Price (cents)')
+                Forms\Components\TextInput::make('price')
+                    ->label('Price')
                     ->numeric()
-                    ->suffix('cents')
+                    ->step(0.01)
+                    ->minValue(0)
+                    ->prefix('RON')
                     ->placeholder('Use product price'),
 
-                Forms\Components\TextInput::make('sale_price_cents')
-                    ->label('Sale Price (cents)')
+                Forms\Components\TextInput::make('sale_price')
+                    ->label('Sale Price')
                     ->numeric()
-                    ->suffix('cents'),
+                    ->step(0.01)
+                    ->minValue(0)
+                    ->prefix('RON')
+                    ->placeholder('Leave empty if no sale'),
 
                 Forms\Components\TextInput::make('stock_quantity')
                     ->label('Stock')
@@ -60,10 +65,20 @@ class VariantsRelationManager extends RelationManager
                     ->numeric()
                     ->placeholder('Use product weight'),
 
-                Forms\Components\TextInput::make('image_url')
+                Forms\Components\FileUpload::make('image_url')
                     ->label('Variant Image')
-                    ->url()
-                    ->maxLength(500),
+                    ->image()
+                    ->imageEditor()
+                    ->imageResizeMode('cover')
+                    ->imageCropAspectRatio('1:1')
+                    ->imageResizeTargetWidth('400')
+                    ->imageResizeTargetHeight('400')
+                    ->disk('public')
+                    ->directory('shop-variants')
+                    ->visibility('public')
+                    ->maxSize(5120)
+                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])
+                    ->helperText('Drag & drop or click to upload. Max 5MB'),
 
                 Forms\Components\Toggle::make('is_active')
                     ->label('Active')
@@ -103,6 +118,7 @@ class VariantsRelationManager extends RelationManager
             ->columns([
                 Tables\Columns\ImageColumn::make('image_url')
                     ->label('Image')
+                    ->disk('public')
                     ->circular()
                     ->defaultImageUrl(fn () => 'https://placehold.co/50x50/EEE/31343C?text=-'),
 
@@ -123,11 +139,11 @@ class VariantsRelationManager extends RelationManager
                             ->join(', ');
                     }),
 
-                Tables\Columns\TextColumn::make('price_cents')
+                Tables\Columns\TextColumn::make('price')
                     ->label('Price')
                     ->formatStateUsing(function ($state, $record) {
                         if (!$state) return '—';
-                        return number_format($state / 100, 2) . ' ' . ($record->product->currency ?? 'RON');
+                        return number_format($state, 2) . ' ' . ($record->product->currency ?? 'RON');
                     }),
 
                 Tables\Columns\TextColumn::make('stock_quantity')
