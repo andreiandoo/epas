@@ -480,6 +480,57 @@ class ArtistResource extends Resource
                     ->getStateUsing(fn ($record) => $record->artistGenres->map(fn($g) => $g->getTranslation('name', app()->getLocale()))->implode(', '))
                     ->toggleable(),
 
+                // Social Links checkmarks
+                Tables\Columns\IconColumn::make('has_facebook')
+                    ->label('FB')
+                    ->getStateUsing(fn (Artist $record) => !empty($record->facebook_url) && $record->facebook_url !== 'https://www.facebook.com/')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->toggleable(),
+
+                Tables\Columns\IconColumn::make('has_instagram')
+                    ->label('IG')
+                    ->getStateUsing(fn (Artist $record) => !empty($record->instagram_url) && $record->instagram_url !== 'https://www.instagram.com/')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->toggleable(),
+
+                Tables\Columns\IconColumn::make('has_tiktok')
+                    ->label('TikTok')
+                    ->getStateUsing(fn (Artist $record) => !empty($record->tiktok_url) && $record->tiktok_url !== 'https://www.tiktok.com/@')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->toggleable(),
+
+                Tables\Columns\IconColumn::make('has_spotify')
+                    ->label('Spotify')
+                    ->getStateUsing(fn (Artist $record) => !empty($record->spotify_url) && $record->spotify_url !== 'https://open.spotify.com/artist/')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->toggleable(),
+
+                Tables\Columns\IconColumn::make('has_youtube')
+                    ->label('YT')
+                    ->getStateUsing(fn (Artist $record) => !empty($record->youtube_url) && $record->youtube_url !== 'https://www.youtube.com/')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->toggleable(),
+
                 // Social Stats columns
                 Tables\Columns\TextColumn::make('followers_youtube')
                     ->label('YT Subs')

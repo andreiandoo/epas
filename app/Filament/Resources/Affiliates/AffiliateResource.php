@@ -167,6 +167,13 @@ class AffiliateResource extends Resource
                     ->searchable()
                     ->toggleable(),
 
+                Tables\Columns\TextColumn::make('tenant.public_name')
+                    ->label('Tenant')
+                    ->searchable()
+                    ->sortable()
+                    ->description(fn (Affiliate $record) => $record->tenant?->domains?->first()?->domain ?? '-')
+                    ->toggleable(),
+
                 Tables\Columns\BadgeColumn::make('status')
                     ->label('Status')
                     ->colors([
@@ -208,6 +215,12 @@ class AffiliateResource extends Resource
                         'inactive' => 'Inactive',
                         'suspended' => 'Suspended',
                     ]),
+
+                Tables\Filters\SelectFilter::make('tenant_id')
+                    ->label('Tenant')
+                    ->relationship('tenant', 'public_name')
+                    ->searchable()
+                    ->preload(),
             ])
             ->defaultSort('created_at', 'desc');
     }
