@@ -489,6 +489,7 @@ class ArtistResource extends Resource
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('gray')
+                    ->sortable(query: fn ($query, string $direction) => $query->orderByRaw("CASE WHEN facebook_url IS NOT NULL AND facebook_url != '' AND facebook_url != 'https://www.facebook.com/' THEN 1 ELSE 0 END {$direction}"))
                     ->toggleable(),
 
                 Tables\Columns\IconColumn::make('has_instagram')
@@ -499,6 +500,7 @@ class ArtistResource extends Resource
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('gray')
+                    ->sortable(query: fn ($query, string $direction) => $query->orderByRaw("CASE WHEN instagram_url IS NOT NULL AND instagram_url != '' AND instagram_url != 'https://www.instagram.com/' THEN 1 ELSE 0 END {$direction}"))
                     ->toggleable(),
 
                 Tables\Columns\IconColumn::make('has_tiktok')
@@ -509,6 +511,7 @@ class ArtistResource extends Resource
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('gray')
+                    ->sortable(query: fn ($query, string $direction) => $query->orderByRaw("CASE WHEN tiktok_url IS NOT NULL AND tiktok_url != '' AND tiktok_url != 'https://www.tiktok.com/@' THEN 1 ELSE 0 END {$direction}"))
                     ->toggleable(),
 
                 Tables\Columns\IconColumn::make('has_spotify')
@@ -519,6 +522,7 @@ class ArtistResource extends Resource
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('gray')
+                    ->sortable(query: fn ($query, string $direction) => $query->orderByRaw("CASE WHEN spotify_url IS NOT NULL AND spotify_url != '' AND spotify_url != 'https://open.spotify.com/artist/' THEN 1 ELSE 0 END {$direction}"))
                     ->toggleable(),
 
                 Tables\Columns\IconColumn::make('has_youtube')
@@ -529,6 +533,7 @@ class ArtistResource extends Resource
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('gray')
+                    ->sortable(query: fn ($query, string $direction) => $query->orderByRaw("CASE WHEN youtube_url IS NOT NULL AND youtube_url != '' AND youtube_url != 'https://www.youtube.com/' THEN 1 ELSE 0 END {$direction}"))
                     ->toggleable(),
 
                 // Social Stats columns
@@ -559,27 +564,6 @@ class ArtistResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->formatStateUsing(fn ($state) => $state !== null ? $state . '/100' : '—'),
-
-                Tables\Columns\TextColumn::make('followers_facebook')
-                    ->label('Facebook')
-                    ->numeric()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->formatStateUsing(fn ($state) => $state ? number_format($state) : '—'),
-
-                Tables\Columns\TextColumn::make('followers_instagram')
-                    ->label('Instagram')
-                    ->numeric()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->formatStateUsing(fn ($state) => $state ? number_format($state) : '—'),
-
-                Tables\Columns\TextColumn::make('followers_tiktok')
-                    ->label('TikTok')
-                    ->numeric()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true)
-                    ->formatStateUsing(fn ($state) => $state ? number_format($state) : '—'),
 
                 Tables\Columns\TextColumn::make('social_stats_updated_at')
                     ->label('Stats Updated')

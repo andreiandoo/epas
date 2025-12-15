@@ -24,6 +24,19 @@ class AffiliateResource extends Resource
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
+            SC\Section::make('Tenant Information')
+                ->schema([
+                    Forms\Components\Placeholder::make('tenant_name')
+                        ->label('Tenant')
+                        ->content(fn ($record) => $record?->tenant?->public_name ?? 'N/A'),
+
+                    Forms\Components\Placeholder::make('tenant_domain')
+                        ->label('Website')
+                        ->content(fn ($record) => $record?->tenant?->domains?->first()?->domain ?? 'N/A'),
+                ])
+                ->columns(2)
+                ->visible(fn ($record) => $record !== null),
+
             SC\Section::make('Affiliate Details')
                 ->schema([
                     Forms\Components\TextInput::make('code')

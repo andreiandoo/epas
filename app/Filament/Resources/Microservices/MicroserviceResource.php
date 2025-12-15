@@ -221,9 +221,9 @@ class MicroserviceResource extends Resource
                             ->badge()
                             ->color('gray')
                             ->size('sm'),
-                        Tables\Columns\TextColumn::make('tenants_count')
-                            ->counts('tenants')
+                        Tables\Columns\TextColumn::make('active_tenants_count')
                             ->label('Tenants')
+                            ->getStateUsing(fn (Microservice $record) => $record->tenants()->wherePivot('status', 'active')->count())
                             ->suffix(' tenants')
                             ->size('sm')
                             ->color('gray'),
