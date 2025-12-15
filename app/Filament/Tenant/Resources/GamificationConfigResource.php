@@ -4,6 +4,7 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\GamificationConfigResource\Pages;
 use App\Models\Gamification\GamificationConfig;
+use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -255,7 +256,7 @@ class GamificationConfigResource extends Resource
                     ->sortable(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                EditAction::make(),
             ]);
     }
 

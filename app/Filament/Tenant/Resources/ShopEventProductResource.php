@@ -7,6 +7,11 @@ use App\Models\Event;
 use App\Models\Shop\ShopEventProduct;
 use App\Models\Shop\ShopProduct;
 use App\Models\TicketType;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -210,17 +215,17 @@ class ShopEventProductResource extends Resource
                     ->label('Active'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('toggle')
+                EditAction::make(),
+                Action::make('toggle')
                     ->label(fn($record) => $record->is_active ? 'Deactivate' : 'Activate')
                     ->icon(fn($record) => $record->is_active ? 'heroicon-o-x-circle' : 'heroicon-o-check-circle')
                     ->color(fn($record) => $record->is_active ? 'warning' : 'success')
                     ->action(fn($record) => $record->update(['is_active' => !$record->is_active])),
-                Tables\Actions\DeleteAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('sort_order');

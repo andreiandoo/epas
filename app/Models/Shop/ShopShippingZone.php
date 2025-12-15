@@ -25,6 +25,7 @@ class ShopShippingZone extends Model
     ];
 
     protected $casts = [
+        'name' => 'array',
         'countries' => 'array',
         'regions' => 'array',
         'is_default' => 'boolean',

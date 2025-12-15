@@ -113,19 +113,56 @@ class ShopCategoryResource extends Resource
                 SC\Section::make('Appearance')
                     ->collapsed()
                     ->schema([
-                        Forms\Components\TextInput::make('image_url')
-                            ->label('Image URL')
-                            ->url()
-                            ->maxLength(500),
+                        Forms\Components\FileUpload::make('image_url')
+                            ->label('Category Image')
+                            ->image()
+                            ->disk('public')
+                            ->directory('shop/categories')
+                            ->visibility('public')
+                            ->imageEditor()
+                            ->maxSize(2048)
+                            ->columnSpanFull(),
 
-                        Forms\Components\TextInput::make('icon')
+                        Forms\Components\Select::make('icon')
                             ->label('Icon')
-                            ->placeholder('heroicon-o-shopping-bag')
-                            ->maxLength(100),
+                            ->options([
+                                'heroicon-o-shopping-bag' => '🛍️ Shopping Bag',
+                                'heroicon-o-shopping-cart' => '🛒 Shopping Cart',
+                                'heroicon-o-gift' => '🎁 Gift',
+                                'heroicon-o-heart' => '❤️ Heart',
+                                'heroicon-o-star' => '⭐ Star',
+                                'heroicon-o-sparkles' => '✨ Sparkles',
+                                'heroicon-o-tag' => '🏷️ Tag',
+                                'heroicon-o-cube' => '📦 Cube/Box',
+                                'heroicon-o-truck' => '🚚 Truck/Delivery',
+                                'heroicon-o-ticket' => '🎫 Ticket',
+                                'heroicon-o-musical-note' => '🎵 Music',
+                                'heroicon-o-film' => '🎬 Film',
+                                'heroicon-o-camera' => '📷 Camera',
+                                'heroicon-o-device-phone-mobile' => '📱 Phone',
+                                'heroicon-o-computer-desktop' => '💻 Computer',
+                                'heroicon-o-tv' => '📺 TV',
+                                'heroicon-o-book-open' => '📖 Book',
+                                'heroicon-o-academic-cap' => '🎓 Academic',
+                                'heroicon-o-beaker' => '🧪 Science',
+                                'heroicon-o-puzzle-piece' => '🧩 Puzzle',
+                                'heroicon-o-face-smile' => '😊 Smile',
+                                'heroicon-o-hand-thumb-up' => '👍 Thumbs Up',
+                                'heroicon-o-fire' => '🔥 Fire/Hot',
+                                'heroicon-o-bolt' => '⚡ Bolt/Electric',
+                                'heroicon-o-sun' => '☀️ Sun',
+                                'heroicon-o-moon' => '🌙 Moon',
+                                'heroicon-o-cloud' => '☁️ Cloud',
+                                'heroicon-o-globe-alt' => '🌍 Globe',
+                                'heroicon-o-home' => '🏠 Home',
+                                'heroicon-o-building-storefront' => '🏪 Store',
+                            ])
+                            ->searchable()
+                            ->placeholder('Select an icon'),
 
                         Forms\Components\ColorPicker::make('color')
                             ->label('Color'),
-                    ])->columns(3),
+                    ])->columns(2),
 
                 SC\Section::make('SEO')
                     ->collapsed()
