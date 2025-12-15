@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Notifications\AffiliateWithdrawalStatusNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class AffiliateWithdrawal extends Model
@@ -147,10 +149,14 @@ class AffiliateWithdrawal extends Model
             return false;
         }
 
+        $previousStatus = $this->status;
+
         $this->update([
             'status' => self::STATUS_PROCESSING,
             'processed_by' => $processedBy,
         ]);
+
+        $this->sendStatusNotification($previousStatus);
 
         return true;
     }
@@ -164,6 +170,8 @@ class AffiliateWithdrawal extends Model
             return false;
         }
 
+        $previousStatus = $this->status;
+
         $this->update([
             'status' => self::STATUS_COMPLETED,
             'transaction_id' => $transactionId,
@@ -174,6 +182,8 @@ class AffiliateWithdrawal extends Model
         // Update affiliate stats
         $this->affiliate->increment('total_withdrawn', $this->amount);
         $this->affiliate->update(['last_withdrawal_at' => now()]);
+
+        $this->sendStatusNotification($previousStatus);
 
         return true;
     }
@@ -187,6 +197,8 @@ class AffiliateWithdrawal extends Model
             return false;
         }
 
+        $previousStatus = $this->status;
+
         // Restore balance to affiliate
         $this->affiliate->increment('available_balance', $this->amount);
 
@@ -197,7 +209,25 @@ class AffiliateWithdrawal extends Model
             'processed_at' => now(),
         ]);
 
+        $this->sendStatusNotification($previousStatus);
+
         return true;
+    }
+
+    /**
+     * Send status notification to affiliate
+     */
+    protected function sendStatusNotification(string $previousStatus): void
+    {
+        try {
+            $this->affiliate->notify(new AffiliateWithdrawalStatusNotification($this, $previousStatus));
+        } catch (\Exception $e) {
+            Log::warning('Failed to send withdrawal status notification', [
+                'withdrawal_id' => $this->id,
+                'status' => $this->status,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**

@@ -3,12 +3,15 @@
 namespace App\Models;
 
 use App\Models\Scopes\TenantScope;
+use App\Notifications\AffiliateApprovedNotification;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Notifications\Notifiable;
 
 class Affiliate extends Model
 {
+    use Notifiable;
     // Status constants
     public const STATUS_ACTIVE = 'active';
     public const STATUS_INACTIVE = 'inactive';
@@ -319,6 +322,18 @@ class Affiliate extends Model
         }
 
         $this->update(['status' => self::STATUS_ACTIVE]);
+
+        // Send notification
+        try {
+            $this->notify(new AffiliateApprovedNotification($this));
+        } catch (\Exception $e) {
+            // Log but don't fail approval
+            \Log::warning('Failed to send affiliate approval notification', [
+                'affiliate_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return true;
     }
 
@@ -380,6 +395,14 @@ class Affiliate extends Model
             self::STATUS_PENDING => $locale === 'ro' ? 'In asteptare' : 'Pending',
             default => $this->status,
         };
+    }
+
+    /**
+     * Route notifications for mail channel
+     */
+    public function routeNotificationForMail(): string
+    {
+        return $this->contact_email;
     }
 
     /**

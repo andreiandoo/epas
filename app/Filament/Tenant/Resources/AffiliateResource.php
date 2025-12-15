@@ -7,6 +7,7 @@ use App\Models\Affiliate;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Forms;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
@@ -21,6 +22,26 @@ class AffiliateResource extends Resource
     protected static ?string $navigationLabel = 'Affiliates';
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
     protected static ?int $navigationSort = 1;
+
+    public static function getNavigationBadge(): ?string
+    {
+        $tenant = auth()->user()?->tenant;
+        if (!$tenant) {
+            return null;
+        }
+
+        $count = Affiliate::withoutGlobalScopes()
+            ->where('tenant_id', $tenant->id)
+            ->where('status', Affiliate::STATUS_PENDING)
+            ->count();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
+    }
 
     public static function getEloquentQuery(): Builder
     {
@@ -144,7 +165,8 @@ class AffiliateResource extends Resource
                     ->label('Status')
                     ->colors([
                         'success' => 'active',
-                        'warning' => 'suspended',
+                        'warning' => 'pending',
+                        'danger' => 'suspended',
                         'gray' => 'inactive',
                     ]),
 
@@ -187,13 +209,101 @@ class AffiliateResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
+                        'pending' => 'Pending Approval',
                         'active' => 'Active',
                         'suspended' => 'Suspended',
                         'inactive' => 'Inactive',
                     ]),
             ])
-            ->actions([])
-            ->bulkActions([])
+            ->actions([
+                Tables\Actions\Action::make('approve')
+                    ->label('Approve')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->visible(fn ($record) => $record->status === Affiliate::STATUS_PENDING)
+                    ->requiresConfirmation()
+                    ->modalHeading('Approve Affiliate')
+                    ->modalDescription('This will activate the affiliate and allow them to start earning commissions.')
+                    ->action(function ($record) {
+                        $record->approve();
+                        Notification::make()
+                            ->success()
+                            ->title('Affiliate approved')
+                            ->body("'{$record->name}' has been approved and can now earn commissions.")
+                            ->send();
+                    }),
+
+                Tables\Actions\Action::make('reject')
+                    ->label('Reject')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn ($record) => $record->status === Affiliate::STATUS_PENDING)
+                    ->requiresConfirmation()
+                    ->modalHeading('Reject Affiliate Application')
+                    ->modalDescription('This will permanently reject the affiliate application.')
+                    ->action(function ($record) {
+                        $record->update(['status' => Affiliate::STATUS_INACTIVE]);
+                        Notification::make()
+                            ->warning()
+                            ->title('Affiliate rejected')
+                            ->body("'{$record->name}' application has been rejected.")
+                            ->send();
+                    }),
+
+                Tables\Actions\Action::make('suspend')
+                    ->label('Suspend')
+                    ->icon('heroicon-o-pause-circle')
+                    ->color('warning')
+                    ->visible(fn ($record) => $record->status === Affiliate::STATUS_ACTIVE)
+                    ->requiresConfirmation()
+                    ->modalHeading('Suspend Affiliate')
+                    ->modalDescription('This will temporarily suspend the affiliate from earning commissions.')
+                    ->action(function ($record) {
+                        $record->update(['status' => Affiliate::STATUS_SUSPENDED]);
+                        Notification::make()
+                            ->warning()
+                            ->title('Affiliate suspended')
+                            ->body("'{$record->name}' has been suspended.")
+                            ->send();
+                    }),
+
+                Tables\Actions\Action::make('reactivate')
+                    ->label('Reactivate')
+                    ->icon('heroicon-o-play-circle')
+                    ->color('success')
+                    ->visible(fn ($record) => in_array($record->status, [Affiliate::STATUS_SUSPENDED, Affiliate::STATUS_INACTIVE]))
+                    ->requiresConfirmation()
+                    ->action(function ($record) {
+                        $record->update(['status' => Affiliate::STATUS_ACTIVE]);
+                        Notification::make()
+                            ->success()
+                            ->title('Affiliate reactivated')
+                            ->body("'{$record->name}' has been reactivated.")
+                            ->send();
+                    }),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkAction::make('bulk_approve')
+                    ->label('Approve Selected')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Approve Selected Affiliates')
+                    ->modalDescription('This will approve all selected pending affiliates.')
+                    ->action(function ($records) {
+                        $count = 0;
+                        foreach ($records as $record) {
+                            if ($record->status === Affiliate::STATUS_PENDING) {
+                                $record->approve();
+                                $count++;
+                            }
+                        }
+                        Notification::make()
+                            ->success()
+                            ->title("{$count} affiliates approved")
+                            ->send();
+                    }),
+            ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
