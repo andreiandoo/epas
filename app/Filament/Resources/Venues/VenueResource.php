@@ -57,6 +57,23 @@ class VenueResource extends Resource
                         ->nullable()
                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Poate fi gol, caz în care venue-ul e „public".'),
                 ]),
+
+                SC\Grid::make(2)->schema([
+                    Forms\Components\Select::make('venue_type_id')
+                        ->label('Venue Type')
+                        ->relationship('venueType', 'name->en')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => ($record->icon ? $record->icon . ' ' : '') . ($record->name['en'] ?? $record->slug))
+                        ->searchable()
+                        ->preload()
+                        ->nullable()
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Tipul venue-ului (ex: Arenă, Club, Restaurant)'),
+
+                    Forms\Components\Select::make('venue_tag')
+                        ->label('Venue Tag')
+                        ->options(Venue::getTagSelectOptions())
+                        ->nullable()
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Etichetă specială pentru venue'),
+                ]),
             ])->columns(1),
 
             SC\Section::make('Identity')->schema([
@@ -224,6 +241,21 @@ class VenueResource extends Resource
                     ->label('Așezați')->numeric()->minValue(0)->placeholder('Ex: 4000'),
             ])->columns(3),
 
+            SC\Section::make('Facilități')
+                ->description('Selectează facilitățile disponibile la acest venue')
+                ->collapsible()
+                ->collapsed()
+                ->schema([
+                    Forms\Components\CheckboxList::make('facilities')
+                        ->label('')
+                        ->options(Venue::getFacilitiesOptions())
+                        ->columns(4)
+                        ->gridDirection('row')
+                        ->searchable()
+                        ->bulkToggleable()
+                        ->columnSpanFull(),
+                ]),
+
             SC\Section::make('Contact & Links')->schema([
                 Forms\Components\TextInput::make('phone')->label('Telefon 1')->maxLength(64)->placeholder('+40 ...')->prefixIcon('heroicon-o-phone'),
                 Forms\Components\TextInput::make('phone2')->label('Telefon 2')->maxLength(64)->placeholder('+40 ...')->prefixIcon('heroicon-o-phone'),
@@ -256,9 +288,26 @@ class VenueResource extends Resource
                     ->sortable()
                     ->url(fn ($record) => static::getUrl('view', ['record' => $record->slug])),
 
+                Tables\Columns\TextColumn::make('venueType.name.en')
+                    ->label('Type')
+                    ->formatStateUsing(fn ($record) => $record->venueType ? (($record->venueType->icon ?? '') . ' ' . ($record->venueType->name['en'] ?? '')) : '-')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('venue_tag')
+                    ->label('Tag')
+                    ->formatStateUsing(fn ($state) => $state ? Venue::TAG_OPTIONS[$state]['icon'] . ' ' . Venue::TAG_OPTIONS[$state]['label'] : '-')
+                    ->badge()
+                    ->color(fn ($state) => match($state) {
+                        'historic' => 'warning',
+                        'popular' => 'success',
+                        default => 'gray',
+                    })
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('city')->label('Oraș')->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('state')->label('Județ')->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('country')->label('Țara')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('state')->label('Județ')->sortable()->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('country')->label('Țara')->sortable()->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('tenant.name')
                     ->label('Tenant')

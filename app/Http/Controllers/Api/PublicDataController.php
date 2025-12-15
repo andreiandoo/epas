@@ -9,6 +9,7 @@ use App\Models\Event;
 use App\Models\Tenant;
 use App\Models\Ticket;
 use App\Models\Venue;
+use App\Models\VenueType;
 use App\Services\SpotifyService;
 use App\Services\YouTubeService;
 use Illuminate\Http\JsonResponse;
@@ -40,7 +41,7 @@ class PublicDataController extends Controller
 
     public function venues(Request $request): JsonResponse
     {
-        $query = Venue::query();
+        $query = Venue::query()->with('venueType');
 
         if ($request->has('city')) {
             $query->where('city', $request->get('city'));
@@ -48,6 +49,14 @@ class PublicDataController extends Controller
 
         if ($request->has('country')) {
             $query->where('country', $request->get('country'));
+        }
+
+        if ($request->has('venue_type')) {
+            $query->whereHas('venueType', fn($q) => $q->where('slug', $request->get('venue_type')));
+        }
+
+        if ($request->has('venue_tag')) {
+            $query->where('venue_tag', $request->get('venue_tag'));
         }
 
         $perPage = min((int) $request->get('per_page', 50), 500);
@@ -61,6 +70,19 @@ class PublicDataController extends Controller
                 'slug' => $venue->slug,
                 'description' => $venue->getTranslation('description', 'en'),
                 'description_translations' => $venue->description,
+                'venue_type' => $venue->venueType ? [
+                    'id' => $venue->venueType->id,
+                    'name' => $venue->venueType->getTranslation('name', 'en'),
+                    'name_translations' => $venue->venueType->name,
+                    'slug' => $venue->venueType->slug,
+                    'icon' => $venue->venueType->icon,
+                ] : null,
+                'venue_tag' => $venue->venue_tag ? [
+                    'key' => $venue->venue_tag,
+                    'label' => Venue::TAG_OPTIONS[$venue->venue_tag]['label'] ?? null,
+                    'icon' => Venue::TAG_OPTIONS[$venue->venue_tag]['icon'] ?? null,
+                ] : null,
+                'facilities' => $venue->getFacilitiesWithLabels(),
                 'address' => $venue->address,
                 'city' => $venue->city,
                 'state' => $venue->state,
@@ -118,7 +140,7 @@ class PublicDataController extends Controller
     public function venue(string $slug): JsonResponse
     {
         $venue = Venue::where('slug', $slug)
-            ->with(['events' => function ($q) {
+            ->with(['venueType', 'events' => function ($q) {
                 $q->where('event_date', '>=', now())
                   ->orderBy('event_date')
                   ->limit(20);
@@ -132,6 +154,19 @@ class PublicDataController extends Controller
             'slug' => $venue->slug,
             'description' => $venue->getTranslation('description', 'en'),
             'description_translations' => $venue->description,
+            'venue_type' => $venue->venueType ? [
+                'id' => $venue->venueType->id,
+                'name' => $venue->venueType->getTranslation('name', 'en'),
+                'name_translations' => $venue->venueType->name,
+                'slug' => $venue->venueType->slug,
+                'icon' => $venue->venueType->icon,
+            ] : null,
+            'venue_tag' => $venue->venue_tag ? [
+                'key' => $venue->venue_tag,
+                'label' => Venue::TAG_OPTIONS[$venue->venue_tag]['label'] ?? null,
+                'icon' => Venue::TAG_OPTIONS[$venue->venue_tag]['icon'] ?? null,
+            ] : null,
+            'facilities' => $venue->getFacilitiesWithLabels(),
             'address' => $venue->address,
             'city' => $venue->city,
             'state' => $venue->state,
@@ -176,6 +211,36 @@ class PublicDataController extends Controller
             ]),
             'created_at' => $venue->created_at?->toIso8601String(),
             'updated_at' => $venue->updated_at?->toIso8601String(),
+        ]);
+    }
+
+    public function venueTypes(): JsonResponse
+    {
+        $venueTypes = VenueType::orderBy('sort_order')->get();
+
+        return response()->json([
+            'data' => $venueTypes->map(fn ($type) => [
+                'id' => $type->id,
+                'name' => $type->getTranslation('name', 'en'),
+                'name_translations' => $type->name,
+                'slug' => $type->slug,
+                'icon' => $type->icon,
+                'description' => $type->getTranslation('description', 'en'),
+                'description_translations' => $type->description,
+            ]),
+            'venue_tags' => collect(Venue::TAG_OPTIONS)->map(fn ($info, $key) => [
+                'key' => $key,
+                'label' => $info['label'],
+                'icon' => $info['icon'],
+            ])->values(),
+            'facilities' => collect(Venue::FACILITIES)->map(fn ($category, $key) => [
+                'key' => $key,
+                'label' => $category['label'],
+                'items' => collect($category['items'])->map(fn ($label, $itemKey) => [
+                    'key' => $itemKey,
+                    'label' => $label,
+                ])->values(),
+            ])->values(),
         ]);
     }
 
