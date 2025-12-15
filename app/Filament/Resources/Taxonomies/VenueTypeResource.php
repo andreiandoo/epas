@@ -5,6 +5,9 @@ namespace App\Filament\Resources\Taxonomies;
 use App\Filament\Resources\Taxonomies\VenueTypeResource\Pages;
 use App\Filament\Forms\Components\TranslatableField;
 use App\Models\VenueType;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\BulkActionGroup;
 use Filament\Forms;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -95,8 +98,14 @@ class VenueTypeResource extends Resource
                 ->searchable()
                 ->preload(),
         ])
-        ->actions([])
-        ->bulkActions([]);
+        ->actions([
+            DeleteAction::make(),
+        ])
+        ->bulkActions([
+            BulkActionGroup::make([
+                DeleteBulkAction::make(),
+            ]),
+        ]);
     }
 
     public static function getPages(): array

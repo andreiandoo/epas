@@ -5,6 +5,9 @@ namespace App\Filament\Resources\Taxonomies;
 use App\Filament\Resources\Taxonomies\VenueCategoryResource\Pages;
 use App\Filament\Forms\Components\TranslatableField;
 use App\Models\VenueCategory;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\BulkActionGroup;
 use Filament\Forms;
 use BackedEnum;
 use Filament\Resources\Resource;
@@ -76,8 +79,14 @@ class VenueCategoryResource extends Resource
         ])
         ->defaultSort('sort_order')
         ->reorderable('sort_order')
-        ->actions([])
-        ->bulkActions([]);
+        ->actions([
+            DeleteAction::make(),
+        ])
+        ->bulkActions([
+            BulkActionGroup::make([
+                DeleteBulkAction::make(),
+            ]),
+        ]);
     }
 
     public static function getPages(): array

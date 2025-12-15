@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Venues;
 use App\Filament\Resources\Venues\Pages;
 use App\Filament\Forms\Components\TranslatableField;
 use App\Models\Venue;
+use App\Models\VenueCategory;
+use App\Models\VenueType;
 use BackedEnum;
 use Filament\Actions;
 use Filament\Actions\BulkActionGroup;
@@ -58,13 +60,40 @@ class VenueResource extends Resource
                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Poate fi gol, caz în care venue-ul e „public".'),
                 ]),
 
-                SC\Grid::make(2)->schema([
-                    Forms\Components\Select::make('venue_type_id')
-                        ->label('Venue Type')
-                        ->relationship('venueType', 'name->en')
-                        ->getOptionLabelFromRecordUsing(fn ($record) => ($record->icon ? $record->icon . ' ' : '') . ($record->name['en'] ?? $record->slug))
+                SC\Grid::make(3)->schema([
+                    Forms\Components\Select::make('venue_category_id')
+                        ->label('Venue Category')
+                        ->options(fn () => VenueCategory::orderBy('sort_order')->get()->mapWithKeys(fn ($cat) => [
+                            $cat->id => ($cat->icon ? $cat->icon . ' ' : '') . ($cat->name['en'] ?? $cat->slug)
+                        ]))
                         ->searchable()
                         ->preload()
+                        ->live()
+                        ->nullable()
+                        ->dehydrated(false)
+                        ->afterStateUpdated(fn (\Filament\Schemas\Components\Utilities\Set $set) => $set('venue_type_id', null))
+                        ->afterStateHydrated(function (\Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get, $record) {
+                            if ($record && $record->venueType && $record->venueType->venue_category_id) {
+                                $set('venue_category_id', $record->venueType->venue_category_id);
+                            }
+                        })
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Categoria venue-ului (ex: Muzică, Sport, HoReCa)'),
+
+                    Forms\Components\Select::make('venue_type_id')
+                        ->label('Venue Type')
+                        ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
+                            $categoryId = $get('venue_category_id');
+                            $query = VenueType::query()->orderBy('sort_order');
+                            if ($categoryId) {
+                                $query->where('venue_category_id', $categoryId);
+                            }
+                            return $query->get()->mapWithKeys(fn ($type) => [
+                                $type->id => ($type->icon ? $type->icon . ' ' : '') . ($type->name['en'] ?? $type->slug)
+                            ]);
+                        })
+                        ->searchable()
+                        ->preload()
+                        ->live()
                         ->nullable()
                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Tipul venue-ului (ex: Arenă, Club, Restaurant)'),
 
