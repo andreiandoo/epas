@@ -5,9 +5,9 @@ namespace App\Filament\Tenant\Resources;
 use App\Filament\Tenant\Resources\AffiliateWithdrawalResource\Pages;
 use App\Models\AffiliateWithdrawal;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -67,9 +67,9 @@ class AffiliateWithdrawalResource extends Resource
         return false; // Withdrawals are created by affiliates, not admins
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\Section::make('Withdrawal Details')
                     ->schema([

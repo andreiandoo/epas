@@ -8,8 +8,8 @@ use App\Models\Shop\ShopEventProduct;
 use App\Models\Shop\ShopProduct;
 use App\Models\TicketType;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,7 +18,7 @@ class ShopEventProductResource extends Resource
 {
     protected static ?string $model = ShopEventProduct::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-link';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-link';
 
     protected static ?string $navigationLabel = 'Event Products';
 
@@ -50,12 +50,12 @@ class ShopEventProductResource extends Resource
             ->whereHas('event', fn($q) => $q->where('tenant_id', $tenantId));
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
         $tenantId = auth()->user()?->tenant?->id;
         $tenantLanguage = auth()->user()?->tenant?->language ?? 'en';
 
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\Section::make('Association Details')
                     ->schema([
