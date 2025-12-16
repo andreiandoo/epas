@@ -354,10 +354,17 @@ class VenueResource extends Resource
                     ->date()
                     ->toggleable(isToggledHiddenByDefault: true),
 
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Last Edit')
+                    ->dateTime('d M Y H:i')
+                    ->sortable()
+                    ->since(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Creat')
                     ->dateTime()
-                    ->since(),
+                    ->since()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('edit_link')
                     ->label('Edit')

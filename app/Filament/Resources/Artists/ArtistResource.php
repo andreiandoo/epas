@@ -571,6 +571,12 @@ class ArtistResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Last Edit')
+                    ->dateTime('d M Y H:i')
+                    ->sortable()
+                    ->since(),
+
                 // Edit link
                 Tables\Columns\TextColumn::make('edit_link')
                     ->label('')
