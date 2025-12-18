@@ -309,6 +309,12 @@ class PublicDataController extends Controller
             $query->where('letter', mb_strtoupper($request->get('letter')));
         }
 
+        // Search by name
+        if ($request->has('search')) {
+            $search = $request->get('search');
+            $query->where('name', 'LIKE', "%{$search}%");
+        }
+
         // Filter by artist type (name or slug)
         if ($request->has('artist_type')) {
             $typeValue = $request->get('artist_type');
@@ -319,9 +325,9 @@ class PublicDataController extends Controller
             });
         }
 
-        // Filter by artist genre (name or slug)
-        if ($request->has('artist_genre')) {
-            $genreValue = $request->get('artist_genre');
+        // Filter by artist genre (name or slug) - supports both ?genre= and ?artist_genre=
+        if ($request->has('genre') || $request->has('artist_genre')) {
+            $genreValue = $request->get('genre') ?? $request->get('artist_genre');
             $query->whereHas('artistGenres', function ($q) use ($genreValue) {
                 $q->where('slug', $genreValue)
                   ->orWhere('name->en', $genreValue)
