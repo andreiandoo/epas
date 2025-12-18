@@ -20,10 +20,19 @@ class Artist extends Model
      */
     public array $translatable = ['bio_html'];
 
+    protected static function booted(): void
+    {
+        static::saving(function (Artist $artist) {
+            if (!empty($artist->name)) {
+                $artist->letter = mb_strtoupper(mb_substr($artist->name, 0, 1));
+            }
+        });
+    }
+
     protected $guarded = [];
 
     protected $fillable = [
-        'name', 'slug', 'bio_html',
+        'name', 'slug', 'letter', 'bio_html',
         'website', 'facebook_url', 'instagram_url', 'tiktok_url',
         'youtube_url', 'youtube_id', 'spotify_url', 'spotify_id',
         'main_image_url', 'logo_url', 'portrait_url',

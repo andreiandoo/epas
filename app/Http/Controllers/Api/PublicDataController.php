@@ -286,6 +286,31 @@ class PublicDataController extends Controller
             $query->where('city', $request->get('city'));
         }
 
+        // Filter by first letter
+        if ($request->has('letter')) {
+            $query->where('letter', mb_strtoupper($request->get('letter')));
+        }
+
+        // Filter by artist type (name or slug)
+        if ($request->has('artist_type')) {
+            $typeValue = $request->get('artist_type');
+            $query->whereHas('artistTypes', function ($q) use ($typeValue) {
+                $q->where('slug', $typeValue)
+                  ->orWhere('name->en', $typeValue)
+                  ->orWhere('name->ro', $typeValue);
+            });
+        }
+
+        // Filter by artist genre (name or slug)
+        if ($request->has('artist_genre')) {
+            $genreValue = $request->get('artist_genre');
+            $query->whereHas('artistGenres', function ($q) use ($genreValue) {
+                $q->where('slug', $genreValue)
+                  ->orWhere('name->en', $genreValue)
+                  ->orWhere('name->ro', $genreValue);
+            });
+        }
+
         $perPage = min((int) $request->get('per_page', 50), 500);
         $paginator = $query
             ->with([
@@ -301,6 +326,9 @@ class PublicDataController extends Controller
                 'name' => $artist->name,
                 'slug' => $artist->slug,
                 'is_active' => $artist->is_active,
+                'meta' => [
+                    'letter' => $artist->letter,
+                ],
                 'bio' => $artist->getTranslation('bio_html', 'en'),
                 'bio_translations' => $artist->bio_html,
                 'location' => [
@@ -401,6 +429,9 @@ class PublicDataController extends Controller
             'name' => $artist->name,
             'slug' => $artist->slug,
             'is_active' => $artist->is_active,
+            'meta' => [
+                'letter' => $artist->letter,
+            ],
             'bio' => $artist->getTranslation('bio_html', 'en'),
             'bio_translations' => $artist->bio_html,
             'location' => [
