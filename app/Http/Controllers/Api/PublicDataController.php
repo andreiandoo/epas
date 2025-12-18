@@ -3,9 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Affiliate;
 use App\Models\Artist;
+use App\Models\ArtistGenre;
+use App\Models\ArtistType;
 use App\Models\Customer;
 use App\Models\Event;
+use App\Models\EventGenre;
+use App\Models\EventType;
+use App\Models\Microservice;
+use App\Models\Order;
 use App\Models\Tenant;
 use App\Models\Ticket;
 use App\Models\Venue;
@@ -37,6 +44,17 @@ class PublicDataController extends Controller
             'venues' => Venue::count(),
             'events' => Event::count(),
             'artists' => Artist::count(),
+            'event_genres' => EventGenre::count(),
+            'event_types' => EventType::count(),
+            'venue_categories' => VenueCategory::count(),
+            'venue_types' => VenueType::count(),
+            'artist_types' => ArtistType::count(),
+            'artist_genres' => ArtistGenre::count(),
+            'microservices' => Microservice::count(),
+            'affiliates' => Affiliate::count(),
+            'orders' => Order::count(),
+            'orders_total_cents' => (int) Order::sum('total_cents'),
+            'orders_paid_total_cents' => (int) Order::where('status', 'paid')->sum('total_cents'),
         ]);
     }
 
