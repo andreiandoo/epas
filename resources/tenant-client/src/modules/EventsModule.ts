@@ -466,9 +466,17 @@ export class EventsModule {
                             ${(event.ticket_types || []).map(tt => this.renderTicketType(tt)).join('')}
                         </div>
                         <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                                 <span style="font-weight: 600;">Total:</span>
                                 <span id="total-price" style="font-size: 1.5rem; font-weight: 700;">0 ${currency}</span>
+                            </div>
+                            <div id="total-points-container" style="display: none; justify-content: flex-end; margin-bottom: 1rem;">
+                                <span id="total-points" style="display: inline-flex; align-items: center; gap: 0.35rem; background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 600;">
+                                    <svg style="width: 14px; height: 14px;" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/>
+                                    </svg>
+                                    Vei câștiga <strong id="points-value">0</strong> puncte
+                                </span>
                             </div>
                             <button id="add-to-cart-btn" class="tixello-btn" style="width: 100%;" disabled>
                                 Adaugă în coș
@@ -507,9 +515,17 @@ export class EventsModule {
                         ${(event.ticket_types || []).map(tt => this.renderTicketType(tt, true)).join('')}
                     </div>
                     <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                             <span style="font-weight: 600;">Total:</span>
                             <span id="total-price-mobile" style="font-size: 1.5rem; font-weight: 700;">0 ${currency}</span>
+                        </div>
+                        <div id="total-points-container-mobile" style="display: none; justify-content: flex-end; margin-bottom: 1rem;">
+                            <span id="total-points-mobile" style="display: inline-flex; align-items: center; gap: 0.35rem; background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 600;">
+                                <svg style="width: 14px; height: 14px;" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/>
+                                </svg>
+                                Vei câștiga <strong id="points-value-mobile">0</strong> puncte
+                            </span>
                         </div>
                         <button id="add-to-cart-btn-mobile" class="tixello-btn" style="width: 100%;" disabled>
                             Adaugă în coș
@@ -523,20 +539,42 @@ export class EventsModule {
     private renderTicketType(ticketType: TicketType, isMobile: boolean = false): string {
         const mobileClass = isMobile ? ' qty-mobile' : '';
         const price = ticketType.sale_price ?? ticketType.price ?? 0;
+        const hasGamification = this.isGamificationEnabled();
+        const pointsEarned = hasGamification ? Math.floor(price) : 0; // 1 point per RON
+
         return `
             <div class="ticket-type" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #e5e7eb;">
                 <div style="flex: 1; min-width: 0;">
                     <h4 style="font-weight: 600; font-size: 0.95rem; margin: 0 0 0.25rem 0;">${ticketType.name}</h4>
                     ${ticketType.description ? `<p style="font-size: 0.8rem; color: #6b7280; margin: 0 0 0.25rem 0;">${ticketType.description}</p>` : ''}
-                    <p style="font-weight: 600; color: #059669; margin: 0; font-size: 0.95rem;">${price} RON</p>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                        <p style="font-weight: 600; color: #059669; margin: 0; font-size: 0.95rem;">${price} RON</p>
+                        ${hasGamification ? `
+                        <span style="display: inline-flex; align-items: center; gap: 0.25rem; background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;">
+                            <svg style="width: 12px; height: 12px;" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/>
+                            </svg>
+                            +${pointsEarned} puncte
+                        </span>
+                        ` : ''}
+                    </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
                     <button class="qty-btn qty-minus${mobileClass}" data-ticket-id="${ticketType.id}" style="width: 32px; height: 32px; border: 1px solid #d1d5db; border-radius: 0.375rem; cursor: pointer; background: white; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">−</button>
-                    <input type="number" class="qty-input${mobileClass}" data-ticket-id="${ticketType.id}" data-price="${price}" value="0" min="0" max="${ticketType.available_quantity ?? 10}" style="width: 44px; text-align: center; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.375rem; font-size: 0.95rem;">
+                    <input type="number" class="qty-input${mobileClass}" data-ticket-id="${ticketType.id}" data-price="${price}" data-points="${pointsEarned}" value="0" min="0" max="${ticketType.available_quantity ?? 10}" style="width: 44px; text-align: center; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.375rem; font-size: 0.95rem;">
                     <button class="qty-btn qty-plus${mobileClass}" data-ticket-id="${ticketType.id}" style="width: 32px; height: 32px; border: 1px solid #d1d5db; border-radius: 0.375rem; cursor: pointer; background: white; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;">+</button>
                 </div>
             </div>
         `;
+    }
+
+    private isGamificationEnabled(): boolean {
+        try {
+            const config = (window as any).TIXELLO?.config;
+            return config?.modules?.includes('gamification') || config?.features?.gamification === true;
+        } catch {
+            return false;
+        }
     }
 
     private bindEventListeners(): void {
@@ -585,14 +623,18 @@ export class EventsModule {
         // Update totals for both desktop and mobile
         const updateTotals = () => {
             let total = 0;
+            let totalPoints = 0;
             let hasTickets = false;
+            const hasGamification = this.isGamificationEnabled();
 
             // Calculate from desktop inputs (they are the source of truth)
             document.querySelectorAll('.qty-input:not(.qty-mobile)').forEach((input: Element) => {
                 const htmlInput = input as HTMLInputElement;
                 const qty = parseInt(htmlInput.value) || 0;
                 const price = parseFloat(htmlInput.getAttribute('data-price') || '0');
+                const points = parseInt(htmlInput.getAttribute('data-points') || '0');
                 total += qty * price;
+                totalPoints += qty * points;
                 if (qty > 0) hasTickets = true;
             });
 
@@ -606,6 +648,32 @@ export class EventsModule {
             const totalElMobile = document.getElementById('total-price-mobile');
             if (totalElMobile) {
                 totalElMobile.textContent = `${total.toFixed(2)} ${currency}`;
+            }
+
+            // Update points display (desktop)
+            if (hasGamification) {
+                const pointsContainer = document.getElementById('total-points-container');
+                const pointsValue = document.getElementById('points-value');
+                if (pointsContainer && pointsValue) {
+                    if (totalPoints > 0) {
+                        pointsContainer.style.display = 'flex';
+                        pointsValue.textContent = String(totalPoints);
+                    } else {
+                        pointsContainer.style.display = 'none';
+                    }
+                }
+
+                // Update points display (mobile)
+                const pointsContainerMobile = document.getElementById('total-points-container-mobile');
+                const pointsValueMobile = document.getElementById('points-value-mobile');
+                if (pointsContainerMobile && pointsValueMobile) {
+                    if (totalPoints > 0) {
+                        pointsContainerMobile.style.display = 'flex';
+                        pointsValueMobile.textContent = String(totalPoints);
+                    } else {
+                        pointsContainerMobile.style.display = 'none';
+                    }
+                }
             }
 
             // Enable/disable both buttons

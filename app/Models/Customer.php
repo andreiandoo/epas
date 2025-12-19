@@ -32,6 +32,10 @@ class Customer extends Authenticatable
         'date_of_birth',
         'age',
         'meta',
+        'points_balance',
+        'points_earned',
+        'points_spent',
+        'referral_code',
     ];
 
     protected $hidden = [
@@ -44,6 +48,9 @@ class Customer extends Authenticatable
         'email_verified_at' => 'datetime',
         'date_of_birth' => 'date',
         'password' => 'hashed',
+        'points_balance' => 'integer',
+        'points_earned' => 'integer',
+        'points_spent' => 'integer',
     ];
 
     // Tenant de bază (unde a fost creat inițial customerul)
@@ -95,5 +102,67 @@ class Customer extends Authenticatable
     {
         return $this->belongsToMany(Event::class, 'customer_watchlist')
             ->withTimestamps();
+    }
+
+    // Points transactions
+    public function pointsTransactions(): HasMany
+    {
+        return $this->hasMany(PointsTransaction::class);
+    }
+
+    // Add points to customer
+    public function addPoints(int $points, string $type = 'earned', ?string $description = null, ?int $orderId = null): PointsTransaction
+    {
+        $this->increment('points_balance', $points);
+        $this->increment('points_earned', $points);
+
+        return $this->pointsTransactions()->create([
+            'points' => $points,
+            'type' => $type,
+            'description' => $description,
+            'order_id' => $orderId,
+            'balance_after' => $this->points_balance,
+        ]);
+    }
+
+    // Spend points from customer
+    public function spendPoints(int $points, string $type = 'spent', ?string $description = null, ?int $orderId = null): PointsTransaction
+    {
+        if ($points > $this->points_balance) {
+            throw new \Exception('Insufficient points balance');
+        }
+
+        $this->decrement('points_balance', $points);
+        $this->increment('points_spent', $points);
+
+        return $this->pointsTransactions()->create([
+            'points' => -$points,
+            'type' => $type,
+            'description' => $description,
+            'order_id' => $orderId,
+            'balance_after' => $this->points_balance,
+        ]);
+    }
+
+    // Generate a unique referral code
+    public function generateReferralCode(): string
+    {
+        if (!$this->referral_code) {
+            $this->referral_code = strtoupper(substr(md5($this->id . $this->email . time()), 0, 8));
+            $this->save();
+        }
+        return $this->referral_code;
+    }
+
+    // Get customer's referrals
+    public function referrals(): HasMany
+    {
+        return $this->hasMany(Customer::class, 'referred_by');
+    }
+
+    // Get who referred this customer
+    public function referrer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'referred_by');
     }
 }

@@ -56,12 +56,16 @@ export class ModuleLoader {
                     const { SleekClientModule } = await import('../modules/SleekClientModule');
                     module = new SleekClientModule();
                     break;
+                case 'gamification':
+                    const { GamificationModule } = await import('../modules/GamificationModule');
+                    module = new GamificationModule();
+                    break;
                 default:
                     return; // Unknown module
             }
 
-            // Pass dependencies to modules that need them (shop and sleek-client)
-            if (this.apiClient && this.eventBus && (name === 'shop' || name === 'sleek-client')) {
+            // Pass dependencies to modules that need them
+            if (this.apiClient && this.eventBus && (name === 'shop' || name === 'sleek-client' || name === 'gamification')) {
                 await module.init(this.apiClient, this.eventBus);
             } else {
                 await module.init();

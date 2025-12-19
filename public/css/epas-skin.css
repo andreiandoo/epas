@@ -3308,8 +3308,17 @@ html.dark {
   background-color: transparent !important;
 }
 
-.dark .fi-sidebar-item-label,
+.dark .fi-sidebar-item-label {
+  color: var(--metro-text-secondary) !important;
+}
 .dark .fi-sidebar-group-label {
+  color: rgb(160 157 99) !important;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.075rem;
+}
+.dark .fi-sidebar-group-label:hover {
   color: var(--metro-text-secondary) !important;
 }
 

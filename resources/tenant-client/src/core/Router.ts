@@ -476,6 +476,11 @@ export class Router {
         this.addRoute('/account/shop-orders/:id', this.renderAccountShopOrderDetail.bind(this));
         this.addRoute('/account/wishlist', this.renderAccountWishlist.bind(this));
         this.addRoute('/account/stock-alerts', this.renderAccountStockAlerts.bind(this));
+
+        // Gamification routes
+        this.addRoute('/account/points', this.renderAccountPoints.bind(this));
+        this.addRoute('/account/points-history', this.renderAccountPointsHistory.bind(this));
+        this.addRoute('/account/referral', this.renderAccountReferral.bind(this));
     }
 
     addRoute(path: string, handler: RouteHandler): void {
@@ -2573,6 +2578,8 @@ export class Router {
                                 </div>
                             </div>
 
+                            ${this.isGamificationEnabled() ? this.renderPointsSection(totals.total, totals.currency) : ''}
+
                             <div class="flex justify-between items-center mb-6">
                                 <span class="text-lg font-semibold">Total</span>
                                 <span class="text-2xl font-bold text-primary" id="cart-total-amount">${totals.total.toFixed(2)} ${totals.currency}</span>
@@ -2660,6 +2667,9 @@ export class Router {
 
         // Discount code handlers
         this.setupDiscountCodeHandlers();
+
+        // Gamification points handlers
+        this.setupPointsHandlers();
     }
 
     private setupDiscountCodeHandlers(): void {
@@ -2779,6 +2789,266 @@ export class Router {
         if (totalEl) {
             totalEl.textContent = `${totals.total.toFixed(2)} ${totals.currency}`;
         }
+    }
+
+    // ========================================
+    // GAMIFICATION POINTS SECTION
+    // ========================================
+
+    private isGamificationEnabled(): boolean {
+        try {
+            const config = (window as any).TIXELLO?.config;
+            return config?.modules?.includes('gamification') || config?.features?.gamification === true;
+        } catch {
+            return false;
+        }
+    }
+
+    private renderPointsSection(cartTotal: number, currency: string): string {
+        // Calculate points that will be earned (1 point per RON)
+        const pointsToEarn = Math.floor(cartTotal);
+
+        return `
+            <!-- Gamification Points Section -->
+            <div class="mb-4 pb-4 border-b" id="points-section">
+                <div class="flex items-center gap-2 mb-3">
+                    <svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/>
+                    </svg>
+                    <span class="text-sm font-medium text-gray-700">Puncte de fidelitate</span>
+                </div>
+
+                <!-- Points you'll earn -->
+                <div class="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-lg p-3 mb-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-amber-800">Vei câștiga cu această comandă</span>
+                        <span class="font-bold text-amber-600">+${pointsToEarn} puncte</span>
+                    </div>
+                </div>
+
+                <!-- Current balance and redemption (loaded dynamically) -->
+                <div id="points-balance-section" class="hidden">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm text-gray-600">Punctele tale disponibile:</span>
+                        <span class="font-semibold text-gray-900" id="available-points">0</span>
+                    </div>
+
+                    <div id="points-redemption-form" class="hidden">
+                        <div class="flex gap-2 mb-2">
+                            <input type="number" id="points-to-redeem" min="0" max="0" value="0" placeholder="Puncte de folosit"
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm">
+                            <button id="apply-points-btn" class="px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-600 transition">
+                                Folosește
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500">
+                            <span id="points-value-info">100 puncte = 1 ${currency}</span>
+                            <span class="mx-1">•</span>
+                            Max: <span id="max-redeemable-points">0</span> puncte
+                        </p>
+                    </div>
+
+                    <div id="points-applied-display" class="hidden mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="text-sm font-medium text-amber-800">Puncte aplicate:</span>
+                                <span class="text-sm text-amber-600 ml-2" id="applied-points-count">0</span>
+                            </div>
+                            <button id="remove-points-btn" class="text-red-600 hover:text-red-700 text-sm">Elimină</button>
+                        </div>
+                        <div class="text-sm text-amber-700 mt-1">
+                            Reducere: -<span id="points-discount-amount">0</span> ${currency}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Login prompt for non-logged-in users -->
+                <div id="points-login-prompt" class="hidden text-center py-2">
+                    <a href="/login" class="text-sm text-primary hover:underline">Conectează-te pentru a folosi punctele tale</a>
+                </div>
+            </div>
+        `;
+    }
+
+    private async setupPointsHandlers(): Promise<void> {
+        if (!this.isGamificationEnabled()) return;
+
+        const balanceSection = document.getElementById('points-balance-section');
+        const loginPrompt = document.getElementById('points-login-prompt');
+        const redemptionForm = document.getElementById('points-redemption-form');
+        const pointsInput = document.getElementById('points-to-redeem') as HTMLInputElement;
+        const applyBtn = document.getElementById('apply-points-btn');
+        const removeBtn = document.getElementById('remove-points-btn');
+
+        if (!this.authToken) {
+            // Show login prompt for non-logged-in users
+            if (loginPrompt) loginPrompt.classList.remove('hidden');
+            return;
+        }
+
+        // Fetch user's points balance
+        try {
+            const response = await this.fetchApi('/account/points');
+            if (response.success && response.data) {
+                const balance = response.data.balance || 0;
+                const pointsPerCurrency = response.data.points_per_currency || 100;
+
+                if (balanceSection) {
+                    balanceSection.classList.remove('hidden');
+                    const availableEl = document.getElementById('available-points');
+                    if (availableEl) availableEl.textContent = String(balance);
+                }
+
+                if (balance > 0 && redemptionForm && pointsInput) {
+                    redemptionForm.classList.remove('hidden');
+
+                    // Calculate max redeemable (can't exceed cart total value)
+                    const totals = CartService.getTotal();
+                    const maxPointsValue = totals.total * pointsPerCurrency;
+                    const maxRedeemable = Math.min(balance, Math.floor(maxPointsValue));
+
+                    pointsInput.max = String(maxRedeemable);
+                    const maxEl = document.getElementById('max-redeemable-points');
+                    if (maxEl) maxEl.textContent = String(maxRedeemable);
+
+                    // Store for later use
+                    (window as any).TIXELLO_POINTS_CONFIG = {
+                        balance,
+                        pointsPerCurrency,
+                        maxRedeemable
+                    };
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch points balance:', error);
+        }
+
+        // Apply points handler
+        if (applyBtn && pointsInput) {
+            applyBtn.addEventListener('click', () => {
+                const pointsToUse = parseInt(pointsInput.value) || 0;
+                const config = (window as any).TIXELLO_POINTS_CONFIG;
+
+                if (!config || pointsToUse <= 0) return;
+                if (pointsToUse > config.maxRedeemable) {
+                    alert(`Poți folosi maxim ${config.maxRedeemable} puncte.`);
+                    return;
+                }
+
+                const discountValue = pointsToUse / config.pointsPerCurrency;
+
+                // Store applied points in localStorage
+                localStorage.setItem('tixello_points_applied', JSON.stringify({
+                    points: pointsToUse,
+                    discountValue
+                }));
+
+                // Update UI
+                const appliedDisplay = document.getElementById('points-applied-display');
+                const appliedCount = document.getElementById('applied-points-count');
+                const discountAmount = document.getElementById('points-discount-amount');
+
+                if (appliedDisplay) appliedDisplay.classList.remove('hidden');
+                if (appliedCount) appliedCount.textContent = String(pointsToUse);
+                if (discountAmount) discountAmount.textContent = discountValue.toFixed(2);
+                if (redemptionForm) redemptionForm.classList.add('hidden');
+
+                // Update cart total
+                this.updateCartTotalWithPoints();
+            });
+        }
+
+        // Remove points handler
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                localStorage.removeItem('tixello_points_applied');
+
+                const appliedDisplay = document.getElementById('points-applied-display');
+                if (appliedDisplay) appliedDisplay.classList.add('hidden');
+                if (redemptionForm) redemptionForm.classList.remove('hidden');
+
+                // Update cart total
+                this.updateCartTotalWithPoints();
+            });
+        }
+
+        // Check if points are already applied
+        const appliedPoints = localStorage.getItem('tixello_points_applied');
+        if (appliedPoints) {
+            const { points, discountValue } = JSON.parse(appliedPoints);
+            const appliedDisplay = document.getElementById('points-applied-display');
+            const appliedCount = document.getElementById('applied-points-count');
+            const discountAmount = document.getElementById('points-discount-amount');
+
+            if (appliedDisplay) appliedDisplay.classList.remove('hidden');
+            if (appliedCount) appliedCount.textContent = String(points);
+            if (discountAmount) discountAmount.textContent = discountValue.toFixed(2);
+            if (redemptionForm) redemptionForm.classList.add('hidden');
+        }
+    }
+
+    private updateCartTotalWithPoints(): void {
+        const totals = CartService.getTotal();
+        let finalTotal = totals.total;
+
+        // Apply points discount if any
+        const appliedPoints = localStorage.getItem('tixello_points_applied');
+        if (appliedPoints) {
+            const { discountValue } = JSON.parse(appliedPoints);
+            finalTotal = Math.max(0, finalTotal - discountValue);
+        }
+
+        const totalEl = document.getElementById('cart-total-amount');
+        if (totalEl) {
+            totalEl.textContent = `${finalTotal.toFixed(2)} ${totals.currency}`;
+        }
+    }
+
+    private renderCheckoutPointsSection(cartTotal: number, currency: string): string {
+        if (!this.isGamificationEnabled()) return '';
+
+        // Calculate points that will be earned (1 point per RON)
+        const pointsToEarn = Math.floor(cartTotal);
+
+        // Check if points are applied
+        const appliedPoints = localStorage.getItem('tixello_points_applied');
+        let pointsDiscountHtml = '';
+
+        if (appliedPoints) {
+            const { points, discountValue } = JSON.parse(appliedPoints);
+            pointsDiscountHtml = `
+                <div class="flex justify-between text-amber-600">
+                    <span>Puncte folosite (${points})</span>
+                    <span>-${discountValue.toFixed(2)} ${currency}</span>
+                </div>
+            `;
+        }
+
+        return `
+            ${pointsDiscountHtml}
+            <div class="flex justify-between text-amber-600 text-sm mt-2">
+                <span class="flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/>
+                    </svg>
+                    Vei câștiga
+                </span>
+                <span class="font-semibold">+${pointsToEarn} puncte</span>
+            </div>
+        `;
+    }
+
+    private getCheckoutFinalTotal(cartTotal: number, currency: string): string {
+        let finalTotal = cartTotal;
+
+        // Apply points discount if any
+        const appliedPoints = localStorage.getItem('tixello_points_applied');
+        if (appliedPoints) {
+            const { discountValue } = JSON.parse(appliedPoints);
+            finalTotal = Math.max(0, finalTotal - discountValue);
+        }
+
+        return `${finalTotal.toFixed(2)} ${currency}`;
     }
 
     private async renderCheckout(): Promise<void> {
@@ -3065,11 +3335,12 @@ export class Router {
                                     <span>+${totals.commission.toFixed(2)} ${totals.currency}</span>
                                 </div>
                                 ` : ''}
+                                ${this.renderCheckoutPointsSection(totals.total, totals.currency)}
                             </div>
 
                             <div class="flex justify-between items-center">
                                 <span class="text-lg font-semibold">Total</span>
-                                <span class="text-2xl font-bold text-primary">${totals.total.toFixed(2)} ${totals.currency}</span>
+                                <span class="text-2xl font-bold text-primary" id="checkout-total-amount">${this.getCheckoutFinalTotal(totals.total, totals.currency)}</span>
                             </div>
                         </div>
                     </div>
@@ -5840,5 +6111,80 @@ private async renderProfile(): Promise<void> {
         `;
 
         this.eventBus.emit('route:stock-alerts');
+    }
+
+    // ========================================
+    // GAMIFICATION ROUTES
+    // ========================================
+
+    private renderAccountPoints(): void {
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="points-container" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="h-32 bg-gray-200 rounded"></div>
+                    <div class="grid grid-cols-3 gap-4">
+                        ${Array(3).fill(0).map(() => '<div class="h-20 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:points');
+    }
+
+    private renderAccountPointsHistory(): void {
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="points-history-container" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-8 bg-gray-200 rounded w-1/4"></div>
+                    <div class="space-y-3">
+                        ${Array(5).fill(0).map(() => '<div class="h-16 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:points-history');
+    }
+
+    private renderAccountReferral(): void {
+        if (!this.isAuthenticated()) {
+            this.navigate('/login');
+            return;
+        }
+
+        const content = this.getContentElement();
+        if (!content) return;
+
+        content.innerHTML = `
+            <div id="referral-container" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <div class="animate-pulse space-y-4">
+                    <div class="h-32 bg-gray-200 rounded"></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        ${Array(2).fill(0).map(() => '<div class="h-24 bg-gray-200 rounded"></div>').join('')}
+                    </div>
+                    <div class="h-24 bg-gray-200 rounded"></div>
+                </div>
+            </div>
+        `;
+
+        this.eventBus.emit('route:referral');
     }
 }

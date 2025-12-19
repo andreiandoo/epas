@@ -16,6 +16,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use App\Filament\Resources\Customers\Pages\ViewCustomerStats;
 use Filament\Schemas\Components as SC;
+use Illuminate\Support\HtmlString;
 
 class CustomerResource extends Resource
 {
@@ -57,7 +58,121 @@ class CustomerResource extends Resource
                 ->keyLabel('Key')->valueLabel('Value')
                 ->columnSpanFull()
                 ->addable()->deletable()->reorderable(),
+
+            // Gamification Points Section
+            Forms\Components\Section::make('Puncte de fidelitate')
+                ->description('Gestionează punctele de fidelitate ale clientului')
+                ->icon('heroicon-o-star')
+                ->collapsible()
+                ->collapsed(false)
+                ->columnSpanFull()
+                ->schema([
+                    SC\Grid::make(3)->schema([
+                        Forms\Components\Placeholder::make('points_balance')
+                            ->label('Sold curent')
+                            ->content(fn ($record) => new HtmlString(
+                                '<div class="flex items-center gap-2">
+                                    <span class="text-3xl font-bold text-amber-600">' . number_format($record?->points_balance ?? 0) . '</span>
+                                    <span class="text-gray-500">puncte</span>
+                                </div>'
+                            )),
+                        Forms\Components\Placeholder::make('points_earned')
+                            ->label('Total câștigate')
+                            ->content(fn ($record) => new HtmlString(
+                                '<div class="flex items-center gap-2">
+                                    <span class="text-2xl font-semibold text-green-600">+' . number_format($record?->points_earned ?? 0) . '</span>
+                                    <span class="text-gray-500">puncte</span>
+                                </div>'
+                            )),
+                        Forms\Components\Placeholder::make('points_spent')
+                            ->label('Total cheltuite')
+                            ->content(fn ($record) => new HtmlString(
+                                '<div class="flex items-center gap-2">
+                                    <span class="text-2xl font-semibold text-red-600">-' . number_format($record?->points_spent ?? 0) . '</span>
+                                    <span class="text-gray-500">puncte</span>
+                                </div>'
+                            )),
+                    ]),
+
+                    Forms\Components\Fieldset::make('Ajustare manuală puncte')
+                        ->schema([
+                            Forms\Components\Select::make('points_action')
+                                ->label('Acțiune')
+                                ->options([
+                                    'add' => 'Adaugă puncte',
+                                    'subtract' => 'Scade puncte',
+                                ])
+                                ->native(false)
+                                ->dehydrated(false),
+                            Forms\Components\TextInput::make('points_amount')
+                                ->label('Cantitate')
+                                ->numeric()
+                                ->minValue(1)
+                                ->dehydrated(false),
+                            Forms\Components\TextInput::make('points_reason')
+                                ->label('Motiv')
+                                ->placeholder('Ex: Bonus aniversar, Corecție, etc.')
+                                ->dehydrated(false),
+                        ])
+                        ->columns(3),
+
+                    Forms\Components\Placeholder::make('points_history')
+                        ->label('Istoric puncte (ultimele 10 tranzacții)')
+                        ->content(fn ($record) => new HtmlString(
+                            static::renderPointsHistory($record)
+                        ))
+                        ->columnSpanFull(),
+                ]),
         ])->columns(2);
+    }
+
+    protected static function renderPointsHistory($record): string
+    {
+        if (!$record) {
+            return '<p class="text-gray-500 text-sm">Salvați clientul pentru a vedea istoricul punctelor.</p>';
+        }
+
+        // Get points transactions from customer meta or dedicated table
+        $transactions = $record->pointsTransactions()
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        if ($transactions->isEmpty()) {
+            return '<p class="text-gray-500 text-sm">Nu există tranzacții de puncte.</p>';
+        }
+
+        $html = '<div class="overflow-x-auto"><table class="w-full text-sm">';
+        $html .= '<thead class="bg-gray-50"><tr>';
+        $html .= '<th class="px-3 py-2 text-left font-medium text-gray-600">Data</th>';
+        $html .= '<th class="px-3 py-2 text-left font-medium text-gray-600">Tip</th>';
+        $html .= '<th class="px-3 py-2 text-right font-medium text-gray-600">Puncte</th>';
+        $html .= '<th class="px-3 py-2 text-left font-medium text-gray-600">Descriere</th>';
+        $html .= '</tr></thead><tbody>';
+
+        foreach ($transactions as $tx) {
+            $pointsClass = $tx->points >= 0 ? 'text-green-600' : 'text-red-600';
+            $pointsPrefix = $tx->points >= 0 ? '+' : '';
+            $typeLabel = match($tx->type) {
+                'earned' => '<span class="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">Câștigate</span>',
+                'spent' => '<span class="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs">Cheltuite</span>',
+                'bonus' => '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">Bonus</span>',
+                'adjustment' => '<span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">Ajustare</span>',
+                'referral' => '<span class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">Referral</span>',
+                default => '<span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">' . ucfirst($tx->type) . '</span>',
+            };
+
+            $html .= '<tr class="border-t border-gray-100">';
+            $html .= '<td class="px-3 py-2 text-gray-600">' . $tx->created_at->format('d.m.Y H:i') . '</td>';
+            $html .= '<td class="px-3 py-2">' . $typeLabel . '</td>';
+            $html .= '<td class="px-3 py-2 text-right font-semibold ' . $pointsClass . '">' . $pointsPrefix . number_format($tx->points) . '</td>';
+            $html .= '<td class="px-3 py-2 text-gray-600">' . e($tx->description ?? '-') . '</td>';
+            $html .= '</tr>';
+        }
+
+        $html .= '</tbody></table></div>';
+
+        return $html;
     }
 
     public static function table(Table $table): Table
@@ -88,6 +203,13 @@ class CustomerResource extends Resource
                     ->label('Orders')
                     ->counts('orders')   // necesită ->orders() pe modelul Customer
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('points_balance')
+                    ->label('Puncte')
+                    ->sortable()
+                    ->toggleable()
+                    ->badge()
+                    ->color('warning'),
 
                 Tables\Columns\TextColumn::make('primaryTenant.name')
                     ->label('Primary Tenant')
