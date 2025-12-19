@@ -11,6 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Skip if columns already exist
+        if (Schema::hasColumn('customers', 'points_balance')) {
+            return;
+        }
+
         Schema::table('customers', function (Blueprint $table) {
             $table->unsignedInteger('points_balance')->default(0)->after('meta');
             $table->unsignedInteger('points_earned')->default(0)->after('points_balance');
