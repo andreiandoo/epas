@@ -4,7 +4,6 @@ namespace App\Filament\Tenant\Resources\GamificationConfigResource\Pages;
 
 use App\Filament\Tenant\Resources\GamificationConfigResource;
 use App\Models\Gamification\GamificationConfig;
-use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListGamificationConfigs extends ListRecords
@@ -13,25 +12,19 @@ class ListGamificationConfigs extends ListRecords
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\CreateAction::make()
-                ->visible(fn () => !GamificationConfig::where('tenant_id', auth()->user()->tenant?->id)->exists()),
-        ];
+        return [];
     }
 
     public function mount(): void
     {
-        parent::mount();
-
-        // Auto-redirect to create if no config exists
+        // Auto-create config if it doesn't exist and redirect to edit
         $tenant = auth()->user()->tenant;
         if ($tenant) {
-            $config = GamificationConfig::where('tenant_id', $tenant->id)->first();
-            if (!$config) {
-                $this->redirect(GamificationConfigResource::getUrl('create'));
-            } elseif ($config) {
-                $this->redirect(GamificationConfigResource::getUrl('edit', ['record' => $config]));
-            }
+            $config = GamificationConfig::getOrCreateForTenant($tenant->id);
+            $this->redirect(GamificationConfigResource::getUrl('edit', ['record' => $config]));
+            return;
         }
+
+        parent::mount();
     }
 }

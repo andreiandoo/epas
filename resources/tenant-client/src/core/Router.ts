@@ -4364,6 +4364,17 @@ export class Router {
                         <h3 class="text-lg font-semibold text-gray-900">Profil</h3>
                         <p class="text-gray-600 text-sm">Editează datele tale</p>
                     </a>
+                    ${this.isGamificationEnabled() ? `
+                    <a href="/account/points" class="block p-6 bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg shadow hover:shadow-md transition border border-amber-200">
+                        <div class="text-amber-600 mb-3">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/>
+                            </svg>
+                        </div>
+                        <h3 class="text-lg font-semibold text-amber-900">Punctele mele</h3>
+                        <p class="text-amber-700 text-sm">Vezi și folosește punctele de fidelitate</p>
+                    </a>
+                    ` : ''}
                 </div>
             </div>
         `;
