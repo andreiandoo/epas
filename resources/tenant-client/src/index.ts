@@ -114,6 +114,9 @@ SecurityGuard.init();
         window.Tixello = app;
         window.TixelloTracking = Tracking;
 
+        // Expose config for internal module checks (TIXELLO uppercase)
+        (window as any).TIXELLO = { config };
+
         console.log(`Tixello v${config.version} initialized`);
     } catch (error) {
         console.error('Tixello initialization failed:', error);

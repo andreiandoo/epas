@@ -515,6 +515,8 @@ class TenantClientController extends Controller
             'insurance' => 'insurance',
             'whatsapp' => 'whatsapp',
             'promo-codes' => 'promo_codes',
+            'shop' => 'shop',
+            'gamification' => 'gamification',
         ];
 
         foreach ($microservices as $ms) {
