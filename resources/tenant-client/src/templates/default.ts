@@ -48,6 +48,7 @@ const defaultTemplate: TemplateConfig = {
                         </a>
                         <nav class="hidden md:flex items-center space-x-6">
                             <a href="/events" class="text-gray-600 hover:text-primary transition">Evenimente</a>
+                            ${config.modules?.includes('shop') ? '<a href="/shop" class="text-gray-600 hover:text-primary transition">Magazin</a>' : ''}
                             <a href="/blog" class="text-gray-600 hover:text-primary transition">Blog</a>
                             ${menuItemsHtml}
                             <a href="/cart" class="relative text-primary hover:text-gray-900 transition">
@@ -89,6 +90,7 @@ const defaultTemplate: TemplateConfig = {
                 </div>
                 <nav class="p-4 flex flex-col space-y-1">
                     <a href="/events" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Evenimente</a>
+                    ${config.modules?.includes('shop') ? '<a href="/shop" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Magazin</a>' : ''}
                     <a href="/blog" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">Blog</a>
                     ${headerMenu.map(item =>
                         `<a href="${item.url}" class="px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg transition">${item.title}</a>`

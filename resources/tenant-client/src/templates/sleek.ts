@@ -487,6 +487,7 @@ const sleekTemplate: TemplateConfig = {
                     <!-- Desktop Nav -->
                     <nav class="hidden md:flex items-center gap-1">
                         <a href="/events" class="px-4 py-2 text-slate-400 hover:text-white text-sm font-medium rounded-lg transition-colors">Evenimente</a>
+                        ${config.modules?.includes('shop') ? '<a href="/shop" class="px-4 py-2 text-slate-400 hover:text-white text-sm font-medium rounded-lg transition-colors">Magazin</a>' : ''}
                         <a href="/blog" class="px-4 py-2 text-slate-400 hover:text-white text-sm font-medium rounded-lg transition-colors">Blog</a>
                         ${menuItemsHtml}
                     </nav>
@@ -555,6 +556,14 @@ const sleekTemplate: TemplateConfig = {
                         </svg>
                         Evenimente
                     </a>
+                    ${config.modules?.includes('shop') ? `
+                    <a href="/shop" class="flex items-center gap-3 px-4 py-3.5 text-white font-medium rounded-xl hover:bg-white/5 transition-colors mb-1">
+                        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                        </svg>
+                        Magazin
+                    </a>
+                    ` : ''}
                     <a href="/blog" class="flex items-center gap-3 px-4 py-3.5 text-white font-medium rounded-xl hover:bg-white/5 transition-colors mb-1">
                         <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>

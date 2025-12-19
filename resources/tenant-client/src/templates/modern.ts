@@ -42,6 +42,7 @@ const modernTemplate: TemplateConfig = {
                         </a>
                         <nav class="hidden md:flex items-center space-x-8">
                             <a href="/events" class="text-gray-300 hover:text-white transition font-medium">Evenimente</a>
+                            ${config.modules?.includes('shop') ? '<a href="/shop" class="text-gray-300 hover:text-white transition font-medium">Magazin</a>' : ''}
                             <a href="/blog" class="text-gray-300 hover:text-white transition font-medium">Blog</a>
                             <a href="/cart" class="text-gray-300 hover:text-white transition">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

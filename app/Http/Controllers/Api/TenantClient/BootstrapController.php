@@ -43,7 +43,10 @@ class BootstrapController extends Controller
                 'insurance' => $this->hasFeature($tenant, 'insurance'),
                 'promo_codes' => $this->hasFeature($tenant, 'promo-codes'),
                 'whatsapp_notifications' => $this->hasWhatsAppFeature($tenant),
+                'shop' => $this->hasFeature($tenant, 'shop'),
+                'gamification' => $this->hasFeature($tenant, 'gamification'),
             ],
+            'modules' => $this->getActiveModules($tenant),
             'payment_methods' => $this->getPaymentMethods($tenant),
             'currency' => $settings['currency'] ?? 'RON',
             'locale' => $settings['locale'] ?? 'ro',
@@ -77,6 +80,21 @@ class BootstrapController extends Controller
             ->whereHas('microservice', fn ($q) => $q->whereIn('slug', ['whatsapp', 'whatsapp-notifications', 'whatsapp-cloud']))
             ->where('is_active', true)
             ->exists();
+    }
+
+    /**
+     * Get array of active module slugs for the tenant
+     */
+    protected function getActiveModules($tenant): array
+    {
+        return $tenant->microservices()
+            ->where('is_active', true)
+            ->with('microservice:id,slug')
+            ->get()
+            ->pluck('microservice.slug')
+            ->filter()
+            ->values()
+            ->toArray();
     }
 
     protected function getPaymentMethods($tenant): array

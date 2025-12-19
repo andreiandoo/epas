@@ -65,6 +65,7 @@ const theaterTemplate: TemplateConfig = {
                         <!-- Desktop Navigation -->
                         <nav class="hidden md:flex items-center space-x-8">
                             <a href="/events" class="text-[#FDF8F0]/80 hover:text-[#D4AF37] transition-colors duration-300 tracking-wide">Spectacole</a>
+                            ${config.modules?.includes('shop') ? '<a href="/shop" class="text-[#FDF8F0]/80 hover:text-[#D4AF37] transition-colors duration-300 tracking-wide">Magazin</a>' : ''}
                             <a href="/blog" class="text-[#FDF8F0]/80 hover:text-[#D4AF37] transition-colors duration-300 tracking-wide">Noutăți</a>
                             ${menuItemsHtml}
                             <a href="/cart" class="relative text-[#D4AF37] hover:text-[#FDF8F0] transition-colors duration-300 p-2">
@@ -121,6 +122,14 @@ const theaterTemplate: TemplateConfig = {
                                 </svg>
                                 <span class="tracking-wide">Spectacole</span>
                             </a>
+                            ${config.modules?.includes('shop') ? `
+                            <a href="/shop" class="flex items-center gap-3 px-4 py-4 text-[#FDF8F0] hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] rounded-lg transition-all duration-300 group">
+                                <svg class="w-5 h-5 text-[#D4AF37]/70 group-hover:text-[#D4AF37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                                </svg>
+                                <span class="tracking-wide">Magazin</span>
+                            </a>
+                            ` : ''}
                             <a href="/blog" class="flex items-center gap-3 px-4 py-4 text-[#FDF8F0] hover:bg-[#D4AF37]/10 hover:text-[#D4AF37] rounded-lg transition-all duration-300 group">
                                 <svg class="w-5 h-5 text-[#D4AF37]/70 group-hover:text-[#D4AF37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
