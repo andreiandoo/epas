@@ -11,6 +11,134 @@ Add the option "I don't have a website" in the tenant onboarding process (Step 3
 
 ---
 
+## IMPORTANT: Will All Microservices Work for Subdomain Tenants?
+
+### ✅ YES - Full Feature Parity
+
+Tenants on `*.ticks.ro` subdomains have **exactly the same capabilities** as tenants with custom domains:
+
+| Feature | How It Works | Subdomain Support |
+|---------|--------------|-------------------|
+| **Payment Processors** | Each tenant has their own `TenantPaymentConfig` with encrypted credentials (Stripe, Netopia, PayU, EuPlatesc) | ✅ Full support |
+| **SMTP/Email** | Tenant can use custom SMTP OR fall back to core Brevo | ✅ Full support |
+| **Microservices** | Per-tenant activation with individual settings (WhatsApp, eFactura, Accounting, Insurance) | ✅ Full support |
+| **Theme/Branding** | Stored in tenant settings, loaded by tenant-client widget | ✅ Full support |
+| **API Keys** | Per-tenant with scopes, rate limits, IP whitelist | ✅ Full support |
+| **Events & Tickets** | All stored with tenant_id foreign key | ✅ Full support |
+
+### How It Works Technically
+
+1. **Tenant Resolution**: When someone visits `teatru.ticks.ro`:
+   - Laravel routes catch the subdomain
+   - Domain table lookup: `WHERE domain = 'teatru.ticks.ro'`
+   - Tenant loaded via `$domain->tenant`
+
+2. **API Requests**: Tenant-client widget makes API calls with:
+   - `X-Tenant-ID` header
+   - Signed requests (SHA-256)
+   - All tenant-specific data returned
+
+3. **Payment Processing**: Uses tenant's own credentials:
+   ```
+   TenantPaymentConfig (per tenant)
+   ├── processor: stripe/netopia/payu/euplatesc
+   ├── mode: test/live
+   ├── credentials (encrypted): API keys, secrets
+   └── is_active: true/false
+   ```
+
+4. **Email Sending**: Respects tenant's choice:
+   ```
+   if (tenant.use_core_smtp) → Use platform Brevo
+   else → Use tenant.settings.mail (custom SMTP)
+   ```
+
+---
+
+## CAPACITY & LIMITS ASSESSMENT
+
+### Cloudflare Limits (ticks.ro)
+
+| Limit | Free Plan | Pro Plan ($20/mo) |
+|-------|-----------|-------------------|
+| **DNS Records** | **200** (zones created after Sept 2024) or **1,000** (older zones) | 3,500 |
+| **API Rate Limit** | 1,200 requests / 5 minutes | 1,200 requests / 5 minutes |
+| **Traffic** | Unlimited | Unlimited |
+| **SSL** | Universal (free, automatic) | Universal + Advanced |
+
+**What This Means for You**:
+- **Free Plan**: You can have **up to 200 tenant subdomains** (if zone created recently) or 1,000 (if older)
+- **With Wildcard DNS**: The `*` record counts as 1 record, so you only need 2 DNS records total (@ and *)
+- **API Calls**: Creating 1 subdomain = 1 API call. At 1,200/5min, you can create 240 tenants/minute (not a real concern)
+
+> 💡 **Recommendation**: With wildcard DNS (`*` record), you don't need to create individual DNS records per subdomain. The wildcard handles all. You only use API to track/manage records if needed.
+
+### Server Capacity (Your VPS via Ploi.io)
+
+This depends on your VPS specs. Here's a general guide:
+
+| VPS Specs | Tenants | Concurrent Users | Orders/Month | Notes |
+|-----------|---------|------------------|--------------|-------|
+| 2 CPU, 4GB RAM | 50-100 | 200-500 | 10,000 | Good for starting |
+| 4 CPU, 8GB RAM | 100-300 | 500-1,500 | 50,000 | Recommended |
+| 8 CPU, 16GB RAM | 300-1,000 | 1,500-5,000 | 200,000 | High traffic |
+| 16 CPU, 32GB RAM | 1,000+ | 5,000+ | 500,000+ | Enterprise |
+
+**Bottlenecks to Watch**:
+
+1. **Database**:
+   - SQLite: Good for < 50 tenants, < 100 concurrent users
+   - MySQL/PostgreSQL: Required for production, handles 1000s of tenants
+
+2. **Queue Workers**:
+   - Background jobs (emails, package generation, webhooks)
+   - Recommendation: 2-4 queue workers per CPU core
+
+3. **Redis** (if enabled):
+   - Session storage, caching, rate limiting
+   - Reduces database load by 60-80%
+
+4. **PHP Workers**:
+   - Ploi default: 5-10 workers
+   - High traffic: 20-50 workers
+
+### Practical Limits Summary
+
+| Component | Limit | Can Be Increased? |
+|-----------|-------|-------------------|
+| Cloudflare subdomains (with wildcard) | **Unlimited** | N/A - wildcard covers all |
+| Cloudflare subdomains (individual records) | 200-1,000 | Upgrade to Pro ($20/mo) for 3,500 |
+| Tenants on platform | **Unlimited** (DB dependent) | Yes - upgrade VPS/DB |
+| Orders per month | **Unlimited** (performance dependent) | Yes - scale infrastructure |
+| Concurrent users | VPS dependent | Yes - upgrade VPS or add load balancer |
+
+### Recommended Architecture for Scale
+
+```
+Small (< 100 tenants)
+├── Single VPS (4 CPU, 8GB RAM)
+├── SQLite or MySQL
+├── Cloudflare Free
+└── Single queue worker
+
+Medium (100-500 tenants)
+├── VPS (8 CPU, 16GB RAM)
+├── MySQL/PostgreSQL (separate DB server optional)
+├── Redis for caching
+├── Cloudflare Free/Pro
+└── 4-8 queue workers
+
+Large (500+ tenants)
+├── Multiple VPS behind load balancer
+├── Dedicated database server (MySQL/PostgreSQL)
+├── Redis cluster
+├── Cloudflare Pro/Business
+├── Separate queue server
+└── CDN for static assets
+```
+
+---
+
 ## Implementation Steps
 
 ### 1. Configuration Updates
@@ -595,265 +723,305 @@ if (!$domain) {
 
 ## STEP-BY-STEP SETUP GUIDE FOR ticks.ro (Ploi.io + Cloudflare)
 
+### BEFORE YOU START - Checklist
+
+- [ ] You own the domain `ticks.ro`
+- [ ] You have access to your domain registrar (to change nameservers)
+- [ ] You have a Cloudflare account (free at cloudflare.com)
+- [ ] You have your VPS IP address from Ploi.io
+- [ ] You have access to Ploi.io dashboard
+
+---
+
 ### PHASE 1: Domain & DNS Setup in Cloudflare
 
 #### Step 1.1: Add ticks.ro to Cloudflare
+
+**Time: 5 minutes | Propagation: 1-48 hours**
+
 1. Go to https://dash.cloudflare.com
-2. Click "Add a Site" → Enter `ticks.ro`
-3. Choose the **Free** plan (sufficient for this)
-4. Cloudflare will scan existing DNS records
-5. **Update nameservers** at your domain registrar to Cloudflare's nameservers:
-   - Example: `nova.ns.cloudflare.com` and `rick.ns.cloudflare.com`
-   - Wait 24-48 hours for propagation (usually much faster)
+2. Click the blue **"Add a Site"** button (or "Add site" in top nav)
+3. Enter `ticks.ro` in the domain field
+4. Click **"Add site"**
+5. Select the **Free** plan → Click **"Continue"**
+6. Cloudflare will scan for existing DNS records - Click **"Continue"**
+7. You'll see two nameservers like:
+   ```
+   Type    Nameserver
+   NS      aria.ns.cloudflare.com
+   NS      cruz.ns.cloudflare.com
+   ```
+8. **Go to your domain registrar** (where you bought ticks.ro) and:
+   - Find DNS/Nameserver settings
+   - Replace existing nameservers with Cloudflare's
+   - Save changes
+9. Back in Cloudflare, click **"Done, check nameservers"**
+10. Wait for email confirmation (usually 5 min - 24 hours)
+
+> 💡 **Tip**: You can check propagation at https://dnschecker.org
+
+---
 
 #### Step 1.2: Configure DNS Records in Cloudflare
-Go to **DNS** → **Records** and add:
 
-| Type | Name | Content | Proxy | TTL |
-|------|------|---------|-------|-----|
-| A | @ | `YOUR_VPS_IP` | ✅ Proxied | Auto |
-| A | * | `YOUR_VPS_IP` | ✅ Proxied | Auto |
+**Time: 2 minutes**
 
-> ⚠️ **Important**: The wildcard `*` record ensures ALL subdomains (like `teatru.ticks.ro`) point to your server. With proxy enabled, Cloudflare handles SSL automatically.
+Once nameservers are active, go to **DNS** → **Records**:
+
+**Delete** any existing A/AAAA/CNAME records for @ and * (if any)
+
+**Add these 2 records:**
+
+| Step | Type | Name | Content | Proxy | TTL |
+|------|------|------|---------|-------|-----|
+| 1 | A | `@` | `YOUR_VPS_IP` (e.g., `123.45.67.89`) | ✅ Proxied (orange cloud) | Auto |
+| 2 | A | `*` | `YOUR_VPS_IP` (e.g., `123.45.67.89`) | ✅ Proxied (orange cloud) | Auto |
+
+**How to add:**
+1. Click **"Add record"**
+2. Type: Select `A`
+3. Name: Enter `@` (for root) or `*` (for wildcard)
+4. IPv4 address: Enter your VPS IP
+5. Proxy status: Click the cloud to make it **orange** (proxied)
+6. Click **"Save"**
+7. Repeat for the second record
+
+> 🔑 **Key Point**: The wildcard `*` record handles ALL subdomains automatically. You don't need to add individual records for each tenant. This means **unlimited subdomains** with just 2 DNS records!
+
+---
 
 #### Step 1.3: SSL/TLS Configuration in Cloudflare
-Go to **SSL/TLS** → **Overview**:
-1. Set encryption mode to **Full (strict)** ← Recommended
-2. Go to **Edge Certificates** → Enable:
-   - Always Use HTTPS: ✅ ON
-   - Automatic HTTPS Rewrites: ✅ ON
 
-> ✅ **HTTPS Answer**: Yes! All subdomains will have HTTPS automatically. Cloudflare provides free Universal SSL that covers `*.ticks.ro` and `ticks.ro`. No certificate purchase needed.
+**Time: 2 minutes**
+
+1. Go to **SSL/TLS** in the left sidebar
+2. Click **Overview**
+3. Select **"Full (strict)"** encryption mode
+4. Go to **SSL/TLS** → **Edge Certificates**
+5. Enable these settings:
+   - **Always Use HTTPS**: Toggle ON
+   - **Automatic HTTPS Rewrites**: Toggle ON
+   - **Minimum TLS Version**: TLS 1.2
+
+> ✅ **HTTPS is now automatic** for `ticks.ro` and ALL subdomains (`*.ticks.ro`)
+
+---
 
 #### Step 1.4: Create Cloudflare API Token
-1. Go to **My Profile** (top right) → **API Tokens**
-2. Click **Create Token**
-3. Use template: **Edit zone DNS**
-4. Configure permissions:
+
+**Time: 3 minutes**
+
+1. Click your profile icon (top right) → **"My Profile"**
+2. Go to **"API Tokens"** tab
+3. Click **"Create Token"**
+4. Find **"Edit zone DNS"** template → Click **"Use template"**
+5. Configure:
+   - **Token name**: `ePas ticks.ro DNS Manager` (or any name)
+   - **Permissions**: Already set correctly (Zone - DNS - Edit)
+   - **Zone Resources**:
+     - Include → Specific zone → Select `ticks.ro`
+6. Click **"Continue to summary"**
+7. Click **"Create Token"**
+8. **⚠️ IMPORTANT: Copy the token NOW** (shown only once!)
    ```
-   Zone - DNS - Edit
-   Zone - Zone - Read
+   Example: Bxj7k9mNpQrStUvWxYz1234567890abcdefg
    ```
-5. Zone Resources: **Include** → **Specific zone** → Select `ticks.ro`
-6. Click **Continue to summary** → **Create Token**
-7. **COPY THE TOKEN** (shown only once!)
+9. Store it securely (you'll add it to `.env` later)
+
+---
 
 #### Step 1.5: Get Zone ID
-1. Go to **ticks.ro** dashboard in Cloudflare
-2. Scroll down on the right sidebar → **API** section
+
+**Time: 1 minute**
+
+1. Go back to `ticks.ro` dashboard in Cloudflare
+2. On the right sidebar, scroll down to **"API"** section
 3. Copy the **Zone ID** (32-character string)
+   ```
+   Example: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+   ```
+4. Store it securely (you'll add it to `.env` later)
 
 ---
 
 ### PHASE 2: Ploi.io Server Configuration
 
 #### Step 2.1: Add ticks.ro Site to Ploi
-1. Go to your server in Ploi.io
-2. Click **Sites** → **New Site**
-3. Configure:
-   - **Root Domain**: `ticks.ro`
-   - **Web Directory**: `/public` (Laravel default)
-   - **PHP Version**: 8.2 or 8.3
-4. **Important**: This should point to your ePas Laravel application
+
+**Time: 5 minutes**
+
+1. Log in to https://ploi.io
+2. Go to your server
+3. Click **"Sites"** in the left menu
+4. Click **"New Site"** button
+5. Configure:
+   ```
+   Root Domain: ticks.ro
+   Project Type: Laravel
+   Web Directory: /public
+   PHP Version: 8.2 (or 8.3)
+   ```
+6. Click **"Add Site"**
+7. Wait for site creation (1-2 minutes)
+
+**If ticks.ro is your EXISTING ePas site:**
+- Skip creating a new site
+- Just add the alias in the next step
+
+---
 
 #### Step 2.2: Configure Wildcard Subdomain in Ploi
-1. Go to the `ticks.ro` site in Ploi
-2. Click **Domains & Aliases**
-3. Add alias: `*.ticks.ro` (wildcard)
-4. Click **Add Alias**
 
-> This tells Nginx to accept requests for ALL subdomains of ticks.ro
+**Time: 2 minutes**
+
+1. Go to the `ticks.ro` site in Ploi
+2. Click **"Manage"** (or enter site settings)
+3. Go to **"Domains & Aliases"** (or just "Domains")
+4. In the **"Add Alias"** section:
+   ```
+   Domain: *.ticks.ro
+   ```
+5. Click **"Add Alias"**
+
+> ✅ Now Nginx will accept requests for ALL subdomains of ticks.ro
+
+---
 
 #### Step 2.3: SSL Certificate in Ploi
-Since Cloudflare handles SSL at the edge, you have two options:
 
-**Option A: Cloudflare Origin Certificate (Recommended)**
-1. In Cloudflare: **SSL/TLS** → **Origin Server** → **Create Certificate**
-2. Choose:
-   - Private key type: RSA (2048)
-   - Hostnames: `*.ticks.ro, ticks.ro`
-   - Validity: 15 years
-3. Copy the **Origin Certificate** and **Private Key**
-4. In Ploi: Site → **SSL** → **Install Custom Certificate**
-5. Paste certificate and key
+**Time: 5 minutes**
 
-**Option B: Let's Encrypt (requires DNS challenge)**
-1. In Ploi: Site → **SSL** → **Let's Encrypt**
-2. Enable **DNS Challenge**
-3. Add Cloudflare API token for automatic DNS validation
-4. Request wildcard: `*.ticks.ro`
+Since Cloudflare handles SSL at the edge, we need an **Origin Certificate**:
 
-> ⚠️ With Cloudflare proxying, self-signed certificates also work, but origin certificates are cleaner.
+**In Cloudflare:**
+1. Go to **SSL/TLS** → **Origin Server**
+2. Click **"Create Certificate"**
+3. Configure:
+   - Generate private key and CSR: **Cloudflare** (selected by default)
+   - Private key type: **RSA (2048)**
+   - Hostnames: Enter both:
+     ```
+     *.ticks.ro
+     ticks.ro
+     ```
+   - Validity: **15 years** (max)
+4. Click **"Create"**
+5. You'll see two text boxes:
+   - **Origin Certificate** (starts with `-----BEGIN CERTIFICATE-----`)
+   - **Private Key** (starts with `-----BEGIN PRIVATE KEY-----`)
+6. **Copy both** (keep this page open!)
+
+**In Ploi:**
+1. Go to your `ticks.ro` site
+2. Click **"SSL"** (or "Certificates")
+3. Click **"Install Custom Certificate"** (or "Custom SSL")
+4. Paste:
+   - **Certificate**: The Origin Certificate from Cloudflare
+   - **Private Key**: The Private Key from Cloudflare
+5. Click **"Install Certificate"**
+
+> ✅ Your server now has a valid SSL certificate for `*.ticks.ro`
+
+---
 
 #### Step 2.4: Verify Nginx Configuration
-Ploi automatically generates Nginx config. Verify it includes:
-```nginx
-server_name ticks.ro *.ticks.ro;
-```
 
-If you need to customize, go to Site → **Nginx Configuration**.
+**Time: 1 minute**
+
+1. In Ploi, go to your `ticks.ro` site
+2. Click **"Nginx Configuration"** (or "Server Config")
+3. Look for the `server_name` line - it should include:
+   ```nginx
+   server_name ticks.ro *.ticks.ro;
+   ```
+4. If not present, add `*.ticks.ro` after `ticks.ro`
+5. Click **"Save"** (Ploi will reload Nginx automatically)
 
 ---
 
 ### PHASE 3: Laravel Application Configuration
 
 #### Step 3.1: Environment Variables
-Add to your `.env` file on the server:
-```env
-# Cloudflare DNS Management (for ticks.ro subdomains)
-CLOUDFLARE_API_TOKEN=your_api_token_from_step_1.4
-CLOUDFLARE_ZONE_ID=your_zone_id_from_step_1.5
-CLOUDFLARE_BASE_DOMAIN=ticks.ro
-```
 
-In Ploi: Site → **Environment** → Add these variables.
+**Time: 2 minutes**
+
+**In Ploi:**
+1. Go to your `ticks.ro` site
+2. Click **"Environment"** (or ".env")
+3. Add these lines at the end:
+   ```env
+   # Cloudflare DNS Management (for ticks.ro subdomains)
+   CLOUDFLARE_API_TOKEN=your_token_from_step_1.4
+   CLOUDFLARE_ZONE_ID=your_zone_id_from_step_1.5
+   CLOUDFLARE_BASE_DOMAIN=ticks.ro
+   ```
+4. Click **"Save"**
+
+---
 
 #### Step 3.2: Deploy the Code
-After implementing the code changes, deploy via Ploi:
-1. Site → **Repository** → Connect to your git repo
-2. Set deploy branch to `core-main` (or your production branch)
-3. Click **Deploy**
 
-Or trigger deployment via webhook/CI.
+**Time: 5 minutes**
 
----
-
-### PHASE 4: How Tenant Websites Work on Subdomains
-
-#### Current System (Custom Domains)
-1. Tenant registers with their domain (e.g., `teatrul-national.ro`)
-2. They download a "deployment package" (HTML + JS widget)
-3. They install it on THEIR server
-4. Widget connects to ePas API
-
-#### New System (Managed Subdomains)
-For managed subdomains like `teatru.ticks.ro`:
-
-**The tenant's "website" is hosted on YOUR server automatically!**
-
-We will serve a full HTML page from Laravel that:
-1. Loads the tenant-client widget
-2. Displays their events, ticketing, etc.
-3. Uses their theme/branding from the database
-
-No separate deployment needed - it's all served from the ePas platform.
+1. In Ploi, go to **"Repository"** (or "Deployment")
+2. If not connected:
+   - Connect to your Git provider (GitHub/GitLab/Bitbucket)
+   - Select your ePas repository
+   - Set branch: `core-main` (or your production branch)
+3. Click **"Deploy Now"**
+4. Wait for deployment to complete
+5. Run migrations (if not in deploy script):
+   ```bash
+   php artisan migrate --force
+   ```
 
 ---
 
-### ADDITIONAL: Tenant Website Routes (Auto-Deployment)
+#### Step 3.3: Verify Everything Works
 
-**File: `routes/web.php`** - Add subdomain routing:
-```php
-// Managed subdomain routes - serves tenant websites
-Route::domain('{subdomain}.' . config('services.cloudflare.base_domain', 'ticks.ro'))
-    ->middleware(['web'])
-    ->group(function () {
-        Route::get('/', [TenantWebsiteController::class, 'index']);
-        Route::get('/{any}', [TenantWebsiteController::class, 'index'])->where('any', '.*');
-    });
-```
+**Time: 5 minutes**
 
-**File: `app/Http/Controllers/TenantWebsiteController.php`** (New):
-```php
-<?php
-
-namespace App\Http\Controllers;
-
-use App\Models\Domain;
-use App\Models\Tenant;
-use Illuminate\Http\Request;
-
-class TenantWebsiteController extends Controller
-{
-    public function index(Request $request, string $subdomain)
-    {
-        $baseDomain = config('services.cloudflare.base_domain', 'ticks.ro');
-        $fullDomain = "{$subdomain}.{$baseDomain}";
-
-        // Find the tenant by subdomain
-        $domain = Domain::where('domain', $fullDomain)
-            ->where('is_managed_subdomain', true)
-            ->where('is_active', true)
-            ->with('tenant')
-            ->first();
-
-        if (!$domain || !$domain->tenant) {
-            abort(404, 'Website not found');
-        }
-
-        $tenant = $domain->tenant;
-
-        // Serve the tenant website template
-        return view('tenant-website.index', [
-            'tenant' => $tenant,
-            'domain' => $domain,
-            'apiUrl' => config('services.tenant_client.api_url'),
-        ]);
-    }
-}
-```
-
-**File: `resources/views/tenant-website/index.blade.php`** (New):
-```html
-<!DOCTYPE html>
-<html lang="{{ $tenant->locale ?? 'ro' }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $tenant->public_name }} - Bilete</title>
-    <meta name="description" content="Cumpără bilete pentru evenimentele organizate de {{ $tenant->public_name }}">
-
-    <!-- Tenant Client Widget -->
-    <script>
-        window.TIXELLO_CONFIG = {
-            apiUrl: '{{ $apiUrl }}',
-            tenantId: '{{ $tenant->id }}',
-            domain: '{{ $domain->domain }}',
-            locale: '{{ $tenant->locale ?? "ro" }}'
-        };
-    </script>
-</head>
-<body>
-    <!-- The widget will render here -->
-    <div id="tixello-app"></div>
-
-    <!-- Load the tenant client widget -->
-    <script src="{{ $apiUrl }}/tenant-client/tixello-loader.iife.js"></script>
-</body>
-</html>
-```
+1. Visit `https://ticks.ro` - Should load your main site
+2. Visit `https://test.ticks.ro` - Should show 404 (no tenant yet)
+3. Check Nginx logs for errors:
+   - In Ploi: Site → Logs → Nginx
+4. Check Laravel logs:
+   - In Ploi: Site → Logs → Laravel
 
 ---
 
-### Summary: What Happens Automatically
+### PHASE 4: Test the Complete Flow
 
-1. **Tenant registers** → Chooses "I don't have a website" → Picks `teatru.ticks.ro`
-2. **System creates DNS record** in Cloudflare via API (instant)
-3. **Cloudflare propagates** the DNS (seconds with wildcard, minutes otherwise)
-4. **SSL is automatic** via Cloudflare Universal SSL
-5. **Tenant visits** `https://teatru.ticks.ro` → Works immediately!
-6. **Laravel serves** their personalized ticket shop with their events
-7. **Admin can manage** everything from the admin panel - no manual deployment
+**Time: 10 minutes**
 
-### What You (Admin) Can Do
+1. **Create a test tenant:**
+   - Go through onboarding at `https://ticks.ro/register`
+   - At Step 3, check "Nu am un website propriu"
+   - Enter subdomain: `test-tenant`
+   - Complete registration
 
-| Action | How |
-|--------|-----|
-| View all managed subdomains | Admin → Tenants → Filter by "Managed Subdomain" |
-| Deactivate a subdomain | Admin → Domains → Toggle Active |
-| Delete subdomain (removes DNS) | Admin → Domains → Delete (calls Cloudflare API) |
-| See subdomain status | Domain record shows `cloudflare_record_id` |
+2. **Verify subdomain works:**
+   - Visit `https://test-tenant.ticks.ro`
+   - Should see tenant's ticket shop
+
+3. **Check database:**
+   - Domain record created with `is_managed_subdomain = true`
+   - `cloudflare_record_id` populated (if not using wildcard-only mode)
+
+4. **Check Cloudflare (optional):**
+   - DNS records page should show the record (if creating individual records)
 
 ---
 
-### Verification Checklist (After Setup)
+### TROUBLESHOOTING
 
-- [ ] ticks.ro loads correctly (main site or redirect)
-- [ ] Create a test subdomain manually in Cloudflare (e.g., test.ticks.ro)
-- [ ] test.ticks.ro resolves and shows HTTPS
-- [ ] API token can list DNS records (test with `curl`)
-- [ ] Wildcard alias works in Ploi (check Nginx config)
-- [ ] Deploy code and test onboarding flow
+| Problem | Solution |
+|---------|----------|
+| Subdomain shows "DNS not found" | Wait 5 mins for DNS propagation, or check wildcard record exists |
+| Subdomain shows connection refused | Check Nginx has `*.ticks.ro` in server_name |
+| HTTPS certificate error | Check origin certificate is installed in Ploi |
+| 404 on subdomain | Check Laravel routes are configured for subdomain |
+| 500 error on subdomain | Check Laravel logs: `storage/logs/laravel.log` |
 
 ---
 
