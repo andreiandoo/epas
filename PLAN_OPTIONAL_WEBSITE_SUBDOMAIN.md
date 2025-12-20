@@ -723,361 +723,403 @@ if (!$domain) {
 
 ## STEP-BY-STEP SETUP GUIDE FOR ticks.ro (Ploi.io + Cloudflare)
 
+> **Total Time**: ~45 minutes active work + DNS propagation time (1-48 hours)
+
 ### BEFORE YOU START - Checklist
 
 - [ ] You own the domain `ticks.ro`
 - [ ] You have access to your domain registrar (to change nameservers)
 - [ ] You have a Cloudflare account (free at cloudflare.com)
-- [ ] You have your VPS IP address from Ploi.io
+- [ ] You have your VPS IP address from Ploi.io (find it in: Ploi → Server → Overview → IP Address)
 - [ ] You have access to Ploi.io dashboard
 
 ---
 
-### PHASE 1: Domain & DNS Setup in Cloudflare
+## PHASE 1: Cloudflare Setup
 
-#### Step 1.1: Add ticks.ro to Cloudflare
+### Step 1.1: Create Cloudflare Account (if needed)
 
-**Time: 5 minutes | Propagation: 1-48 hours**
-
-1. Go to https://dash.cloudflare.com
-2. Click the blue **"Add a Site"** button (or "Add site" in top nav)
-3. Enter `ticks.ro` in the domain field
-4. Click **"Add site"**
-5. Select the **Free** plan → Click **"Continue"**
-6. Cloudflare will scan for existing DNS records - Click **"Continue"**
-7. You'll see two nameservers like:
-   ```
-   Type    Nameserver
-   NS      aria.ns.cloudflare.com
-   NS      cruz.ns.cloudflare.com
-   ```
-8. **Go to your domain registrar** (where you bought ticks.ro) and:
-   - Find DNS/Nameserver settings
-   - Replace existing nameservers with Cloudflare's
-   - Save changes
-9. Back in Cloudflare, click **"Done, check nameservers"**
-10. Wait for email confirmation (usually 5 min - 24 hours)
-
-> 💡 **Tip**: You can check propagation at https://dnschecker.org
+1. Open browser → Go to `https://dash.cloudflare.com`
+2. If no account: Click **"Sign up"** → Enter email & password → Verify email
+3. If have account: Click **"Log in"** → Enter credentials
 
 ---
 
-#### Step 1.2: Configure DNS Records in Cloudflare
+### Step 1.2: Add Your Domain to Cloudflare
 
-**Time: 2 minutes**
+**Where you are**: Cloudflare Dashboard (https://dash.cloudflare.com)
 
-Once nameservers are active, go to **DNS** → **Records**:
+1. **Look at the top navigation bar** → Click **"Add a site"** button (or on homepage click **"Add site"**)
+2. **"Enter your site" page appears** → Type: `ticks.ro`
+3. Click **"Continue"**
+4. **"Select your plan" page appears** → Scroll down → Select **"Free"** (bottom option, $0/month)
+5. Click **"Continue"**
+6. **"Review DNS records" page appears** → Cloudflare scans existing records
+   - If it finds existing records, leave them for now
+7. Click **"Continue"**
+8. **"Change your nameservers" page appears** → You'll see something like:
+   ```
+   ┌─────────────────────────────────────────┐
+   │ Replace with Cloudflare's nameservers   │
+   ├─────────────────────────────────────────┤
+   │ Type   Value                            │
+   │ NS     aria.ns.cloudflare.com           │
+   │ NS     cruz.ns.cloudflare.com           │
+   └─────────────────────────────────────────┘
+   ```
+9. **KEEP THIS PAGE OPEN** - you'll need these nameserver values
+10. Open a **NEW browser tab** → Go to your domain registrar (where you bought ticks.ro)
 
-**Delete** any existing A/AAAA/CNAME records for @ and * (if any)
+---
 
-**Add these 2 records:**
+### Step 1.3: Update Nameservers at Your Domain Registrar
 
-| Step | Type | Name | Content | Proxy | TTL |
-|------|------|------|---------|-------|-----|
-| 1 | A | `@` | `YOUR_VPS_IP` (e.g., `123.45.67.89`) | ✅ Proxied (orange cloud) | Auto |
-| 2 | A | `*` | `YOUR_VPS_IP` (e.g., `123.45.67.89`) | ✅ Proxied (orange cloud) | Auto |
+**This step varies by registrar. Common examples:**
 
-**How to add:**
-1. Click **"Add record"**
-2. Type: Select `A`
-3. Name: Enter `@` (for root) or `*` (for wildcard)
-4. IPv4 address: Enter your VPS IP
-5. Proxy status: Click the cloud to make it **orange** (proxied)
+**If using Namecheap:**
+1. Log in → Go to **"Domain List"**
+2. Click **"Manage"** next to ticks.ro
+3. Scroll to **"Nameservers"** section
+4. Select **"Custom DNS"** from dropdown
+5. Delete existing nameservers
+6. Add the two Cloudflare nameservers (from Step 1.2)
+7. Click the **green checkmark** to save
+
+**If using GoDaddy:**
+1. Log in → Go to **"My Products"** → **"Domains"**
+2. Click **"DNS"** next to ticks.ro
+3. Scroll to **"Nameservers"** → Click **"Change"**
+4. Select **"Enter my own nameservers"**
+5. Enter the two Cloudflare nameservers
 6. Click **"Save"**
-7. Repeat for the second record
 
-> 🔑 **Key Point**: The wildcard `*` record handles ALL subdomains automatically. You don't need to add individual records for each tenant. This means **unlimited subdomains** with just 2 DNS records!
-
----
-
-#### Step 1.3: SSL/TLS Configuration in Cloudflare
-
-**Time: 2 minutes**
-
-1. Go to **SSL/TLS** in the left sidebar
-2. Click **Overview**
-3. Select **"Full (strict)"** encryption mode
-4. Go to **SSL/TLS** → **Edge Certificates**
-5. Enable these settings:
-   - **Always Use HTTPS**: Toggle ON
-   - **Automatic HTTPS Rewrites**: Toggle ON
-   - **Minimum TLS Version**: TLS 1.2
-
-> ✅ **HTTPS is now automatic** for `ticks.ro` and ALL subdomains (`*.ticks.ro`)
+**If using other registrar:**
+- Look for "DNS Settings", "Nameservers", or "DNS Management"
+- Replace all nameservers with the two from Cloudflare
 
 ---
 
-#### Step 1.4: Create Cloudflare API Token
+### Step 1.4: Confirm Nameserver Change in Cloudflare
 
-**Time: 3 minutes**
+1. Go back to your **Cloudflare tab** (from Step 1.2)
+2. Click **"Done, check nameservers"**
+3. You'll see: `"Great news! Cloudflare is now protecting your site"`
+   - OR: `"Pending Nameserver Update"` (wait 5 min - 24 hours)
+4. You'll receive an email when nameservers are active
 
-1. Click your profile icon (top right) → **"My Profile"**
-2. Go to **"API Tokens"** tab
-3. Click **"Create Token"**
-4. Find **"Edit zone DNS"** template → Click **"Use template"**
-5. Configure:
-   - **Token name**: `ePas ticks.ro DNS Manager` (or any name)
-   - **Permissions**: Already set correctly (Zone - DNS - Edit)
-   - **Zone Resources**:
-     - Include → Specific zone → Select `ticks.ro`
-6. Click **"Continue to summary"**
-7. Click **"Create Token"**
-8. **⚠️ IMPORTANT: Copy the token NOW** (shown only once!)
-   ```
-   Example: Bxj7k9mNpQrStUvWxYz1234567890abcdefg
-   ```
-9. Store it securely (you'll add it to `.env` later)
+> ⏳ **Wait for confirmation email before proceeding** (usually 5-30 minutes, max 48 hours)
 
 ---
 
-#### Step 1.5: Get Zone ID
+### Step 1.5: Configure DNS Records (Type A Records)
 
-**Time: 1 minute**
+**Where you are**: Cloudflare Dashboard → Your ticks.ro site
 
-1. Go back to `ticks.ro` dashboard in Cloudflare
-2. On the right sidebar, scroll down to **"API"** section
-3. Copy the **Zone ID** (32-character string)
-   ```
-   Example: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
-   ```
-4. Store it securely (you'll add it to `.env` later)
+1. **In left sidebar** → Click **"DNS"**
+2. **Click "Records"** (submenu under DNS)
+3. You'll see the DNS Records management page
+
+**Delete old records (if any):**
+- If you see any existing **A**, **AAAA**, or **CNAME** records for `@` or `*`:
+  - Click the **"Edit"** button (pencil icon) on each
+  - Click **"Delete"** at the bottom
+
+**Add Record #1 (Root Domain):**
+1. Click **"+ Add record"** button (blue button, top right of records table)
+2. **Type dropdown** → Select: `A`
+3. **Name field** → Type: `@`
+4. **IPv4 address field** → Type: `YOUR_VPS_IP` (e.g., `185.132.178.42`)
+   - Find your IP in Ploi: Server → Overview → "IP Address"
+5. **Proxy status** → Should show **orange cloud** (if gray, click it to turn orange)
+6. **TTL** → Leave as "Auto"
+7. Click **"Save"**
+
+**Add Record #2 (Wildcard - for all subdomains):**
+1. Click **"+ Add record"** button again
+2. **Type dropdown** → Select: `A`
+3. **Name field** → Type: `*` (asterisk - this is the wildcard)
+4. **IPv4 address field** → Type: `YOUR_VPS_IP` (same IP as above)
+5. **Proxy status** → Make sure it's **orange cloud**
+6. **TTL** → Leave as "Auto"
+7. Click **"Save"**
+
+**Your DNS Records should now look like:**
+```
+┌───────┬──────┬─────────────────────┬─────────┬───────┐
+│ Type  │ Name │ Content             │ Proxy   │ TTL   │
+├───────┼──────┼─────────────────────┼─────────┼───────┤
+│ A     │ @    │ 185.132.178.42      │ Proxied │ Auto  │
+│ A     │ *    │ 185.132.178.42      │ Proxied │ Auto  │
+└───────┴──────┴─────────────────────┴─────────┴───────┘
+```
 
 ---
 
-### PHASE 2: Ploi.io Server Configuration
+### Step 1.6: Configure SSL/TLS Settings
 
-#### Step 2.1: Add ticks.ro Site to Ploi
+**Where you are**: Cloudflare Dashboard → Your ticks.ro site
 
-**Time: 5 minutes**
+1. **In left sidebar** → Click **"SSL/TLS"**
+2. Click **"Overview"** (first submenu item)
+3. You'll see **"SSL/TLS encryption mode"** section with 4 options:
+   - Off
+   - Flexible
+   - Full
+   - Full (strict) ✅ **SELECT THIS ONE**
+4. Click on **"Full (strict)"** radio button
 
-1. Log in to https://ploi.io
-2. Go to your server
-3. Click **"Sites"** in the left menu
-4. Click **"New Site"** button
-5. Configure:
+**Now configure Edge Certificates:**
+1. **In left sidebar** → Still under **"SSL/TLS"** → Click **"Edge Certificates"**
+2. Scroll down to find these toggles and enable them:
+
+   | Setting | Action |
+   |---------|--------|
+   | **Always Use HTTPS** | Toggle **ON** (green) |
+   | **Automatic HTTPS Rewrites** | Toggle **ON** (green) |
+   | **Minimum TLS Version** | Select **TLS 1.2** |
+
+---
+
+### Step 1.7: Create Origin Certificate (for your server)
+
+**Where you are**: Cloudflare Dashboard → SSL/TLS section
+
+1. **In left sidebar** → Under **"SSL/TLS"** → Click **"Origin Server"**
+2. Click **"Create Certificate"** button
+3. **"Generate private key and CSR with Cloudflare"** should be selected (default)
+4. **Private key type** → Select: `RSA (2048)`
+5. **Hostnames** field → Should already show `*.ticks.ro` and `ticks.ro`
+   - If not, type them manually (one per line)
+6. **Certificate Validity** → Select: `15 years` (maximum)
+7. Click **"Create"**
+
+8. **IMPORTANT - Save these now!** You'll see two text boxes:
    ```
-   Root Domain: ticks.ro
-   Project Type: Laravel
-   Web Directory: /public
-   PHP Version: 8.2 (or 8.3)
+   ┌─────────────────────────────────────────────────────┐
+   │ Origin Certificate                                  │
+   │ -----BEGIN CERTIFICATE-----                         │
+   │ MIIEojCCA4qgAwIBAgIUe...                            │
+   │ -----END CERTIFICATE-----                           │
+   └─────────────────────────────────────────────────────┘
+
+   ┌─────────────────────────────────────────────────────┐
+   │ Private Key                                         │
+   │ -----BEGIN PRIVATE KEY-----                         │
+   │ MIIEvgIBADANBgkqhki...                              │
+   │ -----END PRIVATE KEY-----                           │
+   └─────────────────────────────────────────────────────┘
    ```
-6. Click **"Add Site"**
-7. Wait for site creation (1-2 minutes)
+
+9. **Copy the Origin Certificate** → Save to a text file (`ticks-cert.pem`)
+10. **Copy the Private Key** → Save to a text file (`ticks-key.pem`)
+11. Click **"OK"**
+
+> ⚠️ **The private key is shown only ONCE.** If you lose it, you must create a new certificate.
+
+---
+
+### Step 1.8: Create API Token
+
+**Where you are**: Cloudflare Dashboard
+
+1. **Top right corner** → Click your **profile icon** (circle with your initial)
+2. Click **"My Profile"**
+3. **In left sidebar** → Click **"API Tokens"**
+4. Click **"Create Token"** button
+5. Scroll down to find **"Edit zone DNS"** template → Click **"Use template"**
+6. **Token name** → Type: `ePas DNS Manager` (or any name you want)
+7. **Permissions** → Should already show:
+   - Zone - DNS - Edit
+   - Zone - Zone - Read
+8. **Zone Resources** section:
+   - **Include** dropdown → Select: `Specific zone`
+   - **Select...** dropdown → Select: `ticks.ro`
+9. Click **"Continue to summary"**
+10. Review the summary → Click **"Create Token"**
+11. **COPY THE TOKEN NOW!** (shown only once)
+    ```
+    Example: Bxj7k9mNpQrStUvWxYz1234567890abcdefghijklmno
+    ```
+12. Save it to a secure location (password manager, secure note)
+13. Click **"OK"**
+
+---
+
+### Step 1.9: Get Zone ID
+
+**Where you are**: Cloudflare Dashboard
+
+1. Click **"Websites"** in top navigation → Click on **ticks.ro**
+2. **On the right sidebar**, scroll down to **"API"** section
+3. You'll see:
+   ```
+   API
+   ─────────────────────────
+   Zone ID
+   a1b2c3d4e5f6789012345678
+
+   Account ID
+   xyz987654321...
+   ```
+4. Click **"Click to copy"** next to **Zone ID**
+5. Save it to a secure location
+
+**You should now have saved:**
+- [ ] API Token (from Step 1.8)
+- [ ] Zone ID (from Step 1.9)
+- [ ] Origin Certificate (from Step 1.7)
+- [ ] Private Key (from Step 1.7)
+
+---
+
+## PHASE 2: Ploi.io Server Configuration
+
+### Step 2.1: Add ticks.ro Site (or use existing)
+
+**Where you are**: Ploi.io Dashboard (https://ploi.io)
+
+**If ticks.ro is a NEW site:**
+1. Click on your **server name** in the dashboard
+2. **In left sidebar** → Click **"Sites"**
+3. Click **"+ Create a new site"** button
+4. Fill in:
+   - **Root domain**: `ticks.ro`
+   - **Project type**: `Laravel`
+   - **Web directory**: `/public`
+   - **PHP Version**: `8.2` (or `8.3`)
+5. Click **"Add site"**
+6. Wait for creation (1-2 minutes)
 
 **If ticks.ro is your EXISTING ePas site:**
-- Skip creating a new site
-- Just add the alias in the next step
+- Skip to Step 2.2
 
 ---
 
-#### Step 2.2: Configure Wildcard Subdomain in Ploi
+### Step 2.2: Add Wildcard Domain Alias
 
-**Time: 2 minutes**
+**Where you are**: Ploi.io → Your ticks.ro site
 
-1. Go to the `ticks.ro` site in Ploi
-2. Click **"Manage"** (or enter site settings)
-3. Go to **"Domains & Aliases"** (or just "Domains")
-4. In the **"Add Alias"** section:
+1. Click on **ticks.ro** site to open it
+2. **In left sidebar** → Click **"Network"** (or **"Domains"** depending on Ploi version)
+3. You'll see a section called **"Site Aliases"** or **"Domains & Aliases"**
+4. In the input field, type: `*.ticks.ro`
+5. Click **"Add"** (or **"+"** button)
+6. You should see:
    ```
-   Domain: *.ticks.ro
+   Domains
+   ─────────────────────────
+   ticks.ro (primary)
+   *.ticks.ro
    ```
-5. Click **"Add Alias"**
-
-> ✅ Now Nginx will accept requests for ALL subdomains of ticks.ro
 
 ---
 
-#### Step 2.3: SSL Certificate in Ploi
+### Step 2.3: Install SSL Certificate
 
-**Time: 5 minutes**
+**Where you are**: Ploi.io → Your ticks.ro site
 
-Since Cloudflare handles SSL at the edge, we need an **Origin Certificate**:
+1. **In left sidebar** → Click **"SSL"** (or **"Certificates"**)
+2. Click **"Install a Custom Certificate"** (or **"Custom SSL"**)
+3. You'll see two text areas:
 
-**In Cloudflare:**
-1. Go to **SSL/TLS** → **Origin Server**
-2. Click **"Create Certificate"**
-3. Configure:
-   - Generate private key and CSR: **Cloudflare** (selected by default)
-   - Private key type: **RSA (2048)**
-   - Hostnames: Enter both:
-     ```
-     *.ticks.ro
-     ticks.ro
-     ```
-   - Validity: **15 years** (max)
-4. Click **"Create"**
-5. You'll see two text boxes:
-   - **Origin Certificate** (starts with `-----BEGIN CERTIFICATE-----`)
-   - **Private Key** (starts with `-----BEGIN PRIVATE KEY-----`)
-6. **Copy both** (keep this page open!)
+   **Certificate field:**
+   - Paste the **Origin Certificate** from Step 1.7
+   - (The one starting with `-----BEGIN CERTIFICATE-----`)
 
-**In Ploi:**
-1. Go to your `ticks.ro` site
-2. Click **"SSL"** (or "Certificates")
-3. Click **"Install Custom Certificate"** (or "Custom SSL")
-4. Paste:
-   - **Certificate**: The Origin Certificate from Cloudflare
-   - **Private Key**: The Private Key from Cloudflare
-5. Click **"Install Certificate"**
+   **Private Key field:**
+   - Paste the **Private Key** from Step 1.7
+   - (The one starting with `-----BEGIN PRIVATE KEY-----`)
 
-> ✅ Your server now has a valid SSL certificate for `*.ticks.ro`
+4. Click **"Install Certificate"** (or **"Save"**)
+5. Wait for installation (10-30 seconds)
+6. You should see: `SSL Certificate installed successfully`
 
 ---
 
-#### Step 2.4: Verify Nginx Configuration
+### Step 2.4: Verify Nginx Configuration
 
-**Time: 1 minute**
+**Where you are**: Ploi.io → Your ticks.ro site
 
-1. In Ploi, go to your `ticks.ro` site
-2. Click **"Nginx Configuration"** (or "Server Config")
-3. Look for the `server_name` line - it should include:
+1. **In left sidebar** → Click **"Server"** (or **"Nginx"**)
+2. Click **"Nginx Configuration"** (or **"Edit Nginx Config"**)
+3. Look for the `server_name` line. It should include:
    ```nginx
    server_name ticks.ro *.ticks.ro;
    ```
-4. If not present, add `*.ticks.ro` after `ticks.ro`
-5. Click **"Save"** (Ploi will reload Nginx automatically)
+4. **If `*.ticks.ro` is missing**, add it after `ticks.ro` (with a space)
+5. Click **"Save"** (Ploi will automatically reload Nginx)
 
 ---
 
-### PHASE 3: Laravel Application Configuration
+### Step 2.5: Add Environment Variables
 
-#### Step 3.1: Environment Variables
+**Where you are**: Ploi.io → Your ticks.ro site
 
-**Time: 2 minutes**
-
-**In Ploi:**
-1. Go to your `ticks.ro` site
-2. Click **"Environment"** (or ".env")
-3. Add these lines at the end:
-   ```env
-   # Cloudflare DNS Management (for ticks.ro subdomains)
-   CLOUDFLARE_API_TOKEN=your_token_from_step_1.4
-   CLOUDFLARE_ZONE_ID=your_zone_id_from_step_1.5
+1. **In left sidebar** → Click **"Environment"** (or **".env"**)
+2. Scroll to the bottom of the .env file
+3. Add these three lines:
+   ```
+   CLOUDFLARE_API_TOKEN=paste_your_token_from_step_1.8
+   CLOUDFLARE_ZONE_ID=paste_your_zone_id_from_step_1.9
    CLOUDFLARE_BASE_DOMAIN=ticks.ro
    ```
 4. Click **"Save"**
 
 ---
 
-#### Step 3.2: Deploy the Code
+## PHASE 3: Verify Setup
 
-**Time: 5 minutes**
+### Step 3.1: Test DNS Resolution
 
-1. In Ploi, go to **"Repository"** (or "Deployment")
-2. If not connected:
-   - Connect to your Git provider (GitHub/GitLab/Bitbucket)
-   - Select your ePas repository
-   - Set branch: `core-main` (or your production branch)
-3. Click **"Deploy Now"**
-4. Wait for deployment to complete
-5. Run migrations (if not in deploy script):
-   ```bash
-   php artisan migrate --force
-   ```
+1. Open browser → Go to: `https://dnschecker.org`
+2. Enter: `ticks.ro`
+3. Select: `A` record type
+4. Click **"Search"**
+5. You should see your VPS IP in green across all locations
+
+6. Test wildcard:
+   - Enter: `test.ticks.ro`
+   - You should see the same IP
 
 ---
 
-#### Step 3.3: Verify Everything Works
+### Step 3.2: Test HTTPS
 
-**Time: 5 minutes**
+1. Open browser → Go to: `https://ticks.ro`
+   - Should load (or show your Laravel app)
+   - Should show padlock icon (HTTPS working)
 
-1. Visit `https://ticks.ro` - Should load your main site
-2. Visit `https://test.ticks.ro` - Should show 404 (no tenant yet)
-3. Check Nginx logs for errors:
-   - In Ploi: Site → Logs → Nginx
-4. Check Laravel logs:
-   - In Ploi: Site → Logs → Laravel
-
----
-
-### PHASE 4: Test the Complete Flow
-
-**Time: 10 minutes**
-
-1. **Create a test tenant:**
-   - Go through onboarding at `https://ticks.ro/register`
-   - At Step 3, check "Nu am un website propriu"
-   - Enter subdomain: `test-tenant`
-   - Complete registration
-
-2. **Verify subdomain works:**
-   - Visit `https://test-tenant.ticks.ro`
-   - Should see tenant's ticket shop
-
-3. **Check database:**
-   - Domain record created with `is_managed_subdomain = true`
-   - `cloudflare_record_id` populated (if not using wildcard-only mode)
-
-4. **Check Cloudflare (optional):**
-   - DNS records page should show the record (if creating individual records)
+2. Go to: `https://anything.ticks.ro`
+   - Should show 404 or your app (not SSL error)
+   - This confirms wildcard SSL is working
 
 ---
 
-### TROUBLESHOOTING
+### Summary: What You Now Have Configured
 
-| Problem | Solution |
-|---------|----------|
-| Subdomain shows "DNS not found" | Wait 5 mins for DNS propagation, or check wildcard record exists |
-| Subdomain shows connection refused | Check Nginx has `*.ticks.ro` in server_name |
-| HTTPS certificate error | Check origin certificate is installed in Ploi |
-| 404 on subdomain | Check Laravel routes are configured for subdomain |
-| 500 error on subdomain | Check Laravel logs: `storage/logs/laravel.log` |
-
----
-
-## Email Notification Updates
-
-For managed subdomains, skip the domain verification email since they're auto-activated:
-
-```php
-// In storeStepFour(), update email sending:
-if (!$noWebsite) {
-    // Only send domain verification instructions for custom domains
-    try {
-        $this->sendDomainVerificationInstructionsEmail($user, $tenant, $step1);
-    } catch (\Exception $e) {
-        Log::error('Failed to send domain verification email', [...]);
-    }
-}
-```
+| Component | Status |
+|-----------|--------|
+| Cloudflare nameservers | ✅ Active |
+| DNS A record for @ | ✅ Points to VPS |
+| DNS A record for * (wildcard) | ✅ Points to VPS |
+| SSL/TLS mode | ✅ Full (strict) |
+| Origin certificate | ✅ Installed on server (15 years) |
+| Edge certificate | ✅ Automatic via Cloudflare |
+| API Token | ✅ Saved for Laravel |
+| Zone ID | ✅ Saved for Laravel |
+| Nginx wildcard | ✅ Accepts *.ticks.ro |
+| Environment variables | ✅ Added to .env |
 
 ---
 
-## Testing Checklist
+## TROUBLESHOOTING
 
-1. [ ] New tenant selects "I don't have a website"
-2. [ ] Subdomain input appears and domain input hides
-3. [ ] Subdomain validation works (format, length, reserved words)
-4. [ ] Subdomain availability check works
-5. [ ] Registration completes successfully
-6. [ ] DNS record created in Cloudflare
-7. [ ] Domain marked as active in database
-8. [ ] Tenant can access their subdomain immediately
-9. [ ] Tenant client (widget) works on the subdomain
-10. [ ] No verification email sent for managed subdomains
-11. [ ] Fallback works if Cloudflare API fails
+| Problem | Cause | Solution |
+|---------|-------|----------|
+| "DNS not found" for subdomain | DNS not propagated yet | Wait 5-30 minutes, check dnschecker.org |
+| "Connection refused" | Nginx not accepting subdomain | Check Step 2.4 - verify `*.ticks.ro` in server_name |
+| "SSL certificate error" | Origin cert not installed | Redo Step 2.3 |
+| "Too many redirects" | SSL mode wrong | In Cloudflare: SSL/TLS → Set to "Full (strict)" |
+| "502 Bad Gateway" | PHP not running | In Ploi: restart PHP/site |
+| API token doesn't work | Wrong permissions | Create new token with "Edit zone DNS" template |
 
----
-
-## Rollback Plan
-
-If issues occur:
-1. Set `CLOUDFLARE_API_TOKEN=` (empty) to disable Cloudflare integration
-2. Subdomains will be created but not auto-activated
-3. Manual DNS record creation and domain activation via admin panel
-
----
-
-## Files to Create/Modify
-
-| File | Action |
-|------|--------|
-| `config/services.php` | Add Cloudflare config |
-| `.env.example` | Add Cloudflare env vars |
-| `database/migrations/xxxx_add_subdomain_fields_to_domains_table.php` | Create |
-| `app/Services/CloudflareService.php` | Create |
-| `app/Models/Domain.php` | Add new fields and methods |
-| `app/Http/Controllers/OnboardingController.php` | Add checkSubdomain, update storeStepThree/Four |
-| `resources/views/onboarding/wizard.blade.php` | Add subdomain UI |
-| `routes/web.php` | Add check-subdomain route |
-| `app/Http/Middleware/TenantClientCors.php` | Handle managed subdomains |
