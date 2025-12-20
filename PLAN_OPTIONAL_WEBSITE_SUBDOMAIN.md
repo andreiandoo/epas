@@ -593,47 +593,267 @@ if (!$domain) {
 
 ---
 
-## Infrastructure Requirements for ticks.ro
+## STEP-BY-STEP SETUP GUIDE FOR ticks.ro (Ploi.io + Cloudflare)
 
-### Cloudflare Setup
-1. **Add ticks.ro to Cloudflare** (if not already)
-2. **Create API Token** with permissions:
-   - Zone: DNS: Edit
-   - Zone: Zone: Read
-   - Zone Resources: Include specific zone (ticks.ro)
-3. **Get Zone ID** from the Cloudflare dashboard for ticks.ro
-4. **Create base DNS record**:
-   - Type: A
-   - Name: @ (or ticks.ro)
-   - Content: Your server IP address
-   - Proxied: Yes
-5. **Create wildcard CNAME** (optional, for instant subdomain resolution):
-   - Type: CNAME
-   - Name: *
-   - Content: ticks.ro
-   - Proxied: Yes
+### PHASE 1: Domain & DNS Setup in Cloudflare
 
-### Nginx/Server Configuration
-The server must be configured to handle all subdomains of ticks.ro:
+#### Step 1.1: Add ticks.ro to Cloudflare
+1. Go to https://dash.cloudflare.com
+2. Click "Add a Site" → Enter `ticks.ro`
+3. Choose the **Free** plan (sufficient for this)
+4. Cloudflare will scan existing DNS records
+5. **Update nameservers** at your domain registrar to Cloudflare's nameservers:
+   - Example: `nova.ns.cloudflare.com` and `rick.ns.cloudflare.com`
+   - Wait 24-48 hours for propagation (usually much faster)
 
+#### Step 1.2: Configure DNS Records in Cloudflare
+Go to **DNS** → **Records** and add:
+
+| Type | Name | Content | Proxy | TTL |
+|------|------|---------|-------|-----|
+| A | @ | `YOUR_VPS_IP` | ✅ Proxied | Auto |
+| A | * | `YOUR_VPS_IP` | ✅ Proxied | Auto |
+
+> ⚠️ **Important**: The wildcard `*` record ensures ALL subdomains (like `teatru.ticks.ro`) point to your server. With proxy enabled, Cloudflare handles SSL automatically.
+
+#### Step 1.3: SSL/TLS Configuration in Cloudflare
+Go to **SSL/TLS** → **Overview**:
+1. Set encryption mode to **Full (strict)** ← Recommended
+2. Go to **Edge Certificates** → Enable:
+   - Always Use HTTPS: ✅ ON
+   - Automatic HTTPS Rewrites: ✅ ON
+
+> ✅ **HTTPS Answer**: Yes! All subdomains will have HTTPS automatically. Cloudflare provides free Universal SSL that covers `*.ticks.ro` and `ticks.ro`. No certificate purchase needed.
+
+#### Step 1.4: Create Cloudflare API Token
+1. Go to **My Profile** (top right) → **API Tokens**
+2. Click **Create Token**
+3. Use template: **Edit zone DNS**
+4. Configure permissions:
+   ```
+   Zone - DNS - Edit
+   Zone - Zone - Read
+   ```
+5. Zone Resources: **Include** → **Specific zone** → Select `ticks.ro`
+6. Click **Continue to summary** → **Create Token**
+7. **COPY THE TOKEN** (shown only once!)
+
+#### Step 1.5: Get Zone ID
+1. Go to **ticks.ro** dashboard in Cloudflare
+2. Scroll down on the right sidebar → **API** section
+3. Copy the **Zone ID** (32-character string)
+
+---
+
+### PHASE 2: Ploi.io Server Configuration
+
+#### Step 2.1: Add ticks.ro Site to Ploi
+1. Go to your server in Ploi.io
+2. Click **Sites** → **New Site**
+3. Configure:
+   - **Root Domain**: `ticks.ro`
+   - **Web Directory**: `/public` (Laravel default)
+   - **PHP Version**: 8.2 or 8.3
+4. **Important**: This should point to your ePas Laravel application
+
+#### Step 2.2: Configure Wildcard Subdomain in Ploi
+1. Go to the `ticks.ro` site in Ploi
+2. Click **Domains & Aliases**
+3. Add alias: `*.ticks.ro` (wildcard)
+4. Click **Add Alias**
+
+> This tells Nginx to accept requests for ALL subdomains of ticks.ro
+
+#### Step 2.3: SSL Certificate in Ploi
+Since Cloudflare handles SSL at the edge, you have two options:
+
+**Option A: Cloudflare Origin Certificate (Recommended)**
+1. In Cloudflare: **SSL/TLS** → **Origin Server** → **Create Certificate**
+2. Choose:
+   - Private key type: RSA (2048)
+   - Hostnames: `*.ticks.ro, ticks.ro`
+   - Validity: 15 years
+3. Copy the **Origin Certificate** and **Private Key**
+4. In Ploi: Site → **SSL** → **Install Custom Certificate**
+5. Paste certificate and key
+
+**Option B: Let's Encrypt (requires DNS challenge)**
+1. In Ploi: Site → **SSL** → **Let's Encrypt**
+2. Enable **DNS Challenge**
+3. Add Cloudflare API token for automatic DNS validation
+4. Request wildcard: `*.ticks.ro`
+
+> ⚠️ With Cloudflare proxying, self-signed certificates also work, but origin certificates are cleaner.
+
+#### Step 2.4: Verify Nginx Configuration
+Ploi automatically generates Nginx config. Verify it includes:
 ```nginx
-server {
-    listen 80;
-    listen 443 ssl;
-    server_name *.ticks.ro ticks.ro;
+server_name ticks.ro *.ticks.ro;
+```
 
-    # SSL certificates (use wildcard certificate or Let's Encrypt with DNS challenge)
-    ssl_certificate /path/to/ticks.ro.crt;
-    ssl_certificate_key /path/to/ticks.ro.key;
+If you need to customize, go to Site → **Nginx Configuration**.
 
-    # ... rest of Laravel config
+---
+
+### PHASE 3: Laravel Application Configuration
+
+#### Step 3.1: Environment Variables
+Add to your `.env` file on the server:
+```env
+# Cloudflare DNS Management (for ticks.ro subdomains)
+CLOUDFLARE_API_TOKEN=your_api_token_from_step_1.4
+CLOUDFLARE_ZONE_ID=your_zone_id_from_step_1.5
+CLOUDFLARE_BASE_DOMAIN=ticks.ro
+```
+
+In Ploi: Site → **Environment** → Add these variables.
+
+#### Step 3.2: Deploy the Code
+After implementing the code changes, deploy via Ploi:
+1. Site → **Repository** → Connect to your git repo
+2. Set deploy branch to `core-main` (or your production branch)
+3. Click **Deploy**
+
+Or trigger deployment via webhook/CI.
+
+---
+
+### PHASE 4: How Tenant Websites Work on Subdomains
+
+#### Current System (Custom Domains)
+1. Tenant registers with their domain (e.g., `teatrul-national.ro`)
+2. They download a "deployment package" (HTML + JS widget)
+3. They install it on THEIR server
+4. Widget connects to ePas API
+
+#### New System (Managed Subdomains)
+For managed subdomains like `teatru.ticks.ro`:
+
+**The tenant's "website" is hosted on YOUR server automatically!**
+
+We will serve a full HTML page from Laravel that:
+1. Loads the tenant-client widget
+2. Displays their events, ticketing, etc.
+3. Uses their theme/branding from the database
+
+No separate deployment needed - it's all served from the ePas platform.
+
+---
+
+### ADDITIONAL: Tenant Website Routes (Auto-Deployment)
+
+**File: `routes/web.php`** - Add subdomain routing:
+```php
+// Managed subdomain routes - serves tenant websites
+Route::domain('{subdomain}.' . config('services.cloudflare.base_domain', 'ticks.ro'))
+    ->middleware(['web'])
+    ->group(function () {
+        Route::get('/', [TenantWebsiteController::class, 'index']);
+        Route::get('/{any}', [TenantWebsiteController::class, 'index'])->where('any', '.*');
+    });
+```
+
+**File: `app/Http/Controllers/TenantWebsiteController.php`** (New):
+```php
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Domain;
+use App\Models\Tenant;
+use Illuminate\Http\Request;
+
+class TenantWebsiteController extends Controller
+{
+    public function index(Request $request, string $subdomain)
+    {
+        $baseDomain = config('services.cloudflare.base_domain', 'ticks.ro');
+        $fullDomain = "{$subdomain}.{$baseDomain}";
+
+        // Find the tenant by subdomain
+        $domain = Domain::where('domain', $fullDomain)
+            ->where('is_managed_subdomain', true)
+            ->where('is_active', true)
+            ->with('tenant')
+            ->first();
+
+        if (!$domain || !$domain->tenant) {
+            abort(404, 'Website not found');
+        }
+
+        $tenant = $domain->tenant;
+
+        // Serve the tenant website template
+        return view('tenant-website.index', [
+            'tenant' => $tenant,
+            'domain' => $domain,
+            'apiUrl' => config('services.tenant_client.api_url'),
+        ]);
+    }
 }
 ```
 
-### SSL Certificate
-- Option 1: **Cloudflare Universal SSL** (free, automatic)
-- Option 2: **Let's Encrypt wildcard** using DNS-01 challenge
-- Option 3: **Purchased wildcard certificate** for *.ticks.ro
+**File: `resources/views/tenant-website/index.blade.php`** (New):
+```html
+<!DOCTYPE html>
+<html lang="{{ $tenant->locale ?? 'ro' }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ $tenant->public_name }} - Bilete</title>
+    <meta name="description" content="Cumpără bilete pentru evenimentele organizate de {{ $tenant->public_name }}">
+
+    <!-- Tenant Client Widget -->
+    <script>
+        window.TIXELLO_CONFIG = {
+            apiUrl: '{{ $apiUrl }}',
+            tenantId: '{{ $tenant->id }}',
+            domain: '{{ $domain->domain }}',
+            locale: '{{ $tenant->locale ?? "ro" }}'
+        };
+    </script>
+</head>
+<body>
+    <!-- The widget will render here -->
+    <div id="tixello-app"></div>
+
+    <!-- Load the tenant client widget -->
+    <script src="{{ $apiUrl }}/tenant-client/tixello-loader.iife.js"></script>
+</body>
+</html>
+```
+
+---
+
+### Summary: What Happens Automatically
+
+1. **Tenant registers** → Chooses "I don't have a website" → Picks `teatru.ticks.ro`
+2. **System creates DNS record** in Cloudflare via API (instant)
+3. **Cloudflare propagates** the DNS (seconds with wildcard, minutes otherwise)
+4. **SSL is automatic** via Cloudflare Universal SSL
+5. **Tenant visits** `https://teatru.ticks.ro` → Works immediately!
+6. **Laravel serves** their personalized ticket shop with their events
+7. **Admin can manage** everything from the admin panel - no manual deployment
+
+### What You (Admin) Can Do
+
+| Action | How |
+|--------|-----|
+| View all managed subdomains | Admin → Tenants → Filter by "Managed Subdomain" |
+| Deactivate a subdomain | Admin → Domains → Toggle Active |
+| Delete subdomain (removes DNS) | Admin → Domains → Delete (calls Cloudflare API) |
+| See subdomain status | Domain record shows `cloudflare_record_id` |
+
+---
+
+### Verification Checklist (After Setup)
+
+- [ ] ticks.ro loads correctly (main site or redirect)
+- [ ] Create a test subdomain manually in Cloudflare (e.g., test.ticks.ro)
+- [ ] test.ticks.ro resolves and shows HTTPS
+- [ ] API token can list DNS records (test with `curl`)
+- [ ] Wildcard alias works in Ploi (check Nginx config)
+- [ ] Deploy code and test onboarding flow
 
 ---
 
