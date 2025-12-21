@@ -22,6 +22,8 @@ class ShopGiftCard extends Model
         'code',
         'initial_balance_cents',
         'current_balance_cents',
+        'initial_balance',
+        'current_balance',
         'currency',
         'status',
         'purchaser_customer_id',
@@ -141,9 +143,19 @@ class ShopGiftCard extends Model
         return $this->initial_balance_cents / 100;
     }
 
+    public function setInitialBalanceAttribute(float $value): void
+    {
+        $this->attributes['initial_balance_cents'] = (int) round($value * 100);
+    }
+
     public function getCurrentBalanceAttribute(): float
     {
         return $this->current_balance_cents / 100;
+    }
+
+    public function setCurrentBalanceAttribute(float $value): void
+    {
+        $this->attributes['current_balance_cents'] = (int) round($value * 100);
     }
 
     public function debit(int $amountCents, ?string $orderId = null, ?string $description = null): ShopGiftCardTransaction

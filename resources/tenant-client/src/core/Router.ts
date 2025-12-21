@@ -3318,6 +3318,37 @@ export class Router {
         `;
     }
 
+    private renderCommissionSection(ticketTotals: any, shopCart: any, currency: string): string {
+        const ticketCommission = ticketTotals.hasCommission ? ticketTotals.commission : 0;
+        const shopCommission = shopCart?.commission_rate > 0 ? parseFloat(shopCart.commission_display || shopCart.commission || 0) : 0;
+        const totalCommission = ticketCommission + shopCommission;
+        const shopIncluded = shopCart?.commission_mode === 'included';
+
+        if (totalCommission <= 0) return '';
+
+        let tooltipParts: string[] = [];
+        if (ticketCommission > 0) {
+            tooltipParts.push(`Bilete: +${ticketCommission.toFixed(2)} ${currency}`);
+        }
+        if (shopCommission > 0) {
+            tooltipParts.push(`Produse: ${shopIncluded ? '' : '+'}${shopCommission.toFixed(2)} ${currency}${shopIncluded ? ' (inclus)' : ''}`);
+        }
+
+        const commissionSign = (shopIncluded && ticketCommission === 0) ? '' : '+';
+
+        return `
+            <div class="flex justify-between text-gray-600 group relative">
+                <span class="cursor-help border-b border-dotted border-gray-400">
+                    Comisioane Tixello
+                    <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                        ${tooltipParts.join('<br>')}
+                    </span>
+                </span>
+                <span>${commissionSign}${totalCommission.toFixed(2)} ${currency}</span>
+            </div>
+        `;
+    }
+
     private getCheckoutFinalTotal(cartTotal: number, currency: string): string {
         let finalTotal = cartTotal;
 
@@ -3384,7 +3415,8 @@ export class Router {
         }
 
         // Prepare pre-filled values
-        const customerName = userData ? `${userData.first_name || ''} ${userData.last_name || ''}`.trim() : '';
+        const customerFirstName = userData?.first_name || '';
+        const customerLastName = userData?.last_name || '';
         const customerEmail = userData?.email || '';
         const customerPhone = userData?.phone || '';
 
@@ -3398,19 +3430,35 @@ export class Router {
                             <div class="bg-white rounded-lg shadow p-6">
                                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Date personale</h2>
                                 <div class="space-y-4">
-                                    <div>
-                                        <label for="customer_name" class="block text-sm font-medium text-gray-700 mb-1">
-                                            Nume complet *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            id="customer_name"
-                                            name="customer_name"
-                                            required
-                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                                            placeholder="Ion Popescu"
-                                            value="${customerName}"
-                                        >
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="customer_first_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Prenume *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="customer_first_name"
+                                                name="customer_first_name"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="Ion"
+                                                value="${customerFirstName}"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label for="customer_last_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Nume *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="customer_last_name"
+                                                name="customer_last_name"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="Popescu"
+                                                value="${customerLastName}"
+                                            >
+                                        </div>
                                     </div>
                                     <div>
                                         <label for="customer_email" class="block text-sm font-medium text-gray-700 mb-1">
@@ -3487,6 +3535,7 @@ export class Router {
                                                 required
                                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                                 placeholder="Ion"
+                                                value="${customerFirstName}"
                                             >
                                         </div>
                                         <div>
@@ -3500,6 +3549,7 @@ export class Router {
                                                 required
                                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                                 placeholder="Popescu"
+                                                value="${customerLastName}"
                                             >
                                         </div>
                                     </div>
@@ -3566,6 +3616,7 @@ export class Router {
                                             required
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                             placeholder="0722123456"
+                                            value="${customerPhone}"
                                         >
                                     </div>
                                 </div>
@@ -3758,11 +3809,22 @@ export class Router {
                             ` : ''}
 
                             <div class="space-y-2 mb-4 pb-4 border-b">
+                                <!-- Subtotals -->
                                 ${ticketCart.length > 0 ? `
                                 <div class="flex justify-between text-gray-600">
                                     <span>Subtotal bilete</span>
                                     <span>${ticketTotals.subtotal.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
+                                ` : ''}
+
+                                ${shopCart?.items?.length > 0 ? `
+                                <div class="flex justify-between text-gray-600">
+                                    <span>Subtotal produse</span>
+                                    <span>${parseFloat(shopCart.subtotal).toFixed(2)} ${shopCart.currency}</span>
+                                </div>
+                                ` : ''}
+
+                                <!-- Discounts -->
                                 ${ticketTotals.bulkDiscount > 0 ? `
                                 <div class="flex justify-between text-green-600">
                                     <span>Discount bulk</span>
@@ -3775,33 +3837,17 @@ export class Router {
                                     <span>-${ticketTotals.couponDiscount.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${ticketTotals.hasCommission ? `
-                                <div class="flex justify-between text-gray-600">
-                                    <span>Comision bilete</span>
-                                    <span>+${ticketTotals.commission.toFixed(2)} ${ticketTotals.currency}</span>
-                                </div>
-                                ` : ''}
-                                ` : ''}
-
-                                ${shopCart?.items?.length > 0 ? `
-                                <div class="flex justify-between text-gray-600">
-                                    <span>Subtotal produse</span>
-                                    <span>${shopCart.subtotal} ${shopCart.currency}</span>
-                                </div>
-                                ${shopCart.discount > 0 ? `
+                                ${shopCart?.discount > 0 ? `
                                 <div class="flex justify-between text-green-600">
                                     <span>Reducere produse</span>
                                     <span>-${parseFloat(shopCart.discount).toFixed(2)} ${shopCart.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${shopCart.commission_rate > 0 ? `
-                                <div class="flex justify-between text-gray-600">
-                                    <span>Comision Tixello${shopCart.commission_mode === 'included' ? ' (inclus în preț)' : ''}</span>
-                                    <span>${shopCart.has_commission ? '+' : ''}${parseFloat(shopCart.commission_display || shopCart.commission).toFixed(2)} ${shopCart.currency}</span>
-                                </div>
-                                ` : ''}
-                                ` : ''}
 
+                                <!-- Combined Commission with hover tooltip -->
+                                ${this.renderCommissionSection(ticketTotals, shopCart, currency)}
+
+                                <!-- Shipping -->
                                 <div id="shipping-cost-row" class="${hasPhysicalProducts ? '' : 'hidden'}">
                                     <div class="flex justify-between text-gray-600">
                                         <span>Transport</span>
@@ -3996,6 +4042,27 @@ export class Router {
         // Load shipping methods if container exists (means there are physical products)
         if (shippingMethodsContainer) {
             loadShippingMethods();
+
+            // Sync customer fields to shipping fields
+            const syncField = (sourceId: string, targetId: string) => {
+                const source = document.getElementById(sourceId) as HTMLInputElement;
+                const target = document.getElementById(targetId) as HTMLInputElement;
+                if (source && target) {
+                    source.addEventListener('input', () => {
+                        // Only sync if target is empty or hasn't been manually modified
+                        if (!target.dataset.modified) {
+                            target.value = source.value;
+                        }
+                    });
+                    target.addEventListener('input', () => {
+                        target.dataset.modified = 'true';
+                    });
+                }
+            };
+
+            syncField('customer_first_name', 'shipping_first_name');
+            syncField('customer_last_name', 'shipping_last_name');
+            syncField('customer_phone', 'shipping_phone');
         }
 
         // Handle beneficiaries checkbox toggle
@@ -4011,7 +4078,9 @@ export class Router {
                     beneficiariesSection.classList.remove('hidden');
 
                     // Generate beneficiary fields
-                    const customerName = (document.getElementById('customer_name') as HTMLInputElement)?.value || '';
+                    const customerFirstName = (document.getElementById('customer_first_name') as HTMLInputElement)?.value || '';
+                    const customerLastName = (document.getElementById('customer_last_name') as HTMLInputElement)?.value || '';
+                    const customerName = `${customerFirstName} ${customerLastName}`.trim();
                     const customerEmail = (document.getElementById('customer_email') as HTMLInputElement)?.value || '';
                     const customerPhone = (document.getElementById('customer_phone') as HTMLInputElement)?.value || '';
 
@@ -4126,7 +4195,7 @@ export class Router {
                                 return_url: window.location.origin + '/checkout/complete',
                                 payment_method_data: {
                                     billing_details: {
-                                        name: formData.get('customer_name') as string,
+                                        name: `${formData.get('customer_first_name') || ''} ${formData.get('customer_last_name') || ''}`.trim(),
                                         email: formData.get('customer_email') as string,
                                         phone: formData.get('customer_phone') as string || undefined,
                                     },
@@ -4147,7 +4216,9 @@ export class Router {
 
                     // Create order after successful payment (or for free orders)
                     const response = await this.postApi('/orders', {
-                        customer_name: formData.get('customer_name'),
+                        customer_first_name: formData.get('customer_first_name'),
+                        customer_last_name: formData.get('customer_last_name'),
+                        customer_name: `${formData.get('customer_first_name') || ''} ${formData.get('customer_last_name') || ''}`.trim(),
                         customer_email: formData.get('customer_email'),
                         customer_phone: formData.get('customer_phone'),
                         agree_terms: agreeTerms,

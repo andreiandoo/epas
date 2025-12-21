@@ -77,13 +77,13 @@ class ShopGiftCardResource extends Resource
                                 default => 'bg-gray-100 text-gray-700',
                             } . '">' . ucfirst($record->status) . '</span>')),
 
-                        Forms\Components\Placeholder::make('initial_balance')
+                        Forms\Components\Placeholder::make('initial_balance_display')
                             ->label('Initial Balance')
-                            ->content(fn ($record) => number_format($record->initial_balance_cents / 100, 2) . ' ' . $record->currency),
+                            ->content(fn ($record) => number_format($record->initial_balance, 2) . ' ' . $record->currency),
 
-                        Forms\Components\Placeholder::make('current_balance')
+                        Forms\Components\Placeholder::make('current_balance_display')
                             ->label('Current Balance')
-                            ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold">' . number_format($record->current_balance_cents / 100, 2) . ' ' . $record->currency . '</span>')),
+                            ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold">' . number_format($record->current_balance, 2) . ' ' . $record->currency . '</span>')),
                     ]),
 
                 SC\Section::make('Purchaser')
@@ -165,7 +165,7 @@ class ShopGiftCardResource extends Resource
                                         $html .= '<br><span class="text-sm text-gray-600">' . $tx->description . '</span>';
                                     }
                                     $html .= '</div>';
-                                    $html .= '<span class="font-medium ' . $color . '">' . $sign . number_format($tx->amount_cents / 100, 2) . '</span>';
+                                    $html .= '<span class="font-medium ' . $color . '">' . $sign . number_format($tx->amount_cents / 100, 2) . ' ' . $record->currency . '</span>';
                                     $html .= '</div>';
                                 }
                                 $html .= '</div>';
@@ -194,16 +194,17 @@ class ShopGiftCardResource extends Resource
                             ->maxLength(32)
                             ->unique(ignoreRecord: true),
 
-                        Forms\Components\TextInput::make('initial_balance_cents')
-                            ->label('Initial Balance (cents)')
+                        Forms\Components\TextInput::make('initial_balance')
+                            ->label('Initial Balance')
                             ->required()
                             ->numeric()
-                            ->minValue(100)
-                            ->suffix('cents')
+                            ->minValue(1)
+                            ->step(0.01)
+                            ->prefix('RON')
                             ->live()
-                            ->afterStateUpdated(fn ($state, $set) => $set('current_balance_cents', $state)),
+                            ->afterStateUpdated(fn ($state, \Filament\Schemas\Components\Utilities\Set $set) => $set('current_balance', $state)),
 
-                        Forms\Components\Hidden::make('current_balance_cents'),
+                        Forms\Components\Hidden::make('current_balance'),
 
                         Forms\Components\Select::make('currency')
                             ->options([
@@ -267,15 +268,15 @@ class ShopGiftCardResource extends Resource
                     ->weight('bold')
                     ->copyable(),
 
-                Tables\Columns\TextColumn::make('initial_balance_cents')
+                Tables\Columns\TextColumn::make('initial_balance')
                     ->label('Initial')
-                    ->formatStateUsing(fn ($state, $record) => number_format($state / 100, 2) . ' ' . $record->currency)
+                    ->formatStateUsing(fn ($state, $record) => number_format($state, 2) . ' ' . $record->currency)
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                Tables\Columns\TextColumn::make('current_balance_cents')
+                Tables\Columns\TextColumn::make('current_balance')
                     ->label('Balance')
-                    ->formatStateUsing(fn ($state, $record) => number_format($state / 100, 2) . ' ' . $record->currency)
-                    ->sortable(),
+                    ->formatStateUsing(fn ($state, $record) => number_format($state, 2) . ' ' . $record->currency)
+                    ->sortable(query: fn (Builder $query, string $direction) => $query->orderBy('current_balance_cents', $direction)),
 
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors([

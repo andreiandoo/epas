@@ -77,7 +77,7 @@ class ShopEventProductResource extends Resource
                             ->searchable()
                             ->required()
                             ->live()
-                            ->afterStateUpdated(fn(Forms\Set $set) => $set('ticket_type_id', null)),
+                            ->afterStateUpdated(fn(\Filament\Schemas\Components\Utilities\Set $set) => $set('ticket_type_id', null)),
 
                         Forms\Components\Select::make('product_id')
                             ->label('Product')
@@ -106,7 +106,7 @@ class ShopEventProductResource extends Resource
 
                         Forms\Components\Select::make('ticket_type_id')
                             ->label('Ticket Type')
-                            ->options(function (Forms\Get $get) use ($tenantLanguage) {
+                            ->options(function (\Filament\Schemas\Components\Utilities\Get $get) use ($tenantLanguage) {
                                 $eventId = $get('event_id');
                                 if (!$eventId) return [];
 
@@ -115,18 +115,18 @@ class ShopEventProductResource extends Resource
                                     ->mapWithKeys(fn($t) => [$t->id => $t->getTranslation('name', $tenantLanguage)]);
                             })
                             ->searchable()
-                            ->helperText(fn($state, Forms\Get $get) => $get('association_type') === 'bundle'
+                            ->helperText(fn($state, \Filament\Schemas\Components\Utilities\Get $get) => $get('association_type') === 'bundle'
                                 ? 'Required for bundles - product will be included with this ticket type'
                                 : 'Optional for upsells - leave empty to show for all ticket types')
-                            ->required(fn(Forms\Get $get) => $get('association_type') === 'bundle')
-                            ->visible(fn(Forms\Get $get) => $get('event_id') !== null),
+                            ->required(fn(\Filament\Schemas\Components\Utilities\Get $get) => $get('association_type') === 'bundle')
+                            ->visible(fn(\Filament\Schemas\Components\Utilities\Get $get) => $get('event_id') !== null),
 
                         Forms\Components\TextInput::make('quantity_included')
                             ->label('Quantity Included')
                             ->numeric()
                             ->default(1)
                             ->minValue(1)
-                            ->visible(fn(Forms\Get $get) => $get('association_type') === 'bundle')
+                            ->visible(fn(\Filament\Schemas\Components\Utilities\Get $get) => $get('association_type') === 'bundle')
                             ->helperText('Number of this product included per ticket'),
                     ])
                     ->columns(2),
