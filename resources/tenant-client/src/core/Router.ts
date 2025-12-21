@@ -41,6 +41,30 @@ interface AppliedDiscount {
     discountAmount: number;
 }
 
+// Shop cart service to track shop product count (synced from API)
+class ShopCartService {
+    private static STORAGE_KEY = 'shop_cart_count';
+
+    static getItemCount(): number {
+        const count = localStorage.getItem(this.STORAGE_KEY);
+        return count ? parseInt(count, 10) : 0;
+    }
+
+    static setItemCount(count: number): void {
+        localStorage.setItem(this.STORAGE_KEY, count.toString());
+        // Dispatch event so other parts of the app can react
+        window.dispatchEvent(new CustomEvent('shop-cart-updated', { detail: { count } }));
+    }
+
+    static clear(): void {
+        localStorage.removeItem(this.STORAGE_KEY);
+        window.dispatchEvent(new CustomEvent('shop-cart-updated', { detail: { count: 0 } }));
+    }
+}
+
+// Make ShopCartService available globally
+(window as any).ShopCartService = ShopCartService;
+
 class CartService {
     private static STORAGE_KEY = 'tixello_cart';
     private static DISCOUNT_KEY = 'tixello_discount';
@@ -270,15 +294,25 @@ export class Router {
     // Update cart badge in header
     private updateCartBadge(): void {
         const badge = document.getElementById('cart-badge');
-        if (badge) {
-            const count = CartService.getItemCount();
-            badge.textContent = count.toString();
-            if (count > 0) {
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
+        const badgeMobile = document.getElementById('cart-badge-mobile');
+        const badgeMenu = document.getElementById('cart-badge-menu');
+
+        // Combine ticket cart count + shop cart count
+        const ticketCount = CartService.getItemCount();
+        const shopCount = ShopCartService.getItemCount();
+        const totalCount = ticketCount + shopCount;
+
+        // Update all badge elements
+        [badge, badgeMobile, badgeMenu].forEach(b => {
+            if (b) {
+                b.textContent = totalCount.toString();
+                if (totalCount > 0) {
+                    b.classList.remove('hidden');
+                } else {
+                    b.classList.add('hidden');
+                }
             }
-        }
+        });
     }
 
     // Update header to show user name when logged in
@@ -436,6 +470,11 @@ export class Router {
 
         // Update cart badge on page load
         this.updateCartBadge();
+
+        // Listen for shop cart updates
+        window.addEventListener('shop-cart-updated', () => {
+            this.updateCartBadge();
+        });
     }
 
     private setupDefaultRoutes(): void {
@@ -6038,6 +6077,10 @@ private async renderProfile(): Promise<void> {
     private renderShopThankYou(params: Record<string, string>): void {
         const content = this.getContentElement();
         if (!content) return;
+
+        // Clear shop cart count after successful order
+        ShopCartService.clear();
+        this.updateCartBadge();
 
         content.innerHTML = `
             <div id="shop-thank-you-container" data-order="${params.orderNumber}" class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">

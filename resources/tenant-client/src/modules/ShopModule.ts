@@ -122,7 +122,28 @@ export class ShopModule {
         this.eventBus.on('route:shop-cart', () => this.loadCartPage());
         this.eventBus.on('route:shop-checkout', () => this.loadCheckoutPage());
 
+        // Sync cart count on init
+        await this.syncCartCount();
+
         console.log('Shop module initialized');
+    }
+
+    private async syncCartCount(): Promise<void> {
+        if (!this.apiClient) return;
+
+        try {
+            const response = await this.apiClient.get('/shop/cart', {
+                headers: { 'X-Session-ID': this.cartSessionId }
+            });
+            const cart = response.data;
+
+            if (cart?.item_count !== undefined) {
+                (window as any).ShopCartService?.setItemCount(cart.item_count);
+            }
+        } catch (e) {
+            // Silently fail - cart might not exist yet
+            console.log('Could not sync shop cart count');
+        }
     }
 
     private getOrCreateSessionId(): string {
@@ -1784,13 +1805,18 @@ export class ShopModule {
             const variantId = selectedVariant?.id || null;
 
             try {
-                await this.apiClient.post('/shop/cart/items', {
+                const response = await this.apiClient.post('/shop/cart/items', {
                     product_id: product.id,
                     variant_id: variantId,
                     quantity: quantity
                 }, {
                     headers: { 'X-Session-ID': this.cartSessionId }
                 });
+
+                // Sync cart count to ShopCartService
+                if (response.data?.item_count !== undefined) {
+                    (window as any).ShopCartService?.setItemCount(response.data.item_count);
+                }
 
                 // Show success feedback
                 const btn = document.getElementById('add-to-cart-btn');
@@ -1893,6 +1919,11 @@ export class ShopModule {
                 headers: { 'X-Session-ID': this.cartSessionId }
             });
             const cart = response.data;
+
+            // Sync cart count to ShopCartService
+            if (cart?.item_count !== undefined) {
+                (window as any).ShopCartService?.setItemCount(cart.item_count);
+            }
 
             if (!cart || !cart.items || cart.items.length === 0) {
                 contentEl.innerHTML = `

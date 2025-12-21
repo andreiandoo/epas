@@ -2246,12 +2246,17 @@ export class SleekClientModule {
                             const sessionId = localStorage.getItem('shop_session_id') || 'shop-' + Math.random().toString(36).substr(2, 16);
                             localStorage.setItem('shop_session_id', sessionId);
 
-                            await this.apiClient.post('/shop/cart/items', {
+                            const cartResponse = await this.apiClient.post('/shop/cart/items', {
                                 product_id: productId,
                                 quantity: 1
                             }, {
                                 headers: { 'X-Session-ID': sessionId }
                             });
+
+                            // Sync cart count
+                            if (cartResponse.data?.item_count !== undefined) {
+                                (window as any).ShopCartService?.setItemCount(cartResponse.data.item_count);
+                            }
 
                             btn.textContent = 'Adaugat!';
                             btn.style.background = '#10b981';
@@ -2448,6 +2453,11 @@ export class SleekClientModule {
                 headers: { 'X-Session-ID': sessionId }
             });
             const cart = response.data;
+
+            // Sync cart count to ShopCartService
+            if (cart?.item_count !== undefined) {
+                (window as any).ShopCartService?.setItemCount(cart.item_count);
+            }
 
             if (!cart || !cart.items || cart.items.length === 0) {
                 contentEl.innerHTML = `
