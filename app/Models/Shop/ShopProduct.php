@@ -61,7 +61,9 @@ class ShopProduct extends Model
         'title' => 'array',
         'description' => 'array',
         'short_description' => 'array',
-        // Note: price, sale_price, cost are handled by accessors/mutators (price_cents, etc.)
+        'price' => 'decimal:2',
+        'sale_price' => 'decimal:2',
+        'cost' => 'decimal:2',
         'tax_rate' => 'decimal:2',
         'stock_quantity' => 'integer',
         'low_stock_threshold' => 'integer',
@@ -190,62 +192,24 @@ class ShopProduct extends Model
     }
 
     // Price Accessors
+    // Note: Database uses 'price' (decimal) not 'price_cents' (integer)
 
     /**
-     * Get price in decimal from price_cents column
-     */
-    public function getPriceAttribute(): float
-    {
-        return ($this->attributes['price_cents'] ?? 0) / 100;
-    }
-
-    /**
-     * Set price - converts decimal to cents before storing
-     */
-    public function setPriceAttribute($value): void
-    {
-        $this->attributes['price_cents'] = (int) round(floatval($value) * 100);
-    }
-
-    /**
-     * Get sale_price in decimal from sale_price_cents column
-     */
-    public function getSalePriceAttribute(): ?float
-    {
-        $cents = $this->attributes['sale_price_cents'] ?? null;
-        return $cents !== null ? $cents / 100 : null;
-    }
-
-    /**
-     * Set sale_price - converts decimal to cents before storing
-     */
-    public function setSalePriceAttribute($value): void
-    {
-        $this->attributes['sale_price_cents'] = $value !== null ? (int) round(floatval($value) * 100) : null;
-    }
-
-    /**
-     * Set cost - converts decimal to cents before storing
-     */
-    public function setCostAttribute($value): void
-    {
-        $this->attributes['cost_cents'] = $value !== null ? (int) round(floatval($value) * 100) : null;
-    }
-
-    /**
-     * Get price_cents directly for API
+     * Get price_cents - converts decimal price to cents for API compatibility
      */
     public function getPriceCentsAttribute(): int
     {
-        return $this->attributes['price_cents'] ?? 0;
+        $price = $this->attributes['price'] ?? 0;
+        return (int) round(floatval($price) * 100);
     }
 
     /**
-     * Get sale_price_cents directly for API
+     * Get sale_price_cents - converts decimal sale_price to cents for API compatibility
      */
     public function getSalePriceCentsAttribute(): ?int
     {
-        return $this->attributes['sale_price_cents'] ?? null;
+        $salePrice = $this->attributes['sale_price'] ?? null;
+        return $salePrice !== null ? (int) round(floatval($salePrice) * 100) : null;
     }
 
     /**
@@ -253,7 +217,7 @@ class ShopProduct extends Model
      */
     public function getDisplayPriceAttribute(): float
     {
-        return $this->sale_price ?? $this->price ?? 0;
+        return floatval($this->attributes['sale_price'] ?? $this->attributes['price'] ?? 0);
     }
 
     /**
@@ -266,7 +230,9 @@ class ShopProduct extends Model
 
     public function isOnSale(): bool
     {
-        return $this->sale_price !== null && $this->sale_price < $this->price;
+        $salePrice = $this->attributes['sale_price'] ?? null;
+        $price = $this->attributes['price'] ?? 0;
+        return $salePrice !== null && floatval($salePrice) > 0 && floatval($salePrice) < floatval($price);
     }
 
     public function getDiscountPercentage(): ?float
