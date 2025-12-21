@@ -350,6 +350,15 @@ class MarketplacePayout extends Model
     }
 
     /**
+     * Accessor for total_amount (alias for amount).
+     * Provides consistent naming across views.
+     */
+    public function getTotalAmountAttribute(): float
+    {
+        return (float) $this->amount;
+    }
+
+    /**
      * Get period description.
      */
     public function getPeriodDescription(): string
