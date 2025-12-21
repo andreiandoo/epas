@@ -2600,11 +2600,11 @@ export class SleekClientModule {
                     <div class="cart-items">
                         ${cart.items.map((item: any) => `
                             <div class="cart-item" data-item-id="${item.id}">
-                                <img src="${item.product?.image_url || '/placeholder.jpg'}" alt="${item.product?.title}" class="cart-item-image">
+                                <img src="${item.image_url || '/placeholder.jpg'}" alt="${item.title}" class="cart-item-image">
                                 <div class="cart-item-info">
-                                    <div class="cart-item-title">${item.product?.title}</div>
-                                    ${item.variant ? `<div class="cart-item-variant">${item.variant.name}</div>` : ''}
-                                    <div class="cart-item-price">${this.formatCurrency(item.price_cents / 100, cart.currency)}</div>
+                                    <div class="cart-item-title">${item.title}</div>
+                                    ${item.variant_name ? `<div class="cart-item-variant">${item.variant_name}</div>` : ''}
+                                    <div class="cart-item-price">${this.formatCurrency(item.unit_price, cart.currency)}</div>
                                     <div class="cart-item-qty">
                                         <button class="cart-qty-btn cart-qty-minus" data-item-id="${item.id}">-</button>
                                         <input type="number" class="cart-qty-input" data-item-id="${item.id}" value="${item.quantity}" min="1">
@@ -2623,17 +2623,17 @@ export class SleekClientModule {
                         <h3 class="cart-summary-title">Sumar comanda</h3>
                         <div class="cart-summary-row">
                             <span>Subtotal</span>
-                            <span>${this.formatCurrency(cart.subtotal_cents / 100, cart.currency)}</span>
+                            <span>${this.formatCurrency(cart.subtotal, cart.currency)}</span>
                         </div>
-                        ${cart.discount_cents > 0 ? `
+                        ${cart.discount > 0 ? `
                             <div class="cart-summary-row" style="color: #10b981;">
                                 <span>Reducere</span>
-                                <span>-${this.formatCurrency(cart.discount_cents / 100, cart.currency)}</span>
+                                <span>-${this.formatCurrency(cart.discount, cart.currency)}</span>
                             </div>
                         ` : ''}
                         <div class="cart-summary-row total">
                             <span>Total</span>
-                            <span>${this.formatCurrency(cart.total_cents / 100, cart.currency)}</span>
+                            <span>${this.formatCurrency(cart.total, cart.currency)}</span>
                         </div>
                         <button class="cart-checkout-btn" onclick="window.location.hash='/shop/checkout'">
                             Continua spre plata

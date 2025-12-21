@@ -1861,18 +1861,198 @@ export class ShopModule {
     }
 
     // ========================================
-    // CART PAGE (Placeholder - will use SleekClientModule)
+    // CART PAGE
     // ========================================
     async loadCartPage(): Promise<void> {
-        // This will be handled by SleekClientModule
-        console.log('Cart page - handled by SleekClientModule');
+        const container = document.getElementById('shop-cart-container');
+        if (!container) {
+            console.log('Cart container not found');
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="shop-page">
+                <h1 class="shop-page-title">Cosul tau</h1>
+                <div id="shop-cart-content" class="shop-loading">
+                    <div class="shop-spinner"></div>
+                </div>
+            </div>
+        `;
+
+        await this.loadCartContent();
+    }
+
+    private async loadCartContent(): Promise<void> {
+        if (!this.apiClient) return;
+
+        const contentEl = document.getElementById('shop-cart-content');
+        if (!contentEl) return;
+
+        try {
+            const response = await this.apiClient.get('/shop/cart', {
+                headers: { 'X-Session-ID': this.cartSessionId }
+            });
+            const cart = response.data;
+
+            if (!cart || !cart.items || cart.items.length === 0) {
+                contentEl.innerHTML = `
+                    <div class="shop-empty-cart">
+                        <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-bottom: 1rem; opacity: 0.5;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                        <h2 style="margin-bottom: 0.5rem;">Cosul este gol</h2>
+                        <p style="color: #666; margin-bottom: 1.5rem;">Adauga produse in cos pentru a continua</p>
+                        <a href="/shop" class="shop-btn-primary">Descopera produse</a>
+                    </div>
+                `;
+                return;
+            }
+
+            contentEl.innerHTML = `
+                <style>
+                    .cart-layout { display: grid; gap: 2rem; }
+                    @media (min-width: 1024px) { .cart-layout { grid-template-columns: 1fr 350px; } }
+                    .cart-items { display: flex; flex-direction: column; gap: 1rem; }
+                    .cart-item { display: flex; gap: 1rem; padding: 1rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 0.5rem; }
+                    .cart-item-image { width: 100px; height: 100px; border-radius: 0.375rem; object-fit: cover; background: #f3f4f6; }
+                    .cart-item-info { flex: 1; }
+                    .cart-item-title { font-weight: 600; margin-bottom: 0.25rem; }
+                    .cart-item-variant { font-size: 0.85rem; color: #666; margin-bottom: 0.5rem; }
+                    .cart-item-price { font-weight: 600; }
+                    .cart-item-qty { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; }
+                    .cart-qty-btn { width: 32px; height: 32px; border: 1px solid #e5e7eb; border-radius: 0.375rem; background: #fff; cursor: pointer; }
+                    .cart-qty-btn:hover { border-color: #6366f1; }
+                    .cart-qty-input { width: 50px; text-align: center; border: 1px solid #e5e7eb; border-radius: 0.375rem; padding: 0.375rem; }
+                    .cart-item-remove { color: #9ca3af; background: none; border: none; cursor: pointer; padding: 0.5rem; }
+                    .cart-item-remove:hover { color: #ef4444; }
+                    .cart-summary { background: #fff; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem; height: fit-content; position: sticky; top: 1rem; }
+                    .cart-summary-title { font-weight: 600; font-size: 1.1rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #e5e7eb; }
+                    .cart-summary-row { display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 0.9rem; }
+                    .cart-summary-row.total { font-weight: 700; font-size: 1.25rem; border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 0.5rem; }
+                    .cart-checkout-btn { width: 100%; padding: 1rem; background: #6366f1; color: #fff; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; margin-top: 1.5rem; }
+                    .cart-checkout-btn:hover { background: #4f46e5; }
+                </style>
+                <div class="cart-layout">
+                    <div class="cart-items">
+                        ${cart.items.map((item: any) => `
+                            <div class="cart-item" data-item-id="${item.id}">
+                                <img src="${item.image_url || 'https://placehold.co/100x100/EEE/31343C?text=No+Image'}" alt="${item.title}" class="cart-item-image">
+                                <div class="cart-item-info">
+                                    <div class="cart-item-title">${item.title}</div>
+                                    ${item.variant_name ? `<div class="cart-item-variant">${item.variant_name}</div>` : ''}
+                                    <div class="cart-item-price">${this.formatCurrency(item.unit_price, cart.currency)}</div>
+                                    <div class="cart-item-qty">
+                                        <button class="cart-qty-btn cart-qty-minus" data-item-id="${item.id}">-</button>
+                                        <input type="number" class="cart-qty-input" data-item-id="${item.id}" value="${item.quantity}" min="1">
+                                        <button class="cart-qty-btn cart-qty-plus" data-item-id="${item.id}">+</button>
+                                    </div>
+                                </div>
+                                <button class="cart-item-remove" data-item-id="${item.id}">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="cart-summary">
+                        <h3 class="cart-summary-title">Sumar comanda</h3>
+                        <div class="cart-summary-row">
+                            <span>Subtotal</span>
+                            <span>${this.formatCurrency(cart.subtotal, cart.currency)}</span>
+                        </div>
+                        ${cart.discount > 0 ? `
+                            <div class="cart-summary-row" style="color: #10b981;">
+                                <span>Reducere</span>
+                                <span>-${this.formatCurrency(cart.discount, cart.currency)}</span>
+                            </div>
+                        ` : ''}
+                        <div class="cart-summary-row total">
+                            <span>Total</span>
+                            <span>${this.formatCurrency(cart.total, cart.currency)}</span>
+                        </div>
+                        <button class="cart-checkout-btn" onclick="window.location.href='/shop/checkout'">
+                            Continua spre plata
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            this.bindCartEvents();
+        } catch (e) {
+            console.error('Failed to load cart:', e);
+            contentEl.innerHTML = '<p style="color: #ef4444; text-align: center;">Eroare la incarcarea cosului.</p>';
+        }
+    }
+
+    private bindCartEvents(): void {
+        const contentEl = document.getElementById('shop-cart-content');
+        if (!contentEl) return;
+
+        // Quantity minus buttons
+        contentEl.querySelectorAll('.cart-qty-minus').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const itemId = btn.getAttribute('data-item-id');
+                const input = contentEl.querySelector(`.cart-qty-input[data-item-id="${itemId}"]`) as HTMLInputElement;
+                if (input && parseInt(input.value) > 1) {
+                    await this.updateCartItem(itemId!, parseInt(input.value) - 1);
+                }
+            });
+        });
+
+        // Quantity plus buttons
+        contentEl.querySelectorAll('.cart-qty-plus').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const itemId = btn.getAttribute('data-item-id');
+                const input = contentEl.querySelector(`.cart-qty-input[data-item-id="${itemId}"]`) as HTMLInputElement;
+                if (input) {
+                    await this.updateCartItem(itemId!, parseInt(input.value) + 1);
+                }
+            });
+        });
+
+        // Remove buttons
+        contentEl.querySelectorAll('.cart-item-remove').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const itemId = btn.getAttribute('data-item-id');
+                if (itemId) {
+                    await this.removeCartItem(itemId);
+                }
+            });
+        });
+    }
+
+    private async updateCartItem(itemId: string, quantity: number): Promise<void> {
+        if (!this.apiClient) return;
+
+        try {
+            await this.apiClient.put(`/shop/cart/items/${itemId}`, { quantity }, {
+                headers: { 'X-Session-ID': this.cartSessionId }
+            });
+            await this.loadCartContent();
+        } catch (e) {
+            console.error('Failed to update quantity:', e);
+        }
+    }
+
+    private async removeCartItem(itemId: string): Promise<void> {
+        if (!this.apiClient) return;
+
+        try {
+            await this.apiClient.delete(`/shop/cart/items/${itemId}`, {
+                headers: { 'X-Session-ID': this.cartSessionId }
+            });
+            await this.loadCartContent();
+        } catch (e) {
+            console.error('Failed to remove item:', e);
+        }
     }
 
     // ========================================
     // CHECKOUT PAGE (Placeholder - will use SleekClientModule)
     // ========================================
     async loadCheckoutPage(): Promise<void> {
-        // This will be handled by SleekClientModule
-        console.log('Checkout page - handled by SleekClientModule');
+        // TODO: Implement checkout page for other templates
+        console.log('Checkout page - to be implemented');
     }
 }
