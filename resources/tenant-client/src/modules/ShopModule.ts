@@ -160,7 +160,8 @@ export class ShopModule {
                 this.loadProducts().catch(() => {})
             ]);
 
-            this.categories = categoriesRes?.data?.data?.categories || categoriesRes?.data?.categories || [];
+            // ApiClient unwraps data.data, so access directly
+            this.categories = categoriesRes?.data?.categories || [];
 
             container.innerHTML = this.renderShopPage();
             this.bindShopFilters();
@@ -259,8 +260,9 @@ export class ShopModule {
         const queryString = new URLSearchParams(params).toString();
         const response = await this.apiClient.get(`/shop/products${queryString ? `?${queryString}` : ''}`);
 
-        this.products = response.data.data?.products || [];
-        this.pagination = response.data.data?.pagination || { total: 0, per_page: 12, current_page: 1, last_page: 1 };
+        // ApiClient unwraps data.data, so access directly
+        this.products = response.data?.products || [];
+        this.pagination = response.data?.pagination || { total: 0, per_page: 12, current_page: 1, last_page: 1 };
     }
 
     private renderShopPage(): string {
@@ -960,9 +962,10 @@ export class ShopModule {
 
         try {
             const response = await this.apiClient.get(`/shop/products/${slug}`);
-            const { product, related } = response.data.data;
+            // ApiClient unwraps data.data, so access directly
+            const { product, related } = response.data;
 
-            container.innerHTML = this.renderProductPage(product, related);
+            container.innerHTML = this.renderProductPage(product, related || []);
             this.bindProductPageEvents(product);
         } catch (error) {
             container.innerHTML = '<p class="text-red-500">Nu s-a putut incarca produsul.</p>';
