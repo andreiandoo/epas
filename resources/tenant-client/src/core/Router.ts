@@ -1977,6 +1977,11 @@ export class Router {
                     this.setupTicketHandlers();
                 }
 
+                // Fetch and display event upsells (in sidebar)
+                if (!isPastEvent && this.isShopEnabled() && event.id) {
+                    this.loadEventUpsells(event.id, event.currency || 'RON');
+                }
+
                 // Setup collapsible sections for mobile
                 this.setupCollapsibleSections();
 
@@ -2696,6 +2701,9 @@ export class Router {
                             <h2 class="text-lg font-semibold text-gray-700 mb-2 ${ticketCart.length > 0 ? 'mt-8' : ''}">Produse magazin</h2>
                             ${shopItemsHtml}
                         ` : ''}
+
+                        <!-- Upsells container - loaded dynamically -->
+                        <div id="cart-upsells-container"></div>
                     </div>
 
                     <div class="lg:col-span-1">
@@ -2795,6 +2803,47 @@ export class Router {
         `;
 
         this.setupCartHandlers();
+
+        // Load upsells from events in cart
+        if (this.isShopEnabled() && ticketCart.length > 0) {
+            this.loadCartUpsells(ticketCart, shopCart, ticketTotals.currency);
+        }
+    }
+
+    private async loadCartUpsells(ticketCart: CartItem[], shopCart: any, currency: string): Promise<void> {
+        // Get unique event IDs from ticket cart
+        const eventIds = [...new Set(ticketCart.map(item => item.eventId))];
+        if (eventIds.length === 0) return;
+
+        // Get already added product IDs from shop cart
+        const addedProductIds = new Set(shopCart?.items?.map((item: any) => item.product_id) || []);
+
+        // Fetch upsells for all events
+        const allUpsells: any[] = [];
+        for (const eventId of eventIds) {
+            const upsells = await this.fetchEventUpsells(eventId);
+            allUpsells.push(...upsells);
+        }
+
+        // Filter out products already in cart and deduplicate by product ID
+        const seenProductIds = new Set<string>();
+        const filteredUpsells = allUpsells.filter(item => {
+            const productId = item.product?.id;
+            if (!productId || addedProductIds.has(productId) || seenProductIds.has(productId)) {
+                return false;
+            }
+            seenProductIds.add(productId);
+            return item.product?.in_stock;
+        });
+
+        if (filteredUpsells.length === 0) return;
+
+        // Render upsells section
+        const container = document.getElementById('cart-upsells-container');
+        if (container) {
+            container.innerHTML = this.renderCartUpsellsSection(filteredUpsells, currency);
+            this.setupUpsellHandlers();
+        }
     }
 
     private setupCartHandlers(): void {
@@ -3067,6 +3116,262 @@ export class Router {
         if (totalEl) {
             totalEl.textContent = `${totals.total.toFixed(2)} ${totals.currency}`;
         }
+    }
+
+    // ========================================
+    // EVENT UPSELLS & BUNDLES
+    // ========================================
+
+    private isShopEnabled(): boolean {
+        try {
+            const modules = this.config?.modules || (window as any).TIXELLO?.config?.modules;
+            return modules?.includes('shop');
+        } catch {
+            return false;
+        }
+    }
+
+    private async fetchEventUpsells(eventId: number): Promise<any[]> {
+        if (!this.isShopEnabled()) return [];
+        try {
+            const response = await this.fetchApi(`/shop/events/${eventId}/upsells`);
+            return response.success ? (response.data?.upsells || []) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    private async fetchTicketTypeBundles(ticketTypeId: number): Promise<any[]> {
+        if (!this.isShopEnabled()) return [];
+        try {
+            const response = await this.fetchApi(`/shop/ticket-types/${ticketTypeId}/bundles`);
+            return response.success ? (response.data?.bundles || []) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    private renderEventUpsellsSection(upsells: any[], currency: string): string {
+        if (!upsells || upsells.length === 0) return '';
+
+        return `
+            <div class="mt-6 pt-6 border-t">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    Adaugă la comandă
+                </h3>
+                <div class="space-y-3" id="event-upsells-list">
+                    ${upsells.map(item => {
+                        const product = item.product;
+                        const price = product.price_cents / 100;
+                        const originalPrice = product.original_price_cents / 100;
+                        const isOnSale = product.is_on_sale && originalPrice > price;
+
+                        return `
+                        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                            <img src="${product.image_url || '/images/placeholder.png'}" alt="${product.title}" class="w-14 h-14 object-cover rounded-lg">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-medium text-gray-900 truncate">${product.title}</h4>
+                                <div class="flex items-center gap-2">
+                                    ${isOnSale ? `<span class="text-xs text-gray-400 line-through">${originalPrice.toFixed(2)} ${currency}</span>` : ''}
+                                    <span class="text-sm font-semibold text-primary">${price.toFixed(2)} ${currency}</span>
+                                </div>
+                            </div>
+                            <button class="upsell-add-btn px-3 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition flex-shrink-0"
+                                    data-product-id="${product.id}"
+                                    data-product-title="${product.title}"
+                                    data-product-price="${price}"
+                                    ${!product.in_stock ? 'disabled' : ''}>
+                                ${product.in_stock ? 'Adaugă' : 'Stoc epuizat'}
+                            </button>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    private renderCartUpsellsSection(upsells: any[], currency: string): string {
+        if (!upsells || upsells.length === 0) return '';
+
+        return `
+            <div class="bg-white rounded-lg shadow p-6 mt-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                    </svg>
+                    Ți-ar putea plăcea
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="cart-upsells-grid">
+                    ${upsells.slice(0, 6).map(item => {
+                        const product = item.product;
+                        const price = product.price_cents / 100;
+                        const originalPrice = product.original_price_cents / 100;
+                        const isOnSale = product.is_on_sale && originalPrice > price;
+
+                        return `
+                        <div class="flex flex-col bg-gray-50 rounded-lg overflow-hidden hover:shadow-md transition">
+                            <img src="${product.image_url || '/images/placeholder.png'}" alt="${product.title}" class="w-full h-32 object-cover">
+                            <div class="p-3 flex-1 flex flex-col">
+                                <h4 class="font-medium text-gray-900 text-sm mb-1 line-clamp-2">${product.title}</h4>
+                                <div class="flex items-center gap-2 mb-3">
+                                    ${isOnSale ? `<span class="text-xs text-gray-400 line-through">${originalPrice.toFixed(2)}</span>` : ''}
+                                    <span class="font-semibold text-primary">${price.toFixed(2)} ${currency}</span>
+                                </div>
+                                <button class="cart-upsell-add-btn mt-auto w-full py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition"
+                                        data-product-id="${product.id}"
+                                        ${!product.in_stock ? 'disabled' : ''}>
+                                    ${product.in_stock ? 'Adaugă în coș' : 'Stoc epuizat'}
+                                </button>
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    private renderBundleInfo(bundles: any[]): string {
+        if (!bundles || bundles.length === 0) return '';
+
+        return `
+            <div class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                    </svg>
+                    <span class="text-sm font-medium text-green-800">Include produse bonus:</span>
+                </div>
+                <div class="space-y-1">
+                    ${bundles.map(b => `
+                        <div class="flex items-center gap-2 text-sm text-green-700">
+                            <span class="font-medium">${b.quantity_included}x</span>
+                            <span>${b.product.title}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    private async addUpsellToShopCart(productId: string): Promise<boolean> {
+        try {
+            let sessionId = localStorage.getItem('shop_session_id');
+            if (!sessionId) {
+                sessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + Date.now();
+                localStorage.setItem('shop_session_id', sessionId);
+            }
+
+            const response = await this.postApi('/shop/cart/items', {
+                product_id: productId,
+                quantity: 1,
+                session_id: sessionId
+            });
+
+            if (response.success) {
+                ShopCartService.setItemCount(response.data?.item_count || ShopCartService.getItemCount() + 1);
+                this.updateShopCartBadge();
+                return true;
+            }
+            return false;
+        } catch {
+            return false;
+        }
+    }
+
+    private async loadEventUpsells(eventId: number, currency: string): Promise<void> {
+        const upsells = await this.fetchEventUpsells(eventId);
+        if (upsells.length === 0) return;
+
+        // Find the sidebar panel to inject upsells
+        const sidebar = document.querySelector('.lg\\:col-span-1 .bg-white.rounded-lg.shadow-lg.sticky');
+        if (!sidebar) return;
+
+        // Find the watchlist button or the last element before footer
+        const watchlistBtn = document.getElementById('watchlist-btn');
+        const tixelloFooter = sidebar.querySelector('.text-center.text-xs.text-gray-400.mt-4');
+
+        // Create upsells container
+        const upsellsContainer = document.createElement('div');
+        upsellsContainer.id = 'event-upsells-container';
+        upsellsContainer.innerHTML = this.renderEventUpsellsSection(upsells, currency);
+
+        // Insert before footer or append to sidebar
+        if (tixelloFooter) {
+            tixelloFooter.parentNode?.insertBefore(upsellsContainer, tixelloFooter);
+        } else if (watchlistBtn) {
+            watchlistBtn.parentNode?.insertBefore(upsellsContainer, watchlistBtn.nextSibling);
+        } else {
+            sidebar.appendChild(upsellsContainer);
+        }
+
+        // Setup handlers for upsell buttons
+        this.setupUpsellHandlers();
+    }
+
+    private setupUpsellHandlers(): void {
+        // Event page upsell buttons
+        document.querySelectorAll('.upsell-add-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                const productId = target.dataset.productId;
+                if (!productId) return;
+
+                target.disabled = true;
+                target.textContent = 'Se adaugă...';
+
+                const success = await this.addUpsellToShopCart(productId);
+
+                if (success) {
+                    target.textContent = 'Adăugat ✓';
+                    target.classList.remove('bg-primary', 'hover:bg-primary-dark');
+                    target.classList.add('bg-green-600');
+                    setTimeout(() => {
+                        target.textContent = 'Adaugă';
+                        target.classList.remove('bg-green-600');
+                        target.classList.add('bg-primary', 'hover:bg-primary-dark');
+                        target.disabled = false;
+                    }, 2000);
+                } else {
+                    target.textContent = 'Eroare';
+                    target.disabled = false;
+                    setTimeout(() => {
+                        target.textContent = 'Adaugă';
+                    }, 2000);
+                }
+            });
+        });
+
+        // Cart page upsell buttons
+        document.querySelectorAll('.cart-upsell-add-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLButtonElement;
+                const productId = target.dataset.productId;
+                if (!productId) return;
+
+                target.disabled = true;
+                target.textContent = 'Se adaugă...';
+
+                const success = await this.addUpsellToShopCart(productId);
+
+                if (success) {
+                    target.textContent = 'Adăugat ✓';
+                    setTimeout(() => {
+                        this.renderCart();
+                    }, 1000);
+                } else {
+                    target.textContent = 'Eroare';
+                    setTimeout(() => {
+                        target.textContent = 'Adaugă în coș';
+                        target.disabled = false;
+                    }, 2000);
+                }
+            });
+        });
     }
 
     // ========================================
@@ -3772,12 +4077,15 @@ export class Router {
                                         itemTotal += commission;
                                     }
                                     return `
-                                    <div class="flex justify-between text-sm">
-                                        <div>
-                                            <div class="font-medium">${item.eventTitle}</div>
-                                            <div class="text-gray-500">${item.ticketTypeName} × ${item.quantity}</div>
+                                    <div class="text-sm">
+                                        <div class="flex justify-between">
+                                            <div>
+                                                <div class="font-medium">${item.eventTitle}</div>
+                                                <div class="text-gray-500">${item.ticketTypeName} × ${item.quantity}</div>
+                                            </div>
+                                            <div class="font-medium">${itemTotal.toFixed(2)} ${item.currency}</div>
                                         </div>
-                                        <div class="font-medium">${itemTotal.toFixed(2)} ${item.currency}</div>
+                                        <div id="bundle-info-${item.ticketTypeId}" class="bundle-info-container"></div>
                                     </div>
                                 `}).join('')}
                             </div>
@@ -3869,6 +4177,44 @@ export class Router {
         `;
 
         this.setupCheckoutHandlers();
+
+        // Load bundle info for ticket types
+        if (this.isShopEnabled() && ticketCart.length > 0) {
+            this.loadCheckoutBundles(ticketCart);
+        }
+    }
+
+    private async loadCheckoutBundles(ticketCart: CartItem[]): Promise<void> {
+        // Get unique ticket type IDs
+        const ticketTypeIds = [...new Set(ticketCart.map(item => item.ticketTypeId))];
+
+        for (const ticketTypeId of ticketTypeIds) {
+            const bundles = await this.fetchTicketTypeBundles(ticketTypeId);
+            if (bundles.length > 0) {
+                const container = document.getElementById(`bundle-info-${ticketTypeId}`);
+                if (container) {
+                    // Get quantity of this ticket type
+                    const ticketItem = ticketCart.find(item => item.ticketTypeId === ticketTypeId);
+                    const ticketQty = ticketItem?.quantity || 1;
+
+                    container.innerHTML = `
+                        <div class="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
+                            <div class="flex items-center gap-1 text-green-700 font-medium mb-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                                </svg>
+                                Include:
+                            </div>
+                            ${bundles.map(b => `
+                                <div class="text-green-700 pl-4">
+                                    ${b.quantity_included * ticketQty}× ${b.product.title}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+            }
+        }
     }
 
     private setupCheckoutHandlers(): void {
