@@ -34,7 +34,9 @@ export class ApiClient {
             withAuth = true,
         } = options;
 
-        const url = `${this.config.apiEndpoint}${endpoint}`;
+        // Build URL with hostname parameter for tenant resolution
+        const separator = endpoint.includes('?') ? '&' : '?';
+        const url = `${this.config.apiEndpoint}${endpoint}${separator}hostname=${encodeURIComponent(this.config.domain)}`;
         const timestamp = Date.now();
         const nonce = this.generateNonce();
 
