@@ -17,13 +17,13 @@ class ShopCartItem extends Model
         'product_id',
         'variant_id',
         'quantity',
-        'unit_price_cents',
+        'unit_price',
         'meta',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
-        'unit_price_cents' => 'integer',
+        'unit_price' => 'decimal:2',
         'meta' => 'array',
     ];
 
@@ -46,19 +46,19 @@ class ShopCartItem extends Model
 
     // Accessors
 
+    public function getUnitPriceCentsAttribute(): int
+    {
+        return (int) round(floatval($this->attributes['unit_price'] ?? 0) * 100);
+    }
+
     public function getTotalCentsAttribute(): int
     {
         return $this->unit_price_cents * $this->quantity;
     }
 
-    public function getUnitPriceAttribute(): float
-    {
-        return $this->unit_price_cents / 100;
-    }
-
     public function getTotalAttribute(): float
     {
-        return $this->total_cents / 100;
+        return floatval($this->attributes['unit_price'] ?? 0) * $this->quantity;
     }
 
     // Methods
@@ -85,8 +85,8 @@ class ShopCartItem extends Model
 
     public function updatePriceFromProduct(): void
     {
-        $priceCents = $this->variant?->display_price_cents ?? $this->product->display_price_cents;
-        $this->update(['unit_price_cents' => $priceCents]);
+        $price = $this->variant?->display_price ?? $this->product->display_price;
+        $this->update(['unit_price' => $price]);
     }
 
     public function getProductTitle(): string

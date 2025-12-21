@@ -1538,7 +1538,17 @@ export class ShopModule {
      * Render variant selectors showing only attribute values that have actual variants
      */
     private renderVariantSelectors(product: ShopProduct): string {
-        if (!product.variants || !product.attributes) return '';
+        if (!product.variants || !product.attributes) {
+            console.log('[Shop] No variants or attributes:', { variants: product.variants, attributes: product.attributes });
+            return '';
+        }
+
+        console.log('[Shop] Rendering variant selectors:', {
+            variantsCount: product.variants.length,
+            attributesCount: product.attributes.length,
+            variants: product.variants.map(v => ({ id: v.id, attrs: v.attributes })),
+            attributes: product.attributes.map(a => ({ slug: a.slug, values: a.values?.map(v => v.slug) }))
+        });
 
         // Build a map of attribute_slug -> Set of value_slugs that exist in variants
         const availableValues: Record<string, Set<string>> = {};
@@ -1558,6 +1568,8 @@ export class ShopModule {
             });
         });
 
+        console.log('[Shop] Available values from variants:', availableValues);
+
         // Only render attributes that have at least one variant value
         return product.attributes
             .filter(attr => availableValues[attr.slug] && availableValues[attr.slug].size > 0)
@@ -1567,6 +1579,7 @@ export class ShopModule {
 
                 // Only show values that exist in variants
                 const filteredValues = attr.values.filter(val => attrAvailableValues.has(val.slug));
+                console.log(`[Shop] Attribute ${attr.slug}: available=${Array.from(attrAvailableValues || [])}, filtered=${filteredValues.map(v => v.slug)}`);
 
                 if (filteredValues.length === 0) return '';
 
@@ -1673,9 +1686,36 @@ export class ShopModule {
                             if (selectedVariant) {
                                 // Update price
                                 const priceEl = document.querySelector('.product-current-price');
+                                const regularPriceEl = document.querySelector('.product-regular-price');
+                                const discountBadge = document.querySelector('.discount-badge');
+
+                                const variantPrice = selectedVariant.price_cents ? selectedVariant.price_cents / 100 : null;
+                                const variantSalePrice = selectedVariant.sale_price_cents ? selectedVariant.sale_price_cents / 100 : null;
+                                const displayPrice = variantSalePrice || variantPrice || product.display_price;
+                                const isOnSale = variantSalePrice && variantPrice && variantSalePrice < variantPrice;
+
                                 if (priceEl) {
-                                    const price = (selectedVariant.sale_price_cents || selectedVariant.price_cents) / 100;
-                                    priceEl.textContent = this.formatCurrency(price, product.currency);
+                                    priceEl.textContent = this.formatCurrency(displayPrice, product.currency);
+                                }
+
+                                // Update regular price (strikethrough) and discount badge
+                                if (regularPriceEl) {
+                                    if (isOnSale && variantPrice) {
+                                        regularPriceEl.textContent = this.formatCurrency(variantPrice, product.currency);
+                                        regularPriceEl.style.display = 'inline';
+                                    } else {
+                                        regularPriceEl.style.display = 'none';
+                                    }
+                                }
+
+                                if (discountBadge) {
+                                    if (isOnSale && variantPrice && variantSalePrice) {
+                                        const discountPct = Math.round((1 - variantSalePrice / variantPrice) * 100);
+                                        discountBadge.textContent = `-${discountPct}%`;
+                                        (discountBadge as HTMLElement).style.display = 'inline-block';
+                                    } else {
+                                        (discountBadge as HTMLElement).style.display = 'none';
+                                    }
                                 }
 
                                 // Update stock display
