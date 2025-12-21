@@ -4,16 +4,22 @@ namespace App\Observers;
 
 use App\Models\Order;
 use App\Models\Platform\CoreCustomer;
+use App\Notifications\Marketplace\NewOrganizerOrder;
+use App\Services\Marketplace\CommissionService;
 use App\Services\Platform\PlatformTrackingService;
 use Illuminate\Support\Facades\Log;
 
 class OrderObserver
 {
     protected PlatformTrackingService $trackingService;
+    protected CommissionService $commissionService;
 
-    public function __construct(PlatformTrackingService $trackingService)
-    {
+    public function __construct(
+        PlatformTrackingService $trackingService,
+        CommissionService $commissionService
+    ) {
         $this->trackingService = $trackingService;
+        $this->commissionService = $commissionService;
     }
 
     /**
@@ -24,6 +30,9 @@ class OrderObserver
         // Track new orders if they're already paid/confirmed
         if (in_array($order->status, ['paid', 'confirmed', 'completed'])) {
             $this->trackPurchaseConversion($order);
+
+            // Calculate commission for marketplace orders created as paid
+            $this->calculateMarketplaceCommission($order);
         }
     }
 
@@ -42,7 +51,51 @@ class OrderObserver
             if (in_array($newStatus, ['paid', 'confirmed', 'completed']) &&
                 !in_array($oldStatus, ['paid', 'confirmed', 'completed'])) {
                 $this->trackPurchaseConversion($order);
+
+                // Calculate commission for marketplace orders
+                $this->calculateMarketplaceCommission($order);
             }
+        }
+    }
+
+    /**
+     * Calculate and store commission for marketplace orders.
+     */
+    protected function calculateMarketplaceCommission(Order $order): void
+    {
+        // Only process marketplace orders (orders with an organizer)
+        if (!$order->isMarketplaceOrder()) {
+            return;
+        }
+
+        try {
+            // Calculate and store commission breakdown
+            $breakdown = $this->commissionService->calculateForOrder($order);
+
+            // Notify organizer of new order
+            $organizer = $order->organizer;
+            if ($organizer) {
+                // Notify all admin users of the organizer
+                $adminUsers = $organizer->adminUsers()->get();
+                foreach ($adminUsers as $user) {
+                    $user->notify(new NewOrganizerOrder($order));
+                }
+
+                // Refresh organizer statistics
+                $organizer->refreshStatistics();
+            }
+
+            Log::info('Marketplace order commission calculated', [
+                'order_id' => $order->id,
+                'organizer_id' => $order->organizer_id,
+                'breakdown' => $breakdown,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to calculate marketplace commission', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
