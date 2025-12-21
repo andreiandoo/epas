@@ -2618,8 +2618,21 @@ export class Router {
             </div>
         `}).join('');
 
-        // Render shop items
-        const shopItemsHtml = shopCart?.items?.map((item: any) => `
+        // Render shop items with attributes
+        const shopItemsHtml = shopCart?.items?.map((item: any) => {
+            // Render attributes as small badges
+            const attributesHtml = item.attributes?.length > 0
+                ? `<div class="flex flex-wrap gap-2 mt-1">
+                    ${item.attributes.map((attr: any) => `
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                            ${attr.color_hex ? `<span class="w-3 h-3 rounded-full mr-1" style="background-color: ${attr.color_hex}"></span>` : ''}
+                            ${attr.name}: ${attr.value}
+                        </span>
+                    `).join('')}
+                </div>`
+                : '';
+
+            return `
             <div class="bg-white rounded-lg shadow p-6">
                 <div class="flex gap-4">
                     <img src="${item.image_url || '/images/placeholder.png'}" alt="${item.title}" class="w-20 h-20 object-cover rounded-lg">
@@ -2627,7 +2640,8 @@ export class Router {
                         <div class="flex justify-between items-start">
                             <div>
                                 <h3 class="font-semibold text-gray-900">${item.title}</h3>
-                                ${item.variant_name ? `<p class="text-sm text-gray-500">${item.variant_name}</p>` : ''}
+                                ${attributesHtml}
+                                <p class="text-xs text-gray-400 mt-1">SKU: ${item.sku || '-'}</p>
                             </div>
                             <button class="shop-remove-item-btn text-red-600 hover:text-red-700" data-item-id="${item.id}">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2649,12 +2663,15 @@ export class Router {
                                     </svg>
                                 </button>
                             </div>
-                            <div class="font-bold text-gray-900">${item.total.toFixed(2)} ${shopCart.currency}</div>
+                            <div class="text-right">
+                                <div class="font-bold text-gray-900">${item.total.toFixed(2)} ${shopCart.currency}</div>
+                                <div class="text-xs text-gray-500">${item.unit_price.toFixed(2)} × ${item.quantity}</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        `).join('') || '';
+        `}).join('') || '';
 
         // Calculate combined totals
         const shopTotal = shopCart?.total || 0;
@@ -2720,6 +2737,12 @@ export class Router {
                                 <div class="flex justify-between text-green-600">
                                     <span>Discount${shopCart.coupon?.code ? ` (${shopCart.coupon.code})` : ''}</span>
                                     <span>-${shopCart.discount.toFixed(2)} ${shopCart.currency}</span>
+                                </div>
+                                ` : ''}
+                                ${shopCart.has_commission ? `
+                                <div class="flex justify-between text-gray-600">
+                                    <span>Comision Tixello (produse)</span>
+                                    <span>+${shopCart.commission.toFixed(2)} ${shopCart.currency}</span>
                                 </div>
                                 ` : ''}
                                 ` : ''}
@@ -3312,13 +3335,40 @@ export class Router {
         const content = this.getContentElement();
         if (!content) return;
 
-        const cart = CartService.getCart();
-        const totals = CartService.getTotal();
+        const ticketCart = CartService.getCart();
+        const ticketTotals = CartService.getTotal();
 
-        if (cart.length === 0) {
+        // Fetch shop cart
+        let shopCart: any = null;
+        try {
+            const sessionId = localStorage.getItem('shop_session_id');
+            if (sessionId) {
+                const shopResponse = await this.fetchApi('/shop/cart', {}, {
+                    headers: { 'X-Session-ID': sessionId }
+                });
+                if (shopResponse.success && shopResponse.data?.items?.length > 0) {
+                    shopCart = shopResponse.data;
+                    ShopCartService.setItemCount(shopCart.item_count);
+                }
+            }
+        } catch (e) {
+            console.log('Could not fetch shop cart');
+        }
+
+        // Check if cart is empty
+        if (ticketCart.length === 0 && (!shopCart || shopCart.items.length === 0)) {
             this.navigate('/cart');
             return;
         }
+
+        // Calculate combined totals
+        const shopTotal = parseFloat(shopCart?.total) || 0;
+        const currency = ticketTotals.currency || shopCart?.currency || 'RON';
+        const grandTotal = ticketTotals.total + shopTotal;
+        const hasPhysicalProducts = shopCart?.has_physical_products || false;
+
+        // Store shop cart total for shipping calculation
+        localStorage.setItem('shop_cart_total', shopTotal.toString());
 
         // Fetch user profile if logged in
         let userData: any = null;
@@ -3360,7 +3410,6 @@ export class Router {
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                             placeholder="Ion Popescu"
                                             value="${customerName}"
-                                            value="${customerName}"
                                         >
                                     </div>
                                     <div>
@@ -3375,7 +3424,6 @@ export class Router {
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                             placeholder="ion@example.com"
                                             value="${customerEmail}"
-                                            value="${customerEmail}"
                                         >
                                     </div>
                                     <div>
@@ -3388,7 +3436,6 @@ export class Router {
                                             name="customer_phone"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                             placeholder="0722123456"
-                                            value="${customerPhone}"
                                             value="${customerPhone}"
                                         >
                                     </div>
@@ -3422,6 +3469,119 @@ export class Router {
                                     </div>
                                 </div>
                             </div>
+
+                            ${hasPhysicalProducts ? `
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Adresa de livrare</h2>
+                                <p class="text-sm text-gray-600 mb-4">Completează adresa pentru livrarea produselor fizice.</p>
+                                <div class="space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="shipping_first_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Prenume *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="shipping_first_name"
+                                                name="shipping_first_name"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="Ion"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label for="shipping_last_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Nume *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="shipping_last_name"
+                                                name="shipping_last_name"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="Popescu"
+                                            >
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="shipping_address" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Adresa *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="shipping_address"
+                                            name="shipping_address"
+                                            required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder="Strada, număr, bloc, apartament"
+                                        >
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label for="shipping_city" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Oraș *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="shipping_city"
+                                                name="shipping_city"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="București"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label for="shipping_county" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Județ
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="shipping_county"
+                                                name="shipping_county"
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="Sector 1"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label for="shipping_postal_code" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Cod poștal
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="shipping_postal_code"
+                                                name="shipping_postal_code"
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="010101"
+                                            >
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="shipping_phone" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Telefon pentru livrare *
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            id="shipping_phone"
+                                            name="shipping_phone"
+                                            required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder="0722123456"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Metodă de livrare</h2>
+                                <div id="shipping-methods-container" class="space-y-3">
+                                    <div class="animate-pulse">
+                                        <div class="h-16 bg-gray-200 rounded mb-2"></div>
+                                        <div class="h-16 bg-gray-200 rounded"></div>
+                                    </div>
+                                </div>
+                                <p id="shipping-methods-error" class="hidden text-red-600 text-sm mt-2"></p>
+                            </div>
+                            ` : ''}
 
                             <div class="bg-white rounded-lg shadow p-6">
                                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Acorduri</h2>
@@ -3530,7 +3690,7 @@ export class Router {
                                     class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                     disabled
                                 >
-                                    <span id="submit-btn-text">Plasează comanda - ${totals.total.toFixed(2)} ${totals.currency}</span>
+                                    <span id="submit-btn-text">Plasează comanda - ${grandTotal.toFixed(2)} ${currency}</span>
                                     <svg id="submit-btn-spinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -3547,8 +3707,10 @@ export class Router {
                         <div class="bg-white rounded-lg shadow p-6 sticky top-4">
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Sumar comandă</h2>
 
+                            ${ticketCart.length > 0 ? `
                             <div class="space-y-3 mb-4 pb-4 border-b">
-                                ${cart.map(item => {
+                                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Bilete</h3>
+                                ${ticketCart.map(item => {
                                     // Use sale price if available, otherwise base price (same as getTotal)
                                     const ticketPrice = item.salePrice || item.price;
                                     const result = CartService.calculateBulkDiscount(item.quantity, ticketPrice, item.bulkDiscounts);
@@ -3568,36 +3730,91 @@ export class Router {
                                     </div>
                                 `}).join('')}
                             </div>
+                            ` : ''}
+
+                            ${shopCart?.items?.length > 0 ? `
+                            <div class="space-y-3 mb-4 pb-4 border-b">
+                                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Produse</h3>
+                                ${shopCart.items.map((item: any) => `
+                                    <div class="flex justify-between text-sm">
+                                        <div>
+                                            <div class="font-medium">${item.product_name}</div>
+                                            <div class="text-gray-500">${item.variant_name || ''} × ${item.quantity}</div>
+                                            ${item.attributes?.length > 0 ? `
+                                            <div class="flex flex-wrap gap-1 mt-1">
+                                                ${item.attributes.map((attr: any) => `
+                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
+                                                        ${attr.color_hex ? `<span class="w-2 h-2 rounded-full mr-1" style="background-color: ${attr.color_hex}"></span>` : ''}
+                                                        ${attr.name}: ${attr.value}
+                                                    </span>
+                                                `).join('')}
+                                            </div>
+                                            ` : ''}
+                                        </div>
+                                        <div class="font-medium">${item.total} ${shopCart.currency}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ` : ''}
 
                             <div class="space-y-2 mb-4 pb-4 border-b">
+                                ${ticketCart.length > 0 ? `
                                 <div class="flex justify-between text-gray-600">
                                     <span>Subtotal bilete</span>
-                                    <span>${totals.subtotal.toFixed(2)} ${totals.currency}</span>
+                                    <span>${ticketTotals.subtotal.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
-                                ${totals.bulkDiscount > 0 ? `
+                                ${ticketTotals.bulkDiscount > 0 ? `
                                 <div class="flex justify-between text-green-600">
                                     <span>Discount bulk</span>
-                                    <span>-${totals.bulkDiscount.toFixed(2)} ${totals.currency}</span>
+                                    <span>-${ticketTotals.bulkDiscount.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${totals.couponDiscount > 0 ? `
+                                ${ticketTotals.couponDiscount > 0 ? `
                                 <div class="flex justify-between text-green-600">
-                                    <span>Cod promoțional${totals.couponName ? ` (${totals.couponName})` : ''}</span>
-                                    <span>-${totals.couponDiscount.toFixed(2)} ${totals.currency}</span>
+                                    <span>Cod promoțional${ticketTotals.couponName ? ` (${ticketTotals.couponName})` : ''}</span>
+                                    <span>-${ticketTotals.couponDiscount.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${totals.hasCommission ? `
+                                ${ticketTotals.hasCommission ? `
                                 <div class="flex justify-between text-gray-600">
-                                    <span>Comision Tixello</span>
-                                    <span>+${totals.commission.toFixed(2)} ${totals.currency}</span>
+                                    <span>Comision bilete</span>
+                                    <span>+${ticketTotals.commission.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${this.renderCheckoutPointsSection(totals.total, totals.currency)}
+                                ` : ''}
+
+                                ${shopCart?.items?.length > 0 ? `
+                                <div class="flex justify-between text-gray-600">
+                                    <span>Subtotal produse</span>
+                                    <span>${shopCart.subtotal} ${shopCart.currency}</span>
+                                </div>
+                                ${shopCart.discount > 0 ? `
+                                <div class="flex justify-between text-green-600">
+                                    <span>Reducere produse</span>
+                                    <span>-${shopCart.discount} ${shopCart.currency}</span>
+                                </div>
+                                ` : ''}
+                                ${shopCart.has_commission ? `
+                                <div class="flex justify-between text-gray-600">
+                                    <span>Comision produse</span>
+                                    <span>+${shopCart.commission} ${shopCart.currency}</span>
+                                </div>
+                                ` : ''}
+                                ` : ''}
+
+                                <div id="shipping-cost-row" class="${hasPhysicalProducts ? '' : 'hidden'}">
+                                    <div class="flex justify-between text-gray-600">
+                                        <span>Transport</span>
+                                        <span id="shipping-cost-display">Se calculează...</span>
+                                    </div>
+                                </div>
+
+                                ${this.renderCheckoutPointsSection(grandTotal, currency)}
                             </div>
 
                             <div class="flex justify-between items-center">
                                 <span class="text-lg font-semibold">Total</span>
-                                <span class="text-2xl font-bold text-primary" id="checkout-total-amount">${this.getCheckoutFinalTotal(totals.total, totals.currency)}</span>
+                                <span class="text-2xl font-bold text-primary" id="checkout-total-amount">${this.getCheckoutFinalTotal(grandTotal, currency)}</span>
                             </div>
                         </div>
                     </div>
@@ -3652,6 +3869,117 @@ export class Router {
         }).catch(() => {
             // Ignore errors, just don't show WhatsApp option
         });
+
+        // Handle shipping methods for physical products
+        const shippingMethodsContainer = document.getElementById('shipping-methods-container');
+        const shippingCostDisplay = document.getElementById('shipping-cost-display');
+        const checkoutTotalAmount = document.getElementById('checkout-total-amount');
+        let selectedShippingMethod: any = null;
+        let shippingCost = 0;
+
+        const loadShippingMethods = async () => {
+            if (!shippingMethodsContainer) return;
+
+            const sessionId = localStorage.getItem('shop_session_id');
+            if (!sessionId) return;
+
+            // For now, we'll default to Romania - in production this should come from an address dropdown
+            try {
+                const response = await this.postApi('/shop/checkout/shipping-methods', {
+                    country: 'RO',
+                    city: (document.getElementById('shipping_city') as HTMLInputElement)?.value || '',
+                    postal_code: (document.getElementById('shipping_postal_code') as HTMLInputElement)?.value || '',
+                }, {
+                    headers: { 'X-Session-ID': sessionId }
+                });
+
+                if (response.success && response.data?.shipping_methods?.length > 0) {
+                    const methods = response.data.shipping_methods;
+                    shippingMethodsContainer.innerHTML = methods.map((method: any, index: number) => `
+                        <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:border-primary transition ${index === 0 ? 'border-primary bg-primary/5' : 'border-gray-200'}">
+                            <input type="radio" name="shipping_method" value="${method.id}"
+                                   class="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
+                                   data-cost="${method.cost}" data-name="${method.name}"
+                                   ${index === 0 ? 'checked' : ''}>
+                            <div class="ml-3 flex-1">
+                                <div class="font-medium text-gray-900">${method.name}</div>
+                                ${method.description ? `<div class="text-sm text-gray-500">${method.description}</div>` : ''}
+                                ${method.estimated_days ? `<div class="text-xs text-gray-400">Livrare în ${method.estimated_days} zile</div>` : ''}
+                            </div>
+                            <div class="font-semibold text-gray-900">${method.cost} RON</div>
+                        </label>
+                    `).join('');
+
+                    // Select first method by default
+                    if (methods.length > 0) {
+                        selectedShippingMethod = methods[0];
+                        shippingCost = parseFloat(methods[0].cost) || 0;
+                        updateShippingDisplay();
+                    }
+
+                    // Add event listeners to radio buttons
+                    shippingMethodsContainer.querySelectorAll('input[name="shipping_method"]').forEach((radio: Element) => {
+                        radio.addEventListener('change', (e) => {
+                            const target = e.target as HTMLInputElement;
+                            shippingCost = parseFloat(target.dataset.cost || '0');
+                            selectedShippingMethod = { id: target.value, name: target.dataset.name, cost: shippingCost };
+                            updateShippingDisplay();
+
+                            // Update radio button styling
+                            shippingMethodsContainer.querySelectorAll('label').forEach(label => {
+                                label.classList.remove('border-primary', 'bg-primary/5');
+                                label.classList.add('border-gray-200');
+                            });
+                            target.closest('label')?.classList.remove('border-gray-200');
+                            target.closest('label')?.classList.add('border-primary', 'bg-primary/5');
+                        });
+                    });
+                } else {
+                    shippingMethodsContainer.innerHTML = `
+                        <div class="text-center py-4 text-gray-500">
+                            <p>Livrarea gratuită este disponibilă pentru comanda ta.</p>
+                        </div>
+                    `;
+                    shippingCost = 0;
+                    updateShippingDisplay();
+                }
+            } catch (error) {
+                console.error('Failed to load shipping methods:', error);
+                shippingMethodsContainer.innerHTML = `
+                    <div class="text-center py-4 text-red-500">
+                        <p>Nu s-au putut încărca metodele de livrare.</p>
+                        <button type="button" onclick="this.closest('.space-y-3').querySelector('.animate-pulse')?.remove(); loadShippingMethods();"
+                                class="mt-2 text-primary hover:underline">Reîncearcă</button>
+                    </div>
+                `;
+            }
+        };
+
+        const updateShippingDisplay = () => {
+            if (shippingCostDisplay) {
+                shippingCostDisplay.textContent = shippingCost > 0 ? `${shippingCost.toFixed(2)} RON` : 'Gratuit';
+            }
+            // Update total - we need to recalculate
+            if (checkoutTotalAmount) {
+                const ticketTotals = CartService.getTotal();
+                const shopTotal = parseFloat(localStorage.getItem('shop_cart_total') || '0');
+                const grandTotal = ticketTotals.total + shopTotal + shippingCost;
+                checkoutTotalAmount.textContent = `${grandTotal.toFixed(2)} RON`;
+            }
+            // Update submit button text
+            if (submitBtnText) {
+                const ticketTotals = CartService.getTotal();
+                const shopTotal = parseFloat(localStorage.getItem('shop_cart_total') || '0');
+                const grandTotal = ticketTotals.total + shopTotal + shippingCost;
+                const currency = ticketTotals.currency || 'RON';
+                submitBtnText.textContent = `Plasează comanda - ${grandTotal.toFixed(2)} ${currency}`;
+            }
+        };
+
+        // Load shipping methods if container exists (means there are physical products)
+        if (shippingMethodsContainer) {
+            loadShippingMethods();
+        }
 
         // Handle beneficiaries checkbox toggle
         const beneficiariesCheckbox = document.getElementById('different_beneficiaries') as HTMLInputElement;

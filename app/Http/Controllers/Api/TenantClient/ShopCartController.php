@@ -430,12 +430,49 @@ class ShopCartController extends Controller
 
     private function formatCart(ShopCart $cart, string $language): array
     {
-        $cart->loadMissing('items.product', 'items.variant');
+        $cart->loadMissing('items.product', 'items.variant.attributeValues.attribute');
 
-        $items = $cart->items->map(function ($item) use ($language) {
+        // Get tenant for commission info
+        $tenant = $cart->tenant;
+        $commissionRate = $tenant?->commission_rate ?? 0;
+        $commissionMode = $tenant?->commission_mode ?? 'included'; // 'included' or 'on_top'
+
+        $hasPhysicalProducts = false;
+
+        $items = $cart->items->map(function ($item) use ($language, &$hasPhysicalProducts) {
             $title = is_array($item->product->title)
                 ? ($item->product->title[$language] ?? $item->product->title['en'] ?? '')
                 : $item->product->title;
+
+            // Check if product is physical
+            if ($item->product->type === 'physical') {
+                $hasPhysicalProducts = true;
+            }
+
+            // Get variant attributes
+            $attributes = [];
+            if ($item->variant) {
+                foreach ($item->variant->attributeValues as $attrValue) {
+                    $attrName = is_array($attrValue->attribute->name)
+                        ? ($attrValue->attribute->name[$language] ?? $attrValue->attribute->name['en'] ?? '')
+                        : $attrValue->attribute->name;
+
+                    $attrValueText = is_array($attrValue->value)
+                        ? ($attrValue->value[$language] ?? $attrValue->value['en'] ?? '')
+                        : $attrValue->value;
+
+                    $attributes[] = [
+                        'name' => $attrName,
+                        'value' => $attrValueText,
+                        'color_hex' => $attrValue->color_hex,
+                    ];
+                }
+            }
+
+            // Build variant display name from attributes
+            $variantName = $item->variant
+                ? implode(', ', array_map(fn($a) => "{$a['name']}: {$a['value']}", $attributes))
+                : null;
 
             return [
                 'id' => $item->id,
@@ -443,7 +480,8 @@ class ShopCartController extends Controller
                 'variant_id' => $item->variant_id,
                 'product_slug' => $item->product->slug,
                 'title' => $title,
-                'variant_name' => $item->variant?->name,
+                'variant_name' => $variantName,
+                'attributes' => $attributes,
                 'sku' => $item->variant?->sku ?? $item->product->sku,
                 'image_url' => $item->variant?->image_url ?? $item->product->image_url,
                 'type' => $item->product->type,
@@ -475,6 +513,15 @@ class ShopCartController extends Controller
             }
         }
 
+        // Calculate commission
+        $subtotalAfterDiscount = $subtotal - $discount;
+        $commission = 0;
+        if ($commissionRate > 0 && $commissionMode === 'on_top') {
+            $commission = (int) round($subtotalAfterDiscount * ($commissionRate / 100));
+        }
+
+        $total = $subtotalAfterDiscount + $commission;
+
         return [
             'id' => $cart->id,
             'items' => $items,
@@ -483,10 +530,15 @@ class ShopCartController extends Controller
             'subtotal' => $subtotal / 100,
             'discount_cents' => $discount,
             'discount' => $discount / 100,
-            'total_cents' => $subtotal - $discount,
-            'total' => ($subtotal - $discount) / 100,
+            'commission_cents' => $commission,
+            'commission' => $commission / 100,
+            'commission_rate' => $commissionRate,
+            'has_commission' => $commission > 0,
+            'total_cents' => $total,
+            'total' => $total / 100,
             'currency' => $cart->currency,
             'coupon' => $couponInfo,
+            'has_physical_products' => $hasPhysicalProducts,
         ];
     }
 }
