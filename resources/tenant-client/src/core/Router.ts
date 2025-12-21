@@ -2739,10 +2739,10 @@ export class Router {
                                     <span>-${shopCart.discount.toFixed(2)} ${shopCart.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${shopCart.has_commission ? `
+                                ${shopCart.commission_rate > 0 ? `
                                 <div class="flex justify-between text-gray-600">
-                                    <span>Comision Tixello (produse)</span>
-                                    <span>+${shopCart.commission.toFixed(2)} ${shopCart.currency}</span>
+                                    <span>Comision Tixello${shopCart.commission_mode === 'included' ? ' (inclus în preț)' : ''}</span>
+                                    <span>${shopCart.has_commission ? '+' : ''}${parseFloat(shopCart.commission_display || shopCart.commission).toFixed(2)} ${shopCart.currency}</span>
                                 </div>
                                 ` : ''}
                                 ` : ''}
@@ -3791,13 +3791,13 @@ export class Router {
                                 ${shopCart.discount > 0 ? `
                                 <div class="flex justify-between text-green-600">
                                     <span>Reducere produse</span>
-                                    <span>-${shopCart.discount} ${shopCart.currency}</span>
+                                    <span>-${parseFloat(shopCart.discount).toFixed(2)} ${shopCart.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${shopCart.has_commission ? `
+                                ${shopCart.commission_rate > 0 ? `
                                 <div class="flex justify-between text-gray-600">
-                                    <span>Comision produse</span>
-                                    <span>+${shopCart.commission} ${shopCart.currency}</span>
+                                    <span>Comision Tixello${shopCart.commission_mode === 'included' ? ' (inclus în preț)' : ''}</span>
+                                    <span>${shopCart.has_commission ? '+' : ''}${parseFloat(shopCart.commission_display || shopCart.commission).toFixed(2)} ${shopCart.currency}</span>
                                 </div>
                                 ` : ''}
                                 ` : ''}

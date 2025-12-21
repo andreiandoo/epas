@@ -515,12 +515,20 @@ class ShopCartController extends Controller
 
         // Calculate commission
         $subtotalAfterDiscount = $subtotal - $discount;
-        $commission = 0;
-        if ($commissionRate > 0 && $commissionMode === 'on_top') {
-            $commission = (int) round($subtotalAfterDiscount * ($commissionRate / 100));
+
+        // Always calculate commission for display, but only add to total if 'on_top'
+        $commissionAmount = 0;
+        $commissionAddedToTotal = 0;
+
+        if ($commissionRate > 0) {
+            $commissionAmount = (int) round($subtotalAfterDiscount * ($commissionRate / 100));
+
+            if ($commissionMode === 'on_top') {
+                $commissionAddedToTotal = $commissionAmount;
+            }
         }
 
-        $total = $subtotalAfterDiscount + $commission;
+        $total = $subtotalAfterDiscount + $commissionAddedToTotal;
 
         return [
             'id' => $cart->id,
@@ -530,10 +538,12 @@ class ShopCartController extends Controller
             'subtotal' => $subtotal / 100,
             'discount_cents' => $discount,
             'discount' => $discount / 100,
-            'commission_cents' => $commission,
-            'commission' => $commission / 100,
+            'commission_cents' => $commissionAddedToTotal,
+            'commission' => $commissionAddedToTotal / 100,
             'commission_rate' => $commissionRate,
-            'has_commission' => $commission > 0,
+            'commission_mode' => $commissionMode,
+            'commission_display' => $commissionAmount / 100, // Always show commission for transparency
+            'has_commission' => $commissionAddedToTotal > 0,
             'total_cents' => $total,
             'total' => $total / 100,
             'currency' => $cart->currency,

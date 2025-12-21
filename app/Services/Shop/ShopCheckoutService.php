@@ -174,20 +174,34 @@ class ShopCheckoutService
 
         // Get available methods
         $methods = $zone->activeMethods()->get();
+        $language = app()->getLocale();
 
         return $methods->filter(function ($method) use ($subtotalCents, $totalWeightGrams, $hasPhysicalProducts) {
             return $method->isAvailableForOrder($subtotalCents, $totalWeightGrams, $hasPhysicalProducts);
-        })->map(function ($method) use ($subtotalCents, $totalWeightGrams) {
-            $cost = $method->calculateCost($subtotalCents, $totalWeightGrams);
+        })->map(function ($method) use ($subtotalCents, $totalWeightGrams, $language) {
+            $cost = $method->calculateCost($subtotalCents / 100, $totalWeightGrams);
+
+            // Get translated name and description
+            $name = is_array($method->name)
+                ? ($method->name[$language] ?? $method->name['en'] ?? array_values($method->name)[0] ?? '')
+                : $method->name;
+
+            $description = is_array($method->description)
+                ? ($method->description[$language] ?? $method->description['en'] ?? '')
+                : $method->description;
 
             return [
                 'id' => $method->id,
-                'name' => $method->name,
-                'description' => $method->description,
+                'name' => $name,
+                'description' => $description,
                 'provider' => $method->provider,
-                'cost_cents' => $cost,
-                'estimated_delivery' => $method->getEstimatedDeliveryText(),
-                'is_free' => $cost === 0,
+                'cost' => number_format($cost, 2, '.', ''),
+                'estimated_days' => $method->estimated_days_min && $method->estimated_days_max
+                    ? ($method->estimated_days_min === $method->estimated_days_max
+                        ? $method->estimated_days_min
+                        : "{$method->estimated_days_min}-{$method->estimated_days_max}")
+                    : null,
+                'is_free' => $cost == 0,
             ];
         })->values()->toArray();
     }
