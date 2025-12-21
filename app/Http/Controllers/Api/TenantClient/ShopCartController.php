@@ -175,7 +175,7 @@ class ShopCartController extends Controller
 
             $existingItem->update(['quantity' => $newQuantity]);
         } else {
-            $unitPrice = $variant?->price_cents ?? $variant?->sale_price_cents ?? $product->display_price_cents;
+            $unitPrice = $variant?->display_price_cents ?? $product->display_price_cents;
 
             $cart->items()->create([
                 'id' => Str::uuid(),

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Storage;
 use App\Support\Translatable;
 
 class ShopCategory extends Model
@@ -83,6 +84,25 @@ class ShopCategory extends Model
     public function scopeOrdered(Builder $query): Builder
     {
         return $query->orderBy('sort_order');
+    }
+
+    // Image URL Accessor
+
+    /**
+     * Get image_url as a full storage URL
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        $value = $this->attributes['image_url'] ?? null;
+        if (!$value) {
+            return null;
+        }
+        // If it's already a full URL, return as-is
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+        // Convert storage path to URL
+        return Storage::disk('public')->url($value);
     }
 
     // Helpers

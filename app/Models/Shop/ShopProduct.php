@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 use App\Support\Translatable;
 
 class ShopProduct extends Model
@@ -189,6 +190,52 @@ class ShopProduct extends Model
     {
         return $query->where('track_inventory', true)
             ->where('stock_quantity', '<=', 0);
+    }
+
+    // Image URL Accessors
+    // FileUpload stores relative paths, we need to convert to full URLs
+
+    /**
+     * Get image_url as a full storage URL
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        $value = $this->attributes['image_url'] ?? null;
+        if (!$value) {
+            return null;
+        }
+        // If it's already a full URL, return as-is
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+        // Convert storage path to URL
+        return Storage::disk('public')->url($value);
+    }
+
+    /**
+     * Get gallery as array of full storage URLs
+     */
+    public function getGalleryAttribute(): ?array
+    {
+        $value = $this->attributes['gallery'] ?? null;
+        if (!$value) {
+            return null;
+        }
+
+        $gallery = is_string($value) ? json_decode($value, true) : $value;
+        if (!is_array($gallery)) {
+            return null;
+        }
+
+        return array_map(function ($path) {
+            if (!$path) return null;
+            // If it's already a full URL, return as-is
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                return $path;
+            }
+            // Convert storage path to URL
+            return Storage::disk('public')->url($path);
+        }, $gallery);
     }
 
     // Price Accessors

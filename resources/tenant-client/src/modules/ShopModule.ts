@@ -1430,20 +1430,7 @@ export class ShopModule {
 
                         ${product.variants && product.variants.length > 0 && product.attributes ? `
                             <div class="product-variants" id="product-variants">
-                                ${product.attributes.map(attr => `
-                                    <div class="variant-group">
-                                        <span class="variant-label">${attr.name}</span>
-                                        <div class="variant-options" data-attribute="${attr.slug}">
-                                            ${attr.values.map(val => `
-                                                <button class="variant-option ${attr.type === 'color' ? 'color-option' : ''}"
-                                                    data-value="${val.slug}"
-                                                    ${attr.type === 'color' && val.color_code ? `style="background-color: ${val.color_code}"` : ''}>
-                                                    ${attr.type !== 'color' ? val.value : ''}
-                                                </button>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                `).join('')}
+                                ${this.renderVariantSelectors(product)}
                             </div>
                         ` : ''}
 
@@ -1547,6 +1534,62 @@ export class ShopModule {
         return stars;
     }
 
+    /**
+     * Render variant selectors showing only attribute values that have actual variants
+     */
+    private renderVariantSelectors(product: ShopProduct): string {
+        if (!product.variants || !product.attributes) return '';
+
+        // Build a map of attribute_slug -> Set of value_slugs that exist in variants
+        const availableValues: Record<string, Set<string>> = {};
+        const valueDetails: Record<string, Record<string, { value: string; color_code: string | null }>> = {};
+
+        product.variants.forEach(variant => {
+            variant.attributes.forEach(attr => {
+                if (!availableValues[attr.attribute_slug]) {
+                    availableValues[attr.attribute_slug] = new Set();
+                    valueDetails[attr.attribute_slug] = {};
+                }
+                availableValues[attr.attribute_slug].add(attr.value_slug);
+                valueDetails[attr.attribute_slug][attr.value_slug] = {
+                    value: attr.value,
+                    color_code: attr.color_code
+                };
+            });
+        });
+
+        // Only render attributes that have at least one variant value
+        return product.attributes
+            .filter(attr => availableValues[attr.slug] && availableValues[attr.slug].size > 0)
+            .map(attr => {
+                const attrAvailableValues = availableValues[attr.slug];
+                const attrValueDetails = valueDetails[attr.slug] || {};
+
+                // Only show values that exist in variants
+                const filteredValues = attr.values.filter(val => attrAvailableValues.has(val.slug));
+
+                if (filteredValues.length === 0) return '';
+
+                return `
+                    <div class="variant-group">
+                        <span class="variant-label">${attr.name}</span>
+                        <div class="variant-options" data-attribute="${attr.slug}">
+                            ${filteredValues.map(val => {
+                                const detail = attrValueDetails[val.slug] || val;
+                                return `
+                                    <button class="variant-option ${attr.type === 'color' ? 'color-option' : ''}"
+                                        data-value="${val.slug}"
+                                        ${attr.type === 'color' && detail.color_code ? `style="background-color: ${detail.color_code}"` : ''}>
+                                        ${attr.type !== 'color' ? detail.value || val.value : ''}
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+    }
+
     private renderStockStatus(product: ShopProduct): string {
         if (!product.is_in_stock) {
             return `
@@ -1626,12 +1669,59 @@ export class ShopModule {
                                 v.attributes.every(a => selectedAttributes[a.attribute_slug] === a.value_slug)
                             ) || null;
 
-                            // Update price if variant selected
+                            // Update UI if variant selected
                             if (selectedVariant) {
+                                // Update price
                                 const priceEl = document.querySelector('.product-current-price');
                                 if (priceEl) {
                                     const price = (selectedVariant.sale_price_cents || selectedVariant.price_cents) / 100;
                                     priceEl.textContent = this.formatCurrency(price, product.currency);
+                                }
+
+                                // Update stock display
+                                const stockEl = document.querySelector('.stock-status');
+                                if (stockEl) {
+                                    if (!selectedVariant.is_in_stock) {
+                                        stockEl.className = 'stock-status out-of-stock';
+                                        stockEl.innerHTML = `
+                                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                            </svg>
+                                            Stoc epuizat
+                                        `;
+                                    } else if (selectedVariant.stock_quantity !== null && selectedVariant.stock_quantity <= 5) {
+                                        stockEl.className = 'stock-status low-stock';
+                                        stockEl.innerHTML = `
+                                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                            </svg>
+                                            Doar ${selectedVariant.stock_quantity} in stoc
+                                        `;
+                                    } else {
+                                        stockEl.className = 'stock-status in-stock';
+                                        stockEl.innerHTML = `
+                                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                            </svg>
+                                            In stoc
+                                        `;
+                                    }
+                                }
+
+                                // Update max quantity
+                                const qtyInput = document.getElementById('product-quantity') as HTMLInputElement;
+                                if (qtyInput && selectedVariant.stock_quantity !== null) {
+                                    qtyInput.max = String(selectedVariant.stock_quantity);
+                                    if (parseInt(qtyInput.value) > selectedVariant.stock_quantity) {
+                                        qtyInput.value = String(selectedVariant.stock_quantity);
+                                    }
+                                }
+
+                                // Update add to cart button
+                                const cartBtn = document.getElementById('add-to-cart-btn') as HTMLButtonElement;
+                                if (cartBtn) {
+                                    cartBtn.disabled = !selectedVariant.is_in_stock;
+                                    cartBtn.textContent = selectedVariant.is_in_stock ? 'Adauga in cos' : 'Stoc epuizat';
                                 }
 
                                 // Update image
