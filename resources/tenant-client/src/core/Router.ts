@@ -3738,7 +3738,7 @@ export class Router {
                                 ${shopCart.items.map((item: any) => `
                                     <div class="flex justify-between text-sm">
                                         <div>
-                                            <div class="font-medium">${item.product_name}</div>
+                                            <div class="font-medium">${item.title}</div>
                                             <div class="text-gray-500">${item.variant_name || ''} × ${item.quantity}</div>
                                             ${item.attributes?.length > 0 ? `
                                             <div class="flex flex-wrap gap-1 mt-1">
@@ -3881,16 +3881,23 @@ export class Router {
             if (!shippingMethodsContainer) return;
 
             const sessionId = localStorage.getItem('shop_session_id');
-            if (!sessionId) return;
+            if (!sessionId) {
+                // No session, show free shipping message
+                shippingMethodsContainer.innerHTML = `
+                    <div class="text-center py-4 text-gray-500">
+                        <p>Livrarea gratuită este disponibilă pentru comanda ta.</p>
+                    </div>
+                `;
+                return;
+            }
 
-            // For now, we'll default to Romania - in production this should come from an address dropdown
+            // Default to Romania for shipping calculation
             try {
                 const response = await this.postApi('/shop/checkout/shipping-methods', {
+                    session_id: sessionId,
                     country: 'RO',
                     city: (document.getElementById('shipping_city') as HTMLInputElement)?.value || '',
                     postal_code: (document.getElementById('shipping_postal_code') as HTMLInputElement)?.value || '',
-                }, {
-                    headers: { 'X-Session-ID': sessionId }
                 });
 
                 if (response.success && response.data?.shipping_methods?.length > 0) {
@@ -3948,10 +3955,20 @@ export class Router {
                 shippingMethodsContainer.innerHTML = `
                     <div class="text-center py-4 text-red-500">
                         <p>Nu s-au putut încărca metodele de livrare.</p>
-                        <button type="button" onclick="this.closest('.space-y-3').querySelector('.animate-pulse')?.remove(); loadShippingMethods();"
+                        <button type="button" id="retry-shipping-methods"
                                 class="mt-2 text-primary hover:underline">Reîncearcă</button>
                     </div>
                 `;
+                // Add event listener for retry button
+                document.getElementById('retry-shipping-methods')?.addEventListener('click', () => {
+                    shippingMethodsContainer.innerHTML = `
+                        <div class="animate-pulse">
+                            <div class="h-16 bg-gray-200 rounded mb-2"></div>
+                            <div class="h-16 bg-gray-200 rounded"></div>
+                        </div>
+                    `;
+                    loadShippingMethods();
+                });
             }
         };
 
