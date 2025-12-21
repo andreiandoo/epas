@@ -155,20 +155,78 @@ export class ShopModule {
 
         try {
             // Load categories and products in parallel
-            const [categoriesRes, productsRes] = await Promise.all([
-                this.apiClient.get('/shop/categories'),
-                this.loadProducts()
+            const [categoriesRes] = await Promise.all([
+                this.apiClient.get('/shop/categories').catch(() => ({ data: { data: { categories: [] } } })),
+                this.loadProducts().catch(() => {})
             ]);
 
-            this.categories = categoriesRes.data.data?.categories || [];
+            this.categories = categoriesRes?.data?.data?.categories || categoriesRes?.data?.categories || [];
 
             container.innerHTML = this.renderShopPage();
             this.bindShopFilters();
             this.bindProductCards();
         } catch (error) {
-            container.innerHTML = '<p class="text-red-500">Nu s-au putut incarca produsele. Incearca din nou.</p>';
             console.error('Failed to load shop:', error);
+            // Show friendly empty state when shop is not available
+            container.innerHTML = this.renderShopNotAvailable();
         }
+    }
+
+    private renderShopNotAvailable(): string {
+        return `
+            <style>
+                .shop-unavailable {
+                    max-width: 600px;
+                    margin: 4rem auto;
+                    padding: 2rem;
+                    text-align: center;
+                }
+                .shop-unavailable-icon {
+                    width: 80px;
+                    height: 80px;
+                    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 1.5rem;
+                }
+                .shop-unavailable-icon svg {
+                    width: 40px;
+                    height: 40px;
+                    color: #9ca3af;
+                }
+                .shop-unavailable h2 {
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    color: var(--sleek-text, #1f2937);
+                    margin-bottom: 0.5rem;
+                }
+                .shop-unavailable p {
+                    color: var(--sleek-text-muted, #6b7280);
+                    margin-bottom: 1.5rem;
+                }
+                .shop-unavailable a {
+                    display: inline-block;
+                    padding: 0.75rem 1.5rem;
+                    background: linear-gradient(135deg, var(--sleek-gradient-start, #6366f1), var(--sleek-gradient-end, #4f46e5));
+                    color: white;
+                    border-radius: 0.5rem;
+                    text-decoration: none;
+                    font-weight: 600;
+                }
+            </style>
+            <div class="shop-unavailable">
+                <div class="shop-unavailable-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                    </svg>
+                </div>
+                <h2>Magazinul este in pregatire</h2>
+                <p>Revino in curand pentru produse si oferte speciale!</p>
+                <a href="/events">Vezi evenimentele</a>
+            </div>
+        `;
     }
 
     private parseFiltersFromUrl(): void {

@@ -2825,8 +2825,10 @@ export class Router {
 
     private isGamificationEnabled(): boolean {
         try {
-            const config = (window as any).TIXELLO?.config;
-            return config?.modules?.includes('gamification') || config?.features?.gamification === true;
+            // Check both local config and window config
+            const modules = this.config?.modules || (window as any).TIXELLO?.config?.modules;
+            const features = this.config?.features || (window as any).TIXELLO?.config?.features;
+            return modules?.includes('gamification') || features?.gamification === true;
         } catch {
             return false;
         }

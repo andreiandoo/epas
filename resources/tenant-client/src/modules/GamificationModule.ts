@@ -147,15 +147,37 @@ export class GamificationModule {
 
         try {
             this.setAuthHeaders();
-            const [balanceRes, historyRes, configRes] = await Promise.all([
-                this.apiClient.get('/gamification/balance'),
-                this.apiClient.get('/gamification/history?per_page=10'),
-                this.apiClient.get('/gamification/config')
-            ]);
 
-            const balance = balanceRes.data.data;
-            const history = historyRes.data.data;
-            const config = configRes.data.data;
+            // First load config (always available)
+            const configRes = await this.apiClient.get('/gamification/config');
+            const config = configRes.data?.data || this.config;
+
+            if (!config) {
+                throw new Error('Config not available');
+            }
+
+            // Try to load balance and history (may fail if customer has no points yet)
+            let balance: any = {
+                current_balance: 0,
+                total_earned: 0,
+                total_spent: 0,
+                referral_code: null,
+                referral_link: null,
+                referral_count: 0,
+                current_tier: null
+            };
+            let history: any = { data: [] };
+
+            try {
+                const [balanceRes, historyRes] = await Promise.all([
+                    this.apiClient.get('/gamification/balance'),
+                    this.apiClient.get('/gamification/history?per_page=10')
+                ]);
+                if (balanceRes.data?.data) balance = balanceRes.data.data;
+                if (historyRes.data?.data) history = historyRes.data.data;
+            } catch {
+                // Customer may not have points record yet - that's OK, use defaults
+            }
 
             const pointsName = config.points_name || 'puncte';
             const pointsNameSingular = config.points_name_singular || 'punct';
@@ -446,9 +468,78 @@ export class GamificationModule {
             `;
         } catch (error) {
             console.error('Failed to load points page:', error);
+            // Show informational content even when API fails
             container.innerHTML = `
-                <div class="gamification-page" style="text-align: center; padding: 3rem;">
-                    <p style="color: var(--sleek-text-muted);">Nu am putut incarca informatiile despre puncte.</p>
+                <style>
+                    .gamification-page { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+                    .points-welcome { background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 1rem; padding: 2rem; text-align: center; color: white; margin-bottom: 2rem; }
+                    .points-welcome h2 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem; }
+                    .points-welcome p { opacity: 0.9; }
+                    .points-how-section { background: var(--sleek-surface, #fff); border: 1px solid var(--sleek-border, #e5e7eb); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem; }
+                    .points-how-section h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; color: var(--sleek-text, #1f2937); }
+                    .points-way { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--sleek-border, #e5e7eb); }
+                    .points-way:last-child { border-bottom: none; }
+                    .points-way-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #fef3c7, #fcd34d); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+                    .points-way-icon svg { width: 20px; height: 20px; color: #d97706; }
+                    .points-way-info { flex: 1; }
+                    .points-way-title { font-weight: 600; color: var(--sleek-text, #1f2937); }
+                    .points-way-desc { font-size: 0.875rem; color: var(--sleek-text-muted, #6b7280); }
+                    .points-way-value { font-weight: 700; color: #f59e0b; white-space: nowrap; }
+                </style>
+                <div class="gamification-page">
+                    <div class="points-welcome">
+                        <h2>🎉 Programul de puncte</h2>
+                        <p>Castiga puncte la fiecare comanda si foloseste-le pentru reduceri!</p>
+                    </div>
+
+                    <div class="points-how-section">
+                        <h3>Cum castigi puncte?</h3>
+                        <div class="points-way">
+                            <div class="points-way-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                            </div>
+                            <div class="points-way-info">
+                                <div class="points-way-title">Comenzi</div>
+                                <div class="points-way-desc">Castiga puncte la fiecare comanda plasata</div>
+                            </div>
+                            <div class="points-way-value">1 punct / RON</div>
+                        </div>
+                        <div class="points-way">
+                            <div class="points-way-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            </div>
+                            <div class="points-way-info">
+                                <div class="points-way-title">Invita prieteni</div>
+                                <div class="points-way-desc">Primesti puncte cand prietenii tai fac prima comanda</div>
+                            </div>
+                            <div class="points-way-value">Bonus puncte</div>
+                        </div>
+                        <div class="points-way">
+                            <div class="points-way-icon">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18z"/></svg>
+                            </div>
+                            <div class="points-way-info">
+                                <div class="points-way-title">Zi de nastere</div>
+                                <div class="points-way-desc">Puncte bonus de ziua ta</div>
+                            </div>
+                            <div class="points-way-value">Bonus special</div>
+                        </div>
+                    </div>
+
+                    <div class="points-how-section">
+                        <h3>Cum folosesti punctele?</h3>
+                        <p style="color: var(--sleek-text-muted, #6b7280); line-height: 1.6;">
+                            Punctele acumulate pot fi folosite pentru reduceri la urmatoarele tale comenzi.
+                            La checkout, vei putea alege cate puncte doresti sa folosesti.
+                            <strong>100 puncte = 1 RON reducere</strong>
+                        </p>
+                    </div>
+
+                    <div style="text-align: center; margin-top: 2rem;">
+                        <a href="/events" style="display: inline-block; padding: 0.875rem 2rem; background: linear-gradient(135deg, #f59e0b, #d97706); color: white; border-radius: 0.5rem; font-weight: 600; text-decoration: none;">
+                            Cumpara bilete si castiga puncte
+                        </a>
+                    </div>
                 </div>
             `;
         }
