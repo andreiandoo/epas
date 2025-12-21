@@ -1661,6 +1661,12 @@ export class Router {
                                                     ` : `
                                                         <span class="font-bold text-primary">${ticket.price} ${currency}</span>
                                                     `}
+                                                    ${this.isGamificationEnabled() ? `
+                                                        <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 text-xs font-medium rounded-full" data-ticket-points="${Math.floor(parseFloat(ticket.sale_price || ticket.price))}">
+                                                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/></svg>
+                                                            +${Math.floor(parseFloat(ticket.sale_price || ticket.price))} puncte
+                                                        </span>
+                                                    ` : ''}
                                                 </div>
                                             </div>
                                             ${ticket.status === 'active' && available > 0 ? `
@@ -1692,6 +1698,14 @@ export class Router {
                                         <span>Total</span>
                                         <span id="cart-total-price">0 ${event.currency || 'RON'}</span>
                                     </div>
+                                    ${this.isGamificationEnabled() ? `
+                                    <div id="total-points-container" class="hidden flex justify-end mt-2">
+                                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 text-sm font-medium rounded-full">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/></svg>
+                                            Vei câștiga <strong id="total-points-value">0</strong> puncte
+                                        </span>
+                                    </div>
+                                    ` : ''}
                                 </div>
 
                                 <button id="add-to-cart-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
@@ -2067,6 +2081,20 @@ export class Router {
                 }
             }
             if (addBtn) (addBtn as HTMLButtonElement).disabled = !hasSelection;
+
+            // Update gamification points display
+            const pointsContainer = document.getElementById('total-points-container');
+            const pointsValue = document.getElementById('total-points-value');
+            if (pointsContainer && pointsValue) {
+                if (hasSelection && finalTotal > 0) {
+                    const totalPoints = Math.floor(finalTotal); // 1 point per RON
+                    pointsValue.textContent = totalPoints.toString();
+                    pointsContainer.classList.remove('hidden');
+                } else {
+                    pointsContainer.classList.add('hidden');
+                    pointsValue.textContent = '0';
+                }
+            }
         };
 
         // Setup + buttons
@@ -5910,7 +5938,7 @@ private async renderProfile(): Promise<void> {
         if (!content) return;
 
         content.innerHTML = `
-            <div id="shop-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div id="shop-products" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div class="animate-pulse space-y-4">
                     <div class="h-8 bg-gray-200 rounded w-1/4"></div>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">

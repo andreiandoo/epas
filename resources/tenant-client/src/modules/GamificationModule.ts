@@ -127,11 +127,7 @@ export class GamificationModule {
     // POINTS PAGE (Account -> My Points)
     // ========================================
     async renderPointsPage(): Promise<void> {
-        if (!this.isLoggedIn()) {
-            window.location.hash = '/login';
-            return;
-        }
-
+        // Auth is already checked by Router before emitting route:points
         const container = document.getElementById('points-container');
         if (!container) return;
 
@@ -462,11 +458,7 @@ export class GamificationModule {
     // POINTS HISTORY PAGE
     // ========================================
     async renderPointsHistory(): Promise<void> {
-        if (!this.isLoggedIn()) {
-            window.location.hash = '/login';
-            return;
-        }
-
+        // Auth is already checked by Router before emitting route:points-history
         const container = document.getElementById('points-history-container');
         if (!container) return;
 
@@ -617,11 +609,7 @@ export class GamificationModule {
     // REFERRAL PAGE
     // ========================================
     async renderReferralPage(): Promise<void> {
-        if (!this.isLoggedIn()) {
-            window.location.hash = '/login';
-            return;
-        }
-
+        // Auth is already checked by Router before emitting route:referral
         const container = document.getElementById('referral-container');
         if (!container) return;
 
