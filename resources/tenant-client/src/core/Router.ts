@@ -3168,12 +3168,19 @@ export class Router {
                         const price = product.price_cents / 100;
                         const originalPrice = product.original_price_cents / 100;
                         const isOnSale = product.is_on_sale && originalPrice > price;
+                        const imageUrl = product.image_url || '/storage/shop/placeholder.png';
+                        const productData = JSON.stringify(product).replace(/"/g, '&quot;');
 
                         return `
                         <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                            <img src="${product.image_url || '/images/placeholder.png'}" alt="${product.title}" class="w-14 h-14 object-cover rounded-lg">
+                            <img src="${imageUrl}" alt="${product.title}"
+                                 class="w-14 h-14 object-cover rounded-lg cursor-pointer hover:opacity-80 transition product-detail-trigger"
+                                 data-product='${productData}'
+                                 data-currency="${currency}">
                             <div class="flex-1 min-w-0">
-                                <h4 class="font-medium text-gray-900 truncate">${product.title}</h4>
+                                <h4 class="font-medium text-gray-900 truncate cursor-pointer hover:text-primary transition product-detail-trigger"
+                                    data-product='${productData}'
+                                    data-currency="${currency}">${product.title}</h4>
                                 <div class="flex items-center gap-2">
                                     ${isOnSale ? `<span class="text-xs text-gray-400 line-through">${originalPrice.toFixed(2)} ${currency}</span>` : ''}
                                     <span class="text-sm font-semibold text-primary">${price.toFixed(2)} ${currency}</span>
@@ -3181,8 +3188,6 @@ export class Router {
                             </div>
                             <button class="upsell-add-btn px-3 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition flex-shrink-0"
                                     data-product-id="${product.id}"
-                                    data-product-title="${product.title}"
-                                    data-product-price="${price}"
                                     ${!product.in_stock ? 'disabled' : ''}>
                                 ${product.in_stock ? 'Adaugă' : 'Stoc epuizat'}
                             </button>
@@ -3211,12 +3216,19 @@ export class Router {
                         const price = product.price_cents / 100;
                         const originalPrice = product.original_price_cents / 100;
                         const isOnSale = product.is_on_sale && originalPrice > price;
+                        const imageUrl = product.image_url || '/storage/shop/placeholder.png';
+                        const productData = JSON.stringify(product).replace(/"/g, '&quot;');
 
                         return `
                         <div class="flex flex-col bg-gray-50 rounded-lg overflow-hidden hover:shadow-md transition">
-                            <img src="${product.image_url || '/images/placeholder.png'}" alt="${product.title}" class="w-full h-32 object-cover">
+                            <img src="${imageUrl}" alt="${product.title}"
+                                 class="w-full h-32 object-cover cursor-pointer hover:opacity-80 transition product-detail-trigger"
+                                 data-product='${productData}'
+                                 data-currency="${currency}">
                             <div class="p-3 flex-1 flex flex-col">
-                                <h4 class="font-medium text-gray-900 text-sm mb-1 line-clamp-2">${product.title}</h4>
+                                <h4 class="font-medium text-gray-900 text-sm mb-1 line-clamp-2 cursor-pointer hover:text-primary transition product-detail-trigger"
+                                    data-product='${productData}'
+                                    data-currency="${currency}">${product.title}</h4>
                                 <div class="flex items-center gap-2 mb-3">
                                     ${isOnSale ? `<span class="text-xs text-gray-400 line-through">${originalPrice.toFixed(2)}</span>` : ''}
                                     <span class="font-semibold text-primary">${price.toFixed(2)} ${currency}</span>
@@ -3313,10 +3325,165 @@ export class Router {
         this.setupUpsellHandlers();
     }
 
+    private showProductDetailModal(product: any, currency: string): void {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('product-detail-modal');
+        if (existingModal) existingModal.remove();
+
+        const price = product.price_cents / 100;
+        const originalPrice = product.original_price_cents / 100;
+        const isOnSale = product.is_on_sale && originalPrice > price;
+        const imageUrl = product.image_url || '/storage/shop/placeholder.png';
+        const gallery = product.gallery || [];
+        const allImages = [imageUrl, ...gallery.filter((img: string) => img !== imageUrl)];
+
+        const modalHtml = `
+            <div id="product-detail-modal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                    <!-- Overlay -->
+                    <div class="product-modal-overlay fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+
+                    <!-- Modal panel -->
+                    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                        <!-- Close button -->
+                        <button class="product-modal-close absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+
+                        <div class="p-6">
+                            <!-- Image gallery -->
+                            <div class="mb-6">
+                                <img id="modal-main-image" src="${imageUrl}" alt="${product.title}" class="w-full h-64 sm:h-80 object-contain rounded-lg bg-gray-100">
+                                ${allImages.length > 1 ? `
+                                <div class="flex gap-2 mt-3 overflow-x-auto pb-2">
+                                    ${allImages.map((img: string, idx: number) => `
+                                        <img src="${img}" alt="${product.title} ${idx + 1}"
+                                             class="modal-gallery-thumb w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${idx === 0 ? 'border-primary' : 'border-transparent'} hover:border-primary transition"
+                                             data-image="${img}">
+                                    `).join('')}
+                                </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- Product info -->
+                            <h2 class="text-2xl font-bold text-gray-900 mb-2">${product.title}</h2>
+
+                            <div class="flex items-center gap-3 mb-4">
+                                ${isOnSale ? `<span class="text-lg text-gray-400 line-through">${originalPrice.toFixed(2)} ${currency}</span>` : ''}
+                                <span class="text-2xl font-bold text-primary">${price.toFixed(2)} ${currency}</span>
+                                ${isOnSale ? `<span class="px-2 py-1 bg-red-100 text-red-700 text-sm font-medium rounded">Reducere!</span>` : ''}
+                            </div>
+
+                            ${product.short_description ? `
+                            <p class="text-gray-600 mb-4">${product.short_description}</p>
+                            ` : ''}
+
+                            ${product.description ? `
+                            <div class="prose prose-sm max-w-none text-gray-700 mb-6">${product.description}</div>
+                            ` : ''}
+
+                            <!-- Add to cart button -->
+                            <button class="modal-add-to-cart-btn w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition"
+                                    data-product-id="${product.id}"
+                                    ${!product.in_stock ? 'disabled' : ''}>
+                                ${product.in_stock ? 'Adaugă în coș' : 'Stoc epuizat'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        const modal = document.getElementById('product-detail-modal');
+        if (!modal) return;
+
+        // Close handlers
+        const closeModal = () => modal.remove();
+
+        modal.querySelector('.product-modal-overlay')?.addEventListener('click', closeModal);
+        modal.querySelector('.product-modal-close')?.addEventListener('click', closeModal);
+
+        // Gallery thumbnails
+        modal.querySelectorAll('.modal-gallery-thumb').forEach(thumb => {
+            thumb.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLImageElement;
+                const mainImage = document.getElementById('modal-main-image') as HTMLImageElement;
+                if (mainImage && target.dataset.image) {
+                    mainImage.src = target.dataset.image;
+                    // Update active border
+                    modal.querySelectorAll('.modal-gallery-thumb').forEach(t => {
+                        t.classList.remove('border-primary');
+                        t.classList.add('border-transparent');
+                    });
+                    target.classList.remove('border-transparent');
+                    target.classList.add('border-primary');
+                }
+            });
+        });
+
+        // Add to cart from modal
+        const addBtn = modal.querySelector('.modal-add-to-cart-btn') as HTMLButtonElement;
+        if (addBtn) {
+            addBtn.addEventListener('click', async () => {
+                const productId = addBtn.dataset.productId;
+                if (!productId) return;
+
+                addBtn.disabled = true;
+                addBtn.textContent = 'Se adaugă...';
+
+                const success = await this.addUpsellToShopCart(productId);
+
+                if (success) {
+                    addBtn.textContent = 'Adăugat în coș ✓';
+                    addBtn.classList.remove('bg-primary', 'hover:bg-primary-dark');
+                    addBtn.classList.add('bg-green-600');
+                    setTimeout(() => closeModal(), 1500);
+                } else {
+                    addBtn.textContent = 'Eroare - Încearcă din nou';
+                    addBtn.disabled = false;
+                }
+            });
+        }
+
+        // Close on Escape
+        const escHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    }
+
     private setupUpsellHandlers(): void {
+        // Product detail modal triggers
+        document.querySelectorAll('.product-detail-trigger').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const target = e.currentTarget as HTMLElement;
+                try {
+                    const productData = target.dataset.product;
+                    const currency = target.dataset.currency || 'RON';
+                    if (productData) {
+                        const product = JSON.parse(productData.replace(/&quot;/g, '"'));
+                        this.showProductDetailModal(product, currency);
+                    }
+                } catch (err) {
+                    console.error('Failed to parse product data:', err);
+                }
+            });
+        });
+
         // Event page upsell buttons
         document.querySelectorAll('.upsell-add-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 const target = e.currentTarget as HTMLButtonElement;
                 const productId = target.dataset.productId;
                 if (!productId) return;
@@ -3349,6 +3516,8 @@ export class Router {
         // Cart page upsell buttons
         document.querySelectorAll('.cart-upsell-add-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 const target = e.currentTarget as HTMLButtonElement;
                 const productId = target.dataset.productId;
                 if (!productId) return;
@@ -3703,6 +3872,24 @@ export class Router {
         const grandTotal = ticketTotals.total + shopTotal;
         const hasPhysicalProducts = shopCart?.has_physical_products || false;
 
+        // Check if any bundle products attached to tickets are physical
+        let bundlesHavePhysicalProducts = false;
+        if (this.isShopEnabled() && ticketCart.length > 0) {
+            const ticketTypeIds = [...new Set(ticketCart.map(item => item.ticketTypeId))];
+            for (const ticketTypeId of ticketTypeIds) {
+                try {
+                    const bundles = await this.fetchTicketTypeBundles(ticketTypeId);
+                    if (bundles.some(b => b.product?.type === 'physical')) {
+                        bundlesHavePhysicalProducts = true;
+                        break;
+                    }
+                } catch (e) {
+                    // Ignore errors, continue checking
+                }
+            }
+        }
+        const needsShipping = hasPhysicalProducts || bundlesHavePhysicalProducts;
+
         // Store shop cart total for shipping calculation
         localStorage.setItem('shop_cart_total', shopTotal.toString());
 
@@ -3823,7 +4010,7 @@ export class Router {
                                 </div>
                             </div>
 
-                            ${hasPhysicalProducts ? `
+                            ${needsShipping ? `
                             <div class="bg-white rounded-lg shadow p-6">
                                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Adresa de livrare</h2>
                                 <p class="text-sm text-gray-600 mb-4">Completează adresa pentru livrarea produselor fizice.</p>
@@ -4156,7 +4343,7 @@ export class Router {
                                 ${this.renderCommissionSection(ticketTotals, shopCart, currency)}
 
                                 <!-- Shipping -->
-                                <div id="shipping-cost-row" class="${hasPhysicalProducts ? '' : 'hidden'}">
+                                <div id="shipping-cost-row" class="${needsShipping ? '' : 'hidden'}">
                                     <div class="flex justify-between text-gray-600">
                                         <span>Transport</span>
                                         <span id="shipping-cost-display">Se calculează...</span>
