@@ -61,9 +61,7 @@ class ShopProduct extends Model
         'title' => 'array',
         'description' => 'array',
         'short_description' => 'array',
-        'price' => 'decimal:2',
-        'sale_price' => 'decimal:2',
-        'cost' => 'decimal:2',
+        // Note: price, sale_price, cost are handled by accessors/mutators (price_cents, etc.)
         'tax_rate' => 'decimal:2',
         'stock_quantity' => 'integer',
         'low_stock_threshold' => 'integer',
@@ -193,9 +191,77 @@ class ShopProduct extends Model
 
     // Price Accessors
 
+    /**
+     * Get price in decimal from price_cents column
+     */
+    public function getPriceAttribute(): float
+    {
+        return ($this->attributes['price_cents'] ?? 0) / 100;
+    }
+
+    /**
+     * Set price - converts decimal to cents before storing
+     */
+    public function setPriceAttribute($value): void
+    {
+        $this->attributes['price_cents'] = (int) round(floatval($value) * 100);
+    }
+
+    /**
+     * Get sale_price in decimal from sale_price_cents column
+     */
+    public function getSalePriceAttribute(): ?float
+    {
+        $cents = $this->attributes['sale_price_cents'] ?? null;
+        return $cents !== null ? $cents / 100 : null;
+    }
+
+    /**
+     * Set sale_price - converts decimal to cents before storing
+     */
+    public function setSalePriceAttribute($value): void
+    {
+        $this->attributes['sale_price_cents'] = $value !== null ? (int) round(floatval($value) * 100) : null;
+    }
+
+    /**
+     * Set cost - converts decimal to cents before storing
+     */
+    public function setCostAttribute($value): void
+    {
+        $this->attributes['cost_cents'] = $value !== null ? (int) round(floatval($value) * 100) : null;
+    }
+
+    /**
+     * Get price_cents directly for API
+     */
+    public function getPriceCentsAttribute(): int
+    {
+        return $this->attributes['price_cents'] ?? 0;
+    }
+
+    /**
+     * Get sale_price_cents directly for API
+     */
+    public function getSalePriceCentsAttribute(): ?int
+    {
+        return $this->attributes['sale_price_cents'] ?? null;
+    }
+
+    /**
+     * Get display price (sale price if on sale, otherwise regular price)
+     */
     public function getDisplayPriceAttribute(): float
     {
         return $this->sale_price ?? $this->price ?? 0;
+    }
+
+    /**
+     * Get display price in cents for API
+     */
+    public function getDisplayPriceCentsAttribute(): int
+    {
+        return $this->sale_price_cents ?? $this->price_cents ?? 0;
     }
 
     public function isOnSale(): bool

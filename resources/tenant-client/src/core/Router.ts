@@ -5976,8 +5976,9 @@ private async renderProfile(): Promise<void> {
         const content = this.getContentElement();
         if (!content) return;
 
+        // Use shop-product-${slug} to match what ShopModule expects
         content.innerHTML = `
-            <div id="shop-product-container" data-slug="${params.slug}" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div id="shop-product-${params.slug}" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div class="animate-pulse space-y-4">
                     <div class="grid md:grid-cols-2 gap-8">
                         <div class="h-96 bg-gray-200 rounded"></div>

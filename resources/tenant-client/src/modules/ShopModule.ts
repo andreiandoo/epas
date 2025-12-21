@@ -906,7 +906,9 @@ export class ShopModule {
             card.addEventListener('click', () => {
                 const slug = card.getAttribute('data-product-slug');
                 if (slug) {
-                    window.location.hash = `/shop/product/${slug}`;
+                    // Use proper navigation instead of hash
+                    window.history.pushState({}, '', `/shop/product/${slug}`);
+                    window.dispatchEvent(new PopStateEvent('popstate'));
                 }
             });
         });
