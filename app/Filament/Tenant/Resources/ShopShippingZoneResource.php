@@ -93,7 +93,7 @@ class ShopShippingZoneResource extends Resource
                         Forms\Components\Repeater::make('methods')
                             ->relationship('methods')
                             ->schema([
-                                Forms\Components\Grid::make(2)
+                                SC\Grid::make(2)
                                     ->schema([
                                         Forms\Components\TextInput::make("name.{$tenantLanguage}")
                                             ->label('Method Name')
@@ -114,7 +114,7 @@ class ShopShippingZoneResource extends Resource
                                             ->live(),
                                     ]),
 
-                                Forms\Components\Grid::make(3)
+                                SC\Grid::make(3)
                                     ->schema([
                                         Forms\Components\TextInput::make('cost')
                                             ->label('Price (RON)')
@@ -148,7 +148,7 @@ class ShopShippingZoneResource extends Resource
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Free shipping when order exceeds this amount'),
                                     ]),
 
-                                Forms\Components\Grid::make(4)
+                                SC\Grid::make(4)
                                     ->schema([
                                         Forms\Components\TextInput::make('estimated_days_min')
                                             ->label('Est. Days (min)')
