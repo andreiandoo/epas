@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Marketplace\MarketplaceOrganizer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -9,6 +10,24 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Tenant extends Model
 {
+    /**
+     * Tenant type constants
+     */
+    public const TYPE_STANDARD = 'standard';
+    public const TYPE_MARKETPLACE = 'marketplace';
+
+    /**
+     * Marketplace commission type constants
+     */
+    public const COMMISSION_PERCENT = 'percent';
+    public const COMMISSION_FIXED = 'fixed';
+    public const COMMISSION_BOTH = 'both';
+
+    /**
+     * Tixello platform fee (always 1%)
+     */
+    public const TIXELLO_PLATFORM_FEE = 0.01;
+
     protected $fillable = [
         'name',
         'public_name',
@@ -71,12 +90,21 @@ class Tenant extends Model
         'payment_processor',
         'payment_processor_mode',
         'currency',
+        // Marketplace fields
+        'tenant_type',
+        'marketplace_commission_type',
+        'marketplace_commission_percent',
+        'marketplace_commission_fixed',
+        'marketplace_settings',
     ];
 
     protected $casts = [
         'settings' => 'array',
         'payment_credentials' => 'array',
         'features' => 'array',
+        'marketplace_settings' => 'array',
+        'marketplace_commission_percent' => 'decimal:2',
+        'marketplace_commission_fixed' => 'decimal:2',
         'due_at' => 'datetime',
         'billing_starts_at' => 'datetime',
         'next_billing_date' => 'date',
@@ -445,5 +473,187 @@ class Tenant extends Model
             ->first();
 
         return $microservice?->pivot?->configuration;
+    }
+
+    // =========================================================================
+    // MARKETPLACE RELATIONSHIPS
+    // =========================================================================
+
+    /**
+     * Get the organizers for this marketplace tenant.
+     */
+    public function organizers(): HasMany
+    {
+        return $this->hasMany(MarketplaceOrganizer::class);
+    }
+
+    /**
+     * Get active organizers.
+     */
+    public function activeOrganizers(): HasMany
+    {
+        return $this->organizers()->where('status', 'active');
+    }
+
+    /**
+     * Get pending approval organizers.
+     */
+    public function pendingOrganizers(): HasMany
+    {
+        return $this->organizers()->where('status', 'pending_approval');
+    }
+
+    // =========================================================================
+    // MARKETPLACE TYPE HELPERS
+    // =========================================================================
+
+    /**
+     * Check if this is a marketplace tenant.
+     */
+    public function isMarketplace(): bool
+    {
+        return $this->tenant_type === self::TYPE_MARKETPLACE;
+    }
+
+    /**
+     * Check if this is a standard tenant.
+     */
+    public function isStandardTenant(): bool
+    {
+        return $this->tenant_type === self::TYPE_STANDARD || $this->tenant_type === null;
+    }
+
+    /**
+     * Scope to get only marketplace tenants.
+     */
+    public function scopeMarketplaces($query)
+    {
+        return $query->where('tenant_type', self::TYPE_MARKETPLACE);
+    }
+
+    /**
+     * Scope to get only standard tenants.
+     */
+    public function scopeStandard($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('tenant_type', self::TYPE_STANDARD)
+              ->orWhereNull('tenant_type');
+        });
+    }
+
+    // =========================================================================
+    // MARKETPLACE COMMISSION CALCULATION
+    // =========================================================================
+
+    /**
+     * Calculate marketplace commission for an order.
+     *
+     * Commission flow:
+     * 1. Tixello takes 1% (always, from total)
+     * 2. Marketplace takes their configured commission (from remainder)
+     * 3. Organizer gets the rest
+     *
+     * @param float $orderTotal Total order amount
+     * @param MarketplaceOrganizer|null $organizer Optional organizer for override
+     * @return array Commission breakdown
+     */
+    public function calculateMarketplaceCommission(float $orderTotal, ?MarketplaceOrganizer $organizer = null): array
+    {
+        // Tixello always takes 1%
+        $tixelloCommission = round($orderTotal * self::TIXELLO_PLATFORM_FEE, 2);
+        $afterTixello = $orderTotal - $tixelloCommission;
+
+        // If not a marketplace or no commission settings, return simple breakdown
+        if (!$this->isMarketplace()) {
+            return [
+                'order_total' => $orderTotal,
+                'tixello_commission' => $tixelloCommission,
+                'marketplace_commission' => 0,
+                'organizer_revenue' => 0,
+            ];
+        }
+
+        // Get commission settings (organizer override or marketplace default)
+        $commissionType = $organizer?->commission_type ?? $this->marketplace_commission_type;
+        $commissionPercent = $organizer?->commission_percent ?? $this->marketplace_commission_percent ?? 0;
+        $commissionFixed = $organizer?->commission_fixed ?? $this->marketplace_commission_fixed ?? 0;
+
+        // Calculate marketplace commission
+        $marketplaceCommission = 0;
+
+        switch ($commissionType) {
+            case self::COMMISSION_PERCENT:
+                $marketplaceCommission = round($afterTixello * ((float) $commissionPercent / 100), 2);
+                break;
+
+            case self::COMMISSION_FIXED:
+                $marketplaceCommission = (float) $commissionFixed;
+                break;
+
+            case self::COMMISSION_BOTH:
+                $percentAmount = round($afterTixello * ((float) $commissionPercent / 100), 2);
+                $marketplaceCommission = $percentAmount + (float) $commissionFixed;
+                break;
+
+            default:
+                $marketplaceCommission = 0;
+        }
+
+        // Ensure marketplace commission doesn't exceed available amount
+        $marketplaceCommission = min($marketplaceCommission, $afterTixello);
+
+        // Organizer gets the rest
+        $organizerRevenue = max(0, $afterTixello - $marketplaceCommission);
+
+        return [
+            'order_total' => $orderTotal,
+            'tixello_commission' => $tixelloCommission,
+            'marketplace_commission' => round($marketplaceCommission, 2),
+            'organizer_revenue' => round($organizerRevenue, 2),
+        ];
+    }
+
+    /**
+     * Get formatted commission description.
+     */
+    public function getMarketplaceCommissionDescription(): string
+    {
+        if (!$this->marketplace_commission_type) {
+            return 'Not configured';
+        }
+
+        switch ($this->marketplace_commission_type) {
+            case self::COMMISSION_PERCENT:
+                return $this->marketplace_commission_percent . '%';
+
+            case self::COMMISSION_FIXED:
+                return number_format($this->marketplace_commission_fixed, 2) . ' ' . ($this->currency ?? 'RON');
+
+            case self::COMMISSION_BOTH:
+                return $this->marketplace_commission_percent . '% + ' .
+                       number_format($this->marketplace_commission_fixed, 2) . ' ' . ($this->currency ?? 'RON');
+
+            default:
+                return 'Not configured';
+        }
+    }
+
+    /**
+     * Get a marketplace setting value.
+     */
+    public function getMarketplaceSetting(string $key, $default = null)
+    {
+        return data_get($this->marketplace_settings, $key, $default);
+    }
+
+    /**
+     * Set a marketplace setting value.
+     */
+    public function setMarketplaceSetting(string $key, $value): void
+    {
+        $settings = $this->marketplace_settings ?? [];
+        data_set($settings, $key, $value);
+        $this->marketplace_settings = $settings;
     }
 }

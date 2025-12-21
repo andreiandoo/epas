@@ -1245,6 +1245,89 @@ Route::post('/tenant-client/checkout/callback/{provider}', [CheckoutController::
 
 /*
 |--------------------------------------------------------------------------
+| Marketplace Client API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for marketplace websites (multi-organizer ticketing platforms)
+| These power the marketplace frontend SPA with event listings, organizer
+| pages, cart, checkout, and organizer registration.
+|
+*/
+
+Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'tenant.client.cors'])->group(function () {
+    // Handle OPTIONS preflight requests
+    Route::options('/{any}', fn () => response('', 200))
+        ->where('any', '.*')
+        ->name('api.marketplace-client.options');
+
+    // Bootstrap - initial data for marketplace website
+    Route::get('/bootstrap', [\App\Http\Controllers\Api\MarketplaceClient\BootstrapController::class, 'index'])
+        ->name('api.marketplace-client.bootstrap');
+
+    Route::get('/categories', [\App\Http\Controllers\Api\MarketplaceClient\BootstrapController::class, 'categories'])
+        ->name('api.marketplace-client.categories');
+
+    // Events
+    Route::prefix('events')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\MarketplaceClient\EventsController::class, 'index'])
+            ->name('api.marketplace-client.events.index');
+        Route::get('/featured', [\App\Http\Controllers\Api\MarketplaceClient\EventsController::class, 'featured'])
+            ->name('api.marketplace-client.events.featured');
+        Route::get('/{slug}', [\App\Http\Controllers\Api\MarketplaceClient\EventsController::class, 'show'])
+            ->name('api.marketplace-client.events.show');
+        Route::get('/{slug}/tickets', [\App\Http\Controllers\Api\MarketplaceClient\EventsController::class, 'ticketTypes'])
+            ->name('api.marketplace-client.events.tickets');
+    });
+
+    // Organizers
+    Route::prefix('organizers')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\MarketplaceClient\OrganizersController::class, 'index'])
+            ->name('api.marketplace-client.organizers.index');
+        Route::get('/featured', [\App\Http\Controllers\Api\MarketplaceClient\OrganizersController::class, 'featured'])
+            ->name('api.marketplace-client.organizers.featured');
+        Route::get('/{slug}', [\App\Http\Controllers\Api\MarketplaceClient\OrganizersController::class, 'show'])
+            ->name('api.marketplace-client.organizers.show');
+        Route::get('/{slug}/events', [\App\Http\Controllers\Api\MarketplaceClient\OrganizersController::class, 'events'])
+            ->name('api.marketplace-client.organizers.events');
+    });
+
+    // Organizer Registration
+    Route::prefix('register')->group(function () {
+        Route::post('/', [\App\Http\Controllers\Api\MarketplaceClient\OrganizerRegistrationController::class, 'register'])
+            ->name('api.marketplace-client.register');
+        Route::post('/check-email', [\App\Http\Controllers\Api\MarketplaceClient\OrganizerRegistrationController::class, 'checkEmail'])
+            ->name('api.marketplace-client.register.check-email');
+        Route::post('/check-name', [\App\Http\Controllers\Api\MarketplaceClient\OrganizerRegistrationController::class, 'checkName'])
+            ->name('api.marketplace-client.register.check-name');
+    });
+
+    // Cart
+    Route::prefix('cart')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\MarketplaceClient\CartController::class, 'show'])
+            ->name('api.marketplace-client.cart.show');
+        Route::post('/add', [\App\Http\Controllers\Api\MarketplaceClient\CartController::class, 'add'])
+            ->name('api.marketplace-client.cart.add');
+        Route::put('/update', [\App\Http\Controllers\Api\MarketplaceClient\CartController::class, 'update'])
+            ->name('api.marketplace-client.cart.update');
+        Route::delete('/remove', [\App\Http\Controllers\Api\MarketplaceClient\CartController::class, 'remove'])
+            ->name('api.marketplace-client.cart.remove');
+        Route::delete('/clear', [\App\Http\Controllers\Api\MarketplaceClient\CartController::class, 'clear'])
+            ->name('api.marketplace-client.cart.clear');
+    });
+
+    // Checkout
+    Route::prefix('checkout')->group(function () {
+        Route::post('/init', [\App\Http\Controllers\Api\MarketplaceClient\CheckoutController::class, 'init'])
+            ->name('api.marketplace-client.checkout.init');
+        Route::post('/complete', [\App\Http\Controllers\Api\MarketplaceClient\CheckoutController::class, 'complete'])
+            ->name('api.marketplace-client.checkout.complete');
+        Route::get('/order/{orderId}/status', [\App\Http\Controllers\Api\MarketplaceClient\CheckoutController::class, 'status'])
+            ->name('api.marketplace-client.checkout.status');
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
 | Platform Analytics API Routes
 |--------------------------------------------------------------------------
 |

@@ -4,6 +4,7 @@ return [
     App\Providers\AppServiceProvider::class,
     App\Providers\Filament\AdminPanelProvider::class,
     App\Providers\Filament\TenantPanelProvider::class,
+    App\Providers\Filament\OrganizerPanelProvider::class,
     App\Providers\SeatingServiceProvider::class,
     App\Providers\MicroservicesServiceProvider::class,
 ];

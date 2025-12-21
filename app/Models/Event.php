@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use App\Models\Marketplace\MarketplaceOrganizer;
 use App\Support\Translatable;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -22,6 +23,7 @@ class Event extends Model
 
     protected $fillable = [
         'tenant_id',
+        'organizer_id',
         'venue_id',
         'ticket_template_id',
         'commission_mode',
@@ -92,6 +94,30 @@ class Event extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    /**
+     * Get the organizer for this event (marketplace events only).
+     */
+    public function organizer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrganizer::class, 'organizer_id');
+    }
+
+    /**
+     * Check if this event belongs to a marketplace organizer.
+     */
+    public function hasOrganizer(): bool
+    {
+        return $this->organizer_id !== null;
+    }
+
+    /**
+     * Check if this is a marketplace event.
+     */
+    public function isMarketplaceEvent(): bool
+    {
+        return $this->hasOrganizer() && $this->tenant?->isMarketplace();
     }
 
     /* Taxonomies (normalized) */

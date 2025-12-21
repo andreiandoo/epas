@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Marketplace\MarketplaceOrganizer;
+use App\Models\Marketplace\MarketplacePayout;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,6 +16,7 @@ class Order extends Model
 
     protected $fillable = [
         'tenant_id',
+        'organizer_id',
         'customer_email',
         'total_cents',
         'status',
@@ -22,10 +25,18 @@ class Order extends Model
         'promo_code_id',
         'promo_code',
         'promo_discount',
+        // Commission tracking for marketplace orders
+        'tixello_commission',
+        'marketplace_commission',
+        'organizer_revenue',
+        'payout_id',
     ];
 
     protected $casts = [
         'meta' => 'array',
+        'tixello_commission' => 'decimal:2',
+        'marketplace_commission' => 'decimal:2',
+        'organizer_revenue' => 'decimal:2',
     ];
 
     public function tenant(): BelongsTo
@@ -41,6 +52,69 @@ class Order extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    /**
+     * Get the organizer for this order (marketplace orders only).
+     */
+    public function organizer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrganizer::class, 'organizer_id');
+    }
+
+    /**
+     * Get the payout this order is included in.
+     */
+    public function payout(): BelongsTo
+    {
+        return $this->belongsTo(MarketplacePayout::class, 'payout_id');
+    }
+
+    /**
+     * Check if this is a marketplace order.
+     */
+    public function isMarketplaceOrder(): bool
+    {
+        return $this->organizer_id !== null;
+    }
+
+    /**
+     * Check if this order has been paid out.
+     */
+    public function isPaidOut(): bool
+    {
+        return $this->payout_id !== null && $this->payout?->isCompleted();
+    }
+
+    /**
+     * Get the total amount as decimal (from cents).
+     */
+    public function getTotalAttribute(): float
+    {
+        return $this->total_cents / 100;
+    }
+
+    /**
+     * Calculate and store commission breakdown.
+     * Called when order is paid for marketplace orders.
+     */
+    public function calculateCommission(): array
+    {
+        if (!$this->isMarketplaceOrder()) {
+            return [];
+        }
+
+        $breakdown = $this->tenant->calculateMarketplaceCommission(
+            $this->total,
+            $this->organizer
+        );
+
+        $this->tixello_commission = $breakdown['tixello_commission'];
+        $this->marketplace_commission = $breakdown['marketplace_commission'];
+        $this->organizer_revenue = $breakdown['organizer_revenue'];
+        $this->save();
+
+        return $breakdown;
     }
 
     protected static function booted(): void
