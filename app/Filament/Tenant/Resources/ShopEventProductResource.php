@@ -106,13 +106,13 @@ class ShopEventProductResource extends Resource
 
                         Forms\Components\Select::make('ticket_type_id')
                             ->label('Ticket Type')
-                            ->options(function (\Filament\Schemas\Components\Utilities\Get $get) use ($tenantLanguage) {
+                            ->options(function (\Filament\Schemas\Components\Utilities\Get $get) {
                                 $eventId = $get('event_id');
                                 if (!$eventId) return [];
 
                                 return TicketType::where('event_id', $eventId)
                                     ->get()
-                                    ->mapWithKeys(fn($t) => [$t->id => $t->getTranslation('name', $tenantLanguage)]);
+                                    ->mapWithKeys(fn($t) => [$t->id => $t->name]);
                             })
                             ->searchable()
                             ->helperText(fn($state, \Filament\Schemas\Components\Utilities\Get $get) => $get('association_type') === 'bundle'
@@ -175,7 +175,7 @@ class ShopEventProductResource extends Resource
 
                 Tables\Columns\TextColumn::make('ticketType.name')
                     ->label('Ticket Type')
-                    ->formatStateUsing(fn($record) => $record->ticketType?->getTranslation('name', $tenantLanguage) ?? 'All')
+                    ->formatStateUsing(fn($record) => $record->ticketType?->name ?? 'All')
                     ->badge()
                     ->color('gray'),
 
