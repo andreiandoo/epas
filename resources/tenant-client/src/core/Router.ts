@@ -2499,26 +2499,62 @@ export class Router {
         const content = this.getContentElement();
         if (!content) return;
 
-        const cart = CartService.getCart();
-        const totals = CartService.getTotal();
+        const ticketCart = CartService.getCart();
+        const ticketTotals = CartService.getTotal();
+        const shopCount = ShopCartService.getItemCount();
 
-        if (cart.length === 0) {
+        // If both carts are empty
+        if (ticketCart.length === 0 && shopCount === 0) {
             content.innerHTML = `
                 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
                     <svg class="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                     </svg>
                     <h1 class="text-2xl font-bold text-gray-900 mb-4">Coșul tău este gol</h1>
-                    <p class="text-gray-600 mb-8">Explorează evenimentele noastre și adaugă bilete în coș.</p>
-                    <a href="/events" class="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition inline-block">
-                        Vezi evenimente
-                    </a>
+                    <p class="text-gray-600 mb-8">Explorează evenimentele noastre și adaugă bilete sau produse în coș.</p>
+                    <div class="flex gap-4 justify-center">
+                        <a href="/events" class="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition inline-block">
+                            Vezi evenimente
+                        </a>
+                        <a href="/shop" class="px-6 py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-700 transition inline-block">
+                            Vezi magazin
+                        </a>
+                    </div>
                 </div>
             `;
             return;
         }
 
-        const cartItemsHtml = cart.map((item, index) => {
+        // Use combined cart rendering
+        this.renderCombinedCart(ticketCart, ticketTotals);
+    }
+
+    private async renderCombinedCart(ticketCart: CartItem[], ticketTotals: any): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        // Fetch shop cart from API
+        let shopCart: any = null;
+        try {
+            const sessionId = localStorage.getItem('shop_session_id');
+            if (sessionId) {
+                const shopResponse = await this.fetchApi('/shop/cart', {}, {
+                    headers: { 'X-Session-ID': sessionId }
+                });
+                if (shopResponse.success) {
+                    shopCart = shopResponse.data;
+                    // Sync cart count
+                    if (shopCart?.item_count !== undefined) {
+                        ShopCartService.setItemCount(shopCart.item_count);
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('Could not fetch shop cart');
+        }
+
+        // Render ticket items
+        const ticketItemsHtml = ticketCart.map((item, index) => {
             // Use sale price if available, otherwise base price (same as getTotal)
             const ticketPrice = item.salePrice || item.price;
             const result = CartService.calculateBulkDiscount(item.quantity, ticketPrice, item.bulkDiscounts);
@@ -2582,6 +2618,49 @@ export class Router {
             </div>
         `}).join('');
 
+        // Render shop items
+        const shopItemsHtml = shopCart?.items?.map((item: any) => `
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex gap-4">
+                    <img src="${item.image_url || '/images/placeholder.png'}" alt="${item.title}" class="w-20 h-20 object-cover rounded-lg">
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-semibold text-gray-900">${item.title}</h3>
+                                ${item.variant_name ? `<p class="text-sm text-gray-500">${item.variant_name}</p>` : ''}
+                            </div>
+                            <button class="shop-remove-item-btn text-red-600 hover:text-red-700" data-item-id="${item.id}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="flex justify-between items-center mt-3">
+                            <div class="flex items-center gap-3">
+                                <button class="shop-qty-minus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-item-id="${item.id}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                                    </svg>
+                                </button>
+                                <span class="shop-qty-display w-12 text-center font-semibold" data-item-id="${item.id}">${item.quantity}</span>
+                                <button class="shop-qty-plus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-item-id="${item.id}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="font-bold text-gray-900">${item.total.toFixed(2)} ${shopCart.currency}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('') || '';
+
+        // Calculate combined totals
+        const shopTotal = shopCart?.total || 0;
+        const currency = ticketTotals.currency || shopCart?.currency || 'RON';
+        const grandTotal = ticketTotals.total + shopTotal;
+
         content.innerHTML = `
             <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div class="flex justify-between items-center mb-8">
@@ -2591,7 +2670,15 @@ export class Router {
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div class="lg:col-span-2 space-y-4">
-                        ${cartItemsHtml}
+                        ${ticketCart.length > 0 ? `
+                            <h2 class="text-lg font-semibold text-gray-700 mb-2">Bilete</h2>
+                            ${ticketItemsHtml}
+                        ` : ''}
+
+                        ${shopCart?.items?.length > 0 ? `
+                            <h2 class="text-lg font-semibold text-gray-700 mb-2 ${ticketCart.length > 0 ? 'mt-8' : ''}">Produse magazin</h2>
+                            ${shopItemsHtml}
+                        ` : ''}
                     </div>
 
                     <div class="lg:col-span-1">
@@ -2599,27 +2686,42 @@ export class Router {
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Sumar comandă</h2>
 
                             <div class="space-y-2 mb-4 pb-4 border-b">
+                                ${ticketCart.length > 0 ? `
                                 <div class="flex justify-between text-gray-600">
                                     <span>Subtotal bilete</span>
-                                    <span>${totals.subtotal.toFixed(2)} ${totals.currency}</span>
+                                    <span>${ticketTotals.subtotal.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
-                                ${totals.bulkDiscount > 0 ? `
+                                ${ticketTotals.bulkDiscount > 0 ? `
                                 <div class="flex justify-between text-green-600">
                                     <span>Discount bulk</span>
-                                    <span>-${totals.bulkDiscount.toFixed(2)} ${totals.currency}</span>
+                                    <span>-${ticketTotals.bulkDiscount.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${totals.couponDiscount > 0 ? `
+                                ${ticketTotals.couponDiscount > 0 ? `
                                 <div class="flex justify-between text-green-600">
-                                    <span>Cod promoțional${totals.couponName ? ` (${totals.couponName})` : ''}</span>
-                                    <span>-${totals.couponDiscount.toFixed(2)} ${totals.currency}</span>
+                                    <span>Cod promoțional${ticketTotals.couponName ? ` (${ticketTotals.couponName})` : ''}</span>
+                                    <span>-${ticketTotals.couponDiscount.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${totals.hasCommission ? `
+                                ${ticketTotals.hasCommission ? `
                                 <div class="flex justify-between text-gray-600">
                                     <span>Comision Tixello</span>
-                                    <span>+${totals.commission.toFixed(2)} ${totals.currency}</span>
+                                    <span>+${ticketTotals.commission.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
+                                ` : ''}
+                                ` : ''}
+
+                                ${shopCart?.items?.length > 0 ? `
+                                <div class="flex justify-between text-gray-600">
+                                    <span>Subtotal produse</span>
+                                    <span>${shopCart.subtotal.toFixed(2)} ${shopCart.currency}</span>
+                                </div>
+                                ${shopCart.discount > 0 ? `
+                                <div class="flex justify-between text-green-600">
+                                    <span>Discount${shopCart.coupon?.code ? ` (${shopCart.coupon.code})` : ''}</span>
+                                    <span>-${shopCart.discount.toFixed(2)} ${shopCart.currency}</span>
+                                </div>
+                                ` : ''}
                                 ` : ''}
                             </div>
 
@@ -2645,11 +2747,11 @@ export class Router {
                                 </div>
                             </div>
 
-                            ${this.isGamificationEnabled() ? this.renderPointsSection(totals.total, totals.currency) : ''}
+                            ${this.isGamificationEnabled() ? this.renderPointsSection(grandTotal, currency) : ''}
 
                             <div class="flex justify-between items-center mb-6">
                                 <span class="text-lg font-semibold">Total</span>
-                                <span class="text-2xl font-bold text-primary" id="cart-total-amount">${totals.total.toFixed(2)} ${totals.currency}</span>
+                                <span class="text-2xl font-bold text-primary" id="cart-total-amount">${grandTotal.toFixed(2)} ${currency}</span>
                             </div>
 
                             <button id="checkout-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition">
@@ -2716,9 +2818,22 @@ export class Router {
 
         const clearBtn = document.getElementById('clear-cart-btn');
         if (clearBtn) {
-            clearBtn.addEventListener('click', () => {
+            clearBtn.addEventListener('click', async () => {
                 if (confirm('Sigur vrei să golești coșul?')) {
                     CartService.clearCart();
+                    // Also clear shop cart
+                    const sessionId = localStorage.getItem('shop_session_id');
+                    if (sessionId) {
+                        try {
+                            await this.fetchApi('/shop/cart/clear', {}, {
+                                method: 'DELETE',
+                                headers: { 'X-Session-ID': sessionId }
+                            });
+                            ShopCartService.clear();
+                        } catch (e) {
+                            console.log('Could not clear shop cart');
+                        }
+                    }
                     this.updateCartBadge();
                     this.renderCart();
                 }
@@ -2732,11 +2847,84 @@ export class Router {
             });
         }
 
+        // Shop cart handlers
+        this.setupShopCartHandlers();
+
         // Discount code handlers
         this.setupDiscountCodeHandlers();
 
         // Gamification points handlers
         this.setupPointsHandlers();
+    }
+
+    private setupShopCartHandlers(): void {
+        const sessionId = localStorage.getItem('shop_session_id');
+        if (!sessionId) return;
+
+        // Shop remove item buttons
+        document.querySelectorAll('.shop-remove-item-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const itemId = target.dataset.itemId;
+                if (itemId) {
+                    try {
+                        await this.fetchApi(`/shop/cart/items/${itemId}`, {}, {
+                            method: 'DELETE',
+                            headers: { 'X-Session-ID': sessionId }
+                        });
+                        this.renderCart();
+                    } catch (e) {
+                        console.error('Failed to remove shop item:', e);
+                    }
+                }
+            });
+        });
+
+        // Shop quantity plus buttons
+        document.querySelectorAll('.shop-qty-plus').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const itemId = target.dataset.itemId;
+                const qtyDisplay = document.querySelector(`.shop-qty-display[data-item-id="${itemId}"]`);
+                const currentQty = parseInt(qtyDisplay?.textContent || '1');
+
+                if (itemId) {
+                    try {
+                        await this.fetchApi(`/shop/cart/items/${itemId}`, {}, {
+                            method: 'PUT',
+                            headers: { 'X-Session-ID': sessionId },
+                            body: JSON.stringify({ quantity: currentQty + 1 })
+                        });
+                        this.renderCart();
+                    } catch (e) {
+                        console.error('Failed to update shop item:', e);
+                    }
+                }
+            });
+        });
+
+        // Shop quantity minus buttons
+        document.querySelectorAll('.shop-qty-minus').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const itemId = target.dataset.itemId;
+                const qtyDisplay = document.querySelector(`.shop-qty-display[data-item-id="${itemId}"]`);
+                const currentQty = parseInt(qtyDisplay?.textContent || '1');
+
+                if (itemId && currentQty > 1) {
+                    try {
+                        await this.fetchApi(`/shop/cart/items/${itemId}`, {}, {
+                            method: 'PUT',
+                            headers: { 'X-Session-ID': sessionId },
+                            body: JSON.stringify({ quantity: currentQty - 1 })
+                        });
+                        this.renderCart();
+                    } catch (e) {
+                        console.error('Failed to update shop item:', e);
+                    }
+                }
+            });
+        });
     }
 
     private setupDiscountCodeHandlers(): void {
