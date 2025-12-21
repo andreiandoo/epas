@@ -2447,7 +2447,7 @@ export class SleekClientModule {
             const response = await this.apiClient.get('/shop/cart', {
                 headers: { 'X-Session-ID': sessionId }
             });
-            const cart = response.data.data;
+            const cart = response.data;
 
             if (!cart || !cart.items || cart.items.length === 0) {
                 contentEl.innerHTML = `
