@@ -478,3 +478,42 @@ Schedule::command('activitylog:cleanup --days=10')
     ->onFailure(function () {
         \Log::error('Failed to cleanup tenant activity logs');
     });
+
+/*
+|--------------------------------------------------------------------------
+| Marketplace Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Generate payouts for marketplace organizers (monthly on the 1st at 6 AM)
+Schedule::command('marketplace:generate-payouts')
+    ->monthlyOn(1, '06:00')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('Marketplace payouts generated successfully');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to generate marketplace payouts');
+    });
+
+// Refresh organizer statistics (daily at 2:30 AM)
+Schedule::command('marketplace:refresh-stats')
+    ->dailyAt('02:30')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('Marketplace organizer stats refreshed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to refresh marketplace organizer stats');
+    });
+
+// Send payout reminders for pending payouts older than 7 days (weekly on Monday at 9 AM)
+Schedule::command('marketplace:send-payout-reminders --days=7')
+    ->weeklyOn(1, '09:00')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('Marketplace payout reminders sent');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to send marketplace payout reminders');
+    });
