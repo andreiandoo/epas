@@ -143,7 +143,7 @@ class ShopCheckoutService
     // SHIPPING CALCULATION
     // ==========================================
 
-    public function getAvailableShippingMethods(ShopCart $cart, array $address): array
+    public function getAvailableShippingMethods(ShopCart $cart, array $address, bool $hasBundlePhysical = false): array
     {
         $tenant = $cart->tenant;
 
@@ -151,6 +151,9 @@ class ShopCheckoutService
         $hasPhysicalProducts = $cart->items()
             ->whereHas('product', fn($q) => $q->where('type', 'physical'))
             ->exists();
+
+        // Include bundle physical products (products attached to tickets)
+        $hasPhysicalProducts = $hasPhysicalProducts || $hasBundlePhysical;
 
         if (!$hasPhysicalProducts) {
             return []; // No shipping needed for digital-only orders

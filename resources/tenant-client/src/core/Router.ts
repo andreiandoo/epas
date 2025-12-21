@@ -356,12 +356,13 @@ export class Router {
     }
 
     // POST helper
-    private async postApi(endpoint: string, data: any): Promise<any> {
+    private async postApi(endpoint: string, data: any, customHeaders: Record<string, string> = {}): Promise<any> {
         const url = new URL(`${this.config.apiEndpoint}${endpoint}`);
         url.searchParams.set('hostname', window.location.hostname);
 
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
+            ...customHeaders,
         };
 
         if (this.authToken) {
@@ -3280,8 +3281,9 @@ export class Router {
 
             const response = await this.postApi('/shop/cart/items', {
                 product_id: productId,
-                quantity: 1,
-                session_id: sessionId
+                quantity: 1
+            }, {
+                'X-Session-ID': sessionId
             });
 
             if (response.success) {
@@ -4363,7 +4365,7 @@ export class Router {
             </div>
         `;
 
-        this.setupCheckoutHandlers();
+        this.setupCheckoutHandlers(bundlesHavePhysicalProducts);
 
         // Load bundle info for ticket types
         if (this.isShopEnabled() && ticketCart.length > 0) {
@@ -4404,7 +4406,7 @@ export class Router {
         }
     }
 
-    private setupCheckoutHandlers(): void {
+    private setupCheckoutHandlers(hasBundlePhysical: boolean = false): void {
         const form = document.getElementById('checkout-form') as HTMLFormElement;
         const submitBtn = document.getElementById('submit-order-btn') as HTMLButtonElement;
         const submitBtnText = document.getElementById('submit-btn-text');
@@ -4459,24 +4461,22 @@ export class Router {
         const loadShippingMethods = async () => {
             if (!shippingMethodsContainer) return;
 
-            const sessionId = localStorage.getItem('shop_session_id');
+            // Create session if doesn't exist (needed for bundle-only shipping too)
+            let sessionId = localStorage.getItem('shop_session_id');
             if (!sessionId) {
-                // No session, show free shipping message
-                shippingMethodsContainer.innerHTML = `
-                    <div class="text-center py-4 text-gray-500">
-                        <p>Livrarea gratuită este disponibilă pentru comanda ta.</p>
-                    </div>
-                `;
-                return;
+                sessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + Date.now();
+                localStorage.setItem('shop_session_id', sessionId);
             }
 
             // Default to Romania for shipping calculation
             try {
                 const response = await this.postApi('/shop/checkout/shipping-methods', {
-                    session_id: sessionId,
                     country: 'RO',
                     city: (document.getElementById('shipping_city') as HTMLInputElement)?.value || '',
                     postal_code: (document.getElementById('shipping_postal_code') as HTMLInputElement)?.value || '',
+                    has_bundle_physical: hasBundlePhysical,
+                }, {
+                    'X-Session-ID': sessionId
                 });
 
                 if (response.success && response.data?.shipping_methods?.length > 0) {
@@ -4522,8 +4522,9 @@ export class Router {
                     });
                 } else {
                     shippingMethodsContainer.innerHTML = `
-                        <div class="text-center py-4 text-gray-500">
-                            <p>Livrarea gratuită este disponibilă pentru comanda ta.</p>
+                        <div class="text-center py-4 text-amber-600">
+                            <p>Nu există metode de livrare disponibile pentru locația selectată.</p>
+                            <p class="text-sm mt-1">Verifică adresa de livrare sau contactează-ne.</p>
                         </div>
                     `;
                     shippingCost = 0;
