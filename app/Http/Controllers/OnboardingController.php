@@ -14,6 +14,7 @@ use App\Services\AnafService;
 use App\Services\LocationService;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use App\Services\ContractPdfService;
+use App\Services\CloudflareService;
 use App\Mail\ContractMail;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
@@ -137,11 +138,22 @@ class OnboardingController extends Controller
      */
     public function storeStepThree(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'domains' => 'required|array|min:1',
-            'domains.*' => 'required|string',
-            'estimated_monthly_tickets' => 'required|integer|min:0',
-        ]);
+        $noWebsite = filter_var($request->no_website, FILTER_VALIDATE_BOOLEAN);
+
+        if ($noWebsite) {
+            // Validate subdomain
+            $validator = Validator::make($request->all(), [
+                'subdomain' => ['required', 'string', 'min:3', 'max:63', 'regex:/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/'],
+                'estimated_monthly_tickets' => 'required|integer|min:0',
+            ]);
+        } else {
+            // Validate domains
+            $validator = Validator::make($request->all(), [
+                'domains' => 'required|array|min:1',
+                'domains.*' => 'required|string',
+                'estimated_monthly_tickets' => 'required|integer|min:0',
+            ]);
+        }
 
         if ($validator->fails()) {
             return response()->json([
@@ -152,7 +164,12 @@ class OnboardingController extends Controller
 
         // Store in session
         $onboarding = Session::get('onboarding', []);
-        $onboarding['data']['step3'] = $request->only(['domains', 'estimated_monthly_tickets']);
+        $onboarding['data']['step3'] = [
+            'no_website' => $noWebsite,
+            'subdomain' => $noWebsite ? strtolower($request->subdomain) : null,
+            'domains' => $noWebsite ? [] : $request->domains,
+            'estimated_monthly_tickets' => $request->estimated_monthly_tickets,
+        ];
         $onboarding['step'] = 4;
         Session::put('onboarding', $onboarding);
 
@@ -263,29 +280,91 @@ class OnboardingController extends Controller
             ]);
 
             // Create Domains
-            foreach ($step3['domains'] as $index => $domainUrl) {
-                $domainName = parse_url($domainUrl, PHP_URL_HOST);
-                if (!$domainName) {
-                    $domainName = str_replace(['http://', 'https://', 'www.'], '', $domainUrl);
-                    $domainName = explode('/', $domainName)[0];
+            $noWebsite = $step3['no_website'] ?? false;
+
+            if ($noWebsite && !empty($step3['subdomain'])) {
+                // Create managed subdomain
+                $cloudflareService = app(CloudflareService::class);
+                $baseDomain = $cloudflareService->getBaseDomain();
+                $subdomain = $step3['subdomain'];
+                $fullDomain = "{$subdomain}.{$baseDomain}";
+
+                try {
+                    // Create DNS record in Cloudflare (optional since wildcard is configured)
+                    $dnsRecord = $cloudflareService->createSubdomainRecord($subdomain);
+
+                    // Create domain record - auto-activated since it's managed
+                    $domain = Domain::create([
+                        'tenant_id' => $tenant->id,
+                        'domain' => $fullDomain,
+                        'is_primary' => true,
+                        'is_active' => true,  // Auto-activate managed subdomains
+                        'is_managed_subdomain' => true,
+                        'subdomain' => $subdomain,
+                        'base_domain' => $baseDomain,
+                        'cloudflare_record_id' => $dnsRecord['id'] ?? null,
+                        'activated_at' => now(),
+                    ]);
+
+                    // Generate deployment package for this domain
+                    GeneratePackageJob::dispatch($domain);
+
+                    Log::info('Managed subdomain created', [
+                        'tenant_id' => $tenant->id,
+                        'domain' => $fullDomain,
+                        'cloudflare_record_id' => $dnsRecord['id'] ?? null,
+                    ]);
+
+                } catch (\Exception $e) {
+                    Log::error('Failed to create managed subdomain DNS record', [
+                        'tenant_id' => $tenant->id,
+                        'subdomain' => $subdomain,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    // Still create domain record but mark as active (since wildcard is configured)
+                    $domain = Domain::create([
+                        'tenant_id' => $tenant->id,
+                        'domain' => $fullDomain,
+                        'is_primary' => true,
+                        'is_active' => true,  // Still active because of wildcard DNS
+                        'is_managed_subdomain' => true,
+                        'subdomain' => $subdomain,
+                        'base_domain' => $baseDomain,
+                        'notes' => 'DNS record creation skipped: ' . $e->getMessage(),
+                        'activated_at' => now(),
+                    ]);
+
+                    // Generate deployment package for this domain
+                    GeneratePackageJob::dispatch($domain);
                 }
+            } else {
+                // Original domain creation flow for custom domains
+                foreach ($step3['domains'] as $index => $domainUrl) {
+                    $domainName = parse_url($domainUrl, PHP_URL_HOST);
+                    if (!$domainName) {
+                        $domainName = str_replace(['http://', 'https://', 'www.'], '', $domainUrl);
+                        $domainName = explode('/', $domainName)[0];
+                    }
 
-                $domain = Domain::create([
-                    'tenant_id' => $tenant->id,
-                    'domain' => $domainName,
-                    'is_primary' => $index === 0,
-                    'is_active' => false, // Activate after email verification
-                ]);
+                    $domain = Domain::create([
+                        'tenant_id' => $tenant->id,
+                        'domain' => $domainName,
+                        'is_primary' => $index === 0,
+                        'is_active' => false, // Activate after email verification
+                        'is_managed_subdomain' => false,
+                    ]);
 
-                // Create verification entry for the domain
-                $domain->verifications()->create([
-                    'tenant_id' => $tenant->id,
-                    'verification_method' => 'dns_txt',
-                    'status' => 'pending',
-                ]);
+                    // Create verification entry for the domain
+                    $domain->verifications()->create([
+                        'tenant_id' => $tenant->id,
+                        'verification_method' => 'dns_txt',
+                        'status' => 'pending',
+                    ]);
 
-                // Generate deployment package for this domain
-                GeneratePackageJob::dispatch($domain);
+                    // Generate deployment package for this domain
+                    GeneratePackageJob::dispatch($domain);
+                }
             }
 
             // Attach Microservices
@@ -447,6 +526,70 @@ class OnboardingController extends Controller
         return response()->json([
             'available' => !$exists,
             'message' => $exists ? 'Acest domeniu este deja înregistrat' : 'Domeniu disponibil'
+        ]);
+    }
+
+    /**
+     * Check if subdomain is available
+     */
+    public function checkSubdomain(Request $request)
+    {
+        $subdomain = strtolower(trim($request->subdomain ?? ''));
+
+        // Validate format
+        if (strlen($subdomain) < 3) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Subdomeniul trebuie să aibă minim 3 caractere'
+            ]);
+        }
+
+        if (strlen($subdomain) > 63) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Subdomeniul nu poate avea mai mult de 63 de caractere'
+            ]);
+        }
+
+        if (!preg_match('/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/', $subdomain)) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Subdomeniul poate conține doar litere mici, cifre și cratime (nu poate începe sau termina cu cratimă)'
+            ]);
+        }
+
+        $cloudflareService = app(CloudflareService::class);
+        $baseDomain = $cloudflareService->getBaseDomain();
+        $fullDomain = "{$subdomain}.{$baseDomain}";
+
+        // Check reserved subdomains
+        $reserved = $cloudflareService->getReservedSubdomains();
+        if (in_array($subdomain, $reserved)) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Acest subdomeniu este rezervat'
+            ]);
+        }
+
+        // Check if already exists in database
+        $exists = Domain::where('domain', $fullDomain)
+            ->orWhere(function($query) use ($subdomain, $baseDomain) {
+                $query->where('subdomain', $subdomain)
+                      ->where('base_domain', $baseDomain);
+            })
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Acest subdomeniu este deja folosit'
+            ]);
+        }
+
+        return response()->json([
+            'available' => true,
+            'message' => 'Subdomeniu disponibil',
+            'full_domain' => $fullDomain
         ]);
     }
 

@@ -474,7 +474,64 @@
                         <p class="text-gray-600 mb-6">Adaugă domeniile pe care vei vinde bilete</p>
 
                         <form @submit.prevent="submitStep3()">
-                            <div class="mb-6">
+                            <!-- No Website Option -->
+                            <div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                <label class="flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        x-model="formData.no_website"
+                                        @change="if(formData.no_website) { formData.domains = []; formData.subdomain = ''; subdomainError = ''; subdomainAvailable = false; } else { formData.domains = ['']; formData.subdomain = ''; }"
+                                        class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    >
+                                    <span class="ml-3 text-sm font-medium text-gray-900">
+                                        Nu am un website propriu - vreau un subdomeniu pe ticks.ro
+                                    </span>
+                                </label>
+                                <p class="text-xs text-gray-600 mt-2 ml-6">
+                                    Vei primi un subdomeniu gratuit care va fi activat automat (ex: teatrul-tau.ticks.ro)
+                                </p>
+                            </div>
+
+                            <!-- Subdomain Input (shown when no_website is checked) -->
+                            <div class="mb-6" x-show="formData.no_website" x-cloak>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Alege subdomeniul tău *</label>
+                                <div class="flex items-center">
+                                    <input
+                                        type="text"
+                                        x-model="formData.subdomain"
+                                        @input.debounce.500ms="checkSubdomainAvailability()"
+                                        class="flex-1 px-4 py-2 border rounded-l-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        :class="subdomainError ? 'border-red-500' : (subdomainAvailable ? 'border-green-500' : 'border-gray-300')"
+                                        placeholder="numele-tau"
+                                        :required="formData.no_website"
+                                    >
+                                    <span class="px-4 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg text-gray-600 font-medium">
+                                        .ticks.ro
+                                    </span>
+                                    <div class="ml-3">
+                                        <svg x-show="subdomainChecking" class="animate-spin h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <svg x-show="subdomainAvailable && !subdomainChecking && !subdomainError" class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <svg x-show="subdomainError && !subdomainChecking" class="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Doar litere mici, cifre și cratime. Minim 3 caractere.
+                                </p>
+                                <span x-show="subdomainError" class="text-red-500 text-sm" x-text="subdomainError"></span>
+                                <span x-show="subdomainAvailable && !subdomainError && formData.subdomain.length >= 3" class="text-green-500 text-sm">
+                                    ✓ Subdomeniul este disponibil
+                                </span>
+                            </div>
+
+                            <!-- Domain URLs (hidden when no_website is checked) -->
+                            <div class="mb-6" x-show="!formData.no_website">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Domenii Website *</label>
                                 <div class="space-y-3">
                                     <template x-for="(domain, index) in formData.domains" :key="index">
@@ -487,7 +544,7 @@
                                                     class="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                     :class="domainErrors[index] ? 'border-red-500' : 'border-gray-300'"
                                                     placeholder="https://example.com"
-                                                    required
+                                                    :required="!formData.no_website"
                                                 >
                                                 <button
                                                     type="button"
@@ -698,6 +755,9 @@
                 emailChecking: false,
                 emailStatus: '', // 'available', 'taken', ''
                 domainErrors: {},
+                subdomainError: '',
+                subdomainAvailable: false,
+                subdomainChecking: false,
                 // Modal state
                 showModal: false,
                 modalTitle: '',
@@ -728,6 +788,8 @@
                     payment_processor: 'stripe',
                     // Step 3
                     domains: [''],
+                    no_website: false,
+                    subdomain: '',
                     estimated_monthly_tickets: '',
                     // Step 4
                     work_method: 'mixed',
@@ -875,6 +937,26 @@
                 async submitStep3() {
                     this.loading = true;
                     this.errors = {};
+
+                    // Validate based on mode
+                    if (this.formData.no_website) {
+                        if (!this.formData.subdomain || this.formData.subdomain.length < 3) {
+                            this.openModal('Eroare', 'Te rugăm să alegi un subdomeniu valid (minim 3 caractere)', 'error');
+                            this.loading = false;
+                            return;
+                        }
+                        if (!this.subdomainAvailable) {
+                            this.openModal('Eroare', 'Subdomeniul nu este disponibil. Te rugăm să alegi altul.', 'error');
+                            this.loading = false;
+                            return;
+                        }
+                    } else {
+                        if (!this.formData.domains.length || !this.formData.domains[0]) {
+                            this.openModal('Eroare', 'Te rugăm să adaugi cel puțin un domeniu', 'error');
+                            this.loading = false;
+                            return;
+                        }
+                    }
 
                     try {
                         const response = await fetch('{{ route("onboarding.step3") }}', {
@@ -1105,6 +1187,61 @@
                     } catch (error) {
                         console.error('Error checking domain:', error);
                         this.domainErrors[index] = '';
+                    }
+                },
+
+                async checkSubdomainAvailability() {
+                    const subdomain = this.formData.subdomain.toLowerCase().trim();
+
+                    // Reset state
+                    this.subdomainError = '';
+                    this.subdomainAvailable = false;
+
+                    // Validate format locally first
+                    if (subdomain.length < 3) {
+                        this.subdomainError = 'Subdomeniul trebuie să aibă minim 3 caractere';
+                        return;
+                    }
+
+                    if (subdomain.length > 63) {
+                        this.subdomainError = 'Subdomeniul nu poate avea mai mult de 63 de caractere';
+                        return;
+                    }
+
+                    if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(subdomain)) {
+                        this.subdomainError = 'Subdomeniul poate conține doar litere mici, cifre și cratime (nu poate începe sau termina cu cratimă)';
+                        return;
+                    }
+
+                    // Reserved subdomains
+                    const reserved = ['www', 'mail', 'ftp', 'admin', 'api', 'app', 'cdn', 'static', 'assets', 'test', 'demo', 'staging', 'dev', 'core', 'panel', 'dashboard', 'login', 'register', 'auth', 'oauth', 'shop', 'store', 'help', 'support', 'docs', 'status', 'blog', 'news'];
+                    if (reserved.includes(subdomain)) {
+                        this.subdomainError = 'Acest subdomeniu este rezervat';
+                        return;
+                    }
+
+                    this.subdomainChecking = true;
+
+                    try {
+                        const response = await fetch('{{ route("onboarding.check-subdomain") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ subdomain: subdomain })
+                        });
+
+                        const data = await response.json();
+                        this.subdomainAvailable = data.available;
+                        if (!data.available) {
+                            this.subdomainError = data.message || 'Subdomeniul nu este disponibil';
+                        }
+                    } catch (error) {
+                        console.error('Error checking subdomain:', error);
+                        this.subdomainError = 'Eroare la verificare. Încearcă din nou.';
+                    } finally {
+                        this.subdomainChecking = false;
                     }
                 },
 

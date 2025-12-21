@@ -15,6 +15,10 @@ class Domain extends Model
         'is_active',
         'is_suspended',
         'is_primary',
+        'is_managed_subdomain',
+        'subdomain',
+        'base_domain',
+        'cloudflare_record_id',
         'activated_at',
         'suspended_at',
         'notes',
@@ -24,6 +28,7 @@ class Domain extends Model
         'is_active' => 'boolean',
         'is_suspended' => 'boolean',
         'is_primary' => 'boolean',
+        'is_managed_subdomain' => 'boolean',
         'activated_at' => 'datetime',
         'suspended_at' => 'datetime',
     ];
@@ -77,5 +82,33 @@ class Domain extends Model
     public function scopePrimary($query)
     {
         return $query->where('is_primary', true);
+    }
+
+    /**
+     * Scope pentru subdomenii gestionate
+     */
+    public function scopeManagedSubdomains($query)
+    {
+        return $query->where('is_managed_subdomain', true);
+    }
+
+    /**
+     * Check if this is a managed subdomain
+     */
+    public function isManagedSubdomain(): bool
+    {
+        return $this->is_managed_subdomain === true;
+    }
+
+    /**
+     * Get the full domain name
+     */
+    public function getFullDomain(): string
+    {
+        if ($this->is_managed_subdomain && $this->subdomain && $this->base_domain) {
+            return "{$this->subdomain}.{$this->base_domain}";
+        }
+
+        return $this->domain;
     }
 }

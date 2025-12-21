@@ -93,4 +93,20 @@ return [
         'api_url' => env('TENANT_CLIENT_API_URL', env('APP_URL', 'http://localhost')),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Cloudflare DNS Management
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for Cloudflare DNS API to manage tenant subdomains.
+    | Used for tenants who choose "I don't have a website" option
+    | to get a subdomain on your managed base domain.
+    |
+    */
+    'cloudflare' => [
+        'api_token' => env('CLOUDFLARE_API_TOKEN'),
+        'zone_id' => env('CLOUDFLARE_ZONE_ID'),
+        'base_domain' => env('CLOUDFLARE_BASE_DOMAIN', 'ticks.ro'),
+    ],
+
 ];
