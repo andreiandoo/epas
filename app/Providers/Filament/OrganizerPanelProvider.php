@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\VerifyOrganizerStatus;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -57,6 +58,7 @@ class OrganizerPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
+                VerifyOrganizerStatus::class,
             ])
 
             // Custom brand

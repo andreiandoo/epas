@@ -18,10 +18,22 @@ class CommissionService
      * Calculate and store commission breakdown for an order.
      *
      * @param Order $order The order to calculate commission for
+     * @param bool $force Force recalculation even if already calculated
      * @return array The commission breakdown
      */
-    public function calculateForOrder(Order $order): array
+    public function calculateForOrder(Order $order, bool $force = false): array
     {
+        // Idempotency check - skip if already calculated (unless forced)
+        if (!$force && $order->tixello_commission !== null) {
+            return [
+                'order_total' => $order->total,
+                'tixello_commission' => (float) $order->tixello_commission,
+                'marketplace_commission' => (float) $order->marketplace_commission,
+                'organizer_revenue' => (float) $order->organizer_revenue,
+                'already_calculated' => true,
+            ];
+        }
+
         $tenant = $order->tenant;
         $organizer = $order->organizer;
 

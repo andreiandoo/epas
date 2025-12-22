@@ -148,7 +148,7 @@ class PayoutResource extends Resource
 
                 Infolists\Components\Section::make('Payment Details')
                     ->schema([
-                        Infolists\Components\TextEntry::make('payout_method')
+                        Infolists\Components\TextEntry::make('method')
                             ->label('Payment Method')
                             ->formatStateUsing(fn ($state) => match ($state) {
                                 'bank_transfer' => 'Bank Transfer',
@@ -156,8 +156,8 @@ class PayoutResource extends Resource
                                 'stripe_connect' => 'Stripe Connect',
                                 default => ucfirst($state ?? 'N/A'),
                             }),
-                        Infolists\Components\TextEntry::make('transaction_reference')
-                            ->label('Transaction Reference')
+                        Infolists\Components\TextEntry::make('bank_reference')
+                            ->label('Bank Reference')
                             ->placeholder('Not yet processed'),
                         Infolists\Components\TextEntry::make('processed_at')
                             ->label('Processed Date')
