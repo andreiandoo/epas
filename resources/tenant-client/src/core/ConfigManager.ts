@@ -556,6 +556,7 @@ export class ConfigManager {
 
             /* Hover utilities */
             .hover\\:text-primary:hover { color: var(--tixello-primary) !important; }
+            .hover\\:text-white:hover { color: white !important; }
             .hover\\:bg-primary:hover { background-color: var(--tixello-primary) !important; }
             .hover\\:bg-primary-dark:hover { background-color: var(--tixello-primary-dark) !important; }
 

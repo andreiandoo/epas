@@ -1394,11 +1394,11 @@ export class Router {
                                         ? artist.youtube_videos[0] : null;
 
                                     return `
-                                    <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-sm">
-                                        <div class="p-6">
+                                    <div class="rounded-2xl overflow-hidden shadow-sm">
+                                        <div class="">
                                             <!-- Header: Image, Name, Types/Genres -->
                                             <div class="flex flex-col md:flex-row gap-6">
-                                                <a href="https://core.tixello.com/artist/${artist.slug}?locale=en" target="_blank" class="flex-shrink-0 group">
+                                                <a href="https://tixello.com/artist/${artist.slug}" target="_blank" class="flex-shrink-0 group">
                                                     ${artist.image || artist.portrait
                                                         ? `<img src="${artist.portrait || artist.image}" alt="${artist.name}" class="w-32 h-32 md:w-40 md:h-40 rounded-xl object-cover shadow-md group-hover:shadow-lg transition">`
                                                         : `<div class="w-32 h-32 md:w-40 md:h-40 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
@@ -1407,7 +1407,7 @@ export class Router {
                                                     }
                                                 </a>
                                                 <div class="flex-1">
-                                                    <a href="https://core.tixello.com/artist/${artist.slug}?locale=en" target="_blank" class="hover:text-primary transition">
+                                                    <a href="https://tixello.com/artist/${artist.slug}" target="_blank" class="hover:text-primary transition">
                                                         <h3 class="text-2xl font-bold text-gray-900 mb-2">${artist.name}</h3>
                                                     </a>
                                                     ${artist.city || artist.country ? `
@@ -1503,14 +1503,13 @@ export class Router {
                                             ${artist.bio ? `
                                             <!-- Bio -->
                                             <div class="mt-6 pt-6 border-t border-gray-200">
-                                                <div class="prose prose-sm max-w-none text-gray-600">${artist.bio}</div>
+                                                <div class="prose prose-sm max-w-none text-gray-600 px-6">${artist.bio}</div>
                                             </div>
                                             ` : ''}
 
                                             ${latestVideo && latestVideo.video_id ? `
                                             <!-- YouTube Video Embed -->
                                             <div class="mt-6 pt-6 border-t border-gray-200">
-                                                <h4 class="text-lg font-semibold text-gray-900 mb-4">Ultimul videoclip</h4>
                                                 <div class="relative pb-[56.25%] h-0 rounded-xl overflow-hidden shadow-lg">
                                                     <iframe
                                                         class="absolute top-0 left-0 w-full h-full"
@@ -1621,7 +1620,7 @@ export class Router {
                     ${!isPastEvent ? `
                     <!-- Desktop tickets sidebar - hidden on mobile -->
                     <div class="lg:col-span-1 hidden lg:block" id="desktop-tickets-sidebar">
-                        <div class="bg-white rounded-lg shadow-lg p-4 sticky top-24">
+                        <div class="sticky top-18">
 
                             ${event.is_sold_out || event.door_sales_only || event.is_cancelled ? `
                                 <div class="mb-4 p-4 rounded ${event.is_cancelled ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}">
@@ -1640,7 +1639,7 @@ export class Router {
                                         const commissionInfo = event.commission;
                                         const hasCommissionOnTop = commissionInfo?.is_added_on_top && ticket.commission_amount > 0;
                                         return `
-                                        <div class="border border-gray-200 rounded-lg p-4 ${ticket.status !== 'active' ? 'opacity-50' : ''}">
+                                        <div class="bg-white border border-gray-200 rounded-lg p-4 ${ticket.status !== 'active' ? 'opacity-50' : ''}">
                                             ${ticket.bulk_discounts && ticket.bulk_discounts.length > 0 ? `
                                             <div class="mb-2 space-y-1">
                                                 ${ticket.bulk_discounts.map((discount: any) => {
@@ -1727,30 +1726,32 @@ export class Router {
                                     `}).join('')}
                                 </div>
 
-                                <div class="border-t pt-4 mb-4">
-                                    <div class="flex justify-between items-center text-lg font-bold">
-                                        <span>Total</span>
-                                        <span id="cart-total-price">0 ${event.currency || 'RON'}</span>
+                                <div class="bg-white p-4">
+                                    <div class="border-t pt-4 mb-4">
+                                        <div class="flex justify-between items-center text-lg font-bold">
+                                            <span>Total</span>
+                                            <span id="cart-total-price">0 ${event.currency || 'RON'}</span>
+                                        </div>
+                                        ${this.isGamificationEnabled() ? `
+                                        <div id="total-points-container" class="hidden flex justify-center mt-2">
+                                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 text-sm font-medium rounded-full">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/></svg>
+                                                Vei câștiga <strong id="total-points-value">0</strong> puncte
+                                            </span>
+                                        </div>
+                                        ` : ''}
                                     </div>
-                                    ${this.isGamificationEnabled() ? `
-                                    <div id="total-points-container" class="hidden flex justify-center mt-2">
-                                        <span class="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 text-sm font-medium rounded-full">
-                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/></svg>
-                                            Vei câștiga <strong id="total-points-value">0</strong> puncte
-                                        </span>
-                                    </div>
-                                    ` : ''}
-                                </div>
 
-                                <button id="add-to-cart-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
-                                    Adaugă în coș
-                                </button>
-                                <button id="watchlist-btn" class="w-full mt-3 py-3 border-2 border-primary text-primary font-semibold rounded-lg hover:bg-primary hover:text-white transition flex items-center justify-center gap-2" data-event-id="${event.id}">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-                                    </svg>
-                                    <span id="watchlist-btn-text">Adaugă la favorite</span>
-                                </button>
+                                    <button id="add-to-cart-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                                        Adaugă în coș
+                                    </button>
+                                    <button id="watchlist-btn" class="w-full mt-3 py-3 border-2 border-primary text-primary font-semibold rounded-lg hover:bg-primary hover:text-white transition flex items-center justify-center gap-2" data-event-id="${event.id}">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                        </svg>
+                                        <span id="watchlist-btn-text">Adaugă la favorite</span>
+                                    </button>
+                                </div>
                             ` : `
                                 <p class="text-gray-500 text-center py-4">Nu sunt bilete disponibile pentru achiziție online.</p>
                             `}
