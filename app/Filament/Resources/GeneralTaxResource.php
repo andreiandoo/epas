@@ -23,7 +23,6 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Validation\Rules\Unique;
 
 class GeneralTaxResource extends Resource
 {
@@ -47,18 +46,12 @@ class GeneralTaxResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
         return parent::getEloquentQuery()
-            ->where('tenant_id', $tenant?->id)
             ->withoutGlobalScopes([SoftDeletingScope::class]);
     }
 
     public static function form(Schema $schema): Schema
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
-        $tenantCurrency = $tenant->currency ?? 'EUR';
-
         $currencies = [
             'EUR' => 'EUR - Euro',
             'USD' => 'USD - US Dollar',
@@ -75,34 +68,20 @@ class GeneralTaxResource extends Resource
 
         return $schema
             ->schema([
-                Forms\Components\Hidden::make('tenant_id')
-                    ->default($tenant?->id),
-
                 SC\Section::make('Tax Details')
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->label('Tax Name')
                             ->required()
                             ->maxLength(190)
-                            ->placeholder('e.g., VAT, Sales Tax, Service Fee')
-                            ->unique(
-                                table: 'general_taxes',
-                                column: 'name',
-                                ignoreRecord: true,
-                                modifyRuleUsing: fn (Unique $rule) => $rule
-                                    ->where('tenant_id', $tenant?->id)
-                                    ->where('event_type_id', request()->input('event_type_id'))
-                            )
-                            ->validationMessages([
-                                'unique' => 'A tax with this name already exists for the selected event type.',
-                            ]),
+                            ->placeholder('e.g., VAT, Sales Tax, Service Fee'),
 
                         Forms\Components\Select::make('event_type_id')
                             ->label('Event Type')
-                            ->options(function () use ($tenantLanguage) {
+                            ->options(function () {
                                 return EventType::all()
                                     ->mapWithKeys(fn ($type) => [
-                                        $type->id => $type->name[$tenantLanguage] ?? $type->name['en'] ?? $type->slug
+                                        $type->id => $type->name['en'] ?? $type->slug
                                     ]);
                             })
                             ->searchable()
@@ -132,7 +111,7 @@ class GeneralTaxResource extends Resource
                                 Forms\Components\Select::make('currency')
                                     ->label('Currency')
                                     ->options($currencies)
-                                    ->default($tenantCurrency)
+                                    ->default('EUR')
                                     ->searchable()
                                     ->visible(fn (Get $get) => $get('value_type') === 'fixed')
                                     ->required(fn (Get $get) => $get('value_type') === 'fixed')
@@ -194,9 +173,6 @@ class GeneralTaxResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
-
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
@@ -206,9 +182,9 @@ class GeneralTaxResource extends Resource
 
                 Tables\Columns\TextColumn::make('eventType.name')
                     ->label('Event Type')
-                    ->formatStateUsing(function ($state) use ($tenantLanguage) {
+                    ->formatStateUsing(function ($state) {
                         if (is_array($state)) {
-                            return $state[$tenantLanguage] ?? $state['en'] ?? '-';
+                            return $state['en'] ?? '-';
                         }
                         return $state ?? 'All Types';
                     })
@@ -301,10 +277,10 @@ class GeneralTaxResource extends Resource
                     ]),
                 Tables\Filters\SelectFilter::make('event_type_id')
                     ->label('Event Type')
-                    ->options(function () use ($tenantLanguage) {
+                    ->options(function () {
                         return EventType::all()
                             ->mapWithKeys(fn ($type) => [
-                                $type->id => $type->name[$tenantLanguage] ?? $type->name['en'] ?? $type->slug
+                                $type->id => $type->name['en'] ?? $type->slug
                             ]);
                     }),
                 Tables\Filters\Filter::make('validity')

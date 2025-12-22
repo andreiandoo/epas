@@ -8,10 +8,4 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateGeneralTax extends CreateRecord
 {
     protected static string $resource = GeneralTaxResource::class;
-
-    protected function mutateFormDataBeforeCreate(array $data): array
-    {
-        $data['tenant_id'] = auth()->user()->tenant?->id;
-        return $data;
-    }
 }

@@ -47,9 +47,7 @@ class LocalTaxResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
         return parent::getEloquentQuery()
-            ->where('tenant_id', $tenant?->id)
             ->withoutGlobalScopes([SoftDeletingScope::class]);
     }
 
@@ -114,14 +112,8 @@ class LocalTaxResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
-
         return $schema
             ->schema([
-                Forms\Components\Hidden::make('tenant_id')
-                    ->default($tenant?->id),
-
                 SC\Section::make('Location')
                     ->description('Define the geographic area where this tax applies')
                     ->schema([
@@ -154,60 +146,8 @@ class LocalTaxResource extends Resource
                         Forms\Components\TextInput::make('city')
                             ->label('City')
                             ->maxLength(100)
-                            ->live(debounce: 500)
                             ->placeholder('Enter city name (optional)')
-                            ->helperText('Enter a city name or leave empty to apply to entire county/country')
-                            ->datalist(function (Get $get) use ($tenant) {
-                                $country = $get('country');
-                                $county = $get('county');
-                                if (!$country) {
-                                    return [];
-                                }
-                                return LocalTax::getCitiesForLocation($tenant?->id, $country, $county);
-                            }),
-
-                        Forms\Components\Placeholder::make('duplicate_warning')
-                            ->label('')
-                            ->content(function (Get $get, $record) use ($tenant) {
-                                $country = $get('country');
-                                $county = $get('county');
-                                $city = $get('city');
-
-                                if (!$country) {
-                                    return null;
-                                }
-
-                                $query = LocalTax::forTenant($tenant?->id)
-                                    ->where('country', $country)
-                                    ->where('county', $county ?: null)
-                                    ->where('city', $city ?: null);
-
-                                // Exclude current record if editing
-                                if ($record) {
-                                    $query->where('id', '!=', $record->id);
-                                }
-
-                                $existing = $query->first();
-
-                                if ($existing) {
-                                    $location = collect([$city, $county, $country])
-                                        ->filter()
-                                        ->implode(', ');
-                                    $status = $existing->is_active ? 'active' : 'inactive';
-                                    return new \Illuminate\Support\HtmlString(
-                                        '<div class="flex items-center gap-2 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200">' .
-                                        '<svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">' .
-                                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>' .
-                                        '</svg>' .
-                                        '<span>A tax already exists for <strong>' . $location . '</strong> (' . $status . ', ' . $existing->getFormattedValue() . '). Creating this will result in multiple taxes for the same location.</span>' .
-                                        '</div>'
-                                    );
-                                }
-
-                                return null;
-                            })
-                            ->columnSpanFull()
-                            ->visible(fn (Get $get) => !empty($get('country'))),
+                            ->helperText('Enter a city name or leave empty to apply to entire county/country'),
                     ])->columns(3),
 
                 SC\Section::make('Tax Details')
@@ -251,10 +191,10 @@ class LocalTaxResource extends Resource
                         Forms\Components\Select::make('event_types')
                             ->label('Event Types')
                             ->relationship('eventTypes', 'name')
-                            ->options(function () use ($tenantLanguage) {
+                            ->options(function () {
                                 return EventType::all()
                                     ->mapWithKeys(fn ($type) => [
-                                        $type->id => $type->name[$tenantLanguage] ?? $type->name['en'] ?? $type->slug
+                                        $type->id => $type->name['en'] ?? $type->slug
                                     ]);
                             })
                             ->multiple()
@@ -305,9 +245,6 @@ class LocalTaxResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
-
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('country')
@@ -341,14 +278,14 @@ class LocalTaxResource extends Resource
 
                 Tables\Columns\TextColumn::make('eventTypes.name')
                     ->label('Event Types')
-                    ->formatStateUsing(function ($state, $record) use ($tenantLanguage) {
+                    ->formatStateUsing(function ($state, $record) {
                         $types = $record->eventTypes;
                         if ($types->isEmpty()) {
                             return 'All Types';
                         }
-                        return $types->map(function ($type) use ($tenantLanguage) {
+                        return $types->map(function ($type) {
                             $name = $type->name;
-                            return is_array($name) ? ($name[$tenantLanguage] ?? $name['en'] ?? 'Unknown') : $name;
+                            return is_array($name) ? ($name['en'] ?? 'Unknown') : $name;
                         })->join(', ');
                     })
                     ->wrap()
@@ -412,10 +349,10 @@ class LocalTaxResource extends Resource
                 Tables\Filters\SelectFilter::make('event_type')
                     ->label('Event Type')
                     ->relationship('eventTypes', 'name')
-                    ->options(function () use ($tenantLanguage) {
+                    ->options(function () {
                         return EventType::all()
                             ->mapWithKeys(fn ($type) => [
-                                $type->id => $type->name[$tenantLanguage] ?? $type->name['en'] ?? $type->slug
+                                $type->id => $type->name['en'] ?? $type->slug
                             ]);
                     }),
                 Tables\Filters\Filter::make('validity')

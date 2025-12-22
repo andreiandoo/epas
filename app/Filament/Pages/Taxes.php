@@ -4,10 +4,8 @@ namespace App\Filament\Pages;
 
 use App\Models\Tax\GeneralTax;
 use App\Models\Tax\LocalTax;
-use App\Services\Tax\TaxService;
 use Filament\Pages\Page;
 use Filament\Actions\Action;
-use Filament\Notifications\Notification;
 use BackedEnum;
 
 class Taxes extends Page
@@ -31,14 +29,21 @@ class Taxes extends Page
 
     public function mount(): void
     {
-        $tenant = auth()->user()->tenant;
-        if (!$tenant) {
-            return;
-        }
-
-        $taxService = app(TaxService::class);
-        $this->summary = $taxService->getTaxSummary($tenant->id);
-        $this->issues = $taxService->validateTaxConfiguration($tenant->id);
+        // Core admin - show global tax summary
+        $this->summary = [
+            'total_active' => GeneralTax::active()->count() + LocalTax::active()->count(),
+            'general' => [
+                'active' => GeneralTax::active()->count(),
+                'inactive' => GeneralTax::where('is_active', false)->count(),
+                'total' => GeneralTax::count(),
+            ],
+            'local' => [
+                'active' => LocalTax::active()->count(),
+                'inactive' => LocalTax::where('is_active', false)->count(),
+                'total' => LocalTax::count(),
+            ],
+        ];
+        $this->issues = [];
     }
 
     protected function getHeaderActions(): array
@@ -60,17 +65,12 @@ class Taxes extends Page
 
     public function getViewData(): array
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
-
-        $recentGeneralTaxes = GeneralTax::forTenant($tenant->id)
-            ->with('eventType')
+        $recentGeneralTaxes = GeneralTax::with('eventType')
             ->latest()
             ->limit(5)
             ->get();
 
-        $recentLocalTaxes = LocalTax::forTenant($tenant->id)
-            ->with('eventTypes')
+        $recentLocalTaxes = LocalTax::with('eventTypes')
             ->latest()
             ->limit(5)
             ->get();
@@ -80,19 +80,13 @@ class Taxes extends Page
             'issues' => $this->issues,
             'recentGeneralTaxes' => $recentGeneralTaxes,
             'recentLocalTaxes' => $recentLocalTaxes,
-            'tenantLanguage' => $tenantLanguage,
+            'tenantLanguage' => 'en',
         ];
     }
 
     public static function getNavigationBadge(): ?string
     {
-        $tenant = auth()->user()?->tenant;
-        if (!$tenant) {
-            return null;
-        }
-
-        $count = GeneralTax::forTenant($tenant->id)->active()->count()
-               + LocalTax::forTenant($tenant->id)->active()->count();
+        $count = GeneralTax::active()->count() + LocalTax::active()->count();
 
         return $count > 0 ? (string) $count : null;
     }
