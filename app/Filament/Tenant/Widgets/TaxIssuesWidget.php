@@ -7,7 +7,7 @@ use Filament\Widgets\Widget;
 
 class TaxIssuesWidget extends Widget
 {
-    protected static string $view = 'filament.tenant.widgets.tax-issues-widget';
+    protected string $view = 'filament.tenant.widgets.tax-issues-widget';
 
     protected static ?int $sort = 2;
 
