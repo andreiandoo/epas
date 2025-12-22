@@ -7,6 +7,7 @@
         $upcomingDeadlines = $this->getViewData()['upcomingDeadlines'] ?? [];
         $overduePayments = $this->getViewData()['overduePayments'] ?? [];
         $taxSummary = $this->getViewData()['taxSummary'] ?? [];
+        $eventOptions = $this->getViewData()['eventOptions'] ?? [];
     @endphp
 
     @if(!$report)
@@ -73,6 +74,15 @@
 
             {{-- Filters --}}
             <div class="flex flex-wrap gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center gap-2">
+                    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Eveniment:</label>
+                    <select wire:model.live="filterEvent" class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg focus:ring-emerald-500 focus:border-emerald-500 max-w-xs">
+                        <option value="all">Toate evenimentele</option>
+                        @foreach($eventOptions as $id => $name)
+                            <option value="{{ $id }}">{{ $name }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="flex items-center gap-2">
                     <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Status:</label>
                     <select wire:model.live="filterStatus" class="text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg focus:ring-emerald-500 focus:border-emerald-500">

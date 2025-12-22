@@ -2773,6 +2773,9 @@ export class Router {
 
                             ${this.isGamificationEnabled() ? this.renderPointsSection(grandTotal, currency) : ''}
 
+                            <!-- Taxes (including VAT for VAT payer tenants) -->
+                            <div id="cart-taxes-section" class="mb-4 pb-4 border-b hidden"></div>
+
                             <div class="flex justify-between items-center mb-6">
                                 <span class="text-lg font-semibold">Total</span>
                                 <span class="text-2xl font-bold text-primary" id="cart-total-amount">${grandTotal.toFixed(2)} ${currency}</span>
@@ -2800,6 +2803,69 @@ export class Router {
         // Load upsells from events in cart
         if (this.isShopEnabled() && ticketCart.length > 0) {
             this.loadCartUpsells(ticketCart, shopCart, ticketTotals.currency);
+        }
+
+        // Load taxes (including VAT for VAT payer tenants)
+        this.loadCartTaxes(grandTotal, currency);
+    }
+
+    private async loadCartTaxes(amount: number, currency: string): Promise<void> {
+        const container = document.getElementById('cart-taxes-section');
+        if (!container) return;
+
+        try {
+            const response = await this.fetchApi(`/taxes/checkout?amount=${amount}&currency=${currency}`);
+            if (response.success && response.data) {
+                const { taxes, is_vat_payer, vat_amount, vat_rate } = response.data;
+
+                // Only show section if tenant is VAT payer or there are visible taxes
+                if ((is_vat_payer && vat_amount > 0) || taxes?.length > 0) {
+                    container.classList.remove('hidden');
+
+                    let taxHtml = '<div class="space-y-2">';
+
+                    // Show VAT info prominently for VAT payer tenants
+                    if (is_vat_payer && vat_amount > 0) {
+                        taxHtml += `
+                            <div class="flex justify-between text-gray-600">
+                                <span class="flex items-center gap-1">
+                                    TVA (${vat_rate}%)
+                                    <span class="cursor-help text-gray-400" title="Taxa pe valoarea adaugata inclusa in pret">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </span>
+                                </span>
+                                <span>${vat_amount.toFixed(2)} ${currency}</span>
+                            </div>
+                        `;
+                    }
+
+                    // Show other taxes (non-VAT)
+                    taxes?.filter((tax: any) => !tax.is_vat).forEach((tax: any) => {
+                        taxHtml += `
+                            <div class="flex justify-between text-gray-600">
+                                <span class="flex items-center gap-1">
+                                    ${tax.name}
+                                    ${tax.explanation ? `
+                                    <span class="cursor-help text-gray-400" title="${tax.explanation}">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </span>
+                                    ` : ''}
+                                </span>
+                                <span>${tax.is_added_to_price ? '+' : ''}${tax.tax_amount.toFixed(2)} ${currency}</span>
+                            </div>
+                        `;
+                    });
+
+                    taxHtml += '</div>';
+                    container.innerHTML = taxHtml;
+                }
+            }
+        } catch (e) {
+            console.log('Could not load cart taxes:', e);
         }
     }
 
@@ -4404,23 +4470,51 @@ export class Router {
 
         try {
             const response = await this.fetchApi(`/taxes/checkout?amount=${amount}&currency=${currency}`);
-            if (response.success && response.data?.taxes?.length > 0) {
-                const taxes = response.data.taxes;
-                container.innerHTML = taxes.map((tax: any) => `
-                    <div class="flex justify-between text-gray-600 group relative">
-                        <span class="flex items-center gap-1">
-                            ${tax.name}
-                            ${tax.explanation ? `
-                            <span class="cursor-help text-gray-400" title="${tax.explanation}">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                            </span>
-                            ` : ''}
-                        </span>
-                        <span>${tax.is_added_to_price ? '+' : ''}${tax.tax_amount.toFixed(2)} ${currency}</span>
-                    </div>
-                `).join('');
+            if (response.success && response.data) {
+                const { taxes, is_vat_payer, vat_amount, vat_rate } = response.data;
+
+                // Only show if there are taxes to display
+                if ((is_vat_payer && vat_amount > 0) || taxes?.length > 0) {
+                    let taxHtml = '';
+
+                    // Show VAT prominently for VAT payer tenants
+                    if (is_vat_payer && vat_amount > 0) {
+                        taxHtml += `
+                            <div class="flex justify-between text-gray-600">
+                                <span class="flex items-center gap-1">
+                                    TVA (${vat_rate}%)
+                                    <span class="cursor-help text-gray-400" title="Taxa pe valoarea adaugata inclusa in pret">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </span>
+                                </span>
+                                <span>${vat_amount.toFixed(2)} ${currency}</span>
+                            </div>
+                        `;
+                    }
+
+                    // Show other taxes (non-VAT)
+                    taxes?.filter((tax: any) => !tax.is_vat).forEach((tax: any) => {
+                        taxHtml += `
+                            <div class="flex justify-between text-gray-600">
+                                <span class="flex items-center gap-1">
+                                    ${tax.name}
+                                    ${tax.explanation ? `
+                                    <span class="cursor-help text-gray-400" title="${tax.explanation}">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </span>
+                                    ` : ''}
+                                </span>
+                                <span>${tax.is_added_to_price ? '+' : ''}${tax.tax_amount.toFixed(2)} ${currency}</span>
+                            </div>
+                        `;
+                    });
+
+                    container.innerHTML = taxHtml;
+                }
             }
         } catch (e) {
             console.log('Could not load checkout taxes:', e);

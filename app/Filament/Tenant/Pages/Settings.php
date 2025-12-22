@@ -40,6 +40,7 @@ class Settings extends Page
                 'company_name' => $tenant->company_name,
                 'cui' => $tenant->cui,
                 'reg_com' => $tenant->reg_com,
+                'vat_payer' => (bool) $tenant->vat_payer,
                 'address' => $tenant->address,
                 'city' => $tenant->city,
                 'state' => $tenant->state,
@@ -124,6 +125,12 @@ class Settings extends Page
                                             ->disabled()
                                             ->dehydrated(true)
                                             ->maxLength(50),
+
+                                        Forms\Components\Toggle::make('vat_payer')
+                                            ->label('Platitor TVA')
+                                            ->helperText('Bifati daca sunteti inregistrat ca platitor de TVA. Aceasta afecteaza calculul taxelor si afisarea TVA-ului in checkout.')
+                                            ->onColor('success')
+                                            ->offColor('gray'),
 
                                         Forms\Components\TextInput::make('bank_name')
                                             ->maxLength(255),
@@ -468,6 +475,7 @@ class Settings extends Page
             'company_name' => $data['company_name'],
             'cui' => $data['cui'],
             'reg_com' => $data['reg_com'],
+            'vat_payer' => (bool) ($data['vat_payer'] ?? false),
             'address' => $data['address'],
             'city' => $data['city'],
             'state' => $data['state'],

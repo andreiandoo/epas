@@ -4,6 +4,7 @@ namespace App\Filament\Tenant\Pages;
 
 use BackedEnum;
 use Filament\Pages\Page;
+use App\Models\Event;
 use App\Services\Tax\TaxReportService;
 
 class TaxReports extends Page
@@ -16,6 +17,7 @@ class TaxReports extends Page
 
     public string $filterStatus = 'all';
     public string $filterPeriod = 'all';
+    public string $filterEvent = 'all';
 
     public function getTitle(): string
     {
@@ -32,14 +34,32 @@ class TaxReports extends Page
                 'upcomingDeadlines' => [],
                 'overduePayments' => [],
                 'taxSummary' => [],
+                'eventOptions' => [],
             ];
         }
 
         $service = app(TaxReportService::class);
         $report = $service->getEventsTaxReport($tenant);
 
+        // Get event options for selector
+        $eventOptions = Event::where('tenant_id', $tenant->id)
+            ->orderByDesc('event_date')
+            ->orderByDesc('range_start_date')
+            ->get()
+            ->mapWithKeys(function ($event) {
+                $title = $event->getTranslation('title', 'ro') ?: $event->getTranslation('title', 'en') ?: 'Event #' . $event->id;
+                $date = $event->start_date?->format('d M Y') ?? '';
+                return [$event->id => $title . ($date ? " ({$date})" : '')];
+            })
+            ->toArray();
+
         // Apply filters
         $events = collect($report['events']);
+
+        // Filter by event
+        if ($this->filterEvent !== 'all') {
+            $events = $events->filter(fn($e) => (string) $e['event']['id'] === $this->filterEvent);
+        }
 
         // Filter by status
         if ($this->filterStatus !== 'all') {
@@ -78,6 +98,7 @@ class TaxReports extends Page
             'upcomingDeadlines' => $service->getUpcomingDeadlines($tenant, 30),
             'overduePayments' => $service->getOverduePayments($tenant),
             'taxSummary' => $service->getTaxSummaryByType($tenant),
+            'eventOptions' => $eventOptions,
         ];
     }
 
@@ -87,6 +108,11 @@ class TaxReports extends Page
     }
 
     public function updatedFilterPeriod(): void
+    {
+        // Livewire will automatically re-render
+    }
+
+    public function updatedFilterEvent(): void
     {
         // Livewire will automatically re-render
     }

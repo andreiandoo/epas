@@ -297,10 +297,12 @@ class TaxController extends Controller
     }
 
     /**
-     * Get taxes visible on checkout (global taxes without tenant_id)
+     * Get taxes visible on checkout (including VAT for VAT payer tenants)
      */
     public function getCheckoutTaxes(Request $request): JsonResponse
     {
+        $tenant = $this->resolveTenant($request);
+
         $validator = Validator::make($request->all(), [
             'amount' => 'required|numeric|min:0',
             'currency' => 'nullable|string|size:3',
@@ -317,6 +319,9 @@ class TaxController extends Controller
         $amount = (float) $request->input('amount');
         $currency = $request->input('currency', 'RON');
 
+        // Check if tenant is VAT payer
+        $isVatPayer = $tenant && (bool) $tenant->vat_payer;
+
         // Get global taxes that are visible on checkout
         $taxes = GeneralTax::query()
             ->whereNull('tenant_id') // Global taxes only
@@ -328,10 +333,26 @@ class TaxController extends Controller
 
         $taxBreakdown = [];
         $totalTax = 0;
+        $vatAmount = 0;
+        $vatRate = 0;
 
         foreach ($taxes as $tax) {
+            // Check if this is a VAT tax
+            $isVatTax = str_contains(strtolower($tax->name ?? ''), 'tva') ||
+                        str_contains(strtolower($tax->name ?? ''), 'vat');
+
+            // Skip VAT taxes if tenant is not a VAT payer
+            if ($isVatTax && !$isVatPayer) {
+                continue;
+            }
+
             $taxAmount = $tax->calculateTax($amount);
             $totalTax += $taxAmount;
+
+            if ($isVatTax) {
+                $vatAmount = $taxAmount;
+                $vatRate = (float) $tax->value;
+            }
 
             $taxBreakdown[] = [
                 'id' => $tax->id,
@@ -342,7 +363,31 @@ class TaxController extends Controller
                 'tax_amount' => round($taxAmount, 2),
                 'explanation' => strip_tags($tax->explanation ?? ''),
                 'is_added_to_price' => $tax->is_added_to_price,
+                'is_vat' => $isVatTax,
             ];
+        }
+
+        // If tenant is VAT payer but no VAT tax found in global taxes, calculate standard VAT
+        if ($isVatPayer && $vatAmount === 0) {
+            // Standard Romanian VAT rate for tickets is 9% (reduced rate for cultural events)
+            $standardVatRate = 9;
+            $vatAmount = $amount * ($standardVatRate / 100);
+
+            // Add VAT as first item (highest priority)
+            array_unshift($taxBreakdown, [
+                'id' => 0,
+                'name' => 'TVA',
+                'value' => $standardVatRate,
+                'value_type' => 'percent',
+                'formatted_value' => $standardVatRate . '%',
+                'tax_amount' => round($vatAmount, 2),
+                'explanation' => 'Taxa pe valoarea adaugata conform Codului Fiscal',
+                'is_added_to_price' => false,
+                'is_vat' => true,
+            ]);
+
+            $totalTax += $vatAmount;
+            $vatRate = $standardVatRate;
         }
 
         return response()->json([
@@ -350,6 +395,9 @@ class TaxController extends Controller
             'data' => [
                 'taxes' => $taxBreakdown,
                 'total_tax' => round($totalTax, 2),
+                'vat_amount' => round($vatAmount, 2),
+                'vat_rate' => $vatRate,
+                'is_vat_payer' => $isVatPayer,
                 'base_amount' => $amount,
                 'currency' => $currency,
             ],
