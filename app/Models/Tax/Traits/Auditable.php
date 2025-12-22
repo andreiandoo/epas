@@ -9,6 +9,8 @@ trait Auditable
 {
     protected static bool $auditingEnabled = true;
 
+    protected static array $auditOldValuesCache = [];
+
     protected array $auditExclude = ['updated_at', 'created_at'];
 
     public static function bootAuditable(): void
@@ -22,13 +24,16 @@ trait Auditable
 
         static::updating(function ($model) {
             if (static::$auditingEnabled) {
-                $model->auditOldValues = $model->getOriginal();
+                // Store old values in a static cache, keyed by model class and ID
+                $key = get_class($model) . ':' . $model->id;
+                static::$auditOldValuesCache[$key] = $model->getOriginal();
             }
         });
 
         static::updated(function ($model) {
-            if (static::$auditingEnabled && isset($model->auditOldValues)) {
-                $oldValues = collect($model->auditOldValues)
+            $key = get_class($model) . ':' . $model->id;
+            if (static::$auditingEnabled && isset(static::$auditOldValuesCache[$key])) {
+                $oldValues = collect(static::$auditOldValuesCache[$key])
                     ->except($model->getAuditExclude())
                     ->toArray();
                 $newValues = collect($model->getAttributes())
@@ -41,7 +46,7 @@ trait Auditable
                     static::dispatchConfigurationChangedEvent($model, 'updated', $oldValues);
                 }
 
-                unset($model->auditOldValues);
+                unset(static::$auditOldValuesCache[$key]);
             }
         });
 

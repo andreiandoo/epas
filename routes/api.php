@@ -1212,6 +1212,8 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.taxes.counties');
         Route::get('/locations/cities', [TaxController::class, 'getCities'])
             ->name('api.tenant-client.taxes.cities');
+        Route::get('/checkout', [TaxController::class, 'getCheckoutTaxes'])
+            ->name('api.tenant-client.taxes.checkout');
     });
 
     // Admin (requires admin auth)

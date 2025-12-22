@@ -297,6 +297,66 @@ class TaxController extends Controller
     }
 
     /**
+     * Get taxes visible on checkout (global taxes without tenant_id)
+     */
+    public function getCheckoutTaxes(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'amount' => 'required|numeric|min:0',
+            'currency' => 'nullable|string|size:3',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $amount = (float) $request->input('amount');
+        $currency = $request->input('currency', 'RON');
+
+        // Get global taxes that are visible on checkout
+        $taxes = GeneralTax::query()
+            ->whereNull('tenant_id') // Global taxes only
+            ->active()
+            ->visibleOnCheckout()
+            ->validOn(Carbon::today())
+            ->orderByDesc('priority')
+            ->get();
+
+        $taxBreakdown = [];
+        $totalTax = 0;
+
+        foreach ($taxes as $tax) {
+            $taxAmount = $tax->calculateTax($amount);
+            $totalTax += $taxAmount;
+
+            $taxBreakdown[] = [
+                'id' => $tax->id,
+                'name' => $tax->name,
+                'value' => (float) $tax->value,
+                'value_type' => $tax->value_type,
+                'formatted_value' => $tax->getFormattedValue(),
+                'tax_amount' => round($taxAmount, 2),
+                'explanation' => strip_tags($tax->explanation ?? ''),
+                'is_added_to_price' => $tax->is_added_to_price,
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'taxes' => $taxBreakdown,
+                'total_tax' => round($totalTax, 2),
+                'base_amount' => $amount,
+                'currency' => $currency,
+            ],
+        ]);
+    }
+
+    /**
      * Get cities for a country/county
      */
     public function getCities(Request $request): JsonResponse

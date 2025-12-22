@@ -4363,6 +4363,9 @@ export class Router {
                                 <!-- Combined Commission with hover tooltip -->
                                 ${this.renderCommissionSection(ticketTotals, shopCart, currency)}
 
+                                <!-- Taxes visible on checkout (global taxes) -->
+                                <div id="checkout-taxes-section"></div>
+
                                 <!-- Shipping -->
                                 <div id="shipping-cost-row" class="${needsShipping ? '' : 'hidden'}">
                                     <div class="flex justify-between text-gray-600">
@@ -4389,6 +4392,38 @@ export class Router {
         // Load bundle info for ticket types
         if (this.isShopEnabled() && ticketCart.length > 0) {
             this.loadCheckoutBundles(ticketCart);
+        }
+
+        // Load checkout taxes (global taxes visible on checkout)
+        this.loadCheckoutTaxes(grandTotal, currency);
+    }
+
+    private async loadCheckoutTaxes(amount: number, currency: string): Promise<void> {
+        const container = document.getElementById('checkout-taxes-section');
+        if (!container) return;
+
+        try {
+            const response = await this.fetchApi(`/taxes/checkout?amount=${amount}&currency=${currency}`);
+            if (response.success && response.data?.taxes?.length > 0) {
+                const taxes = response.data.taxes;
+                container.innerHTML = taxes.map((tax: any) => `
+                    <div class="flex justify-between text-gray-600 group relative">
+                        <span class="flex items-center gap-1">
+                            ${tax.name}
+                            ${tax.explanation ? `
+                            <span class="cursor-help text-gray-400" title="${tax.explanation}">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </span>
+                            ` : ''}
+                        </span>
+                        <span>${tax.is_added_to_price ? '+' : ''}${tax.tax_amount.toFixed(2)} ${currency}</span>
+                    </div>
+                `).join('');
+            }
+        } catch (e) {
+            console.log('Could not load checkout taxes:', e);
         }
     }
 
