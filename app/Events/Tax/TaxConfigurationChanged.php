@@ -17,7 +17,7 @@ class TaxConfigurationChanged implements ShouldDispatchAfterCommit
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public function __construct(
-        public int $tenantId,
+        public ?int $tenantId, // null for global Core admin taxes
         public string $taxType, // 'general', 'local', 'exemption'
         public int $taxId,
         public string $action, // 'created', 'updated', 'deleted', 'restored'
