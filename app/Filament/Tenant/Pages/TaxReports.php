@@ -15,7 +15,7 @@ class TaxReports extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
 
-    protected static string $view = 'filament.tenant.pages.tax-reports';
+    protected string $view = 'filament.tenant.pages.tax-reports';
 
     protected static ?string $navigationLabel = 'Tax Reports';
 

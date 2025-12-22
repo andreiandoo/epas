@@ -20,7 +20,7 @@ class Taxes extends Page
 
     protected static ?int $navigationSort = 50;
 
-    protected static string $view = 'filament.tenant.pages.taxes';
+    protected string $view = 'filament.tenant.pages.taxes';
 
     protected static ?string $title = 'Tax Management';
 

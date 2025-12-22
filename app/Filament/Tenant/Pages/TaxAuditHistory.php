@@ -18,7 +18,7 @@ class TaxAuditHistory extends Page implements HasTable
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-clock';
 
-    protected static string $view = 'filament.tenant.pages.tax-audit-history';
+    protected string $view = 'filament.tenant.pages.tax-audit-history';
 
     protected static ?string $navigationLabel = 'Audit History';
 

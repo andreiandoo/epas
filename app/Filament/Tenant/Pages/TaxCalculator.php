@@ -16,7 +16,7 @@ class TaxCalculator extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-calculator';
 
-    protected static string $view = 'filament.tenant.pages.tax-calculator';
+    protected string $view = 'filament.tenant.pages.tax-calculator';
 
     protected static ?string $navigationLabel = 'Tax Calculator';
 
