@@ -296,14 +296,22 @@ class AccountController extends Controller
             ];
         })->values();
 
-        // Check for linked shop order (created within 5 minutes of ticket order)
-        $linkedShopOrder = ShopOrder::where('customer_id', $customer->id)
-            ->whereBetween('created_at', [
-                $order->created_at->subMinutes(5),
-                $order->created_at->addMinutes(5)
-            ])
+        // Check for linked shop order - first try direct link, then time-based fallback
+        $linkedShopOrder = ShopOrder::where('ticket_order_id', $order->id)
             ->with(['items.product', 'items.variant'])
             ->first();
+
+        // Fallback: If no direct link, try time-based matching (for older orders)
+        if (!$linkedShopOrder && $customer) {
+            $linkedShopOrder = ShopOrder::where('customer_id', $customer->id)
+                ->whereNull('ticket_order_id')
+                ->whereBetween('created_at', [
+                    $order->created_at->subMinutes(5),
+                    $order->created_at->addMinutes(5)
+                ])
+                ->with(['items.product', 'items.variant'])
+                ->first();
+        }
 
         $shopOrderData = null;
         if ($linkedShopOrder) {
