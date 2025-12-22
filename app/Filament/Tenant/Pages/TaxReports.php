@@ -3,6 +3,7 @@
 namespace App\Filament\Tenant\Pages;
 
 use App\Services\Tax\TaxAnalyticsService;
+use BackedEnum;
 use Filament\Forms;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
@@ -12,7 +13,7 @@ use Livewire\Attributes\Computed;
 
 class TaxReports extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
 
     protected static string $view = 'filament.tenant.pages.tax-reports';
 

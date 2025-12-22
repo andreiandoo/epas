@@ -4,6 +4,7 @@ namespace App\Filament\Tenant\Pages;
 
 use App\Models\EventType;
 use App\Services\Tax\TaxService;
+use BackedEnum;
 use Filament\Forms;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
@@ -13,7 +14,7 @@ use Livewire\Attributes\Computed;
 
 class TaxCalculator extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-calculator';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-calculator';
 
     protected static string $view = 'filament.tenant.pages.tax-calculator';
 
