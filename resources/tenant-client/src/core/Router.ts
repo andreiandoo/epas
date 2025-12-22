@@ -2898,7 +2898,7 @@ export class Router {
                     const sessionId = localStorage.getItem('shop_session_id');
                     if (sessionId) {
                         try {
-                            await this.fetchApi('/shop/cart/clear', {}, {
+                            await this.fetchApi('/shop/cart', {}, {
                                 method: 'DELETE',
                                 headers: { 'X-Session-ID': sessionId }
                             });
@@ -4749,33 +4749,100 @@ export class Router {
                     }
 
                     // Create order after successful payment (or for free orders)
-                    const response = await this.postApi('/orders', {
-                        customer_first_name: formData.get('customer_first_name'),
-                        customer_last_name: formData.get('customer_last_name'),
-                        customer_name: `${formData.get('customer_first_name') || ''} ${formData.get('customer_last_name') || ''}`.trim(),
-                        customer_email: formData.get('customer_email'),
-                        customer_phone: formData.get('customer_phone'),
-                        agree_terms: agreeTerms,
-                        agree_privacy: agreePrivacy,
-                        create_account: createAccount,
-                        notification_email: notificationEmail,
-                        notification_whatsapp: notificationWhatsapp,
-                        payment_intent_id: clientSecret ? clientSecret.split('_secret_')[0] : null,
-                        cart: cartData.map(item => ({
-                            eventId: item.eventId,
-                            ticketTypeId: item.ticketTypeId,
-                            quantity: item.quantity,
-                        })),
-                        beneficiaries: beneficiariesData.length > 0 ? beneficiariesData : null,
-                    });
+                    let ticketOrderId: number | null = null;
+                    let shopOrderNumber: string | null = null;
+                    const hasTickets = cartData.length > 0;
+                    const hasShopProducts = ShopCartService.getItemCount() > 0;
+                    const sessionId = localStorage.getItem('shop_session_id');
 
-                    if (response.success) {
-                        CartService.clearCart();
-                        this.updateCartBadge();
-                        ToastNotification.show('✓ Comanda a fost plasată cu succes!', 'success');
-                        this.navigate(`/order-success/${response.data.order_id}`);
+                    // Create ticket order if there are tickets
+                    if (hasTickets) {
+                        const response = await this.postApi('/orders', {
+                            customer_first_name: formData.get('customer_first_name'),
+                            customer_last_name: formData.get('customer_last_name'),
+                            customer_name: `${formData.get('customer_first_name') || ''} ${formData.get('customer_last_name') || ''}`.trim(),
+                            customer_email: formData.get('customer_email'),
+                            customer_phone: formData.get('customer_phone'),
+                            agree_terms: agreeTerms,
+                            agree_privacy: agreePrivacy,
+                            create_account: createAccount,
+                            notification_email: notificationEmail,
+                            notification_whatsapp: notificationWhatsapp,
+                            payment_intent_id: clientSecret ? clientSecret.split('_secret_')[0] : null,
+                            cart: cartData.map(item => ({
+                                eventId: item.eventId,
+                                ticketTypeId: item.ticketTypeId,
+                                quantity: item.quantity,
+                            })),
+                            beneficiaries: beneficiariesData.length > 0 ? beneficiariesData : null,
+                        });
+
+                        if (!response.success) {
+                            throw new Error(response.error || 'Eroare la plasarea comenzii de bilete');
+                        }
+                        ticketOrderId = response.data.order_id;
+                    }
+
+                    // Create shop order if there are shop products
+                    if (hasShopProducts && sessionId) {
+                        // Get shipping data if needed
+                        const selectedShipping = document.querySelector('input[name="shipping_method"]:checked') as HTMLInputElement;
+                        const shippingMethodId = selectedShipping?.value || null;
+
+                        // Collect shipping address if there are physical products
+                        let shippingAddress: any = null;
+                        const shippingSection = document.getElementById('shipping-section');
+                        if (shippingSection && !shippingSection.classList.contains('hidden')) {
+                            shippingAddress = {
+                                name: `${formData.get('customer_first_name') || ''} ${formData.get('customer_last_name') || ''}`.trim(),
+                                line1: (document.getElementById('shipping_address') as HTMLInputElement)?.value || '',
+                                city: (document.getElementById('shipping_city') as HTMLInputElement)?.value || '',
+                                postal_code: (document.getElementById('shipping_postal_code') as HTMLInputElement)?.value || '',
+                                country: 'RO',
+                            };
+                        }
+
+                        const shopOrderResponse = await this.postApi('/shop/checkout/create-order', {
+                            customer_email: formData.get('customer_email'),
+                            customer_phone: formData.get('customer_phone'),
+                            customer_name: `${formData.get('customer_first_name') || ''} ${formData.get('customer_last_name') || ''}`.trim(),
+                            shipping_address: shippingAddress,
+                            shipping_method_id: shippingMethodId,
+                            ticket_order_id: ticketOrderId,
+                        }, {
+                            'X-Session-ID': sessionId
+                        });
+
+                        if (!shopOrderResponse.success) {
+                            throw new Error(shopOrderResponse.message || 'Eroare la plasarea comenzii de produse');
+                        }
+                        shopOrderNumber = shopOrderResponse.data?.order_number;
+                    }
+
+                    // Clear carts
+                    CartService.clearCart();
+                    if (sessionId) {
+                        try {
+                            await this.fetchApi('/shop/cart', {}, {
+                                method: 'DELETE',
+                                headers: { 'X-Session-ID': sessionId }
+                            });
+                        } catch (e) {
+                            console.log('Could not clear shop cart');
+                        }
+                        ShopCartService.clear();
+                    }
+                    this.updateCartBadge();
+
+                    ToastNotification.show('✓ Comanda a fost plasată cu succes!', 'success');
+
+                    // Redirect based on order type
+                    if (ticketOrderId) {
+                        this.navigate(`/order-success/${ticketOrderId}`);
+                    } else if (shopOrderNumber) {
+                        this.navigate(`/shop/thank-you/${shopOrderNumber}`);
                     } else {
-                        throw new Error(response.error || 'Eroare la plasarea comenzii');
+                        this.navigate('/');
                     }
                 } catch (error: any) {
                     ToastNotification.show(error.message || 'Eroare la plasarea comenzii', 'error');
@@ -5734,7 +5801,7 @@ export class Router {
                                 ${tickets.map((ticket: any) => `
                                     <div class="p-3 md:p-4 hover:bg-gray-50 transition">
                                         <div class="flex items-start gap-3 md:gap-4">
-                                            <img src="${ticket.qr_code}" alt="QR" class="w-14 h-14 md:w-16 md:h-16 border border-gray-200 rounded flex-shrink-0">
+                                            <img src="${ticket.qr_code}" alt="QR" class="w-14 h-14 md:w-16 md:h-16 rounded flex-shrink-0">
                                             <div class="flex-1 min-w-0">
                                                 <div class="flex flex-wrap items-center gap-1.5 md:gap-2 mb-1">
                                                     <h3 class="font-semibold text-gray-900 text-sm md:text-base line-clamp-1">${ticket.event_name}</h3>
@@ -7033,7 +7100,7 @@ private async renderProfile(): Promise<void> {
                                     <!-- QR Code -->
                                     <div class="border-t pt-4">
                                         <div class="flex flex-col items-center">
-                                            <img src="${ticket.qr_code}" alt="QR Code" class="w-48 h-48 border-2 border-gray-300 rounded-lg mb-3">
+                                            <img src="${ticket.qr_code}" alt="QR Code" class="w-48 h-48 rounded-lg mb-3">
                                             <div class="text-center">
                                                 <p class="text-xs text-gray-500 mb-1">Cod bilet:</p>
                                                 <p class="text-lg font-mono font-bold text-gray-900">${ticket.code}</p>
