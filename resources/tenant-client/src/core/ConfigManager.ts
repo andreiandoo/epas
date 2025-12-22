@@ -1,3 +1,10 @@
+export interface TenantConfig {
+    id: number;
+    name: string;
+    locale: string;
+    vat_payer: boolean;
+}
+
 export interface TixelloConfig {
     tenantId: number;
     domainId: number;
@@ -9,6 +16,7 @@ export interface TixelloConfig {
     social: SocialConfig;
     menus: MenusConfig;
     platform: PlatformConfig;
+    tenant?: TenantConfig;
     version: string;
     packageHash: string;
 }
@@ -204,6 +212,9 @@ export class ConfigManager {
                     if (data.platform) {
                         this.config.platform = { ...this.config.platform, ...data.platform };
                     }
+                    if (data.tenant) {
+                        this.config.tenant = data.tenant;
+                    }
                 }
             } catch {
                 // Use baked config if API fails
@@ -285,6 +296,9 @@ export class ConfigManager {
                 if (data.platform) {
                     this.config.platform = { ...this.config.platform, ...data.platform };
                 }
+                if (data.tenant) {
+                    this.config.tenant = data.tenant;
+                }
             }
         } catch {
             // Use defaults if API fails
@@ -365,6 +379,7 @@ export class ConfigManager {
                 }
                 if (data.tenant) {
                     this.config.tenantId = data.tenant.id;
+                    this.config.tenant = data.tenant;
                 }
             } else {
                 throw new Error('Failed to load tenant configuration');

@@ -4541,17 +4541,19 @@ export class Router {
 
                     container.innerHTML = taxHtml;
 
-                    // Update total if there are taxes to add
+                    // Store taxes_to_add for other functions to use
+                    (window as any).checkoutTaxesToAdd = taxes_to_add;
+
+                    // Update total if there are taxes to add (include shipping if present)
                     if (taxes_to_add > 0) {
-                        const newTotal = amount + taxes_to_add;
+                        const shippingCost = (window as any).checkoutShippingCost || 0;
+                        const newTotal = amount + taxes_to_add + shippingCost;
                         if (totalAmountEl) {
                             totalAmountEl.textContent = `${newTotal.toFixed(2)} ${currency}`;
                         }
                         if (submitBtnText) {
                             submitBtnText.textContent = `Plasează comanda - ${newTotal.toFixed(2)} ${currency}`;
                         }
-                        // Store taxes_to_add for payment calculation
-                        (window as any).checkoutTaxesToAdd = taxes_to_add;
                     }
                 }
             }
@@ -4741,21 +4743,25 @@ export class Router {
         };
 
         const updateShippingDisplay = () => {
+            // Store shipping cost on window for other functions to use
+            (window as any).checkoutShippingCost = shippingCost;
+
             if (shippingCostDisplay) {
                 shippingCostDisplay.textContent = shippingCost > 0 ? `${shippingCost.toFixed(2)} RON` : 'Gratuit';
             }
-            // Update total - we need to recalculate
+            // Update total - include taxes_to_add if present
+            const taxesToAdd = (window as any).checkoutTaxesToAdd || 0;
             if (checkoutTotalAmount) {
                 const ticketTotals = CartService.getTotal();
                 const shopTotal = parseFloat(localStorage.getItem('shop_cart_total') || '0');
-                const grandTotal = ticketTotals.total + shopTotal + shippingCost;
+                const grandTotal = ticketTotals.total + shopTotal + shippingCost + taxesToAdd;
                 checkoutTotalAmount.textContent = `${grandTotal.toFixed(2)} RON`;
             }
             // Update submit button text
             if (submitBtnText) {
                 const ticketTotals = CartService.getTotal();
                 const shopTotal = parseFloat(localStorage.getItem('shop_cart_total') || '0');
-                const grandTotal = ticketTotals.total + shopTotal + shippingCost;
+                const grandTotal = ticketTotals.total + shopTotal + shippingCost + taxesToAdd;
                 const currency = ticketTotals.currency || 'RON';
                 submitBtnText.textContent = `Plasează comanda - ${grandTotal.toFixed(2)} ${currency}`;
             }
@@ -5198,8 +5204,11 @@ export class Router {
             const selectedShippingRadio = document.querySelector('input[name="shipping_method"]:checked') as HTMLInputElement;
             const shippingCost = selectedShippingRadio ? parseFloat(selectedShippingRadio.dataset.cost || '0') : 0;
 
-            // Calculate grand total: tickets + shop products + shipping
-            const grandTotal = totals.total + shopCartTotal + shippingCost;
+            // Get taxes to add (taxes with is_added_to_price: true)
+            const taxesToAdd = (window as any).checkoutTaxesToAdd || 0;
+
+            // Calculate grand total: tickets + shop products + shipping + taxes
+            const grandTotal = totals.total + shopCartTotal + shippingCost + taxesToAdd;
             const currency = totals.currency || 'RON';
 
             const intentResponse = await this.postApi('/payment/create-intent', {
@@ -5212,6 +5221,7 @@ export class Router {
                 })),
                 shop_cart_total: shopCartTotal,
                 shipping_cost: shippingCost,
+                taxes_to_add: taxesToAdd,
             });
 
             if (!intentResponse.success || !intentResponse.data?.client_secret) {

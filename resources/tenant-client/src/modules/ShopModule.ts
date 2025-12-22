@@ -1,5 +1,6 @@
 import { ApiClient } from '../core/ApiClient';
 import { EventBus } from '../core/EventBus';
+import { ConfigManager } from '../core/ConfigManager';
 
 interface ShopProduct {
     id: string;
@@ -160,6 +161,31 @@ export class ShopModule {
             style: 'currency',
             currency: currency
         }).format(amount);
+    }
+
+    /**
+     * Render VAT info if tenant is a VAT payer
+     * VAT is included in the price (21% standard Romanian VAT)
+     */
+    private renderVatInfo(price: number, currency: string = 'RON'): string {
+        try {
+            const config = ConfigManager.get();
+            if (!config.tenant?.vat_payer) {
+                return '';
+            }
+
+            // Calculate VAT extracted from gross price (21% VAT)
+            const vatRate = 21;
+            const vatAmount = price - (price / (1 + vatRate / 100));
+
+            return `
+                <div class="product-vat-info" style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--sleek-text-muted, #6b7280);">
+                    <span>incl. TVA ${vatRate}%: ${this.formatCurrency(vatAmount, currency)}</span>
+                </div>
+            `;
+        } catch {
+            return '';
+        }
     }
 
     // ========================================
@@ -1442,6 +1468,7 @@ export class ShopModule {
                                 <span class="product-discount-badge">-${product.discount_percentage}%</span>
                             ` : ''}
                         </div>
+                        ${this.renderVatInfo(displayPrice, product.currency)}
 
                         ${product.short_description ? `
                             <p class="product-description">${product.short_description}</p>
