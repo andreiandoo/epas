@@ -4820,18 +4820,31 @@ export class Router {
 
             const stripe = (window as any).Stripe(publishableKey);
 
-            // Create payment intent
+            // Create payment intent - combine ticket cart and shop cart totals
             const cart = CartService.getCart();
             const totals = CartService.getTotal();
 
+            // Get shop cart total from localStorage (set during checkout render)
+            const shopCartTotal = parseFloat(localStorage.getItem('shop_cart_total') || '0');
+
+            // Get shipping cost if selected
+            const selectedShippingRadio = document.querySelector('input[name="shipping_method"]:checked') as HTMLInputElement;
+            const shippingCost = selectedShippingRadio ? parseFloat(selectedShippingRadio.dataset.cost || '0') : 0;
+
+            // Calculate grand total: tickets + shop products + shipping
+            const grandTotal = totals.total + shopCartTotal + shippingCost;
+            const currency = totals.currency || 'RON';
+
             const intentResponse = await this.postApi('/payment/create-intent', {
-                amount: Math.round(totals.total * 100), // Convert to cents
-                currency: totals.currency.toLowerCase(),
+                amount: Math.round(grandTotal * 100), // Convert to cents
+                currency: currency.toLowerCase(),
                 cart: cart.map(item => ({
                     eventId: item.eventId,
                     ticketTypeId: item.ticketTypeId,
                     quantity: item.quantity,
                 })),
+                shop_cart_total: shopCartTotal,
+                shipping_cost: shippingCost,
             });
 
             if (!intentResponse.success || !intentResponse.data?.client_secret) {
@@ -5909,9 +5922,103 @@ export class Router {
                         `).join('')}
                     </div>
 
+                    ${order.shop_order ? `
+                        <h2 class="text-base md:text-lg font-semibold text-gray-900 mt-6 mb-3">Produse comandate</h2>
+                        <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+                            <div class="divide-y">
+                                ${order.shop_order.items.map((item: any) => `
+                                    <div class="p-3 md:p-4 flex items-center gap-3">
+                                        ${item.image_url ? `
+                                            <img src="${item.image_url}" alt="${item.title}" class="w-12 h-12 md:w-16 md:h-16 object-cover rounded">
+                                        ` : `
+                                            <div class="w-12 h-12 md:w-16 md:h-16 bg-gray-100 rounded flex items-center justify-center">
+                                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                                </svg>
+                                            </div>
+                                        `}
+                                        <div class="flex-1">
+                                            <p class="font-medium text-gray-900">${item.title}</p>
+                                            ${item.variant_name ? `<p class="text-sm text-gray-500">${item.variant_name}</p>` : ''}
+                                            <p class="text-xs text-gray-400">Cantitate: ${item.quantity}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="font-medium">${(item.total_cents / 100).toFixed(2)} ${order.shop_order.currency}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="bg-gray-50 p-3 md:p-4 border-t">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-500">Subtotal produse</span>
+                                    <span>${(order.shop_order.subtotal_cents / 100).toFixed(2)} ${order.shop_order.currency}</span>
+                                </div>
+                                ${order.shop_order.shipping_cents > 0 ? `
+                                    <div class="flex justify-between text-sm mt-1">
+                                        <span class="text-gray-500">Transport</span>
+                                        <span>${(order.shop_order.shipping_cents / 100).toFixed(2)} ${order.shop_order.currency}</span>
+                                    </div>
+                                ` : ''}
+                                <div class="flex justify-between font-medium mt-2 pt-2 border-t">
+                                    <span>Total produse</span>
+                                    <span>${(order.shop_order.total_cents / 100).toFixed(2)} ${order.shop_order.currency}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${order.shop_order.shipping_address ? `
+                            <h2 class="text-base md:text-lg font-semibold text-gray-900 mb-3">Livrare</h2>
+                            <div class="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <p class="text-sm text-gray-500 mb-1">Adresa de livrare</p>
+                                        <p class="font-medium">${order.shop_order.shipping_address.name || ''}</p>
+                                        <p class="text-sm text-gray-700">${order.shop_order.shipping_address.line1 || ''}</p>
+                                        ${order.shop_order.shipping_address.line2 ? `<p class="text-sm text-gray-700">${order.shop_order.shipping_address.line2}</p>` : ''}
+                                        <p class="text-sm text-gray-700">${order.shop_order.shipping_address.city || ''}, ${order.shop_order.shipping_address.postal_code || ''}</p>
+                                        <p class="text-sm text-gray-700">${order.shop_order.shipping_address.country || ''}</p>
+                                    </div>
+                                    <div>
+                                        ${order.shop_order.shipping_method ? `
+                                            <p class="text-sm text-gray-500 mb-1">Metodă de livrare</p>
+                                            <p class="font-medium">${order.shop_order.shipping_method}</p>
+                                        ` : ''}
+                                        ${order.shop_order.estimated_delivery ? `
+                                            <p class="text-sm text-gray-500 mt-3 mb-1">Data estimată livrare</p>
+                                            <p class="font-medium">${order.shop_order.estimated_delivery}</p>
+                                        ` : ''}
+                                        ${order.shop_order.tracking_number ? `
+                                            <p class="text-sm text-gray-500 mt-3 mb-1">Cod urmărire</p>
+                                            <p class="font-medium font-mono">${order.shop_order.tracking_number}</p>
+                                            ${order.shop_order.tracking_url ? `
+                                                <a href="${order.shop_order.tracking_url}" target="_blank"
+                                                   class="inline-flex items-center text-sm text-primary hover:underline mt-1">
+                                                    Urmărește coletul
+                                                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                                    </svg>
+                                                </a>
+                                            ` : ''}
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                <div class="mt-4 pt-4 border-t">
+                                    <span class="inline-block px-3 py-1 text-xs font-medium rounded-full ${
+                                        order.shop_order.status === 'delivered' ? 'bg-green-100 text-green-700' :
+                                        order.shop_order.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
+                                        order.shop_order.status === 'processing' ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-gray-100 text-gray-700'
+                                    }">
+                                        ${order.shop_order.status_label}
+                                    </span>
+                                </div>
+                            </div>
+                        ` : ''}
+                    ` : ''}
+
                     ${order.meta ? `
-                        <h2 class="text-xl font-semibold text-gray-900 mt-8 mb-4">Informații client</h2>
-                        <div class="bg-white rounded-lg shadow p-6">
+                        <h2 class="text-base md:text-lg font-semibold text-gray-900 mt-6 mb-3">Informații client</h2>
+                        <div class="bg-white rounded-lg shadow p-4 md:p-6">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <p class="text-sm text-gray-500">Nume</p>
