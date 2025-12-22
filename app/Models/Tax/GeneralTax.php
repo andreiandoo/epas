@@ -27,6 +27,8 @@ class GeneralTax extends Model
         'currency',
         'explanation',
         'priority',
+        'is_compound',
+        'compound_order',
         'valid_from',
         'valid_until',
         'is_active',
@@ -35,6 +37,8 @@ class GeneralTax extends Model
     protected $casts = [
         'value' => 'decimal:4',
         'priority' => 'integer',
+        'is_compound' => 'boolean',
+        'compound_order' => 'integer',
         'valid_from' => 'date',
         'valid_until' => 'date',
         'is_active' => 'boolean',
@@ -46,7 +50,8 @@ class GeneralTax extends Model
         return LogOptions::defaults()
             ->logOnly([
                 'name', 'value', 'value_type', 'currency', 'event_type_id',
-                'explanation', 'priority', 'valid_from', 'valid_until', 'is_active'
+                'explanation', 'priority', 'is_compound', 'compound_order',
+                'valid_from', 'valid_until', 'is_active'
             ])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
@@ -120,7 +125,22 @@ class GeneralTax extends Model
         return $query->orderByDesc('priority');
     }
 
+    public function scopeNonCompound(Builder $query): Builder
+    {
+        return $query->where('is_compound', false);
+    }
+
+    public function scopeCompound(Builder $query): Builder
+    {
+        return $query->where('is_compound', true)->orderBy('compound_order');
+    }
+
     // Helpers
+
+    public function isCompound(): bool
+    {
+        return (bool) $this->is_compound;
+    }
 
     public function isPercent(): bool
     {

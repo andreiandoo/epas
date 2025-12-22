@@ -28,6 +28,8 @@ class LocalTax extends Model
         'explanation',
         'source_url',
         'priority',
+        'is_compound',
+        'compound_order',
         'valid_from',
         'valid_until',
         'is_active',
@@ -36,6 +38,8 @@ class LocalTax extends Model
     protected $casts = [
         'value' => 'decimal:4',
         'priority' => 'integer',
+        'is_compound' => 'boolean',
+        'compound_order' => 'integer',
         'valid_from' => 'date',
         'valid_until' => 'date',
         'is_active' => 'boolean',
@@ -47,7 +51,8 @@ class LocalTax extends Model
         return LogOptions::defaults()
             ->logOnly([
                 'country', 'county', 'city', 'value', 'explanation',
-                'source_url', 'priority', 'valid_from', 'valid_until', 'is_active'
+                'source_url', 'priority', 'is_compound', 'compound_order',
+                'valid_from', 'valid_until', 'is_active'
             ])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
@@ -169,7 +174,22 @@ class LocalTax extends Model
         return $query->orderByDesc('priority');
     }
 
+    public function scopeNonCompound(Builder $query): Builder
+    {
+        return $query->where('is_compound', false);
+    }
+
+    public function scopeCompound(Builder $query): Builder
+    {
+        return $query->where('is_compound', true)->orderBy('compound_order');
+    }
+
     // Helpers
+
+    public function isCompound(): bool
+    {
+        return (bool) $this->is_compound;
+    }
 
     public function isValidOn(?Carbon $date = null): bool
     {

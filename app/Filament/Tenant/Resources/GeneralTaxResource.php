@@ -145,6 +145,22 @@ class GeneralTaxResource extends Resource
                             ->default(0)
                             ->helperText('Higher priority taxes are applied first. Use this to control calculation order.'),
 
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\Toggle::make('is_compound')
+                                    ->label('Compound Tax')
+                                    ->default(false)
+                                    ->live()
+                                    ->helperText('Compound taxes are calculated on the subtotal plus other non-compound taxes'),
+
+                                Forms\Components\TextInput::make('compound_order')
+                                    ->label('Compound Order')
+                                    ->numeric()
+                                    ->default(0)
+                                    ->visible(fn (Get $get) => $get('is_compound'))
+                                    ->helperText('Order in which compound taxes are applied (lower first)'),
+                            ]),
+
                         Forms\Components\Textarea::make('explanation')
                             ->label('Explanation')
                             ->rows(3)
@@ -221,6 +237,15 @@ class GeneralTaxResource extends Resource
                 Tables\Columns\TextColumn::make('priority')
                     ->label('Priority')
                     ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\IconColumn::make('is_compound')
+                    ->label('Compound')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-arrow-path')
+                    ->falseIcon('heroicon-o-minus')
+                    ->trueColor('warning')
+                    ->falseColor('gray')
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('validity')
