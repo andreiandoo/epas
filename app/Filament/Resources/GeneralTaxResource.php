@@ -66,7 +66,7 @@ class GeneralTaxResource extends Resource
                             ->label('Tax Name')
                             ->required()
                             ->maxLength(190)
-                            ->placeholder('e.g., VAT, Sales Tax, Service Fee'),
+                            ->placeholder('e.g., TVA 21%, Timbru Muzical, UCMR-ADA'),
 
                         Forms\Components\Select::make('event_type_id')
                             ->label('Event Type')
@@ -103,18 +103,17 @@ class GeneralTaxResource extends Resource
                                 Forms\Components\Select::make('currency')
                                     ->label('Currency')
                                     ->options($currencies)
-                                    ->default('EUR')
+                                    ->default('RON')
                                     ->searchable()
                                     ->visible(fn (Get $get) => $get('value_type') === 'fixed')
-                                    ->required(fn (Get $get) => $get('value_type') === 'fixed')
-                                    ->helperText('Required for fixed amount taxes'),
+                                    ->required(fn (Get $get) => $get('value_type') === 'fixed'),
                             ]),
 
                         Forms\Components\TextInput::make('priority')
                             ->label('Priority')
                             ->numeric()
                             ->default(0)
-                            ->helperText('Higher priority taxes are applied first. Use this to control calculation order.'),
+                            ->helperText('Higher priority taxes are applied first.'),
 
                         SC\Grid::make(2)
                             ->schema([
@@ -122,44 +121,222 @@ class GeneralTaxResource extends Resource
                                     ->label('Compound Tax')
                                     ->default(false)
                                     ->live()
-                                    ->helperText('Compound taxes are calculated on the subtotal plus other non-compound taxes'),
+                                    ->helperText('Calculated on subtotal + other taxes'),
 
                                 Forms\Components\TextInput::make('compound_order')
                                     ->label('Compound Order')
                                     ->numeric()
                                     ->default(0)
-                                    ->visible(fn (Get $get) => $get('is_compound'))
-                                    ->helperText('Order in which compound taxes are applied (lower first)'),
+                                    ->visible(fn (Get $get) => $get('is_compound')),
                             ]),
 
-                        Forms\Components\Textarea::make('explanation')
-                            ->label('Explanation')
-                            ->rows(3)
-                            ->placeholder('Describe what this tax is for and when it applies...')
+                        Forms\Components\RichEditor::make('explanation')
+                            ->label('Explanation / Notes')
+                            ->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList'])
+                            ->placeholder('Describe what this tax is for...')
                             ->columnSpanFull(),
                     ])->columns(2),
 
-                SC\Section::make('Validity Period')
-                    ->description('Optionally set when this tax is active. Leave empty for always active.')
+                SC\Section::make('Tax Application Rules')
+                    ->description('How is this tax calculated and applied?')
                     ->collapsed()
                     ->schema([
-                        Forms\Components\DatePicker::make('valid_from')
-                            ->label('Valid From')
-                            ->placeholder('Always')
-                            ->helperText('Tax becomes active on this date'),
+                        SC\Grid::make(2)
+                            ->schema([
+                                Forms\Components\Toggle::make('is_added_to_price')
+                                    ->label('Added to Price')
+                                    ->default(false)
+                                    ->helperText('ON = Added to ticket price (like stamps). OFF = Included in price (like VAT)'),
 
-                        Forms\Components\DatePicker::make('valid_until')
-                            ->label('Valid Until')
-                            ->placeholder('Forever')
-                            ->afterOrEqual('valid_from')
-                            ->helperText('Tax expires after this date'),
+                                Forms\Components\Select::make('applied_to_base')
+                                    ->label('Applied To')
+                                    ->options([
+                                        'gross_with_vat' => 'Gross (with VAT)',
+                                        'gross_excl_vat' => 'Gross (excluding VAT)',
+                                        'ticket_price' => 'Ticket Price',
+                                        'net_revenue' => 'Net Revenue',
+                                    ])
+                                    ->default('gross_excl_vat')
+                                    ->helperText('What is the tax calculated on?'),
+                            ]),
+
+                        SC\Grid::make(3)
+                            ->schema([
+                                Forms\Components\TextInput::make('min_revenue_threshold')
+                                    ->label('Min Revenue Threshold')
+                                    ->numeric()
+                                    ->prefix('RON')
+                                    ->placeholder('No minimum'),
+
+                                Forms\Components\TextInput::make('max_revenue_threshold')
+                                    ->label('Max Revenue Threshold')
+                                    ->numeric()
+                                    ->prefix('RON')
+                                    ->placeholder('No maximum'),
+
+                                Forms\Components\TextInput::make('min_guaranteed_amount')
+                                    ->label('Min Guaranteed Amount')
+                                    ->numeric()
+                                    ->prefix('RON')
+                                    ->placeholder('None'),
+                            ]),
+
+                        Forms\Components\Toggle::make('has_tiered_rates')
+                            ->label('Has Tiered Rates')
+                            ->default(false)
+                            ->live()
+                            ->helperText('Different rates based on revenue (e.g., UCMR-ADA)'),
+
+                        Forms\Components\Repeater::make('tiered_rates')
+                            ->label('Revenue Tiers')
+                            ->visible(fn (Get $get) => $get('has_tiered_rates'))
+                            ->schema([
+                                Forms\Components\TextInput::make('min')
+                                    ->label('Min Revenue')
+                                    ->numeric()
+                                    ->required()
+                                    ->prefix('RON'),
+                                Forms\Components\TextInput::make('max')
+                                    ->label('Max Revenue')
+                                    ->numeric()
+                                    ->prefix('RON')
+                                    ->placeholder('Unlimited'),
+                                Forms\Components\TextInput::make('rate')
+                                    ->label('Rate')
+                                    ->numeric()
+                                    ->required()
+                                    ->suffix('%'),
+                            ])
+                            ->columns(3)
+                            ->defaultItems(0)
+                            ->columnSpanFull(),
+                    ]),
+
+                SC\Section::make('Payment Information')
+                    ->description('Where and to whom is this tax paid?')
+                    ->collapsed()
+                    ->schema([
+                        SC\Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('beneficiary')
+                                    ->label('Beneficiary')
+                                    ->maxLength(255)
+                                    ->placeholder('e.g., ANAF, UCMR-ADA, DITL'),
+
+                                Forms\Components\TextInput::make('iban')
+                                    ->label('IBAN')
+                                    ->maxLength(34)
+                                    ->placeholder('RO49AAAA1B31007593840000'),
+                            ]),
+
+                        Forms\Components\Textarea::make('beneficiary_address')
+                            ->label('Beneficiary Address')
+                            ->rows(2)
+                            ->columnSpanFull(),
+
+                        Forms\Components\RichEditor::make('where_to_pay')
+                            ->label('Where / How to Pay')
+                            ->toolbarButtons(['bold', 'italic', 'link', 'bulletList'])
+                            ->placeholder('Payment instructions, online portal URLs, etc.')
+                            ->columnSpanFull(),
+                    ]),
+
+                SC\Section::make('Payment Terms')
+                    ->description('When must this tax be paid?')
+                    ->collapsed()
+                    ->schema([
+                        SC\Grid::make(2)
+                            ->schema([
+                                Forms\Components\Select::make('payment_term_type')
+                                    ->label('Payment Term Type')
+                                    ->options([
+                                        'day_of_month' => 'Day of Following Month',
+                                        'days_after_event' => 'Days After Event',
+                                        'at_sale' => 'At Time of Sale',
+                                        'quarterly' => 'Quarterly',
+                                        'custom' => 'Custom',
+                                    ])
+                                    ->live(),
+
+                                Forms\Components\TextInput::make('payment_term_day')
+                                    ->label('Day of Month')
+                                    ->numeric()
+                                    ->minValue(1)
+                                    ->maxValue(31)
+                                    ->placeholder('e.g., 10, 25')
+                                    ->visible(fn (Get $get) => in_array($get('payment_term_type'), ['day_of_month', 'quarterly'])),
+
+                                Forms\Components\TextInput::make('payment_term_days_after')
+                                    ->label('Days After Event')
+                                    ->numeric()
+                                    ->minValue(1)
+                                    ->placeholder('e.g., 45')
+                                    ->visible(fn (Get $get) => $get('payment_term_type') === 'days_after_event'),
+                            ]),
+
+                        Forms\Components\TextInput::make('payment_term')
+                            ->label('Payment Term Description')
+                            ->maxLength(255)
+                            ->placeholder('e.g., "10 a lunii următoare", "45 zile de la eveniment"')
+                            ->columnSpanFull(),
+                    ]),
+
+                SC\Section::make('Legal & Documentation')
+                    ->description('Legal basis and required declarations')
+                    ->collapsed()
+                    ->schema([
+                        Forms\Components\TextInput::make('legal_basis')
+                            ->label('Legal Basis')
+                            ->maxLength(255)
+                            ->placeholder('e.g., Art. 291 Cod Fiscal, Legea 35/1994')
+                            ->columnSpanFull(),
+
+                        Forms\Components\RichEditor::make('declaration')
+                            ->label('Declaration Template / Requirements')
+                            ->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList'])
+                            ->placeholder('What declarations need to be filed?')
+                            ->columnSpanFull(),
+                    ]),
+
+                SC\Section::make('Instructions')
+                    ->description('What needs to be done before and after the event?')
+                    ->collapsed()
+                    ->schema([
+                        Forms\Components\RichEditor::make('before_event_instructions')
+                            ->label('Before Event')
+                            ->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList'])
+                            ->placeholder('Steps to complete before the event...')
+                            ->columnSpanFull(),
+
+                        Forms\Components\RichEditor::make('after_event_instructions')
+                            ->label('After Event')
+                            ->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList'])
+                            ->placeholder('Steps to complete after the event...')
+                            ->columnSpanFull(),
+                    ]),
+
+                SC\Section::make('Validity Period')
+                    ->description('When is this tax active?')
+                    ->collapsed()
+                    ->schema([
+                        SC\Grid::make(2)
+                            ->schema([
+                                Forms\Components\DatePicker::make('valid_from')
+                                    ->label('Valid From')
+                                    ->placeholder('Always'),
+
+                                Forms\Components\DatePicker::make('valid_until')
+                                    ->label('Valid Until')
+                                    ->placeholder('Forever')
+                                    ->afterOrEqual('valid_from'),
+                            ]),
 
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
                             ->default(true)
-                            ->helperText('Inactive taxes will not be applied to orders.')
+                            ->helperText('Inactive taxes will not be applied.')
                             ->columnSpanFull(),
-                    ])->columns(2),
+                    ]),
             ]);
     }
 
@@ -193,34 +370,24 @@ class GeneralTaxResource extends Resource
                     })
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('value_type')
-                    ->label('Type')
-                    ->badge()
-                    ->colors([
-                        'primary' => 'percent',
-                        'success' => 'fixed',
-                    ])
-                    ->formatStateUsing(fn ($state) => $state === 'percent' ? 'Percentage' : 'Fixed'),
+                Tables\Columns\TextColumn::make('beneficiary')
+                    ->label('Beneficiary')
+                    ->placeholder('-')
+                    ->toggleable(),
 
-                Tables\Columns\TextColumn::make('priority')
-                    ->label('Priority')
-                    ->sortable()
+                Tables\Columns\TextColumn::make('payment_term')
+                    ->label('Payment Term')
+                    ->placeholder('-')
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                Tables\Columns\IconColumn::make('is_compound')
-                    ->label('Compound')
+                Tables\Columns\IconColumn::make('is_added_to_price')
+                    ->label('Added to Price')
                     ->boolean()
-                    ->trueIcon('heroicon-o-arrow-path')
-                    ->falseIcon('heroicon-o-minus')
-                    ->trueColor('warning')
-                    ->falseColor('gray')
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('validity')
-                    ->label('Validity')
-                    ->state(function ($record) {
-                        return $record->getValidityStatus();
-                    })
+                    ->label('Status')
+                    ->state(fn ($record) => $record->getValidityStatus())
                     ->badge()
                     ->colors([
                         'success' => 'active',
@@ -230,27 +397,9 @@ class GeneralTaxResource extends Resource
                     ])
                     ->formatStateUsing(fn ($state) => ucfirst($state)),
 
-                Tables\Columns\TextColumn::make('valid_from')
-                    ->label('From')
-                    ->date()
-                    ->placeholder('Always')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\TextColumn::make('valid_until')
-                    ->label('Until')
-                    ->date()
-                    ->placeholder('Forever')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean(),
-
-                Tables\Columns\TextColumn::make('deleted_at')
-                    ->label('Deleted')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
@@ -274,28 +423,6 @@ class GeneralTaxResource extends Resource
                             ->mapWithKeys(fn ($type) => [
                                 $type->id => $type->name['en'] ?? $type->slug
                             ]);
-                    }),
-                Tables\Filters\Filter::make('validity')
-                    ->form([
-                        Forms\Components\Select::make('validity_status')
-                            ->options([
-                                'active' => 'Currently Active',
-                                'scheduled' => 'Scheduled (Future)',
-                                'expired' => 'Expired',
-                            ]),
-                    ])
-                    ->query(function (Builder $query, array $data): Builder {
-                        return $query->when($data['validity_status'], function ($query, $status) {
-                            $today = now()->toDateString();
-                            return match ($status) {
-                                'active' => $query->where('is_active', true)
-                                    ->where(fn ($q) => $q->whereNull('valid_from')->orWhere('valid_from', '<=', $today))
-                                    ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', $today)),
-                                'scheduled' => $query->where('valid_from', '>', $today),
-                                'expired' => $query->where('valid_until', '<', $today),
-                                default => $query,
-                            };
-                        });
                     }),
             ])
             ->defaultSort('priority', 'desc');

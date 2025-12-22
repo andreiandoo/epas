@@ -34,6 +34,23 @@ class LocalTax extends Model
         'valid_from',
         'valid_until',
         'is_active',
+        // Payment info
+        'beneficiary',
+        'iban',
+        'beneficiary_address',
+        'where_to_pay',
+        // Payment terms
+        'payment_term',
+        'payment_term_day',
+        'payment_term_type',
+        // Legal & docs
+        'legal_basis',
+        'declaration',
+        'before_event_instructions',
+        'after_event_instructions',
+        // Application rules
+        'applied_to_base',
+        'max_rate',
     ];
 
     protected $casts = [
@@ -44,6 +61,8 @@ class LocalTax extends Model
         'valid_from' => 'date',
         'valid_until' => 'date',
         'is_active' => 'boolean',
+        'payment_term_day' => 'integer',
+        'max_rate' => 'decimal:2',
     ];
 
     // Activity Log Configuration

@@ -51,7 +51,6 @@ class LocalTaxResource extends Resource
 
     protected static function getCountyOptions(string $country): array
     {
-        // Romania counties
         $romaniaCounties = [
             'Alba', 'Arad', 'Arges', 'Bacau', 'Bihor', 'Bistrita-Nasaud', 'Botosani', 'Braila',
             'Brasov', 'Bucuresti', 'Buzau', 'Calarasi', 'Caras-Severin', 'Cluj', 'Constanta',
@@ -61,7 +60,6 @@ class LocalTaxResource extends Resource
             'Valcea', 'Vaslui', 'Vrancea'
         ];
 
-        // US States
         $usStates = [
             'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut',
             'Delaware', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa',
@@ -73,7 +71,6 @@ class LocalTaxResource extends Resource
             'Wisconsin', 'Wyoming', 'District of Columbia'
         ];
 
-        // UK Counties
         $ukCounties = [
             'Bedfordshire', 'Berkshire', 'Bristol', 'Buckinghamshire', 'Cambridgeshire', 'Cheshire',
             'City of London', 'Cornwall', 'Cumbria', 'Derbyshire', 'Devon', 'Dorset', 'Durham',
@@ -86,7 +83,6 @@ class LocalTaxResource extends Resource
             'Wiltshire', 'Worcestershire'
         ];
 
-        // German States
         $germanStates = [
             'Baden-Württemberg', 'Bayern', 'Berlin', 'Brandenburg', 'Bremen', 'Hamburg', 'Hessen',
             'Mecklenburg-Vorpommern', 'Niedersachsen', 'Nordrhein-Westfalen', 'Rheinland-Pfalz',
@@ -139,12 +135,12 @@ class LocalTaxResource extends Resource
                             ->label('City')
                             ->maxLength(100)
                             ->placeholder('Enter city name (optional)')
-                            ->helperText('Enter a city name or leave empty to apply to entire county/country'),
+                            ->helperText('Leave empty to apply to entire county/country'),
                     ])->columns(3),
 
                 SC\Section::make('Tax Details')
                     ->schema([
-                        SC\Grid::make(2)
+                        SC\Grid::make(3)
                             ->schema([
                                 Forms\Components\TextInput::make('value')
                                     ->label('Tax Rate (%)')
@@ -154,14 +150,22 @@ class LocalTaxResource extends Resource
                                     ->minValue(0)
                                     ->maxValue(100)
                                     ->suffix('%')
-                                    ->placeholder('0.00')
-                                    ->helperText('Enter the tax rate as a percentage'),
+                                    ->placeholder('0.00'),
+
+                                Forms\Components\TextInput::make('max_rate')
+                                    ->label('Max Rate (by law)')
+                                    ->numeric()
+                                    ->step(0.01)
+                                    ->minValue(0)
+                                    ->maxValue(100)
+                                    ->suffix('%')
+                                    ->placeholder('e.g., 2% or 5%')
+                                    ->helperText('Maximum rate allowed by HCL'),
 
                                 Forms\Components\TextInput::make('priority')
                                     ->label('Priority')
                                     ->numeric()
-                                    ->default(0)
-                                    ->helperText('Higher priority taxes are applied first'),
+                                    ->default(0),
                             ]),
 
                         SC\Grid::make(2)
@@ -170,15 +174,24 @@ class LocalTaxResource extends Resource
                                     ->label('Compound Tax')
                                     ->default(false)
                                     ->live()
-                                    ->helperText('Compound taxes are calculated on the subtotal plus other non-compound taxes'),
+                                    ->helperText('Calculated on subtotal + other taxes'),
 
                                 Forms\Components\TextInput::make('compound_order')
                                     ->label('Compound Order')
                                     ->numeric()
                                     ->default(0)
-                                    ->visible(fn (Get $get) => $get('is_compound'))
-                                    ->helperText('Order in which compound taxes are applied (lower first)'),
+                                    ->visible(fn (Get $get) => $get('is_compound')),
                             ]),
+
+                        Forms\Components\Select::make('applied_to_base')
+                            ->label('Applied To')
+                            ->options([
+                                'gross_with_vat' => 'Gross (with VAT)',
+                                'gross_excl_vat' => 'Gross (excluding VAT)',
+                                'ticket_price' => 'Ticket Price',
+                            ])
+                            ->default('gross_excl_vat')
+                            ->helperText('What is the tax calculated on?'),
 
                         Forms\Components\Select::make('event_types')
                             ->label('Event Types')
@@ -192,14 +205,13 @@ class LocalTaxResource extends Resource
                             ->multiple()
                             ->searchable()
                             ->preload()
-                            ->placeholder('Select event types (leave empty for all)')
-                            ->helperText('Select multiple event types this tax applies to, or leave empty for all types')
+                            ->placeholder('All event types')
                             ->columnSpanFull(),
 
-                        Forms\Components\Textarea::make('explanation')
-                            ->label('Explanation')
-                            ->rows(3)
-                            ->placeholder('Describe what this tax is for and why it applies to this location...')
+                        Forms\Components\RichEditor::make('explanation')
+                            ->label('Explanation / Notes')
+                            ->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList'])
+                            ->placeholder('Describe what this tax is for...')
                             ->columnSpanFull(),
 
                         Forms\Components\TextInput::make('source_url')
@@ -207,31 +219,127 @@ class LocalTaxResource extends Resource
                             ->url()
                             ->maxLength(500)
                             ->placeholder('https://...')
-                            ->helperText('Link to official documentation or source for this tax rate')
+                            ->helperText('Link to official documentation')
+                            ->columnSpanFull(),
+                    ]),
+
+                SC\Section::make('Payment Information')
+                    ->description('Where and to whom is this tax paid?')
+                    ->collapsed()
+                    ->schema([
+                        SC\Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('beneficiary')
+                                    ->label('Beneficiary')
+                                    ->maxLength(255)
+                                    ->placeholder('e.g., DITL, Buget Local'),
+
+                                Forms\Components\TextInput::make('iban')
+                                    ->label('IBAN')
+                                    ->maxLength(34)
+                                    ->placeholder('RO49AAAA1B31007593840000'),
+                            ]),
+
+                        Forms\Components\Textarea::make('beneficiary_address')
+                            ->label('Beneficiary Address')
+                            ->rows(2)
+                            ->columnSpanFull(),
+
+                        Forms\Components\RichEditor::make('where_to_pay')
+                            ->label('Where / How to Pay')
+                            ->toolbarButtons(['bold', 'italic', 'link', 'bulletList'])
+                            ->placeholder('Payment instructions...')
+                            ->columnSpanFull(),
+                    ]),
+
+                SC\Section::make('Payment Terms')
+                    ->description('When must this tax be paid?')
+                    ->collapsed()
+                    ->schema([
+                        SC\Grid::make(2)
+                            ->schema([
+                                Forms\Components\Select::make('payment_term_type')
+                                    ->label('Payment Term Type')
+                                    ->options([
+                                        'day_of_month' => 'Day of Following Month',
+                                        'days_after_event' => 'Days After Event',
+                                        'quarterly' => 'Quarterly',
+                                        'custom' => 'Custom',
+                                    ])
+                                    ->live(),
+
+                                Forms\Components\TextInput::make('payment_term_day')
+                                    ->label('Day of Month')
+                                    ->numeric()
+                                    ->minValue(1)
+                                    ->maxValue(31)
+                                    ->placeholder('e.g., 10')
+                                    ->visible(fn (Get $get) => in_array($get('payment_term_type'), ['day_of_month', 'quarterly'])),
+                            ]),
+
+                        Forms\Components\TextInput::make('payment_term')
+                            ->label('Payment Term Description')
+                            ->maxLength(255)
+                            ->placeholder('e.g., "10 a lunii următoare"')
+                            ->columnSpanFull(),
+                    ]),
+
+                SC\Section::make('Legal & Documentation')
+                    ->description('Legal basis and required declarations')
+                    ->collapsed()
+                    ->schema([
+                        Forms\Components\TextInput::make('legal_basis')
+                            ->label('Legal Basis')
+                            ->maxLength(255)
+                            ->placeholder('e.g., Art. 481 Cod Fiscal, HCL nr. X')
+                            ->columnSpanFull(),
+
+                        Forms\Components\RichEditor::make('declaration')
+                            ->label('Declaration Template / Requirements')
+                            ->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList'])
+                            ->placeholder('What declarations need to be filed?')
+                            ->columnSpanFull(),
+                    ]),
+
+                SC\Section::make('Instructions')
+                    ->description('What needs to be done before and after the event?')
+                    ->collapsed()
+                    ->schema([
+                        Forms\Components\RichEditor::make('before_event_instructions')
+                            ->label('Before Event')
+                            ->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList'])
+                            ->placeholder('Steps to complete before the event...')
+                            ->columnSpanFull(),
+
+                        Forms\Components\RichEditor::make('after_event_instructions')
+                            ->label('After Event')
+                            ->toolbarButtons(['bold', 'italic', 'link', 'bulletList', 'orderedList'])
+                            ->placeholder('Steps to complete after the event...')
                             ->columnSpanFull(),
                     ]),
 
                 SC\Section::make('Validity Period')
-                    ->description('Optionally set when this tax is active. Leave empty for always active.')
+                    ->description('When is this tax active?')
                     ->collapsed()
                     ->schema([
-                        Forms\Components\DatePicker::make('valid_from')
-                            ->label('Valid From')
-                            ->placeholder('Always')
-                            ->helperText('Tax becomes active on this date'),
+                        SC\Grid::make(2)
+                            ->schema([
+                                Forms\Components\DatePicker::make('valid_from')
+                                    ->label('Valid From')
+                                    ->placeholder('Always'),
 
-                        Forms\Components\DatePicker::make('valid_until')
-                            ->label('Valid Until')
-                            ->placeholder('Forever')
-                            ->afterOrEqual('valid_from')
-                            ->helperText('Tax expires after this date'),
+                                Forms\Components\DatePicker::make('valid_until')
+                                    ->label('Valid Until')
+                                    ->placeholder('Forever')
+                                    ->afterOrEqual('valid_from'),
+                            ]),
 
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
                             ->default(true)
-                            ->helperText('Inactive taxes will not be applied to orders.')
+                            ->helperText('Inactive taxes will not be applied.')
                             ->columnSpanFull(),
-                    ])->columns(2),
+                    ]),
             ]);
     }
 
@@ -263,10 +371,15 @@ class LocalTaxResource extends Resource
                     ->badge()
                     ->color('success'),
 
-                Tables\Columns\TextColumn::make('priority')
-                    ->label('Priority')
-                    ->sortable()
+                Tables\Columns\TextColumn::make('max_rate')
+                    ->label('Max')
+                    ->formatStateUsing(fn ($state) => $state ? number_format($state, 2) . '%' : '-')
                     ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('beneficiary')
+                    ->label('Beneficiary')
+                    ->placeholder('-')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('eventTypes.name')
                     ->label('Event Types')
@@ -275,19 +388,15 @@ class LocalTaxResource extends Resource
                         if ($types->isEmpty()) {
                             return 'All Types';
                         }
-                        return $types->map(function ($type) {
-                            $name = $type->name;
-                            return is_array($name) ? ($name['en'] ?? 'Unknown') : $name;
-                        })->join(', ');
+                        return $types->map(fn ($type) => is_array($type->name) ? ($type->name['en'] ?? 'Unknown') : $type->name)->join(', ');
                     })
                     ->wrap()
-                    ->limit(50),
+                    ->limit(50)
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('validity')
-                    ->label('Validity')
-                    ->state(function ($record) {
-                        return $record->getValidityStatus();
-                    })
+                    ->label('Status')
+                    ->state(fn ($record) => $record->getValidityStatus())
                     ->badge()
                     ->colors([
                         'success' => 'active',
@@ -297,34 +406,9 @@ class LocalTaxResource extends Resource
                     ])
                     ->formatStateUsing(fn ($state) => ucfirst($state)),
 
-                Tables\Columns\TextColumn::make('valid_from')
-                    ->label('From')
-                    ->date()
-                    ->placeholder('Always')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\TextColumn::make('valid_until')
-                    ->label('Until')
-                    ->date()
-                    ->placeholder('Forever')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean(),
-
-                Tables\Columns\TextColumn::make('source_url')
-                    ->label('Source')
-                    ->formatStateUsing(fn ($state) => $state ? 'View' : '-')
-                    ->url(fn ($record) => $record->source_url, shouldOpenInNewTab: true)
-                    ->color('primary')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\TextColumn::make('deleted_at')
-                    ->label('Deleted')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
@@ -338,37 +422,6 @@ class LocalTaxResource extends Resource
                 Tables\Filters\SelectFilter::make('country')
                     ->label('Country')
                     ->options(static::getCountryOptions()),
-                Tables\Filters\SelectFilter::make('event_type')
-                    ->label('Event Type')
-                    ->relationship('eventTypes', 'name')
-                    ->options(function () {
-                        return EventType::all()
-                            ->mapWithKeys(fn ($type) => [
-                                $type->id => $type->name['en'] ?? $type->slug
-                            ]);
-                    }),
-                Tables\Filters\Filter::make('validity')
-                    ->form([
-                        Forms\Components\Select::make('validity_status')
-                            ->options([
-                                'active' => 'Currently Active',
-                                'scheduled' => 'Scheduled (Future)',
-                                'expired' => 'Expired',
-                            ]),
-                    ])
-                    ->query(function (Builder $query, array $data): Builder {
-                        return $query->when($data['validity_status'], function ($query, $status) {
-                            $today = now()->toDateString();
-                            return match ($status) {
-                                'active' => $query->where('is_active', true)
-                                    ->where(fn ($q) => $q->whereNull('valid_from')->orWhere('valid_from', '<=', $today))
-                                    ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', $today)),
-                                'scheduled' => $query->where('valid_from', '>', $today),
-                                'expired' => $query->where('valid_until', '<', $today),
-                                default => $query,
-                            };
-                        });
-                    }),
             ])
             ->defaultSort('country');
     }

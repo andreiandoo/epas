@@ -33,6 +33,29 @@ class GeneralTax extends Model
         'valid_from',
         'valid_until',
         'is_active',
+        // Payment info
+        'beneficiary',
+        'iban',
+        'beneficiary_address',
+        'where_to_pay',
+        // Payment terms
+        'payment_term',
+        'payment_term_day',
+        'payment_term_days_after',
+        'payment_term_type',
+        // Legal & docs
+        'legal_basis',
+        'declaration',
+        'before_event_instructions',
+        'after_event_instructions',
+        // Application rules
+        'is_added_to_price',
+        'applied_to_base',
+        'has_tiered_rates',
+        'tiered_rates',
+        'min_revenue_threshold',
+        'max_revenue_threshold',
+        'min_guaranteed_amount',
     ];
 
     protected $casts = [
@@ -43,6 +66,14 @@ class GeneralTax extends Model
         'valid_from' => 'date',
         'valid_until' => 'date',
         'is_active' => 'boolean',
+        'is_added_to_price' => 'boolean',
+        'has_tiered_rates' => 'boolean',
+        'tiered_rates' => 'array',
+        'payment_term_day' => 'integer',
+        'payment_term_days_after' => 'integer',
+        'min_revenue_threshold' => 'decimal:2',
+        'max_revenue_threshold' => 'decimal:2',
+        'min_guaranteed_amount' => 'decimal:2',
     ];
 
     // Activity Log Configuration
