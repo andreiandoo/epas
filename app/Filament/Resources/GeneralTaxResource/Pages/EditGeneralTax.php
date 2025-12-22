@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Tenant\Resources\GeneralTaxResource\Pages;
+namespace App\Filament\Resources\GeneralTaxResource\Pages;
 
-use App\Filament\Tenant\Resources\GeneralTaxResource;
+use App\Filament\Resources\GeneralTaxResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 

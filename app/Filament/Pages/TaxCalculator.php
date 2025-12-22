@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Tenant\Pages;
+namespace App\Filament\Pages;
 
 use App\Models\EventType;
 use App\Services\Tax\TaxService;
@@ -16,7 +16,7 @@ class TaxCalculator extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-calculator';
 
-    protected string $view = 'filament.tenant.pages.tax-calculator';
+    protected string $view = 'filament.pages.tax-calculator';
 
     protected static ?string $navigationLabel = 'Tax Calculator';
 

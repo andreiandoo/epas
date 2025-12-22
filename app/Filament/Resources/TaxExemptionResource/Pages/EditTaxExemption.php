@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Tenant\Resources\TaxExemptionResource\Pages;
+namespace App\Filament\Resources\TaxExemptionResource\Pages;
 
-use App\Filament\Tenant\Resources\TaxExemptionResource;
+use App\Filament\Resources\TaxExemptionResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 

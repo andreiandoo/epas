@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Tenant\Pages;
+namespace App\Filament\Pages;
 
 use App\Models\Tax\GeneralTax;
 use App\Models\Tax\LocalTax;
@@ -20,7 +20,7 @@ class Taxes extends Page
 
     protected static ?int $navigationSort = 50;
 
-    protected string $view = 'filament.tenant.pages.taxes';
+    protected string $view = 'filament.pages.taxes';
 
     protected static ?string $title = 'Tax Management';
 

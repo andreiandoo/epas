@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Tenant\Widgets;
+namespace App\Filament\Widgets;
 
 use App\Models\Tax\GeneralTax;
 use App\Models\Tax\LocalTax;

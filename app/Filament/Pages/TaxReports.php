@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Tenant\Pages;
+namespace App\Filament\Pages;
 
 use App\Services\Tax\TaxAnalyticsService;
 use BackedEnum;
@@ -15,7 +15,7 @@ class TaxReports extends Page
 {
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
 
-    protected string $view = 'filament.tenant.pages.tax-reports';
+    protected string $view = 'filament.pages.tax-reports';
 
     protected static ?string $navigationLabel = 'Tax Reports';
 

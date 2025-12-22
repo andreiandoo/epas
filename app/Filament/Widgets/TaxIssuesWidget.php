@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Filament\Tenant\Widgets;
+namespace App\Filament\Widgets;
 
 use App\Services\Tax\TaxService;
 use Filament\Widgets\Widget;
 
 class TaxIssuesWidget extends Widget
 {
-    protected string $view = 'filament.tenant.widgets.tax-issues-widget';
+    protected string $view = 'filament.widgets.tax-issues-widget';
 
     protected static ?int $sort = 2;
 

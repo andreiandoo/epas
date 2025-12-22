@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Tenant\Resources;
+namespace App\Filament\Resources;
 
-use App\Filament\Tenant\Resources\GeneralTaxResource\Pages;
+use App\Filament\Resources\GeneralTaxResource\Pages;
 use App\Models\Tax\GeneralTax;
 use App\Models\EventType;
 use BackedEnum;

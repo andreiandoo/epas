@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Tenant\Pages;
+namespace App\Filament\Pages;
 
 use App\Models\Tax\TaxAuditLog;
 use BackedEnum;
@@ -18,7 +18,7 @@ class TaxAuditHistory extends Page implements HasTable
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-clock';
 
-    protected string $view = 'filament.tenant.pages.tax-audit-history';
+    protected string $view = 'filament.pages.tax-audit-history';
 
     protected static ?string $navigationLabel = 'Audit History';
 
@@ -141,7 +141,7 @@ class TaxAuditHistory extends Page implements HasTable
             ])
             ->actions([
                 Tables\Actions\ViewAction::make()
-                    ->modalContent(fn ($record) => view('filament.tenant.pages.partials.audit-details', ['record' => $record])),
+                    ->modalContent(fn ($record) => view('filament.pages.partials.audit-details', ['record' => $record])),
             ])
             ->defaultSort('created_at', 'desc')
             ->poll('60s');

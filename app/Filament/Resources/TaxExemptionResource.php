@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Filament\Tenant\Resources;
+namespace App\Filament\Resources;
 
-use App\Filament\Tenant\Resources\TaxExemptionResource\Pages;
+use App\Filament\Resources\TaxExemptionResource\Pages;
 use App\Models\Tax\TaxExemption;
 use BackedEnum;
 use Filament\Forms;
