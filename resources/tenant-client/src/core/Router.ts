@@ -4060,7 +4060,7 @@ export class Router {
                                             placeholder="Strada, număr, bloc, apartament"
                                         >
                                     </div>
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label for="shipping_city" class="block text-sm font-medium text-gray-700 mb-1">
                                                 Oraș *
@@ -4076,27 +4076,55 @@ export class Router {
                                         </div>
                                         <div>
                                             <label for="shipping_county" class="block text-sm font-medium text-gray-700 mb-1">
-                                                Județ
+                                                Județ *
                                             </label>
                                             <input
                                                 type="text"
                                                 id="shipping_county"
                                                 name="shipping_county"
+                                                required
                                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                                 placeholder="Sector 1"
                                             >
                                         </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label for="shipping_postal_code" class="block text-sm font-medium text-gray-700 mb-1">
-                                                Cod poștal
+                                                Cod poștal *
                                             </label>
                                             <input
                                                 type="text"
                                                 id="shipping_postal_code"
                                                 name="shipping_postal_code"
+                                                required
                                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                                 placeholder="010101"
                                             >
+                                        </div>
+                                        <div>
+                                            <label for="shipping_country" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Țara *
+                                            </label>
+                                            <select
+                                                id="shipping_country"
+                                                name="shipping_country"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            >
+                                                <option value="RO" selected>România</option>
+                                                <option value="MD">Republica Moldova</option>
+                                                <option value="BG">Bulgaria</option>
+                                                <option value="HU">Ungaria</option>
+                                                <option value="RS">Serbia</option>
+                                                <option value="UA">Ucraina</option>
+                                                <option value="DE">Germania</option>
+                                                <option value="AT">Austria</option>
+                                                <option value="IT">Italia</option>
+                                                <option value="ES">Spania</option>
+                                                <option value="FR">Franța</option>
+                                                <option value="GB">Marea Britanie</option>
+                                            </select>
                                         </div>
                                     </div>
                                     <div>
@@ -4471,9 +4499,10 @@ export class Router {
             // Default to Romania for shipping calculation
             try {
                 const response = await this.postApi('/shop/checkout/shipping-methods', {
-                    country: 'RO',
+                    country: (document.getElementById('shipping_country') as HTMLSelectElement)?.value || 'RO',
                     city: (document.getElementById('shipping_city') as HTMLInputElement)?.value || '',
                     postal_code: (document.getElementById('shipping_postal_code') as HTMLInputElement)?.value || '',
+                    region: (document.getElementById('shipping_county') as HTMLInputElement)?.value || '',
                     has_bundle_physical: hasBundlePhysical,
                 }, {
                     'X-Session-ID': sessionId
@@ -4597,6 +4626,34 @@ export class Router {
             syncField('customer_first_name', 'shipping_first_name');
             syncField('customer_last_name', 'shipping_last_name');
             syncField('customer_phone', 'shipping_phone');
+
+            // Reload shipping methods when country changes
+            const countrySelect = document.getElementById('shipping_country') as HTMLSelectElement;
+            if (countrySelect) {
+                countrySelect.addEventListener('change', () => {
+                    shippingMethodsContainer.innerHTML = `
+                        <div class="animate-pulse">
+                            <div class="h-16 bg-gray-200 rounded mb-2"></div>
+                            <div class="h-16 bg-gray-200 rounded"></div>
+                        </div>
+                    `;
+                    loadShippingMethods();
+                });
+            }
+
+            // Also reload when postal code or city changes (debounced)
+            let shippingDebounce: NodeJS.Timeout;
+            const debouncedLoadShipping = () => {
+                clearTimeout(shippingDebounce);
+                shippingDebounce = setTimeout(() => {
+                    loadShippingMethods();
+                }, 500);
+            };
+
+            const cityField = document.getElementById('shipping_city') as HTMLInputElement;
+            const postalField = document.getElementById('shipping_postal_code') as HTMLInputElement;
+            cityField?.addEventListener('blur', debouncedLoadShipping);
+            postalField?.addEventListener('blur', debouncedLoadShipping);
         }
 
         // Handle beneficiaries checkbox toggle
@@ -4791,20 +4848,25 @@ export class Router {
 
                         // Collect shipping address if there are physical products
                         let shippingAddress: any = null;
-                        const shippingSection = document.getElementById('shipping-section');
-                        if (shippingSection && !shippingSection.classList.contains('hidden')) {
+                        const shippingFirstName = (document.getElementById('shipping_first_name') as HTMLInputElement)?.value;
+                        const shippingAddress1 = (document.getElementById('shipping_address') as HTMLInputElement)?.value;
+
+                        // Check if shipping fields exist (means we have physical products)
+                        if (shippingFirstName !== undefined && shippingAddress1) {
                             shippingAddress = {
-                                name: `${formData.get('customer_first_name') || ''} ${formData.get('customer_last_name') || ''}`.trim(),
-                                line1: (document.getElementById('shipping_address') as HTMLInputElement)?.value || '',
+                                name: `${(document.getElementById('shipping_first_name') as HTMLInputElement)?.value || ''} ${(document.getElementById('shipping_last_name') as HTMLInputElement)?.value || ''}`.trim(),
+                                line1: shippingAddress1,
                                 city: (document.getElementById('shipping_city') as HTMLInputElement)?.value || '',
+                                region: (document.getElementById('shipping_county') as HTMLInputElement)?.value || '',
                                 postal_code: (document.getElementById('shipping_postal_code') as HTMLInputElement)?.value || '',
-                                country: 'RO',
+                                country: (document.getElementById('shipping_country') as HTMLSelectElement)?.value || 'RO',
+                                phone: (document.getElementById('shipping_phone') as HTMLInputElement)?.value || '',
                             };
                         }
 
                         const shopOrderResponse = await this.postApi('/shop/checkout/create-order', {
                             customer_email: formData.get('customer_email'),
-                            customer_phone: formData.get('customer_phone'),
+                            customer_phone: formData.get('customer_phone') || (document.getElementById('shipping_phone') as HTMLInputElement)?.value,
                             customer_name: `${formData.get('customer_first_name') || ''} ${formData.get('customer_last_name') || ''}`.trim(),
                             shipping_address: shippingAddress,
                             shipping_method_id: shippingMethodId,
