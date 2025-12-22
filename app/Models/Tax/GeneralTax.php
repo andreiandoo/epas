@@ -33,6 +33,8 @@ class GeneralTax extends Model
         'valid_from',
         'valid_until',
         'is_active',
+        'visible_on_checkout',
+        'visible_on_ticket',
         // Payment info
         'beneficiary',
         'iban',
@@ -66,6 +68,8 @@ class GeneralTax extends Model
         'valid_from' => 'date',
         'valid_until' => 'date',
         'is_active' => 'boolean',
+        'visible_on_checkout' => 'boolean',
+        'visible_on_ticket' => 'boolean',
         'is_added_to_price' => 'boolean',
         'has_tiered_rates' => 'boolean',
         'tiered_rates' => 'array',
@@ -165,6 +169,16 @@ class GeneralTax extends Model
     public function scopeCompound(Builder $query): Builder
     {
         return $query->where('is_compound', true)->orderBy('compound_order');
+    }
+
+    public function scopeVisibleOnCheckout(Builder $query): Builder
+    {
+        return $query->where('visible_on_checkout', true);
+    }
+
+    public function scopeVisibleOnTicket(Builder $query): Builder
+    {
+        return $query->where('visible_on_ticket', true);
     }
 
     // Helpers

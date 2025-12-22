@@ -315,8 +315,8 @@ class GeneralTaxResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
-                SC\Section::make('Validity Period')
-                    ->description('When is this tax active?')
+                SC\Section::make('Validity & Visibility')
+                    ->description('When is this tax active and where is it displayed?')
                     ->collapsed()
                     ->schema([
                         SC\Grid::make(2)
@@ -334,8 +334,20 @@ class GeneralTaxResource extends Resource
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
                             ->default(true)
-                            ->helperText('Inactive taxes will not be applied.')
-                            ->columnSpanFull(),
+                            ->helperText('Inactive taxes will not be applied.'),
+
+                        SC\Grid::make(2)
+                            ->schema([
+                                Forms\Components\Toggle::make('visible_on_checkout')
+                                    ->label('Visible on Checkout')
+                                    ->default(false)
+                                    ->helperText('Show this tax breakdown on tenant website checkout page'),
+
+                                Forms\Components\Toggle::make('visible_on_ticket')
+                                    ->label('Visible on Ticket')
+                                    ->default(false)
+                                    ->helperText('Print this tax info on issued tickets'),
+                            ]),
                     ]),
             ]);
     }
@@ -400,6 +412,16 @@ class GeneralTaxResource extends Resource
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean(),
+
+                Tables\Columns\IconColumn::make('visible_on_checkout')
+                    ->label('On Checkout')
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\IconColumn::make('visible_on_ticket')
+                    ->label('On Ticket')
+                    ->boolean()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
