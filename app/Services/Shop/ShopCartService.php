@@ -9,14 +9,18 @@ use App\Models\Shop\ShopProductVariant;
 use App\Models\Shop\ShopGiftCard;
 use App\Models\Tenant;
 use App\Services\Coupon\CouponService;
+use App\Services\Tax\TaxService;
 use App\Events\Shop\ShopItemAddedToCart;
 use Illuminate\Support\Facades\DB;
 
 class ShopCartService
 {
     public function __construct(
-        protected CouponService $couponService
-    ) {}
+        protected CouponService $couponService,
+        protected ?TaxService $taxService = null
+    ) {
+        $this->taxService = $taxService ?? app(TaxService::class);
+    }
 
     // ==========================================
     // CART MANAGEMENT
@@ -518,9 +522,13 @@ class ShopCartService
     {
         $subtotalCents = $cart->getSubtotalCents();
         $discountCents = 0;
-        $taxCents = 0;
+        $productTaxCents = 0;
+        $regionalTaxCents = 0;
         $shippingCents = $options['shipping_cents'] ?? 0;
         $giftCardCents = $options['gift_card_cents'] ?? 0;
+
+        // Shipping address for regional taxes
+        $shippingAddress = $options['shipping_address'] ?? null;
 
         // Calculate coupon discount
         $couponDiscount = $this->getCouponDiscount($cart);
@@ -528,7 +536,7 @@ class ShopCartService
             $discountCents = $couponDiscount['discount_cents'];
         }
 
-        // Calculate tax for each item
+        // Calculate product-level tax for each item
         foreach ($cart->items as $item) {
             $product = $item->product;
             if ($product) {
@@ -541,11 +549,36 @@ class ShopCartService
 
                 $taxMode = $product->getEffectiveTaxMode();
                 if ($taxMode === 'added') {
-                    $taxCents += $product->calculateTax($itemTotal);
+                    $productTaxCents += $product->calculateTax($itemTotal);
                 }
             }
         }
 
+        // Calculate regional/local taxes using TaxService
+        $taxBreakdown = null;
+        if ($shippingAddress && $this->taxService) {
+            $country = $shippingAddress['country'] ?? null;
+            $county = $shippingAddress['state'] ?? $shippingAddress['county'] ?? null;
+            $city = $shippingAddress['city'] ?? null;
+
+            if ($country) {
+                $taxableAmount = ($subtotalCents - $discountCents) / 100; // Convert to currency
+                $taxResult = $this->taxService->calculateTaxes(
+                    tenantId: $cart->tenant_id,
+                    amount: $taxableAmount,
+                    eventTypeId: null,
+                    country: $country,
+                    county: $county,
+                    city: $city,
+                    currency: $cart->currency ?? $cart->tenant?->settings['currency'] ?? 'RON'
+                );
+
+                $regionalTaxCents = (int) round($taxResult->totalTax * 100);
+                $taxBreakdown = $taxResult->toArray();
+            }
+        }
+
+        $taxCents = $productTaxCents + $regionalTaxCents;
         $totalBeforeGiftCard = max(0, $subtotalCents - $discountCents + $shippingCents + $taxCents);
         $appliedGiftCardCents = min($giftCardCents, $totalBeforeGiftCard);
         $totalCents = max(0, $totalBeforeGiftCard - $appliedGiftCardCents);
@@ -555,10 +588,13 @@ class ShopCartService
             'discount_cents' => $discountCents,
             'shipping_cents' => $shippingCents,
             'tax_cents' => $taxCents,
+            'product_tax_cents' => $productTaxCents,
+            'regional_tax_cents' => $regionalTaxCents,
             'gift_card_cents' => $appliedGiftCardCents,
             'total_cents' => $totalCents,
             'item_count' => $cart->getItemCount(),
             'coupon' => $couponDiscount,
+            'tax_breakdown' => $taxBreakdown,
         ];
     }
 
