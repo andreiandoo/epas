@@ -16,9 +16,14 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class LocalTaxResource extends Resource
 {
@@ -43,7 +48,9 @@ class LocalTaxResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $tenant = auth()->user()->tenant;
-        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+        return parent::getEloquentQuery()
+            ->where('tenant_id', $tenant?->id)
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
     }
 
     protected static function getCountryOptions(): array
@@ -161,16 +168,25 @@ class LocalTaxResource extends Resource
 
                 SC\Section::make('Tax Details')
                     ->schema([
-                        Forms\Components\TextInput::make('value')
-                            ->label('Tax Rate (%)')
-                            ->required()
-                            ->numeric()
-                            ->step(0.01)
-                            ->minValue(0)
-                            ->maxValue(100)
-                            ->suffix('%')
-                            ->placeholder('0.00')
-                            ->helperText('Enter the tax rate as a percentage'),
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('value')
+                                    ->label('Tax Rate (%)')
+                                    ->required()
+                                    ->numeric()
+                                    ->step(0.01)
+                                    ->minValue(0)
+                                    ->maxValue(100)
+                                    ->suffix('%')
+                                    ->placeholder('0.00')
+                                    ->helperText('Enter the tax rate as a percentage'),
+
+                                Forms\Components\TextInput::make('priority')
+                                    ->label('Priority')
+                                    ->numeric()
+                                    ->default(0)
+                                    ->helperText('Higher priority taxes are applied first'),
+                            ]),
 
                         Forms\Components\Select::make('event_types')
                             ->label('Event Types')
@@ -185,7 +201,8 @@ class LocalTaxResource extends Resource
                             ->searchable()
                             ->preload()
                             ->placeholder('Select event types (leave empty for all)')
-                            ->helperText('Select multiple event types this tax applies to, or leave empty for all types'),
+                            ->helperText('Select multiple event types this tax applies to, or leave empty for all types')
+                            ->columnSpanFull(),
 
                         Forms\Components\Textarea::make('explanation')
                             ->label('Explanation')
@@ -200,11 +217,28 @@ class LocalTaxResource extends Resource
                             ->placeholder('https://...')
                             ->helperText('Link to official documentation or source for this tax rate')
                             ->columnSpanFull(),
+                    ]),
+
+                SC\Section::make('Validity Period')
+                    ->description('Optionally set when this tax is active. Leave empty for always active.')
+                    ->collapsed()
+                    ->schema([
+                        Forms\Components\DatePicker::make('valid_from')
+                            ->label('Valid From')
+                            ->placeholder('Always')
+                            ->helperText('Tax becomes active on this date'),
+
+                        Forms\Components\DatePicker::make('valid_until')
+                            ->label('Valid Until')
+                            ->placeholder('Forever')
+                            ->afterOrEqual('valid_from')
+                            ->helperText('Tax expires after this date'),
 
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
                             ->default(true)
-                            ->helperText('Inactive taxes will not be applied to orders.'),
+                            ->helperText('Inactive taxes will not be applied to orders.')
+                            ->columnSpanFull(),
                     ])->columns(2),
             ]);
     }
@@ -240,6 +274,11 @@ class LocalTaxResource extends Resource
                     ->badge()
                     ->color('success'),
 
+                Tables\Columns\TextColumn::make('priority')
+                    ->label('Priority')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('eventTypes.name')
                     ->label('Event Types')
                     ->formatStateUsing(function ($state, $record) use ($tenantLanguage) {
@@ -255,6 +294,32 @@ class LocalTaxResource extends Resource
                     ->wrap()
                     ->limit(50),
 
+                Tables\Columns\TextColumn::make('validity')
+                    ->label('Validity')
+                    ->state(function ($record) {
+                        return $record->getValidityStatus();
+                    })
+                    ->badge()
+                    ->colors([
+                        'success' => 'active',
+                        'gray' => 'inactive',
+                        'info' => 'scheduled',
+                        'danger' => 'expired',
+                    ])
+                    ->formatStateUsing(fn ($state) => ucfirst($state)),
+
+                Tables\Columns\TextColumn::make('valid_from')
+                    ->label('From')
+                    ->date()
+                    ->placeholder('Always')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('valid_until')
+                    ->label('Until')
+                    ->date()
+                    ->placeholder('Forever')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean(),
@@ -266,12 +331,19 @@ class LocalTaxResource extends Resource
                     ->color('primary')
                     ->toggleable(isToggledHiddenByDefault: true),
 
+                Tables\Columns\TextColumn::make('deleted_at')
+                    ->label('Deleted')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\TrashedFilter::make(),
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active Status'),
                 Tables\Filters\SelectFilter::make('country')
@@ -286,14 +358,40 @@ class LocalTaxResource extends Resource
                                 $type->id => $type->name[$tenantLanguage] ?? $type->name['en'] ?? $type->slug
                             ]);
                     }),
+                Tables\Filters\Filter::make('validity')
+                    ->form([
+                        Forms\Components\Select::make('validity_status')
+                            ->options([
+                                'active' => 'Currently Active',
+                                'scheduled' => 'Scheduled (Future)',
+                                'expired' => 'Expired',
+                            ]),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when($data['validity_status'], function ($query, $status) {
+                            $today = now()->toDateString();
+                            return match ($status) {
+                                'active' => $query->where('is_active', true)
+                                    ->where(fn ($q) => $q->whereNull('valid_from')->orWhere('valid_from', '<=', $today))
+                                    ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', $today)),
+                                'scheduled' => $query->where('valid_from', '>', $today),
+                                'expired' => $query->where('valid_until', '<', $today),
+                                default => $query,
+                            };
+                        });
+                    }),
             ])
             ->actions([
                 EditAction::make(),
                 DeleteAction::make(),
+                RestoreAction::make(),
+                ForceDeleteAction::make(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('country');

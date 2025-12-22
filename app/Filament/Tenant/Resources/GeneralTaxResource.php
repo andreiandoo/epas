@@ -10,13 +10,20 @@ use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Validation\Rules\Unique;
 
 class GeneralTaxResource extends Resource
 {
@@ -41,13 +48,30 @@ class GeneralTaxResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $tenant = auth()->user()->tenant;
-        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+        return parent::getEloquentQuery()
+            ->where('tenant_id', $tenant?->id)
+            ->withoutGlobalScopes([SoftDeletingScope::class]);
     }
 
     public static function form(Schema $schema): Schema
     {
         $tenant = auth()->user()->tenant;
         $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $tenantCurrency = $tenant->currency ?? 'EUR';
+
+        $currencies = [
+            'EUR' => 'EUR - Euro',
+            'USD' => 'USD - US Dollar',
+            'GBP' => 'GBP - British Pound',
+            'RON' => 'RON - Romanian Leu',
+            'CHF' => 'CHF - Swiss Franc',
+            'PLN' => 'PLN - Polish Zloty',
+            'CZK' => 'CZK - Czech Koruna',
+            'HUF' => 'HUF - Hungarian Forint',
+            'SEK' => 'SEK - Swedish Krona',
+            'NOK' => 'NOK - Norwegian Krone',
+            'DKK' => 'DKK - Danish Krone',
+        ];
 
         return $schema
             ->schema([
@@ -60,7 +84,18 @@ class GeneralTaxResource extends Resource
                             ->label('Tax Name')
                             ->required()
                             ->maxLength(190)
-                            ->placeholder('e.g., VAT, Sales Tax, Service Fee'),
+                            ->placeholder('e.g., VAT, Sales Tax, Service Fee')
+                            ->unique(
+                                table: 'general_taxes',
+                                column: 'name',
+                                ignoreRecord: true,
+                                modifyRuleUsing: fn (Unique $rule) => $rule
+                                    ->where('tenant_id', $tenant?->id)
+                                    ->where('event_type_id', request()->input('event_type_id'))
+                            )
+                            ->validationMessages([
+                                'unique' => 'A tax with this name already exists for the selected event type.',
+                            ]),
 
                         Forms\Components\Select::make('event_type_id')
                             ->label('Event Type')
@@ -74,7 +109,7 @@ class GeneralTaxResource extends Resource
                             ->placeholder('All Event Types (leave empty for global)')
                             ->helperText('Select an event type to apply this tax only to specific events, or leave empty for all events.'),
 
-                        Forms\Components\Grid::make(2)
+                        Forms\Components\Grid::make(3)
                             ->schema([
                                 Forms\Components\TextInput::make('value')
                                     ->label('Value')
@@ -91,19 +126,52 @@ class GeneralTaxResource extends Resource
                                         'fixed' => 'Fixed Amount',
                                     ])
                                     ->default('percent')
-                                    ->required(),
+                                    ->required()
+                                    ->live(),
+
+                                Forms\Components\Select::make('currency')
+                                    ->label('Currency')
+                                    ->options($currencies)
+                                    ->default($tenantCurrency)
+                                    ->searchable()
+                                    ->visible(fn (Get $get) => $get('value_type') === 'fixed')
+                                    ->required(fn (Get $get) => $get('value_type') === 'fixed')
+                                    ->helperText('Required for fixed amount taxes'),
                             ]),
+
+                        Forms\Components\TextInput::make('priority')
+                            ->label('Priority')
+                            ->numeric()
+                            ->default(0)
+                            ->helperText('Higher priority taxes are applied first. Use this to control calculation order.'),
 
                         Forms\Components\Textarea::make('explanation')
                             ->label('Explanation')
                             ->rows(3)
                             ->placeholder('Describe what this tax is for and when it applies...')
                             ->columnSpanFull(),
+                    ])->columns(2),
+
+                SC\Section::make('Validity Period')
+                    ->description('Optionally set when this tax is active. Leave empty for always active.')
+                    ->collapsed()
+                    ->schema([
+                        Forms\Components\DatePicker::make('valid_from')
+                            ->label('Valid From')
+                            ->placeholder('Always')
+                            ->helperText('Tax becomes active on this date'),
+
+                        Forms\Components\DatePicker::make('valid_until')
+                            ->label('Valid Until')
+                            ->placeholder('Forever')
+                            ->afterOrEqual('valid_from')
+                            ->helperText('Tax expires after this date'),
 
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
                             ->default(true)
-                            ->helperText('Inactive taxes will not be applied to orders.'),
+                            ->helperText('Inactive taxes will not be applied to orders.')
+                            ->columnSpanFull(),
                     ])->columns(2),
             ]);
     }
@@ -137,7 +205,7 @@ class GeneralTaxResource extends Resource
                         if ($record->value_type === 'percent') {
                             return number_format($state, 2) . '%';
                         }
-                        return number_format($state, 2);
+                        return number_format($state, 2) . ' ' . ($record->currency ?? '');
                     })
                     ->sortable(),
 
@@ -150,21 +218,54 @@ class GeneralTaxResource extends Resource
                     ])
                     ->formatStateUsing(fn ($state) => $state === 'percent' ? 'Percentage' : 'Fixed'),
 
+                Tables\Columns\TextColumn::make('priority')
+                    ->label('Priority')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('validity')
+                    ->label('Validity')
+                    ->state(function ($record) {
+                        return $record->getValidityStatus();
+                    })
+                    ->badge()
+                    ->colors([
+                        'success' => 'active',
+                        'gray' => 'inactive',
+                        'info' => 'scheduled',
+                        'danger' => 'expired',
+                    ])
+                    ->formatStateUsing(fn ($state) => ucfirst($state)),
+
+                Tables\Columns\TextColumn::make('valid_from')
+                    ->label('From')
+                    ->date()
+                    ->placeholder('Always')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('valid_until')
+                    ->label('Until')
+                    ->date()
+                    ->placeholder('Forever')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean(),
+
+                Tables\Columns\TextColumn::make('deleted_at')
+                    ->label('Deleted')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\TrashedFilter::make(),
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active Status'),
                 Tables\Filters\SelectFilter::make('value_type')
@@ -181,17 +282,43 @@ class GeneralTaxResource extends Resource
                                 $type->id => $type->name[$tenantLanguage] ?? $type->name['en'] ?? $type->slug
                             ]);
                     }),
+                Tables\Filters\Filter::make('validity')
+                    ->form([
+                        Forms\Components\Select::make('validity_status')
+                            ->options([
+                                'active' => 'Currently Active',
+                                'scheduled' => 'Scheduled (Future)',
+                                'expired' => 'Expired',
+                            ]),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when($data['validity_status'], function ($query, $status) {
+                            $today = now()->toDateString();
+                            return match ($status) {
+                                'active' => $query->where('is_active', true)
+                                    ->where(fn ($q) => $q->whereNull('valid_from')->orWhere('valid_from', '<=', $today))
+                                    ->where(fn ($q) => $q->whereNull('valid_until')->orWhere('valid_until', '>=', $today)),
+                                'scheduled' => $query->where('valid_from', '>', $today),
+                                'expired' => $query->where('valid_until', '<', $today),
+                                default => $query,
+                            };
+                        });
+                    }),
             ])
             ->actions([
                 EditAction::make(),
                 DeleteAction::make(),
+                RestoreAction::make(),
+                ForceDeleteAction::make(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort('name');
+            ->defaultSort('priority', 'desc');
     }
 
     public static function getRelations(): array
