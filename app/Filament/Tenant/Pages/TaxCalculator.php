@@ -19,7 +19,7 @@ class TaxCalculator extends Page
 
     protected static ?string $navigationLabel = 'Tax Calculator';
 
-    protected static ?string $navigationGroup = 'Settings';
+    protected static \UnitEnum|string|null $navigationGroup = 'Settings';
 
     protected static ?string $navigationParentItem = 'Taxes';
 
