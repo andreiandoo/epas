@@ -443,10 +443,8 @@ class RomanianTaxesSeeder extends Seeder
                 $eventTypeId = $eventTypes[$eventTypeSlug];
             }
 
-            // Convert tiered_rates to JSON if present
-            if (isset($taxData['tiered_rates']) && is_array($taxData['tiered_rates'])) {
-                $taxData['tiered_rates'] = json_encode($taxData['tiered_rates']);
-            }
+            // Note: tiered_rates is automatically JSON encoded by Laravel's 'array' cast
+            // Do NOT manually json_encode it here
 
             GeneralTax::updateOrCreate(
                 [
