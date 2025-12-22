@@ -75,14 +75,14 @@ trait Auditable
         $user = auth()->user();
 
         TaxConfigurationChanged::dispatch(
-            tenantId: $model->tenant_id,
-            taxType: $taxType,
-            taxId: $model->id,
-            action: $action,
-            taxData: $model->toArray(),
-            previousData: $previousData,
-            userId: $user?->id,
-            userName: $user?->name ?? 'System'
+            $model->tenant_id,
+            $taxType,
+            $model->id,
+            $action,
+            $model->toArray(),
+            $previousData,
+            $user?->id,
+            $user?->name ?? 'System'
         );
     }
 
