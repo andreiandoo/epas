@@ -4062,42 +4062,41 @@ export class Router {
                                     </div>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label for="shipping_city" class="block text-sm font-medium text-gray-700 mb-1">
-                                                Oraș *
-                                            </label>
-                                            <input
-                                                type="text"
-                                                id="shipping_city"
-                                                name="shipping_city"
-                                                required
-                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                                                placeholder="București"
-                                            >
-                                        </div>
-                                        <div>
                                             <label for="shipping_county" class="block text-sm font-medium text-gray-700 mb-1">
                                                 Județ *
                                             </label>
-                                            <input
-                                                type="text"
+                                            <select
                                                 id="shipping_county"
                                                 name="shipping_county"
                                                 required
                                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                                                placeholder="Sector 1"
                                             >
+                                                <option value="">Selectează județul</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="shipping_city" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Oraș *
+                                            </label>
+                                            <select
+                                                id="shipping_city"
+                                                name="shipping_city"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            >
+                                                <option value="">Selectează mai întâi județul</option>
+                                            </select>
                                         </div>
                                     </div>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
                                             <label for="shipping_postal_code" class="block text-sm font-medium text-gray-700 mb-1">
-                                                Cod poștal *
+                                                Cod poștal (opțional)
                                             </label>
                                             <input
                                                 type="text"
                                                 id="shipping_postal_code"
                                                 name="shipping_postal_code"
-                                                required
                                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                                 placeholder="010101"
                                             >
@@ -4650,10 +4649,89 @@ export class Router {
                 }, 500);
             };
 
-            const cityField = document.getElementById('shipping_city') as HTMLInputElement;
             const postalField = document.getElementById('shipping_postal_code') as HTMLInputElement;
-            cityField?.addEventListener('blur', debouncedLoadShipping);
             postalField?.addEventListener('blur', debouncedLoadShipping);
+
+            // Romanian counties and cities data
+            const romanianLocations: Record<string, string[]> = {
+                'Alba': ['Alba Iulia', 'Sebeș', 'Aiud', 'Blaj', 'Cugir', 'Ocna Mureș'],
+                'Arad': ['Arad', 'Ineu', 'Lipova', 'Pecica', 'Curtici', 'Chișineu-Criș'],
+                'Argeș': ['Pitești', 'Câmpulung', 'Curtea de Argeș', 'Mioveni', 'Costești'],
+                'Bacău': ['Bacău', 'Onești', 'Moinești', 'Comănești', 'Buhuși', 'Dărmănești'],
+                'Bihor': ['Oradea', 'Salonta', 'Marghita', 'Beiuș', 'Aleșd', 'Ștei'],
+                'Bistrița-Năsăud': ['Bistrița', 'Năsăud', 'Beclean', 'Sângeorz-Băi'],
+                'Botoșani': ['Botoșani', 'Dorohoi', 'Săveni', 'Darabani', 'Flămânzi'],
+                'Brăila': ['Brăila', 'Făurei', 'Însurăței', 'Ianca'],
+                'Brașov': ['Brașov', 'Făgăraș', 'Săcele', 'Codlea', 'Zărnești', 'Râșnov', 'Rupea'],
+                'București': ['Sector 1', 'Sector 2', 'Sector 3', 'Sector 4', 'Sector 5', 'Sector 6'],
+                'Buzău': ['Buzău', 'Râmnicu Sărat', 'Nehoiu', 'Pătârlagele', 'Pogoanele'],
+                'Călărași': ['Călărași', 'Oltenița', 'Budești', 'Fundulea', 'Lehliu Gară'],
+                'Caraș-Severin': ['Reșița', 'Caransebeș', 'Bocșa', 'Oravița', 'Moldova Nouă'],
+                'Cluj': ['Cluj-Napoca', 'Turda', 'Dej', 'Câmpia Turzii', 'Gherla', 'Huedin'],
+                'Constanța': ['Constanța', 'Mangalia', 'Medgidia', 'Năvodari', 'Cernavodă', 'Eforie'],
+                'Covasna': ['Sfântu Gheorghe', 'Târgu Secuiesc', 'Covasna', 'Baraolt', 'Întorsura Buzăului'],
+                'Dâmbovița': ['Târgoviște', 'Moreni', 'Pucioasa', 'Găești', 'Titu', 'Fieni'],
+                'Dolj': ['Craiova', 'Băilești', 'Calafat', 'Filiași', 'Dăbuleni', 'Segarcea'],
+                'Galați': ['Galați', 'Tecuci', 'Târgu Bujor', 'Berești'],
+                'Giurgiu': ['Giurgiu', 'Bolintin-Vale', 'Mihăilești'],
+                'Gorj': ['Târgu Jiu', 'Motru', 'Rovinari', 'Bumbești-Jiu', 'Novaci', 'Țicleni'],
+                'Harghita': ['Miercurea Ciuc', 'Odorheiu Secuiesc', 'Gheorgheni', 'Toplița', 'Cristuru Secuiesc'],
+                'Hunedoara': ['Deva', 'Hunedoara', 'Petroșani', 'Lupeni', 'Orăștie', 'Brad', 'Vulcan'],
+                'Ialomița': ['Slobozia', 'Fetești', 'Urziceni', 'Țăndărei', 'Amara'],
+                'Iași': ['Iași', 'Pașcani', 'Hârlău', 'Târgu Frumos', 'Podu Iloaiei'],
+                'Ilfov': ['Buftea', 'Voluntari', 'Pantelimon', 'Popești-Leordeni', 'Bragadiru', 'Otopeni', 'Chitila', 'Măgurele'],
+                'Maramureș': ['Baia Mare', 'Sighetu Marmației', 'Borșa', 'Vișeu de Sus', 'Târgu Lăpuș'],
+                'Mehedinți': ['Drobeta-Turnu Severin', 'Orșova', 'Strehaia', 'Vânju Mare', 'Baia de Aramă'],
+                'Mureș': ['Târgu Mureș', 'Reghin', 'Sighișoara', 'Târnăveni', 'Luduș', 'Sovata'],
+                'Neamț': ['Piatra Neamț', 'Roman', 'Târgu Neamț', 'Bicaz', 'Roznov'],
+                'Olt': ['Slatina', 'Caracal', 'Balș', 'Corabia', 'Scornicești', 'Drăgănești-Olt'],
+                'Prahova': ['Ploiești', 'Câmpina', 'Băicoi', 'Breaza', 'Sinaia', 'Bușteni', 'Azuga', 'Vălenii de Munte'],
+                'Satu Mare': ['Satu Mare', 'Carei', 'Negrești-Oaș', 'Tășnad', 'Livada'],
+                'Sălaj': ['Zalău', 'Șimleu Silvaniei', 'Jibou', 'Cehu Silvaniei'],
+                'Sibiu': ['Sibiu', 'Mediaș', 'Cisnădie', 'Avrig', 'Dumbrăveni', 'Agnita', 'Copșa Mică'],
+                'Suceava': ['Suceava', 'Fălticeni', 'Rădăuți', 'Câmpulung Moldovenesc', 'Vatra Dornei', 'Gura Humorului'],
+                'Teleorman': ['Alexandria', 'Roșiori de Vede', 'Turnu Măgurele', 'Zimnicea', 'Videle'],
+                'Timiș': ['Timișoara', 'Lugoj', 'Sânnicolau Mare', 'Jimbolia', 'Făget', 'Buziaș', 'Recaș'],
+                'Tulcea': ['Tulcea', 'Măcin', 'Babadag', 'Isaccea', 'Sulina'],
+                'Vâlcea': ['Râmnicu Vâlcea', 'Drăgășani', 'Băbeni', 'Brezoi', 'Călimănești', 'Horezu'],
+                'Vaslui': ['Vaslui', 'Bârlad', 'Huși', 'Negrești', 'Murgeni'],
+                'Vrancea': ['Focșani', 'Adjud', 'Mărășești', 'Panciu', 'Odobești'],
+            };
+
+            // Populate counties dropdown
+            const countySelect = document.getElementById('shipping_county') as HTMLSelectElement;
+            const citySelect = document.getElementById('shipping_city') as HTMLSelectElement;
+
+            if (countySelect && citySelect) {
+                // Add counties to dropdown
+                Object.keys(romanianLocations).sort().forEach(county => {
+                    const option = document.createElement('option');
+                    option.value = county;
+                    option.textContent = county;
+                    countySelect.appendChild(option);
+                });
+
+                // Handle county change - populate cities
+                countySelect.addEventListener('change', () => {
+                    const selectedCounty = countySelect.value;
+                    citySelect.innerHTML = '<option value="">Selectează orașul</option>';
+
+                    if (selectedCounty && romanianLocations[selectedCounty]) {
+                        romanianLocations[selectedCounty].forEach(city => {
+                            const option = document.createElement('option');
+                            option.value = city;
+                            option.textContent = city;
+                            citySelect.appendChild(option);
+                        });
+                    }
+
+                    // Reload shipping methods
+                    debouncedLoadShipping();
+                });
+
+                // Reload shipping when city changes
+                citySelect.addEventListener('change', debouncedLoadShipping);
+            }
         }
 
         // Handle beneficiaries checkbox toggle

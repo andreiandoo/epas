@@ -26,14 +26,14 @@ class ShopOrder extends Model
         'status',
         'payment_status',
         'fulfillment_status',
-        'subtotal',
-        'discount',
-        'shipping',
-        'tax',
-        'total',
+        'subtotal_cents',
+        'discount_cents',
+        'shipping_cents',
+        'tax_cents',
+        'total_cents',
         'currency',
         'coupon_code',
-        'coupon_discount',
+        'coupon_discount_cents',
         'billing_address',
         'shipping_address',
         'shipping_method',
@@ -55,12 +55,12 @@ class ShopOrder extends Model
     ];
 
     protected $casts = [
-        'subtotal' => 'decimal:2',
-        'discount' => 'decimal:2',
-        'shipping' => 'decimal:2',
-        'tax' => 'decimal:2',
-        'total' => 'decimal:2',
-        'coupon_discount' => 'decimal:2',
+        'subtotal_cents' => 'integer',
+        'discount_cents' => 'integer',
+        'shipping_cents' => 'integer',
+        'tax_cents' => 'integer',
+        'total_cents' => 'integer',
+        'coupon_discount_cents' => 'integer',
         'billing_address' => 'array',
         'shipping_address' => 'array',
         'meta' => 'array',
@@ -280,15 +280,15 @@ class ShopOrder extends Model
 
     public function recalculateTotals(): void
     {
-        $subtotal = $this->items->sum('total');
-        $discount = $this->coupon_discount ?? 0;
-        $shipping = $this->shipping ?? 0;
-        $tax = $this->tax ?? 0;
+        $subtotalCents = $this->items->sum('total_cents');
+        $discountCents = $this->coupon_discount_cents ?? 0;
+        $shippingCents = $this->shipping_cents ?? 0;
+        $taxCents = $this->tax_cents ?? 0;
 
         $this->update([
-            'subtotal' => $subtotal,
-            'discount' => $discount,
-            'total' => max(0, round($subtotal - $discount + $shipping + $tax, 2)),
+            'subtotal_cents' => $subtotalCents,
+            'discount_cents' => $discountCents,
+            'total_cents' => max(0, $subtotalCents - $discountCents + $shippingCents + $taxCents),
         ]);
     }
 

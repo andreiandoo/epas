@@ -108,7 +108,8 @@ class ShopCheckoutService
     protected function validateShippingAddress(array $address): array
     {
         $errors = [];
-        $required = ['name', 'line1', 'city', 'postal_code', 'country'];
+        // postal_code is optional - not everyone knows their postal code
+        $required = ['name', 'line1', 'city', 'country'];
 
         foreach ($required as $field) {
             if (empty($address[$field])) {
@@ -125,7 +126,8 @@ class ShopCheckoutService
     protected function validateBillingAddress(array $address): array
     {
         $errors = [];
-        $required = ['name', 'line1', 'city', 'postal_code', 'country'];
+        // postal_code is optional - not everyone knows their postal code
+        $required = ['name', 'line1', 'city', 'country'];
 
         foreach ($required as $field) {
             if (empty($address[$field])) {
