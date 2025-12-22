@@ -332,7 +332,7 @@ class TaxController extends Controller
             ->get();
 
         $taxBreakdown = [];
-        $totalTax = 0;
+        $taxesToAdd = 0; // Taxes that need to be added to the total (is_added_to_price = true)
         $vatAmount = 0;
         $vatRate = 0;
 
@@ -347,10 +347,16 @@ class TaxController extends Controller
             }
 
             $taxAmount = $tax->calculateTax($amount);
-            $totalTax += $taxAmount;
+
+            // Only add to total if is_added_to_price is true
+            // VAT is always included in price, so never add it
+            if ($tax->is_added_to_price && !$isVatTax) {
+                $taxesToAdd += $taxAmount;
+            }
 
             if ($isVatTax) {
-                $vatAmount = $taxAmount;
+                // For VAT from DB, calculate as extracted from gross (already included)
+                $vatAmount = $amount - ($amount / (1 + $tax->value / 100));
                 $vatRate = (float) $tax->value;
             }
 
@@ -360,20 +366,24 @@ class TaxController extends Controller
                 'value' => (float) $tax->value,
                 'value_type' => $tax->value_type,
                 'formatted_value' => $tax->getFormattedValue(),
-                'tax_amount' => round($taxAmount, 2),
+                'tax_amount' => round($isVatTax ? $vatAmount : $taxAmount, 2),
                 'explanation' => strip_tags($tax->explanation ?? ''),
-                'is_added_to_price' => $tax->is_added_to_price,
+                'is_added_to_price' => $isVatTax ? false : $tax->is_added_to_price, // VAT is never added
                 'is_vat' => $isVatTax,
             ];
         }
 
         // If tenant is VAT payer but no VAT tax found in global taxes, calculate standard VAT
+        // VAT is INCLUDED in the price - we only display the amount, not add it to total
         if ($isVatPayer && $vatAmount === 0) {
-            // Standard Romanian VAT rate for tickets is 9% (reduced rate for cultural events)
-            $standardVatRate = 9;
-            $vatAmount = $amount * ($standardVatRate / 100);
+            // Standard Romanian VAT rate is 21%
+            $standardVatRate = 21;
+            // Calculate VAT from gross amount: VAT = amount - (amount / (1 + rate/100))
+            // This extracts VAT that's already included in the price
+            $vatAmount = $amount - ($amount / (1 + $standardVatRate / 100));
 
             // Add VAT as first item (highest priority)
+            // is_added_to_price = false means it's already included, just for display
             array_unshift($taxBreakdown, [
                 'id' => 0,
                 'name' => 'TVA',
@@ -381,12 +391,12 @@ class TaxController extends Controller
                 'value_type' => 'percent',
                 'formatted_value' => $standardVatRate . '%',
                 'tax_amount' => round($vatAmount, 2),
-                'explanation' => 'Taxa pe valoarea adaugata conform Codului Fiscal',
-                'is_added_to_price' => false,
+                'explanation' => 'Taxa pe valoarea adaugata inclusa in pret',
+                'is_added_to_price' => false, // VAT is already included in price
                 'is_vat' => true,
             ]);
 
-            $totalTax += $vatAmount;
+            // Do NOT add VAT to totalTax - it's already included in the price
             $vatRate = $standardVatRate;
         }
 
@@ -394,7 +404,7 @@ class TaxController extends Controller
             'success' => true,
             'data' => [
                 'taxes' => $taxBreakdown,
-                'total_tax' => round($totalTax, 2),
+                'taxes_to_add' => round($taxesToAdd, 2), // Only taxes with is_added_to_price = true
                 'vat_amount' => round($vatAmount, 2),
                 'vat_rate' => $vatRate,
                 'is_vat_payer' => $isVatPayer,

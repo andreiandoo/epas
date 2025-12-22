@@ -2705,9 +2705,17 @@ export class Router {
 
                             <div class="space-y-2 mb-4 pb-4 border-b">
                                 ${ticketCart.length > 0 ? `
-                                <div class="flex justify-between text-gray-600">
-                                    <span>Subtotal bilete</span>
-                                    <span>${ticketTotals.subtotal.toFixed(2)} ${ticketTotals.currency}</span>
+                                <div class="flex justify-between text-gray-600 group relative">
+                                    <span class="${ticketTotals.hasCommission ? 'cursor-help border-b border-dotted border-gray-400' : ''}">
+                                        Subtotal bilete
+                                        ${ticketTotals.hasCommission ? `
+                                        <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                                            Valoare bilete: ${ticketTotals.subtotal.toFixed(2)} ${ticketTotals.currency}<br>
+                                            Comision Tixello: +${ticketTotals.commission.toFixed(2)} ${ticketTotals.currency}
+                                        </span>
+                                        ` : ''}
+                                    </span>
+                                    <span>${ticketTotals.total.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
                                 ${ticketTotals.bulkDiscount > 0 ? `
                                 <div class="flex justify-between text-green-600">
@@ -2721,29 +2729,25 @@ export class Router {
                                     <span>-${ticketTotals.couponDiscount.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${ticketTotals.hasCommission ? `
-                                <div class="flex justify-between text-gray-600">
-                                    <span>Comision Tixello</span>
-                                    <span>+${ticketTotals.commission.toFixed(2)} ${ticketTotals.currency}</span>
-                                </div>
-                                ` : ''}
                                 ` : ''}
 
                                 ${shopCart?.items?.length > 0 ? `
-                                <div class="flex justify-between text-gray-600">
-                                    <span>Subtotal produse</span>
-                                    <span>${shopCart.subtotal.toFixed(2)} ${shopCart.currency}</span>
+                                <div class="flex justify-between text-gray-600 group relative">
+                                    <span class="${shopCart.commission_rate > 0 ? 'cursor-help border-b border-dotted border-gray-400' : ''}">
+                                        Subtotal produse
+                                        ${shopCart.commission_rate > 0 ? `
+                                        <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                                            Valoare produse: ${parseFloat(shopCart.subtotal).toFixed(2)} ${shopCart.currency}<br>
+                                            Comision Tixello: ${parseFloat(shopCart.commission_display || shopCart.commission).toFixed(2)} ${shopCart.currency}${shopCart.commission_mode === 'included' ? ' (inclus)' : ''}
+                                        </span>
+                                        ` : ''}
+                                    </span>
+                                    <span>${parseFloat(shopCart.total).toFixed(2)} ${shopCart.currency}</span>
                                 </div>
                                 ${shopCart.discount > 0 ? `
                                 <div class="flex justify-between text-green-600">
                                     <span>Discount${shopCart.coupon?.code ? ` (${shopCart.coupon.code})` : ''}</span>
                                     <span>-${shopCart.discount.toFixed(2)} ${shopCart.currency}</span>
-                                </div>
-                                ` : ''}
-                                ${shopCart.commission_rate > 0 ? `
-                                <div class="flex justify-between text-gray-600">
-                                    <span>Comision Tixello${shopCart.commission_mode === 'included' ? ' (inclus în preț)' : ''}</span>
-                                    <span>${shopCart.has_commission ? '+' : ''}${parseFloat(shopCart.commission_display || shopCart.commission).toFixed(2)} ${shopCart.currency}</span>
                                 </div>
                                 ` : ''}
                                 ` : ''}
@@ -2811,12 +2815,13 @@ export class Router {
 
     private async loadCartTaxes(amount: number, currency: string): Promise<void> {
         const container = document.getElementById('cart-taxes-section');
+        const totalAmountEl = document.getElementById('cart-total-amount');
         if (!container) return;
 
         try {
             const response = await this.fetchApi(`/taxes/checkout?amount=${amount}&currency=${currency}`);
             if (response.success && response.data) {
-                const { taxes, is_vat_payer, vat_amount, vat_rate } = response.data;
+                const { taxes, is_vat_payer, vat_amount, vat_rate, taxes_to_add } = response.data;
 
                 // Only show section if tenant is VAT payer or there are visible taxes
                 if ((is_vat_payer && vat_amount > 0) || taxes?.length > 0) {
@@ -2824,12 +2829,12 @@ export class Router {
 
                     let taxHtml = '<div class="space-y-2">';
 
-                    // Show VAT info prominently for VAT payer tenants
+                    // Show VAT info prominently for VAT payer tenants (informational only - included in price)
                     if (is_vat_payer && vat_amount > 0) {
                         taxHtml += `
-                            <div class="flex justify-between text-gray-600">
+                            <div class="flex justify-between text-gray-500 text-sm">
                                 <span class="flex items-center gap-1">
-                                    TVA (${vat_rate}%)
+                                    TVA inclus (${vat_rate}%)
                                     <span class="cursor-help text-gray-400" title="Taxa pe valoarea adaugata inclusa in pret">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -2862,6 +2867,12 @@ export class Router {
 
                     taxHtml += '</div>';
                     container.innerHTML = taxHtml;
+
+                    // Update total if there are taxes to add
+                    if (taxes_to_add > 0 && totalAmountEl) {
+                        const newTotal = amount + taxes_to_add;
+                        totalAmountEl.textContent = `${newTotal.toFixed(2)} ${currency}`;
+                    }
                 }
             }
         } catch (e) {
@@ -4391,18 +4402,34 @@ export class Router {
                             ` : ''}
 
                             <div class="space-y-2 mb-4 pb-4 border-b">
-                                <!-- Subtotals -->
+                                <!-- Subtotals with commission in hover tooltip -->
                                 ${ticketCart.length > 0 ? `
-                                <div class="flex justify-between text-gray-600">
-                                    <span>Subtotal bilete</span>
-                                    <span>${ticketTotals.subtotal.toFixed(2)} ${ticketTotals.currency}</span>
+                                <div class="flex justify-between text-gray-600 group relative">
+                                    <span class="${ticketTotals.hasCommission ? 'cursor-help border-b border-dotted border-gray-400' : ''}">
+                                        Subtotal bilete
+                                        ${ticketTotals.hasCommission ? `
+                                        <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                                            Valoare bilete: ${ticketTotals.subtotal.toFixed(2)} ${ticketTotals.currency}<br>
+                                            Comision Tixello: +${ticketTotals.commission.toFixed(2)} ${ticketTotals.currency}
+                                        </span>
+                                        ` : ''}
+                                    </span>
+                                    <span>${ticketTotals.total.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
                                 ` : ''}
 
                                 ${shopCart?.items?.length > 0 ? `
-                                <div class="flex justify-between text-gray-600">
-                                    <span>Subtotal produse</span>
-                                    <span>${parseFloat(shopCart.subtotal).toFixed(2)} ${shopCart.currency}</span>
+                                <div class="flex justify-between text-gray-600 group relative">
+                                    <span class="${shopCart.commission_rate > 0 ? 'cursor-help border-b border-dotted border-gray-400' : ''}">
+                                        Subtotal produse
+                                        ${shopCart.commission_rate > 0 ? `
+                                        <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                                            Valoare produse: ${parseFloat(shopCart.subtotal).toFixed(2)} ${shopCart.currency}<br>
+                                            Comision Tixello: ${parseFloat(shopCart.commission_display || shopCart.commission).toFixed(2)} ${shopCart.currency}${shopCart.commission_mode === 'included' ? ' (inclus)' : ''}
+                                        </span>
+                                        ` : ''}
+                                    </span>
+                                    <span>${parseFloat(shopCart.total).toFixed(2)} ${shopCart.currency}</span>
                                 </div>
                                 ` : ''}
 
@@ -4425,9 +4452,6 @@ export class Router {
                                     <span>-${parseFloat(shopCart.discount).toFixed(2)} ${shopCart.currency}</span>
                                 </div>
                                 ` : ''}
-
-                                <!-- Combined Commission with hover tooltip -->
-                                ${this.renderCommissionSection(ticketTotals, shopCart, currency)}
 
                                 <!-- Taxes visible on checkout (global taxes) -->
                                 <div id="checkout-taxes-section"></div>
@@ -4466,23 +4490,25 @@ export class Router {
 
     private async loadCheckoutTaxes(amount: number, currency: string): Promise<void> {
         const container = document.getElementById('checkout-taxes-section');
+        const totalAmountEl = document.getElementById('checkout-total-amount');
+        const submitBtnText = document.getElementById('submit-btn-text');
         if (!container) return;
 
         try {
             const response = await this.fetchApi(`/taxes/checkout?amount=${amount}&currency=${currency}`);
             if (response.success && response.data) {
-                const { taxes, is_vat_payer, vat_amount, vat_rate } = response.data;
+                const { taxes, is_vat_payer, vat_amount, vat_rate, taxes_to_add } = response.data;
 
                 // Only show if there are taxes to display
                 if ((is_vat_payer && vat_amount > 0) || taxes?.length > 0) {
                     let taxHtml = '';
 
-                    // Show VAT prominently for VAT payer tenants
+                    // Show VAT info for VAT payer tenants (informational only - included in price)
                     if (is_vat_payer && vat_amount > 0) {
                         taxHtml += `
-                            <div class="flex justify-between text-gray-600">
+                            <div class="flex justify-between text-gray-500 text-sm">
                                 <span class="flex items-center gap-1">
-                                    TVA (${vat_rate}%)
+                                    TVA inclus (${vat_rate}%)
                                     <span class="cursor-help text-gray-400" title="Taxa pe valoarea adaugata inclusa in pret">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -4514,6 +4540,19 @@ export class Router {
                     });
 
                     container.innerHTML = taxHtml;
+
+                    // Update total if there are taxes to add
+                    if (taxes_to_add > 0) {
+                        const newTotal = amount + taxes_to_add;
+                        if (totalAmountEl) {
+                            totalAmountEl.textContent = `${newTotal.toFixed(2)} ${currency}`;
+                        }
+                        if (submitBtnText) {
+                            submitBtnText.textContent = `Plasează comanda - ${newTotal.toFixed(2)} ${currency}`;
+                        }
+                        // Store taxes_to_add for payment calculation
+                        (window as any).checkoutTaxesToAdd = taxes_to_add;
+                    }
                 }
             }
         } catch (e) {
