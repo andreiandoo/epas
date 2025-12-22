@@ -4,6 +4,7 @@ namespace App\Models\Tax;
 
 use App\Models\Tenant;
 use App\Models\EventType;
+use App\Models\Tax\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -15,7 +16,7 @@ use Carbon\Carbon;
 
 class LocalTax extends Model
 {
-    use LogsActivity, SoftDeletes;
+    use LogsActivity, SoftDeletes, Auditable;
 
     protected $table = 'local_taxes';
 

@@ -5,11 +5,17 @@ namespace App\Services\Tax;
 use App\Models\Tax\GeneralTax;
 use App\Models\Tax\LocalTax;
 use App\Models\Tax\TaxExemption;
+use App\Events\Tax\TaxesCalculated;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class TaxService
 {
+    protected int $cacheTtl = 300; // 5 minutes default cache
+
+    protected bool $cacheEnabled = true;
+
     /**
      * Calculate all applicable taxes for an order/transaction
      * Supports compound taxes (tax on tax) and exemptions
@@ -276,18 +282,27 @@ class TaxService
     }
 
     /**
-     * Get applicable general taxes for a tenant
+     * Get applicable general taxes for a tenant (with caching)
      */
     public function getApplicableGeneralTaxes(
         int $tenantId,
         ?int $eventTypeId = null,
         ?Carbon $date = null
     ): Collection {
-        return GeneralTax::applicable($tenantId, $eventTypeId, $date)->get();
+        if (!$this->cacheEnabled) {
+            return GeneralTax::applicable($tenantId, $eventTypeId, $date)->get();
+        }
+
+        $dateKey = ($date ?? Carbon::today())->format('Y-m-d');
+        $cacheKey = "tax:general:{$tenantId}:{$eventTypeId}:{$dateKey}";
+
+        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($tenantId, $eventTypeId, $date) {
+            return GeneralTax::applicable($tenantId, $eventTypeId, $date)->get();
+        });
     }
 
     /**
-     * Get applicable local taxes for a location
+     * Get applicable local taxes for a location (with caching)
      */
     public function getApplicableLocalTaxes(
         int $tenantId,
@@ -297,7 +312,81 @@ class TaxService
         ?int $eventTypeId = null,
         ?Carbon $date = null
     ): Collection {
-        return LocalTax::applicable($tenantId, $country, $county, $city, $eventTypeId, $date)->get();
+        if (!$this->cacheEnabled) {
+            return LocalTax::applicable($tenantId, $country, $county, $city, $eventTypeId, $date)->get();
+        }
+
+        $dateKey = ($date ?? Carbon::today())->format('Y-m-d');
+        $locationKey = md5("{$country}:{$county}:{$city}");
+        $cacheKey = "tax:local:{$tenantId}:{$locationKey}:{$eventTypeId}:{$dateKey}";
+
+        return Cache::remember($cacheKey, $this->cacheTtl, function () use ($tenantId, $country, $county, $city, $eventTypeId, $date) {
+            return LocalTax::applicable($tenantId, $country, $county, $city, $eventTypeId, $date)->get();
+        });
+    }
+
+    /**
+     * Enable caching
+     */
+    public function enableCache(): self
+    {
+        $this->cacheEnabled = true;
+        return $this;
+    }
+
+    /**
+     * Disable caching
+     */
+    public function disableCache(): self
+    {
+        $this->cacheEnabled = false;
+        return $this;
+    }
+
+    /**
+     * Set cache TTL in seconds
+     */
+    public function setCacheTtl(int $seconds): self
+    {
+        $this->cacheTtl = $seconds;
+        return $this;
+    }
+
+    /**
+     * Clear all tax caches for a tenant
+     */
+    public function clearCache(int $tenantId): void
+    {
+        // Clear general tax cache
+        $pattern = "tax:general:{$tenantId}:*";
+        $this->clearCachePattern($pattern);
+
+        // Clear local tax cache
+        $pattern = "tax:local:{$tenantId}:*";
+        $this->clearCachePattern($pattern);
+
+        // Clear validation cache
+        Cache::forget("tax:validation:{$tenantId}");
+
+        // Clear summary cache
+        Cache::forget("tax:summary:{$tenantId}");
+    }
+
+    /**
+     * Clear cache by pattern (for Redis/Memcached)
+     */
+    protected function clearCachePattern(string $pattern): void
+    {
+        $driver = config('cache.default');
+
+        if ($driver === 'redis') {
+            $redis = Cache::getStore()->getRedis();
+            $keys = $redis->keys(config('cache.prefix') . ':' . $pattern);
+            if (!empty($keys)) {
+                $redis->del($keys);
+            }
+        }
+        // For other drivers, we rely on TTL expiration
     }
 
     /**
@@ -355,9 +444,25 @@ class TaxService
     }
 
     /**
-     * Validate tax configuration for potential issues
+     * Validate tax configuration for potential issues (with caching)
      */
     public function validateTaxConfiguration(int $tenantId): array
+    {
+        if ($this->cacheEnabled) {
+            return Cache::remember(
+                "tax:validation:{$tenantId}",
+                $this->cacheTtl,
+                fn () => $this->doValidateTaxConfiguration($tenantId)
+            );
+        }
+
+        return $this->doValidateTaxConfiguration($tenantId);
+    }
+
+    /**
+     * Internal validation logic
+     */
+    protected function doValidateTaxConfiguration(int $tenantId): array
     {
         $issues = [];
 
@@ -455,9 +560,25 @@ class TaxService
     }
 
     /**
-     * Get tax summary for a tenant
+     * Get tax summary for a tenant (with caching)
      */
     public function getTaxSummary(int $tenantId): array
+    {
+        if ($this->cacheEnabled) {
+            return Cache::remember(
+                "tax:summary:{$tenantId}",
+                $this->cacheTtl,
+                fn () => $this->doGetTaxSummary($tenantId)
+            );
+        }
+
+        return $this->doGetTaxSummary($tenantId);
+    }
+
+    /**
+     * Internal summary logic
+     */
+    protected function doGetTaxSummary(int $tenantId): array
     {
         $generalActive = GeneralTax::forTenant($tenantId)->active()->validOn()->count();
         $generalTotal = GeneralTax::forTenant($tenantId)->count();
