@@ -47,13 +47,13 @@ class Taxes extends Page
             Action::make('createGeneralTax')
                 ->label('Add General Tax')
                 ->icon('heroicon-o-plus')
-                ->url(route('filament.tenant.resources.general-taxes.create'))
+                ->url(route('filament.admin.resources.general-taxes.create'))
                 ->color('primary'),
 
             Action::make('createLocalTax')
                 ->label('Add Local Tax')
                 ->icon('heroicon-o-map-pin')
-                ->url(route('filament.tenant.resources.local-taxes.create'))
+                ->url(route('filament.admin.resources.local-taxes.create'))
                 ->color('success'),
         ];
     }

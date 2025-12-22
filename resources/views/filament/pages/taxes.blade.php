@@ -65,7 +65,7 @@
             <x-slot name="heading">
                 <div class="flex items-center justify-between">
                     <span>Recent General Taxes</span>
-                    <x-filament::link href="{{ route('filament.tenant.resources.general-taxes.index') }}" class="text-sm">
+                    <x-filament::link href="{{ route('filament.admin.resources.general-taxes.index') }}" class="text-sm">
                         View All
                     </x-filament::link>
                 </div>
@@ -75,7 +75,7 @@
                 <div class="text-center py-6 text-gray-500">
                     <x-heroicon-o-calculator class="w-12 h-12 mx-auto mb-2 text-gray-300" />
                     <p>No general taxes configured yet.</p>
-                    <x-filament::link href="{{ route('filament.tenant.resources.general-taxes.create') }}" class="mt-2 inline-block">
+                    <x-filament::link href="{{ route('filament.admin.resources.general-taxes.create') }}" class="mt-2 inline-block">
                         Add your first general tax
                     </x-filament::link>
                 </div>
@@ -118,7 +118,7 @@
             <x-slot name="heading">
                 <div class="flex items-center justify-between">
                     <span>Recent Local Taxes</span>
-                    <x-filament::link href="{{ route('filament.tenant.resources.local-taxes.index') }}" class="text-sm">
+                    <x-filament::link href="{{ route('filament.admin.resources.local-taxes.index') }}" class="text-sm">
                         View All
                     </x-filament::link>
                 </div>
@@ -128,7 +128,7 @@
                 <div class="text-center py-6 text-gray-500">
                     <x-heroicon-o-map-pin class="w-12 h-12 mx-auto mb-2 text-gray-300" />
                     <p>No local taxes configured yet.</p>
-                    <x-filament::link href="{{ route('filament.tenant.resources.local-taxes.create') }}" class="mt-2 inline-block">
+                    <x-filament::link href="{{ route('filament.admin.resources.local-taxes.create') }}" class="mt-2 inline-block">
                         Add your first local tax
                     </x-filament::link>
                 </div>
@@ -172,7 +172,7 @@
         <x-slot name="heading">Quick Actions</x-slot>
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <a href="{{ route('filament.tenant.resources.general-taxes.index') }}"
+            <a href="{{ route('filament.admin.resources.general-taxes.index') }}"
                class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                 <x-heroicon-o-calculator class="w-8 h-8 text-primary-500" />
                 <div>
@@ -181,7 +181,7 @@
                 </div>
             </a>
 
-            <a href="{{ route('filament.tenant.resources.local-taxes.index') }}"
+            <a href="{{ route('filament.admin.resources.local-taxes.index') }}"
                class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                 <x-heroicon-o-map-pin class="w-8 h-8 text-success-500" />
                 <div>
@@ -190,7 +190,7 @@
                 </div>
             </a>
 
-            <a href="{{ route('filament.tenant.resources.general-taxes.create') }}"
+            <a href="{{ route('filament.admin.resources.general-taxes.create') }}"
                class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                 <x-heroicon-o-plus-circle class="w-8 h-8 text-info-500" />
                 <div>
@@ -199,7 +199,7 @@
                 </div>
             </a>
 
-            <a href="{{ route('filament.tenant.resources.local-taxes.create') }}"
+            <a href="{{ route('filament.admin.resources.local-taxes.create') }}"
                class="flex items-center gap-3 p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition">
                 <x-heroicon-o-plus-circle class="w-8 h-8 text-warning-500" />
                 <div>
