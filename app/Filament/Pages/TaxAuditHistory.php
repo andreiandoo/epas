@@ -32,12 +32,9 @@ class TaxAuditHistory extends Page implements HasTable
 
     public function table(Table $table): Table
     {
-        $tenant = auth()->user()->tenant;
-
         return $table
             ->query(
                 TaxAuditLog::query()
-                    ->where('tenant_id', $tenant?->id)
                     ->orderByDesc('created_at')
             )
             ->columns([
@@ -138,10 +135,6 @@ class TaxAuditHistory extends Page implements HasTable
                                 fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
                             );
                     }),
-            ])
-            ->actions([
-                Tables\Actions\ViewAction::make()
-                    ->modalContent(fn ($record) => view('filament.pages.partials.audit-details', ['record' => $record])),
             ])
             ->defaultSort('created_at', 'desc')
             ->poll('60s');

@@ -13,14 +13,6 @@ use Filament\Schemas\Components as SC;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
-use Filament\Actions\ForceDeleteAction;
-use Filament\Actions\RestoreAction;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\ForceDeleteBulkAction;
-use Filament\Actions\RestoreBulkAction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
@@ -88,7 +80,7 @@ class GeneralTaxResource extends Resource
                             ->placeholder('All Event Types (leave empty for global)')
                             ->helperText('Select an event type to apply this tax only to specific events, or leave empty for all events.'),
 
-                        Forms\Components\Grid::make(3)
+                        SC\Grid::make(3)
                             ->schema([
                                 Forms\Components\TextInput::make('value')
                                     ->label('Value')
@@ -124,7 +116,7 @@ class GeneralTaxResource extends Resource
                             ->default(0)
                             ->helperText('Higher priority taxes are applied first. Use this to control calculation order.'),
 
-                        Forms\Components\Grid::make(2)
+                        SC\Grid::make(2)
                             ->schema([
                                 Forms\Components\Toggle::make('is_compound')
                                     ->label('Compound Tax')
@@ -305,19 +297,6 @@ class GeneralTaxResource extends Resource
                             };
                         });
                     }),
-            ])
-            ->actions([
-                EditAction::make(),
-                DeleteAction::make(),
-                RestoreAction::make(),
-                ForceDeleteAction::make(),
-            ])
-            ->bulkActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                ]),
             ])
             ->defaultSort('priority', 'desc');
     }
