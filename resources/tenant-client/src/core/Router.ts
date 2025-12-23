@@ -1722,6 +1722,7 @@ export class Router {
                                             ` : `
                                                 <p class="text-sm text-gray-500 mt-2">${ticket.status !== 'active' ? 'Indisponibil' : 'Stoc epuizat'}</p>
                                             `}
+                                            <div class="ticket-bundle-container" data-ticket-id="${ticket.id}"></div>
                                         </div>
                                     `}).join('')}
                                 </div>
@@ -1939,6 +1940,7 @@ export class Router {
                                             ` : `
                                                 <p class="text-sm text-gray-500 mt-2">${ticket.status !== 'active' ? 'Indisponibil' : 'Stoc epuizat'}</p>
                                             `}
+                                            <div class="mobile-ticket-bundle-container" data-ticket-id="${ticket.id}"></div>
                                         </div>
                                     `}).join('')}
                                 </div>
@@ -1973,6 +1975,11 @@ export class Router {
                 // Fetch and display event upsells (in sidebar)
                 if (!isPastEvent && this.isShopEnabled() && event.id) {
                     this.loadEventUpsells(event.id, event.currency || 'RON');
+                }
+
+                // Load bundled products for each ticket type
+                if (!isPastEvent && this.isShopEnabled() && event.ticket_types) {
+                    this.loadTicketTypeBundles(event.ticket_types, event.currency || 'RON');
                 }
 
                 // Setup collapsible sections for mobile
@@ -3519,6 +3526,182 @@ export class Router {
                 }
             });
         }
+
+        // Close on Escape
+        const escHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    }
+
+    private async loadTicketTypeBundles(ticketTypes: any[], currency: string): Promise<void> {
+        for (const ticket of ticketTypes) {
+            try {
+                const bundles = await this.fetchTicketTypeBundles(ticket.id);
+                if (bundles && bundles.length > 0) {
+                    // Find desktop container
+                    const desktopContainer = document.querySelector(`.ticket-bundle-container[data-ticket-id="${ticket.id}"]`);
+                    if (desktopContainer) {
+                        desktopContainer.innerHTML = this.renderTicketBundleDisplay(bundles, currency);
+                    }
+                    // Find mobile container
+                    const mobileContainer = document.querySelector(`.mobile-ticket-bundle-container[data-ticket-id="${ticket.id}"]`);
+                    if (mobileContainer) {
+                        mobileContainer.innerHTML = this.renderTicketBundleDisplay(bundles, currency);
+                    }
+                    // Setup click handlers for bundle product names
+                    this.setupBundleProductHandlers();
+                }
+            } catch (err) {
+                console.error(`Failed to load bundles for ticket type ${ticket.id}:`, err);
+            }
+        }
+    }
+
+    private renderTicketBundleDisplay(bundles: any[], currency: string): string {
+        return `
+            <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                    </svg>
+                    <span class="text-xs font-medium text-amber-800">Include în preț:</span>
+                </div>
+                <div class="space-y-1">
+                    ${bundles.map(b => {
+                        const product = b.product;
+                        const productData = JSON.stringify(product).replace(/"/g, '&quot;');
+                        return `
+                        <div class="flex items-center gap-2 text-xs text-amber-700">
+                            <span class="font-medium">${b.quantity_included}×</span>
+                            <span class="bundle-product-link cursor-pointer hover:text-amber-900 hover:underline transition"
+                                  data-bundle-product='${productData}'
+                                  data-currency="${currency}">${product.title}</span>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    private setupBundleProductHandlers(): void {
+        document.querySelectorAll('.bundle-product-link').forEach(el => {
+            // Remove existing listeners by cloning
+            const newEl = el.cloneNode(true);
+            el.parentNode?.replaceChild(newEl, el);
+
+            newEl.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const target = e.currentTarget as HTMLElement;
+                try {
+                    const productData = target.dataset.bundleProduct;
+                    const currency = target.dataset.currency || 'RON';
+                    if (productData) {
+                        const product = JSON.parse(productData.replace(/&quot;/g, '"'));
+                        this.showBundleProductModal(product, currency);
+                    }
+                } catch (err) {
+                    console.error('Failed to parse bundle product data:', err);
+                }
+            });
+        });
+    }
+
+    private showBundleProductModal(product: any, currency: string): void {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('bundle-product-modal');
+        if (existingModal) existingModal.remove();
+
+        const imageUrl = product.image_url || '/storage/shop/placeholder.png';
+        const gallery = product.gallery || [];
+        const allImages = [imageUrl, ...gallery.filter((img: string) => img !== imageUrl)];
+
+        const modalHtml = `
+            <div id="bundle-product-modal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                    <!-- Overlay -->
+                    <div class="bundle-modal-overlay fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+
+                    <!-- Modal panel -->
+                    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                        <!-- Close button -->
+                        <button class="bundle-modal-close absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+
+                        <div class="p-6">
+                            <!-- Image gallery -->
+                            <div class="mb-4">
+                                <img id="bundle-modal-main-image" src="${imageUrl}" alt="${product.title}" class="w-full h-48 sm:h-64 object-contain rounded-lg bg-gray-100">
+                                ${allImages.length > 1 ? `
+                                <div class="flex gap-2 mt-3 overflow-x-auto pb-2">
+                                    ${allImages.map((img: string, idx: number) => `
+                                        <img src="${img}" alt="${product.title} ${idx + 1}"
+                                             class="bundle-modal-gallery-thumb w-14 h-14 object-cover rounded-lg cursor-pointer border-2 ${idx === 0 ? 'border-primary' : 'border-transparent'} hover:border-primary transition"
+                                             data-image="${img}">
+                                    `).join('')}
+                                </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- Product info -->
+                            <h2 class="text-xl font-bold text-gray-900 mb-2">${product.title}</h2>
+
+                            <div class="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-800 text-sm font-medium rounded-full mb-4">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                                </svg>
+                                Inclus în bilet
+                            </div>
+
+                            ${product.short_description ? `
+                            <p class="text-gray-600 mb-4">${product.short_description}</p>
+                            ` : ''}
+
+                            ${product.description ? `
+                            <div class="prose prose-sm max-w-none text-gray-700">${product.description}</div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        const modal = document.getElementById('bundle-product-modal');
+        if (!modal) return;
+
+        // Close handlers
+        const closeModal = () => modal.remove();
+
+        modal.querySelector('.bundle-modal-overlay')?.addEventListener('click', closeModal);
+        modal.querySelector('.bundle-modal-close')?.addEventListener('click', closeModal);
+
+        // Gallery thumbnails
+        modal.querySelectorAll('.bundle-modal-gallery-thumb').forEach(thumb => {
+            thumb.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLImageElement;
+                const mainImage = document.getElementById('bundle-modal-main-image') as HTMLImageElement;
+                if (mainImage && target.dataset.image) {
+                    mainImage.src = target.dataset.image;
+                    // Update active border
+                    modal.querySelectorAll('.bundle-modal-gallery-thumb').forEach(t => {
+                        t.classList.remove('border-primary');
+                        t.classList.add('border-transparent');
+                    });
+                    target.classList.remove('border-transparent');
+                    target.classList.add('border-primary');
+                }
+            });
+        });
 
         // Close on Escape
         const escHandler = (e: KeyboardEvent) => {
