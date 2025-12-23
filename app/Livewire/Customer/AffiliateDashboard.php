@@ -248,6 +248,21 @@ class AffiliateDashboard extends Component
             ->get();
     }
 
+    public function getActiveCouponsProperty()
+    {
+        if (!$this->affiliate) {
+            return collect();
+        }
+
+        return $this->affiliate->coupons()
+            ->active()
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->get();
+    }
+
     public function render()
     {
         return view('livewire.customer.affiliate-dashboard');

@@ -68,31 +68,7 @@
             </div>
         </div>
 
-        {{-- Account details --}}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-gray-200">
-                <h2 class="text-lg font-semibold text-gray-900">{{ __('Account Details') }}</h2>
-            </div>
-            <div class="p-6">
-                <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500">{{ __('Name') }}</dt>
-                        <dd class="mt-1 text-sm text-gray-900">{{ $customer->full_name ?? '-' }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500">{{ __('Email') }}</dt>
-                        <dd class="mt-1 text-sm text-gray-900">{{ $customer->email }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500">{{ __('Phone') }}</dt>
-                        <dd class="mt-1 text-sm text-gray-900">{{ $customer->phone ?? '-' }}</dd>
-                    </div>
-                    <div>
-                        <dt class="text-sm font-medium text-gray-500">{{ __('Member Since') }}</dt>
-                        <dd class="mt-1 text-sm text-gray-900">{{ $customer->created_at->format('d M Y') }}</dd>
-                    </div>
-                </dl>
-            </div>
-        </div>
+        {{-- Profile Edit Component --}}
+        <livewire:customer.profile-edit :tenant="$tenant" />
     </div>
 @endsection
