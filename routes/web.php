@@ -154,6 +154,7 @@ Route::post('/register/step-4', [OnboardingController::class, 'storeStepFour'])-
 Route::post('/register/lookup-cui', [OnboardingController::class, 'lookupCui'])->name('onboarding.lookup-cui');
 Route::post('/register/check-email', [OnboardingController::class, 'checkEmail'])->name('onboarding.check-email');
 Route::post('/register/check-domain', [OnboardingController::class, 'checkDomain'])->name('onboarding.check-domain');
+Route::post('/register/check-subdomain', [OnboardingController::class, 'checkSubdomain'])->name('onboarding.check-subdomain');
 Route::get('/register/api/cities/{country}/{state}', [OnboardingController::class, 'getCities'])->name('onboarding.cities');
 Route::get('/register/verify/{token}', [OnboardingController::class, 'verify'])->name('onboarding.verify');
 // Redirect /verify/{token} to /register/verify/{token}

@@ -15,6 +15,7 @@ class Domain extends Model
         'is_active',
         'is_suspended',
         'is_primary',
+        'is_subdomain',
         'activated_at',
         'suspended_at',
         'notes',
@@ -24,6 +25,7 @@ class Domain extends Model
         'is_active' => 'boolean',
         'is_suspended' => 'boolean',
         'is_primary' => 'boolean',
+        'is_subdomain' => 'boolean',
         'activated_at' => 'datetime',
         'suspended_at' => 'datetime',
     ];

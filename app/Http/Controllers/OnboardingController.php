@@ -69,6 +69,7 @@ class OnboardingController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'public_name' => 'required|string|max:255',
+            'organizer_type' => 'required|string|in:event_organizer,pub_bar,theater,concert_hall,philharmonic,museum,sports,other',
             'email' => 'required|email|unique:users,email',
             'phone' => 'required|string|max:20',
             'contact_position' => 'nullable|string|max:255',
@@ -84,7 +85,7 @@ class OnboardingController extends Controller
 
         // Store in session
         $onboarding = Session::get('onboarding', []);
-        $onboarding['data']['step1'] = $request->only(['first_name', 'last_name', 'public_name', 'email', 'phone', 'contact_position', 'password']);
+        $onboarding['data']['step1'] = $request->only(['first_name', 'last_name', 'public_name', 'organizer_type', 'email', 'phone', 'contact_position', 'password']);
         $onboarding['step'] = 2;
         Session::put('onboarding', $onboarding);
 
@@ -108,7 +109,7 @@ class OnboardingController extends Controller
             'address' => 'required|string',
             'city' => 'required|string|max:255',
             'state' => 'required|string|max:255',
-            'payment_processor' => 'required|in:stripe,netopia,euplatesc,payu',
+            'payment_processor' => 'nullable|in:stripe,netopia,euplatesc,payu,unknown',
         ]);
 
         if ($validator->fails()) {
@@ -137,11 +138,26 @@ class OnboardingController extends Controller
      */
     public function storeStepThree(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'domains' => 'required|array|min:1',
-            'domains.*' => 'required|string',
-            'estimated_monthly_tickets' => 'required|integer|min:0',
-        ]);
+        $hasNoWebsite = filter_var($request->input('has_no_website'), FILTER_VALIDATE_BOOLEAN);
+
+        // Different validation rules based on whether they have a website
+        if ($hasNoWebsite) {
+            $validator = Validator::make($request->all(), [
+                'has_no_website' => 'required|boolean',
+                'subdomain' => 'required|string|min:3|max:50|regex:/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/i',
+                'estimated_monthly_tickets' => 'required|integer|min:0',
+            ], [
+                'subdomain.required' => 'Te rugăm să alegi un subdomeniu.',
+                'subdomain.min' => 'Subdomeniul trebuie să aibă cel puțin 3 caractere.',
+                'subdomain.regex' => 'Subdomeniul poate conține doar litere, cifre și cratimă.',
+            ]);
+        } else {
+            $validator = Validator::make($request->all(), [
+                'domains' => 'required|array|min:1',
+                'domains.*' => 'required|string',
+                'estimated_monthly_tickets' => 'required|integer|min:0',
+            ]);
+        }
 
         if ($validator->fails()) {
             return response()->json([
@@ -152,7 +168,12 @@ class OnboardingController extends Controller
 
         // Store in session
         $onboarding = Session::get('onboarding', []);
-        $onboarding['data']['step3'] = $request->only(['domains', 'estimated_monthly_tickets']);
+        $onboarding['data']['step3'] = [
+            'has_no_website' => $hasNoWebsite,
+            'subdomain' => $hasNoWebsite ? strtolower($request->input('subdomain')) : null,
+            'domains' => $hasNoWebsite ? [] : $request->input('domains'),
+            'estimated_monthly_tickets' => $request->input('estimated_monthly_tickets'),
+        ];
         $onboarding['step'] = 4;
         Session::put('onboarding', $onboarding);
 
@@ -207,13 +228,26 @@ class OnboardingController extends Controller
                 'role' => 'tenant', // Tenant owner role
             ]);
 
-            // Extract domain from first URL
-            $firstDomain = $step3['domains'][0];
-            $parsedDomain = parse_url($firstDomain, PHP_URL_HOST);
-            if (!$parsedDomain) {
-                // If parse_url fails, try to extract domain manually
-                $parsedDomain = str_replace(['http://', 'https://', 'www.'], '', $firstDomain);
-                $parsedDomain = explode('/', $parsedDomain)[0];
+            // Handle domain based on whether tenant has their own website
+            $hasNoWebsite = $step3['has_no_website'] ?? false;
+            if ($hasNoWebsite && !empty($step3['subdomain'])) {
+                // Subdomain on tics.ro
+                $parsedDomain = $step3['subdomain'] . '.tics.ro';
+            } else {
+                // Extract domain from first URL
+                $firstDomain = $step3['domains'][0] ?? '';
+                $parsedDomain = parse_url($firstDomain, PHP_URL_HOST);
+                if (!$parsedDomain) {
+                    // If parse_url fails, try to extract domain manually
+                    $parsedDomain = str_replace(['http://', 'https://', 'www.'], '', $firstDomain);
+                    $parsedDomain = explode('/', $parsedDomain)[0];
+                }
+            }
+
+            // Handle payment processor - 'unknown' means null
+            $paymentProcessor = $step2['payment_processor'] ?? null;
+            if ($paymentProcessor === 'unknown') {
+                $paymentProcessor = null;
             }
 
             // Convert country name to ISO code
@@ -241,6 +275,7 @@ class OnboardingController extends Controller
                 'commission_rate' => $planData['commission_rate'],
                 'vat_payer' => filter_var($step2['vat_payer'], FILTER_VALIDATE_BOOLEAN),
                 'work_method' => $step4['work_method'],
+                'organizer_type' => $step1['organizer_type'] ?? null,
                 'estimated_monthly_tickets' => (int)$step3['estimated_monthly_tickets'],
                 'company_name' => $step2['company_name'],
                 'cui' => $step2['cui'] ?? null,
@@ -254,8 +289,9 @@ class OnboardingController extends Controller
                 'contact_email' => $step1['email'],
                 'contact_phone' => $step1['phone'],
                 'contact_position' => $step1['contact_position'] ?? null,
-                'payment_processor' => $step2['payment_processor'] ?? null,
+                'payment_processor' => $paymentProcessor,
                 'payment_processor_mode' => 'test', // Start in test mode
+                'has_own_website' => !$hasNoWebsite,
                 'onboarding_completed' => true,
                 'onboarding_completed_at' => now(),
                 'billing_starts_at' => now(),
@@ -263,29 +299,46 @@ class OnboardingController extends Controller
             ]);
 
             // Create Domains
-            foreach ($step3['domains'] as $index => $domainUrl) {
-                $domainName = parse_url($domainUrl, PHP_URL_HOST);
-                if (!$domainName) {
-                    $domainName = str_replace(['http://', 'https://', 'www.'], '', $domainUrl);
-                    $domainName = explode('/', $domainName)[0];
-                }
-
+            if ($hasNoWebsite && !empty($step3['subdomain'])) {
+                // Create subdomain on tics.ro
+                $subdomainName = $step3['subdomain'] . '.tics.ro';
                 $domain = Domain::create([
                     'tenant_id' => $tenant->id,
-                    'domain' => $domainName,
-                    'is_primary' => $index === 0,
-                    'is_active' => false, // Activate after email verification
+                    'domain' => $subdomainName,
+                    'is_primary' => true,
+                    'is_active' => true, // Subdomains are auto-activated (we control tics.ro)
+                    'is_subdomain' => true, // Flag that this is a managed subdomain
                 ]);
 
-                // Create verification entry for the domain
-                $domain->verifications()->create([
-                    'tenant_id' => $tenant->id,
-                    'verification_method' => 'dns_txt',
-                    'status' => 'pending',
-                ]);
-
+                // No verification needed for tics.ro subdomains - we control the DNS
                 // Generate deployment package for this domain
                 GeneratePackageJob::dispatch($domain);
+            } else {
+                // Process regular domains
+                foreach ($step3['domains'] as $index => $domainUrl) {
+                    $domainName = parse_url($domainUrl, PHP_URL_HOST);
+                    if (!$domainName) {
+                        $domainName = str_replace(['http://', 'https://', 'www.'], '', $domainUrl);
+                        $domainName = explode('/', $domainName)[0];
+                    }
+
+                    $domain = Domain::create([
+                        'tenant_id' => $tenant->id,
+                        'domain' => $domainName,
+                        'is_primary' => $index === 0,
+                        'is_active' => false, // Activate after email verification
+                    ]);
+
+                    // Create verification entry for the domain
+                    $domain->verifications()->create([
+                        'tenant_id' => $tenant->id,
+                        'verification_method' => 'dns_txt',
+                        'status' => 'pending',
+                    ]);
+
+                    // Generate deployment package for this domain
+                    GeneratePackageJob::dispatch($domain);
+                }
             }
 
             // Attach Microservices
@@ -447,6 +500,54 @@ class OnboardingController extends Controller
         return response()->json([
             'available' => !$exists,
             'message' => $exists ? 'Acest domeniu este deja înregistrat' : 'Domeniu disponibil'
+        ]);
+    }
+
+    /**
+     * Check if subdomain is available on tics.ro
+     */
+    public function checkSubdomain(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'subdomain' => 'required|string|min:3|max:50',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Subdomeniu invalid'
+            ]);
+        }
+
+        $subdomain = strtolower($request->subdomain);
+
+        // Validate subdomain format
+        if (!preg_match('/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/', $subdomain)) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Subdomeniul poate conține doar litere, cifre și cratimă'
+            ]);
+        }
+
+        // Reserved subdomains
+        $reserved = ['www', 'mail', 'ftp', 'admin', 'api', 'app', 'blog', 'cdn', 'dev', 'test', 'staging', 'demo', 'support', 'help', 'docs', 'status', 'shop', 'store', 'portal'];
+        if (in_array($subdomain, $reserved)) {
+            return response()->json([
+                'available' => false,
+                'message' => 'Acest subdomeniu este rezervat'
+            ]);
+        }
+
+        // Check if subdomain.tics.ro already exists in domains table
+        $fullDomain = $subdomain . '.tics.ro';
+        $exists = Domain::where('domain', $fullDomain)->exists();
+
+        // Also check tenant slugs
+        $slugExists = Tenant::where('slug', $subdomain)->exists();
+
+        return response()->json([
+            'available' => !$exists && !$slugExists,
+            'message' => ($exists || $slugExists) ? 'Acest subdomeniu nu este disponibil' : 'Subdomeniu disponibil'
         ]);
     }
 

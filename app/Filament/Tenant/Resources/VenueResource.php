@@ -174,6 +174,22 @@ class VenueResource extends Resource
                         ->placeholder('e.g. 4000'),
                 ])->columns(3),
 
+            // FACILITIES
+            SC\Section::make('Facilități')
+                ->description('Selectează facilitățile disponibile la această locație')
+                ->collapsible()
+                ->collapsed()
+                ->schema([
+                    Forms\Components\CheckboxList::make('facilities')
+                        ->label('')
+                        ->options(Venue::getFacilitiesOptions())
+                        ->columns(4)
+                        ->gridDirection('row')
+                        ->searchable()
+                        ->bulkToggleable()
+                        ->columnSpanFull(),
+                ]),
+
             // CONTACT & LINKS
             SC\Section::make('Contact & Links')
                 ->schema([
