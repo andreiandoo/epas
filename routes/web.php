@@ -370,3 +370,35 @@ Route::middleware(['web', 'auth'])->group(function () {
         ->where('path', '.*')
         ->name('tenant.preview.proxy');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Customer Account Routes
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['web'])->prefix('account/{tenant}')->group(function () {
+    // Customer authentication
+    Route::get('/login', [\App\Http\Controllers\Customer\CustomerAuthController::class, 'showLogin'])
+        ->name('customer.login');
+    Route::post('/login', [\App\Http\Controllers\Customer\CustomerAuthController::class, 'login'])
+        ->name('customer.login.submit');
+    Route::get('/register', [\App\Http\Controllers\Customer\CustomerAuthController::class, 'showRegister'])
+        ->name('customer.register');
+    Route::post('/register', [\App\Http\Controllers\Customer\CustomerAuthController::class, 'register'])
+        ->name('customer.register.submit');
+
+    // Protected customer routes
+    Route::middleware(['auth:customer'])->group(function () {
+        Route::get('/', [\App\Http\Controllers\Customer\CustomerAccountController::class, 'index'])
+            ->name('customer.account');
+        Route::get('/orders', [\App\Http\Controllers\Customer\CustomerAccountController::class, 'orders'])
+            ->name('customer.orders');
+        Route::get('/tickets', [\App\Http\Controllers\Customer\CustomerAccountController::class, 'tickets'])
+            ->name('customer.tickets');
+        Route::get('/affiliate', [\App\Http\Controllers\Customer\CustomerAccountController::class, 'affiliate'])
+            ->name('customer.affiliate');
+        Route::post('/logout', [\App\Http\Controllers\Customer\CustomerAccountController::class, 'logout'])
+            ->name('customer.logout');
+    });
+});

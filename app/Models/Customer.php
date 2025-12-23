@@ -165,4 +165,33 @@ class Customer extends Authenticatable
     {
         return $this->belongsTo(Customer::class, 'referred_by');
     }
+
+    /**
+     * Get the affiliate account for this customer (if they are an affiliate)
+     */
+    public function affiliate(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Affiliate::class);
+    }
+
+    /**
+     * Check if customer is an affiliate for a specific tenant
+     */
+    public function isAffiliateFor(int $tenantId): bool
+    {
+        return $this->affiliate()
+            ->where('tenant_id', $tenantId)
+            ->whereIn('status', [Affiliate::STATUS_ACTIVE, Affiliate::STATUS_PENDING])
+            ->exists();
+    }
+
+    /**
+     * Get affiliate for a specific tenant
+     */
+    public function getAffiliateFor(int $tenantId): ?Affiliate
+    {
+        return $this->affiliate()
+            ->where('tenant_id', $tenantId)
+            ->first();
+    }
 }
