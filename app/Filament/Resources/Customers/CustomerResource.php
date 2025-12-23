@@ -94,7 +94,7 @@ class CustomerResource extends Resource
                             )),
                     ]),
 
-                    Forms\Components\Fieldset::make('Ajustare manuală puncte')
+                    SC\Fieldset::make('Ajustare manuală puncte')
                         ->schema([
                             Forms\Components\Select::make('points_action')
                                 ->label('Acțiune')
