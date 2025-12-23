@@ -6,6 +6,7 @@ use App\Models\Affiliate;
 use App\Models\AffiliateSettings;
 use App\Models\Customer;
 use App\Models\Tenant;
+use App\Notifications\NewAffiliateSignupNotification;
 use Livewire\Component;
 
 class AffiliateSignupCard extends Component
@@ -93,6 +94,9 @@ class AffiliateSignupCard extends Component
                 ],
             ]);
 
+            // Notify tenant admin about new affiliate signup
+            $this->notifyTenantAdmin();
+
             $this->showSignupForm = false;
 
             if ($status === Affiliate::STATUS_PENDING) {
@@ -108,6 +112,22 @@ class AffiliateSignupCard extends Component
             \Log::error('Affiliate signup error', [
                 'customer_id' => $this->customer->id,
                 'tenant_id' => $this->tenant->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    protected function notifyTenantAdmin(): void
+    {
+        try {
+            // Notify tenant owner
+            $owner = $this->tenant->owner;
+            if ($owner) {
+                $owner->notify(new NewAffiliateSignupNotification($this->affiliate));
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Failed to send affiliate signup notification', [
+                'affiliate_id' => $this->affiliate->id,
                 'error' => $e->getMessage(),
             ]);
         }

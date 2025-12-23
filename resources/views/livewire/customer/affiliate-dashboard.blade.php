@@ -87,7 +87,7 @@
             </div>
 
             {{-- Stats Grid --}}
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 {{-- Clicks --}}
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                     <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">{{ __('Total Clicks') }}</div>
@@ -103,6 +103,20 @@
                     <div class="text-2xl font-bold text-gray-900">{{ number_format($stats['total_conversions'] ?? 0) }}</div>
                     <div class="text-xs text-gray-500 mt-1">
                         {{ number_format($stats['pending_conversions'] ?? 0) }} {{ __('pending') }}
+                    </div>
+                </div>
+
+                {{-- Conversion Rate --}}
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <div class="text-xs uppercase tracking-wide text-gray-500 mb-1">{{ __('Conversion Rate') }}</div>
+                    @php
+                        $conversionRate = ($stats['total_clicks'] ?? 0) > 0
+                            ? (($stats['total_conversions'] ?? 0) / $stats['total_clicks']) * 100
+                            : 0;
+                    @endphp
+                    <div class="text-2xl font-bold text-gray-900">{{ number_format($conversionRate, 1) }}%</div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        {{ __('clicks to sales') }}
                     </div>
                 </div>
 
