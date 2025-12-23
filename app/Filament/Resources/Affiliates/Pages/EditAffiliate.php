@@ -16,7 +16,10 @@ class EditAffiliate extends EditRecord
                 ->label('View Statistics')
                 ->icon('heroicon-o-chart-bar')
                 ->url(fn () => static::getResource()::getUrl('stats', ['record' => $this->record])),
-            \Filament\Actions\DeleteAction::make(),
+            \Filament\Actions\DeleteAction::make()
+                ->label('Delete Affiliate')
+                ->icon('heroicon-o-trash')
+                ->color('danger'),
         ];
     }
 

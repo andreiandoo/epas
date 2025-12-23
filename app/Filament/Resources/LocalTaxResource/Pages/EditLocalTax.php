@@ -13,7 +13,11 @@ class EditLocalTax extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->label('Delete Local Tax')
+                ->icon('heroicon-o-trash')
+                ->color('danger')
+                ->requiresConfirmation(),
         ];
     }
 }

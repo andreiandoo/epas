@@ -13,7 +13,11 @@ class EditGeneralTax extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->label('Delete General Tax')
+                ->icon('heroicon-o-trash')
+                ->color('danger')
+                ->requiresConfirmation(),
         ];
     }
 }

@@ -88,7 +88,11 @@ class EditEventSeatingLayout extends EditRecord
                         ->send();
                 }),
 
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->label('Delete Layout')
+                ->icon('heroicon-o-trash')
+                ->color('danger')
+                ->requiresConfirmation(),
         ];
     }
 

@@ -244,7 +244,11 @@ class PlatformAdAccountResource extends Resource
                     }),
 
                 EditAction::make(),
-                DeleteAction::make(),
+                DeleteAction::make()
+                    ->label('Delete Ad Account')
+                    ->requiresConfirmation()
+                    ->color('danger')
+                    ->icon('heroicon-o-trash'),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
