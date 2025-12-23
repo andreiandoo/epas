@@ -61,7 +61,10 @@ class EditInvoice extends EditRecord
                     }
                 }),
 
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->label('Delete Invoice')
+                ->icon('heroicon-o-trash')
+                ->color('danger'),
         ];
     }
 
