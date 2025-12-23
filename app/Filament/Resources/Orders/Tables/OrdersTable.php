@@ -23,7 +23,7 @@ class OrdersTable
                     ->searchable()
                     ->url(fn ($record) => \App\Filament\Resources\Orders\OrderResource::getUrl('view', ['record' => $record])),
 
-                TextColumn::make('tenant.name')
+                TextColumn::make('tenant.public_name')
                     ->label('Tenant')
                     ->sortable()
                     ->searchable()
