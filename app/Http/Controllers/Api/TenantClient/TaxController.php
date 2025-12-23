@@ -322,6 +322,9 @@ class TaxController extends Controller
         // Check if tenant is VAT payer
         $isVatPayer = $tenant && (bool) $tenant->vat_payer;
 
+        // Get tenant's tax display mode (included = taxes already in price, added = taxes added at checkout)
+        $taxDisplayMode = $tenant->tax_display_mode ?? 'included';
+
         // Get global taxes that are visible on checkout
         $taxes = GeneralTax::query()
             ->whereNull('tenant_id') // Global taxes only
@@ -363,6 +366,7 @@ class TaxController extends Controller
             $taxBreakdown[] = [
                 'id' => $tax->id,
                 'name' => $tax->name,
+                'icon_svg' => $tax->icon_svg,
                 'value' => (float) $tax->value,
                 'value_type' => $tax->value_type,
                 'formatted_value' => $tax->getFormattedValue(),
@@ -387,6 +391,7 @@ class TaxController extends Controller
             array_unshift($taxBreakdown, [
                 'id' => 0,
                 'name' => 'TVA',
+                'icon_svg' => null,
                 'value' => $standardVatRate,
                 'value_type' => 'percent',
                 'formatted_value' => $standardVatRate . '%',
@@ -408,6 +413,7 @@ class TaxController extends Controller
                 'vat_amount' => round($vatAmount, 2),
                 'vat_rate' => $vatRate,
                 'is_vat_payer' => $isVatPayer,
+                'tax_display_mode' => $taxDisplayMode, // 'included' or 'added'
                 'base_amount' => $amount,
                 'currency' => $currency,
             ],

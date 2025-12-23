@@ -7,6 +7,7 @@ use App\Models\EventType;
 use App\Models\Tax\Traits\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
@@ -21,8 +22,8 @@ class GeneralTax extends Model
 
     protected $fillable = [
         'tenant_id',
-        'event_type_id',
         'name',
+        'icon_svg',
         'value',
         'value_type',
         'currency',
@@ -85,7 +86,7 @@ class GeneralTax extends Model
     {
         return LogOptions::defaults()
             ->logOnly([
-                'name', 'value', 'value_type', 'currency', 'event_type_id',
+                'name', 'icon_svg', 'value', 'value_type', 'currency',
                 'explanation', 'priority', 'is_compound', 'compound_order',
                 'valid_from', 'valid_until', 'is_active'
             ])
@@ -100,6 +101,15 @@ class GeneralTax extends Model
         return $this->belongsTo(Tenant::class);
     }
 
+    public function eventTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(EventType::class, 'general_tax_event_type')
+            ->withTimestamps();
+    }
+
+    /**
+     * @deprecated Use eventTypes() instead
+     */
     public function eventType(): BelongsTo
     {
         return $this->belongsTo(EventType::class);
@@ -121,11 +131,35 @@ class GeneralTax extends Model
     {
         if ($eventTypeId) {
             return $query->where(function ($q) use ($eventTypeId) {
-                $q->where('event_type_id', $eventTypeId)
-                  ->orWhereNull('event_type_id'); // Include global taxes
+                // Taxes that apply to this specific event type
+                $q->whereHas('eventTypes', function ($subQ) use ($eventTypeId) {
+                    $subQ->where('event_types.id', $eventTypeId);
+                })
+                // Or global taxes (no event types assigned)
+                ->orWhereDoesntHave('eventTypes');
             });
         }
-        return $query->whereNull('event_type_id');
+        // If no event type specified, only return global taxes
+        return $query->whereDoesntHave('eventTypes');
+    }
+
+    /**
+     * Scope for taxes that apply to any of the given event type IDs
+     */
+    public function scopeForEventTypes(Builder $query, array $eventTypeIds): Builder
+    {
+        if (empty($eventTypeIds)) {
+            return $query->whereDoesntHave('eventTypes');
+        }
+
+        return $query->where(function ($q) use ($eventTypeIds) {
+            // Taxes that apply to any of these event types
+            $q->whereHas('eventTypes', function ($subQ) use ($eventTypeIds) {
+                $subQ->whereIn('event_types.id', $eventTypeIds);
+            })
+            // Or global taxes (no event types assigned)
+            ->orWhereDoesntHave('eventTypes');
+        });
     }
 
     public function scopeValidOn(Builder $query, ?Carbon $date = null): Builder

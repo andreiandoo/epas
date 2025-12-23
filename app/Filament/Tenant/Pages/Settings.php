@@ -41,6 +41,7 @@ class Settings extends Page
                 'cui' => $tenant->cui,
                 'reg_com' => $tenant->reg_com,
                 'vat_payer' => (bool) $tenant->vat_payer,
+                'tax_display_mode' => $tenant->tax_display_mode ?? 'included',
                 'address' => $tenant->address,
                 'city' => $tenant->city,
                 'state' => $tenant->state,
@@ -131,6 +132,16 @@ class Settings extends Page
                                             ->helperText('Bifati daca sunteti inregistrat ca platitor de TVA. Aceasta afecteaza calculul taxelor si afisarea TVA-ului in checkout.')
                                             ->onColor('success')
                                             ->offColor('gray'),
+
+                                        Forms\Components\Select::make('tax_display_mode')
+                                            ->label('Modul de afișare taxe')
+                                            ->options([
+                                                'included' => 'Incluse în preț (prețul afișat include taxele)',
+                                                'added' => 'Adăugate la preț (taxele se adaugă la checkout)',
+                                            ])
+                                            ->default('included')
+                                            ->helperText('Alegeți cum vor fi afișate taxele pe website: incluse în prețul biletului sau adăugate separat la checkout.')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Aceasta setare afecteaza modul in care clientii vad preturile pe website.'),
 
                                         Forms\Components\TextInput::make('bank_name')
                                             ->maxLength(255),
@@ -476,6 +487,7 @@ class Settings extends Page
             'cui' => $data['cui'],
             'reg_com' => $data['reg_com'],
             'vat_payer' => (bool) ($data['vat_payer'] ?? false),
+            'tax_display_mode' => $data['tax_display_mode'] ?? 'included',
             'address' => $data['address'],
             'city' => $data['city'],
             'state' => $data['state'],

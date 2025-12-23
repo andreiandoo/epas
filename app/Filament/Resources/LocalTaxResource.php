@@ -340,7 +340,7 @@ class LocalTaxResource extends Resource
                             ->helperText('Inactive taxes will not be applied.')
                             ->columnSpanFull(),
                     ]),
-            ]);
+            ]) ->columns(1);
     }
 
     public static function table(Table $table): Table

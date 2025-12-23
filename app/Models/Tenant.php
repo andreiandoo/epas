@@ -55,6 +55,7 @@ class Tenant extends Model
         // Onboarding
         'locale',
         'vat_payer',
+        'tax_display_mode',
         'estimated_monthly_tickets',
         'work_method',
         'organizer_type',

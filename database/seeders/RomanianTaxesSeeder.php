@@ -446,17 +446,22 @@ class RomanianTaxesSeeder extends Seeder
             // Note: tiered_rates is automatically JSON encoded by Laravel's 'array' cast
             // Do NOT manually json_encode it here
 
-            GeneralTax::updateOrCreate(
+            // Create or update the tax
+            $tax = GeneralTax::updateOrCreate(
                 [
                     'name' => $taxData['name'],
-                    'event_type_id' => $eventTypeId,
                 ],
                 array_merge($taxData, [
-                    'event_type_id' => $eventTypeId,
                     'is_active' => true,
                     'priority' => $this->getPriority($taxData['name']),
                 ])
             );
+
+            // Attach event type using the new many-to-many relationship
+            if ($eventTypeId) {
+                // Sync without detaching to avoid duplicates
+                $tax->eventTypes()->syncWithoutDetaching([$eventTypeId]);
+            }
         }
     }
 

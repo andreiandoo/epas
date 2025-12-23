@@ -4680,11 +4680,16 @@ export class Router {
         try {
             const response = await this.fetchApi(`/taxes/checkout?amount=${amount}&currency=${currency}`);
             if (response.success && response.data) {
-                const { taxes, is_vat_payer, vat_amount, vat_rate, taxes_to_add } = response.data;
+                const { taxes, is_vat_payer, vat_amount, vat_rate, taxes_to_add, tax_display_mode } = response.data;
 
                 // Only show if there are taxes to display
                 if ((is_vat_payer && vat_amount > 0) || taxes?.length > 0) {
                     let taxHtml = '';
+
+                    // Default info icon
+                    const defaultInfoIcon = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>`;
 
                     // Show VAT info for VAT payer tenants (informational only - included in price)
                     if (is_vat_payer && vat_amount > 0) {
@@ -4693,9 +4698,7 @@ export class Router {
                                 <span class="flex items-center gap-1">
                                     TVA inclus (${vat_rate}%)
                                     <span class="cursor-help text-gray-400" title="Taxa pe valoarea adaugata inclusa in pret">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
+                                        ${defaultInfoIcon}
                                     </span>
                                 </span>
                                 <span>${vat_amount.toFixed(2)} ${currency}</span>
@@ -4705,17 +4708,19 @@ export class Router {
 
                     // Show other taxes (non-VAT)
                     taxes?.filter((tax: any) => !tax.is_vat).forEach((tax: any) => {
+                        // Use custom icon_svg if available, otherwise show info icon with explanation
+                        const taxIcon = tax.icon_svg || '';
+                        const infoIcon = tax.explanation ? `
+                            <span class="cursor-help text-gray-400" title="${tax.explanation}">
+                                ${defaultInfoIcon}
+                            </span>` : '';
+
                         taxHtml += `
                             <div class="flex justify-between text-gray-600">
-                                <span class="flex items-center gap-1">
+                                <span class="flex items-center gap-1.5">
+                                    ${taxIcon ? `<span class="inline-flex items-center">${taxIcon}</span>` : ''}
                                     ${tax.name}
-                                    ${tax.explanation ? `
-                                    <span class="cursor-help text-gray-400" title="${tax.explanation}">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                    </span>
-                                    ` : ''}
+                                    ${infoIcon}
                                 </span>
                                 <span>${tax.is_added_to_price ? '+' : ''}${tax.tax_amount.toFixed(2)} ${currency}</span>
                             </div>

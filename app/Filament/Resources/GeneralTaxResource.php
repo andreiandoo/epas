@@ -68,17 +68,28 @@ class GeneralTaxResource extends Resource
                             ->maxLength(190)
                             ->placeholder('e.g., TVA 21%, Timbru Muzical, UCMR-ADA'),
 
-                        Forms\Components\Select::make('event_type_id')
-                            ->label('Event Type')
+                        Forms\Components\Textarea::make('icon_svg')
+                            ->label('Icon SVG')
+                            ->rows(3)
+                            ->placeholder('<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24">...</svg>')
+                            ->helperText('HTML SVG code for the tax icon. Use Tailwind classes for styling (e.g., w-5 h-5 text-purple-500).')
+                            ->columnSpanFull(),
+
+                        Forms\Components\Select::make('eventTypes')
+                            ->label('Event Types')
+                            ->relationship('eventTypes', 'slug')
                             ->options(function () {
                                 return EventType::all()
                                     ->mapWithKeys(fn ($type) => [
                                         $type->id => $type->name['en'] ?? $type->slug
                                     ]);
                             })
+                            ->multiple()
                             ->searchable()
+                            ->preload()
                             ->placeholder('All Event Types (leave empty for global)')
-                            ->helperText('Select an event type to apply this tax only to specific events, or leave empty for all events.'),
+                            ->helperText('Select one or more event types. Leave empty to apply to all events.')
+                            ->columnSpanFull(),
 
                         SC\Grid::make(3)
                             ->schema([
@@ -349,7 +360,7 @@ class GeneralTaxResource extends Resource
                                     ->helperText('Print this tax info on issued tickets'),
                             ]),
                     ]),
-            ]);
+            ]) ->columns(1);
     }
 
     public static function table(Table $table): Table
@@ -361,16 +372,18 @@ class GeneralTaxResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('eventType.name')
-                    ->label('Event Type')
-                    ->formatStateUsing(function ($state) {
-                        if (is_array($state)) {
-                            return $state['en'] ?? '-';
+                Tables\Columns\TextColumn::make('eventTypes.slug')
+                    ->label('Event Types')
+                    ->formatStateUsing(function ($state, $record) {
+                        $types = $record->eventTypes;
+                        if ($types->isEmpty()) {
+                            return 'All Types';
                         }
-                        return $state ?? 'All Types';
+                        return $types->map(fn ($t) => $t->name['en'] ?? $t->slug)->join(', ');
                     })
                     ->badge()
-                    ->color('gray'),
+                    ->color('gray')
+                    ->wrap(),
 
                 Tables\Columns\TextColumn::make('value')
                     ->label('Value')
@@ -438,14 +451,17 @@ class GeneralTaxResource extends Resource
                         'percent' => 'Percentage',
                         'fixed' => 'Fixed Amount',
                     ]),
-                Tables\Filters\SelectFilter::make('event_type_id')
+                Tables\Filters\SelectFilter::make('eventTypes')
                     ->label('Event Type')
+                    ->relationship('eventTypes', 'slug')
                     ->options(function () {
                         return EventType::all()
                             ->mapWithKeys(fn ($type) => [
                                 $type->id => $type->name['en'] ?? $type->slug
                             ]);
-                    }),
+                    })
+                    ->multiple()
+                    ->preload(),
             ])
             ->defaultSort('priority', 'desc');
     }
