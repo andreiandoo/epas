@@ -15,9 +15,9 @@ class TicketTemplateResource extends Resource
 {
     protected static ?string $model = TicketTemplate::class;
 
-    protected static ?string $navigationGroup = 'Design';
+    protected static string|UnitEnum|null $navigationGroup = 'Design';
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
-    protected static ?string $navigationLabel = 'Ticket Templates';
+    protected static string|BackedEnum|null $navigationLabel = 'Ticket Templates';
     protected static ?int $navigationSort = 10;
 
     public static function form(Schema $schema): Schema

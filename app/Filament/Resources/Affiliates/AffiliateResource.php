@@ -15,8 +15,8 @@ class AffiliateResource extends Resource
 {
     protected static ?string $model = Affiliate::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
-    protected static ?string $navigationGroup = 'Marketing';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
+    protected static string|UnitEnum|null $navigationGroup = 'Marketing';
     protected static ?int $navigationSort = 20;
     protected static ?string $modelLabel = 'Affiliate';
     protected static ?string $pluralModelLabel = 'Affiliates';

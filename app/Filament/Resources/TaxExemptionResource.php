@@ -29,11 +29,11 @@ class TaxExemptionResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static ?string $navigationLabel = 'Tax Exemptions';
+    protected static string|BackedEnum|null $navigationLabel = 'Tax Exemptions';
 
     protected static ?string $navigationParentItem = 'Taxes';
 
-    protected static ?string $navigationGroup = 'Settings';
+    protected static string|UnitEnum|null $navigationGroup = 'Settings';
 
     protected static ?int $navigationSort = 3;
 

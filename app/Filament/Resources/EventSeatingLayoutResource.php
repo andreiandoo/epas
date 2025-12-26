@@ -18,10 +18,10 @@ class EventSeatingLayoutResource extends Resource
 {
     protected static ?string $model = EventSeatingLayout::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-ticket';
-    protected static ?string $navigationGroup = 'Venues & Mapping';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-ticket';
+    protected static string|UnitEnum|null $navigationGroup = 'Venues & Mapping';
     protected static ?int $navigationSort = 30;
-    protected static ?string $navigationLabel = 'Event Seating';
+    protected static string|BackedEnum|null $navigationLabel = 'Event Seating';
     protected static ?string $modelLabel = 'Event Seating Layout';
     protected static ?string $pluralModelLabel = 'Event Seating Layouts';
 

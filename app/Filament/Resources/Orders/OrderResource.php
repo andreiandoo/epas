@@ -23,7 +23,7 @@ class OrderResource extends Resource
     protected static ?int $navigationSort = 10;
 
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function form(Schema $schema): Schema
     {

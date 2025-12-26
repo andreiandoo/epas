@@ -14,12 +14,12 @@ class PlatformCredentialResource extends Resource
 {
     protected static ?string $model = PlatformCredential::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-key';
-    protected static ?string $navigationGroup = 'Settings';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-key';
+    protected static string|UnitEnum|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 50;
     protected static ?string $modelLabel = 'Credential';
     protected static ?string $pluralModelLabel = 'Credentials Ledger';
-    protected static ?string $navigationLabel = 'Ledger';
+    protected static string|BackedEnum|null $navigationLabel = 'Ledger';
 
     /**
      * Only super-admin can access this resource

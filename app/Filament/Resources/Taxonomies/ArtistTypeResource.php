@@ -17,9 +17,9 @@ class ArtistTypeResource extends Resource
 {
     protected static ?string $model = ArtistType::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
-    protected static ?string $navigationGroup = 'Taxonomies';
-    protected static ?string $navigationLabel = 'Artist Types';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
+    protected static string|UnitEnum|null $navigationGroup = 'Taxonomies';
+    protected static string|BackedEnum|null $navigationLabel = 'Artist Types';
     protected static ?int $navigationSort = 31;
 
     public static function form(Schema $schema): Schema

@@ -30,7 +30,7 @@ class ImportArtists extends Page implements HasForms
 
     protected static ?string $title = 'Import Artists';
 
-    protected static ?string $navigationIcon = 'heroicon-o-arrow-up-tray';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-arrow-up-tray';
 
     public ?array $data = [];
 

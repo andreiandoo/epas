@@ -18,9 +18,9 @@ class DocResource extends Resource
 {
     protected static ?string $model = Doc::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static ?string $navigationGroup = 'Documentation';
+    protected static string|UnitEnum|null $navigationGroup = 'Documentation';
 
     protected static ?int $navigationSort = 2;
 

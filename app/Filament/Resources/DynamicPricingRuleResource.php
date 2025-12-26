@@ -17,20 +17,20 @@ class DynamicPricingRuleResource extends Resource
 {
     protected static ?string $model = DynamicPricingRule::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
-    protected static ?string $navigationGroup = 'Venues & Mapping';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar';
+    protected static string|UnitEnum|null $navigationGroup = 'Venues & Mapping';
     protected static ?int $navigationSort = 20;
-    protected static ?string $navigationLabel = 'Dynamic Pricing Rules';
+    protected static string|BackedEnum|null $navigationLabel = 'Dynamic Pricing Rules';
     protected static ?string $modelLabel = 'Dynamic Pricing Rule';
     protected static ?string $pluralModelLabel = 'Dynamic Pricing Rules';
 
     // protected static ?string $navigationParentItem = 'Email Templates';
 
-    // protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
+    // protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar';
 
-    // protected static ?string $navigationLabel = 'Dynamic Pricing Rules';
+    // protected static string|BackedEnum|null $navigationLabel = 'Dynamic Pricing Rules';
 
-    // protected static ?string $navigationGroup = 'Venues';
+    // protected static string|UnitEnum|null $navigationGroup = 'Venues';
 
     // protected static ?int $navigationSort = 5;
 

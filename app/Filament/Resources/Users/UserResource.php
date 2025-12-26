@@ -15,10 +15,10 @@ class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationGroup = 'Core';
+    protected static string|UnitEnum|null $navigationGroup = 'Core';
     protected static ?int $navigationSort = 30;
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
-    protected static ?string $navigationLabel = 'Users';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
+    protected static string|BackedEnum|null $navigationLabel = 'Users';
 
     public static function shouldRegisterNavigation(): bool
     {

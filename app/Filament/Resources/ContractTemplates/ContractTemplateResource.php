@@ -16,11 +16,11 @@ class ContractTemplateResource extends Resource
 {
     protected static ?string $model = ContractTemplate::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static ?string $navigationGroup = 'Settings';
+    protected static string|UnitEnum|null $navigationGroup = 'Settings';
 
-    protected static ?string $navigationLabel = 'Contract Templates';
+    protected static string|BackedEnum|null $navigationLabel = 'Contract Templates';
 
     protected static ?int $navigationSort = 10;
 
