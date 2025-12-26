@@ -364,6 +364,268 @@ class EventsController extends BaseController
     }
 
     /**
+     * Get event participants (ticket holders)
+     */
+    public function participants(Request $request, int $eventId): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = MarketplaceEvent::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $query = \App\Models\Ticket::whereHas('order', function ($q) use ($event) {
+                $q->where('marketplace_event_id', $event->id)
+                    ->where('status', 'completed');
+            })
+            ->with(['order.marketplaceCustomer', 'marketplaceTicketType']);
+
+        // Filters
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->has('checked_in')) {
+            if ($request->checked_in === 'true' || $request->checked_in === '1') {
+                $query->whereNotNull('checked_in_at');
+            } else {
+                $query->whereNull('checked_in_at');
+            }
+        }
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('barcode', 'like', "%{$search}%")
+                    ->orWhereHas('order', function ($oq) use ($search) {
+                        $oq->where('customer_email', 'like', "%{$search}%")
+                            ->orWhere('customer_name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('order.marketplaceCustomer', function ($cq) use ($search) {
+                        $cq->where('email', 'like', "%{$search}%")
+                            ->orWhere('first_name', 'like', "%{$search}%")
+                            ->orWhere('last_name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        if ($request->has('ticket_type_id')) {
+            $query->where('marketplace_ticket_type_id', $request->ticket_type_id);
+        }
+
+        $query->orderBy('created_at', 'desc');
+
+        $perPage = min((int) $request->get('per_page', 50), 200);
+        $tickets = $query->paginate($perPage);
+
+        // Get stats
+        $totalTickets = \App\Models\Ticket::whereHas('order', function ($q) use ($event) {
+            $q->where('marketplace_event_id', $event->id)->where('status', 'completed');
+        })->count();
+
+        $checkedInCount = \App\Models\Ticket::whereHas('order', function ($q) use ($event) {
+            $q->where('marketplace_event_id', $event->id)->where('status', 'completed');
+        })->whereNotNull('checked_in_at')->count();
+
+        return $this->paginated($tickets, function ($ticket) {
+            $customer = $ticket->order->marketplaceCustomer;
+            return [
+                'id' => $ticket->id,
+                'barcode' => $ticket->barcode,
+                'qr_code' => $ticket->qr_code_url ?? null,
+                'ticket_type' => $ticket->marketplaceTicketType?->name,
+                'ticket_type_id' => $ticket->marketplace_ticket_type_id,
+                'price' => (float) ($ticket->marketplaceTicketType?->price ?? 0),
+                'status' => $ticket->status,
+                'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
+                'checked_in_by' => $ticket->checked_in_by,
+                'customer' => [
+                    'name' => $customer
+                        ? $customer->first_name . ' ' . $customer->last_name
+                        : $ticket->order->customer_name,
+                    'email' => $customer?->email ?? $ticket->order->customer_email,
+                    'phone' => $customer?->phone ?? $ticket->order->customer_phone,
+                ],
+                'order_number' => $ticket->order->order_number,
+                'purchased_at' => $ticket->created_at->toIso8601String(),
+            ];
+        }, [
+            'stats' => [
+                'total' => $totalTickets,
+                'checked_in' => $checkedInCount,
+                'not_checked_in' => $totalTickets - $checkedInCount,
+                'check_in_rate' => $totalTickets > 0 ? round(($checkedInCount / $totalTickets) * 100, 1) : 0,
+            ],
+        ]);
+    }
+
+    /**
+     * Check in a ticket
+     */
+    public function checkIn(Request $request, int $eventId, string $barcode): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = MarketplaceEvent::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $ticket = \App\Models\Ticket::where('barcode', $barcode)
+            ->whereHas('order', function ($q) use ($event) {
+                $q->where('marketplace_event_id', $event->id)
+                    ->where('status', 'completed');
+            })
+            ->first();
+
+        if (!$ticket) {
+            return $this->error('Ticket not found or invalid', 404);
+        }
+
+        if ($ticket->status === 'cancelled' || $ticket->status === 'refunded') {
+            return $this->error('This ticket has been ' . $ticket->status, 400);
+        }
+
+        if ($ticket->checked_in_at) {
+            return $this->error('Ticket already checked in at ' . $ticket->checked_in_at->format('Y-m-d H:i:s'), 400);
+        }
+
+        $ticket->update([
+            'checked_in_at' => now(),
+            'checked_in_by' => $organizer->contact_name ?? $organizer->name,
+        ]);
+
+        $customer = $ticket->order->marketplaceCustomer;
+
+        return $this->success([
+            'ticket' => [
+                'id' => $ticket->id,
+                'barcode' => $ticket->barcode,
+                'ticket_type' => $ticket->marketplaceTicketType?->name,
+                'status' => $ticket->status,
+                'checked_in_at' => $ticket->checked_in_at->toIso8601String(),
+            ],
+            'customer' => [
+                'name' => $customer
+                    ? $customer->first_name . ' ' . $customer->last_name
+                    : $ticket->order->customer_name,
+                'email' => $customer?->email ?? $ticket->order->customer_email,
+            ],
+        ], 'Ticket checked in successfully');
+    }
+
+    /**
+     * Undo check-in for a ticket
+     */
+    public function undoCheckIn(Request $request, int $eventId, string $barcode): JsonResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = MarketplaceEvent::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        $ticket = \App\Models\Ticket::where('barcode', $barcode)
+            ->whereHas('order', function ($q) use ($event) {
+                $q->where('marketplace_event_id', $event->id)
+                    ->where('status', 'completed');
+            })
+            ->first();
+
+        if (!$ticket) {
+            return $this->error('Ticket not found', 404);
+        }
+
+        if (!$ticket->checked_in_at) {
+            return $this->error('Ticket is not checked in', 400);
+        }
+
+        $ticket->update([
+            'checked_in_at' => null,
+            'checked_in_by' => null,
+        ]);
+
+        return $this->success(null, 'Check-in undone');
+    }
+
+    /**
+     * Export participants list as CSV
+     */
+    public function exportParticipants(Request $request, int $eventId): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $organizer = $this->requireOrganizer($request);
+
+        $event = MarketplaceEvent::where('id', $eventId)
+            ->where('marketplace_organizer_id', $organizer->id)
+            ->first();
+
+        if (!$event) {
+            abort(404, 'Event not found');
+        }
+
+        $tickets = \App\Models\Ticket::whereHas('order', function ($q) use ($event) {
+                $q->where('marketplace_event_id', $event->id)
+                    ->where('status', 'completed');
+            })
+            ->with(['order.marketplaceCustomer', 'marketplaceTicketType'])
+            ->get();
+
+        $filename = 'participants-' . $event->slug . '-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($tickets) {
+            $handle = fopen('php://output', 'w');
+
+            // Header
+            fputcsv($handle, [
+                'Ticket ID',
+                'Barcode',
+                'Ticket Type',
+                'Price',
+                'Customer Name',
+                'Customer Email',
+                'Customer Phone',
+                'Order Number',
+                'Purchased At',
+                'Checked In',
+                'Checked In At',
+            ]);
+
+            foreach ($tickets as $ticket) {
+                $customer = $ticket->order->marketplaceCustomer;
+                fputcsv($handle, [
+                    $ticket->id,
+                    $ticket->barcode,
+                    $ticket->marketplaceTicketType?->name ?? 'N/A',
+                    $ticket->marketplaceTicketType?->price ?? 0,
+                    $customer ? $customer->first_name . ' ' . $customer->last_name : $ticket->order->customer_name,
+                    $customer?->email ?? $ticket->order->customer_email,
+                    $customer?->phone ?? $ticket->order->customer_phone,
+                    $ticket->order->order_number,
+                    $ticket->created_at->format('Y-m-d H:i:s'),
+                    $ticket->checked_in_at ? 'Yes' : 'No',
+                    $ticket->checked_in_at?->format('Y-m-d H:i:s') ?? '',
+                ]);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    /**
      * Get event statistics
      */
     public function statistics(Request $request, int $eventId): JsonResponse

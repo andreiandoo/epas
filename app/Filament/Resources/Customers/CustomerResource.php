@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Customers;
 
 use App\Models\Customer;
+use App\Models\Gamification\CustomerPoints;
+use App\Models\Gamification\PointsTransaction;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -72,7 +74,7 @@ class CustomerResource extends Resource
                             ->label('Sold curent')
                             ->content(fn ($record) => new HtmlString(
                                 '<div class="flex items-center gap-2">
-                                    <span class="text-3xl font-bold text-amber-600">' . number_format($record?->points_balance ?? 0) . '</span>
+                                    <span class="text-3xl font-bold text-amber-600">' . number_format(static::getCustomerPoints($record)?->current_balance ?? 0) . '</span>
                                     <span class="text-gray-500">puncte</span>
                                 </div>'
                             )),
@@ -80,7 +82,7 @@ class CustomerResource extends Resource
                             ->label('Total câștigate')
                             ->content(fn ($record) => new HtmlString(
                                 '<div class="flex items-center gap-2">
-                                    <span class="text-2xl font-semibold text-green-600">+' . number_format($record?->points_earned ?? 0) . '</span>
+                                    <span class="text-2xl font-semibold text-green-600">+' . number_format(static::getCustomerPoints($record)?->total_earned ?? 0) . '</span>
                                     <span class="text-gray-500">puncte</span>
                                 </div>'
                             )),
@@ -88,7 +90,7 @@ class CustomerResource extends Resource
                             ->label('Total cheltuite')
                             ->content(fn ($record) => new HtmlString(
                                 '<div class="flex items-center gap-2">
-                                    <span class="text-2xl font-semibold text-red-600">-' . number_format($record?->points_spent ?? 0) . '</span>
+                                    <span class="text-2xl font-semibold text-red-600">-' . number_format(static::getCustomerPoints($record)?->total_spent ?? 0) . '</span>
                                     <span class="text-gray-500">puncte</span>
                                 </div>'
                             )),
@@ -126,14 +128,41 @@ class CustomerResource extends Resource
         ])->columns(2);
     }
 
+    /**
+     * Get CustomerPoints record for a customer from the Gamification system
+     */
+    protected static function getCustomerPoints($record): ?CustomerPoints
+    {
+        if (!$record) {
+            return null;
+        }
+
+        $tenantId = $record->primary_tenant_id ?? $record->tenant_id;
+
+        if (!$tenantId) {
+            return null;
+        }
+
+        return CustomerPoints::where('tenant_id', $tenantId)
+            ->where('customer_id', $record->id)
+            ->first();
+    }
+
     protected static function renderPointsHistory($record): string
     {
         if (!$record) {
             return '<p class="text-gray-500 text-sm">Salvați clientul pentru a vedea istoricul punctelor.</p>';
         }
 
-        // Get points transactions from customer meta or dedicated table
-        $transactions = $record->pointsTransactions()
+        $tenantId = $record->primary_tenant_id ?? $record->tenant_id;
+
+        if (!$tenantId) {
+            return '<p class="text-gray-500 text-sm">Clientul nu are un tenant asociat.</p>';
+        }
+
+        // Get points transactions from Gamification system
+        $transactions = PointsTransaction::where('tenant_id', $tenantId)
+            ->where('customer_id', $record->id)
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();
@@ -156,17 +185,24 @@ class CustomerResource extends Resource
             $typeLabel = match($tx->type) {
                 'earned' => '<span class="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">Câștigate</span>',
                 'spent' => '<span class="px-2 py-0.5 bg-red-100 text-red-700 rounded text-xs">Cheltuite</span>',
-                'bonus' => '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">Bonus</span>',
-                'adjustment' => '<span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">Ajustare</span>',
-                'referral' => '<span class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">Referral</span>',
+                'expired' => '<span class="px-2 py-0.5 bg-orange-100 text-orange-700 rounded text-xs">Expirate</span>',
+                'adjusted' => '<span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">Ajustare</span>',
+                'refunded' => '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">Returnat</span>',
                 default => '<span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">' . ucfirst($tx->type) . '</span>',
             };
+
+            // Handle JSON description
+            $description = $tx->description;
+            if (is_array($description)) {
+                $description = $description['ro'] ?? $description['en'] ?? reset($description) ?? '-';
+            }
+            $description = $description ?: ($tx->admin_note ?? '-');
 
             $html .= '<tr class="border-t border-gray-100">';
             $html .= '<td class="px-3 py-2 text-gray-600">' . $tx->created_at->format('d.m.Y H:i') . '</td>';
             $html .= '<td class="px-3 py-2">' . $typeLabel . '</td>';
             $html .= '<td class="px-3 py-2 text-right font-semibold ' . $pointsClass . '">' . $pointsPrefix . number_format($tx->points) . '</td>';
-            $html .= '<td class="px-3 py-2 text-gray-600">' . e($tx->description ?? '-') . '</td>';
+            $html .= '<td class="px-3 py-2 text-gray-600">' . e($description) . '</td>';
             $html .= '</tr>';
         }
 

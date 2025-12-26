@@ -90,6 +90,12 @@ class CheckoutController extends Controller
             'coupon_code' => 'nullable|string',
             // Gamification points redemption
             'redeem_points' => 'nullable|integer|min:0',
+            // Ticket beneficiaries
+            'beneficiaries' => 'nullable|array',
+            'beneficiaries.*.name' => 'required_with:beneficiaries|string|max:255',
+            'beneficiaries.*.email' => 'nullable|email|max:255',
+            'beneficiaries.*.phone' => 'nullable|string|max:50',
+            'beneficiaries.*.ticket_index' => 'nullable|integer',
         ]);
 
         // Normalize billing data - support both nested and flat fields

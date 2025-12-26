@@ -895,6 +895,10 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             ->name('api.tenant-client.account.orders');
         Route::get('/orders/{orderId}', [AccountController::class, 'orderDetail'])
             ->name('api.tenant-client.account.orders.detail');
+        Route::get('/orders/{orderId}/beneficiaries', [AccountController::class, 'orderBeneficiaries'])
+            ->name('api.tenant-client.account.orders.beneficiaries');
+        Route::put('/orders/{orderId}/beneficiaries', [AccountController::class, 'updateOrderBeneficiaries'])
+            ->name('api.tenant-client.account.orders.beneficiaries.update');
         Route::get('/tickets', [AccountController::class, 'tickets'])
             ->name('api.tenant-client.account.tickets');
         Route::get('/profile', [AccountController::class, 'profile'])
@@ -1442,6 +1446,16 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         Route::get('/events/{event}/statistics', [OrganizerEventsController::class, 'statistics'])
             ->name('api.marketplace-client.organizer.events.statistics');
 
+        // Participants / Check-in
+        Route::get('/events/{event}/participants', [OrganizerEventsController::class, 'participants'])
+            ->name('api.marketplace-client.organizer.events.participants');
+        Route::get('/events/{event}/participants/export', [OrganizerEventsController::class, 'exportParticipants'])
+            ->name('api.marketplace-client.organizer.events.participants.export');
+        Route::post('/events/{event}/check-in/{barcode}', [OrganizerEventsController::class, 'checkIn'])
+            ->name('api.marketplace-client.organizer.events.check-in');
+        Route::delete('/events/{event}/check-in/{barcode}', [OrganizerEventsController::class, 'undoCheckIn'])
+            ->name('api.marketplace-client.organizer.events.check-in.undo');
+
         // Payouts & Balance
         Route::get('/balance', [OrganizerPayoutController::class, 'balance'])
             ->name('api.marketplace-client.organizer.balance');
@@ -1555,6 +1569,197 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
     // Public transfer acceptance (by token, no auth required)
     Route::post('/transfers/accept-by-token', [CustomerTicketTransferController::class, 'acceptByToken'])
         ->name('api.marketplace-client.customer.transfers.accept-by-token');
+
+    // Cart (public, session-based)
+    Route::get('/cart', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'index'])
+        ->name('api.marketplace-client.customer.cart');
+    Route::post('/cart/items', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'addItem'])
+        ->name('api.marketplace-client.customer.cart.add');
+    Route::put('/cart/items/{itemKey}', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'updateItem'])
+        ->name('api.marketplace-client.customer.cart.update');
+    Route::delete('/cart/items/{itemKey}', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'removeItem'])
+        ->name('api.marketplace-client.customer.cart.remove');
+    Route::delete('/cart', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'clear'])
+        ->name('api.marketplace-client.customer.cart.clear');
+    Route::post('/cart/promo-code', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'applyPromoCode'])
+        ->name('api.marketplace-client.customer.cart.promo-code');
+    Route::delete('/cart/promo-code', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'removePromoCode'])
+        ->name('api.marketplace-client.customer.cart.promo-code.remove');
+
+    // Checkout
+    Route::get('/checkout/summary', [App\Http\Controllers\Api\MarketplaceClient\Customer\CheckoutController::class, 'summary'])
+        ->name('api.marketplace-client.customer.checkout.summary');
+    Route::post('/checkout', [App\Http\Controllers\Api\MarketplaceClient\Customer\CheckoutController::class, 'checkout'])
+        ->name('api.marketplace-client.customer.checkout');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Marketplace Admin API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for marketplace administrators. Admins can approve events,
+| manage organizers, process payouts, and configure platform settings.
+|
+*/
+
+use App\Http\Controllers\Api\MarketplaceClient\Admin\AuthController as AdminAuthController;
+use App\Http\Controllers\Api\MarketplaceClient\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Api\MarketplaceClient\Admin\EventsController as AdminEventsController;
+use App\Http\Controllers\Api\MarketplaceClient\Admin\OrganizersController as AdminOrganizersController;
+use App\Http\Controllers\Api\MarketplaceClient\Admin\PayoutsController as AdminPayoutsController;
+use App\Http\Controllers\Api\MarketplaceClient\Admin\SettingsController as AdminSettingsController;
+
+Route::prefix('marketplace-client/admin')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+    // Public routes (no admin auth)
+    Route::post('/login', [AdminAuthController::class, 'login'])
+        ->name('api.marketplace-client.admin.login');
+    Route::post('/forgot-password', [AdminAuthController::class, 'forgotPassword'])
+        ->name('api.marketplace-client.admin.forgot-password');
+    Route::post('/reset-password', [AdminAuthController::class, 'resetPassword'])
+        ->name('api.marketplace-client.admin.reset-password');
+
+    // Protected routes (require admin auth)
+    Route::middleware('auth:sanctum')->group(function () {
+        // Auth
+        Route::post('/logout', [AdminAuthController::class, 'logout'])
+            ->name('api.marketplace-client.admin.logout');
+        Route::get('/me', [AdminAuthController::class, 'me'])
+            ->name('api.marketplace-client.admin.me');
+        Route::put('/profile', [AdminAuthController::class, 'updateProfile'])
+            ->name('api.marketplace-client.admin.profile.update');
+        Route::put('/password', [AdminAuthController::class, 'updatePassword'])
+            ->name('api.marketplace-client.admin.password.update');
+
+        // Admin management
+        Route::get('/admins', [AdminAuthController::class, 'listAdmins'])
+            ->name('api.marketplace-client.admin.admins');
+        Route::post('/admins', [AdminAuthController::class, 'createAdmin'])
+            ->name('api.marketplace-client.admin.admins.create');
+        Route::put('/admins/{admin}', [AdminAuthController::class, 'updateAdmin'])
+            ->name('api.marketplace-client.admin.admins.update');
+        Route::delete('/admins/{admin}', [AdminAuthController::class, 'deleteAdmin'])
+            ->name('api.marketplace-client.admin.admins.delete');
+
+        // Dashboard
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])
+            ->name('api.marketplace-client.admin.dashboard');
+        Route::get('/dashboard/timeline', [AdminDashboardController::class, 'salesTimeline'])
+            ->name('api.marketplace-client.admin.dashboard.timeline');
+        Route::get('/dashboard/activity', [AdminDashboardController::class, 'recentActivity'])
+            ->name('api.marketplace-client.admin.dashboard.activity');
+        Route::get('/dashboard/top-organizers', [AdminDashboardController::class, 'topOrganizers'])
+            ->name('api.marketplace-client.admin.dashboard.top-organizers');
+        Route::get('/dashboard/top-events', [AdminDashboardController::class, 'topEvents'])
+            ->name('api.marketplace-client.admin.dashboard.top-events');
+
+        // Events management
+        Route::get('/events', [AdminEventsController::class, 'index'])
+            ->name('api.marketplace-client.admin.events');
+        Route::get('/events/pending', [AdminEventsController::class, 'pendingReview'])
+            ->name('api.marketplace-client.admin.events.pending');
+        Route::get('/events/{event}', [AdminEventsController::class, 'show'])
+            ->name('api.marketplace-client.admin.events.show');
+        Route::post('/events/{event}/approve', [AdminEventsController::class, 'approve'])
+            ->name('api.marketplace-client.admin.events.approve');
+        Route::post('/events/{event}/reject', [AdminEventsController::class, 'reject'])
+            ->name('api.marketplace-client.admin.events.reject');
+        Route::post('/events/{event}/feature', [AdminEventsController::class, 'toggleFeatured'])
+            ->name('api.marketplace-client.admin.events.feature');
+        Route::post('/events/{event}/suspend', [AdminEventsController::class, 'suspend'])
+            ->name('api.marketplace-client.admin.events.suspend');
+
+        // Organizers management
+        Route::get('/organizers', [AdminOrganizersController::class, 'index'])
+            ->name('api.marketplace-client.admin.organizers');
+        Route::get('/organizers/pending', [AdminOrganizersController::class, 'pending'])
+            ->name('api.marketplace-client.admin.organizers.pending');
+        Route::get('/organizers/{organizer}', [AdminOrganizersController::class, 'show'])
+            ->name('api.marketplace-client.admin.organizers.show');
+        Route::post('/organizers/{organizer}/approve', [AdminOrganizersController::class, 'approve'])
+            ->name('api.marketplace-client.admin.organizers.approve');
+        Route::post('/organizers/{organizer}/verify', [AdminOrganizersController::class, 'verify'])
+            ->name('api.marketplace-client.admin.organizers.verify');
+        Route::post('/organizers/{organizer}/suspend', [AdminOrganizersController::class, 'suspend'])
+            ->name('api.marketplace-client.admin.organizers.suspend');
+        Route::post('/organizers/{organizer}/reactivate', [AdminOrganizersController::class, 'reactivate'])
+            ->name('api.marketplace-client.admin.organizers.reactivate');
+        Route::put('/organizers/{organizer}/commission', [AdminOrganizersController::class, 'updateCommission'])
+            ->name('api.marketplace-client.admin.organizers.commission');
+        Route::get('/organizers/{organizer}/events', [AdminOrganizersController::class, 'events'])
+            ->name('api.marketplace-client.admin.organizers.events');
+        Route::get('/organizers/{organizer}/transactions', [AdminOrganizersController::class, 'transactions'])
+            ->name('api.marketplace-client.admin.organizers.transactions');
+
+        // Payouts management
+        Route::get('/payouts', [AdminPayoutsController::class, 'index'])
+            ->name('api.marketplace-client.admin.payouts');
+        Route::get('/payouts/pending', [AdminPayoutsController::class, 'pending'])
+            ->name('api.marketplace-client.admin.payouts.pending');
+        Route::get('/payouts/stats', [AdminPayoutsController::class, 'stats'])
+            ->name('api.marketplace-client.admin.payouts.stats');
+        Route::get('/payouts/{payout}', [AdminPayoutsController::class, 'show'])
+            ->name('api.marketplace-client.admin.payouts.show');
+        Route::post('/payouts/{payout}/approve', [AdminPayoutsController::class, 'approve'])
+            ->name('api.marketplace-client.admin.payouts.approve');
+        Route::post('/payouts/{payout}/processing', [AdminPayoutsController::class, 'markProcessing'])
+            ->name('api.marketplace-client.admin.payouts.processing');
+        Route::post('/payouts/{payout}/complete', [AdminPayoutsController::class, 'complete'])
+            ->name('api.marketplace-client.admin.payouts.complete');
+        Route::post('/payouts/{payout}/reject', [AdminPayoutsController::class, 'reject'])
+            ->name('api.marketplace-client.admin.payouts.reject');
+
+        // Settings
+        Route::get('/settings', [AdminSettingsController::class, 'index'])
+            ->name('api.marketplace-client.admin.settings');
+        Route::put('/settings', [AdminSettingsController::class, 'update'])
+            ->name('api.marketplace-client.admin.settings.update');
+        Route::put('/settings/commission', [AdminSettingsController::class, 'updateCommission'])
+            ->name('api.marketplace-client.admin.settings.commission');
+        Route::put('/settings/custom', [AdminSettingsController::class, 'updateSettings'])
+            ->name('api.marketplace-client.admin.settings.custom');
+        Route::get('/settings/webhooks', [AdminSettingsController::class, 'webhooks'])
+            ->name('api.marketplace-client.admin.settings.webhooks');
+        Route::put('/settings/webhooks', [AdminSettingsController::class, 'updateWebhooks'])
+            ->name('api.marketplace-client.admin.settings.webhooks.update');
+        Route::post('/settings/webhooks/test', [AdminSettingsController::class, 'testWebhook'])
+            ->name('api.marketplace-client.admin.settings.webhooks.test');
+        Route::post('/settings/regenerate-api', [AdminSettingsController::class, 'regenerateApiCredentials'])
+            ->name('api.marketplace-client.admin.settings.regenerate-api');
+        Route::get('/settings/permissions', [AdminSettingsController::class, 'permissions'])
+            ->name('api.marketplace-client.admin.settings.permissions');
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Marketplace Events Public API Routes
+|--------------------------------------------------------------------------
+|
+| Public API endpoints for browsing marketplace events (organizer-created events).
+| These are separate from tenant events and allow customers to discover events.
+|
+*/
+
+use App\Http\Controllers\Api\MarketplaceClient\MarketplaceEventsController;
+
+Route::prefix('marketplace-client/marketplace-events')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+    Route::get('/', [MarketplaceEventsController::class, 'index'])
+        ->name('api.marketplace-client.marketplace-events');
+    Route::get('/featured', [MarketplaceEventsController::class, 'featured'])
+        ->name('api.marketplace-client.marketplace-events.featured');
+    Route::get('/categories', [MarketplaceEventsController::class, 'categories'])
+        ->name('api.marketplace-client.marketplace-events.categories');
+    Route::get('/cities', [MarketplaceEventsController::class, 'cities'])
+        ->name('api.marketplace-client.marketplace-events.cities');
+    Route::get('/organizers', [MarketplaceEventsController::class, 'organizers'])
+        ->name('api.marketplace-client.marketplace-events.organizers');
+    Route::get('/organizers/{identifier}', [MarketplaceEventsController::class, 'organizer'])
+        ->name('api.marketplace-client.marketplace-events.organizer');
+    Route::get('/{identifier}', [MarketplaceEventsController::class, 'show'])
+        ->name('api.marketplace-client.marketplace-events.show');
+    Route::get('/{event}/availability', [MarketplaceEventsController::class, 'availability'])
+        ->name('api.marketplace-client.marketplace-events.availability');
 });
 
 /*

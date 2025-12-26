@@ -361,6 +361,98 @@ class AccountController extends Controller
                     'customer_email' => $order->customer_email,
                     'payment_method' => $order->meta['payment_method'] ?? 'Card',
                 ],
+                'beneficiaries' => $order->meta['beneficiaries'] ?? [],
+            ],
+        ]);
+    }
+
+    /**
+     * Get order beneficiaries
+     */
+    public function orderBeneficiaries(Request $request, int $orderId): JsonResponse
+    {
+        $customer = $this->getAuthenticatedCustomer($request);
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $order = Order::where('customer_id', $customer->id)
+            ->where('id', $orderId)
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Comanda nu a fost găsită',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'order_id' => $order->id,
+                'beneficiaries' => $order->meta['beneficiaries'] ?? [],
+                'tickets_count' => $order->tickets()->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * Update order beneficiaries
+     */
+    public function updateOrderBeneficiaries(Request $request, int $orderId): JsonResponse
+    {
+        $customer = $this->getAuthenticatedCustomer($request);
+
+        if (!$customer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated',
+            ], 401);
+        }
+
+        $order = Order::where('customer_id', $customer->id)
+            ->where('id', $orderId)
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Comanda nu a fost găsită',
+            ], 404);
+        }
+
+        // Only allow updating beneficiaries for paid orders
+        if ($order->status !== 'paid') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Beneficiarii pot fi modificați doar pentru comenzile plătite',
+            ], 400);
+        }
+
+        $validated = $request->validate([
+            'beneficiaries' => 'required|array',
+            'beneficiaries.*.name' => 'required|string|max:255',
+            'beneficiaries.*.email' => 'nullable|email|max:255',
+            'beneficiaries.*.phone' => 'nullable|string|max:50',
+            'beneficiaries.*.ticket_index' => 'nullable|integer',
+        ]);
+
+        // Update order meta
+        $meta = $order->meta ?? [];
+        $meta['beneficiaries'] = $validated['beneficiaries'];
+        $order->meta = $meta;
+        $order->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Beneficiarii au fost actualizați cu succes',
+            'data' => [
+                'beneficiaries' => $order->meta['beneficiaries'],
             ],
         ]);
     }

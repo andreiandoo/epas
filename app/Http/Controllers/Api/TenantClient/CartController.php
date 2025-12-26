@@ -4,36 +4,48 @@ namespace App\Http\Controllers\Api\TenantClient;
 
 use App\Http\Controllers\Controller;
 use App\Models\Coupon\CouponCode;
+use App\Services\CartService;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CartController extends Controller
 {
+    public function __construct(
+        protected CartService $cartService
+    ) {}
+
+    /**
+     * Get session ID from request
+     */
+    protected function getSessionId(Request $request): string
+    {
+        return $request->header('X-Session-ID')
+            ?? $request->cookie('session_id')
+            ?? $request->session()->getId()
+            ?? md5($request->ip() . $request->userAgent());
+    }
+
     /**
      * Get cart contents
      */
     public function index(Request $request): JsonResponse
     {
         $tenant = $request->attributes->get('tenant');
-        $sessionId = $request->header('X-Session-ID') ?? $request->session()->getId();
 
-        // Get cart items from session/database
-        $items = [];
-        $subtotal = 0;
-        $fees = 0;
-        $total = 0;
+        if (!$tenant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tenant not found',
+            ], 404);
+        }
+
+        $sessionId = $this->getSessionId($request);
+        $cart = $this->cartService->getCart($sessionId, $tenant->id);
 
         return response()->json([
             'success' => true,
-            'data' => [
-                'items' => $items,
-                'subtotal' => $subtotal,
-                'fees' => $fees,
-                'total' => $total,
-                'currency' => $tenant->settings['currency'] ?? 'RON',
-                'item_count' => count($items),
-            ],
+            'data' => $this->cartService->formatCart($cart, $tenant->id),
         ]);
     }
 
@@ -44,6 +56,13 @@ class CartController extends Controller
     {
         $tenant = $request->attributes->get('tenant');
 
+        if (!$tenant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tenant not found',
+            ], 404);
+        }
+
         $validated = $request->validate([
             'event_id' => 'required|integer',
             'ticket_type_id' => 'required|integer',
@@ -52,51 +71,102 @@ class CartController extends Controller
             'seat_ids.*' => 'integer',
         ]);
 
-        // Validate ticket availability
-        // Add to cart (session or database)
+        $sessionId = $this->getSessionId($request);
+
+        $result = $this->cartService->addItem(
+            $sessionId,
+            $tenant->id,
+            $validated['event_id'],
+            $validated['ticket_type_id'],
+            $validated['quantity'],
+            $validated['seat_ids'] ?? null
+        );
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'],
+                'available' => $result['available'] ?? null,
+            ], 400);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Item added to cart',
-            'data' => [
-                'item_id' => 1, // Cart item ID
-                'quantity' => $validated['quantity'],
-            ],
+            'data' => $result['cart'],
         ]);
     }
 
     /**
      * Update cart item quantity
      */
-    public function updateItem(Request $request, int $itemId): JsonResponse
+    public function updateItem(Request $request, string $itemId): JsonResponse
     {
+        $tenant = $request->attributes->get('tenant');
+
+        if (!$tenant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tenant not found',
+            ], 404);
+        }
+
         $validated = $request->validate([
             'quantity' => 'required|integer|min:0|max:10',
         ]);
 
-        if ($validated['quantity'] === 0) {
-            // Remove item
-            return $this->removeItem($request, $itemId);
-        }
+        $sessionId = $this->getSessionId($request);
 
-        // Update quantity
+        $result = $this->cartService->updateItem(
+            $sessionId,
+            $tenant->id,
+            $itemId,
+            $validated['quantity']
+        );
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'],
+            ], 400);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Cart updated',
+            'data' => $result['cart'],
         ]);
     }
 
     /**
      * Remove item from cart
      */
-    public function removeItem(Request $request, int $itemId): JsonResponse
+    public function removeItem(Request $request, string $itemId): JsonResponse
     {
-        // Remove item from cart
+        $tenant = $request->attributes->get('tenant');
+
+        if (!$tenant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tenant not found',
+            ], 404);
+        }
+
+        $sessionId = $this->getSessionId($request);
+
+        $result = $this->cartService->removeItem($sessionId, $tenant->id, $itemId);
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'],
+            ], 400);
+        }
 
         return response()->json([
             'success' => true,
             'message' => 'Item removed from cart',
+            'data' => $result['cart'],
         ]);
     }
 
@@ -105,11 +175,23 @@ class CartController extends Controller
      */
     public function clear(Request $request): JsonResponse
     {
-        // Clear all items
+        $tenant = $request->attributes->get('tenant');
+
+        if (!$tenant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tenant not found',
+            ], 404);
+        }
+
+        $sessionId = $this->getSessionId($request);
+
+        $result = $this->cartService->clearCart($sessionId, $tenant->id);
 
         return response()->json([
             'success' => true,
             'message' => 'Cart cleared',
+            'data' => $result['cart'],
         ]);
     }
 
@@ -119,6 +201,13 @@ class CartController extends Controller
     public function applyPromoCode(Request $request): JsonResponse
     {
         $tenant = $request->attributes->get('tenant');
+
+        if (!$tenant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tenant not found',
+            ], 404);
+        }
 
         $validated = $request->validate([
             'code' => 'required|string|max:50',
@@ -165,15 +254,11 @@ class CartController extends Controller
             ], 400);
         }
 
-        // Calculate cart total from request if provided
-        $cartTotal = 0;
-        if (isset($validated['cart']) && is_array($validated['cart'])) {
-            foreach ($validated['cart'] as $item) {
-                $price = $item['salePrice'] ?? $item['price'] ?? 0;
-                $quantity = $item['quantity'] ?? 1;
-                $cartTotal += $price * $quantity;
-            }
-        }
+        // Get cart total from stored cart
+        $sessionId = $this->getSessionId($request);
+        $cart = $this->cartService->getCart($sessionId, $tenant->id);
+        $formattedCart = $this->cartService->formatCart($cart, $tenant->id);
+        $cartTotal = $formattedCart['subtotal_cents'] / 100;
 
         // Check minimum purchase amount
         if ($cartTotal > 0 && !$coupon->isValidForAmount($cartTotal)) {
@@ -192,17 +277,19 @@ class CartController extends Controller
             ($coupon->campaign->getTranslation('name', app()->getLocale()) ?? $coupon->campaign->name ?? $validated['code']) :
             $validated['code'];
 
+        // Save promo code to cart
+        $result = $this->cartService->applyPromoCode($sessionId, $tenant->id, $coupon->code, [
+            'discount_type' => $coupon->discount_type === 'percentage' ? 'percentage' : 'fixed',
+            'discount_value' => (float) $coupon->discount_value,
+            'discount_amount' => $discountAmount,
+            'max_discount_amount' => $coupon->max_discount_amount ? (float) $coupon->max_discount_amount : null,
+            'name' => $campaignName,
+        ]);
+
         return response()->json([
             'success' => true,
             'message' => 'Codul promoțional a fost aplicat cu succes!',
-            'data' => [
-                'code' => $coupon->code,
-                'name' => $campaignName,
-                'discount_type' => $coupon->discount_type === 'percentage' ? 'percentage' : 'fixed',
-                'discount_value' => (float) $coupon->discount_value,
-                'discount_amount' => $discountAmount,
-                'max_discount_amount' => $coupon->max_discount_amount ? (float) $coupon->max_discount_amount : null,
-            ],
+            'data' => $result['cart'],
         ]);
     }
 
@@ -211,11 +298,22 @@ class CartController extends Controller
      */
     public function removePromoCode(Request $request): JsonResponse
     {
-        // Remove applied promo code
+        $tenant = $request->attributes->get('tenant');
+
+        if (!$tenant) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tenant not found',
+            ], 404);
+        }
+
+        $sessionId = $this->getSessionId($request);
+        $result = $this->cartService->removePromoCode($sessionId, $tenant->id);
 
         return response()->json([
             'success' => true,
             'message' => 'Promo code removed',
+            'data' => $result['cart'],
         ]);
     }
 

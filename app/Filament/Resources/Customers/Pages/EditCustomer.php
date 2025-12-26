@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Customers\Pages;
 
 use App\Filament\Resources\Customers\CustomerResource;
+use App\Models\Gamification\CustomerPoints;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Actions\Action;
 use Filament\Forms;
@@ -40,26 +41,40 @@ class EditCustomer extends EditRecord
                 ])
                 ->action(function (array $data): void {
                     $customer = $this->record;
+                    $tenantId = $customer->primary_tenant_id ?? $customer->tenant_id;
+
+                    if (!$tenantId) {
+                        Notification::make()
+                            ->title('Eroare')
+                            ->body('Clientul nu are un tenant asociat.')
+                            ->danger()
+                            ->send();
+                        return;
+                    }
+
+                    // Use the Gamification system
+                    $customerPoints = CustomerPoints::getOrCreate($tenantId, $customer->id);
+
                     $amount = (int) $data['amount'];
                     $reason = $data['reason'];
 
                     if ($data['action'] === 'add') {
-                        $customer->addPoints($amount, 'adjustment', $reason);
+                        $customerPoints->adjustPoints($amount, $reason, auth()->id());
                         Notification::make()
                             ->title('Puncte adăugate')
                             ->body("S-au adăugat {$amount} puncte clientului.")
                             ->success()
                             ->send();
                     } else {
-                        if ($amount > $customer->points_balance) {
+                        if ($amount > $customerPoints->current_balance) {
                             Notification::make()
                                 ->title('Eroare')
-                                ->body("Clientul are doar {$customer->points_balance} puncte disponibile.")
+                                ->body("Clientul are doar {$customerPoints->current_balance} puncte disponibile.")
                                 ->danger()
                                 ->send();
                             return;
                         }
-                        $customer->spendPoints($amount, 'adjustment', $reason);
+                        $customerPoints->adjustPoints(-$amount, $reason, auth()->id());
                         Notification::make()
                             ->title('Puncte scăzute')
                             ->body("S-au scăzut {$amount} puncte din contul clientului.")
