@@ -1266,6 +1266,52 @@ Route::post('/tenant-client/checkout/callback/{provider}', [CheckoutController::
 
 /*
 |--------------------------------------------------------------------------
+| Marketplace Client API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for marketplace clients (like AmBilet.ro) that have their
+| own custom websites hosted on their own servers. All data flows through
+| these endpoints.
+|
+*/
+
+use App\Http\Controllers\Api\MarketplaceClient\ConfigController as MarketplaceConfigController;
+use App\Http\Controllers\Api\MarketplaceClient\EventsController as MarketplaceEventsController;
+use App\Http\Controllers\Api\MarketplaceClient\OrdersController as MarketplaceOrdersController;
+
+Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+    // Handle OPTIONS preflight requests
+    Route::options('/{any}', fn () => response('', 200))
+        ->where('any', '.*')
+        ->name('api.marketplace-client.options');
+
+    // Configuration & Authentication
+    Route::get('/config', [MarketplaceConfigController::class, 'index'])
+        ->name('api.marketplace-client.config');
+    Route::get('/tenants', [MarketplaceConfigController::class, 'tenants'])
+        ->name('api.marketplace-client.tenants');
+
+    // Events
+    Route::get('/events', [MarketplaceEventsController::class, 'index'])
+        ->name('api.marketplace-client.events');
+    Route::get('/events/{event}', [MarketplaceEventsController::class, 'show'])
+        ->name('api.marketplace-client.events.show');
+    Route::get('/events/{event}/availability', [MarketplaceEventsController::class, 'availability'])
+        ->name('api.marketplace-client.events.availability');
+
+    // Orders
+    Route::get('/orders', [MarketplaceOrdersController::class, 'index'])
+        ->name('api.marketplace-client.orders');
+    Route::post('/orders', [MarketplaceOrdersController::class, 'create'])
+        ->name('api.marketplace-client.orders.create');
+    Route::get('/orders/{order}', [MarketplaceOrdersController::class, 'show'])
+        ->name('api.marketplace-client.orders.show');
+    Route::post('/orders/{order}/cancel', [MarketplaceOrdersController::class, 'cancel'])
+        ->name('api.marketplace-client.orders.cancel');
+});
+
+/*
+|--------------------------------------------------------------------------
 | Platform Analytics API Routes
 |--------------------------------------------------------------------------
 |

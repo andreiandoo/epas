@@ -36,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'webhook.verify' => \App\Http\Middleware\VerifyWebhookSignature::class,
             'api.key' => \App\Http\Middleware\VerifyApiKey::class,
             'tenant.client.cors' => \App\Http\Middleware\TenantClientCors::class,
+            'marketplace.auth' => \App\Http\Middleware\MarketplaceClientAuth::class,
         ]);
 
         // Add global middleware for API routes
