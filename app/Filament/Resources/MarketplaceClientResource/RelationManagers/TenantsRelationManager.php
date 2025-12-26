@@ -4,8 +4,8 @@ namespace App\Filament\Resources\MarketplaceClientResource\RelationManagers;
 
 use App\Models\Tenant;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 
@@ -17,10 +17,10 @@ class TenantsRelationManager extends RelationManager
 
     protected static ?string $recordTitleAttribute = 'name';
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
+        return $schema
+            ->components([
                 Forms\Components\Toggle::make('is_active')
                     ->label('Active')
                     ->default(true)
