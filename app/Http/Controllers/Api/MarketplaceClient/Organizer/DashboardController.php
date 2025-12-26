@@ -66,6 +66,14 @@ class DashboardController extends BaseController
                 'is_verified' => $organizer->isVerified(),
                 'has_payout_details' => !empty($organizer->payout_details),
             ],
+            'balance' => [
+                'available' => (float) $organizer->available_balance,
+                'pending' => (float) $organizer->pending_balance,
+                'total_paid_out' => (float) $organizer->total_paid_out,
+                'can_request_payout' => $organizer->hasMinimumPayoutBalance()
+                    && !$organizer->hasPendingPayout()
+                    && !empty($organizer->payout_details),
+            ],
         ]);
     }
 
@@ -280,6 +288,26 @@ class DashboardController extends BaseController
         $commissionAmount = round($grossRevenue * $commissionRate / 100, 2);
         $netRevenue = $grossRevenue - $commissionAmount;
 
+        // Get recent payouts
+        $recentPayouts = $organizer->payouts()
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get()
+            ->map(function ($payout) {
+                return [
+                    'id' => $payout->id,
+                    'reference' => $payout->reference,
+                    'amount' => (float) $payout->amount,
+                    'status' => $payout->status,
+                    'status_label' => $payout->status_label,
+                    'created_at' => $payout->created_at->toIso8601String(),
+                    'completed_at' => $payout->completed_at?->toIso8601String(),
+                ];
+            });
+
+        // Get pending payout if exists
+        $pendingPayout = $organizer->getPendingPayout();
+
         return $this->success([
             'month' => $month,
             'summary' => [
@@ -289,8 +317,25 @@ class DashboardController extends BaseController
                 'commission_amount' => $commissionAmount,
                 'net_payout' => $netRevenue,
             ],
+            'balance' => [
+                'available' => (float) $organizer->available_balance,
+                'pending' => (float) $organizer->pending_balance,
+                'total_paid_out' => (float) $organizer->total_paid_out,
+                'minimum_payout' => $organizer->getMinimumPayoutAmount(),
+            ],
             'has_payout_details' => !empty($organizer->payout_details),
-            'payout_status' => 'pending', // You can add payout tracking later
+            'can_request_payout' => $organizer->hasMinimumPayoutBalance()
+                && !$organizer->hasPendingPayout()
+                && !empty($organizer->payout_details),
+            'pending_payout' => $pendingPayout ? [
+                'id' => $pendingPayout->id,
+                'reference' => $pendingPayout->reference,
+                'amount' => (float) $pendingPayout->amount,
+                'status' => $pendingPayout->status,
+                'status_label' => $pendingPayout->status_label,
+                'created_at' => $pendingPayout->created_at->toIso8601String(),
+            ] : null,
+            'recent_payouts' => $recentPayouts,
         ]);
     }
 

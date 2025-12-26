@@ -232,7 +232,15 @@ class AuthController extends BaseController
                 'total_tickets_sold' => $organizer->total_tickets_sold,
                 'total_revenue' => $organizer->total_revenue,
             ],
+            'balance' => [
+                'available' => (float) $organizer->available_balance,
+                'pending' => (float) $organizer->pending_balance,
+                'total_paid_out' => (float) $organizer->total_paid_out,
+            ],
             'has_payout_details' => !empty($organizer->payout_details),
+            'can_request_payout' => $organizer->hasMinimumPayoutBalance()
+                && !$organizer->hasPendingPayout()
+                && !empty($organizer->payout_details),
             'created_at' => $organizer->created_at->toIso8601String(),
         ];
     }

@@ -40,6 +40,9 @@ class MarketplaceOrganizer extends Authenticatable
         'total_events',
         'total_tickets_sold',
         'total_revenue',
+        'available_balance',
+        'pending_balance',
+        'total_paid_out',
     ];
 
     protected $hidden = [
@@ -57,6 +60,9 @@ class MarketplaceOrganizer extends Authenticatable
         'payout_details' => 'encrypted:array',
         'commission_rate' => 'decimal:2',
         'total_revenue' => 'decimal:2',
+        'available_balance' => 'decimal:2',
+        'pending_balance' => 'decimal:2',
+        'total_paid_out' => 'decimal:2',
     ];
 
     protected static function boot()
@@ -87,6 +93,16 @@ class MarketplaceOrganizer extends Authenticatable
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class, 'marketplace_organizer_id');
+    }
+
+    public function payouts(): HasMany
+    {
+        return $this->hasMany(MarketplacePayout::class);
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(MarketplaceTransaction::class);
     }
 
     // =========================================
@@ -171,5 +187,110 @@ class MarketplaceOrganizer extends Authenticatable
         return str_starts_with($this->logo, 'http')
             ? $this->logo
             : asset('storage/' . $this->logo);
+    }
+
+    // =========================================
+    // Balance Management
+    // =========================================
+
+    /**
+     * Get total balance (available + pending)
+     */
+    public function getTotalBalanceAttribute(): float
+    {
+        return (float) $this->available_balance + (float) $this->pending_balance;
+    }
+
+    /**
+     * Check if organizer can request a payout for the given amount
+     */
+    public function canRequestPayout(float $amount): bool
+    {
+        return $amount > 0 && $amount <= (float) $this->available_balance;
+    }
+
+    /**
+     * Get minimum payout amount (from client settings or default)
+     */
+    public function getMinimumPayoutAmount(): float
+    {
+        return (float) ($this->marketplaceClient->settings['min_payout_amount'] ?? 100);
+    }
+
+    /**
+     * Check if organizer has sufficient balance for minimum payout
+     */
+    public function hasMinimumPayoutBalance(): bool
+    {
+        return (float) $this->available_balance >= $this->getMinimumPayoutAmount();
+    }
+
+    /**
+     * Reserve balance for a payout request (move from available to pending)
+     */
+    public function reserveBalanceForPayout(float $amount): void
+    {
+        $this->decrement('available_balance', $amount);
+        $this->increment('pending_balance', $amount);
+    }
+
+    /**
+     * Return pending balance to available (when payout is rejected/cancelled)
+     */
+    public function returnPendingBalance(float $amount): void
+    {
+        $this->decrement('pending_balance', $amount);
+        $this->increment('available_balance', $amount);
+    }
+
+    /**
+     * Record completed payout
+     */
+    public function recordPayoutCompleted(float $amount): void
+    {
+        $this->decrement('pending_balance', $amount);
+        $this->increment('total_paid_out', $amount);
+    }
+
+    /**
+     * Get payout history
+     */
+    public function getPayoutHistory(int $limit = 10)
+    {
+        return $this->payouts()
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get transaction history
+     */
+    public function getTransactionHistory(int $limit = 50)
+    {
+        return $this->transactions()
+            ->orderByDesc('created_at')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Check if there's a pending payout request
+     */
+    public function hasPendingPayout(): bool
+    {
+        return $this->payouts()
+            ->whereIn('status', ['pending', 'approved', 'processing'])
+            ->exists();
+    }
+
+    /**
+     * Get the current pending payout request
+     */
+    public function getPendingPayout(): ?MarketplacePayout
+    {
+        return $this->payouts()
+            ->whereIn('status', ['pending', 'approved', 'processing'])
+            ->first();
     }
 }

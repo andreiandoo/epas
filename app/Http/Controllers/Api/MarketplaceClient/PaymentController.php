@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Models\Order;
+use App\Models\MarketplaceTransaction;
 use App\Models\Tenant;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use Illuminate\Http\Request;
@@ -138,6 +139,26 @@ class PaymentController extends BaseController
 
                 // Activate tickets
                 $order->tickets()->update(['status' => 'valid']);
+
+                // Record financial transactions for organizer balance
+                if ($order->marketplace_organizer_id && $order->marketplace_client_id) {
+                    $organizer = $order->marketplaceOrganizer;
+                    $commissionRate = $organizer->getEffectiveCommissionRate();
+                    $grossAmount = (float) $order->total;
+                    $commissionAmount = round($grossAmount * $commissionRate / 100, 2);
+
+                    MarketplaceTransaction::recordSale(
+                        $order->marketplace_client_id,
+                        $order->marketplace_organizer_id,
+                        $grossAmount,
+                        $commissionAmount,
+                        $order->id,
+                        $order->currency
+                    );
+
+                    // Update organizer stats
+                    $organizer->updateStats();
+                }
 
                 // Send webhook notification
                 if ($order->marketplaceClient) {

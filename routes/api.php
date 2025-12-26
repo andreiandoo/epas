@@ -1369,6 +1369,7 @@ Route::post('/marketplace-client/payment/callback/{client}', [MarketplacePayment
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\AuthController as OrganizerAuthController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\EventsController as OrganizerEventsController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\DashboardController as OrganizerDashboardController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\PayoutController as OrganizerPayoutController;
 
 Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no organizer auth)
@@ -1422,6 +1423,22 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.events.cancel');
         Route::get('/events/{event}/statistics', [OrganizerEventsController::class, 'statistics'])
             ->name('api.marketplace-client.organizer.events.statistics');
+
+        // Payouts & Balance
+        Route::get('/balance', [OrganizerPayoutController::class, 'balance'])
+            ->name('api.marketplace-client.organizer.balance');
+        Route::get('/transactions', [OrganizerPayoutController::class, 'transactions'])
+            ->name('api.marketplace-client.organizer.transactions');
+        Route::get('/payouts', [OrganizerPayoutController::class, 'payouts'])
+            ->name('api.marketplace-client.organizer.payouts');
+        Route::post('/payouts', [OrganizerPayoutController::class, 'requestPayout'])
+            ->name('api.marketplace-client.organizer.payouts.request');
+        Route::get('/payouts/{payout}', [OrganizerPayoutController::class, 'showPayout'])
+            ->name('api.marketplace-client.organizer.payouts.show');
+        Route::delete('/payouts/{payout}', [OrganizerPayoutController::class, 'cancelPayout'])
+            ->name('api.marketplace-client.organizer.payouts.cancel');
+        Route::get('/statements', [OrganizerPayoutController::class, 'statements'])
+            ->name('api.marketplace-client.organizer.statements');
     });
 });
 
