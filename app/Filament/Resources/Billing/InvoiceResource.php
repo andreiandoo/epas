@@ -16,11 +16,11 @@ class InvoiceResource extends Resource
 {
     protected static ?string $model = Invoice::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
-    protected static \UnitEnum|string|null $navigationGroup = 'Billing';
+    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static ?string $navigationGroup = 'Billing';
     protected static ?int $navigationSort = 10;
     protected static ?string $modelLabel = 'Invoice';
-    protected static \BackedEnum|string|null $navigationLabel = 'Invoices';
+    protected static ?string $navigationLabel = 'Invoices';
 
     public static function form(Schema $schema): Schema
     {

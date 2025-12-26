@@ -15,9 +15,9 @@ class TrackingIntegrationResource extends Resource
 {
     protected static ?string $model = TrackingIntegration::class;
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Marketing';
+    protected static ?string $navigationGroup = 'Marketing';
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
-    protected static \BackedEnum|string|null $navigationLabel = 'Tracking & Pixels';
+    protected static ?string $navigationLabel = 'Tracking & Pixels';
     protected static ?int $navigationSort = 20;
 
     public static function form(Schema $schema): Schema

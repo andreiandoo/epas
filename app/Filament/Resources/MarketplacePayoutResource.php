@@ -17,11 +17,11 @@ class MarketplacePayoutResource extends Resource
 {
     protected static ?string $model = MarketplacePayout::class;
 
-    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-banknotes';
+    protected static ?string $navigationIcon = 'heroicon-o-banknotes';
 
-    protected static \BackedEnum|string|null $navigationLabel = 'Payouts';
+    protected static ?string $navigationLabel = 'Payouts';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Marketplace';
+    protected static ?string $navigationGroup = 'Marketplace';
 
     protected static ?int $navigationSort = 3;
 

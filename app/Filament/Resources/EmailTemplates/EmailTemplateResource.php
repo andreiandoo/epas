@@ -18,10 +18,10 @@ class EmailTemplateResource extends Resource
 {
     protected static ?string $model = EmailTemplate::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
-    protected static \UnitEnum|string|null $navigationGroup = 'Communications';
+    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static ?string $navigationGroup = 'Communications';
     protected static ?int $navigationSort = 10;
-    protected static \BackedEnum|string|null $navigationLabel = 'Email Templates';
+    protected static ?string $navigationLabel = 'Email Templates';
     protected static ?string $modelLabel = 'Email Template';
     protected static ?string $pluralModelLabel = 'Email Templates';
 

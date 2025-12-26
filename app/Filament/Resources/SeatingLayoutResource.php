@@ -17,20 +17,20 @@ class SeatingLayoutResource extends Resource
 {
     protected static ?string $model = SeatingLayout::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-square-3-stack-3d';
-    protected static \UnitEnum|string|null $navigationGroup = 'Venues & Mapping';
+    protected static ?string $navigationIcon = 'heroicon-o-square-3-stack-3d';
+    protected static ?string $navigationGroup = 'Venues & Mapping';
     protected static ?int $navigationSort = 6;
-    protected static \BackedEnum|string|null $navigationLabel = 'Seating Layouts';
+    protected static ?string $navigationLabel = 'Seating Layouts';
     protected static ?string $modelLabel = 'Seating Layout';
     protected static ?string $pluralModelLabel = 'Seating Layouts';
 
     //protected static ?string $navigationParentItem = 'Venues';
 
-    // protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-square-3-stack-3d';
+    // protected static ?string $navigationIcon = 'heroicon-o-square-3-stack-3d';
 
-    // protected static \BackedEnum|string|null $navigationLabel = 'Seating Layouts';
+    // protected static ?string $navigationLabel = 'Seating Layouts';
 
-    // protected static \UnitEnum|string|null $navigationGroup = 'Venues';
+    // protected static ?string $navigationGroup = 'Venues';
 
     // protected static ?int $navigationSort = 3;
 

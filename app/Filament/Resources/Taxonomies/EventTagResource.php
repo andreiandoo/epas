@@ -17,8 +17,8 @@ class EventTagResource extends Resource
 {
     protected static ?string $model = EventTag::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-hashtag';
-    protected static \UnitEnum|string|null $navigationGroup = 'Taxonomies';
+    protected static ?string $navigationIcon = 'heroicon-o-hashtag';
+    protected static ?string $navigationGroup = 'Taxonomies';
     protected static ?int $navigationSort = 13;
     protected static ?string $modelLabel = 'Event Tag';
 

@@ -15,8 +15,8 @@ class MicroserviceResource extends Resource
 {
     protected static ?string $model = Microservice::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-puzzle-piece';
-    protected static \UnitEnum|string|null $navigationGroup = 'Core';
+    protected static ?string $navigationIcon = 'heroicon-o-puzzle-piece';
+    protected static ?string $navigationGroup = 'Core';
     protected static ?int $navigationSort = 15;
     protected static ?string $modelLabel = 'Microservice';
 

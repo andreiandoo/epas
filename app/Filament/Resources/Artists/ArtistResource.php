@@ -36,8 +36,8 @@ class ArtistResource extends Resource
 {
     protected static ?string $model = Artist::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-user';
-    protected static \UnitEnum|string|null $navigationGroup = 'Catalog';
+    protected static ?string $navigationIcon = 'heroicon-o-user';
+    protected static ?string $navigationGroup = 'Catalog';
     protected static ?int $navigationSort = 10;
 
     public static function form(Schema $schema): Schema
