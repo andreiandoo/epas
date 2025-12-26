@@ -8,6 +8,8 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DetachBulkAction;
 
 class TenantsRelationManager extends RelationManager
 {
@@ -105,9 +107,9 @@ class TenantsRelationManager extends RelationManager
                 Tables\Actions\DetachAction::make()
                     ->label('Remove'),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DetachBulkAction::make()
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DetachBulkAction::make()
                         ->label('Remove Selected'),
                 ]),
             ])

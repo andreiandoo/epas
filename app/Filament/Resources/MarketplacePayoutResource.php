@@ -13,6 +13,8 @@ use Filament\Infolists;
 use Illuminate\Database\Eloquent\Builder;
 use BackedEnum;
 use UnitEnum;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\BulkAction;
 
 class MarketplacePayoutResource extends Resource
 {
@@ -208,9 +210,9 @@ class MarketplacePayoutResource extends Resource
                         $record->reject(auth()->id(), $data['reason']);
                     }),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('approve_selected')
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('approve_selected')
                         ->label('Approve Selected')
                         ->icon('heroicon-o-check')
                         ->color('success')
