@@ -1358,6 +1358,123 @@ Route::post('/marketplace-client/payment/callback/{client}', [MarketplacePayment
 
 /*
 |--------------------------------------------------------------------------
+| Marketplace Organizer API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for marketplace organizers (event creators on a marketplace).
+| Organizers can create events, view sales, and manage their profile.
+|
+*/
+
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\AuthController as OrganizerAuthController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\EventsController as OrganizerEventsController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\DashboardController as OrganizerDashboardController;
+
+Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+    // Public routes (no organizer auth)
+    Route::post('/register', [OrganizerAuthController::class, 'register'])
+        ->name('api.marketplace-client.organizer.register');
+    Route::post('/login', [OrganizerAuthController::class, 'login'])
+        ->name('api.marketplace-client.organizer.login');
+
+    // Protected routes (require organizer auth)
+    Route::middleware('auth:sanctum')->group(function () {
+        // Auth
+        Route::post('/logout', [OrganizerAuthController::class, 'logout'])
+            ->name('api.marketplace-client.organizer.logout');
+        Route::get('/me', [OrganizerAuthController::class, 'me'])
+            ->name('api.marketplace-client.organizer.me');
+        Route::put('/profile', [OrganizerAuthController::class, 'updateProfile'])
+            ->name('api.marketplace-client.organizer.profile.update');
+        Route::put('/password', [OrganizerAuthController::class, 'updatePassword'])
+            ->name('api.marketplace-client.organizer.password.update');
+        Route::put('/payout-details', [OrganizerAuthController::class, 'updatePayoutDetails'])
+            ->name('api.marketplace-client.organizer.payout-details.update');
+
+        // Dashboard
+        Route::get('/dashboard', [OrganizerDashboardController::class, 'index'])
+            ->name('api.marketplace-client.organizer.dashboard');
+        Route::get('/dashboard/timeline', [OrganizerDashboardController::class, 'salesTimeline'])
+            ->name('api.marketplace-client.organizer.dashboard.timeline');
+        Route::get('/dashboard/recent-orders', [OrganizerDashboardController::class, 'recentOrders'])
+            ->name('api.marketplace-client.organizer.dashboard.recent-orders');
+        Route::get('/dashboard/payout-summary', [OrganizerDashboardController::class, 'payoutSummary'])
+            ->name('api.marketplace-client.organizer.dashboard.payout-summary');
+
+        // Orders
+        Route::get('/orders', [OrganizerDashboardController::class, 'orders'])
+            ->name('api.marketplace-client.organizer.orders');
+        Route::get('/orders/{order}', [OrganizerDashboardController::class, 'orderDetail'])
+            ->name('api.marketplace-client.organizer.orders.show');
+
+        // Events
+        Route::get('/events', [OrganizerEventsController::class, 'index'])
+            ->name('api.marketplace-client.organizer.events');
+        Route::post('/events', [OrganizerEventsController::class, 'store'])
+            ->name('api.marketplace-client.organizer.events.store');
+        Route::get('/events/{event}', [OrganizerEventsController::class, 'show'])
+            ->name('api.marketplace-client.organizer.events.show');
+        Route::put('/events/{event}', [OrganizerEventsController::class, 'update'])
+            ->name('api.marketplace-client.organizer.events.update');
+        Route::post('/events/{event}/submit', [OrganizerEventsController::class, 'submit'])
+            ->name('api.marketplace-client.organizer.events.submit');
+        Route::post('/events/{event}/cancel', [OrganizerEventsController::class, 'cancel'])
+            ->name('api.marketplace-client.organizer.events.cancel');
+        Route::get('/events/{event}/statistics', [OrganizerEventsController::class, 'statistics'])
+            ->name('api.marketplace-client.organizer.events.statistics');
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Marketplace Customer API Routes
+|--------------------------------------------------------------------------
+|
+| API endpoints for marketplace customers (ticket buyers on a marketplace).
+| Customers can view orders, tickets, and manage their profile.
+|
+*/
+
+use App\Http\Controllers\Api\MarketplaceClient\Customer\AuthController as CustomerAuthController;
+use App\Http\Controllers\Api\MarketplaceClient\Customer\AccountController as CustomerAccountController;
+
+Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+    // Public routes (no customer auth)
+    Route::post('/register', [CustomerAuthController::class, 'register'])
+        ->name('api.marketplace-client.customer.register');
+    Route::post('/login', [CustomerAuthController::class, 'login'])
+        ->name('api.marketplace-client.customer.login');
+
+    // Protected routes (require customer auth)
+    Route::middleware('auth:sanctum')->group(function () {
+        // Auth
+        Route::post('/logout', [CustomerAuthController::class, 'logout'])
+            ->name('api.marketplace-client.customer.logout');
+        Route::get('/me', [CustomerAuthController::class, 'me'])
+            ->name('api.marketplace-client.customer.me');
+        Route::put('/profile', [CustomerAuthController::class, 'updateProfile'])
+            ->name('api.marketplace-client.customer.profile.update');
+        Route::put('/password', [CustomerAuthController::class, 'updatePassword'])
+            ->name('api.marketplace-client.customer.password.update');
+        Route::put('/marketing', [CustomerAuthController::class, 'updateMarketingPreferences'])
+            ->name('api.marketplace-client.customer.marketing.update');
+
+        // Account
+        Route::get('/orders', [CustomerAccountController::class, 'orders'])
+            ->name('api.marketplace-client.customer.orders');
+        Route::get('/orders/{order}', [CustomerAccountController::class, 'orderDetail'])
+            ->name('api.marketplace-client.customer.orders.show');
+        Route::get('/tickets', [CustomerAccountController::class, 'upcomingTickets'])
+            ->name('api.marketplace-client.customer.tickets');
+        Route::get('/past-events', [CustomerAccountController::class, 'pastEvents'])
+            ->name('api.marketplace-client.customer.past-events');
+        Route::delete('/account', [CustomerAccountController::class, 'deleteAccount'])
+            ->name('api.marketplace-client.customer.account.delete');
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
 | Platform Analytics API Routes
 |--------------------------------------------------------------------------
 |
