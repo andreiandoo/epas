@@ -21,7 +21,7 @@ class MarketplacePayoutResource extends Resource
 
     protected static ?string $navigationLabel = 'Payouts';
 
-    protected static ?string $navigationGroup = 'Marketplace';
+    protected static string|\UnitEnum|null $navigationGroup = 'Marketplace';
 
     protected static ?int $navigationSort = 3;
 

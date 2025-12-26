@@ -18,7 +18,6 @@ class ListArtistTypes extends ListRecords
         return [
             Actions\CreateAction::make()
                 ->label('Add artist type')
-                ->class('add-btn')
                 ->icon('heroicon-m-plus'),
 
             Actions\Action::make('export')
