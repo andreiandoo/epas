@@ -6,9 +6,13 @@ use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\MarketplaceEvent;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceTicketType;
+use App\Models\MarketplaceTransaction;
+use App\Models\Order;
+use App\Notifications\MarketplaceOrderNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 class EventsController extends BaseController
@@ -243,11 +247,15 @@ class EventsController extends BaseController
     }
 
     /**
-     * Cancel an event
+     * Cancel an event with automatic refunds
      */
     public function cancel(Request $request, int $eventId): JsonResponse
     {
         $organizer = $this->requireOrganizer($request);
+
+        $validated = $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
 
         $event = MarketplaceEvent::where('id', $eventId)
             ->where('marketplace_organizer_id', $organizer->id)
@@ -261,14 +269,98 @@ class EventsController extends BaseController
             return $this->error('Event is already cancelled', 400);
         }
 
-        // Check if there are completed orders
-        if ($event->orders()->where('status', 'completed')->exists()) {
-            return $this->error('Cannot cancel event with completed orders. Contact support for assistance.', 400);
+        $reason = $validated['reason'] ?? 'Event cancelled by organizer';
+
+        try {
+            DB::beginTransaction();
+
+            // Get all completed orders for this event
+            $completedOrders = $event->orders()->where('status', 'completed')->get();
+            $refundedCount = 0;
+            $totalRefunded = 0;
+
+            foreach ($completedOrders as $order) {
+                // Calculate refund
+                $refundAmount = (float) $order->total;
+                $commissionRefund = (float) $order->commission_amount;
+                $netRefund = $refundAmount - $commissionRefund;
+
+                // Update order status
+                $order->update([
+                    'status' => 'refunded',
+                    'refunded_at' => now(),
+                    'refund_amount' => $refundAmount,
+                    'refund_reason' => $reason,
+                ]);
+
+                // Invalidate tickets
+                $order->tickets()->update(['status' => 'refunded']);
+
+                // Record refund transaction
+                if ($order->marketplace_organizer_id) {
+                    MarketplaceTransaction::recordRefund(
+                        $order->marketplace_client_id,
+                        $order->marketplace_organizer_id,
+                        $netRefund,
+                        $commissionRefund,
+                        $order->id,
+                        $order->currency
+                    );
+                }
+
+                // Send email notification to customer
+                if ($order->customer_email) {
+                    dispatch(function () use ($order) {
+                        Notification::route('mail', $order->customer_email)
+                            ->notify(new MarketplaceOrderNotification($order->fresh(), 'event_cancelled'));
+                    })->afterResponse();
+                }
+
+                $refundedCount++;
+                $totalRefunded += $refundAmount;
+            }
+
+            // Cancel pending orders
+            $pendingOrders = $event->orders()->where('status', 'pending')->get();
+            foreach ($pendingOrders as $order) {
+                $order->update([
+                    'status' => 'cancelled',
+                    'cancelled_at' => now(),
+                ]);
+                $order->tickets()->update(['status' => 'cancelled']);
+
+                // Restore ticket availability
+                foreach ($order->items as $item) {
+                    if ($item->ticket_type_id) {
+                        $event->ticketTypes()
+                            ->where('id', $item->ticket_type_id)
+                            ->increment('available_quantity', $item->quantity);
+                    }
+                }
+            }
+
+            // Cancel the event
+            $event->update([
+                'status' => 'cancelled',
+                'cancelled_at' => now(),
+                'cancellation_reason' => $reason,
+            ]);
+
+            // Update organizer stats
+            $organizer->updateStats();
+
+            DB::commit();
+
+            return $this->success([
+                'orders_refunded' => $refundedCount,
+                'total_refunded' => $totalRefunded,
+                'orders_cancelled' => $pendingOrders->count(),
+            ], 'Event cancelled. ' . $refundedCount . ' orders have been refunded.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return $this->error('Failed to cancel event: ' . $e->getMessage(), 500);
         }
-
-        $event->cancel();
-
-        return $this->success(null, 'Event cancelled');
     }
 
     /**

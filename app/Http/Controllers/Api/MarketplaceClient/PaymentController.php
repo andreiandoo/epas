@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 use App\Models\Order;
 use App\Models\MarketplaceTransaction;
 use App\Models\Tenant;
+use App\Notifications\MarketplaceOrderNotification;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 
 class PaymentController extends BaseController
 {
@@ -173,6 +175,14 @@ class PaymentController extends BaseController
                                 'paid_at' => $order->paid_at->toIso8601String(),
                             ]
                         );
+                    })->afterResponse();
+                }
+
+                // Send order confirmation email to customer
+                if ($order->customer_email) {
+                    dispatch(function () use ($order) {
+                        Notification::route('mail', $order->customer_email)
+                            ->notify(new MarketplaceOrderNotification($order, 'confirmed'));
                     })->afterResponse();
                 }
 

@@ -1379,6 +1379,10 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         ->name('api.marketplace-client.organizer.register');
     Route::post('/login', [OrganizerAuthController::class, 'login'])
         ->name('api.marketplace-client.organizer.login');
+    Route::post('/forgot-password', [OrganizerAuthController::class, 'forgotPassword'])
+        ->name('api.marketplace-client.organizer.forgot-password');
+    Route::post('/reset-password', [OrganizerAuthController::class, 'resetPassword'])
+        ->name('api.marketplace-client.organizer.reset-password');
 
     // Protected routes (require organizer auth)
     Route::middleware('auth:sanctum')->group(function () {
@@ -1463,6 +1467,10 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
         ->name('api.marketplace-client.customer.register');
     Route::post('/login', [CustomerAuthController::class, 'login'])
         ->name('api.marketplace-client.customer.login');
+    Route::post('/forgot-password', [CustomerAuthController::class, 'forgotPassword'])
+        ->name('api.marketplace-client.customer.forgot-password');
+    Route::post('/reset-password', [CustomerAuthController::class, 'resetPassword'])
+        ->name('api.marketplace-client.customer.reset-password');
 
     // Protected routes (require customer auth)
     Route::middleware('auth:sanctum')->group(function () {

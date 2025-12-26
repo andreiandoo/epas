@@ -8,11 +8,13 @@ use App\Models\TicketType;
 use App\Models\Ticket;
 use App\Models\Customer;
 use App\Models\MarketplaceTransaction;
+use App\Notifications\MarketplaceOrderNotification;
 use App\Services\MarketplaceWebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 class OrdersController extends BaseController
@@ -454,6 +456,14 @@ class OrdersController extends BaseController
                     'refunded_at' => $order->refunded_at->toIso8601String(),
                 ]);
             })->afterResponse();
+
+            // Send refund notification email to customer
+            if ($order->customer_email) {
+                dispatch(function () use ($order) {
+                    Notification::route('mail', $order->customer_email)
+                        ->notify(new MarketplaceOrderNotification($order->fresh(), 'refunded'));
+                })->afterResponse();
+            }
 
             return $this->success([
                 'order_id' => $order->id,

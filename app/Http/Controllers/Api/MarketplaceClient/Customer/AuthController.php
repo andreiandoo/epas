@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Customer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\MarketplaceCustomer;
+use App\Notifications\MarketplacePasswordResetNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRules;
 
 class AuthController extends BaseController
@@ -218,6 +221,111 @@ class AuthController extends BaseController
         ]);
 
         return $this->success(null, 'Marketing preferences updated');
+    }
+
+    /**
+     * Send password reset link
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $validated = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $customer = MarketplaceCustomer::where('marketplace_client_id', $client->id)
+            ->where('email', $validated['email'])
+            ->whereNotNull('password')
+            ->first();
+
+        // Always return success to prevent email enumeration
+        if (!$customer) {
+            return $this->success(null, 'If an account exists with this email, you will receive a password reset link.');
+        }
+
+        // Delete any existing tokens
+        DB::table('marketplace_password_resets')
+            ->where('email', $customer->email)
+            ->where('type', 'customer')
+            ->where('marketplace_client_id', $client->id)
+            ->delete();
+
+        // Create new token
+        $token = Str::random(64);
+        DB::table('marketplace_password_resets')->insert([
+            'email' => $customer->email,
+            'type' => 'customer',
+            'marketplace_client_id' => $client->id,
+            'token' => Hash::make($token),
+            'created_at' => now(),
+        ]);
+
+        // Send notification
+        $customer->notify(new MarketplacePasswordResetNotification(
+            $token,
+            'customer',
+            $client->domain
+        ));
+
+        return $this->success(null, 'If an account exists with this email, you will receive a password reset link.');
+    }
+
+    /**
+     * Reset password with token
+     */
+    public function resetPassword(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'token' => 'required|string',
+            'password' => ['required', 'confirmed', PasswordRules::min(8)],
+        ]);
+
+        // Find the reset record
+        $record = DB::table('marketplace_password_resets')
+            ->where('email', $validated['email'])
+            ->where('type', 'customer')
+            ->where('marketplace_client_id', $client->id)
+            ->first();
+
+        if (!$record) {
+            return $this->error('Invalid or expired reset token', 400);
+        }
+
+        // Check if token is expired (60 minutes)
+        if (now()->diffInMinutes($record->created_at) > 60) {
+            DB::table('marketplace_password_resets')->where('id', $record->id)->delete();
+            return $this->error('Reset token has expired', 400);
+        }
+
+        // Verify token
+        if (!Hash::check($validated['token'], $record->token)) {
+            return $this->error('Invalid or expired reset token', 400);
+        }
+
+        // Find and update customer
+        $customer = MarketplaceCustomer::where('marketplace_client_id', $client->id)
+            ->where('email', $validated['email'])
+            ->first();
+
+        if (!$customer) {
+            return $this->error('Account not found', 404);
+        }
+
+        $customer->update([
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        // Delete the reset record
+        DB::table('marketplace_password_resets')->where('id', $record->id)->delete();
+
+        // Revoke all tokens
+        $customer->tokens()->delete();
+
+        return $this->success(null, 'Password has been reset successfully. Please login with your new password.');
     }
 
     /**
