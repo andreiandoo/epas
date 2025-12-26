@@ -206,11 +206,13 @@ return new class extends Migration
 
         // Add marketplace fields to orders table
         Schema::table('orders', function (Blueprint $table) {
-            $table->foreignId('marketplace_organizer_id')->nullable()->after('marketplace_client_id')
+            $table->foreignId('marketplace_client_id')->nullable()
                 ->constrained()->nullOnDelete();
-            $table->foreignId('marketplace_customer_id')->nullable()->after('marketplace_organizer_id')
+            $table->foreignId('marketplace_organizer_id')->nullable()
                 ->constrained()->nullOnDelete();
-            $table->foreignId('marketplace_event_id')->nullable()->after('marketplace_customer_id')
+            $table->foreignId('marketplace_customer_id')->nullable()
+                ->constrained()->nullOnDelete();
+            $table->foreignId('marketplace_event_id')->nullable()
                 ->constrained()->nullOnDelete();
         });
     }
@@ -221,10 +223,11 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('orders', function (Blueprint $table) {
+            $table->dropForeign(['marketplace_client_id']);
             $table->dropForeign(['marketplace_organizer_id']);
             $table->dropForeign(['marketplace_customer_id']);
             $table->dropForeign(['marketplace_event_id']);
-            $table->dropColumn(['marketplace_organizer_id', 'marketplace_customer_id', 'marketplace_event_id']);
+            $table->dropColumn(['marketplace_client_id', 'marketplace_organizer_id', 'marketplace_customer_id', 'marketplace_event_id']);
         });
 
         Schema::dropIfExists('marketplace_ticket_types');
