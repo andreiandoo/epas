@@ -44,7 +44,7 @@ return new class extends Migration
             $table->decimal('commission_override', 5, 2)->nullable(); // Override client's default commission
             $table->timestamps();
 
-            $table->unique(['marketplace_client_id', 'tenant_id']);
+            $table->unique(['marketplace_client_id', 'tenant_id'], 'mkt_client_tenant_unique');
         });
     }
 
