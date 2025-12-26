@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\TicketType;
 use App\Models\Ticket;
 use App\Models\Customer;
+use App\Services\MarketplaceWebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -163,6 +164,17 @@ class OrdersController extends BaseController
                 'tenant_id' => $event->tenant_id,
                 'total' => $total,
             ]);
+
+            // Send webhook notification (async)
+            dispatch(function () use ($client, $order) {
+                app(MarketplaceWebhookService::class)->orderCreated($client, [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'status' => $order->status,
+                    'total' => $order->total,
+                    'currency' => $order->currency,
+                ]);
+            })->afterResponse();
 
             return $this->success([
                 'order' => [
@@ -321,6 +333,15 @@ class OrdersController extends BaseController
                 'order_id' => $order->id,
                 'marketplace_client_id' => $client->id,
             ]);
+
+            // Send webhook notification (async)
+            dispatch(function () use ($client, $order) {
+                app(MarketplaceWebhookService::class)->orderCancelled($client, [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'status' => 'cancelled',
+                ]);
+            })->afterResponse();
 
             return $this->success(null, 'Order cancelled successfully');
 

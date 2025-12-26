@@ -1,30 +1,26 @@
 /**
  * AmBilet.ro API Client
- * Communicates with the Core Tixello platform
+ * Communicates with the Core platform through a secure server-side proxy.
+ *
+ * SECURITY: This client calls a local PHP proxy which holds the API key
+ * securely on the server side. The API key is NEVER exposed to the browser.
  */
 
 class AmBiletAPI {
     constructor(config = {}) {
-        this.baseUrl = config.baseUrl || 'https://core.tixello.com/api/marketplace-client';
-        this.apiKey = config.apiKey || '';
+        // Local proxy URL - this calls our server-side proxy.php
+        this.proxyUrl = config.proxyUrl || '/api/proxy.php';
     }
 
     /**
-     * Set API key
-     */
-    setApiKey(key) {
-        this.apiKey = key;
-    }
-
-    /**
-     * Make API request
+     * Make API request through the secure proxy
      */
     async request(endpoint, options = {}) {
-        const url = `${this.baseUrl}${endpoint}`;
+        const url = `${this.proxyUrl}?endpoint=${encodeURIComponent(endpoint)}`;
 
         const headers = {
             'Content-Type': 'application/json',
-            'X-API-Key': this.apiKey,
+            'X-Requested-With': 'XMLHttpRequest',
             ...options.headers
         };
 
@@ -37,7 +33,7 @@ class AmBiletAPI {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.message || 'API request failed');
+                throw new Error(data.message || data.error || 'API request failed');
             }
 
             return data;
@@ -51,9 +47,10 @@ class AmBiletAPI {
      * GET request
      */
     async get(endpoint, params = {}) {
+        // Add query params to the endpoint
         const queryString = new URLSearchParams(params).toString();
-        const url = queryString ? `${endpoint}?${queryString}` : endpoint;
-        return this.request(url, { method: 'GET' });
+        const fullEndpoint = queryString ? `${endpoint}?${queryString}` : endpoint;
+        return this.request(fullEndpoint, { method: 'GET' });
     }
 
     /**
@@ -74,14 +71,14 @@ class AmBiletAPI {
      * Get marketplace client configuration
      */
     async getConfig() {
-        return this.get('/config');
+        return this.get('config');
     }
 
     /**
      * Get list of tenants we can sell tickets for
      */
     async getTenants() {
-        return this.get('/tenants');
+        return this.get('tenants');
     }
 
     // ==========================================
@@ -93,7 +90,7 @@ class AmBiletAPI {
      * @param {Object} filters - Optional filters
      */
     async getEvents(filters = {}) {
-        return this.get('/events', filters);
+        return this.get('events', filters);
     }
 
     /**
@@ -101,7 +98,7 @@ class AmBiletAPI {
      * @param {number} eventId - Event ID
      */
     async getEvent(eventId) {
-        return this.get(`/events/${eventId}`);
+        return this.get(`events/${eventId}`);
     }
 
     /**
@@ -109,7 +106,7 @@ class AmBiletAPI {
      * @param {number} eventId - Event ID
      */
     async getEventAvailability(eventId) {
-        return this.get(`/events/${eventId}/availability`);
+        return this.get(`events/${eventId}/availability`);
     }
 
     // ==========================================
@@ -121,7 +118,7 @@ class AmBiletAPI {
      * @param {Object} filters - Optional filters
      */
     async getOrders(filters = {}) {
-        return this.get('/orders', filters);
+        return this.get('orders', filters);
     }
 
     /**
@@ -129,7 +126,7 @@ class AmBiletAPI {
      * @param {number} orderId - Order ID
      */
     async getOrder(orderId) {
-        return this.get(`/orders/${orderId}`);
+        return this.get(`orders/${orderId}`);
     }
 
     /**
@@ -137,7 +134,7 @@ class AmBiletAPI {
      * @param {Object} orderData - Order data
      */
     async createOrder(orderData) {
-        return this.post('/orders', orderData);
+        return this.post('orders', orderData);
     }
 
     /**
@@ -145,15 +142,12 @@ class AmBiletAPI {
      * @param {number} orderId - Order ID
      */
     async cancelOrder(orderId) {
-        return this.post(`/orders/${orderId}/cancel`);
+        return this.post(`orders/${orderId}/cancel`);
     }
 }
 
 // Create global instance
 window.AmBiletAPI = AmBiletAPI;
 
-// Initialize with config
-window.api = new AmBiletAPI({
-    // TODO: Replace with actual API key
-    apiKey: 'mpc_YOUR_API_KEY_HERE'
-});
+// Initialize - no API key needed! It's handled by the server-side proxy
+window.api = new AmBiletAPI();

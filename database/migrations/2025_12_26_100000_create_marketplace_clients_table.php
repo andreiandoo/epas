@@ -26,6 +26,7 @@ return new class extends Migration
             $table->json('allowed_tenants')->nullable(); // null = all tenants, array = specific tenant IDs
             $table->json('settings')->nullable();
             $table->text('notes')->nullable();
+            $table->unsignedBigInteger('api_calls_count')->default(0);
             $table->timestamp('last_api_call_at')->nullable();
             $table->timestamps();
             $table->softDeletes();

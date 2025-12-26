@@ -2,141 +2,197 @@
 
 This folder contains the custom website for AmBilet.ro marketplace client.
 
+## Security Architecture
+
+**IMPORTANT**: The API key is stored server-side and NEVER exposed to the browser.
+
+```
+Browser  →  proxy.php (server)  →  Core API
+              ↓
+         config.php (API key stored here, outside webroot)
+```
+
 ## Folder Structure
 
 ```
 ambilet/
-├── index.html          # Main landing page
-├── events.html         # Events listing page
-├── event.html          # Single event detail page
-├── checkout.html       # Checkout page
-├── order-complete.html # Order confirmation page
+├── api/
+│   ├── config.php       # API key and configuration (KEEP OUTSIDE WEBROOT!)
+│   └── proxy.php        # Server-side proxy for API calls
 ├── css/
-│   └── styles.css      # Custom styles
+│   └── styles.css       # Custom styles
 ├── js/
-│   ├── api.js          # API client for Core communication
-│   ├── app.js          # Main application logic
-│   └── checkout.js     # Checkout logic
-├── images/             # Static images
-└── pages/              # Additional static pages
+│   ├── api.js           # API client (calls local proxy, not Core directly)
+│   └── app.js           # Main application logic
+├── images/              # Static images
+├── index.html           # Main landing page
+└── README.md
 ```
 
-## API Configuration
+## Deployment Setup
 
-### Authentication
+### 1. Recommended Server Structure
 
-All API requests require the `X-API-Key` header:
-
-```javascript
-const API_BASE_URL = 'https://core.tixello.com/api/marketplace-client';
-const API_KEY = 'mpc_YOUR_API_KEY_HERE';
-
-fetch(`${API_BASE_URL}/events`, {
-    headers: {
-        'X-API-Key': API_KEY,
-        'Content-Type': 'application/json'
-    }
-});
+```
+/var/www/ambilet.ro/
+├── config/
+│   └── config.php       # ← API key here (OUTSIDE webroot!)
+└── public/              # ← Webroot points here
+    ├── api/
+    │   └── proxy.php    # Proxy script
+    ├── css/
+    ├── js/
+    ├── images/
+    └── index.html
 ```
 
-### Available Endpoints
+### 2. Configure the API Key
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/config` | GET | Get marketplace client configuration |
-| `/tenants` | GET | List tenants you can sell tickets for |
-| `/events` | GET | List all available events |
-| `/events/{id}` | GET | Get single event details |
-| `/events/{id}/availability` | GET | Get real-time ticket availability |
-| `/orders` | GET | List your orders |
-| `/orders` | POST | Create a new order |
-| `/orders/{id}` | GET | Get order details |
-| `/orders/{id}/cancel` | POST | Cancel a pending order |
+Edit `config/config.php` (outside webroot):
 
-### Event Listing
-
-```javascript
-// Get events with filters
-const response = await fetch(`${API_BASE_URL}/events?` + new URLSearchParams({
-    tenant_id: 123,        // Optional: filter by tenant
-    category: 'concert',   // Optional: filter by category
-    city: 'Bucuresti',     // Optional: filter by city
-    from_date: '2025-01-01', // Optional: filter by date range
-    to_date: '2025-12-31',
-    search: 'rock',        // Optional: text search
-    per_page: 20,          // Pagination (max 100)
-    page: 1
-}), {
-    headers: { 'X-API-Key': API_KEY }
-});
-
-const data = await response.json();
-// data.data = array of events
-// data.meta = pagination info
+```php
+<?php
+return [
+    'core_api_url' => 'https://core.tixello.com/api/marketplace-client',
+    'api_key' => 'mpc_YOUR_ACTUAL_API_KEY',
+    'api_secret' => 'YOUR_API_SECRET',
+    'allowed_origins' => [
+        'https://ambilet.ro',
+        'https://www.ambilet.ro',
+    ],
+    'rate_limit' => 60,
+];
 ```
 
-### Creating an Order
+### 3. Update proxy.php Path
 
-```javascript
-const response = await fetch(`${API_BASE_URL}/orders`, {
-    method: 'POST',
-    headers: {
-        'X-API-Key': API_KEY,
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-        event_id: 123,
-        tickets: [
-            { ticket_type_id: 1, quantity: 2 },
-            { ticket_type_id: 2, quantity: 1 }
-        ],
-        customer: {
-            email: 'client@example.com',
-            first_name: 'Ion',
-            last_name: 'Popescu',
-            phone: '+40712345678'
-        }
-    })
-});
+In `public/api/proxy.php`, update the config path:
 
-const data = await response.json();
-// data.data.order = order details
-// data.data.payment_url = redirect URL for payment
+```php
+$configPath = dirname(__DIR__, 2) . '/config/config.php';
 ```
 
-### Order Response
+### 4. Protect config.php
 
-```json
-{
-    "success": true,
-    "data": {
-        "order": {
-            "id": 12345,
-            "order_number": "MPC-ABCD1234",
-            "status": "pending",
-            "subtotal": 150.00,
-            "commission_amount": 3.00,
-            "total": 153.00,
-            "currency": "RON",
-            "expires_at": "2025-12-26T10:15:00Z"
-        },
-        "payment_url": "https://core.tixello.com/marketplace/payment/12345"
-    }
+Add to `.htaccess` in the config folder:
+
+```apache
+Deny from all
+```
+
+Or use nginx:
+
+```nginx
+location /config {
+    deny all;
+    return 404;
 }
 ```
 
-## Deployment
+## How the Proxy Works
 
-This website is hosted on AmBilet.ro's own server. To deploy:
+1. Browser calls `proxy.php?endpoint=events`
+2. Proxy adds the API key header (stored server-side)
+3. Proxy forwards request to Core API
+4. Proxy returns the response to the browser
 
-1. Copy all files to your web server
-2. Update `js/api.js` with your API key
-3. Configure your web server to serve `index.html` for all routes (SPA mode)
-4. Ensure HTTPS is enabled
+The API key never leaves your server.
 
-## CORS
+## Available Endpoints
 
-The Core API allows requests from any origin when authenticated with a valid API key. Your website can be hosted on any domain.
+All endpoints are accessed through the proxy:
+
+```javascript
+// Browser makes request to local proxy
+fetch('/api/proxy.php?endpoint=events')
+
+// Proxy adds API key and forwards to:
+// https://core.tixello.com/api/marketplace-client/events
+```
+
+| Proxy URL | Core Endpoint | Description |
+|-----------|---------------|-------------|
+| `?endpoint=config` | `/config` | Get client configuration |
+| `?endpoint=tenants` | `/tenants` | List available tenants |
+| `?endpoint=events` | `/events` | List events |
+| `?endpoint=events/123` | `/events/123` | Get event details |
+| `?endpoint=events/123/availability` | `/events/123/availability` | Check availability |
+| `?endpoint=orders` | `/orders` | List/create orders |
+| `?endpoint=orders/123` | `/orders/123` | Get order details |
+
+## JavaScript API Client
+
+The API client (`js/api.js`) automatically uses the proxy:
+
+```javascript
+// Initialize - no API key needed!
+const api = new AmBiletAPI();
+
+// Get events
+const events = await api.getEvents({ city: 'Bucuresti' });
+
+// Create order
+const order = await api.createOrder({
+    event_id: 123,
+    tickets: [{ ticket_type_id: 1, quantity: 2 }],
+    customer: {
+        email: 'client@example.com',
+        first_name: 'Ion',
+        last_name: 'Popescu',
+        phone: '+40712345678'
+    }
+});
+```
+
+## Additional Security (Core-side)
+
+Configure these in the Core admin panel for extra security:
+
+### IP Restriction
+Limit API access to your server's IP:
+```json
+{
+    "allowed_ips": ["1.2.3.4", "5.6.7.8/24"]
+}
+```
+
+### Domain Restriction
+Limit CORS to your domains:
+```json
+{
+    "allowed_domains": ["ambilet.ro", "*.ambilet.ro"]
+}
+```
+
+## Webhooks
+
+Configure webhook URL in Core to receive order notifications:
+
+```json
+{
+    "webhook_url": "https://ambilet.ro/webhooks/orders",
+    "webhook_secret": "your-secret-key"
+}
+```
+
+Webhook events:
+- `order.created` - New order placed
+- `order.confirmed` - Payment confirmed
+- `order.cancelled` - Order cancelled
+- `order.completed` - Order fulfilled
+- `order.refunded` - Order refunded
+
+Verify webhook signature:
+```php
+$payload = file_get_contents('php://input');
+$signature = $_SERVER['HTTP_X_WEBHOOK_SIGNATURE'];
+$expected = hash_hmac('sha256', $payload, $webhookSecret);
+
+if (!hash_equals($expected, $signature)) {
+    http_response_code(401);
+    exit('Invalid signature');
+}
+```
 
 ## Support
 
@@ -144,4 +200,5 @@ Contact the Core platform team for:
 - API key generation
 - Tenant access configuration
 - Commission rate setup
+- IP/Domain whitelisting
 - Technical support

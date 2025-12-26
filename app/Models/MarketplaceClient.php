@@ -25,6 +25,7 @@ class MarketplaceClient extends Model
         'allowed_tenants',
         'settings',
         'notes',
+        'api_calls_count',
         'last_api_call_at',
     ];
 
@@ -134,6 +135,41 @@ class MarketplaceClient extends Model
         $newSecret = hash('sha256', Str::random(64));
         $this->update(['api_secret' => $newSecret]);
         return $newSecret;
+    }
+
+    /**
+     * Regenerate both API key and secret
+     */
+    public function regenerateApiCredentials(): void
+    {
+        $this->update([
+            'api_key' => 'mpc_' . Str::random(60),
+            'api_secret' => hash('sha256', Str::random(64)),
+        ]);
+    }
+
+    /**
+     * Increment API calls count
+     */
+    public function incrementApiCalls(): void
+    {
+        $this->increment('api_calls_count');
+    }
+
+    /**
+     * Get webhook URL if configured
+     */
+    public function getWebhookUrl(): ?string
+    {
+        return $this->settings['webhook_url'] ?? null;
+    }
+
+    /**
+     * Get webhook secret if configured
+     */
+    public function getWebhookSecret(): ?string
+    {
+        return $this->settings['webhook_secret'] ?? null;
     }
 
     /**
