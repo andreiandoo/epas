@@ -31,6 +31,8 @@ class MarketplaceCustomer extends Authenticatable
         'country',
         'status',
         'email_verified_at',
+        'email_verification_token',
+        'email_verification_expires_at',
         'last_login_at',
         'accepts_marketing',
         'marketing_consent_at',
@@ -45,6 +47,7 @@ class MarketplaceCustomer extends Authenticatable
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'email_verification_expires_at' => 'datetime',
         'last_login_at' => 'datetime',
         'marketing_consent_at' => 'datetime',
         'birth_date' => 'date',
@@ -144,5 +147,77 @@ class MarketplaceCustomer extends Authenticatable
         $this->update([
             'password' => bcrypt($password),
         ]);
+    }
+
+    // =========================================
+    // Email Verification
+    // =========================================
+
+    /**
+     * Generate email verification token
+     */
+    public function generateEmailVerificationToken(): string
+    {
+        $token = \Illuminate\Support\Str::random(64);
+
+        $this->update([
+            'email_verification_token' => hash('sha256', $token),
+            'email_verification_expires_at' => now()->addHours(24),
+        ]);
+
+        return $token;
+    }
+
+    /**
+     * Verify email with token
+     */
+    public function verifyEmailWithToken(string $token): bool
+    {
+        if (!$this->email_verification_token) {
+            return false;
+        }
+
+        if ($this->email_verification_expires_at && $this->email_verification_expires_at->isPast()) {
+            return false;
+        }
+
+        if (!hash_equals($this->email_verification_token, hash('sha256', $token))) {
+            return false;
+        }
+
+        $this->update([
+            'email_verified_at' => now(),
+            'email_verification_token' => null,
+            'email_verification_expires_at' => null,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Check if verification token is expired
+     */
+    public function isVerificationTokenExpired(): bool
+    {
+        return $this->email_verification_expires_at && $this->email_verification_expires_at->isPast();
+    }
+
+    /**
+     * Check if customer can resend verification email
+     * (rate limiting: at least 1 minute between requests)
+     */
+    public function canResendVerification(): bool
+    {
+        if ($this->isEmailVerified()) {
+            return false;
+        }
+
+        if (!$this->email_verification_expires_at) {
+            return true;
+        }
+
+        // Allow resend if token was created more than 1 minute ago
+        $tokenCreatedAt = $this->email_verification_expires_at->subHours(24);
+        return $tokenCreatedAt->diffInMinutes(now()) >= 1;
     }
 }

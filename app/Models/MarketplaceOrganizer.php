@@ -34,6 +34,8 @@ class MarketplaceOrganizer extends Authenticatable
         'status',
         'verified_at',
         'email_verified_at',
+        'email_verification_token',
+        'email_verification_expires_at',
         'commission_rate',
         'settings',
         'payout_details',
@@ -53,6 +55,7 @@ class MarketplaceOrganizer extends Authenticatable
 
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'email_verification_expires_at' => 'datetime',
         'verified_at' => 'datetime',
         'password' => 'hashed',
         'social_links' => 'array',
@@ -103,6 +106,11 @@ class MarketplaceOrganizer extends Authenticatable
     public function transactions(): HasMany
     {
         return $this->hasMany(MarketplaceTransaction::class);
+    }
+
+    public function promoCodes(): HasMany
+    {
+        return $this->hasMany(MarketplaceOrganizerPromoCode::class);
     }
 
     // =========================================
@@ -292,5 +300,85 @@ class MarketplaceOrganizer extends Authenticatable
         return $this->payouts()
             ->whereIn('status', ['pending', 'approved', 'processing'])
             ->first();
+    }
+
+    // =========================================
+    // Email Verification
+    // =========================================
+
+    /**
+     * Check if email is verified
+     */
+    public function isEmailVerified(): bool
+    {
+        return $this->email_verified_at !== null;
+    }
+
+    /**
+     * Generate email verification token
+     */
+    public function generateEmailVerificationToken(): string
+    {
+        $token = Str::random(64);
+
+        $this->update([
+            'email_verification_token' => hash('sha256', $token),
+            'email_verification_expires_at' => now()->addHours(24),
+        ]);
+
+        return $token;
+    }
+
+    /**
+     * Verify email with token
+     */
+    public function verifyEmailWithToken(string $token): bool
+    {
+        if (!$this->email_verification_token) {
+            return false;
+        }
+
+        if ($this->email_verification_expires_at && $this->email_verification_expires_at->isPast()) {
+            return false;
+        }
+
+        if (!hash_equals($this->email_verification_token, hash('sha256', $token))) {
+            return false;
+        }
+
+        $this->update([
+            'email_verified_at' => now(),
+            'email_verification_token' => null,
+            'email_verification_expires_at' => null,
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Check if verification token is expired
+     */
+    public function isVerificationTokenExpired(): bool
+    {
+        return $this->email_verification_expires_at && $this->email_verification_expires_at->isPast();
+    }
+
+    /**
+     * Check if organizer can resend verification email
+     * (rate limiting: at least 1 minute between requests)
+     */
+    public function canResendVerification(): bool
+    {
+        if ($this->isEmailVerified()) {
+            return false;
+        }
+
+        if (!$this->email_verification_expires_at) {
+            return true;
+        }
+
+        // Allow resend if token was created more than 1 minute ago
+        $tokenCreatedAt = $this->email_verification_expires_at->subHours(24);
+        return $tokenCreatedAt->diffInMinutes(now()) >= 1;
     }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Customer;
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\MarketplaceCustomer;
 use App\Notifications\MarketplacePasswordResetNotification;
+use App\Notifications\MarketplaceEmailVerificationNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -70,12 +71,21 @@ class AuthController extends BaseController
             'status' => 'active',
         ]);
 
+        // Send verification email
+        $verificationToken = $customer->generateEmailVerificationToken();
+        $customer->notify(new MarketplaceEmailVerificationNotification(
+            $verificationToken,
+            'customer',
+            $client->domain
+        ));
+
         $token = $customer->createToken('customer-api')->plainTextToken;
 
         return $this->success([
             'customer' => $this->formatCustomer($customer),
             'token' => $token,
-        ], 'Registration successful', 201);
+            'requires_verification' => true,
+        ], 'Registration successful. Please verify your email.', 201);
     }
 
     /**
@@ -326,6 +336,81 @@ class AuthController extends BaseController
         $customer->tokens()->delete();
 
         return $this->success(null, 'Password has been reset successfully. Please login with your new password.');
+    }
+
+    /**
+     * Verify email with token
+     */
+    public function verifyEmail(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'token' => 'required|string',
+        ]);
+
+        $customer = MarketplaceCustomer::where('marketplace_client_id', $client->id)
+            ->where('email', $validated['email'])
+            ->first();
+
+        if (!$customer) {
+            return $this->error('Account not found', 404);
+        }
+
+        if ($customer->isEmailVerified()) {
+            return $this->success(null, 'Email is already verified');
+        }
+
+        if (!$customer->verifyEmailWithToken($validated['token'])) {
+            if ($customer->isVerificationTokenExpired()) {
+                return $this->error('Verification link has expired. Please request a new one.', 400);
+            }
+            return $this->error('Invalid verification token', 400);
+        }
+
+        return $this->success([
+            'customer' => $this->formatCustomer($customer->fresh()),
+        ], 'Email verified successfully');
+    }
+
+    /**
+     * Resend verification email
+     */
+    public function resendVerification(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $validated = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $customer = MarketplaceCustomer::where('marketplace_client_id', $client->id)
+            ->where('email', $validated['email'])
+            ->whereNotNull('password')
+            ->first();
+
+        // Always return success to prevent email enumeration
+        if (!$customer) {
+            return $this->success(null, 'If an account exists with this email, a verification link will be sent.');
+        }
+
+        if ($customer->isEmailVerified()) {
+            return $this->success(null, 'Email is already verified');
+        }
+
+        if (!$customer->canResendVerification()) {
+            return $this->error('Please wait before requesting another verification email', 429);
+        }
+
+        $verificationToken = $customer->generateEmailVerificationToken();
+        $customer->notify(new MarketplaceEmailVerificationNotification(
+            $verificationToken,
+            'customer',
+            $client->domain
+        ));
+
+        return $this->success(null, 'Verification email sent');
     }
 
     /**

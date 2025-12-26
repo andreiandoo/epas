@@ -108,6 +108,11 @@ class Order extends Model
         return $this->belongsTo(Event::class);
     }
 
+    public function reminders(): HasMany
+    {
+        return $this->hasMany(OrderReminder::class);
+    }
+
     protected static function booted(): void
     {
         static::saving(function (Order $order) {

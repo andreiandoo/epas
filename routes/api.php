@@ -1351,6 +1351,12 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.stats.commission-report');
     Route::get('/stats/commission-report/export', [MarketplaceStatisticsController::class, 'exportCommissionReport'])
         ->name('api.marketplace-client.stats.commission-report.export');
+
+    // Promo Codes (public endpoints for checkout)
+    Route::post('/promo-codes/validate', [MarketplacePromoCodeController::class, 'validate'])
+        ->name('api.marketplace-client.promo-codes.validate');
+    Route::get('/events/{event}/promo-codes', [MarketplacePromoCodeController::class, 'publicCodes'])
+        ->name('api.marketplace-client.events.promo-codes');
 });
 
 // Payment callback (no auth middleware - called by payment processors)
@@ -1372,6 +1378,8 @@ use App\Http\Controllers\Api\MarketplaceClient\Organizer\AuthController as Organ
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\EventsController as OrganizerEventsController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\DashboardController as OrganizerDashboardController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\PayoutController as OrganizerPayoutController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\PromoCodeController as OrganizerPromoCodeController;
+use App\Http\Controllers\Api\MarketplaceClient\PromoCodeController as MarketplacePromoCodeController;
 
 Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no organizer auth)
@@ -1383,6 +1391,10 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
         ->name('api.marketplace-client.organizer.forgot-password');
     Route::post('/reset-password', [OrganizerAuthController::class, 'resetPassword'])
         ->name('api.marketplace-client.organizer.reset-password');
+    Route::post('/verify-email', [OrganizerAuthController::class, 'verifyEmail'])
+        ->name('api.marketplace-client.organizer.verify-email');
+    Route::post('/resend-verification', [OrganizerAuthController::class, 'resendVerification'])
+        ->name('api.marketplace-client.organizer.resend-verification');
 
     // Protected routes (require organizer auth)
     Route::middleware('auth:sanctum')->group(function () {
@@ -1445,6 +1457,28 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.payouts.cancel');
         Route::get('/statements', [OrganizerPayoutController::class, 'statements'])
             ->name('api.marketplace-client.organizer.statements');
+
+        // Promo Codes
+        Route::get('/promo-codes', [OrganizerPromoCodeController::class, 'index'])
+            ->name('api.marketplace-client.organizer.promo-codes');
+        Route::post('/promo-codes', [OrganizerPromoCodeController::class, 'store'])
+            ->name('api.marketplace-client.organizer.promo-codes.store');
+        Route::post('/promo-codes/bulk', [OrganizerPromoCodeController::class, 'bulkCreate'])
+            ->name('api.marketplace-client.organizer.promo-codes.bulk');
+        Route::get('/promo-codes/{promoCode}', [OrganizerPromoCodeController::class, 'show'])
+            ->name('api.marketplace-client.organizer.promo-codes.show');
+        Route::put('/promo-codes/{promoCode}', [OrganizerPromoCodeController::class, 'update'])
+            ->name('api.marketplace-client.organizer.promo-codes.update');
+        Route::delete('/promo-codes/{promoCode}', [OrganizerPromoCodeController::class, 'destroy'])
+            ->name('api.marketplace-client.organizer.promo-codes.destroy');
+        Route::post('/promo-codes/{promoCode}/activate', [OrganizerPromoCodeController::class, 'activate'])
+            ->name('api.marketplace-client.organizer.promo-codes.activate');
+        Route::post('/promo-codes/{promoCode}/deactivate', [OrganizerPromoCodeController::class, 'deactivate'])
+            ->name('api.marketplace-client.organizer.promo-codes.deactivate');
+        Route::get('/promo-codes/{promoCode}/stats', [OrganizerPromoCodeController::class, 'stats'])
+            ->name('api.marketplace-client.organizer.promo-codes.stats');
+        Route::get('/promo-codes/{promoCode}/usage', [OrganizerPromoCodeController::class, 'usageHistory'])
+            ->name('api.marketplace-client.organizer.promo-codes.usage');
     });
 });
 
@@ -1460,6 +1494,7 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
 
 use App\Http\Controllers\Api\MarketplaceClient\Customer\AuthController as CustomerAuthController;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\AccountController as CustomerAccountController;
+use App\Http\Controllers\Api\MarketplaceClient\Customer\TicketTransferController as CustomerTicketTransferController;
 
 Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no customer auth)
@@ -1471,6 +1506,10 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
         ->name('api.marketplace-client.customer.forgot-password');
     Route::post('/reset-password', [CustomerAuthController::class, 'resetPassword'])
         ->name('api.marketplace-client.customer.reset-password');
+    Route::post('/verify-email', [CustomerAuthController::class, 'verifyEmail'])
+        ->name('api.marketplace-client.customer.verify-email');
+    Route::post('/resend-verification', [CustomerAuthController::class, 'resendVerification'])
+        ->name('api.marketplace-client.customer.resend-verification');
 
     // Protected routes (require customer auth)
     Route::middleware('auth:sanctum')->group(function () {
@@ -1497,7 +1536,25 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
             ->name('api.marketplace-client.customer.past-events');
         Route::delete('/account', [CustomerAccountController::class, 'deleteAccount'])
             ->name('api.marketplace-client.customer.account.delete');
+
+        // Ticket Transfers
+        Route::post('/transfers', [CustomerTicketTransferController::class, 'initiate'])
+            ->name('api.marketplace-client.customer.transfers.initiate');
+        Route::get('/transfers/outgoing', [CustomerTicketTransferController::class, 'outgoing'])
+            ->name('api.marketplace-client.customer.transfers.outgoing');
+        Route::get('/transfers/incoming', [CustomerTicketTransferController::class, 'incoming'])
+            ->name('api.marketplace-client.customer.transfers.incoming');
+        Route::post('/transfers/{transfer}/cancel', [CustomerTicketTransferController::class, 'cancel'])
+            ->name('api.marketplace-client.customer.transfers.cancel');
+        Route::post('/transfers/{transfer}/accept', [CustomerTicketTransferController::class, 'accept'])
+            ->name('api.marketplace-client.customer.transfers.accept');
+        Route::post('/transfers/{transfer}/reject', [CustomerTicketTransferController::class, 'reject'])
+            ->name('api.marketplace-client.customer.transfers.reject');
     });
+
+    // Public transfer acceptance (by token, no auth required)
+    Route::post('/transfers/accept-by-token', [CustomerTicketTransferController::class, 'acceptByToken'])
+        ->name('api.marketplace-client.customer.transfers.accept-by-token');
 });
 
 /*

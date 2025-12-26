@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Organizer;
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\MarketplaceOrganizer;
 use App\Notifications\MarketplacePasswordResetNotification;
+use App\Notifications\MarketplaceEmailVerificationNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -55,13 +56,22 @@ class AuthController extends BaseController
             'status' => 'pending', // Requires approval
         ]);
 
+        // Send verification email
+        $verificationToken = $organizer->generateEmailVerificationToken();
+        $organizer->notify(new MarketplaceEmailVerificationNotification(
+            $verificationToken,
+            'organizer',
+            $client->domain
+        ));
+
         // Generate token
         $token = $organizer->createToken('organizer-api')->plainTextToken;
 
         return $this->success([
             'organizer' => $this->formatOrganizer($organizer),
             'token' => $token,
-            'message' => 'Registration successful. Your account is pending approval.',
+            'requires_verification' => true,
+            'message' => 'Registration successful. Please verify your email. Your account will then be pending approval.',
         ], 'Registration successful', 201);
     }
 
@@ -309,6 +319,80 @@ class AuthController extends BaseController
         $organizer->tokens()->delete();
 
         return $this->success(null, 'Password has been reset successfully. Please login with your new password.');
+    }
+
+    /**
+     * Verify email with token
+     */
+    public function verifyEmail(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'token' => 'required|string',
+        ]);
+
+        $organizer = MarketplaceOrganizer::where('marketplace_client_id', $client->id)
+            ->where('email', $validated['email'])
+            ->first();
+
+        if (!$organizer) {
+            return $this->error('Account not found', 404);
+        }
+
+        if ($organizer->isEmailVerified()) {
+            return $this->success(null, 'Email is already verified');
+        }
+
+        if (!$organizer->verifyEmailWithToken($validated['token'])) {
+            if ($organizer->isVerificationTokenExpired()) {
+                return $this->error('Verification link has expired. Please request a new one.', 400);
+            }
+            return $this->error('Invalid verification token', 400);
+        }
+
+        return $this->success([
+            'organizer' => $this->formatOrganizer($organizer->fresh()),
+        ], 'Email verified successfully');
+    }
+
+    /**
+     * Resend verification email
+     */
+    public function resendVerification(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $validated = $request->validate([
+            'email' => 'required|email',
+        ]);
+
+        $organizer = MarketplaceOrganizer::where('marketplace_client_id', $client->id)
+            ->where('email', $validated['email'])
+            ->first();
+
+        // Always return success to prevent email enumeration
+        if (!$organizer) {
+            return $this->success(null, 'If an account exists with this email, a verification link will be sent.');
+        }
+
+        if ($organizer->isEmailVerified()) {
+            return $this->success(null, 'Email is already verified');
+        }
+
+        if (!$organizer->canResendVerification()) {
+            return $this->error('Please wait before requesting another verification email', 429);
+        }
+
+        $verificationToken = $organizer->generateEmailVerificationToken();
+        $organizer->notify(new MarketplaceEmailVerificationNotification(
+            $verificationToken,
+            'organizer',
+            $client->domain
+        ));
+
+        return $this->success(null, 'Verification email sent');
     }
 
     /**
