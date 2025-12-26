@@ -18,7 +18,7 @@ class UserResource extends Resource
     protected static \UnitEnum|string|null $navigationGroup = 'Core';
     protected static ?int $navigationSort = 30;
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
-    protected static ?string $navigationLabel = 'Users';
+    protected static \BackedEnum|string|null $navigationLabel = 'Users';
 
     public static function shouldRegisterNavigation(): bool
     {

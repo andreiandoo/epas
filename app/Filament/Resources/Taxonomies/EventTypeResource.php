@@ -19,7 +19,7 @@ class EventTypeResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static \UnitEnum|string|null $navigationGroup = 'Taxonomies';
-    protected static ?string $navigationLabel = 'Event Types';
+    protected static \BackedEnum|string|null $navigationLabel = 'Event Types';
     protected static ?int    $navigationSort  = 20;
 
     public static function form(Schema $schema): Schema

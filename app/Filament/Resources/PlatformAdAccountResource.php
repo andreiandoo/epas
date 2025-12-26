@@ -22,7 +22,7 @@ class PlatformAdAccountResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-megaphone';
 
-    protected static ?string $navigationLabel = 'Platform Ad Accounts';
+    protected static \BackedEnum|string|null $navigationLabel = 'Platform Ad Accounts';
 
     protected static \UnitEnum|string|null $navigationGroup = 'Platform Marketing';
 

@@ -22,7 +22,7 @@ class CoreCustomerResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';
 
-    protected static ?string $navigationLabel = 'Customers';
+    protected static \BackedEnum|string|null $navigationLabel = 'Customers';
 
     protected static \UnitEnum|string|null $navigationGroup = 'Platform Marketing';
 

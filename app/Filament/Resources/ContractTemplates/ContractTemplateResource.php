@@ -20,7 +20,7 @@ class ContractTemplateResource extends Resource
 
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
 
-    protected static ?string $navigationLabel = 'Contract Templates';
+    protected static \BackedEnum|string|null $navigationLabel = 'Contract Templates';
 
     protected static ?int $navigationSort = 10;
 

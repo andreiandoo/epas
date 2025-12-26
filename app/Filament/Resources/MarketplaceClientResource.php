@@ -21,7 +21,7 @@ class MarketplaceClientResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-building-storefront';
 
-    protected static ?string $navigationLabel = 'Marketplace Clients';
+    protected static \BackedEnum|string|null $navigationLabel = 'Marketplace Clients';
 
     protected static \UnitEnum|string|null $navigationGroup = 'Platform';
 

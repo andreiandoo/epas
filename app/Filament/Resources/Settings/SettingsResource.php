@@ -16,7 +16,7 @@ class SettingsResource extends Resource
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-cog-6-tooth';
     protected static \UnitEnum|string|null $navigationGroup = 'System';
     protected static ?int $navigationSort = 100;
-    protected static ?string $navigationLabel = 'Settings';
+    protected static \BackedEnum|string|null $navigationLabel = 'Settings';
     protected static ?string $modelLabel = 'Settings';
     protected static ?string $pluralModelLabel = 'Settings';
 

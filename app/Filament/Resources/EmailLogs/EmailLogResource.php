@@ -19,7 +19,7 @@ class EmailLogResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-envelope';
     protected static \UnitEnum|string|null $navigationGroup = 'Communications';
     protected static ?int $navigationSort = 20;
-    protected static ?string $navigationLabel = 'Email History';
+    protected static \BackedEnum|string|null $navigationLabel = 'Email History';
     protected static ?string $modelLabel = 'Email Log';
     protected static ?string $pluralModelLabel = 'Emails History';
 

@@ -22,7 +22,7 @@ class GeneralTaxResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-calculator';
 
-    protected static ?string $navigationLabel = 'General Taxes';
+    protected static \BackedEnum|string|null $navigationLabel = 'General Taxes';
 
     protected static ?string $navigationParentItem = 'Taxes';
 

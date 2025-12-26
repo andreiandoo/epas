@@ -21,7 +21,7 @@ class EmailTemplateResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-document-text';
     protected static \UnitEnum|string|null $navigationGroup = 'Communications';
     protected static ?int $navigationSort = 10;
-    protected static ?string $navigationLabel = 'Email Templates';
+    protected static \BackedEnum|string|null $navigationLabel = 'Email Templates';
     protected static ?string $modelLabel = 'Email Template';
     protected static ?string $pluralModelLabel = 'Email Templates';
 

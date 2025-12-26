@@ -22,7 +22,7 @@ class VenueCategoryResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-squares-2x2';
     protected static \UnitEnum|string|null $navigationGroup = 'Taxonomies';
-    protected static ?string $navigationLabel = 'Venue Categories';
+    protected static \BackedEnum|string|null $navigationLabel = 'Venue Categories';
     protected static ?int $navigationSort = 24;
 
     public static function form(Schema $schema): Schema
