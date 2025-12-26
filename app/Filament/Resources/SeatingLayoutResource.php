@@ -12,6 +12,7 @@ use Filament\Tables;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Support\Enums\FontWeight;
 use BackedEnum;
+use UnitEnum;
 
 class SeatingLayoutResource extends Resource 
 {

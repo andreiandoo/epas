@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Gamification\CustomerPoints;
 use App\Models\Gamification\PointsTransaction;
 use BackedEnum;
+use UnitEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;

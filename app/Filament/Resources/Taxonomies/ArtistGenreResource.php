@@ -7,6 +7,7 @@ use App\Filament\Forms\Components\TranslatableField;
 use App\Models\ArtistGenre;
 use Filament\Forms;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;

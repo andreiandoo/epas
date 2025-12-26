@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Taxonomies;
 use App\Filament\Resources\Taxonomies\EventTagResource\Pages;
 use App\Models\EventTag;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;

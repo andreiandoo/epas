@@ -10,6 +10,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use BackedEnum;
+use UnitEnum;
 use Filament\Forms;
 use Filament\Tables;
 

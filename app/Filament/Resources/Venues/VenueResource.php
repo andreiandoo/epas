@@ -8,6 +8,7 @@ use App\Models\Venue;
 use App\Models\VenueCategory;
 use App\Models\VenueType;
 use BackedEnum;
+use UnitEnum;
 use Filament\Actions;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;

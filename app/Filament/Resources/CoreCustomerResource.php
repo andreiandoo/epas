@@ -15,6 +15,8 @@ use Filament\Tables\Table;
 use Filament\Schemas\Components as SC;
 use Illuminate\Support\Facades\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use BackedEnum;
+use UnitEnum;
 
 class CoreCustomerResource extends Resource
 {

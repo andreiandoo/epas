@@ -8,6 +8,8 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Filament\Forms;
+use BackedEnum;
+use UnitEnum;
 
 class SettingsResource extends Resource
 {

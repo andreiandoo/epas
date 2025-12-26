@@ -16,6 +16,8 @@ use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Infolists;
 use Illuminate\Support\Facades\Response;
+use BackedEnum;
+use UnitEnum;
 
 class GdprRequestResource extends Resource
 {

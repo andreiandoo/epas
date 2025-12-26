@@ -14,6 +14,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Schemas\Components as SC;
 use Illuminate\Support\Str;
+use BackedEnum;
+use UnitEnum;
 
 class MarketplaceClientResource extends Resource
 {

@@ -6,6 +6,7 @@ use App\Filament\Resources\EventSeatingLayoutResource\Pages;
 use App\Models\Seating\EventSeatingLayout;
 use App\Models\Seating\SeatingLayout;
 use BackedEnum;
+use UnitEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components as SC;

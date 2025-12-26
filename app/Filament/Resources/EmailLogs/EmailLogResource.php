@@ -8,6 +8,7 @@ use App\Filament\Resources\EmailLogs\Schemas\EmailLogForm;
 use App\Filament\Resources\EmailLogs\Tables\EmailLogsTable;
 use App\Models\EmailLog;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Table;

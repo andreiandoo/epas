@@ -17,6 +17,8 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Notifications\Notification;
+use BackedEnum;
+use UnitEnum;
 
 class PlatformAudienceResource extends Resource
 {

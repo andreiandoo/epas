@@ -6,6 +6,7 @@ use App\Filament\Resources\LocalTaxResource\Pages;
 use App\Models\Tax\LocalTax;
 use App\Models\EventType;
 use BackedEnum;
+use UnitEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;

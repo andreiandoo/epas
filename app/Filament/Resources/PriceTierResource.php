@@ -11,6 +11,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Illuminate\Database\Eloquent\Builder;
 use BackedEnum;
+use UnitEnum;
 
 class PriceTierResource extends Resource 
 {

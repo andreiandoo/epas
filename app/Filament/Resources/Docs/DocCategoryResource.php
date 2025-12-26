@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Docs;
 use App\Filament\Resources\Docs\DocCategoryResource\Pages;
 use App\Models\DocCategory;
 use BackedEnum;
+use UnitEnum;
 use Filament\Forms\Components as FC;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components as SC;

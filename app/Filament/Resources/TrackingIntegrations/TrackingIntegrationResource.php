@@ -10,6 +10,7 @@ use Filament\Tables;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use BackedEnum;
+use UnitEnum;
 
 class TrackingIntegrationResource extends Resource
 {

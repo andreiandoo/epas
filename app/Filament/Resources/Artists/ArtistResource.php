@@ -16,6 +16,7 @@ use App\Models\Artist;
 use App\Models\ArtistGenre;
 use App\Models\ArtistType;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;

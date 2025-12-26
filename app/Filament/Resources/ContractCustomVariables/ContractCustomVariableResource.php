@@ -10,6 +10,8 @@ use Filament\Schemas\Components as SC;
 use Filament\Schemas\Components\Utilities\Set as SSet;
 use Filament\Tables;
 use Filament\Tables\Table;
+use BackedEnum;
+use UnitEnum;
 
 class ContractCustomVariableResource extends Resource
 {

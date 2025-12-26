@@ -6,6 +6,7 @@ use App\Filament\Resources\Taxonomies\EventGenreResource\Pages;
 use App\Filament\Forms\Components\TranslatableField;
 use App\Models\EventGenre;
 use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;

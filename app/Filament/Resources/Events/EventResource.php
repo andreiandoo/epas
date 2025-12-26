@@ -10,6 +10,7 @@ use App\Models\EventGenre;
 use App\Models\EventType;
 use App\Models\Tax\GeneralTax;
 use BackedEnum;
+use UnitEnum;
 use Illuminate\Support\HtmlString;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
