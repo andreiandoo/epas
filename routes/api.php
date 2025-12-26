@@ -1741,24 +1741,24 @@ Route::prefix('marketplace-client/admin')->middleware(['throttle:120,1', 'market
 |
 */
 
-use App\Http\Controllers\Api\MarketplaceClient\MarketplaceEventsController;
+use App\Http\Controllers\Api\MarketplaceClient\MarketplaceEventsController as PublicMarketplaceEventsController;
 
 Route::prefix('marketplace-client/marketplace-events')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
-    Route::get('/', [MarketplaceEventsController::class, 'index'])
+    Route::get('/', [PublicMarketplaceEventsController::class, 'index'])
         ->name('api.marketplace-client.marketplace-events');
-    Route::get('/featured', [MarketplaceEventsController::class, 'featured'])
+    Route::get('/featured', [PublicMarketplaceEventsController::class, 'featured'])
         ->name('api.marketplace-client.marketplace-events.featured');
-    Route::get('/categories', [MarketplaceEventsController::class, 'categories'])
+    Route::get('/categories', [PublicMarketplaceEventsController::class, 'categories'])
         ->name('api.marketplace-client.marketplace-events.categories');
-    Route::get('/cities', [MarketplaceEventsController::class, 'cities'])
+    Route::get('/cities', [PublicMarketplaceEventsController::class, 'cities'])
         ->name('api.marketplace-client.marketplace-events.cities');
-    Route::get('/organizers', [MarketplaceEventsController::class, 'organizers'])
+    Route::get('/organizers', [PublicMarketplaceEventsController::class, 'organizers'])
         ->name('api.marketplace-client.marketplace-events.organizers');
-    Route::get('/organizers/{identifier}', [MarketplaceEventsController::class, 'organizer'])
+    Route::get('/organizers/{identifier}', [PublicMarketplaceEventsController::class, 'organizer'])
         ->name('api.marketplace-client.marketplace-events.organizer');
-    Route::get('/{identifier}', [MarketplaceEventsController::class, 'show'])
+    Route::get('/{identifier}', [PublicMarketplaceEventsController::class, 'show'])
         ->name('api.marketplace-client.marketplace-events.show');
-    Route::get('/{event}/availability', [MarketplaceEventsController::class, 'availability'])
+    Route::get('/{event}/availability', [PublicMarketplaceEventsController::class, 'availability'])
         ->name('api.marketplace-client.marketplace-events.availability');
 });
 
