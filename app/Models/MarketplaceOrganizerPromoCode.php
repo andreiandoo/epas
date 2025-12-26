@@ -13,6 +13,8 @@ class MarketplaceOrganizerPromoCode extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected $table = 'mkt_promo_codes';
+
     protected $fillable = [
         'marketplace_client_id',
         'marketplace_organizer_id',

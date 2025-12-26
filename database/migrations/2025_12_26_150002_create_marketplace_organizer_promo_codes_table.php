@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('marketplace_organizer_promo_codes', function (Blueprint $table) {
+        Schema::create('mkt_promo_codes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();
             $table->foreignId('marketplace_organizer_id')->constrained()->cascadeOnDelete();
@@ -57,7 +57,7 @@ return new class extends Migration
         // Track promo code usage
         Schema::create('marketplace_promo_code_usage', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('promo_code_id')->constrained('marketplace_organizer_promo_codes')->cascadeOnDelete();
+            $table->foreignId('promo_code_id')->constrained('mkt_promo_codes')->cascadeOnDelete();
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
             $table->foreignId('marketplace_customer_id')->nullable()->constrained()->nullOnDelete();
             $table->string('customer_email');
@@ -77,6 +77,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('marketplace_promo_code_usage');
-        Schema::dropIfExists('marketplace_organizer_promo_codes');
+        Schema::dropIfExists('mkt_promo_codes');
     }
 };
