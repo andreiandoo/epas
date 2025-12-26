@@ -21,7 +21,7 @@ class MarketplacePayoutResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-banknotes';
 
-    protected static BackedEnum|string|null $navigationLabel = 'Payouts';
+    protected static ?string $navigationLabel = 'Payouts';
 
     protected static UnitEnum|string|null $navigationGroup = 'Marketplace';
 

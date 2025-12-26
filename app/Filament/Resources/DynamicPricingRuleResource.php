@@ -21,7 +21,7 @@ class DynamicPricingRuleResource extends Resource
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
     protected static UnitEnum|string|null $navigationGroup = 'Venues & Mapping';
     protected static ?int $navigationSort = 20;
-    protected static BackedEnum|string|null $navigationLabel = 'Dynamic Pricing Rules';
+    protected static ?string $navigationLabel = 'Dynamic Pricing Rules';
     protected static ?string $modelLabel = 'Dynamic Pricing Rule';
     protected static ?string $pluralModelLabel = 'Dynamic Pricing Rules';
 
@@ -29,7 +29,7 @@ class DynamicPricingRuleResource extends Resource
 
     // protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
 
-    // protected static BackedEnum|string|null $navigationLabel = 'Dynamic Pricing Rules';
+    // protected static ?string $navigationLabel = 'Dynamic Pricing Rules';
 
     // protected static UnitEnum|string|null $navigationGroup = 'Venues';
 

@@ -21,7 +21,7 @@ class SeatingLayoutResource extends Resource
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-square-3-stack-3d';
     protected static UnitEnum|string|null $navigationGroup = 'Venues & Mapping';
     protected static ?int $navigationSort = 6;
-    protected static BackedEnum|string|null $navigationLabel = 'Seating Layouts';
+    protected static ?string $navigationLabel = 'Seating Layouts';
     protected static ?string $modelLabel = 'Seating Layout';
     protected static ?string $pluralModelLabel = 'Seating Layouts';
 
@@ -29,7 +29,7 @@ class SeatingLayoutResource extends Resource
 
     // protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-square-3-stack-3d';
 
-    // protected static BackedEnum|string|null $navigationLabel = 'Seating Layouts';
+    // protected static ?string $navigationLabel = 'Seating Layouts';
 
     // protected static UnitEnum|string|null $navigationGroup = 'Venues';
 

@@ -24,7 +24,7 @@ class LocalTaxResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-map-pin';
 
-    protected static BackedEnum|string|null $navigationLabel = 'Local Taxes';
+    protected static ?string $navigationLabel = 'Local Taxes';
 
     protected static ?string $navigationParentItem = 'Taxes';
 

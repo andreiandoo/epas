@@ -25,7 +25,7 @@ class GdprRequestResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static BackedEnum|string|null $navigationLabel = 'GDPR Requests';
+    protected static ?string $navigationLabel = 'GDPR Requests';
 
     protected static UnitEnum|string|null $navigationGroup = 'Platform Marketing';
 

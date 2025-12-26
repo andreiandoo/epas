@@ -23,7 +23,7 @@ class VenueTypeResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office-2';
     protected static UnitEnum|string|null $navigationGroup = 'Taxonomies';
-    protected static BackedEnum|string|null $navigationLabel = 'Venue Types';
+    protected static ?string $navigationLabel = 'Venue Types';
     protected static ?int $navigationSort = 25;
 
     public static function form(Schema $schema): Schema

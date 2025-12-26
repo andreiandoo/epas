@@ -21,7 +21,7 @@ class InvoiceResource extends Resource
     protected static UnitEnum|string|null $navigationGroup = 'Billing';
     protected static ?int $navigationSort = 10;
     protected static ?string $modelLabel = 'Invoice';
-    protected static BackedEnum|string|null $navigationLabel = 'Invoices';
+    protected static ?string $navigationLabel = 'Invoices';
 
     public static function form(Schema $schema): Schema
     {

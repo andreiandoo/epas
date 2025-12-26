@@ -20,7 +20,7 @@ class PriceTierResource extends Resource
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-currency-dollar';
     protected static UnitEnum|string|null $navigationGroup = 'Venues & Mapping';
     protected static ?int $navigationSort = 4;
-    protected static BackedEnum|string|null $navigationLabel = 'Price Tiers';
+    protected static ?string $navigationLabel = 'Price Tiers';
     protected static ?string $modelLabel = 'Price Tier';
     protected static ?string $pluralModelLabel = 'Price Tiers';
 
@@ -28,7 +28,7 @@ class PriceTierResource extends Resource
 
     // protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-currency-dollar';
 
-    // protected static BackedEnum|string|null $navigationLabel = 'Price Tiers';
+    // protected static ?string $navigationLabel = 'Price Tiers';
 
     // protected static UnitEnum|string|null $navigationGroup = 'Venues';
 

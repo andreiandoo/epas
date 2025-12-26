@@ -20,7 +20,7 @@ class PlatformCredentialResource extends Resource
     protected static ?int $navigationSort = 50;
     protected static ?string $modelLabel = 'Credential';
     protected static ?string $pluralModelLabel = 'Credentials Ledger';
-    protected static BackedEnum|string|null $navigationLabel = 'Ledger';
+    protected static ?string $navigationLabel = 'Ledger';
 
     /**
      * Only super-admin can access this resource

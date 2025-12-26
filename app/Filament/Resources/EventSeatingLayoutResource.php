@@ -22,7 +22,7 @@ class EventSeatingLayoutResource extends Resource
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
     protected static UnitEnum|string|null $navigationGroup = 'Venues & Mapping';
     protected static ?int $navigationSort = 30;
-    protected static BackedEnum|string|null $navigationLabel = 'Event Seating';
+    protected static ?string $navigationLabel = 'Event Seating';
     protected static ?string $modelLabel = 'Event Seating Layout';
     protected static ?string $pluralModelLabel = 'Event Seating Layouts';
 
