@@ -51,7 +51,7 @@ return new class extends Migration
             $table->softDeletes();
 
             // Ensure unique code per marketplace client
-            $table->unique(['marketplace_client_id', 'code']);
+            $table->unique(['marketplace_client_id', 'code'], 'mkt_promo_client_code_unique');
         });
 
         // Track promo code usage

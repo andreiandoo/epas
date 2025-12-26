@@ -107,7 +107,7 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->index(['marketplace_organizer_id', 'created_at']);
+            $table->index(['marketplace_organizer_id', 'created_at'], 'mkt_txn_org_created_idx');
             $table->index('type');
         });
 
