@@ -207,6 +207,12 @@ class MarketplaceClientResource extends Resource
                     ->suffix('%')
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('tenants_count')
+                    ->label('Tenants')
+                    ->counts('tenants')
+                    ->badge()
+                    ->color('info'),
+
                 Tables\Columns\TextColumn::make('contact_email')
                     ->label('Contact')
                     ->searchable()
@@ -268,7 +274,7 @@ class MarketplaceClientResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            MarketplaceClientResource\RelationManagers\TenantsRelationManager::class,
         ];
     }
 

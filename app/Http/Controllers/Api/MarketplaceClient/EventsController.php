@@ -63,7 +63,36 @@ class EventsController extends BaseController
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhereHas('venue', function ($vq) use ($search) {
+                        $vq->where('name', 'like', "%{$search}%")
+                            ->orWhere('city', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('artists', function ($aq) use ($search) {
+                        $aq->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        // Price range filter
+        if ($request->has('min_price') || $request->has('max_price')) {
+            $query->whereHas('ticketTypes', function ($q) use ($request) {
+                $q->where('is_visible', true)->where('status', 'on_sale');
+                if ($request->has('min_price')) {
+                    $q->where('price', '>=', $request->min_price);
+                }
+                if ($request->has('max_price')) {
+                    $q->where('price', '<=', $request->max_price);
+                }
+            });
+        }
+
+        // Has available tickets
+        if ($request->boolean('available_only', false)) {
+            $query->whereHas('ticketTypes', function ($q) {
+                $q->where('is_visible', true)
+                    ->where('status', 'on_sale')
+                    ->where('available_quantity', '>', 0);
             });
         }
 
@@ -164,6 +193,123 @@ class EventsController extends BaseController
                 ];
             }),
             'commission_rate' => $commission,
+        ]);
+    }
+
+    /**
+     * Get featured events
+     */
+    public function featured(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $query = Event::query()
+            ->with(['venue:id,name,city', 'ticketTypes' => function ($q) {
+                $q->where('is_visible', true)
+                    ->where('status', 'on_sale')
+                    ->select(['id', 'event_id', 'name', 'price', 'available_quantity']);
+            }])
+            ->where('status', 'published')
+            ->where('is_public', true)
+            ->where('is_featured', true)
+            ->where('starts_at', '>=', now());
+
+        // Filter by allowed tenants
+        $allowedTenants = $client->allowed_tenants;
+        if (!is_null($allowedTenants)) {
+            $query->whereIn('tenant_id', $allowedTenants);
+        }
+
+        $limit = min((int) $request->get('limit', 10), 50);
+        $events = $query->orderBy('starts_at')->limit($limit)->get();
+
+        return $this->success([
+            'events' => $events->map(function ($event) {
+                return [
+                    'id' => $event->id,
+                    'name' => $event->name,
+                    'slug' => $event->slug,
+                    'image_url' => $event->image_url,
+                    'starts_at' => $event->starts_at,
+                    'venue' => $event->venue?->name,
+                    'city' => $event->venue?->city,
+                    'price_from' => $event->ticketTypes->min('price'),
+                    'has_availability' => $event->ticketTypes->sum('available_quantity') > 0,
+                ];
+            }),
+        ]);
+    }
+
+    /**
+     * Get available categories
+     */
+    public function categories(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $query = Event::query()
+            ->where('status', 'published')
+            ->where('is_public', true)
+            ->where('starts_at', '>=', now())
+            ->whereNotNull('category');
+
+        // Filter by allowed tenants
+        $allowedTenants = $client->allowed_tenants;
+        if (!is_null($allowedTenants)) {
+            $query->whereIn('tenant_id', $allowedTenants);
+        }
+
+        $categories = $query->selectRaw('category, COUNT(*) as event_count')
+            ->groupBy('category')
+            ->orderByDesc('event_count')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'name' => $item->category,
+                    'slug' => \Illuminate\Support\Str::slug($item->category),
+                    'event_count' => $item->event_count,
+                ];
+            });
+
+        return $this->success([
+            'categories' => $categories,
+        ]);
+    }
+
+    /**
+     * Get available cities
+     */
+    public function cities(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $query = Event::query()
+            ->join('venues', 'events.venue_id', '=', 'venues.id')
+            ->where('events.status', 'published')
+            ->where('events.is_public', true)
+            ->where('events.starts_at', '>=', now())
+            ->whereNotNull('venues.city');
+
+        // Filter by allowed tenants
+        $allowedTenants = $client->allowed_tenants;
+        if (!is_null($allowedTenants)) {
+            $query->whereIn('events.tenant_id', $allowedTenants);
+        }
+
+        $cities = $query->selectRaw('venues.city, venues.country, COUNT(*) as event_count')
+            ->groupBy('venues.city', 'venues.country')
+            ->orderByDesc('event_count')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'name' => $item->city,
+                    'country' => $item->country,
+                    'event_count' => $item->event_count,
+                ];
+            });
+
+        return $this->success([
+            'cities' => $cities,
         ]);
     }
 

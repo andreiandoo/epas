@@ -1278,6 +1278,9 @@ Route::post('/tenant-client/checkout/callback/{provider}', [CheckoutController::
 use App\Http\Controllers\Api\MarketplaceClient\ConfigController as MarketplaceConfigController;
 use App\Http\Controllers\Api\MarketplaceClient\EventsController as MarketplaceEventsController;
 use App\Http\Controllers\Api\MarketplaceClient\OrdersController as MarketplaceOrdersController;
+use App\Http\Controllers\Api\MarketplaceClient\PaymentController as MarketplacePaymentController;
+use App\Http\Controllers\Api\MarketplaceClient\TicketsController as MarketplaceTicketsController;
+use App\Http\Controllers\Api\MarketplaceClient\StatisticsController as MarketplaceStatisticsController;
 
 Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Handle OPTIONS preflight requests
@@ -1294,6 +1297,12 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
     // Events
     Route::get('/events', [MarketplaceEventsController::class, 'index'])
         ->name('api.marketplace-client.events');
+    Route::get('/events/featured', [MarketplaceEventsController::class, 'featured'])
+        ->name('api.marketplace-client.events.featured');
+    Route::get('/events/categories', [MarketplaceEventsController::class, 'categories'])
+        ->name('api.marketplace-client.events.categories');
+    Route::get('/events/cities', [MarketplaceEventsController::class, 'cities'])
+        ->name('api.marketplace-client.events.cities');
     Route::get('/events/{event}', [MarketplaceEventsController::class, 'show'])
         ->name('api.marketplace-client.events.show');
     Route::get('/events/{event}/availability', [MarketplaceEventsController::class, 'availability'])
@@ -1308,7 +1317,44 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.orders.show');
     Route::post('/orders/{order}/cancel', [MarketplaceOrdersController::class, 'cancel'])
         ->name('api.marketplace-client.orders.cancel');
+
+    // Payment
+    Route::post('/orders/{order}/pay', [MarketplacePaymentController::class, 'initiate'])
+        ->name('api.marketplace-client.orders.pay');
+    Route::get('/orders/{order}/payment-status', [MarketplacePaymentController::class, 'status'])
+        ->name('api.marketplace-client.orders.payment-status');
+
+    // Tickets
+    Route::get('/orders/{order}/tickets', [MarketplaceTicketsController::class, 'index'])
+        ->name('api.marketplace-client.orders.tickets');
+    Route::get('/orders/{order}/tickets/download', [MarketplaceTicketsController::class, 'downloadAll'])
+        ->name('api.marketplace-client.orders.tickets.download');
+    Route::get('/tickets/{ticket}/download', [MarketplaceTicketsController::class, 'download'])
+        ->name('api.marketplace-client.tickets.download');
+    Route::get('/tickets/{ticket}/qr', [MarketplaceTicketsController::class, 'qrCode'])
+        ->name('api.marketplace-client.tickets.qr');
+    Route::post('/tickets/validate', [MarketplaceTicketsController::class, 'validate'])
+        ->name('api.marketplace-client.tickets.validate');
+
+    // Statistics & Reports
+    Route::get('/stats/dashboard', [MarketplaceStatisticsController::class, 'dashboard'])
+        ->name('api.marketplace-client.stats.dashboard');
+    Route::get('/stats/timeline', [MarketplaceStatisticsController::class, 'salesTimeline'])
+        ->name('api.marketplace-client.stats.timeline');
+    Route::get('/stats/by-event', [MarketplaceStatisticsController::class, 'salesByEvent'])
+        ->name('api.marketplace-client.stats.by-event');
+    Route::get('/stats/by-tenant', [MarketplaceStatisticsController::class, 'salesByTenant'])
+        ->name('api.marketplace-client.stats.by-tenant');
+    Route::get('/stats/commission-report', [MarketplaceStatisticsController::class, 'commissionReport'])
+        ->name('api.marketplace-client.stats.commission-report');
+    Route::get('/stats/commission-report/export', [MarketplaceStatisticsController::class, 'exportCommissionReport'])
+        ->name('api.marketplace-client.stats.commission-report.export');
 });
+
+// Payment callback (no auth middleware - called by payment processors)
+Route::post('/marketplace-client/payment/callback/{client}', [MarketplacePaymentController::class, 'callback'])
+    ->name('api.marketplace-client.payment.callback')
+    ->middleware('throttle:60,1');
 
 /*
 |--------------------------------------------------------------------------
