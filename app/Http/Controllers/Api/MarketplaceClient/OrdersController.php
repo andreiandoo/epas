@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\TicketType;
 use App\Models\Ticket;
 use App\Models\Customer;
+use App\Models\MarketplaceTransaction;
 use App\Services\MarketplaceWebhookService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -348,6 +349,127 @@ class OrdersController extends BaseController
         } catch (\Exception $e) {
             DB::rollBack();
             return $this->error('Failed to cancel order', 500);
+        }
+    }
+
+    /**
+     * Refund a completed order
+     */
+    public function refund(Request $request, int $orderId): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $request->validate([
+            'amount' => 'nullable|numeric|min:0',
+            'reason' => 'required|string|max:500',
+            'refund_type' => 'nullable|in:full,partial',
+        ]);
+
+        $order = Order::with('marketplaceOrganizer')
+            ->where('id', $orderId)
+            ->where('marketplace_client_id', $client->id)
+            ->first();
+
+        if (!$order) {
+            return $this->error('Order not found', 404);
+        }
+
+        if ($order->status !== 'completed') {
+            return $this->error('Only completed orders can be refunded', 400);
+        }
+
+        if ($order->refunded_at) {
+            return $this->error('Order has already been refunded', 400);
+        }
+
+        $refundType = $request->input('refund_type', 'full');
+        $refundAmount = $refundType === 'full'
+            ? (float) $order->total
+            : (float) $request->input('amount', $order->total);
+
+        if ($refundAmount > (float) $order->total) {
+            return $this->error('Refund amount cannot exceed order total', 400);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Calculate commission refund proportionally
+            $refundRatio = $refundAmount / (float) $order->total;
+            $commissionRefund = round((float) $order->commission_amount * $refundRatio, 2);
+            $netRefund = $refundAmount - $commissionRefund;
+
+            // Update order
+            $order->update([
+                'status' => $refundType === 'full' ? 'refunded' : 'partially_refunded',
+                'refunded_at' => now(),
+                'refund_amount' => $refundAmount,
+                'refund_reason' => $request->reason,
+            ]);
+
+            // Invalidate tickets if full refund
+            if ($refundType === 'full') {
+                $order->tickets()->update(['status' => 'refunded']);
+
+                // Restore ticket availability
+                foreach ($order->items as $item) {
+                    TicketType::where('id', $item->ticket_type_id)
+                        ->increment('available_quantity', $item->quantity);
+                }
+            }
+
+            // Record transaction to deduct from organizer balance
+            if ($order->marketplace_organizer_id && $order->marketplaceOrganizer) {
+                MarketplaceTransaction::recordRefund(
+                    $order->marketplace_client_id,
+                    $order->marketplace_organizer_id,
+                    $netRefund,
+                    $commissionRefund,
+                    $order->id,
+                    $order->currency
+                );
+
+                // Update organizer stats
+                $order->marketplaceOrganizer->updateStats();
+            }
+
+            DB::commit();
+
+            Log::info('Marketplace order refunded', [
+                'order_id' => $order->id,
+                'marketplace_client_id' => $client->id,
+                'refund_amount' => $refundAmount,
+                'refund_type' => $refundType,
+            ]);
+
+            // Send webhook notification (async)
+            dispatch(function () use ($client, $order, $refundAmount, $refundType) {
+                app(MarketplaceWebhookService::class)->orderRefunded($client, [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'status' => $order->status,
+                    'refund_amount' => $refundAmount,
+                    'refund_type' => $refundType,
+                    'refund_reason' => $order->refund_reason,
+                    'refunded_at' => $order->refunded_at->toIso8601String(),
+                ]);
+            })->afterResponse();
+
+            return $this->success([
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'status' => $order->status,
+                'refund_amount' => $refundAmount,
+                'refund_type' => $refundType,
+            ], 'Order refunded successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to refund marketplace order', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+            return $this->error('Failed to refund order: ' . $e->getMessage(), 500);
         }
     }
 }

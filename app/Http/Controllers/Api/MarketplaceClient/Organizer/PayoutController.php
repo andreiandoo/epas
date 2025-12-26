@@ -205,6 +205,9 @@ class PayoutController extends BaseController
             // Reserve the balance
             $organizer->reserveBalanceForPayout($requestedAmount);
 
+            // Send notification
+            $payout->notifyOrganizer('submitted');
+
             DB::commit();
 
             return $this->success([

@@ -22,10 +22,45 @@ class Order extends Model
         'promo_code_id',
         'promo_code',
         'promo_discount',
+        // Marketplace fields
+        'marketplace_client_id',
+        'marketplace_organizer_id',
+        'marketplace_customer_id',
+        'marketplace_event_id',
+        'order_number',
+        'subtotal',
+        'commission_rate',
+        'commission_amount',
+        'total',
+        'currency',
+        'source',
+        'customer_name',
+        'customer_phone',
+        'payment_status',
+        'payment_reference',
+        'payment_processor',
+        'payment_error',
+        'expires_at',
+        'paid_at',
+        'cancelled_at',
+        'refunded_at',
+        'refund_amount',
+        'refund_reason',
+        'metadata',
     ];
 
     protected $casts = [
         'meta' => 'array',
+        'metadata' => 'array',
+        'subtotal' => 'decimal:2',
+        'commission_rate' => 'decimal:2',
+        'commission_amount' => 'decimal:2',
+        'total' => 'decimal:2',
+        'refund_amount' => 'decimal:2',
+        'expires_at' => 'datetime',
+        'paid_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+        'refunded_at' => 'datetime',
     ];
 
     public function tenant(): BelongsTo
@@ -41,6 +76,36 @@ class Order extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function marketplaceClient(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
+    public function marketplaceOrganizer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrganizer::class);
+    }
+
+    public function marketplaceCustomer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceCustomer::class);
+    }
+
+    public function marketplaceEvent(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceEvent::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(Event::class);
     }
 
     protected static function booted(): void

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\MarketplacePayoutNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -176,6 +177,8 @@ class MarketplacePayout extends Model
             'approved_by' => $userId,
             'approved_at' => now(),
         ]);
+
+        $this->notifyOrganizer('approved');
     }
 
     /**
@@ -188,6 +191,8 @@ class MarketplacePayout extends Model
             'processed_by' => $userId,
             'processed_at' => now(),
         ]);
+
+        $this->notifyOrganizer('processing');
     }
 
     /**
@@ -216,6 +221,8 @@ class MarketplacePayout extends Model
             'marketplace_payout_id' => $this->id,
             'description' => "Payout {$this->reference} completed",
         ]);
+
+        $this->notifyOrganizer('completed');
     }
 
     /**
@@ -232,10 +239,10 @@ class MarketplacePayout extends Model
             'rejected_at' => now(),
         ]);
 
-        // Return balance to available if it was already deducted
-        if ($wasApproved) {
-            $this->organizer->returnPendingBalance($this->amount);
-        }
+        // Return balance to available
+        $this->organizer->returnPendingBalance($this->amount);
+
+        $this->notifyOrganizer('rejected');
     }
 
     /**
@@ -276,5 +283,15 @@ class MarketplacePayout extends Model
             'cancelled' => 'gray',
             default => 'gray',
         };
+    }
+
+    /**
+     * Send notification to organizer
+     */
+    public function notifyOrganizer(string $action): void
+    {
+        if ($this->organizer) {
+            $this->organizer->notify(new MarketplacePayoutNotification($this, $action));
+        }
     }
 }
