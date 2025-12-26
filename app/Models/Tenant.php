@@ -55,8 +55,11 @@ class Tenant extends Model
         // Onboarding
         'locale',
         'vat_payer',
+        'tax_display_mode',
         'estimated_monthly_tickets',
         'work_method',
+        'organizer_type',
+        'has_own_website',
         'onboarding_completed',
         'onboarding_completed_at',
         'onboarding_step',
@@ -92,6 +95,7 @@ class Tenant extends Model
         'vat_payer' => 'boolean',
         'onboarding_completed' => 'boolean',
         'use_core_smtp' => 'boolean',
+        'has_own_website' => 'boolean',
     ];
 
     public function contractTemplate(): BelongsTo

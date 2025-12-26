@@ -296,6 +296,53 @@ class AccountController extends Controller
             ];
         })->values();
 
+        // Check for linked shop order - first try direct link, then time-based fallback
+        $linkedShopOrder = ShopOrder::where('ticket_order_id', $order->id)
+            ->with(['items.product', 'items.variant'])
+            ->first();
+
+        // Fallback: If no direct link, try time-based matching (for older orders)
+        if (!$linkedShopOrder && $customer) {
+            $linkedShopOrder = ShopOrder::where('customer_id', $customer->id)
+                ->whereNull('ticket_order_id')
+                ->whereBetween('created_at', [
+                    $order->created_at->subMinutes(5),
+                    $order->created_at->addMinutes(5)
+                ])
+                ->with(['items.product', 'items.variant'])
+                ->first();
+        }
+
+        $shopOrderData = null;
+        if ($linkedShopOrder) {
+            $shopOrderData = [
+                'id' => $linkedShopOrder->id,
+                'order_number' => $linkedShopOrder->order_number,
+                'status' => $linkedShopOrder->status,
+                'status_label' => $this->getShopOrderStatusLabel($linkedShopOrder->status),
+                'subtotal_cents' => $linkedShopOrder->subtotal_cents,
+                'shipping_cents' => $linkedShopOrder->shipping_cents,
+                'total_cents' => $linkedShopOrder->total_cents,
+                'currency' => $linkedShopOrder->currency,
+                'shipping_address' => $linkedShopOrder->shipping_address,
+                'shipping_method' => $linkedShopOrder->meta['shipping_method'] ?? null,
+                'estimated_delivery' => $linkedShopOrder->meta['estimated_delivery'] ?? null,
+                'tracking_number' => $linkedShopOrder->tracking_number,
+                'tracking_url' => $linkedShopOrder->tracking_url,
+                'items' => $linkedShopOrder->items->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'title' => $item->product_title,
+                        'image_url' => $item->product?->image_url,
+                        'variant_name' => $item->variant?->name ?? $item->variant_title,
+                        'quantity' => $item->quantity,
+                        'unit_price_cents' => $item->unit_price_cents,
+                        'total_cents' => $item->total_cents,
+                    ];
+                }),
+            ];
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -308,6 +355,7 @@ class AccountController extends Controller
                 'status_label' => $this->getStatusLabel($order->status),
                 'items_count' => $order->tickets->count(),
                 'events' => $ticketsByEvent,
+                'shop_order' => $shopOrderData,
                 'meta' => [
                     'customer_name' => $order->meta['customer_name'] ?? null,
                     'customer_email' => $order->customer_email,
@@ -315,6 +363,23 @@ class AccountController extends Controller
                 ],
             ],
         ]);
+    }
+
+    /**
+     * Helper: Get shop order status label
+     */
+    private function getShopOrderStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'pending' => 'În așteptare',
+            'processing' => 'În procesare',
+            'shipped' => 'Expediat',
+            'delivered' => 'Livrat',
+            'completed' => 'Finalizată',
+            'cancelled' => 'Anulată',
+            'refunded' => 'Rambursată',
+            default => ucfirst($status),
+        };
     }
 
     /**

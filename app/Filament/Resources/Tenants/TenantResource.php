@@ -866,7 +866,9 @@ class TenantResource extends Resource
                         },
                         'orders as orders_total',
                     ])
-                    ->withSum('orders as income_cents', 'total_cents');
+                    ->withSum(['orders as income_cents' => function ($q) {
+                        $q->where('status', 'paid');
+                    }], 'total_cents');
             })
             ->columns([
                 Tables\Columns\TextColumn::make('name')

@@ -1,5 +1,6 @@
 import { ApiClient } from '../core/ApiClient';
 import { EventBus } from '../core/EventBus';
+import { ConfigManager } from '../core/ConfigManager';
 
 interface ShopProduct {
     id: string;
@@ -122,7 +123,28 @@ export class ShopModule {
         this.eventBus.on('route:shop-cart', () => this.loadCartPage());
         this.eventBus.on('route:shop-checkout', () => this.loadCheckoutPage());
 
+        // Sync cart count on init
+        await this.syncCartCount();
+
         console.log('Shop module initialized');
+    }
+
+    private async syncCartCount(): Promise<void> {
+        if (!this.apiClient) return;
+
+        try {
+            const response = await this.apiClient.get('/shop/cart', {
+                headers: { 'X-Session-ID': this.cartSessionId }
+            });
+            const cart = response.data;
+
+            if (cart?.item_count !== undefined) {
+                (window as any).ShopCartService?.setItemCount(cart.item_count);
+            }
+        } catch (e) {
+            // Silently fail - cart might not exist yet
+            console.log('Could not sync shop cart count');
+        }
     }
 
     private getOrCreateSessionId(): string {
@@ -141,6 +163,31 @@ export class ShopModule {
         }).format(amount);
     }
 
+    /**
+     * Render VAT info if tenant is a VAT payer
+     * VAT is included in the price (21% standard Romanian VAT)
+     */
+    private renderVatInfo(price: number, currency: string = 'RON'): string {
+        try {
+            const config = ConfigManager.get();
+            if (!config.tenant?.vat_payer) {
+                return '';
+            }
+
+            // Calculate VAT extracted from gross price (21% VAT)
+            const vatRate = 21;
+            const vatAmount = price - (price / (1 + vatRate / 100));
+
+            return `
+                <div class="product-vat-info" style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--sleek-text-muted, #6b7280);">
+                    <span>incl. TVA ${vatRate}%: ${this.formatCurrency(vatAmount, currency)}</span>
+                </div>
+            `;
+        } catch {
+            return '';
+        }
+    }
+
     // ========================================
     // SHOP LISTING PAGE
     // ========================================
@@ -155,20 +202,79 @@ export class ShopModule {
 
         try {
             // Load categories and products in parallel
-            const [categoriesRes, productsRes] = await Promise.all([
-                this.apiClient.get('/shop/categories'),
-                this.loadProducts()
+            const [categoriesRes] = await Promise.all([
+                this.apiClient.get('/shop/categories').catch(() => ({ data: { data: { categories: [] } } })),
+                this.loadProducts().catch(() => {})
             ]);
 
-            this.categories = categoriesRes.data.data?.categories || [];
+            // ApiClient unwraps data.data, so access directly
+            this.categories = categoriesRes?.data?.categories || [];
 
             container.innerHTML = this.renderShopPage();
             this.bindShopFilters();
             this.bindProductCards();
         } catch (error) {
-            container.innerHTML = '<p class="text-red-500">Nu s-au putut incarca produsele. Incearca din nou.</p>';
             console.error('Failed to load shop:', error);
+            // Show friendly empty state when shop is not available
+            container.innerHTML = this.renderShopNotAvailable();
         }
+    }
+
+    private renderShopNotAvailable(): string {
+        return `
+            <style>
+                .shop-unavailable {
+                    max-width: 600px;
+                    margin: 4rem auto;
+                    padding: 2rem;
+                    text-align: center;
+                }
+                .shop-unavailable-icon {
+                    width: 80px;
+                    height: 80px;
+                    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 1.5rem;
+                }
+                .shop-unavailable-icon svg {
+                    width: 40px;
+                    height: 40px;
+                    color: #9ca3af;
+                }
+                .shop-unavailable h2 {
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    color: var(--sleek-text, #1f2937);
+                    margin-bottom: 0.5rem;
+                }
+                .shop-unavailable p {
+                    color: var(--sleek-text-muted, #6b7280);
+                    margin-bottom: 1.5rem;
+                }
+                .shop-unavailable a {
+                    display: inline-block;
+                    padding: 0.75rem 1.5rem;
+                    background: linear-gradient(135deg, var(--sleek-gradient-start, #6366f1), var(--sleek-gradient-end, #4f46e5));
+                    color: white;
+                    border-radius: 0.5rem;
+                    text-decoration: none;
+                    font-weight: 600;
+                }
+            </style>
+            <div class="shop-unavailable">
+                <div class="shop-unavailable-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                    </svg>
+                </div>
+                <h2>Magazinul este in pregatire</h2>
+                <p>Revino in curand pentru produse si oferte speciale!</p>
+                <a href="/events">Vezi evenimentele</a>
+            </div>
+        `;
     }
 
     private parseFiltersFromUrl(): void {
@@ -201,8 +307,9 @@ export class ShopModule {
         const queryString = new URLSearchParams(params).toString();
         const response = await this.apiClient.get(`/shop/products${queryString ? `?${queryString}` : ''}`);
 
-        this.products = response.data.data?.products || [];
-        this.pagination = response.data.data?.pagination || { total: 0, per_page: 12, current_page: 1, last_page: 1 };
+        // ApiClient unwraps data.data, so access directly
+        this.products = response.data?.products || [];
+        this.pagination = response.data?.pagination || { total: 0, per_page: 12, current_page: 1, last_page: 1 };
     }
 
     private renderShopPage(): string {
@@ -846,7 +953,9 @@ export class ShopModule {
             card.addEventListener('click', () => {
                 const slug = card.getAttribute('data-product-slug');
                 if (slug) {
-                    window.location.hash = `/shop/product/${slug}`;
+                    // Use proper navigation instead of hash
+                    window.history.pushState({}, '', `/shop/product/${slug}`);
+                    window.dispatchEvent(new PopStateEvent('popstate'));
                 }
             });
         });
@@ -902,9 +1011,10 @@ export class ShopModule {
 
         try {
             const response = await this.apiClient.get(`/shop/products/${slug}`);
-            const { product, related } = response.data.data;
+            // ApiClient unwraps data.data, so access directly
+            const { product, related } = response.data;
 
-            container.innerHTML = this.renderProductPage(product, related);
+            container.innerHTML = this.renderProductPage(product, related || []);
             this.bindProductPageEvents(product);
         } catch (error) {
             container.innerHTML = '<p class="text-red-500">Nu s-a putut incarca produsul.</p>';
@@ -1358,6 +1468,7 @@ export class ShopModule {
                                 <span class="product-discount-badge">-${product.discount_percentage}%</span>
                             ` : ''}
                         </div>
+                        ${this.renderVatInfo(displayPrice, product.currency)}
 
                         ${product.short_description ? `
                             <p class="product-description">${product.short_description}</p>
@@ -1367,20 +1478,7 @@ export class ShopModule {
 
                         ${product.variants && product.variants.length > 0 && product.attributes ? `
                             <div class="product-variants" id="product-variants">
-                                ${product.attributes.map(attr => `
-                                    <div class="variant-group">
-                                        <span class="variant-label">${attr.name}</span>
-                                        <div class="variant-options" data-attribute="${attr.slug}">
-                                            ${attr.values.map(val => `
-                                                <button class="variant-option ${attr.type === 'color' ? 'color-option' : ''}"
-                                                    data-value="${val.slug}"
-                                                    ${attr.type === 'color' && val.color_code ? `style="background-color: ${val.color_code}"` : ''}>
-                                                    ${attr.type !== 'color' ? val.value : ''}
-                                                </button>
-                                            `).join('')}
-                                        </div>
-                                    </div>
-                                `).join('')}
+                                ${this.renderVariantSelectors(product)}
                             </div>
                         ` : ''}
 
@@ -1484,6 +1582,75 @@ export class ShopModule {
         return stars;
     }
 
+    /**
+     * Render variant selectors showing only attribute values that have actual variants
+     */
+    private renderVariantSelectors(product: ShopProduct): string {
+        if (!product.variants || !product.attributes) {
+            console.log('[Shop] No variants or attributes:', { variants: product.variants, attributes: product.attributes });
+            return '';
+        }
+
+        console.log('[Shop] Rendering variant selectors:', {
+            variantsCount: product.variants.length,
+            attributesCount: product.attributes.length,
+            variants: product.variants.map(v => ({ id: v.id, attrs: v.attributes })),
+            attributes: product.attributes.map(a => ({ slug: a.slug, values: a.values?.map(v => v.slug) }))
+        });
+
+        // Build a map of attribute_slug -> Set of value_slugs that exist in variants
+        const availableValues: Record<string, Set<string>> = {};
+        const valueDetails: Record<string, Record<string, { value: string; color_code: string | null }>> = {};
+
+        product.variants.forEach(variant => {
+            variant.attributes.forEach(attr => {
+                if (!availableValues[attr.attribute_slug]) {
+                    availableValues[attr.attribute_slug] = new Set();
+                    valueDetails[attr.attribute_slug] = {};
+                }
+                availableValues[attr.attribute_slug].add(attr.value_slug);
+                valueDetails[attr.attribute_slug][attr.value_slug] = {
+                    value: attr.value,
+                    color_code: attr.color_code
+                };
+            });
+        });
+
+        console.log('[Shop] Available values from variants:', availableValues);
+
+        // Only render attributes that have at least one variant value
+        return product.attributes
+            .filter(attr => availableValues[attr.slug] && availableValues[attr.slug].size > 0)
+            .map(attr => {
+                const attrAvailableValues = availableValues[attr.slug];
+                const attrValueDetails = valueDetails[attr.slug] || {};
+
+                // Only show values that exist in variants
+                const filteredValues = attr.values.filter(val => attrAvailableValues.has(val.slug));
+                console.log(`[Shop] Attribute ${attr.slug}: available=${Array.from(attrAvailableValues || [])}, filtered=${filteredValues.map(v => v.slug)}`);
+
+                if (filteredValues.length === 0) return '';
+
+                return `
+                    <div class="variant-group">
+                        <span class="variant-label">${attr.name}</span>
+                        <div class="variant-options" data-attribute="${attr.slug}">
+                            ${filteredValues.map(val => {
+                                const detail = attrValueDetails[val.slug] || val;
+                                return `
+                                    <button class="variant-option ${attr.type === 'color' ? 'color-option' : ''}"
+                                        data-value="${val.slug}"
+                                        ${attr.type === 'color' && detail.color_code ? `style="background-color: ${detail.color_code}"` : ''}>
+                                        ${attr.type !== 'color' ? detail.value || val.value : ''}
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+    }
+
     private renderStockStatus(product: ShopProduct): string {
         if (!product.is_in_stock) {
             return `
@@ -1563,12 +1730,86 @@ export class ShopModule {
                                 v.attributes.every(a => selectedAttributes[a.attribute_slug] === a.value_slug)
                             ) || null;
 
-                            // Update price if variant selected
+                            // Update UI if variant selected
                             if (selectedVariant) {
+                                // Update price
                                 const priceEl = document.querySelector('.product-current-price');
+                                const regularPriceEl = document.querySelector('.product-regular-price');
+                                const discountBadge = document.querySelector('.discount-badge');
+
+                                const variantPrice = selectedVariant.price_cents ? selectedVariant.price_cents / 100 : null;
+                                const variantSalePrice = selectedVariant.sale_price_cents ? selectedVariant.sale_price_cents / 100 : null;
+                                const displayPrice = variantSalePrice || variantPrice || product.display_price;
+                                const isOnSale = variantSalePrice && variantPrice && variantSalePrice < variantPrice;
+
                                 if (priceEl) {
-                                    const price = (selectedVariant.sale_price_cents || selectedVariant.price_cents) / 100;
-                                    priceEl.textContent = this.formatCurrency(price, product.currency);
+                                    priceEl.textContent = this.formatCurrency(displayPrice, product.currency);
+                                }
+
+                                // Update regular price (strikethrough) and discount badge
+                                if (regularPriceEl) {
+                                    if (isOnSale && variantPrice) {
+                                        regularPriceEl.textContent = this.formatCurrency(variantPrice, product.currency);
+                                        regularPriceEl.style.display = 'inline';
+                                    } else {
+                                        regularPriceEl.style.display = 'none';
+                                    }
+                                }
+
+                                if (discountBadge) {
+                                    if (isOnSale && variantPrice && variantSalePrice) {
+                                        const discountPct = Math.round((1 - variantSalePrice / variantPrice) * 100);
+                                        discountBadge.textContent = `-${discountPct}%`;
+                                        (discountBadge as HTMLElement).style.display = 'inline-block';
+                                    } else {
+                                        (discountBadge as HTMLElement).style.display = 'none';
+                                    }
+                                }
+
+                                // Update stock display
+                                const stockEl = document.querySelector('.stock-status');
+                                if (stockEl) {
+                                    if (!selectedVariant.is_in_stock) {
+                                        stockEl.className = 'stock-status out-of-stock';
+                                        stockEl.innerHTML = `
+                                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                            </svg>
+                                            Stoc epuizat
+                                        `;
+                                    } else if (selectedVariant.stock_quantity !== null && selectedVariant.stock_quantity <= 5) {
+                                        stockEl.className = 'stock-status low-stock';
+                                        stockEl.innerHTML = `
+                                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                            </svg>
+                                            Doar ${selectedVariant.stock_quantity} in stoc
+                                        `;
+                                    } else {
+                                        stockEl.className = 'stock-status in-stock';
+                                        stockEl.innerHTML = `
+                                            <svg width="16" height="16" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                            </svg>
+                                            In stoc
+                                        `;
+                                    }
+                                }
+
+                                // Update max quantity
+                                const qtyInput = document.getElementById('product-quantity') as HTMLInputElement;
+                                if (qtyInput && selectedVariant.stock_quantity !== null) {
+                                    qtyInput.max = String(selectedVariant.stock_quantity);
+                                    if (parseInt(qtyInput.value) > selectedVariant.stock_quantity) {
+                                        qtyInput.value = String(selectedVariant.stock_quantity);
+                                    }
+                                }
+
+                                // Update add to cart button
+                                const cartBtn = document.getElementById('add-to-cart-btn') as HTMLButtonElement;
+                                if (cartBtn) {
+                                    cartBtn.disabled = !selectedVariant.is_in_stock;
+                                    cartBtn.textContent = selectedVariant.is_in_stock ? 'Adauga in cos' : 'Stoc epuizat';
                                 }
 
                                 // Update image
@@ -1591,13 +1832,18 @@ export class ShopModule {
             const variantId = selectedVariant?.id || null;
 
             try {
-                await this.apiClient.post('/shop/cart/items', {
+                const response = await this.apiClient.post('/shop/cart/items', {
                     product_id: product.id,
                     variant_id: variantId,
                     quantity: quantity
                 }, {
                     headers: { 'X-Session-ID': this.cartSessionId }
                 });
+
+                // Sync cart count to ShopCartService
+                if (response.data?.item_count !== undefined) {
+                    (window as any).ShopCartService?.setItemCount(response.data.item_count);
+                }
 
                 // Show success feedback
                 const btn = document.getElementById('add-to-cart-btn');
@@ -1668,18 +1914,203 @@ export class ShopModule {
     }
 
     // ========================================
-    // CART PAGE (Placeholder - will use SleekClientModule)
+    // CART PAGE
     // ========================================
     async loadCartPage(): Promise<void> {
-        // This will be handled by SleekClientModule
-        console.log('Cart page - handled by SleekClientModule');
+        const container = document.getElementById('shop-cart-container');
+        if (!container) {
+            console.log('Cart container not found');
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="shop-page">
+                <h1 class="shop-page-title">Cosul tau</h1>
+                <div id="shop-cart-content" class="shop-loading">
+                    <div class="shop-spinner"></div>
+                </div>
+            </div>
+        `;
+
+        await this.loadCartContent();
+    }
+
+    private async loadCartContent(): Promise<void> {
+        if (!this.apiClient) return;
+
+        const contentEl = document.getElementById('shop-cart-content');
+        if (!contentEl) return;
+
+        try {
+            const response = await this.apiClient.get('/shop/cart', {
+                headers: { 'X-Session-ID': this.cartSessionId }
+            });
+            const cart = response.data;
+
+            // Sync cart count to ShopCartService
+            if (cart?.item_count !== undefined) {
+                (window as any).ShopCartService?.setItemCount(cart.item_count);
+            }
+
+            if (!cart || !cart.items || cart.items.length === 0) {
+                contentEl.innerHTML = `
+                    <div class="shop-empty-cart">
+                        <svg width="64" height="64" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-bottom: 1rem; opacity: 0.5;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                        <h2 style="margin-bottom: 0.5rem;">Cosul este gol</h2>
+                        <p style="color: #666; margin-bottom: 1.5rem;">Adauga produse in cos pentru a continua</p>
+                        <a href="/shop" class="shop-btn-primary">Descopera produse</a>
+                    </div>
+                `;
+                return;
+            }
+
+            contentEl.innerHTML = `
+                <style>
+                    .cart-layout { display: grid; gap: 2rem; }
+                    @media (min-width: 1024px) { .cart-layout { grid-template-columns: 1fr 350px; } }
+                    .cart-items { display: flex; flex-direction: column; gap: 1rem; }
+                    .cart-item { display: flex; gap: 1rem; padding: 1rem; background: #fff; border: 1px solid #e5e7eb; border-radius: 0.5rem; }
+                    .cart-item-image { width: 100px; height: 100px; border-radius: 0.375rem; object-fit: cover; background: #f3f4f6; }
+                    .cart-item-info { flex: 1; }
+                    .cart-item-title { font-weight: 600; margin-bottom: 0.25rem; }
+                    .cart-item-variant { font-size: 0.85rem; color: #666; margin-bottom: 0.5rem; }
+                    .cart-item-price { font-weight: 600; }
+                    .cart-item-qty { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; }
+                    .cart-qty-btn { width: 32px; height: 32px; border: 1px solid #e5e7eb; border-radius: 0.375rem; background: #fff; cursor: pointer; }
+                    .cart-qty-btn:hover { border-color: #6366f1; }
+                    .cart-qty-input { width: 50px; text-align: center; border: 1px solid #e5e7eb; border-radius: 0.375rem; padding: 0.375rem; }
+                    .cart-item-remove { color: #9ca3af; background: none; border: none; cursor: pointer; padding: 0.5rem; }
+                    .cart-item-remove:hover { color: #ef4444; }
+                    .cart-summary { background: #fff; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem; height: fit-content; position: sticky; top: 1rem; }
+                    .cart-summary-title { font-weight: 600; font-size: 1.1rem; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid #e5e7eb; }
+                    .cart-summary-row { display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 0.9rem; }
+                    .cart-summary-row.total { font-weight: 700; font-size: 1.25rem; border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 0.5rem; }
+                    .cart-checkout-btn { width: 100%; padding: 1rem; background: #6366f1; color: #fff; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; margin-top: 1.5rem; }
+                    .cart-checkout-btn:hover { background: #4f46e5; }
+                </style>
+                <div class="cart-layout">
+                    <div class="cart-items">
+                        ${cart.items.map((item: any) => `
+                            <div class="cart-item" data-item-id="${item.id}">
+                                <img src="${item.image_url || 'https://placehold.co/100x100/EEE/31343C?text=No+Image'}" alt="${item.title}" class="cart-item-image">
+                                <div class="cart-item-info">
+                                    <div class="cart-item-title">${item.title}</div>
+                                    ${item.variant_name ? `<div class="cart-item-variant">${item.variant_name}</div>` : ''}
+                                    <div class="cart-item-price">${this.formatCurrency(item.unit_price, cart.currency)}</div>
+                                    <div class="cart-item-qty">
+                                        <button class="cart-qty-btn cart-qty-minus" data-item-id="${item.id}">-</button>
+                                        <input type="number" class="cart-qty-input" data-item-id="${item.id}" value="${item.quantity}" min="1">
+                                        <button class="cart-qty-btn cart-qty-plus" data-item-id="${item.id}">+</button>
+                                    </div>
+                                </div>
+                                <button class="cart-item-remove" data-item-id="${item.id}">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="cart-summary">
+                        <h3 class="cart-summary-title">Sumar comanda</h3>
+                        <div class="cart-summary-row">
+                            <span>Subtotal</span>
+                            <span>${this.formatCurrency(cart.subtotal, cart.currency)}</span>
+                        </div>
+                        ${cart.discount > 0 ? `
+                            <div class="cart-summary-row" style="color: #10b981;">
+                                <span>Reducere</span>
+                                <span>-${this.formatCurrency(cart.discount, cart.currency)}</span>
+                            </div>
+                        ` : ''}
+                        <div class="cart-summary-row total">
+                            <span>Total</span>
+                            <span>${this.formatCurrency(cart.total, cart.currency)}</span>
+                        </div>
+                        <button class="cart-checkout-btn" onclick="window.location.href='/shop/checkout'">
+                            Continua spre plata
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            this.bindCartEvents();
+        } catch (e) {
+            console.error('Failed to load cart:', e);
+            contentEl.innerHTML = '<p style="color: #ef4444; text-align: center;">Eroare la incarcarea cosului.</p>';
+        }
+    }
+
+    private bindCartEvents(): void {
+        const contentEl = document.getElementById('shop-cart-content');
+        if (!contentEl) return;
+
+        // Quantity minus buttons
+        contentEl.querySelectorAll('.cart-qty-minus').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const itemId = btn.getAttribute('data-item-id');
+                const input = contentEl.querySelector(`.cart-qty-input[data-item-id="${itemId}"]`) as HTMLInputElement;
+                if (input && parseInt(input.value) > 1) {
+                    await this.updateCartItem(itemId!, parseInt(input.value) - 1);
+                }
+            });
+        });
+
+        // Quantity plus buttons
+        contentEl.querySelectorAll('.cart-qty-plus').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const itemId = btn.getAttribute('data-item-id');
+                const input = contentEl.querySelector(`.cart-qty-input[data-item-id="${itemId}"]`) as HTMLInputElement;
+                if (input) {
+                    await this.updateCartItem(itemId!, parseInt(input.value) + 1);
+                }
+            });
+        });
+
+        // Remove buttons
+        contentEl.querySelectorAll('.cart-item-remove').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const itemId = btn.getAttribute('data-item-id');
+                if (itemId) {
+                    await this.removeCartItem(itemId);
+                }
+            });
+        });
+    }
+
+    private async updateCartItem(itemId: string, quantity: number): Promise<void> {
+        if (!this.apiClient) return;
+
+        try {
+            await this.apiClient.put(`/shop/cart/items/${itemId}`, { quantity }, {
+                headers: { 'X-Session-ID': this.cartSessionId }
+            });
+            await this.loadCartContent();
+        } catch (e) {
+            console.error('Failed to update quantity:', e);
+        }
+    }
+
+    private async removeCartItem(itemId: string): Promise<void> {
+        if (!this.apiClient) return;
+
+        try {
+            await this.apiClient.delete(`/shop/cart/items/${itemId}`, {
+                headers: { 'X-Session-ID': this.cartSessionId }
+            });
+            await this.loadCartContent();
+        } catch (e) {
+            console.error('Failed to remove item:', e);
+        }
     }
 
     // ========================================
     // CHECKOUT PAGE (Placeholder - will use SleekClientModule)
     // ========================================
     async loadCheckoutPage(): Promise<void> {
-        // This will be handled by SleekClientModule
-        console.log('Checkout page - handled by SleekClientModule');
+        // TODO: Implement checkout page for other templates
+        console.log('Checkout page - to be implemented');
     }
 }

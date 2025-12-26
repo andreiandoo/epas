@@ -23,7 +23,7 @@ class OrdersTable
                     ->searchable()
                     ->url(fn ($record) => \App\Filament\Resources\Orders\OrderResource::getUrl('view', ['record' => $record])),
 
-                TextColumn::make('tenant.name')
+                TextColumn::make('tenant.public_name')
                     ->label('Tenant')
                     ->sortable()
                     ->searchable()
@@ -48,8 +48,8 @@ class OrdersTable
 
                 TextColumn::make('total_cents')
                     ->label('Total')
-                    ->sortable()
-                    ->formatStateUsing(fn ($v) => number_format(($v ?? 0) / 100, 2) . ' RON'),
+                    ->money('RON', divideBy: 100)
+                    ->sortable(),
 
                 BadgeColumn::make('status')
                     ->colors([

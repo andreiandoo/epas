@@ -8,7 +8,9 @@ use App\Filament\Resources\Events\Pages\ListEvents;
 use App\Models\Event;
 use App\Models\EventGenre;
 use App\Models\EventType;
+use App\Models\Tax\GeneralTax;
 use BackedEnum;
+use Illuminate\Support\HtmlString;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
@@ -869,6 +871,97 @@ class EventResource extends Resource
                         ->createOptionUsing(function (array $data) {
                             $data['slug'] = $data['slug'] ?: Str::slug($data['name']);
                             return \App\Models\EventTag::create($data);
+                        }),
+
+                    // Dynamic tax display based on selected event types
+                    Forms\Components\Placeholder::make('applicable_taxes')
+                        ->label('Taxe aplicabile pentru tipul de eveniment')
+                        ->columnSpanFull()
+                        ->visible(fn (SGet $get) => !empty($get('eventTypes')))
+                        ->content(function (SGet $get, $record) {
+                            $eventTypeIds = (array) ($get('eventTypes') ?? []);
+                            if (empty($eventTypeIds)) {
+                                return '';
+                            }
+
+                            // Get tenant from record if editing, otherwise show general info
+                            $tenant = $record?->tenant;
+                            $isVatPayer = $tenant?->vat_payer ?? null;
+                            $taxDisplayMode = $tenant?->tax_display_mode ?? 'included';
+
+                            // Get applicable taxes using the new forEventTypes scope
+                            $allTaxes = GeneralTax::query()
+                                ->whereNull('tenant_id') // Global taxes only
+                                ->active()
+                                ->validOn(Carbon::today())
+                                ->forEventTypes($eventTypeIds)
+                                ->orderByDesc('priority')
+                                ->get()
+                                ->unique('id');
+
+                            if ($allTaxes->isEmpty()) {
+                                return new HtmlString('<div class="text-sm text-gray-500 italic">Nu există taxe configurate pentru tipul de eveniment selectat.</div>');
+                            }
+
+                            $html = '<div class="space-y-2">';
+
+                            // VAT payer status and tax display mode if tenant is known
+                            if ($isVatPayer !== null) {
+                                $vatBadge = $isVatPayer
+                                    ? '<span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Tenant: Plătitor TVA</span>'
+                                    : '<span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Tenant: Neplătitor TVA</span>';
+
+                                $modeBadge = $taxDisplayMode === 'added'
+                                    ? '<span class="ml-2 inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">Taxe adăugate la preț</span>'
+                                    : '<span class="ml-2 inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Taxe incluse în preț</span>';
+
+                                $html .= '<div class="mb-3 flex flex-wrap items-center gap-2">' . $vatBadge . $modeBadge . '</div>';
+                            } else {
+                                $html .= '<div class="mb-3 text-xs text-gray-500 italic">Aplicarea TVA depinde de statusul de plătitor TVA al tenant-ului.</div>';
+                            }
+
+                            $html .= '<div class="grid grid-cols-1 md:grid-cols-2 gap-2">';
+
+                            foreach ($allTaxes as $tax) {
+                                $isVatTax = str_contains(strtolower($tax->name ?? ''), 'tva') ||
+                                            str_contains(strtolower($tax->name ?? ''), 'vat');
+
+                                // Skip VAT if tenant is known and not a VAT payer
+                                if ($isVatTax && $isVatPayer === false) {
+                                    continue;
+                                }
+
+                                $rateDisplay = $tax->value_type === 'percent'
+                                    ? number_format($tax->value, 2) . '%'
+                                    : number_format($tax->value, 2) . ' ' . ($tax->currency ?? 'RON');
+
+                                $includedBadge = $tax->is_added_to_price
+                                    ? '<span class="text-xs text-amber-600 dark:text-amber-400">(se adaugă la preț)</span>'
+                                    : '<span class="text-xs text-gray-500">(inclus în preț)</span>';
+
+                                $vatBadgeSmall = $isVatTax
+                                    ? '<span class="ml-1 px-1.5 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">TVA</span>'
+                                    : '';
+
+                                // Custom SVG icon
+                                $iconHtml = $tax->icon_svg ? '<span class="inline-flex items-center mr-1">' . $tax->icon_svg . '</span>' : '';
+
+                                $html .= '<div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">';
+                                $html .= '<div class="flex items-center gap-2">';
+                                $html .= $iconHtml;
+                                $html .= '<span class="font-medium text-sm text-gray-900 dark:text-white">' . e($tax->name) . '</span>';
+                                $html .= $vatBadgeSmall;
+                                $html .= '</div>';
+                                $html .= '<div class="text-right">';
+                                $html .= '<span class="font-semibold text-primary">' . $rateDisplay . '</span>';
+                                $html .= '<br>' . $includedBadge;
+                                $html .= '</div>';
+                                $html .= '</div>';
+                            }
+
+                            $html .= '</div></div>';
+
+                            return new HtmlString($html);
                         }),
                 ])
                 ->columns(2),

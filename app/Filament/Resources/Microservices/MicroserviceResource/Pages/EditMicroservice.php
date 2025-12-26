@@ -17,7 +17,11 @@ class EditMicroservice extends EditRecord
                 ->label('View Tenants')
                 ->icon('heroicon-o-users')
                 ->url(fn () => MicroserviceResource::getUrl('tenants', ['record' => $this->record])),
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->label('Delete Microservice')
+                ->icon('heroicon-o-trash')
+                ->color('danger')
+                ->requiresConfirmation(),
         ];
     }
 }

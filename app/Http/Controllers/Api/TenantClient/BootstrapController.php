@@ -26,6 +26,8 @@ class BootstrapController extends Controller
                 'id' => $tenant->id,
                 'name' => $tenant->name,
                 'slug' => $tenant->slug,
+                'vat_payer' => (bool) $tenant->vat_payer,
+                'tax_display_mode' => $tenant->tax_display_mode ?? 'included',
             ],
             'branding' => [
                 'logo' => $settings['branding']['logo_url'] ?? null,

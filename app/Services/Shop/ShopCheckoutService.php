@@ -108,7 +108,8 @@ class ShopCheckoutService
     protected function validateShippingAddress(array $address): array
     {
         $errors = [];
-        $required = ['name', 'line1', 'city', 'postal_code', 'country'];
+        // postal_code is optional - not everyone knows their postal code
+        $required = ['name', 'line1', 'city', 'country'];
 
         foreach ($required as $field) {
             if (empty($address[$field])) {
@@ -125,7 +126,8 @@ class ShopCheckoutService
     protected function validateBillingAddress(array $address): array
     {
         $errors = [];
-        $required = ['name', 'line1', 'city', 'postal_code', 'country'];
+        // postal_code is optional - not everyone knows their postal code
+        $required = ['name', 'line1', 'city', 'country'];
 
         foreach ($required as $field) {
             if (empty($address[$field])) {
@@ -143,7 +145,7 @@ class ShopCheckoutService
     // SHIPPING CALCULATION
     // ==========================================
 
-    public function getAvailableShippingMethods(ShopCart $cart, array $address): array
+    public function getAvailableShippingMethods(ShopCart $cart, array $address, bool $hasBundlePhysical = false): array
     {
         $tenant = $cart->tenant;
 
@@ -151,6 +153,9 @@ class ShopCheckoutService
         $hasPhysicalProducts = $cart->items()
             ->whereHas('product', fn($q) => $q->where('type', 'physical'))
             ->exists();
+
+        // Include bundle physical products (products attached to tickets)
+        $hasPhysicalProducts = $hasPhysicalProducts || $hasBundlePhysical;
 
         if (!$hasPhysicalProducts) {
             return []; // No shipping needed for digital-only orders
@@ -174,20 +179,34 @@ class ShopCheckoutService
 
         // Get available methods
         $methods = $zone->activeMethods()->get();
+        $language = app()->getLocale();
 
         return $methods->filter(function ($method) use ($subtotalCents, $totalWeightGrams, $hasPhysicalProducts) {
             return $method->isAvailableForOrder($subtotalCents, $totalWeightGrams, $hasPhysicalProducts);
-        })->map(function ($method) use ($subtotalCents, $totalWeightGrams) {
-            $cost = $method->calculateCost($subtotalCents, $totalWeightGrams);
+        })->map(function ($method) use ($subtotalCents, $totalWeightGrams, $language) {
+            $cost = $method->calculateCost($subtotalCents / 100, $totalWeightGrams);
+
+            // Get translated name and description
+            $name = is_array($method->name)
+                ? ($method->name[$language] ?? $method->name['en'] ?? array_values($method->name)[0] ?? '')
+                : $method->name;
+
+            $description = is_array($method->description)
+                ? ($method->description[$language] ?? $method->description['en'] ?? '')
+                : $method->description;
 
             return [
                 'id' => $method->id,
-                'name' => $method->name,
-                'description' => $method->description,
+                'name' => $name,
+                'description' => $description,
                 'provider' => $method->provider,
-                'cost_cents' => $cost,
-                'estimated_delivery' => $method->getEstimatedDeliveryText(),
-                'is_free' => $cost === 0,
+                'cost' => number_format($cost, 2, '.', ''),
+                'estimated_days' => $method->estimated_days_min && $method->estimated_days_max
+                    ? ($method->estimated_days_min === $method->estimated_days_max
+                        ? $method->estimated_days_min
+                        : "{$method->estimated_days_min}-{$method->estimated_days_max}")
+                    : null,
+                'is_free' => $cost == 0,
             ];
         })->values()->toArray();
     }

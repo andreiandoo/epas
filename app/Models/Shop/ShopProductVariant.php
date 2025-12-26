@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Storage;
 
 class ShopProductVariant extends Model
 {
@@ -52,6 +53,25 @@ class ShopProductVariant extends Model
         );
     }
 
+    // Image URL Accessor
+
+    /**
+     * Get image_url as a full storage URL
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        $value = $this->attributes['image_url'] ?? null;
+        if (!$value) {
+            return null;
+        }
+        // If it's already a full URL, return as-is
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+        // Convert storage path to URL
+        return Storage::disk('public')->url($value);
+    }
+
     // Scopes
 
     public function scopeActive(Builder $query): Builder
@@ -68,6 +88,32 @@ class ShopProductVariant extends Model
     }
 
     // Price Accessors
+
+    /**
+     * Get price_cents - converts decimal price to cents for API compatibility
+     */
+    public function getPriceCentsAttribute(): ?int
+    {
+        $price = $this->attributes['price'] ?? null;
+        return $price !== null ? (int) round(floatval($price) * 100) : null;
+    }
+
+    /**
+     * Get sale_price_cents - converts decimal sale_price to cents for API compatibility
+     */
+    public function getSalePriceCentsAttribute(): ?int
+    {
+        $salePrice = $this->attributes['sale_price'] ?? null;
+        return $salePrice !== null ? (int) round(floatval($salePrice) * 100) : null;
+    }
+
+    /**
+     * Get display price in cents for API
+     */
+    public function getDisplayPriceCentsAttribute(): int
+    {
+        return $this->sale_price_cents ?? $this->price_cents ?? $this->product->display_price_cents ?? 0;
+    }
 
     public function getEffectivePriceAttribute(): float
     {

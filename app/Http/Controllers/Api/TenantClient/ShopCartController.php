@@ -175,14 +175,14 @@ class ShopCartController extends Controller
 
             $existingItem->update(['quantity' => $newQuantity]);
         } else {
-            $unitPrice = $variant?->price_cents ?? $variant?->sale_price_cents ?? $product->display_price_cents;
+            $unitPrice = $variant?->display_price ?? $product->display_price;
 
             $cart->items()->create([
                 'id' => Str::uuid(),
                 'product_id' => $product->id,
                 'variant_id' => $variant?->id,
                 'quantity' => $validated['quantity'],
-                'unit_price_cents' => $unitPrice,
+                'unit_price' => $unitPrice,
             ]);
         }
 
@@ -430,12 +430,49 @@ class ShopCartController extends Controller
 
     private function formatCart(ShopCart $cart, string $language): array
     {
-        $cart->loadMissing('items.product', 'items.variant');
+        $cart->loadMissing('items.product', 'items.variant.attributeValues.attribute');
 
-        $items = $cart->items->map(function ($item) use ($language) {
+        // Get tenant for commission info
+        $tenant = $cart->tenant;
+        $commissionRate = $tenant?->commission_rate ?? 0;
+        $commissionMode = $tenant?->commission_mode ?? 'included'; // 'included' or 'on_top'
+
+        $hasPhysicalProducts = false;
+
+        $items = $cart->items->map(function ($item) use ($language, &$hasPhysicalProducts) {
             $title = is_array($item->product->title)
                 ? ($item->product->title[$language] ?? $item->product->title['en'] ?? '')
                 : $item->product->title;
+
+            // Check if product is physical
+            if ($item->product->type === 'physical') {
+                $hasPhysicalProducts = true;
+            }
+
+            // Get variant attributes
+            $attributes = [];
+            if ($item->variant) {
+                foreach ($item->variant->attributeValues as $attrValue) {
+                    $attrName = is_array($attrValue->attribute->name)
+                        ? ($attrValue->attribute->name[$language] ?? $attrValue->attribute->name['en'] ?? '')
+                        : $attrValue->attribute->name;
+
+                    $attrValueText = is_array($attrValue->value)
+                        ? ($attrValue->value[$language] ?? $attrValue->value['en'] ?? '')
+                        : $attrValue->value;
+
+                    $attributes[] = [
+                        'name' => $attrName,
+                        'value' => $attrValueText,
+                        'color_hex' => $attrValue->color_hex,
+                    ];
+                }
+            }
+
+            // Build variant display name from attributes
+            $variantName = $item->variant
+                ? implode(', ', array_map(fn($a) => "{$a['name']}: {$a['value']}", $attributes))
+                : null;
 
             return [
                 'id' => $item->id,
@@ -443,7 +480,8 @@ class ShopCartController extends Controller
                 'variant_id' => $item->variant_id,
                 'product_slug' => $item->product->slug,
                 'title' => $title,
-                'variant_name' => $item->variant?->name,
+                'variant_name' => $variantName,
+                'attributes' => $attributes,
                 'sku' => $item->variant?->sku ?? $item->product->sku,
                 'image_url' => $item->variant?->image_url ?? $item->product->image_url,
                 'type' => $item->product->type,
@@ -475,6 +513,23 @@ class ShopCartController extends Controller
             }
         }
 
+        // Calculate commission
+        $subtotalAfterDiscount = $subtotal - $discount;
+
+        // Always calculate commission for display, but only add to total if 'on_top'
+        $commissionAmount = 0;
+        $commissionAddedToTotal = 0;
+
+        if ($commissionRate > 0) {
+            $commissionAmount = (int) round($subtotalAfterDiscount * ($commissionRate / 100));
+
+            if ($commissionMode === 'on_top') {
+                $commissionAddedToTotal = $commissionAmount;
+            }
+        }
+
+        $total = $subtotalAfterDiscount + $commissionAddedToTotal;
+
         return [
             'id' => $cart->id,
             'items' => $items,
@@ -483,10 +538,17 @@ class ShopCartController extends Controller
             'subtotal' => $subtotal / 100,
             'discount_cents' => $discount,
             'discount' => $discount / 100,
-            'total_cents' => $subtotal - $discount,
-            'total' => ($subtotal - $discount) / 100,
+            'commission_cents' => $commissionAddedToTotal,
+            'commission' => $commissionAddedToTotal / 100,
+            'commission_rate' => $commissionRate,
+            'commission_mode' => $commissionMode,
+            'commission_display' => $commissionAmount / 100, // Always show commission for transparency
+            'has_commission' => $commissionAddedToTotal > 0,
+            'total_cents' => $total,
+            'total' => $total / 100,
             'currency' => $cart->currency,
             'coupon' => $couponInfo,
+            'has_physical_products' => $hasPhysicalProducts,
         ];
     }
 }

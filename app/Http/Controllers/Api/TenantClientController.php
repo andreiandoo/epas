@@ -109,6 +109,7 @@ class TenantClientController extends Controller
                 'id' => $tenant->id,
                 'name' => $tenant->public_name ?? $tenant->name,
                 'locale' => $settings['site_language'] ?? 'en',
+                'vat_payer' => (bool) $tenant->vat_payer,
             ],
             'platform' => $this->getPlatformBranding(),
         ]);

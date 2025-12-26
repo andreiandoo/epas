@@ -11,10 +11,20 @@ use App\Events\PromoCodes\PromoCodeDeactivated;
 use App\Listeners\PromoCodes\LogPromoCodeActivity;
 use App\Listeners\PromoCodes\SendPromoCodeAlerts;
 use App\Listeners\PromoCodes\UpdatePromoCodeMetrics;
+use App\Listeners\Tax\TaxEventSubscriber;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 class EventServiceProvider extends ServiceProvider
 {
+    /**
+     * The event subscriber mappings for the application.
+     *
+     * @var array<int, class-string>
+     */
+    protected $subscribe = [
+        TaxEventSubscriber::class,
+    ];
+
     /**
      * The event to listener mappings for the application.
      *

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 use App\Support\Translatable;
 
 class ShopProduct extends Model
@@ -191,16 +192,94 @@ class ShopProduct extends Model
             ->where('stock_quantity', '<=', 0);
     }
 
-    // Price Accessors
+    // Image URL Accessors
+    // FileUpload stores relative paths, we need to convert to full URLs
 
+    /**
+     * Get image_url as a full storage URL
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        $value = $this->attributes['image_url'] ?? null;
+        if (!$value) {
+            return null;
+        }
+        // If it's already a full URL, return as-is
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+        // Convert storage path to URL
+        return Storage::disk('public')->url($value);
+    }
+
+    /**
+     * Get gallery as array of full storage URLs
+     */
+    public function getGalleryAttribute(): ?array
+    {
+        $value = $this->attributes['gallery'] ?? null;
+        if (!$value) {
+            return null;
+        }
+
+        $gallery = is_string($value) ? json_decode($value, true) : $value;
+        if (!is_array($gallery)) {
+            return null;
+        }
+
+        return array_map(function ($path) {
+            if (!$path) return null;
+            // If it's already a full URL, return as-is
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                return $path;
+            }
+            // Convert storage path to URL
+            return Storage::disk('public')->url($path);
+        }, $gallery);
+    }
+
+    // Price Accessors
+    // Note: Database uses 'price' (decimal) not 'price_cents' (integer)
+
+    /**
+     * Get price_cents - converts decimal price to cents for API compatibility
+     */
+    public function getPriceCentsAttribute(): int
+    {
+        $price = $this->attributes['price'] ?? 0;
+        return (int) round(floatval($price) * 100);
+    }
+
+    /**
+     * Get sale_price_cents - converts decimal sale_price to cents for API compatibility
+     */
+    public function getSalePriceCentsAttribute(): ?int
+    {
+        $salePrice = $this->attributes['sale_price'] ?? null;
+        return $salePrice !== null ? (int) round(floatval($salePrice) * 100) : null;
+    }
+
+    /**
+     * Get display price (sale price if on sale, otherwise regular price)
+     */
     public function getDisplayPriceAttribute(): float
     {
-        return $this->sale_price ?? $this->price ?? 0;
+        return floatval($this->attributes['sale_price'] ?? $this->attributes['price'] ?? 0);
+    }
+
+    /**
+     * Get display price in cents for API
+     */
+    public function getDisplayPriceCentsAttribute(): int
+    {
+        return $this->sale_price_cents ?? $this->price_cents ?? 0;
     }
 
     public function isOnSale(): bool
     {
-        return $this->sale_price !== null && $this->sale_price < $this->price;
+        $salePrice = $this->attributes['sale_price'] ?? null;
+        $price = $this->attributes['price'] ?? 0;
+        return $salePrice !== null && floatval($salePrice) > 0 && floatval($salePrice) < floatval($price);
     }
 
     public function getDiscountPercentage(): ?float

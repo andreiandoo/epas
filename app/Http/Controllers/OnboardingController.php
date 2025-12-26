@@ -70,6 +70,7 @@ class OnboardingController extends Controller
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'public_name' => 'required|string|max:255',
+            'organizer_type' => 'required|string|in:event_organizer,pub_bar,theater,concert_hall,philharmonic,museum,sports,other',
             'email' => 'required|email|unique:users,email',
             'phone' => 'required|string|max:20',
             'contact_position' => 'nullable|string|max:255',
@@ -85,7 +86,7 @@ class OnboardingController extends Controller
 
         // Store in session
         $onboarding = Session::get('onboarding', []);
-        $onboarding['data']['step1'] = $request->only(['first_name', 'last_name', 'public_name', 'email', 'phone', 'contact_position', 'password']);
+        $onboarding['data']['step1'] = $request->only(['first_name', 'last_name', 'public_name', 'organizer_type', 'email', 'phone', 'contact_position', 'password']);
         $onboarding['step'] = 2;
         Session::put('onboarding', $onboarding);
 
@@ -109,7 +110,7 @@ class OnboardingController extends Controller
             'address' => 'required|string',
             'city' => 'required|string|max:255',
             'state' => 'required|string|max:255',
-            'payment_processor' => 'required|in:stripe,netopia,euplatesc,payu',
+            'payment_processor' => 'nullable|in:stripe,netopia,euplatesc,payu,unknown',
         ]);
 
         if ($validator->fails()) {
@@ -138,16 +139,19 @@ class OnboardingController extends Controller
      */
     public function storeStepThree(Request $request)
     {
-        $noWebsite = filter_var($request->no_website, FILTER_VALIDATE_BOOLEAN);
+        $hasNoWebsite = filter_var($request->input('has_no_website'), FILTER_VALIDATE_BOOLEAN);
 
-        if ($noWebsite) {
-            // Validate subdomain
+        // Different validation rules based on whether they have a website
+        if ($hasNoWebsite) {
             $validator = Validator::make($request->all(), [
                 'subdomain' => ['required', 'string', 'min:3', 'max:63', 'regex:/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/'],
                 'estimated_monthly_tickets' => 'required|integer|min:0',
+            ], [
+                'subdomain.required' => 'Te rugăm să alegi un subdomeniu.',
+                'subdomain.min' => 'Subdomeniul trebuie să aibă cel puțin 3 caractere.',
+                'subdomain.regex' => 'Subdomeniul poate conține doar litere, cifre și cratimă.',
             ]);
         } else {
-            // Validate domains
             $validator = Validator::make($request->all(), [
                 'domains' => 'required|array|min:1',
                 'domains.*' => 'required|string',
@@ -165,10 +169,10 @@ class OnboardingController extends Controller
         // Store in session
         $onboarding = Session::get('onboarding', []);
         $onboarding['data']['step3'] = [
-            'no_website' => $noWebsite,
-            'subdomain' => $noWebsite ? strtolower($request->subdomain) : null,
-            'domains' => $noWebsite ? [] : $request->domains,
-            'estimated_monthly_tickets' => $request->estimated_monthly_tickets,
+            'has_no_website' => $hasNoWebsite,
+            'subdomain' => $hasNoWebsite ? strtolower($request->input('subdomain')) : null,
+            'domains' => $hasNoWebsite ? [] : $request->input('domains'),
+            'estimated_monthly_tickets' => $request->input('estimated_monthly_tickets'),
         ];
         $onboarding['step'] = 4;
         Session::put('onboarding', $onboarding);
@@ -224,13 +228,29 @@ class OnboardingController extends Controller
                 'role' => 'tenant', // Tenant owner role
             ]);
 
-            // Extract domain from first URL
-            $firstDomain = $step3['domains'][0];
-            $parsedDomain = parse_url($firstDomain, PHP_URL_HOST);
-            if (!$parsedDomain) {
-                // If parse_url fails, try to extract domain manually
-                $parsedDomain = str_replace(['http://', 'https://', 'www.'], '', $firstDomain);
-                $parsedDomain = explode('/', $parsedDomain)[0];
+            // Handle domain based on whether tenant has their own website
+            $hasNoWebsite = $step3['has_no_website'] ?? false;
+            $cloudflareService = app(CloudflareService::class);
+            $baseDomain = $cloudflareService->getBaseDomain();
+
+            if ($hasNoWebsite && !empty($step3['subdomain'])) {
+                // Subdomain on managed domain (e.g., ticks.ro)
+                $parsedDomain = $step3['subdomain'] . '.' . $baseDomain;
+            } else {
+                // Extract domain from first URL
+                $firstDomain = $step3['domains'][0] ?? '';
+                $parsedDomain = parse_url($firstDomain, PHP_URL_HOST);
+                if (!$parsedDomain) {
+                    // If parse_url fails, try to extract domain manually
+                    $parsedDomain = str_replace(['http://', 'https://', 'www.'], '', $firstDomain);
+                    $parsedDomain = explode('/', $parsedDomain)[0];
+                }
+            }
+
+            // Handle payment processor - 'unknown' means null
+            $paymentProcessor = $step2['payment_processor'] ?? null;
+            if ($paymentProcessor === 'unknown') {
+                $paymentProcessor = null;
             }
 
             // Convert country name to ISO code
@@ -258,6 +278,7 @@ class OnboardingController extends Controller
                 'commission_rate' => $planData['commission_rate'],
                 'vat_payer' => filter_var($step2['vat_payer'], FILTER_VALIDATE_BOOLEAN),
                 'work_method' => $step4['work_method'],
+                'organizer_type' => $step1['organizer_type'] ?? null,
                 'estimated_monthly_tickets' => (int)$step3['estimated_monthly_tickets'],
                 'company_name' => $step2['company_name'],
                 'cui' => $step2['cui'] ?? null,
@@ -271,8 +292,9 @@ class OnboardingController extends Controller
                 'contact_email' => $step1['email'],
                 'contact_phone' => $step1['phone'],
                 'contact_position' => $step1['contact_position'] ?? null,
-                'payment_processor' => $step2['payment_processor'] ?? null,
+                'payment_processor' => $paymentProcessor,
                 'payment_processor_mode' => 'test', // Start in test mode
+                'has_own_website' => !$hasNoWebsite,
                 'onboarding_completed' => true,
                 'onboarding_completed_at' => now(),
                 'billing_starts_at' => now(),
@@ -280,12 +302,8 @@ class OnboardingController extends Controller
             ]);
 
             // Create Domains
-            $noWebsite = $step3['no_website'] ?? false;
-
-            if ($noWebsite && !empty($step3['subdomain'])) {
-                // Create managed subdomain
-                $cloudflareService = app(CloudflareService::class);
-                $baseDomain = $cloudflareService->getBaseDomain();
+            if ($hasNoWebsite && !empty($step3['subdomain'])) {
+                // Create managed subdomain with Cloudflare integration
                 $subdomain = $step3['subdomain'];
                 $fullDomain = "{$subdomain}.{$baseDomain}";
 
@@ -339,7 +357,7 @@ class OnboardingController extends Controller
                     GeneratePackageJob::dispatch($domain);
                 }
             } else {
-                // Original domain creation flow for custom domains
+                // Process regular domains
                 foreach ($step3['domains'] as $index => $domainUrl) {
                     $domainName = parse_url($domainUrl, PHP_URL_HOST);
                     if (!$domainName) {
@@ -389,13 +407,16 @@ class OnboardingController extends Controller
                 ]);
             }
 
-            try {
-                $this->sendDomainVerificationInstructionsEmail($user, $tenant, $step1);
-            } catch (\Exception $e) {
-                Log::error('Failed to send domain verification email', [
-                    'user_id' => $user->id,
-                    'error' => $e->getMessage(),
-                ]);
+            // Only send domain verification email for custom domains (not managed subdomains)
+            if (!$hasNoWebsite) {
+                try {
+                    $this->sendDomainVerificationInstructionsEmail($user, $tenant, $step1);
+                } catch (\Exception $e) {
+                    Log::error('Failed to send domain verification email', [
+                        'user_id' => $user->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
 
             // Generate and send contract (non-fatal - registration continues even if contract fails)
@@ -579,7 +600,10 @@ class OnboardingController extends Controller
             })
             ->exists();
 
-        if ($exists) {
+        // Also check tenant slugs
+        $slugExists = Tenant::where('slug', $subdomain)->exists();
+
+        if ($exists || $slugExists) {
             return response()->json([
                 'available' => false,
                 'message' => 'Acest subdomeniu este deja folosit'

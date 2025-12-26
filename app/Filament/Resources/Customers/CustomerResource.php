@@ -60,7 +60,7 @@ class CustomerResource extends Resource
                 ->addable()->deletable()->reorderable(),
 
             // Gamification Points Section
-            Forms\Components\Section::make('Puncte de fidelitate')
+            SC\Section::make('Puncte de fidelitate')
                 ->description('Gestionează punctele de fidelitate ale clientului')
                 ->icon('heroicon-o-star')
                 ->collapsible()
@@ -94,7 +94,7 @@ class CustomerResource extends Resource
                             )),
                     ]),
 
-                    Forms\Components\Fieldset::make('Ajustare manuală puncte')
+                    SC\Fieldset::make('Ajustare manuală puncte')
                         ->schema([
                             Forms\Components\Select::make('points_action')
                                 ->label('Acțiune')

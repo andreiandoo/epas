@@ -109,6 +109,7 @@ class ShopCheckoutController extends Controller
             'region' => 'nullable|string',
             'city' => 'nullable|string',
             'postal_code' => 'nullable|string',
+            'has_bundle_physical' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -120,7 +121,8 @@ class ShopCheckoutController extends Controller
         }
 
         $address = $validator->validated();
-        $methods = $this->checkoutService->getAvailableShippingMethods($cart, $address);
+        $hasBundlePhysical = $request->boolean('has_bundle_physical', false);
+        $methods = $this->checkoutService->getAvailableShippingMethods($cart, $address, $hasBundlePhysical);
 
         return response()->json([
             'success' => true,
@@ -239,7 +241,7 @@ class ShopCheckoutController extends Controller
             'shipping_address.line2' => 'nullable|string',
             'shipping_address.city' => 'required_with:shipping_address|string',
             'shipping_address.region' => 'nullable|string',
-            'shipping_address.postal_code' => 'required_with:shipping_address|string',
+            'shipping_address.postal_code' => 'nullable|string',
             'shipping_address.country' => 'required_with:shipping_address|string|size:2',
             'billing_address' => 'nullable|array',
             'same_as_shipping' => 'nullable|boolean',

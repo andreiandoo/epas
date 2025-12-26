@@ -42,7 +42,11 @@ class EditContractTemplate extends EditRecord
                     return redirect(ContractTemplateResource::getUrl('edit', ['record' => $newTemplate]));
                 }),
 
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->label('Delete Template')
+                ->icon('heroicon-o-trash')
+                ->color('danger')
+                ->requiresConfirmation(),
         ];
     }
 

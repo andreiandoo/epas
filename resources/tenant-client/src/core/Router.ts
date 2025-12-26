@@ -41,6 +41,30 @@ interface AppliedDiscount {
     discountAmount: number;
 }
 
+// Shop cart service to track shop product count (synced from API)
+class ShopCartService {
+    private static STORAGE_KEY = 'shop_cart_count';
+
+    static getItemCount(): number {
+        const count = localStorage.getItem(this.STORAGE_KEY);
+        return count ? parseInt(count, 10) : 0;
+    }
+
+    static setItemCount(count: number): void {
+        localStorage.setItem(this.STORAGE_KEY, count.toString());
+        // Dispatch event so other parts of the app can react
+        window.dispatchEvent(new CustomEvent('shop-cart-updated', { detail: { count } }));
+    }
+
+    static clear(): void {
+        localStorage.removeItem(this.STORAGE_KEY);
+        window.dispatchEvent(new CustomEvent('shop-cart-updated', { detail: { count: 0 } }));
+    }
+}
+
+// Make ShopCartService available globally
+(window as any).ShopCartService = ShopCartService;
+
 class CartService {
     private static STORAGE_KEY = 'tixello_cart';
     private static DISCOUNT_KEY = 'tixello_discount';
@@ -270,15 +294,25 @@ export class Router {
     // Update cart badge in header
     private updateCartBadge(): void {
         const badge = document.getElementById('cart-badge');
-        if (badge) {
-            const count = CartService.getItemCount();
-            badge.textContent = count.toString();
-            if (count > 0) {
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
+        const badgeMobile = document.getElementById('cart-badge-mobile');
+        const badgeMenu = document.getElementById('cart-badge-menu');
+
+        // Combine ticket cart count + shop cart count
+        const ticketCount = CartService.getItemCount();
+        const shopCount = ShopCartService.getItemCount();
+        const totalCount = ticketCount + shopCount;
+
+        // Update all badge elements
+        [badge, badgeMobile, badgeMenu].forEach(b => {
+            if (b) {
+                b.textContent = totalCount.toString();
+                if (totalCount > 0) {
+                    b.classList.remove('hidden');
+                } else {
+                    b.classList.add('hidden');
+                }
             }
-        }
+        });
     }
 
     // Update header to show user name when logged in
@@ -322,12 +356,13 @@ export class Router {
     }
 
     // POST helper
-    private async postApi(endpoint: string, data: any): Promise<any> {
+    private async postApi(endpoint: string, data: any, customHeaders: Record<string, string> = {}): Promise<any> {
         const url = new URL(`${this.config.apiEndpoint}${endpoint}`);
         url.searchParams.set('hostname', window.location.hostname);
 
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
+            ...customHeaders,
         };
 
         if (this.authToken) {
@@ -436,6 +471,11 @@ export class Router {
 
         // Update cart badge on page load
         this.updateCartBadge();
+
+        // Listen for shop cart updates
+        window.addEventListener('shop-cart-updated', () => {
+            this.updateCartBadge();
+        });
     }
 
     private setupDefaultRoutes(): void {
@@ -1354,11 +1394,11 @@ export class Router {
                                         ? artist.youtube_videos[0] : null;
 
                                     return `
-                                    <div class="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl overflow-hidden shadow-sm">
-                                        <div class="p-6">
+                                    <div class="rounded-2xl overflow-hidden shadow-sm">
+                                        <div class="">
                                             <!-- Header: Image, Name, Types/Genres -->
                                             <div class="flex flex-col md:flex-row gap-6">
-                                                <a href="https://core.tixello.com/artist/${artist.slug}?locale=en" target="_blank" class="flex-shrink-0 group">
+                                                <a href="https://tixello.com/artist/${artist.slug}" target="_blank" class="flex-shrink-0 group">
                                                     ${artist.image || artist.portrait
                                                         ? `<img src="${artist.portrait || artist.image}" alt="${artist.name}" class="w-32 h-32 md:w-40 md:h-40 rounded-xl object-cover shadow-md group-hover:shadow-lg transition">`
                                                         : `<div class="w-32 h-32 md:w-40 md:h-40 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
@@ -1367,7 +1407,7 @@ export class Router {
                                                     }
                                                 </a>
                                                 <div class="flex-1">
-                                                    <a href="https://core.tixello.com/artist/${artist.slug}?locale=en" target="_blank" class="hover:text-primary transition">
+                                                    <a href="https://tixello.com/artist/${artist.slug}" target="_blank" class="hover:text-primary transition">
                                                         <h3 class="text-2xl font-bold text-gray-900 mb-2">${artist.name}</h3>
                                                     </a>
                                                     ${artist.city || artist.country ? `
@@ -1463,14 +1503,13 @@ export class Router {
                                             ${artist.bio ? `
                                             <!-- Bio -->
                                             <div class="mt-6 pt-6 border-t border-gray-200">
-                                                <div class="prose prose-sm max-w-none text-gray-600">${artist.bio}</div>
+                                                <div class="prose prose-sm max-w-none text-gray-600 px-6">${artist.bio}</div>
                                             </div>
                                             ` : ''}
 
                                             ${latestVideo && latestVideo.video_id ? `
                                             <!-- YouTube Video Embed -->
                                             <div class="mt-6 pt-6 border-t border-gray-200">
-                                                <h4 class="text-lg font-semibold text-gray-900 mb-4">Ultimul videoclip</h4>
                                                 <div class="relative pb-[56.25%] h-0 rounded-xl overflow-hidden shadow-lg">
                                                     <iframe
                                                         class="absolute top-0 left-0 w-full h-full"
@@ -1581,8 +1620,7 @@ export class Router {
                     ${!isPastEvent ? `
                     <!-- Desktop tickets sidebar - hidden on mobile -->
                     <div class="lg:col-span-1 hidden lg:block" id="desktop-tickets-sidebar">
-                        <div class="bg-white rounded-lg shadow-lg p-6 sticky top-24">
-                            <h2 class="text-xl font-semibold text-gray-900 mb-4">Bilete</h2>
+                        <div class="sticky top-18">
 
                             ${event.is_sold_out || event.door_sales_only || event.is_cancelled ? `
                                 <div class="mb-4 p-4 rounded ${event.is_cancelled ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}">
@@ -1601,25 +1639,9 @@ export class Router {
                                         const commissionInfo = event.commission;
                                         const hasCommissionOnTop = commissionInfo?.is_added_on_top && ticket.commission_amount > 0;
                                         return `
-                                        <div class="border border-gray-200 rounded-lg p-4 ${ticket.status !== 'active' ? 'opacity-50' : ''}">
-                                            <div class="flex justify-between items-start mb-2">
-                                                <div class="flex items-center gap-2">
-                                                    <h3 class="font-semibold text-gray-900">${ticket.name}</h3>
-                                                    ${hasCommissionOnTop ? `
-                                                    <div class="relative group">
-                                                        <svg class="w-4 h-4 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                        </svg>
-                                                        <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                                                            Prețul include comision Tixello de ${ticket.commission_amount} ${currency}
-                                                        </div>
-                                                    </div>
-                                                    ` : ''}
-                                                </div>
-                                            </div>
-                                            ${ticket.description ? `<p class="text-sm text-gray-500 mb-2">${ticket.description}</p>` : ''}
+                                        <div class="bg-white border border-gray-200 rounded-lg p-4 ${ticket.status !== 'active' ? 'opacity-50' : ''}">
                                             ${ticket.bulk_discounts && ticket.bulk_discounts.length > 0 ? `
-                                            <div class="mt-2 space-y-1">
+                                            <div class="mb-2 space-y-1">
                                                 ${ticket.bulk_discounts.map((discount: any) => {
                                                     if (discount.rule_type === 'buy_x_get_y') {
                                                         return `<div class="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
@@ -1638,31 +1660,48 @@ export class Router {
                                                 }).join('')}
                                             </div>
                                             ` : ''}
-                                            <div class="flex justify-between items-start">
-                                                <div></div>
-                                                <div class="text-right">
-                                                    ${hasCommissionOnTop ? `
-                                                        <div>
-                                                            ${ticket.sale_price ? `
+                                            <div class="flex justify-between items-start mb-2">
+                                                <div class="flex flex-col items-start">
+                                                    <div class="flex items-center gap-2">
+                                                        <h3 class="font-semibold text-gray-900">${ticket.name}</h3>
+                                                        ${hasCommissionOnTop ? `
+                                                        <div class="relative group">
+                                                            <svg class="w-4 h-4 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                            </svg>
+                                                            <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                                                                Prețul include comision Tixello de ${ticket.commission_amount} ${currency}
+                                                            </div>
+                                                        </div>
+                                                        ` : ''}
+                                                    </div>
+                                                    ${ticket.description ? `<p class="text-xs text-gray-500 mb-2">${ticket.description}</p>` : ''}
+                                                </div>
+                                                <div class="flex justify-between items-start">
+                                                    <div class="text-right">
+                                                        ${hasCommissionOnTop ? `
+                                                            <div class="flex flex-col items-end">
+                                                                ${ticket.sale_price ? `
+                                                                    <span class="line-through text-gray-400 text-sm">${ticket.price} ${currency}</span>
+                                                                    <span class="font-bold text-primary block">${(parseFloat(ticket.sale_price) + parseFloat(ticket.commission_amount || 0)).toFixed(2)} ${currency}</span>
+                                                                ` : `
+                                                                    <span class="font-bold text-primary">${(parseFloat(ticket.price) + parseFloat(ticket.commission_amount || 0)).toFixed(2)} ${currency}</span>
+                                                                `}
+                                                            </div>
+                                                        ` : ticket.sale_price ? `
+                                                            <div>
                                                                 <span class="line-through text-gray-400 text-sm">${ticket.price} ${currency}</span>
-                                                                <span class="font-bold text-primary block">${(parseFloat(ticket.sale_price) + parseFloat(ticket.commission_amount || 0)).toFixed(2)} ${currency}</span>
-                                                                <span class="text-xs text-gray-500">(${ticket.sale_price} + ${ticket.commission_amount} comision)</span>
-                                                            ` : `
-                                                                <span class="font-bold text-primary">${(parseFloat(ticket.price) + parseFloat(ticket.commission_amount || 0)).toFixed(2)} ${currency}</span>
-                                                                <span class="text-xs text-gray-500 block">(${ticket.price} + ${ticket.commission_amount} comision)</span>
-                                                            `}
-                                                        </div>
-                                                    ` : ticket.sale_price ? `
-                                                        <div>
-                                                            <span class="line-through text-gray-400 text-sm">${ticket.price} ${currency}</span>
-                                                            <span class="font-bold text-red-600 block">${ticket.sale_price} ${currency}</span>
-                                                            ${ticket.discount_percent ? `<span class="text-xs text-red-600">-${ticket.discount_percent}%</span>` : ''}
-                                                        </div>
-                                                    ` : `
-                                                        <span class="font-bold text-primary">${ticket.price} ${currency}</span>
-                                                    `}
+                                                                <span class="font-bold text-red-600 block">${ticket.sale_price} ${currency}</span>
+                                                                ${ticket.discount_percent ? `<span class="text-xs text-red-600">-${ticket.discount_percent}%</span>` : ''}
+                                                            </div>
+                                                        ` : `
+                                                            <span class="font-bold text-primary">${ticket.price} ${currency}</span>
+                                                        `}
+                                                    </div>
                                                 </div>
                                             </div>
+                                            
+                                            
                                             ${ticket.status === 'active' && available > 0 ? `
                                             <div class="flex items-center justify-between mt-3">
                                                 <div class="flex items-center gap-2">
@@ -1671,41 +1710,49 @@ export class Router {
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
                                                         </svg>
                                                     </button>
-                                                    <span class="ticket-qty-display w-12 text-center font-semibold" data-ticket-id="${ticket.id}" data-price="${ticket.sale_price || ticket.price}" data-base-price="${ticket.price}" data-currency="${currency}" data-bulk-discounts='${JSON.stringify(ticket.bulk_discounts || [])}' data-commission-rate="${commissionInfo?.rate || 0}" data-has-commission-on-top="${hasCommissionOnTop}">0</span>
+                                                    <span class="ticket-qty-display w-12 text-center font-semibold text-primary" data-ticket-id="${ticket.id}" data-price="${ticket.sale_price || ticket.price}" data-base-price="${ticket.price}" data-currency="${currency}" data-bulk-discounts='${JSON.stringify(ticket.bulk_discounts || [])}' data-commission-rate="${commissionInfo?.rate || 0}" data-has-commission-on-top="${hasCommissionOnTop}">0</span>
                                                     <button class="ticket-plus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-ticket-id="${ticket.id}" data-max="${maxQty}">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                                                         </svg>
                                                     </button>
                                                 </div>
-                                                <span class="text-sm text-gray-500">${available} disponibile</span>
+                                                <span class="text-xs text-gray-500">${available} disponibile</span>
                                             </div>
                                             ` : `
                                                 <p class="text-sm text-gray-500 mt-2">${ticket.status !== 'active' ? 'Indisponibil' : 'Stoc epuizat'}</p>
                                             `}
+                                            <div class="ticket-bundle-container" data-ticket-id="${ticket.id}"></div>
                                         </div>
                                     `}).join('')}
                                 </div>
 
-                                <div class="border-t pt-4 mb-4">
-                                    <div class="flex justify-between items-center text-lg font-bold">
-                                        <span>Total</span>
-                                        <span id="cart-total-price">0 ${event.currency || 'RON'}</span>
+                                <div class="bg-white p-4">
+                                    <div class="border-t pt-4 mb-4">
+                                        <div class="flex justify-between items-center text-lg font-bold">
+                                            <span>Total</span>
+                                            <span id="cart-total-price">0 ${event.currency || 'RON'}</span>
+                                        </div>
+                                        ${this.isGamificationEnabled() ? `
+                                        <div id="total-points-container" class="hidden flex justify-center mt-2">
+                                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 text-sm font-medium rounded-full">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"/></svg>
+                                                Vei câștiga <strong id="total-points-value">0</strong> puncte
+                                            </span>
+                                        </div>
+                                        ` : ''}
                                     </div>
-                                </div>
 
-                                <button id="add-to-cart-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
-                                    Adaugă în coș
-                                </button>
-                                <button id="watchlist-btn" class="w-full mt-3 py-3 border-2 border-primary text-primary font-semibold rounded-lg hover:bg-primary hover:text-white transition flex items-center justify-center gap-2" data-event-id="${event.id}">
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-                                    </svg>
-                                    <span id="watchlist-btn-text">Adaugă la favorite</span>
-                                </button>
-                                <p class="text-center text-xs text-gray-400 mt-4">
-                                    Ticketing system powered by <a href="https://tixello.com" target="_blank" class="text-primary hover:underline">Tixello</a>
-                                </p>
+                                    <button id="add-to-cart-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed" disabled>
+                                        Adaugă în coș
+                                    </button>
+                                    <button id="watchlist-btn" class="w-full mt-3 py-3 border-2 border-primary text-primary font-semibold rounded-lg hover:bg-primary hover:text-white transition flex items-center justify-center gap-2" data-event-id="${event.id}">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                                        </svg>
+                                        <span id="watchlist-btn-text">Adaugă la favorite</span>
+                                    </button>
+                                </div>
                             ` : `
                                 <p class="text-gray-500 text-center py-4">Nu sunt bilete disponibile pentru achiziție online.</p>
                             `}
@@ -1893,6 +1940,7 @@ export class Router {
                                             ` : `
                                                 <p class="text-sm text-gray-500 mt-2">${ticket.status !== 'active' ? 'Indisponibil' : 'Stoc epuizat'}</p>
                                             `}
+                                            <div class="mobile-ticket-bundle-container" data-ticket-id="${ticket.id}"></div>
                                         </div>
                                     `}).join('')}
                                 </div>
@@ -1922,6 +1970,16 @@ export class Router {
                 // Setup ticket quantity handlers
                 if (!isPastEvent) {
                     this.setupTicketHandlers();
+                }
+
+                // Fetch and display event upsells (in sidebar)
+                if (!isPastEvent && this.isShopEnabled() && event.id) {
+                    this.loadEventUpsells(event.id, event.currency || 'RON');
+                }
+
+                // Load bundled products for each ticket type
+                if (!isPastEvent && this.isShopEnabled() && event.ticket_types) {
+                    this.loadTicketTypeBundles(event.ticket_types, event.currency || 'RON');
                 }
 
                 // Setup collapsible sections for mobile
@@ -2067,6 +2125,20 @@ export class Router {
                 }
             }
             if (addBtn) (addBtn as HTMLButtonElement).disabled = !hasSelection;
+
+            // Update gamification points display
+            const pointsContainer = document.getElementById('total-points-container');
+            const pointsValue = document.getElementById('total-points-value');
+            if (pointsContainer && pointsValue) {
+                if (hasSelection && finalTotal > 0) {
+                    const totalPoints = Math.floor(finalTotal); // 1 point per RON
+                    pointsValue.textContent = totalPoints.toString();
+                    pointsContainer.classList.remove('hidden');
+                } else {
+                    pointsContainer.classList.add('hidden');
+                    pointsValue.textContent = '0';
+                }
+            }
         };
 
         // Setup + buttons
@@ -2432,26 +2504,62 @@ export class Router {
         const content = this.getContentElement();
         if (!content) return;
 
-        const cart = CartService.getCart();
-        const totals = CartService.getTotal();
+        const ticketCart = CartService.getCart();
+        const ticketTotals = CartService.getTotal();
+        const shopCount = ShopCartService.getItemCount();
 
-        if (cart.length === 0) {
+        // If both carts are empty
+        if (ticketCart.length === 0 && shopCount === 0) {
             content.innerHTML = `
                 <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
                     <svg class="w-24 h-24 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                     </svg>
                     <h1 class="text-2xl font-bold text-gray-900 mb-4">Coșul tău este gol</h1>
-                    <p class="text-gray-600 mb-8">Explorează evenimentele noastre și adaugă bilete în coș.</p>
-                    <a href="/events" class="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition inline-block">
-                        Vezi evenimente
-                    </a>
+                    <p class="text-gray-600 mb-8">Explorează evenimentele noastre și adaugă bilete sau produse în coș.</p>
+                    <div class="flex gap-4 justify-center">
+                        <a href="/events" class="px-6 py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition inline-block">
+                            Vezi evenimente
+                        </a>
+                        <a href="/shop" class="px-6 py-3 bg-gray-800 text-white font-semibold rounded-lg hover:bg-gray-700 transition inline-block">
+                            Vezi magazin
+                        </a>
+                    </div>
                 </div>
             `;
             return;
         }
 
-        const cartItemsHtml = cart.map((item, index) => {
+        // Use combined cart rendering
+        this.renderCombinedCart(ticketCart, ticketTotals);
+    }
+
+    private async renderCombinedCart(ticketCart: CartItem[], ticketTotals: any): Promise<void> {
+        const content = this.getContentElement();
+        if (!content) return;
+
+        // Fetch shop cart from API
+        let shopCart: any = null;
+        try {
+            const sessionId = localStorage.getItem('shop_session_id');
+            if (sessionId) {
+                const shopResponse = await this.fetchApi('/shop/cart', {}, {
+                    headers: { 'X-Session-ID': sessionId }
+                });
+                if (shopResponse.success) {
+                    shopCart = shopResponse.data;
+                    // Sync cart count
+                    if (shopCart?.item_count !== undefined) {
+                        ShopCartService.setItemCount(shopCart.item_count);
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('Could not fetch shop cart');
+        }
+
+        // Render ticket items
+        const ticketItemsHtml = ticketCart.map((item, index) => {
             // Use sale price if available, otherwise base price (same as getTotal)
             const ticketPrice = item.salePrice || item.price;
             const result = CartService.calculateBulkDiscount(item.quantity, ticketPrice, item.bulkDiscounts);
@@ -2515,6 +2623,66 @@ export class Router {
             </div>
         `}).join('');
 
+        // Render shop items with attributes
+        const shopItemsHtml = shopCart?.items?.map((item: any) => {
+            // Render attributes as small badges
+            const attributesHtml = item.attributes?.length > 0
+                ? `<div class="flex flex-wrap gap-2 mt-1">
+                    ${item.attributes.map((attr: any) => `
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                            ${attr.color_hex ? `<span class="w-3 h-3 rounded-full mr-1" style="background-color: ${attr.color_hex}"></span>` : ''}
+                            ${attr.name}: ${attr.value}
+                        </span>
+                    `).join('')}
+                </div>`
+                : '';
+
+            return `
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex gap-4">
+                    <img src="${item.image_url || '/images/placeholder.png'}" alt="${item.title}" class="w-20 h-20 object-cover rounded-lg">
+                    <div class="flex-1">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-semibold text-gray-900">${item.title}</h3>
+                                ${attributesHtml}
+                                <p class="text-xs text-gray-400 mt-1">SKU: ${item.sku || '-'}</p>
+                            </div>
+                            <button class="shop-remove-item-btn text-red-600 hover:text-red-700" data-item-id="${item.id}">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="flex justify-between items-center mt-3">
+                            <div class="flex items-center gap-3">
+                                <button class="shop-qty-minus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-item-id="${item.id}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>
+                                    </svg>
+                                </button>
+                                <span class="shop-qty-display w-12 text-center font-semibold" data-item-id="${item.id}">${item.quantity}</span>
+                                <button class="shop-qty-plus w-8 h-8 flex items-center justify-center border border-gray-300 rounded hover:bg-gray-100" data-item-id="${item.id}">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-bold text-gray-900">${item.total.toFixed(2)} ${shopCart.currency}</div>
+                                <div class="text-xs text-gray-500">${item.unit_price.toFixed(2)} × ${item.quantity}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `}).join('') || '';
+
+        // Calculate combined totals
+        const shopTotal = shopCart?.total || 0;
+        const currency = ticketTotals.currency || shopCart?.currency || 'RON';
+        const grandTotal = ticketTotals.total + shopTotal;
+
         content.innerHTML = `
             <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div class="flex justify-between items-center mb-8">
@@ -2524,7 +2692,18 @@ export class Router {
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div class="lg:col-span-2 space-y-4">
-                        ${cartItemsHtml}
+                        ${ticketCart.length > 0 ? `
+                            <h2 class="text-lg font-semibold text-gray-700 mb-2">Bilete</h2>
+                            ${ticketItemsHtml}
+                        ` : ''}
+
+                        ${shopCart?.items?.length > 0 ? `
+                            <h2 class="text-lg font-semibold text-gray-700 mb-2 ${ticketCart.length > 0 ? 'mt-8' : ''}">Produse magazin</h2>
+                            ${shopItemsHtml}
+                        ` : ''}
+
+                        <!-- Upsells container - loaded dynamically -->
+                        <div id="cart-upsells-container"></div>
                     </div>
 
                     <div class="lg:col-span-1">
@@ -2532,27 +2711,52 @@ export class Router {
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Sumar comandă</h2>
 
                             <div class="space-y-2 mb-4 pb-4 border-b">
-                                <div class="flex justify-between text-gray-600">
-                                    <span>Subtotal bilete</span>
-                                    <span>${totals.subtotal.toFixed(2)} ${totals.currency}</span>
+                                ${ticketCart.length > 0 ? `
+                                <div class="flex justify-between text-gray-600 group relative">
+                                    <span class="${ticketTotals.hasCommission ? 'cursor-help border-b border-dotted border-gray-400' : ''}">
+                                        Subtotal bilete
+                                        ${ticketTotals.hasCommission ? `
+                                        <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                                            Valoare bilete: ${ticketTotals.subtotal.toFixed(2)} ${ticketTotals.currency}<br>
+                                            Comision Tixello: +${ticketTotals.commission.toFixed(2)} ${ticketTotals.currency}
+                                        </span>
+                                        ` : ''}
+                                    </span>
+                                    <span>${ticketTotals.total.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
-                                ${totals.bulkDiscount > 0 ? `
+                                ${ticketTotals.bulkDiscount > 0 ? `
                                 <div class="flex justify-between text-green-600">
                                     <span>Discount bulk</span>
-                                    <span>-${totals.bulkDiscount.toFixed(2)} ${totals.currency}</span>
+                                    <span>-${ticketTotals.bulkDiscount.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${totals.couponDiscount > 0 ? `
+                                ${ticketTotals.couponDiscount > 0 ? `
                                 <div class="flex justify-between text-green-600">
-                                    <span>Cod promoțional${totals.couponName ? ` (${totals.couponName})` : ''}</span>
-                                    <span>-${totals.couponDiscount.toFixed(2)} ${totals.currency}</span>
+                                    <span>Cod promoțional${ticketTotals.couponName ? ` (${ticketTotals.couponName})` : ''}</span>
+                                    <span>-${ticketTotals.couponDiscount.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${totals.hasCommission ? `
-                                <div class="flex justify-between text-gray-600">
-                                    <span>Comision Tixello</span>
-                                    <span>+${totals.commission.toFixed(2)} ${totals.currency}</span>
+                                ` : ''}
+
+                                ${shopCart?.items?.length > 0 ? `
+                                <div class="flex justify-between text-gray-600 group relative">
+                                    <span class="${shopCart.commission_rate > 0 ? 'cursor-help border-b border-dotted border-gray-400' : ''}">
+                                        Subtotal produse
+                                        ${shopCart.commission_rate > 0 ? `
+                                        <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                                            Valoare produse: ${parseFloat(shopCart.subtotal).toFixed(2)} ${shopCart.currency}<br>
+                                            Comision Tixello: ${parseFloat(shopCart.commission_display || shopCart.commission).toFixed(2)} ${shopCart.currency}${shopCart.commission_mode === 'included' ? ' (inclus)' : ''}
+                                        </span>
+                                        ` : ''}
+                                    </span>
+                                    <span>${parseFloat(shopCart.total).toFixed(2)} ${shopCart.currency}</span>
                                 </div>
+                                ${shopCart.discount > 0 ? `
+                                <div class="flex justify-between text-green-600">
+                                    <span>Discount${shopCart.coupon?.code ? ` (${shopCart.coupon.code})` : ''}</span>
+                                    <span>-${shopCart.discount.toFixed(2)} ${shopCart.currency}</span>
+                                </div>
+                                ` : ''}
                                 ` : ''}
                             </div>
 
@@ -2578,11 +2782,14 @@ export class Router {
                                 </div>
                             </div>
 
-                            ${this.isGamificationEnabled() ? this.renderPointsSection(totals.total, totals.currency) : ''}
+                            ${this.isGamificationEnabled() ? this.renderPointsSection(grandTotal, currency) : ''}
+
+                            <!-- Taxes (including VAT for VAT payer tenants) -->
+                            <div id="cart-taxes-section" class="mb-4 pb-4 border-b hidden"></div>
 
                             <div class="flex justify-between items-center mb-6">
                                 <span class="text-lg font-semibold">Total</span>
-                                <span class="text-2xl font-bold text-primary" id="cart-total-amount">${totals.total.toFixed(2)} ${totals.currency}</span>
+                                <span class="text-2xl font-bold text-primary" id="cart-total-amount">${grandTotal.toFixed(2)} ${currency}</span>
                             </div>
 
                             <button id="checkout-btn" class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition">
@@ -2603,6 +2810,117 @@ export class Router {
         `;
 
         this.setupCartHandlers();
+
+        // Load upsells from events in cart
+        if (this.isShopEnabled() && ticketCart.length > 0) {
+            this.loadCartUpsells(ticketCart, shopCart, ticketTotals.currency);
+        }
+
+        // Load taxes (including VAT for VAT payer tenants)
+        this.loadCartTaxes(grandTotal, currency);
+    }
+
+    private async loadCartTaxes(amount: number, currency: string): Promise<void> {
+        const container = document.getElementById('cart-taxes-section');
+        const totalAmountEl = document.getElementById('cart-total-amount');
+        if (!container) return;
+
+        try {
+            const response = await this.fetchApi(`/taxes/checkout?amount=${amount}&currency=${currency}`);
+            if (response.success && response.data) {
+                const { taxes, is_vat_payer, vat_amount, vat_rate, taxes_to_add } = response.data;
+
+                // Only show section if tenant is VAT payer or there are visible taxes
+                if ((is_vat_payer && vat_amount > 0) || taxes?.length > 0) {
+                    container.classList.remove('hidden');
+
+                    let taxHtml = '<div class="space-y-2">';
+
+                    // Show VAT info prominently for VAT payer tenants (informational only - included in price)
+                    if (is_vat_payer && vat_amount > 0) {
+                        taxHtml += `
+                            <div class="flex justify-between text-gray-500 text-sm">
+                                <span class="flex items-center gap-1">
+                                    TVA inclus (${vat_rate}%)
+                                    <span class="cursor-help text-gray-400" title="Taxa pe valoarea adaugata inclusa in pret">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </span>
+                                </span>
+                                <span>${vat_amount.toFixed(2)} ${currency}</span>
+                            </div>
+                        `;
+                    }
+
+                    // Show other taxes (non-VAT)
+                    taxes?.filter((tax: any) => !tax.is_vat).forEach((tax: any) => {
+                        taxHtml += `
+                            <div class="flex justify-between text-gray-600">
+                                <span class="flex items-center gap-1">
+                                    ${tax.name}
+                                    ${tax.explanation ? `
+                                    <span class="cursor-help text-gray-400" title="${tax.explanation}">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </span>
+                                    ` : ''}
+                                </span>
+                                <span>${tax.is_added_to_price ? '+' : ''}${tax.tax_amount.toFixed(2)} ${currency}</span>
+                            </div>
+                        `;
+                    });
+
+                    taxHtml += '</div>';
+                    container.innerHTML = taxHtml;
+
+                    // Update total if there are taxes to add
+                    if (taxes_to_add > 0 && totalAmountEl) {
+                        const newTotal = amount + taxes_to_add;
+                        totalAmountEl.textContent = `${newTotal.toFixed(2)} ${currency}`;
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('Could not load cart taxes:', e);
+        }
+    }
+
+    private async loadCartUpsells(ticketCart: CartItem[], shopCart: any, currency: string): Promise<void> {
+        // Get unique event IDs from ticket cart
+        const eventIds = [...new Set(ticketCart.map(item => item.eventId))];
+        if (eventIds.length === 0) return;
+
+        // Get already added product IDs from shop cart
+        const addedProductIds = new Set(shopCart?.items?.map((item: any) => item.product_id) || []);
+
+        // Fetch upsells for all events
+        const allUpsells: any[] = [];
+        for (const eventId of eventIds) {
+            const upsells = await this.fetchEventUpsells(eventId);
+            allUpsells.push(...upsells);
+        }
+
+        // Filter out products already in cart and deduplicate by product ID
+        const seenProductIds = new Set<string>();
+        const filteredUpsells = allUpsells.filter(item => {
+            const productId = item.product?.id;
+            if (!productId || addedProductIds.has(productId) || seenProductIds.has(productId)) {
+                return false;
+            }
+            seenProductIds.add(productId);
+            return item.product?.in_stock;
+        });
+
+        if (filteredUpsells.length === 0) return;
+
+        // Render upsells section
+        const container = document.getElementById('cart-upsells-container');
+        if (container) {
+            container.innerHTML = this.renderCartUpsellsSection(filteredUpsells, currency);
+            this.setupUpsellHandlers();
+        }
     }
 
     private setupCartHandlers(): void {
@@ -2649,9 +2967,22 @@ export class Router {
 
         const clearBtn = document.getElementById('clear-cart-btn');
         if (clearBtn) {
-            clearBtn.addEventListener('click', () => {
+            clearBtn.addEventListener('click', async () => {
                 if (confirm('Sigur vrei să golești coșul?')) {
                     CartService.clearCart();
+                    // Also clear shop cart
+                    const sessionId = localStorage.getItem('shop_session_id');
+                    if (sessionId) {
+                        try {
+                            await this.fetchApi('/shop/cart', {}, {
+                                method: 'DELETE',
+                                headers: { 'X-Session-ID': sessionId }
+                            });
+                            ShopCartService.clear();
+                        } catch (e) {
+                            console.log('Could not clear shop cart');
+                        }
+                    }
                     this.updateCartBadge();
                     this.renderCart();
                 }
@@ -2665,11 +2996,84 @@ export class Router {
             });
         }
 
+        // Shop cart handlers
+        this.setupShopCartHandlers();
+
         // Discount code handlers
         this.setupDiscountCodeHandlers();
 
         // Gamification points handlers
         this.setupPointsHandlers();
+    }
+
+    private setupShopCartHandlers(): void {
+        const sessionId = localStorage.getItem('shop_session_id');
+        if (!sessionId) return;
+
+        // Shop remove item buttons
+        document.querySelectorAll('.shop-remove-item-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const itemId = target.dataset.itemId;
+                if (itemId) {
+                    try {
+                        await this.fetchApi(`/shop/cart/items/${itemId}`, {}, {
+                            method: 'DELETE',
+                            headers: { 'X-Session-ID': sessionId }
+                        });
+                        this.renderCart();
+                    } catch (e) {
+                        console.error('Failed to remove shop item:', e);
+                    }
+                }
+            });
+        });
+
+        // Shop quantity plus buttons
+        document.querySelectorAll('.shop-qty-plus').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const itemId = target.dataset.itemId;
+                const qtyDisplay = document.querySelector(`.shop-qty-display[data-item-id="${itemId}"]`);
+                const currentQty = parseInt(qtyDisplay?.textContent || '1');
+
+                if (itemId) {
+                    try {
+                        await this.fetchApi(`/shop/cart/items/${itemId}`, {}, {
+                            method: 'PUT',
+                            headers: { 'X-Session-ID': sessionId },
+                            body: JSON.stringify({ quantity: currentQty + 1 })
+                        });
+                        this.renderCart();
+                    } catch (e) {
+                        console.error('Failed to update shop item:', e);
+                    }
+                }
+            });
+        });
+
+        // Shop quantity minus buttons
+        document.querySelectorAll('.shop-qty-minus').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const target = e.currentTarget as HTMLElement;
+                const itemId = target.dataset.itemId;
+                const qtyDisplay = document.querySelector(`.shop-qty-display[data-item-id="${itemId}"]`);
+                const currentQty = parseInt(qtyDisplay?.textContent || '1');
+
+                if (itemId && currentQty > 1) {
+                    try {
+                        await this.fetchApi(`/shop/cart/items/${itemId}`, {}, {
+                            method: 'PUT',
+                            headers: { 'X-Session-ID': sessionId },
+                            body: JSON.stringify({ quantity: currentQty - 1 })
+                        });
+                        this.renderCart();
+                    } catch (e) {
+                        console.error('Failed to update shop item:', e);
+                    }
+                }
+            });
+        });
     }
 
     private setupDiscountCodeHandlers(): void {
@@ -2792,13 +3196,617 @@ export class Router {
     }
 
     // ========================================
+    // EVENT UPSELLS & BUNDLES
+    // ========================================
+
+    private isShopEnabled(): boolean {
+        try {
+            const modules = this.config?.modules || (window as any).TIXELLO?.config?.modules;
+            return modules?.includes('shop');
+        } catch {
+            return false;
+        }
+    }
+
+    private async fetchEventUpsells(eventId: number): Promise<any[]> {
+        if (!this.isShopEnabled()) return [];
+        try {
+            const response = await this.fetchApi(`/shop/events/${eventId}/upsells`);
+            return response.success ? (response.data?.upsells || []) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    private async fetchTicketTypeBundles(ticketTypeId: number): Promise<any[]> {
+        if (!this.isShopEnabled()) return [];
+        try {
+            const response = await this.fetchApi(`/shop/ticket-types/${ticketTypeId}/bundles`);
+            return response.success ? (response.data?.bundles || []) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    private renderEventUpsellsSection(upsells: any[], currency: string): string {
+        if (!upsells || upsells.length === 0) return '';
+
+        return `
+            <div class="mt-6 pt-6 border-t">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    Adaugă la comandă
+                </h3>
+                <div class="space-y-3" id="event-upsells-list">
+                    ${upsells.map(item => {
+                        const product = item.product;
+                        const price = product.price_cents / 100;
+                        const originalPrice = product.original_price_cents / 100;
+                        const isOnSale = product.is_on_sale && originalPrice > price;
+                        const imageUrl = product.image_url || '/storage/shop/placeholder.png';
+                        const productData = JSON.stringify(product).replace(/"/g, '&quot;');
+
+                        return `
+                        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                            <img src="${imageUrl}" alt="${product.title}"
+                                 class="w-14 h-14 object-cover rounded-lg cursor-pointer hover:opacity-80 transition product-detail-trigger"
+                                 data-product='${productData}'
+                                 data-currency="${currency}">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="font-medium text-gray-900 truncate cursor-pointer hover:text-primary transition product-detail-trigger"
+                                    data-product='${productData}'
+                                    data-currency="${currency}">${product.title}</h4>
+                                <div class="flex items-center gap-2">
+                                    ${isOnSale ? `<span class="text-xs text-gray-400 line-through">${originalPrice.toFixed(2)} ${currency}</span>` : ''}
+                                    <span class="text-sm font-semibold text-primary">${price.toFixed(2)} ${currency}</span>
+                                </div>
+                            </div>
+                            <button class="upsell-add-btn px-3 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition flex-shrink-0"
+                                    data-product-id="${product.id}"
+                                    ${!product.in_stock ? 'disabled' : ''}>
+                                ${product.in_stock ? 'Adaugă' : 'Stoc epuizat'}
+                            </button>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    private renderCartUpsellsSection(upsells: any[], currency: string): string {
+        if (!upsells || upsells.length === 0) return '';
+
+        return `
+            <div class="bg-white rounded-lg shadow p-6 mt-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                    </svg>
+                    Ți-ar putea plăcea
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="cart-upsells-grid">
+                    ${upsells.slice(0, 6).map(item => {
+                        const product = item.product;
+                        const price = product.price_cents / 100;
+                        const originalPrice = product.original_price_cents / 100;
+                        const isOnSale = product.is_on_sale && originalPrice > price;
+                        const imageUrl = product.image_url || '/storage/shop/placeholder.png';
+                        const productData = JSON.stringify(product).replace(/"/g, '&quot;');
+
+                        return `
+                        <div class="flex flex-col bg-gray-50 rounded-lg overflow-hidden hover:shadow-md transition">
+                            <img src="${imageUrl}" alt="${product.title}"
+                                 class="w-full h-32 object-cover cursor-pointer hover:opacity-80 transition product-detail-trigger"
+                                 data-product='${productData}'
+                                 data-currency="${currency}">
+                            <div class="p-3 flex-1 flex flex-col">
+                                <h4 class="font-medium text-gray-900 text-sm mb-1 line-clamp-2 cursor-pointer hover:text-primary transition product-detail-trigger"
+                                    data-product='${productData}'
+                                    data-currency="${currency}">${product.title}</h4>
+                                <div class="flex items-center gap-2 mb-3">
+                                    ${isOnSale ? `<span class="text-xs text-gray-400 line-through">${originalPrice.toFixed(2)}</span>` : ''}
+                                    <span class="font-semibold text-primary">${price.toFixed(2)} ${currency}</span>
+                                </div>
+                                <button class="cart-upsell-add-btn mt-auto w-full py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-dark transition"
+                                        data-product-id="${product.id}"
+                                        ${!product.in_stock ? 'disabled' : ''}>
+                                    ${product.in_stock ? 'Adaugă în coș' : 'Stoc epuizat'}
+                                </button>
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    private renderBundleInfo(bundles: any[]): string {
+        if (!bundles || bundles.length === 0) return '';
+
+        return `
+            <div class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                    </svg>
+                    <span class="text-sm font-medium text-green-800">Include produse bonus:</span>
+                </div>
+                <div class="space-y-1">
+                    ${bundles.map(b => `
+                        <div class="flex items-center gap-2 text-sm text-green-700">
+                            <span class="font-medium">${b.quantity_included}x</span>
+                            <span>${b.product.title}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    private async addUpsellToShopCart(productId: string): Promise<boolean> {
+        try {
+            let sessionId = localStorage.getItem('shop_session_id');
+            if (!sessionId) {
+                sessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + Date.now();
+                localStorage.setItem('shop_session_id', sessionId);
+            }
+
+            const response = await this.postApi('/shop/cart/items', {
+                product_id: productId,
+                quantity: 1
+            }, {
+                'X-Session-ID': sessionId
+            });
+
+            if (response.success) {
+                ShopCartService.setItemCount(response.data?.item_count || ShopCartService.getItemCount() + 1);
+                this.updateShopCartBadge();
+                return true;
+            }
+            return false;
+        } catch {
+            return false;
+        }
+    }
+
+    private async loadEventUpsells(eventId: number, currency: string): Promise<void> {
+        const upsells = await this.fetchEventUpsells(eventId);
+        if (upsells.length === 0) return;
+
+        // Find the sidebar panel to inject upsells
+        const sidebar = document.querySelector('.lg\\:col-span-1 .bg-white.rounded-lg.shadow-lg.sticky');
+        if (!sidebar) return;
+
+        // Find the watchlist button or the last element before footer
+        const watchlistBtn = document.getElementById('watchlist-btn');
+        const tixelloFooter = sidebar.querySelector('.text-center.text-xs.text-gray-400.mt-4');
+
+        // Create upsells container
+        const upsellsContainer = document.createElement('div');
+        upsellsContainer.id = 'event-upsells-container';
+        upsellsContainer.innerHTML = this.renderEventUpsellsSection(upsells, currency);
+
+        // Insert before footer or append to sidebar
+        if (tixelloFooter) {
+            tixelloFooter.parentNode?.insertBefore(upsellsContainer, tixelloFooter);
+        } else if (watchlistBtn) {
+            watchlistBtn.parentNode?.insertBefore(upsellsContainer, watchlistBtn.nextSibling);
+        } else {
+            sidebar.appendChild(upsellsContainer);
+        }
+
+        // Setup handlers for upsell buttons
+        this.setupUpsellHandlers();
+    }
+
+    private showProductDetailModal(product: any, currency: string): void {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('product-detail-modal');
+        if (existingModal) existingModal.remove();
+
+        const price = product.price_cents / 100;
+        const originalPrice = product.original_price_cents / 100;
+        const isOnSale = product.is_on_sale && originalPrice > price;
+        const imageUrl = product.image_url || '/storage/shop/placeholder.png';
+        const gallery = product.gallery || [];
+        const allImages = [imageUrl, ...gallery.filter((img: string) => img !== imageUrl)];
+
+        const modalHtml = `
+            <div id="product-detail-modal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                    <!-- Overlay -->
+                    <div class="product-modal-overlay fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+
+                    <!-- Modal panel -->
+                    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                        <!-- Close button -->
+                        <button class="product-modal-close absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+
+                        <div class="p-6">
+                            <!-- Image gallery -->
+                            <div class="mb-6">
+                                <img id="modal-main-image" src="${imageUrl}" alt="${product.title}" class="w-full h-64 sm:h-80 object-contain rounded-lg bg-gray-100">
+                                ${allImages.length > 1 ? `
+                                <div class="flex gap-2 mt-3 overflow-x-auto pb-2">
+                                    ${allImages.map((img: string, idx: number) => `
+                                        <img src="${img}" alt="${product.title} ${idx + 1}"
+                                             class="modal-gallery-thumb w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${idx === 0 ? 'border-primary' : 'border-transparent'} hover:border-primary transition"
+                                             data-image="${img}">
+                                    `).join('')}
+                                </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- Product info -->
+                            <h2 class="text-2xl font-bold text-gray-900 mb-2">${product.title}</h2>
+
+                            <div class="flex items-center gap-3 mb-4">
+                                ${isOnSale ? `<span class="text-lg text-gray-400 line-through">${originalPrice.toFixed(2)} ${currency}</span>` : ''}
+                                <span class="text-2xl font-bold text-primary">${price.toFixed(2)} ${currency}</span>
+                                ${isOnSale ? `<span class="px-2 py-1 bg-red-100 text-red-700 text-sm font-medium rounded">Reducere!</span>` : ''}
+                            </div>
+
+                            ${product.short_description ? `
+                            <p class="text-gray-600 mb-4">${product.short_description}</p>
+                            ` : ''}
+
+                            ${product.description ? `
+                            <div class="prose prose-sm max-w-none text-gray-700 mb-6">${product.description}</div>
+                            ` : ''}
+
+                            <!-- Add to cart button -->
+                            <button class="modal-add-to-cart-btn w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition"
+                                    data-product-id="${product.id}"
+                                    ${!product.in_stock ? 'disabled' : ''}>
+                                ${product.in_stock ? 'Adaugă în coș' : 'Stoc epuizat'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        const modal = document.getElementById('product-detail-modal');
+        if (!modal) return;
+
+        // Close handlers
+        const closeModal = () => modal.remove();
+
+        modal.querySelector('.product-modal-overlay')?.addEventListener('click', closeModal);
+        modal.querySelector('.product-modal-close')?.addEventListener('click', closeModal);
+
+        // Gallery thumbnails
+        modal.querySelectorAll('.modal-gallery-thumb').forEach(thumb => {
+            thumb.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLImageElement;
+                const mainImage = document.getElementById('modal-main-image') as HTMLImageElement;
+                if (mainImage && target.dataset.image) {
+                    mainImage.src = target.dataset.image;
+                    // Update active border
+                    modal.querySelectorAll('.modal-gallery-thumb').forEach(t => {
+                        t.classList.remove('border-primary');
+                        t.classList.add('border-transparent');
+                    });
+                    target.classList.remove('border-transparent');
+                    target.classList.add('border-primary');
+                }
+            });
+        });
+
+        // Add to cart from modal
+        const addBtn = modal.querySelector('.modal-add-to-cart-btn') as HTMLButtonElement;
+        if (addBtn) {
+            addBtn.addEventListener('click', async () => {
+                const productId = addBtn.dataset.productId;
+                if (!productId) return;
+
+                addBtn.disabled = true;
+                addBtn.textContent = 'Se adaugă...';
+
+                const success = await this.addUpsellToShopCart(productId);
+
+                if (success) {
+                    addBtn.textContent = 'Adăugat în coș ✓';
+                    addBtn.classList.remove('bg-primary', 'hover:bg-primary-dark');
+                    addBtn.classList.add('bg-green-600');
+                    setTimeout(() => closeModal(), 1500);
+                } else {
+                    addBtn.textContent = 'Eroare - Încearcă din nou';
+                    addBtn.disabled = false;
+                }
+            });
+        }
+
+        // Close on Escape
+        const escHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    }
+
+    private async loadTicketTypeBundles(ticketTypes: any[], currency: string): Promise<void> {
+        for (const ticket of ticketTypes) {
+            try {
+                const bundles = await this.fetchTicketTypeBundles(ticket.id);
+                if (bundles && bundles.length > 0) {
+                    // Find desktop container
+                    const desktopContainer = document.querySelector(`.ticket-bundle-container[data-ticket-id="${ticket.id}"]`);
+                    if (desktopContainer) {
+                        desktopContainer.innerHTML = this.renderTicketBundleDisplay(bundles, currency);
+                    }
+                    // Find mobile container
+                    const mobileContainer = document.querySelector(`.mobile-ticket-bundle-container[data-ticket-id="${ticket.id}"]`);
+                    if (mobileContainer) {
+                        mobileContainer.innerHTML = this.renderTicketBundleDisplay(bundles, currency);
+                    }
+                    // Setup click handlers for bundle product names
+                    this.setupBundleProductHandlers();
+                }
+            } catch (err) {
+                console.error(`Failed to load bundles for ticket type ${ticket.id}:`, err);
+            }
+        }
+    }
+
+    private renderTicketBundleDisplay(bundles: any[], currency: string): string {
+        return `
+            <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div class="flex items-center gap-2 mb-2">
+                    <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                    </svg>
+                    <span class="text-xs font-medium text-amber-800">Include în preț:</span>
+                </div>
+                <div class="space-y-1">
+                    ${bundles.map(b => {
+                        const product = b.product;
+                        const productData = JSON.stringify(product).replace(/"/g, '&quot;');
+                        return `
+                        <div class="flex items-center gap-2 text-xs text-amber-700">
+                            <span class="font-medium">${b.quantity_included}×</span>
+                            <span class="bundle-product-link cursor-pointer hover:text-amber-900 hover:underline transition"
+                                  data-bundle-product='${productData}'
+                                  data-currency="${currency}">${product.title}</span>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    private setupBundleProductHandlers(): void {
+        document.querySelectorAll('.bundle-product-link').forEach(el => {
+            // Remove existing listeners by cloning
+            const newEl = el.cloneNode(true);
+            el.parentNode?.replaceChild(newEl, el);
+
+            newEl.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const target = e.currentTarget as HTMLElement;
+                try {
+                    const productData = target.dataset.bundleProduct;
+                    const currency = target.dataset.currency || 'RON';
+                    if (productData) {
+                        const product = JSON.parse(productData.replace(/&quot;/g, '"'));
+                        this.showBundleProductModal(product, currency);
+                    }
+                } catch (err) {
+                    console.error('Failed to parse bundle product data:', err);
+                }
+            });
+        });
+    }
+
+    private showBundleProductModal(product: any, currency: string): void {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('bundle-product-modal');
+        if (existingModal) existingModal.remove();
+
+        const imageUrl = product.image_url || '/storage/shop/placeholder.png';
+        const gallery = product.gallery || [];
+        const allImages = [imageUrl, ...gallery.filter((img: string) => img !== imageUrl)];
+
+        const modalHtml = `
+            <div id="bundle-product-modal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                    <!-- Overlay -->
+                    <div class="bundle-modal-overlay fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+
+                    <!-- Modal panel -->
+                    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                        <!-- Close button -->
+                        <button class="bundle-modal-close absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+
+                        <div class="p-6">
+                            <!-- Image gallery -->
+                            <div class="mb-4">
+                                <img id="bundle-modal-main-image" src="${imageUrl}" alt="${product.title}" class="w-full h-48 sm:h-64 object-contain rounded-lg bg-gray-100">
+                                ${allImages.length > 1 ? `
+                                <div class="flex gap-2 mt-3 overflow-x-auto pb-2">
+                                    ${allImages.map((img: string, idx: number) => `
+                                        <img src="${img}" alt="${product.title} ${idx + 1}"
+                                             class="bundle-modal-gallery-thumb w-14 h-14 object-cover rounded-lg cursor-pointer border-2 ${idx === 0 ? 'border-primary' : 'border-transparent'} hover:border-primary transition"
+                                             data-image="${img}">
+                                    `).join('')}
+                                </div>
+                                ` : ''}
+                            </div>
+
+                            <!-- Product info -->
+                            <h2 class="text-xl font-bold text-gray-900 mb-2">${product.title}</h2>
+
+                            <div class="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 text-amber-800 text-sm font-medium rounded-full mb-4">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                                </svg>
+                                Inclus în bilet
+                            </div>
+
+                            ${product.short_description ? `
+                            <p class="text-gray-600 mb-4">${product.short_description}</p>
+                            ` : ''}
+
+                            ${product.description ? `
+                            <div class="prose prose-sm max-w-none text-gray-700">${product.description}</div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        const modal = document.getElementById('bundle-product-modal');
+        if (!modal) return;
+
+        // Close handlers
+        const closeModal = () => modal.remove();
+
+        modal.querySelector('.bundle-modal-overlay')?.addEventListener('click', closeModal);
+        modal.querySelector('.bundle-modal-close')?.addEventListener('click', closeModal);
+
+        // Gallery thumbnails
+        modal.querySelectorAll('.bundle-modal-gallery-thumb').forEach(thumb => {
+            thumb.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLImageElement;
+                const mainImage = document.getElementById('bundle-modal-main-image') as HTMLImageElement;
+                if (mainImage && target.dataset.image) {
+                    mainImage.src = target.dataset.image;
+                    // Update active border
+                    modal.querySelectorAll('.bundle-modal-gallery-thumb').forEach(t => {
+                        t.classList.remove('border-primary');
+                        t.classList.add('border-transparent');
+                    });
+                    target.classList.remove('border-transparent');
+                    target.classList.add('border-primary');
+                }
+            });
+        });
+
+        // Close on Escape
+        const escHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                closeModal();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    }
+
+    private setupUpsellHandlers(): void {
+        // Product detail modal triggers
+        document.querySelectorAll('.product-detail-trigger').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const target = e.currentTarget as HTMLElement;
+                try {
+                    const productData = target.dataset.product;
+                    const currency = target.dataset.currency || 'RON';
+                    if (productData) {
+                        const product = JSON.parse(productData.replace(/&quot;/g, '"'));
+                        this.showProductDetailModal(product, currency);
+                    }
+                } catch (err) {
+                    console.error('Failed to parse product data:', err);
+                }
+            });
+        });
+
+        // Event page upsell buttons
+        document.querySelectorAll('.upsell-add-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const target = e.currentTarget as HTMLButtonElement;
+                const productId = target.dataset.productId;
+                if (!productId) return;
+
+                target.disabled = true;
+                target.textContent = 'Se adaugă...';
+
+                const success = await this.addUpsellToShopCart(productId);
+
+                if (success) {
+                    target.textContent = 'Adăugat ✓';
+                    target.classList.remove('bg-primary', 'hover:bg-primary-dark');
+                    target.classList.add('bg-green-600');
+                    setTimeout(() => {
+                        target.textContent = 'Adaugă';
+                        target.classList.remove('bg-green-600');
+                        target.classList.add('bg-primary', 'hover:bg-primary-dark');
+                        target.disabled = false;
+                    }, 2000);
+                } else {
+                    target.textContent = 'Eroare';
+                    target.disabled = false;
+                    setTimeout(() => {
+                        target.textContent = 'Adaugă';
+                    }, 2000);
+                }
+            });
+        });
+
+        // Cart page upsell buttons
+        document.querySelectorAll('.cart-upsell-add-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const target = e.currentTarget as HTMLButtonElement;
+                const productId = target.dataset.productId;
+                if (!productId) return;
+
+                target.disabled = true;
+                target.textContent = 'Se adaugă...';
+
+                const success = await this.addUpsellToShopCart(productId);
+
+                if (success) {
+                    target.textContent = 'Adăugat ✓';
+                    setTimeout(() => {
+                        this.renderCart();
+                    }, 1000);
+                } else {
+                    target.textContent = 'Eroare';
+                    setTimeout(() => {
+                        target.textContent = 'Adaugă în coș';
+                        target.disabled = false;
+                    }, 2000);
+                }
+            });
+        });
+    }
+
+    // ========================================
     // GAMIFICATION POINTS SECTION
     // ========================================
 
     private isGamificationEnabled(): boolean {
         try {
-            const config = (window as any).TIXELLO?.config;
-            return config?.modules?.includes('gamification') || config?.features?.gamification === true;
+            // Check both local config and window config
+            const modules = this.config?.modules || (window as any).TIXELLO?.config?.modules;
+            const features = this.config?.features || (window as any).TIXELLO?.config?.features;
+            return modules?.includes('gamification') || features?.gamification === true;
         } catch {
             return false;
         }
@@ -3038,6 +4046,37 @@ export class Router {
         `;
     }
 
+    private renderCommissionSection(ticketTotals: any, shopCart: any, currency: string): string {
+        const ticketCommission = ticketTotals.hasCommission ? ticketTotals.commission : 0;
+        const shopCommission = shopCart?.commission_rate > 0 ? parseFloat(shopCart.commission_display || shopCart.commission || 0) : 0;
+        const totalCommission = ticketCommission + shopCommission;
+        const shopIncluded = shopCart?.commission_mode === 'included';
+
+        if (totalCommission <= 0) return '';
+
+        let tooltipParts: string[] = [];
+        if (ticketCommission > 0) {
+            tooltipParts.push(`Bilete: +${ticketCommission.toFixed(2)} ${currency}`);
+        }
+        if (shopCommission > 0) {
+            tooltipParts.push(`Produse: ${shopIncluded ? '' : '+'}${shopCommission.toFixed(2)} ${currency}${shopIncluded ? ' (inclus)' : ''}`);
+        }
+
+        const commissionSign = (shopIncluded && ticketCommission === 0) ? '' : '+';
+
+        return `
+            <div class="flex justify-between text-gray-600 group relative">
+                <span class="cursor-help border-b border-dotted border-gray-400">
+                    Comisioane Tixello
+                    <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                        ${tooltipParts.join('<br>')}
+                    </span>
+                </span>
+                <span>${commissionSign}${totalCommission.toFixed(2)} ${currency}</span>
+            </div>
+        `;
+    }
+
     private getCheckoutFinalTotal(cartTotal: number, currency: string): string {
         let finalTotal = cartTotal;
 
@@ -3055,13 +4094,58 @@ export class Router {
         const content = this.getContentElement();
         if (!content) return;
 
-        const cart = CartService.getCart();
-        const totals = CartService.getTotal();
+        const ticketCart = CartService.getCart();
+        const ticketTotals = CartService.getTotal();
 
-        if (cart.length === 0) {
+        // Fetch shop cart
+        let shopCart: any = null;
+        try {
+            const sessionId = localStorage.getItem('shop_session_id');
+            if (sessionId) {
+                const shopResponse = await this.fetchApi('/shop/cart', {}, {
+                    headers: { 'X-Session-ID': sessionId }
+                });
+                if (shopResponse.success && shopResponse.data?.items?.length > 0) {
+                    shopCart = shopResponse.data;
+                    ShopCartService.setItemCount(shopCart.item_count);
+                }
+            }
+        } catch (e) {
+            console.log('Could not fetch shop cart');
+        }
+
+        // Check if cart is empty
+        if (ticketCart.length === 0 && (!shopCart || shopCart.items.length === 0)) {
             this.navigate('/cart');
             return;
         }
+
+        // Calculate combined totals
+        const shopTotal = parseFloat(shopCart?.total) || 0;
+        const currency = ticketTotals.currency || shopCart?.currency || 'RON';
+        const grandTotal = ticketTotals.total + shopTotal;
+        const hasPhysicalProducts = shopCart?.has_physical_products || false;
+
+        // Check if any bundle products attached to tickets are physical
+        let bundlesHavePhysicalProducts = false;
+        if (this.isShopEnabled() && ticketCart.length > 0) {
+            const ticketTypeIds = [...new Set(ticketCart.map(item => item.ticketTypeId))];
+            for (const ticketTypeId of ticketTypeIds) {
+                try {
+                    const bundles = await this.fetchTicketTypeBundles(ticketTypeId);
+                    if (bundles.some(b => b.product?.type === 'physical')) {
+                        bundlesHavePhysicalProducts = true;
+                        break;
+                    }
+                } catch (e) {
+                    // Ignore errors, continue checking
+                }
+            }
+        }
+        const needsShipping = hasPhysicalProducts || bundlesHavePhysicalProducts;
+
+        // Store shop cart total for shipping calculation
+        localStorage.setItem('shop_cart_total', shopTotal.toString());
 
         // Fetch user profile if logged in
         let userData: any = null;
@@ -3077,7 +4161,8 @@ export class Router {
         }
 
         // Prepare pre-filled values
-        const customerName = userData ? `${userData.first_name || ''} ${userData.last_name || ''}`.trim() : '';
+        const customerFirstName = userData?.first_name || '';
+        const customerLastName = userData?.last_name || '';
         const customerEmail = userData?.email || '';
         const customerPhone = userData?.phone || '';
 
@@ -3091,20 +4176,35 @@ export class Router {
                             <div class="bg-white rounded-lg shadow p-6">
                                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Date personale</h2>
                                 <div class="space-y-4">
-                                    <div>
-                                        <label for="customer_name" class="block text-sm font-medium text-gray-700 mb-1">
-                                            Nume complet *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            id="customer_name"
-                                            name="customer_name"
-                                            required
-                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                                            placeholder="Ion Popescu"
-                                            value="${customerName}"
-                                            value="${customerName}"
-                                        >
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="customer_first_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Prenume *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="customer_first_name"
+                                                name="customer_first_name"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="Ion"
+                                                value="${customerFirstName}"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label for="customer_last_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Nume *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="customer_last_name"
+                                                name="customer_last_name"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="Popescu"
+                                                value="${customerLastName}"
+                                            >
+                                        </div>
                                     </div>
                                     <div>
                                         <label for="customer_email" class="block text-sm font-medium text-gray-700 mb-1">
@@ -3118,7 +4218,6 @@ export class Router {
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                             placeholder="ion@example.com"
                                             value="${customerEmail}"
-                                            value="${customerEmail}"
                                         >
                                     </div>
                                     <div>
@@ -3131,7 +4230,6 @@ export class Router {
                                             name="customer_phone"
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                             placeholder="0722123456"
-                                            value="${customerPhone}"
                                             value="${customerPhone}"
                                         >
                                     </div>
@@ -3165,6 +4263,149 @@ export class Router {
                                     </div>
                                 </div>
                             </div>
+
+                            ${needsShipping ? `
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Adresa de livrare</h2>
+                                <p class="text-sm text-gray-600 mb-4">Completează adresa pentru livrarea produselor fizice.</p>
+                                <div class="space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="shipping_first_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Prenume *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="shipping_first_name"
+                                                name="shipping_first_name"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="Ion"
+                                                value="${customerFirstName}"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label for="shipping_last_name" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Nume *
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="shipping_last_name"
+                                                name="shipping_last_name"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="Popescu"
+                                                value="${customerLastName}"
+                                            >
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="shipping_address" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Adresa *
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="shipping_address"
+                                            name="shipping_address"
+                                            required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder="Strada, număr, bloc, apartament"
+                                        >
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="shipping_county" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Județ *
+                                            </label>
+                                            <select
+                                                id="shipping_county"
+                                                name="shipping_county"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            >
+                                                <option value="">Selectează județul</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="shipping_city" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Oraș *
+                                            </label>
+                                            <select
+                                                id="shipping_city"
+                                                name="shipping_city"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            >
+                                                <option value="">Selectează mai întâi județul</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="shipping_postal_code" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Cod poștal (opțional)
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="shipping_postal_code"
+                                                name="shipping_postal_code"
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                placeholder="010101"
+                                            >
+                                        </div>
+                                        <div>
+                                            <label for="shipping_country" class="block text-sm font-medium text-gray-700 mb-1">
+                                                Țara *
+                                            </label>
+                                            <select
+                                                id="shipping_country"
+                                                name="shipping_country"
+                                                required
+                                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            >
+                                                <option value="RO" selected>România</option>
+                                                <option value="MD">Republica Moldova</option>
+                                                <option value="BG">Bulgaria</option>
+                                                <option value="HU">Ungaria</option>
+                                                <option value="RS">Serbia</option>
+                                                <option value="UA">Ucraina</option>
+                                                <option value="DE">Germania</option>
+                                                <option value="AT">Austria</option>
+                                                <option value="IT">Italia</option>
+                                                <option value="ES">Spania</option>
+                                                <option value="FR">Franța</option>
+                                                <option value="GB">Marea Britanie</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label for="shipping_phone" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Telefon pentru livrare *
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            id="shipping_phone"
+                                            name="shipping_phone"
+                                            required
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                            placeholder="0722123456"
+                                            value="${customerPhone}"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white rounded-lg shadow p-6">
+                                <h2 class="text-xl font-semibold text-gray-900 mb-4">Metodă de livrare</h2>
+                                <div id="shipping-methods-container" class="space-y-3">
+                                    <div class="animate-pulse">
+                                        <div class="h-16 bg-gray-200 rounded mb-2"></div>
+                                        <div class="h-16 bg-gray-200 rounded"></div>
+                                    </div>
+                                </div>
+                                <p id="shipping-methods-error" class="hidden text-red-600 text-sm mt-2"></p>
+                            </div>
+                            ` : ''}
 
                             <div class="bg-white rounded-lg shadow p-6">
                                 <h2 class="text-xl font-semibold text-gray-900 mb-4">Acorduri</h2>
@@ -3273,7 +4514,7 @@ export class Router {
                                     class="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-primary-dark transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                     disabled
                                 >
-                                    <span id="submit-btn-text">Plasează comanda - ${totals.total.toFixed(2)} ${totals.currency}</span>
+                                    <span id="submit-btn-text">Plasează comanda - ${grandTotal.toFixed(2)} ${currency}</span>
                                     <svg id="submit-btn-spinner" class="hidden animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -3290,8 +4531,10 @@ export class Router {
                         <div class="bg-white rounded-lg shadow p-6 sticky top-4">
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Sumar comandă</h2>
 
+                            ${ticketCart.length > 0 ? `
                             <div class="space-y-3 mb-4 pb-4 border-b">
-                                ${cart.map(item => {
+                                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Bilete</h3>
+                                ${ticketCart.map(item => {
                                     // Use sale price if available, otherwise base price (same as getTotal)
                                     const ticketPrice = item.salePrice || item.price;
                                     const result = CartService.calculateBulkDiscount(item.quantity, ticketPrice, item.bulkDiscounts);
@@ -3302,45 +4545,114 @@ export class Router {
                                         itemTotal += commission;
                                     }
                                     return `
-                                    <div class="flex justify-between text-sm">
-                                        <div>
-                                            <div class="font-medium">${item.eventTitle}</div>
-                                            <div class="text-gray-500">${item.ticketTypeName} × ${item.quantity}</div>
+                                    <div class="text-sm">
+                                        <div class="flex justify-between">
+                                            <div>
+                                                <div class="font-medium">${item.eventTitle}</div>
+                                                <div class="text-gray-500">${item.ticketTypeName} × ${item.quantity}</div>
+                                            </div>
+                                            <div class="font-medium">${itemTotal.toFixed(2)} ${item.currency}</div>
                                         </div>
-                                        <div class="font-medium">${itemTotal.toFixed(2)} ${item.currency}</div>
+                                        <div id="bundle-info-${item.ticketTypeId}" class="bundle-info-container"></div>
                                     </div>
                                 `}).join('')}
                             </div>
+                            ` : ''}
+
+                            ${shopCart?.items?.length > 0 ? `
+                            <div class="space-y-3 mb-4 pb-4 border-b">
+                                <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Produse</h3>
+                                ${shopCart.items.map((item: any) => `
+                                    <div class="flex justify-between text-sm">
+                                        <div>
+                                            <div class="font-medium">${item.title}</div>
+                                            <div class="text-gray-500">${item.variant_name || ''} × ${item.quantity}</div>
+                                            ${item.attributes?.length > 0 ? `
+                                            <div class="flex flex-wrap gap-1 mt-1">
+                                                ${item.attributes.map((attr: any) => `
+                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600">
+                                                        ${attr.color_hex ? `<span class="w-2 h-2 rounded-full mr-1" style="background-color: ${attr.color_hex}"></span>` : ''}
+                                                        ${attr.name}: ${attr.value}
+                                                    </span>
+                                                `).join('')}
+                                            </div>
+                                            ` : ''}
+                                        </div>
+                                        <div class="font-medium">${item.total} ${shopCart.currency}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ` : ''}
 
                             <div class="space-y-2 mb-4 pb-4 border-b">
-                                <div class="flex justify-between text-gray-600">
-                                    <span>Subtotal bilete</span>
-                                    <span>${totals.subtotal.toFixed(2)} ${totals.currency}</span>
+                                <!-- Subtotals with commission in hover tooltip -->
+                                ${ticketCart.length > 0 ? `
+                                <div class="flex justify-between text-gray-600 group relative">
+                                    <span class="${ticketTotals.hasCommission ? 'cursor-help border-b border-dotted border-gray-400' : ''}">
+                                        Subtotal bilete
+                                        ${ticketTotals.hasCommission ? `
+                                        <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                                            Valoare bilete: ${ticketTotals.subtotal.toFixed(2)} ${ticketTotals.currency}<br>
+                                            Comision Tixello: +${ticketTotals.commission.toFixed(2)} ${ticketTotals.currency}
+                                        </span>
+                                        ` : ''}
+                                    </span>
+                                    <span>${ticketTotals.total.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
-                                ${totals.bulkDiscount > 0 ? `
+                                ` : ''}
+
+                                ${shopCart?.items?.length > 0 ? `
+                                <div class="flex justify-between text-gray-600 group relative">
+                                    <span class="${shopCart.commission_rate > 0 ? 'cursor-help border-b border-dotted border-gray-400' : ''}">
+                                        Subtotal produse
+                                        ${shopCart.commission_rate > 0 ? `
+                                        <span class="absolute bottom-full left-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-2 px-3 whitespace-nowrap z-10">
+                                            Valoare produse: ${parseFloat(shopCart.subtotal).toFixed(2)} ${shopCart.currency}<br>
+                                            Comision Tixello: ${parseFloat(shopCart.commission_display || shopCart.commission).toFixed(2)} ${shopCart.currency}${shopCart.commission_mode === 'included' ? ' (inclus)' : ''}
+                                        </span>
+                                        ` : ''}
+                                    </span>
+                                    <span>${parseFloat(shopCart.total).toFixed(2)} ${shopCart.currency}</span>
+                                </div>
+                                ` : ''}
+
+                                <!-- Discounts -->
+                                ${ticketTotals.bulkDiscount > 0 ? `
                                 <div class="flex justify-between text-green-600">
                                     <span>Discount bulk</span>
-                                    <span>-${totals.bulkDiscount.toFixed(2)} ${totals.currency}</span>
+                                    <span>-${ticketTotals.bulkDiscount.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${totals.couponDiscount > 0 ? `
+                                ${ticketTotals.couponDiscount > 0 ? `
                                 <div class="flex justify-between text-green-600">
-                                    <span>Cod promoțional${totals.couponName ? ` (${totals.couponName})` : ''}</span>
-                                    <span>-${totals.couponDiscount.toFixed(2)} ${totals.currency}</span>
+                                    <span>Cod promoțional${ticketTotals.couponName ? ` (${ticketTotals.couponName})` : ''}</span>
+                                    <span>-${ticketTotals.couponDiscount.toFixed(2)} ${ticketTotals.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${totals.hasCommission ? `
-                                <div class="flex justify-between text-gray-600">
-                                    <span>Comision Tixello</span>
-                                    <span>+${totals.commission.toFixed(2)} ${totals.currency}</span>
+                                ${shopCart?.discount > 0 ? `
+                                <div class="flex justify-between text-green-600">
+                                    <span>Reducere produse</span>
+                                    <span>-${parseFloat(shopCart.discount).toFixed(2)} ${shopCart.currency}</span>
                                 </div>
                                 ` : ''}
-                                ${this.renderCheckoutPointsSection(totals.total, totals.currency)}
+
+                                <!-- Taxes visible on checkout (global taxes) -->
+                                <div id="checkout-taxes-section"></div>
+
+                                <!-- Shipping -->
+                                <div id="shipping-cost-row" class="${needsShipping ? '' : 'hidden'}">
+                                    <div class="flex justify-between text-gray-600">
+                                        <span>Transport</span>
+                                        <span id="shipping-cost-display">Se calculează...</span>
+                                    </div>
+                                </div>
+
+                                ${this.renderCheckoutPointsSection(grandTotal, currency)}
                             </div>
 
                             <div class="flex justify-between items-center">
                                 <span class="text-lg font-semibold">Total</span>
-                                <span class="text-2xl font-bold text-primary" id="checkout-total-amount">${this.getCheckoutFinalTotal(totals.total, totals.currency)}</span>
+                                <span class="text-2xl font-bold text-primary" id="checkout-total-amount">${this.getCheckoutFinalTotal(grandTotal, currency)}</span>
                             </div>
                         </div>
                     </div>
@@ -3348,10 +4660,130 @@ export class Router {
             </div>
         `;
 
-        this.setupCheckoutHandlers();
+        this.setupCheckoutHandlers(bundlesHavePhysicalProducts);
+
+        // Load bundle info for ticket types
+        if (this.isShopEnabled() && ticketCart.length > 0) {
+            this.loadCheckoutBundles(ticketCart);
+        }
+
+        // Load checkout taxes (global taxes visible on checkout)
+        this.loadCheckoutTaxes(grandTotal, currency);
     }
 
-    private setupCheckoutHandlers(): void {
+    private async loadCheckoutTaxes(amount: number, currency: string): Promise<void> {
+        const container = document.getElementById('checkout-taxes-section');
+        const totalAmountEl = document.getElementById('checkout-total-amount');
+        const submitBtnText = document.getElementById('submit-btn-text');
+        if (!container) return;
+
+        try {
+            const response = await this.fetchApi(`/taxes/checkout?amount=${amount}&currency=${currency}`);
+            if (response.success && response.data) {
+                const { taxes, is_vat_payer, vat_amount, vat_rate, taxes_to_add, tax_display_mode } = response.data;
+
+                // Only show if there are taxes to display
+                if ((is_vat_payer && vat_amount > 0) || taxes?.length > 0) {
+                    let taxHtml = '';
+
+                    // Default info icon
+                    const defaultInfoIcon = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>`;
+
+                    // Show VAT info for VAT payer tenants (informational only - included in price)
+                    if (is_vat_payer && vat_amount > 0) {
+                        taxHtml += `
+                            <div class="flex justify-between text-gray-500 text-sm">
+                                <span class="flex items-center gap-1">
+                                    TVA inclus (${vat_rate}%)
+                                    <span class="cursor-help text-gray-400" title="Taxa pe valoarea adaugata inclusa in pret">
+                                        ${defaultInfoIcon}
+                                    </span>
+                                </span>
+                                <span>${vat_amount.toFixed(2)} ${currency}</span>
+                            </div>
+                        `;
+                    }
+
+                    // Show other taxes (non-VAT)
+                    taxes?.filter((tax: any) => !tax.is_vat).forEach((tax: any) => {
+                        // Use custom icon_svg if available, otherwise show info icon with explanation
+                        const taxIcon = tax.icon_svg || '';
+                        const infoIcon = tax.explanation ? `
+                            <span class="cursor-help text-gray-400" title="${tax.explanation}">
+                                ${defaultInfoIcon}
+                            </span>` : '';
+
+                        taxHtml += `
+                            <div class="flex justify-between text-gray-600">
+                                <span class="flex items-center gap-1.5">
+                                    ${taxIcon ? `<span class="inline-flex items-center">${taxIcon}</span>` : ''}
+                                    ${tax.name}
+                                    ${infoIcon}
+                                </span>
+                                <span>${tax.is_added_to_price ? '+' : ''}${tax.tax_amount.toFixed(2)} ${currency}</span>
+                            </div>
+                        `;
+                    });
+
+                    container.innerHTML = taxHtml;
+
+                    // Store taxes_to_add for other functions to use
+                    (window as any).checkoutTaxesToAdd = taxes_to_add;
+
+                    // Update total if there are taxes to add (include shipping if present)
+                    if (taxes_to_add > 0) {
+                        const shippingCost = (window as any).checkoutShippingCost || 0;
+                        const newTotal = amount + taxes_to_add + shippingCost;
+                        if (totalAmountEl) {
+                            totalAmountEl.textContent = `${newTotal.toFixed(2)} ${currency}`;
+                        }
+                        if (submitBtnText) {
+                            submitBtnText.textContent = `Plasează comanda - ${newTotal.toFixed(2)} ${currency}`;
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.log('Could not load checkout taxes:', e);
+        }
+    }
+
+    private async loadCheckoutBundles(ticketCart: CartItem[]): Promise<void> {
+        // Get unique ticket type IDs
+        const ticketTypeIds = [...new Set(ticketCart.map(item => item.ticketTypeId))];
+
+        for (const ticketTypeId of ticketTypeIds) {
+            const bundles = await this.fetchTicketTypeBundles(ticketTypeId);
+            if (bundles.length > 0) {
+                const container = document.getElementById(`bundle-info-${ticketTypeId}`);
+                if (container) {
+                    // Get quantity of this ticket type
+                    const ticketItem = ticketCart.find(item => item.ticketTypeId === ticketTypeId);
+                    const ticketQty = ticketItem?.quantity || 1;
+
+                    container.innerHTML = `
+                        <div class="mt-2 p-2 bg-green-50 border border-green-200 rounded text-xs">
+                            <div class="flex items-center gap-1 text-green-700 font-medium mb-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/>
+                                </svg>
+                                Include:
+                            </div>
+                            ${bundles.map(b => `
+                                <div class="text-green-700 pl-4">
+                                    ${b.quantity_included * ticketQty}× ${b.product.title}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+            }
+        }
+    }
+
+    private setupCheckoutHandlers(hasBundlePhysical: boolean = false): void {
         const form = document.getElementById('checkout-form') as HTMLFormElement;
         const submitBtn = document.getElementById('submit-order-btn') as HTMLButtonElement;
         const submitBtnText = document.getElementById('submit-btn-text');
@@ -3396,6 +4828,266 @@ export class Router {
             // Ignore errors, just don't show WhatsApp option
         });
 
+        // Handle shipping methods for physical products
+        const shippingMethodsContainer = document.getElementById('shipping-methods-container');
+        const shippingCostDisplay = document.getElementById('shipping-cost-display');
+        const checkoutTotalAmount = document.getElementById('checkout-total-amount');
+        let selectedShippingMethod: any = null;
+        let shippingCost = 0;
+
+        const loadShippingMethods = async () => {
+            if (!shippingMethodsContainer) return;
+
+            // Create session if doesn't exist (needed for bundle-only shipping too)
+            let sessionId = localStorage.getItem('shop_session_id');
+            if (!sessionId) {
+                sessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + Date.now();
+                localStorage.setItem('shop_session_id', sessionId);
+            }
+
+            // Default to Romania for shipping calculation
+            try {
+                const response = await this.postApi('/shop/checkout/shipping-methods', {
+                    country: (document.getElementById('shipping_country') as HTMLSelectElement)?.value || 'RO',
+                    city: (document.getElementById('shipping_city') as HTMLInputElement)?.value || '',
+                    postal_code: (document.getElementById('shipping_postal_code') as HTMLInputElement)?.value || '',
+                    region: (document.getElementById('shipping_county') as HTMLInputElement)?.value || '',
+                    has_bundle_physical: hasBundlePhysical,
+                }, {
+                    'X-Session-ID': sessionId
+                });
+
+                if (response.success && response.data?.shipping_methods?.length > 0) {
+                    const methods = response.data.shipping_methods;
+                    shippingMethodsContainer.innerHTML = methods.map((method: any, index: number) => `
+                        <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:border-primary transition ${index === 0 ? 'border-primary bg-primary/5' : 'border-gray-200'}">
+                            <input type="radio" name="shipping_method" value="${method.id}"
+                                   class="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
+                                   data-cost="${method.cost}" data-name="${method.name}"
+                                   ${index === 0 ? 'checked' : ''}>
+                            <div class="ml-3 flex-1">
+                                <div class="font-medium text-gray-900">${method.name}</div>
+                                ${method.description ? `<div class="text-sm text-gray-500">${method.description}</div>` : ''}
+                                ${method.estimated_days ? `<div class="text-xs text-gray-400">Livrare în ${method.estimated_days} zile</div>` : ''}
+                            </div>
+                            <div class="font-semibold text-gray-900">${method.cost} RON</div>
+                        </label>
+                    `).join('');
+
+                    // Select first method by default
+                    if (methods.length > 0) {
+                        selectedShippingMethod = methods[0];
+                        shippingCost = parseFloat(methods[0].cost) || 0;
+                        updateShippingDisplay();
+                    }
+
+                    // Add event listeners to radio buttons
+                    shippingMethodsContainer.querySelectorAll('input[name="shipping_method"]').forEach((radio: Element) => {
+                        radio.addEventListener('change', (e) => {
+                            const target = e.target as HTMLInputElement;
+                            shippingCost = parseFloat(target.dataset.cost || '0');
+                            selectedShippingMethod = { id: target.value, name: target.dataset.name, cost: shippingCost };
+                            updateShippingDisplay();
+
+                            // Update radio button styling
+                            shippingMethodsContainer.querySelectorAll('label').forEach(label => {
+                                label.classList.remove('border-primary', 'bg-primary/5');
+                                label.classList.add('border-gray-200');
+                            });
+                            target.closest('label')?.classList.remove('border-gray-200');
+                            target.closest('label')?.classList.add('border-primary', 'bg-primary/5');
+                        });
+                    });
+                } else {
+                    shippingMethodsContainer.innerHTML = `
+                        <div class="text-center py-4 text-amber-600">
+                            <p>Nu există metode de livrare disponibile pentru locația selectată.</p>
+                            <p class="text-sm mt-1">Verifică adresa de livrare sau contactează-ne.</p>
+                        </div>
+                    `;
+                    shippingCost = 0;
+                    updateShippingDisplay();
+                }
+            } catch (error) {
+                console.error('Failed to load shipping methods:', error);
+                shippingMethodsContainer.innerHTML = `
+                    <div class="text-center py-4 text-red-500">
+                        <p>Nu s-au putut încărca metodele de livrare.</p>
+                        <button type="button" id="retry-shipping-methods"
+                                class="mt-2 text-primary hover:underline">Reîncearcă</button>
+                    </div>
+                `;
+                // Add event listener for retry button
+                document.getElementById('retry-shipping-methods')?.addEventListener('click', () => {
+                    shippingMethodsContainer.innerHTML = `
+                        <div class="animate-pulse">
+                            <div class="h-16 bg-gray-200 rounded mb-2"></div>
+                            <div class="h-16 bg-gray-200 rounded"></div>
+                        </div>
+                    `;
+                    loadShippingMethods();
+                });
+            }
+        };
+
+        const updateShippingDisplay = () => {
+            // Store shipping cost on window for other functions to use
+            (window as any).checkoutShippingCost = shippingCost;
+
+            if (shippingCostDisplay) {
+                shippingCostDisplay.textContent = shippingCost > 0 ? `${shippingCost.toFixed(2)} RON` : 'Gratuit';
+            }
+            // Update total - include taxes_to_add if present
+            const taxesToAdd = (window as any).checkoutTaxesToAdd || 0;
+            if (checkoutTotalAmount) {
+                const ticketTotals = CartService.getTotal();
+                const shopTotal = parseFloat(localStorage.getItem('shop_cart_total') || '0');
+                const grandTotal = ticketTotals.total + shopTotal + shippingCost + taxesToAdd;
+                checkoutTotalAmount.textContent = `${grandTotal.toFixed(2)} RON`;
+            }
+            // Update submit button text
+            if (submitBtnText) {
+                const ticketTotals = CartService.getTotal();
+                const shopTotal = parseFloat(localStorage.getItem('shop_cart_total') || '0');
+                const grandTotal = ticketTotals.total + shopTotal + shippingCost + taxesToAdd;
+                const currency = ticketTotals.currency || 'RON';
+                submitBtnText.textContent = `Plasează comanda - ${grandTotal.toFixed(2)} ${currency}`;
+            }
+        };
+
+        // Load shipping methods if container exists (means there are physical products)
+        if (shippingMethodsContainer) {
+            loadShippingMethods();
+
+            // Sync customer fields to shipping fields
+            const syncField = (sourceId: string, targetId: string) => {
+                const source = document.getElementById(sourceId) as HTMLInputElement;
+                const target = document.getElementById(targetId) as HTMLInputElement;
+                if (source && target) {
+                    source.addEventListener('input', () => {
+                        // Only sync if target is empty or hasn't been manually modified
+                        if (!target.dataset.modified) {
+                            target.value = source.value;
+                        }
+                    });
+                    target.addEventListener('input', () => {
+                        target.dataset.modified = 'true';
+                    });
+                }
+            };
+
+            syncField('customer_first_name', 'shipping_first_name');
+            syncField('customer_last_name', 'shipping_last_name');
+            syncField('customer_phone', 'shipping_phone');
+
+            // Reload shipping methods when country changes
+            const countrySelect = document.getElementById('shipping_country') as HTMLSelectElement;
+            if (countrySelect) {
+                countrySelect.addEventListener('change', () => {
+                    shippingMethodsContainer.innerHTML = `
+                        <div class="animate-pulse">
+                            <div class="h-16 bg-gray-200 rounded mb-2"></div>
+                            <div class="h-16 bg-gray-200 rounded"></div>
+                        </div>
+                    `;
+                    loadShippingMethods();
+                });
+            }
+
+            // Also reload when postal code or city changes (debounced)
+            let shippingDebounce: NodeJS.Timeout;
+            const debouncedLoadShipping = () => {
+                clearTimeout(shippingDebounce);
+                shippingDebounce = setTimeout(() => {
+                    loadShippingMethods();
+                }, 500);
+            };
+
+            const postalField = document.getElementById('shipping_postal_code') as HTMLInputElement;
+            postalField?.addEventListener('blur', debouncedLoadShipping);
+
+            // Romanian counties and cities data
+            const romanianLocations: Record<string, string[]> = {
+                'Alba': ['Alba Iulia', 'Sebeș', 'Aiud', 'Blaj', 'Cugir', 'Ocna Mureș'],
+                'Arad': ['Arad', 'Ineu', 'Lipova', 'Pecica', 'Curtici', 'Chișineu-Criș'],
+                'Argeș': ['Pitești', 'Câmpulung', 'Curtea de Argeș', 'Mioveni', 'Costești'],
+                'Bacău': ['Bacău', 'Onești', 'Moinești', 'Comănești', 'Buhuși', 'Dărmănești'],
+                'Bihor': ['Oradea', 'Salonta', 'Marghita', 'Beiuș', 'Aleșd', 'Ștei'],
+                'Bistrița-Năsăud': ['Bistrița', 'Năsăud', 'Beclean', 'Sângeorz-Băi'],
+                'Botoșani': ['Botoșani', 'Dorohoi', 'Săveni', 'Darabani', 'Flămânzi'],
+                'Brăila': ['Brăila', 'Făurei', 'Însurăței', 'Ianca'],
+                'Brașov': ['Brașov', 'Făgăraș', 'Săcele', 'Codlea', 'Zărnești', 'Râșnov', 'Rupea'],
+                'București': ['Sector 1', 'Sector 2', 'Sector 3', 'Sector 4', 'Sector 5', 'Sector 6'],
+                'Buzău': ['Buzău', 'Râmnicu Sărat', 'Nehoiu', 'Pătârlagele', 'Pogoanele'],
+                'Călărași': ['Călărași', 'Oltenița', 'Budești', 'Fundulea', 'Lehliu Gară'],
+                'Caraș-Severin': ['Reșița', 'Caransebeș', 'Bocșa', 'Oravița', 'Moldova Nouă'],
+                'Cluj': ['Cluj-Napoca', 'Turda', 'Dej', 'Câmpia Turzii', 'Gherla', 'Huedin'],
+                'Constanța': ['Constanța', 'Mangalia', 'Medgidia', 'Năvodari', 'Cernavodă', 'Eforie'],
+                'Covasna': ['Sfântu Gheorghe', 'Târgu Secuiesc', 'Covasna', 'Baraolt', 'Întorsura Buzăului'],
+                'Dâmbovița': ['Târgoviște', 'Moreni', 'Pucioasa', 'Găești', 'Titu', 'Fieni'],
+                'Dolj': ['Craiova', 'Băilești', 'Calafat', 'Filiași', 'Dăbuleni', 'Segarcea'],
+                'Galați': ['Galați', 'Tecuci', 'Târgu Bujor', 'Berești'],
+                'Giurgiu': ['Giurgiu', 'Bolintin-Vale', 'Mihăilești'],
+                'Gorj': ['Târgu Jiu', 'Motru', 'Rovinari', 'Bumbești-Jiu', 'Novaci', 'Țicleni'],
+                'Harghita': ['Miercurea Ciuc', 'Odorheiu Secuiesc', 'Gheorgheni', 'Toplița', 'Cristuru Secuiesc'],
+                'Hunedoara': ['Deva', 'Hunedoara', 'Petroșani', 'Lupeni', 'Orăștie', 'Brad', 'Vulcan'],
+                'Ialomița': ['Slobozia', 'Fetești', 'Urziceni', 'Țăndărei', 'Amara'],
+                'Iași': ['Iași', 'Pașcani', 'Hârlău', 'Târgu Frumos', 'Podu Iloaiei'],
+                'Ilfov': ['Buftea', 'Voluntari', 'Pantelimon', 'Popești-Leordeni', 'Bragadiru', 'Otopeni', 'Chitila', 'Măgurele'],
+                'Maramureș': ['Baia Mare', 'Sighetu Marmației', 'Borșa', 'Vișeu de Sus', 'Târgu Lăpuș'],
+                'Mehedinți': ['Drobeta-Turnu Severin', 'Orșova', 'Strehaia', 'Vânju Mare', 'Baia de Aramă'],
+                'Mureș': ['Târgu Mureș', 'Reghin', 'Sighișoara', 'Târnăveni', 'Luduș', 'Sovata'],
+                'Neamț': ['Piatra Neamț', 'Roman', 'Târgu Neamț', 'Bicaz', 'Roznov'],
+                'Olt': ['Slatina', 'Caracal', 'Balș', 'Corabia', 'Scornicești', 'Drăgănești-Olt'],
+                'Prahova': ['Ploiești', 'Câmpina', 'Băicoi', 'Breaza', 'Sinaia', 'Bușteni', 'Azuga', 'Vălenii de Munte'],
+                'Satu Mare': ['Satu Mare', 'Carei', 'Negrești-Oaș', 'Tășnad', 'Livada'],
+                'Sălaj': ['Zalău', 'Șimleu Silvaniei', 'Jibou', 'Cehu Silvaniei'],
+                'Sibiu': ['Sibiu', 'Mediaș', 'Cisnădie', 'Avrig', 'Dumbrăveni', 'Agnita', 'Copșa Mică'],
+                'Suceava': ['Suceava', 'Fălticeni', 'Rădăuți', 'Câmpulung Moldovenesc', 'Vatra Dornei', 'Gura Humorului'],
+                'Teleorman': ['Alexandria', 'Roșiori de Vede', 'Turnu Măgurele', 'Zimnicea', 'Videle'],
+                'Timiș': ['Timișoara', 'Lugoj', 'Sânnicolau Mare', 'Jimbolia', 'Făget', 'Buziaș', 'Recaș'],
+                'Tulcea': ['Tulcea', 'Măcin', 'Babadag', 'Isaccea', 'Sulina'],
+                'Vâlcea': ['Râmnicu Vâlcea', 'Drăgășani', 'Băbeni', 'Brezoi', 'Călimănești', 'Horezu'],
+                'Vaslui': ['Vaslui', 'Bârlad', 'Huși', 'Negrești', 'Murgeni'],
+                'Vrancea': ['Focșani', 'Adjud', 'Mărășești', 'Panciu', 'Odobești'],
+            };
+
+            // Populate counties dropdown
+            const countySelect = document.getElementById('shipping_county') as HTMLSelectElement;
+            const citySelect = document.getElementById('shipping_city') as HTMLSelectElement;
+
+            if (countySelect && citySelect) {
+                // Add counties to dropdown
+                Object.keys(romanianLocations).sort().forEach(county => {
+                    const option = document.createElement('option');
+                    option.value = county;
+                    option.textContent = county;
+                    countySelect.appendChild(option);
+                });
+
+                // Handle county change - populate cities
+                countySelect.addEventListener('change', () => {
+                    const selectedCounty = countySelect.value;
+                    citySelect.innerHTML = '<option value="">Selectează orașul</option>';
+
+                    if (selectedCounty && romanianLocations[selectedCounty]) {
+                        romanianLocations[selectedCounty].forEach(city => {
+                            const option = document.createElement('option');
+                            option.value = city;
+                            option.textContent = city;
+                            citySelect.appendChild(option);
+                        });
+                    }
+
+                    // Reload shipping methods
+                    debouncedLoadShipping();
+                });
+
+                // Reload shipping when city changes
+                citySelect.addEventListener('change', debouncedLoadShipping);
+            }
+        }
+
         // Handle beneficiaries checkbox toggle
         const beneficiariesCheckbox = document.getElementById('different_beneficiaries') as HTMLInputElement;
         const beneficiariesSection = document.getElementById('beneficiaries-section');
@@ -3409,7 +5101,9 @@ export class Router {
                     beneficiariesSection.classList.remove('hidden');
 
                     // Generate beneficiary fields
-                    const customerName = (document.getElementById('customer_name') as HTMLInputElement)?.value || '';
+                    const customerFirstName = (document.getElementById('customer_first_name') as HTMLInputElement)?.value || '';
+                    const customerLastName = (document.getElementById('customer_last_name') as HTMLInputElement)?.value || '';
+                    const customerName = `${customerFirstName} ${customerLastName}`.trim();
                     const customerEmail = (document.getElementById('customer_email') as HTMLInputElement)?.value || '';
                     const customerPhone = (document.getElementById('customer_phone') as HTMLInputElement)?.value || '';
 
@@ -3524,7 +5218,7 @@ export class Router {
                                 return_url: window.location.origin + '/checkout/complete',
                                 payment_method_data: {
                                     billing_details: {
-                                        name: formData.get('customer_name') as string,
+                                        name: `${formData.get('customer_first_name') || ''} ${formData.get('customer_last_name') || ''}`.trim(),
                                         email: formData.get('customer_email') as string,
                                         phone: formData.get('customer_phone') as string || undefined,
                                     },
@@ -3544,31 +5238,105 @@ export class Router {
                     }
 
                     // Create order after successful payment (or for free orders)
-                    const response = await this.postApi('/orders', {
-                        customer_name: formData.get('customer_name'),
-                        customer_email: formData.get('customer_email'),
-                        customer_phone: formData.get('customer_phone'),
-                        agree_terms: agreeTerms,
-                        agree_privacy: agreePrivacy,
-                        create_account: createAccount,
-                        notification_email: notificationEmail,
-                        notification_whatsapp: notificationWhatsapp,
-                        payment_intent_id: clientSecret ? clientSecret.split('_secret_')[0] : null,
-                        cart: cartData.map(item => ({
-                            eventId: item.eventId,
-                            ticketTypeId: item.ticketTypeId,
-                            quantity: item.quantity,
-                        })),
-                        beneficiaries: beneficiariesData.length > 0 ? beneficiariesData : null,
-                    });
+                    let ticketOrderId: number | null = null;
+                    let shopOrderNumber: string | null = null;
+                    const hasTickets = cartData.length > 0;
+                    const hasShopProducts = ShopCartService.getItemCount() > 0;
+                    const sessionId = localStorage.getItem('shop_session_id');
 
-                    if (response.success) {
-                        CartService.clearCart();
-                        this.updateCartBadge();
-                        ToastNotification.show('✓ Comanda a fost plasată cu succes!', 'success');
-                        this.navigate(`/order-success/${response.data.order_id}`);
+                    // Create ticket order if there are tickets
+                    if (hasTickets) {
+                        const response = await this.postApi('/orders', {
+                            customer_first_name: formData.get('customer_first_name'),
+                            customer_last_name: formData.get('customer_last_name'),
+                            customer_name: `${formData.get('customer_first_name') || ''} ${formData.get('customer_last_name') || ''}`.trim(),
+                            customer_email: formData.get('customer_email'),
+                            customer_phone: formData.get('customer_phone'),
+                            agree_terms: agreeTerms,
+                            agree_privacy: agreePrivacy,
+                            create_account: createAccount,
+                            notification_email: notificationEmail,
+                            notification_whatsapp: notificationWhatsapp,
+                            payment_intent_id: clientSecret ? clientSecret.split('_secret_')[0] : null,
+                            cart: cartData.map(item => ({
+                                eventId: item.eventId,
+                                ticketTypeId: item.ticketTypeId,
+                                quantity: item.quantity,
+                            })),
+                            beneficiaries: beneficiariesData.length > 0 ? beneficiariesData : null,
+                        });
+
+                        if (!response.success) {
+                            throw new Error(response.error || 'Eroare la plasarea comenzii de bilete');
+                        }
+                        ticketOrderId = response.data.order_id;
+                    }
+
+                    // Create shop order if there are shop products
+                    if (hasShopProducts && sessionId) {
+                        // Get shipping data if needed
+                        const selectedShipping = document.querySelector('input[name="shipping_method"]:checked') as HTMLInputElement;
+                        const shippingMethodId = selectedShipping?.value || null;
+
+                        // Collect shipping address if there are physical products
+                        let shippingAddress: any = null;
+                        const shippingFirstName = (document.getElementById('shipping_first_name') as HTMLInputElement)?.value;
+                        const shippingAddress1 = (document.getElementById('shipping_address') as HTMLInputElement)?.value;
+
+                        // Check if shipping fields exist (means we have physical products)
+                        if (shippingFirstName !== undefined && shippingAddress1) {
+                            shippingAddress = {
+                                name: `${(document.getElementById('shipping_first_name') as HTMLInputElement)?.value || ''} ${(document.getElementById('shipping_last_name') as HTMLInputElement)?.value || ''}`.trim(),
+                                line1: shippingAddress1,
+                                city: (document.getElementById('shipping_city') as HTMLInputElement)?.value || '',
+                                region: (document.getElementById('shipping_county') as HTMLInputElement)?.value || '',
+                                postal_code: (document.getElementById('shipping_postal_code') as HTMLInputElement)?.value || '',
+                                country: (document.getElementById('shipping_country') as HTMLSelectElement)?.value || 'RO',
+                                phone: (document.getElementById('shipping_phone') as HTMLInputElement)?.value || '',
+                            };
+                        }
+
+                        const shopOrderResponse = await this.postApi('/shop/checkout/create-order', {
+                            customer_email: formData.get('customer_email'),
+                            customer_phone: formData.get('customer_phone') || (document.getElementById('shipping_phone') as HTMLInputElement)?.value,
+                            customer_name: `${formData.get('customer_first_name') || ''} ${formData.get('customer_last_name') || ''}`.trim(),
+                            shipping_address: shippingAddress,
+                            shipping_method_id: shippingMethodId,
+                            ticket_order_id: ticketOrderId,
+                        }, {
+                            'X-Session-ID': sessionId
+                        });
+
+                        if (!shopOrderResponse.success) {
+                            throw new Error(shopOrderResponse.message || 'Eroare la plasarea comenzii de produse');
+                        }
+                        shopOrderNumber = shopOrderResponse.data?.order_number;
+                    }
+
+                    // Clear carts
+                    CartService.clearCart();
+                    if (sessionId) {
+                        try {
+                            await this.fetchApi('/shop/cart', {}, {
+                                method: 'DELETE',
+                                headers: { 'X-Session-ID': sessionId }
+                            });
+                        } catch (e) {
+                            console.log('Could not clear shop cart');
+                        }
+                        ShopCartService.clear();
+                    }
+                    this.updateCartBadge();
+
+                    ToastNotification.show('✓ Comanda a fost plasată cu succes!', 'success');
+
+                    // Redirect based on order type
+                    if (ticketOrderId) {
+                        this.navigate(`/order-success/${ticketOrderId}`);
+                    } else if (shopOrderNumber) {
+                        this.navigate(`/shop/thank-you/${shopOrderNumber}`);
                     } else {
-                        throw new Error(response.error || 'Eroare la plasarea comenzii');
+                        this.navigate('/');
                     }
                 } catch (error: any) {
                     ToastNotification.show(error.message || 'Eroare la plasarea comenzii', 'error');
@@ -3613,18 +5381,35 @@ export class Router {
 
             const stripe = (window as any).Stripe(publishableKey);
 
-            // Create payment intent
+            // Create payment intent - combine ticket cart and shop cart totals
             const cart = CartService.getCart();
             const totals = CartService.getTotal();
 
+            // Get shop cart total from localStorage (set during checkout render)
+            const shopCartTotal = parseFloat(localStorage.getItem('shop_cart_total') || '0');
+
+            // Get shipping cost if selected
+            const selectedShippingRadio = document.querySelector('input[name="shipping_method"]:checked') as HTMLInputElement;
+            const shippingCost = selectedShippingRadio ? parseFloat(selectedShippingRadio.dataset.cost || '0') : 0;
+
+            // Get taxes to add (taxes with is_added_to_price: true)
+            const taxesToAdd = (window as any).checkoutTaxesToAdd || 0;
+
+            // Calculate grand total: tickets + shop products + shipping + taxes
+            const grandTotal = totals.total + shopCartTotal + shippingCost + taxesToAdd;
+            const currency = totals.currency || 'RON';
+
             const intentResponse = await this.postApi('/payment/create-intent', {
-                amount: Math.round(totals.total * 100), // Convert to cents
-                currency: totals.currency.toLowerCase(),
+                amount: Math.round(grandTotal * 100), // Convert to cents
+                currency: currency.toLowerCase(),
                 cart: cart.map(item => ({
                     eventId: item.eventId,
                     ticketTypeId: item.ticketTypeId,
                     quantity: item.quantity,
                 })),
+                shop_cart_total: shopCartTotal,
+                shipping_cost: shippingCost,
+                taxes_to_add: taxesToAdd,
             });
 
             if (!intentResponse.success || !intentResponse.data?.client_secret) {
@@ -4514,7 +6299,7 @@ export class Router {
                                 ${tickets.map((ticket: any) => `
                                     <div class="p-3 md:p-4 hover:bg-gray-50 transition">
                                         <div class="flex items-start gap-3 md:gap-4">
-                                            <img src="${ticket.qr_code}" alt="QR" class="w-14 h-14 md:w-16 md:h-16 border border-gray-200 rounded flex-shrink-0">
+                                            <img src="${ticket.qr_code}" alt="QR" class="w-14 h-14 md:w-16 md:h-16 rounded flex-shrink-0">
                                             <div class="flex-1 min-w-0">
                                                 <div class="flex flex-wrap items-center gap-1.5 md:gap-2 mb-1">
                                                     <h3 class="font-semibold text-gray-900 text-sm md:text-base line-clamp-1">${ticket.event_name}</h3>
@@ -4702,9 +6487,103 @@ export class Router {
                         `).join('')}
                     </div>
 
+                    ${order.shop_order ? `
+                        <h2 class="text-base md:text-lg font-semibold text-gray-900 mt-6 mb-3">Produse comandate</h2>
+                        <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+                            <div class="divide-y">
+                                ${order.shop_order.items.map((item: any) => `
+                                    <div class="p-3 md:p-4 flex items-center gap-3">
+                                        ${item.image_url ? `
+                                            <img src="${item.image_url}" alt="${item.title}" class="w-12 h-12 md:w-16 md:h-16 object-cover rounded">
+                                        ` : `
+                                            <div class="w-12 h-12 md:w-16 md:h-16 bg-gray-100 rounded flex items-center justify-center">
+                                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                                </svg>
+                                            </div>
+                                        `}
+                                        <div class="flex-1">
+                                            <p class="font-medium text-gray-900">${item.title}</p>
+                                            ${item.variant_name ? `<p class="text-sm text-gray-500">${item.variant_name}</p>` : ''}
+                                            <p class="text-xs text-gray-400">Cantitate: ${item.quantity}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <p class="font-medium">${(item.total_cents / 100).toFixed(2)} ${order.shop_order.currency}</p>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="bg-gray-50 p-3 md:p-4 border-t">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-500">Subtotal produse</span>
+                                    <span>${(order.shop_order.subtotal_cents / 100).toFixed(2)} ${order.shop_order.currency}</span>
+                                </div>
+                                ${order.shop_order.shipping_cents > 0 ? `
+                                    <div class="flex justify-between text-sm mt-1">
+                                        <span class="text-gray-500">Transport</span>
+                                        <span>${(order.shop_order.shipping_cents / 100).toFixed(2)} ${order.shop_order.currency}</span>
+                                    </div>
+                                ` : ''}
+                                <div class="flex justify-between font-medium mt-2 pt-2 border-t">
+                                    <span>Total produse</span>
+                                    <span>${(order.shop_order.total_cents / 100).toFixed(2)} ${order.shop_order.currency}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${order.shop_order.shipping_address ? `
+                            <h2 class="text-base md:text-lg font-semibold text-gray-900 mb-3">Livrare</h2>
+                            <div class="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <p class="text-sm text-gray-500 mb-1">Adresa de livrare</p>
+                                        <p class="font-medium">${order.shop_order.shipping_address.name || ''}</p>
+                                        <p class="text-sm text-gray-700">${order.shop_order.shipping_address.line1 || ''}</p>
+                                        ${order.shop_order.shipping_address.line2 ? `<p class="text-sm text-gray-700">${order.shop_order.shipping_address.line2}</p>` : ''}
+                                        <p class="text-sm text-gray-700">${order.shop_order.shipping_address.city || ''}, ${order.shop_order.shipping_address.postal_code || ''}</p>
+                                        <p class="text-sm text-gray-700">${order.shop_order.shipping_address.country || ''}</p>
+                                    </div>
+                                    <div>
+                                        ${order.shop_order.shipping_method ? `
+                                            <p class="text-sm text-gray-500 mb-1">Metodă de livrare</p>
+                                            <p class="font-medium">${order.shop_order.shipping_method}</p>
+                                        ` : ''}
+                                        ${order.shop_order.estimated_delivery ? `
+                                            <p class="text-sm text-gray-500 mt-3 mb-1">Data estimată livrare</p>
+                                            <p class="font-medium">${order.shop_order.estimated_delivery}</p>
+                                        ` : ''}
+                                        ${order.shop_order.tracking_number ? `
+                                            <p class="text-sm text-gray-500 mt-3 mb-1">Cod urmărire</p>
+                                            <p class="font-medium font-mono">${order.shop_order.tracking_number}</p>
+                                            ${order.shop_order.tracking_url ? `
+                                                <a href="${order.shop_order.tracking_url}" target="_blank"
+                                                   class="inline-flex items-center text-sm text-primary hover:underline mt-1">
+                                                    Urmărește coletul
+                                                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                                    </svg>
+                                                </a>
+                                            ` : ''}
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                <div class="mt-4 pt-4 border-t">
+                                    <span class="inline-block px-3 py-1 text-xs font-medium rounded-full ${
+                                        order.shop_order.status === 'delivered' ? 'bg-green-100 text-green-700' :
+                                        order.shop_order.status === 'shipped' ? 'bg-blue-100 text-blue-700' :
+                                        order.shop_order.status === 'processing' ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-gray-100 text-gray-700'
+                                    }">
+                                        ${order.shop_order.status_label}
+                                    </span>
+                                </div>
+                            </div>
+                        ` : ''}
+                    ` : ''}
+
                     ${order.meta ? `
-                        <h2 class="text-xl font-semibold text-gray-900 mt-8 mb-4">Informații client</h2>
-                        <div class="bg-white rounded-lg shadow p-6">
+                        <h2 class="text-base md:text-lg font-semibold text-gray-900 mt-6 mb-3">Informații client</h2>
+                        <div class="bg-white rounded-lg shadow p-4 md:p-6">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <p class="text-sm text-gray-500">Nume</p>
@@ -5719,7 +7598,7 @@ private async renderProfile(): Promise<void> {
                                     <!-- QR Code -->
                                     <div class="border-t pt-4">
                                         <div class="flex flex-col items-center">
-                                            <img src="${ticket.qr_code}" alt="QR Code" class="w-48 h-48 border-2 border-gray-300 rounded-lg mb-3">
+                                            <img src="${ticket.qr_code}" alt="QR Code" class="w-48 h-48 rounded-lg mb-3">
                                             <div class="text-center">
                                                 <p class="text-xs text-gray-500 mb-1">Cod bilet:</p>
                                                 <p class="text-lg font-mono font-bold text-gray-900">${ticket.code}</p>
@@ -5910,7 +7789,7 @@ private async renderProfile(): Promise<void> {
         if (!content) return;
 
         content.innerHTML = `
-            <div id="shop-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div id="shop-products" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div class="animate-pulse space-y-4">
                     <div class="h-8 bg-gray-200 rounded w-1/4"></div>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -5946,8 +7825,9 @@ private async renderProfile(): Promise<void> {
         const content = this.getContentElement();
         if (!content) return;
 
+        // Use shop-product-${slug} to match what ShopModule expects
         content.innerHTML = `
-            <div id="shop-product-container" data-slug="${params.slug}" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div id="shop-product-${params.slug}" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div class="animate-pulse space-y-4">
                     <div class="grid md:grid-cols-2 gap-8">
                         <div class="h-96 bg-gray-200 rounded"></div>
@@ -6007,6 +7887,10 @@ private async renderProfile(): Promise<void> {
     private renderShopThankYou(params: Record<string, string>): void {
         const content = this.getContentElement();
         if (!content) return;
+
+        // Clear shop cart count after successful order
+        ShopCartService.clear();
+        this.updateCartBadge();
 
         content.innerHTML = `
             <div id="shop-thank-you-container" data-order="${params.orderNumber}" class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">

@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\TenantClient\ShopWishlistController;
 use App\Http\Controllers\Api\TenantClient\ShopStockAlertController;
 use App\Http\Controllers\Api\TenantClient\GamificationController;
 use App\Http\Controllers\Api\TenantClient\AffiliateController as TenantClientAffiliateController;
+use App\Http\Controllers\Api\TenantClient\TaxController;
 use App\Http\Controllers\Api\DocSearchController;
 use App\Http\Controllers\Api\TenantClientController;
 
@@ -1193,6 +1194,26 @@ Route::prefix('tenant-client')->middleware(['throttle:api', 'tenant.client.cors'
             Route::get('/expiring', [CookieConsentController::class, 'analyticsExpiring'])
                 ->name('api.tenant-client.consent.analytics.expiring');
         });
+    });
+
+    // Taxes (public - calculates applicable taxes for checkout)
+    Route::prefix('taxes')->group(function () {
+        Route::get('/applicable', [TaxController::class, 'getApplicableTaxes'])
+            ->name('api.tenant-client.taxes.applicable');
+        Route::post('/calculate', [TaxController::class, 'calculateTaxes'])
+            ->name('api.tenant-client.taxes.calculate');
+        Route::get('/effective-rate', [TaxController::class, 'getEffectiveRate'])
+            ->name('api.tenant-client.taxes.effective-rate');
+        Route::get('/summary', [TaxController::class, 'getSummary'])
+            ->name('api.tenant-client.taxes.summary');
+        Route::get('/locations', [TaxController::class, 'getLocations'])
+            ->name('api.tenant-client.taxes.locations');
+        Route::get('/locations/counties', [TaxController::class, 'getCounties'])
+            ->name('api.tenant-client.taxes.counties');
+        Route::get('/locations/cities', [TaxController::class, 'getCities'])
+            ->name('api.tenant-client.taxes.cities');
+        Route::get('/checkout', [TaxController::class, 'getCheckoutTaxes'])
+            ->name('api.tenant-client.taxes.checkout');
     });
 
     // Admin (requires admin auth)

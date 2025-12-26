@@ -2246,12 +2246,17 @@ export class SleekClientModule {
                             const sessionId = localStorage.getItem('shop_session_id') || 'shop-' + Math.random().toString(36).substr(2, 16);
                             localStorage.setItem('shop_session_id', sessionId);
 
-                            await this.apiClient.post('/shop/cart/items', {
+                            const cartResponse = await this.apiClient.post('/shop/cart/items', {
                                 product_id: productId,
                                 quantity: 1
                             }, {
                                 headers: { 'X-Session-ID': sessionId }
                             });
+
+                            // Sync cart count
+                            if (cartResponse.data?.item_count !== undefined) {
+                                (window as any).ShopCartService?.setItemCount(cartResponse.data.item_count);
+                            }
 
                             btn.textContent = 'Adaugat!';
                             btn.style.background = '#10b981';
@@ -2447,7 +2452,12 @@ export class SleekClientModule {
             const response = await this.apiClient.get('/shop/cart', {
                 headers: { 'X-Session-ID': sessionId }
             });
-            const cart = response.data.data;
+            const cart = response.data;
+
+            // Sync cart count to ShopCartService
+            if (cart?.item_count !== undefined) {
+                (window as any).ShopCartService?.setItemCount(cart.item_count);
+            }
 
             if (!cart || !cart.items || cart.items.length === 0) {
                 contentEl.innerHTML = `
@@ -2600,11 +2610,11 @@ export class SleekClientModule {
                     <div class="cart-items">
                         ${cart.items.map((item: any) => `
                             <div class="cart-item" data-item-id="${item.id}">
-                                <img src="${item.product?.image_url || '/placeholder.jpg'}" alt="${item.product?.title}" class="cart-item-image">
+                                <img src="${item.image_url || '/placeholder.jpg'}" alt="${item.title}" class="cart-item-image">
                                 <div class="cart-item-info">
-                                    <div class="cart-item-title">${item.product?.title}</div>
-                                    ${item.variant ? `<div class="cart-item-variant">${item.variant.name}</div>` : ''}
-                                    <div class="cart-item-price">${this.formatCurrency(item.price_cents / 100, cart.currency)}</div>
+                                    <div class="cart-item-title">${item.title}</div>
+                                    ${item.variant_name ? `<div class="cart-item-variant">${item.variant_name}</div>` : ''}
+                                    <div class="cart-item-price">${this.formatCurrency(item.unit_price, cart.currency)}</div>
                                     <div class="cart-item-qty">
                                         <button class="cart-qty-btn cart-qty-minus" data-item-id="${item.id}">-</button>
                                         <input type="number" class="cart-qty-input" data-item-id="${item.id}" value="${item.quantity}" min="1">
@@ -2623,17 +2633,17 @@ export class SleekClientModule {
                         <h3 class="cart-summary-title">Sumar comanda</h3>
                         <div class="cart-summary-row">
                             <span>Subtotal</span>
-                            <span>${this.formatCurrency(cart.subtotal_cents / 100, cart.currency)}</span>
+                            <span>${this.formatCurrency(cart.subtotal, cart.currency)}</span>
                         </div>
-                        ${cart.discount_cents > 0 ? `
+                        ${cart.discount > 0 ? `
                             <div class="cart-summary-row" style="color: #10b981;">
                                 <span>Reducere</span>
-                                <span>-${this.formatCurrency(cart.discount_cents / 100, cart.currency)}</span>
+                                <span>-${this.formatCurrency(cart.discount, cart.currency)}</span>
                             </div>
                         ` : ''}
                         <div class="cart-summary-row total">
                             <span>Total</span>
-                            <span>${this.formatCurrency(cart.total_cents / 100, cart.currency)}</span>
+                            <span>${this.formatCurrency(cart.total, cart.currency)}</span>
                         </div>
                         <button class="cart-checkout-btn" onclick="window.location.hash='/shop/checkout'">
                             Continua spre plata

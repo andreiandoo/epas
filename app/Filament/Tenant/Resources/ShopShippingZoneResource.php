@@ -86,74 +86,91 @@ class ShopShippingZoneResource extends Resource
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
                             ->default(true),
-                    ])->columns(2),
+                    ]),
 
                 SC\Section::make('Shipping Methods')
                     ->schema([
                         Forms\Components\Repeater::make('methods')
                             ->relationship('methods')
                             ->schema([
-                                Forms\Components\TextInput::make("name.{$tenantLanguage}")
-                                    ->label('Method Name')
-                                    ->required()
-                                    ->maxLength(100)
-                                    ->placeholder('e.g., Standard Shipping, Express'),
+                                SC\Grid::make(2)
+                                    ->schema([
+                                        Forms\Components\TextInput::make("name.{$tenantLanguage}")
+                                            ->label('Method Name')
+                                            ->required()
+                                            ->maxLength(100)
+                                            ->placeholder('e.g., Standard Shipping, Express'),
 
-                                Forms\Components\Select::make('type')
-                                    ->label('Type')
-                                    ->options([
-                                        'flat_rate' => 'Flat Rate',
-                                        'free' => 'Free Shipping',
-                                        'weight_based' => 'Weight Based',
-                                        'price_based' => 'Price Based',
-                                    ])
-                                    ->default('flat_rate')
-                                    ->required()
-                                    ->live(),
+                                        Forms\Components\Select::make('calculation_type')
+                                            ->label('Type')
+                                            ->options([
+                                                'flat' => 'Flat Rate',
+                                                'free' => 'Free Shipping',
+                                                'weight_based' => 'Weight Based',
+                                                'price_based' => 'Price Based',
+                                            ])
+                                            ->default('flat')
+                                            ->required()
+                                            ->live(),
+                                    ]),
 
-                                Forms\Components\TextInput::make('price_cents')
-                                    ->label('Price (cents)')
-                                    ->numeric()
-                                    ->default(0)
-                                    ->visible(fn ($get) => $get('type') === 'flat_rate')
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Enter price in cents'),
+                                SC\Grid::make(3)
+                                    ->schema([
+                                        Forms\Components\TextInput::make('cost')
+                                            ->label('Price (RON)')
+                                            ->numeric()
+                                            ->step(0.01)
+                                            ->default(0)
+                                            ->prefix('RON')
+                                            ->visible(fn ($get) => in_array($get('calculation_type'), ['flat', 'weight_based', 'price_based'])),
 
-                                Forms\Components\TextInput::make('free_shipping_threshold_cents')
-                                    ->label('Free Shipping Above (cents)')
-                                    ->numeric()
-                                    ->placeholder('No threshold')
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Free shipping when order exceeds this amount'),
+                                        Forms\Components\TextInput::make('cost_per_kg')
+                                            ->label('Cost per KG')
+                                            ->numeric()
+                                            ->step(0.01)
+                                            ->prefix('RON')
+                                            ->placeholder('0.00')
+                                            ->visible(fn ($get) => $get('calculation_type') === 'weight_based'),
 
-                                Forms\Components\TextInput::make('min_order_cents')
-                                    ->label('Min Order (cents)')
-                                    ->numeric()
-                                    ->placeholder('No minimum'),
+                                        Forms\Components\TextInput::make('min_order')
+                                            ->label('Min Order')
+                                            ->numeric()
+                                            ->step(0.01)
+                                            ->prefix('RON')
+                                            ->placeholder('No minimum'),
 
-                                Forms\Components\TextInput::make('max_order_cents')
-                                    ->label('Max Order (cents)')
-                                    ->numeric()
-                                    ->placeholder('No maximum'),
+                                        Forms\Components\TextInput::make('max_order')
+                                            ->label('Free Above / Max Order')
+                                            ->numeric()
+                                            ->step(0.01)
+                                            ->prefix('RON')
+                                            ->placeholder('No maximum')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Free shipping when order exceeds this amount'),
+                                    ]),
 
-                                Forms\Components\TextInput::make('estimated_days_min')
-                                    ->label('Est. Days (min)')
-                                    ->numeric()
-                                    ->default(3),
+                                SC\Grid::make(4)
+                                    ->schema([
+                                        Forms\Components\TextInput::make('estimated_days_min')
+                                            ->label('Est. Days (min)')
+                                            ->numeric()
+                                            ->default(3),
 
-                                Forms\Components\TextInput::make('estimated_days_max')
-                                    ->label('Est. Days (max)')
-                                    ->numeric()
-                                    ->default(5),
+                                        Forms\Components\TextInput::make('estimated_days_max')
+                                            ->label('Est. Days (max)')
+                                            ->numeric()
+                                            ->default(5),
 
-                                Forms\Components\Toggle::make('is_active')
-                                    ->label('Active')
-                                    ->default(true),
+                                        Forms\Components\TextInput::make('sort_order')
+                                            ->label('Order')
+                                            ->numeric()
+                                            ->default(0),
 
-                                Forms\Components\TextInput::make('sort_order')
-                                    ->label('Order')
-                                    ->numeric()
-                                    ->default(0),
+                                        Forms\Components\Toggle::make('is_active')
+                                            ->label('Active')
+                                            ->default(true)
+                                            ->inline(false),
+                                    ]),
                             ])
-                            ->columns(5)
                             ->defaultItems(1)
                             ->addActionLabel('Add Shipping Method')
                             ->collapsible()

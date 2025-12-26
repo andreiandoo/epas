@@ -27,6 +27,7 @@ class ListArtists extends ListRecords
                 ->icon('heroicon-m-plus')
                 ->outlined()
                 ->modalHeading('Add artist')
+                ->class('add-btn')
                 ->slideOver(), // opțional; dacă preferi redirect la /create, șterge ->slideOver()
 
             Actions\Action::make('import')
