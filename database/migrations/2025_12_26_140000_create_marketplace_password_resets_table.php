@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('token');
             $table->timestamp('created_at')->nullable();
 
-            $table->index(['email', 'type', 'marketplace_client_id']);
+            $table->index(['email', 'type', 'marketplace_client_id'], 'mkt_pwd_reset_lookup_idx');
         });
     }
 
