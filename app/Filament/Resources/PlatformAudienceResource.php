@@ -24,9 +24,9 @@ class PlatformAudienceResource extends Resource
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-group';
 
-    protected static string|BackedEnum|null $navigationLabel = 'Audiences';
+    protected static BackedEnum|string|null $navigationLabel = 'Audiences';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Platform Marketing';
+    protected static UnitEnum|string|null $navigationGroup = 'Platform Marketing';
 
     protected static ?int $navigationSort = 3;
 

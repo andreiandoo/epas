@@ -16,20 +16,20 @@ class PriceTierResource extends Resource
 {
     protected static ?string $model = PriceTier::class;
     
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-currency-dollar';
-    protected static string|UnitEnum|null $navigationGroup = 'Venues & Mapping';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-currency-dollar';
+    protected static UnitEnum|string|null $navigationGroup = 'Venues & Mapping';
     protected static ?int $navigationSort = 4;
-    protected static string|BackedEnum|null $navigationLabel = 'Price Tiers';
+    protected static BackedEnum|string|null $navigationLabel = 'Price Tiers';
     protected static ?string $modelLabel = 'Price Tier';
     protected static ?string $pluralModelLabel = 'Price Tiers';
 
     //protected static ?string $navigationParentItem = 'Venues';
 
-    // protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-currency-dollar';
+    // protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-currency-dollar';
 
-    // protected static string|BackedEnum|null $navigationLabel = 'Price Tiers';
+    // protected static BackedEnum|string|null $navigationLabel = 'Price Tiers';
 
-    // protected static string|UnitEnum|null $navigationGroup = 'Venues';
+    // protected static UnitEnum|string|null $navigationGroup = 'Venues';
 
     // protected static ?int $navigationSort = 4;
 

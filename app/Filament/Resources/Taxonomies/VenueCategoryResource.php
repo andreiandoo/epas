@@ -20,9 +20,9 @@ class VenueCategoryResource extends Resource
 {
     protected static ?string $model = VenueCategory::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-squares-2x2';
-    protected static string|UnitEnum|null $navigationGroup = 'Taxonomies';
-    protected static string|BackedEnum|null $navigationLabel = 'Venue Categories';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-squares-2x2';
+    protected static UnitEnum|string|null $navigationGroup = 'Taxonomies';
+    protected static BackedEnum|string|null $navigationLabel = 'Venue Categories';
     protected static ?int $navigationSort = 24;
 
     public static function form(Schema $schema): Schema

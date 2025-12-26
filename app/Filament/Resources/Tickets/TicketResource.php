@@ -22,7 +22,7 @@ class TicketResource extends Resource
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-qr-code';
 
     // Filament v4: UnitEnum|string|null
-    protected static string|UnitEnum|null $navigationGroup = 'Sales';
+    protected static UnitEnum|string|null $navigationGroup = 'Sales';
 
     protected static ?int $navigationSort = 20;
 

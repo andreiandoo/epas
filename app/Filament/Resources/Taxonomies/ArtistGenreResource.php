@@ -17,9 +17,9 @@ class ArtistGenreResource extends Resource
 {
     protected static ?string $model = ArtistGenre::class;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-musical-note';
-    protected static string|UnitEnum|null $navigationGroup = 'Taxonomies';
-    protected static string|BackedEnum|null $navigationLabel = 'Artist Genres';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-musical-note';
+    protected static UnitEnum|string|null $navigationGroup = 'Taxonomies';
+    protected static BackedEnum|string|null $navigationLabel = 'Artist Genres';
     protected static ?int $navigationSort = 32;
 
     public static function form(Schema $schema): Schema
