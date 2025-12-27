@@ -4,17 +4,18 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\MarketplacePayoutResource\Pages;
 use App\Models\MarketplacePayout;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\ViewAction;
 use Filament\Forms;
-use Filament\Schemas\Schema;
+use Filament\Infolists;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Infolists;
-use Illuminate\Database\Eloquent\Builder;
 use BackedEnum;
 use UnitEnum;
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\BulkAction;
 
 class MarketplacePayoutResource extends Resource
 {
@@ -159,8 +160,8 @@ class MarketplacePayoutResource extends Resource
                     ->label('Marketplace'),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\Action::make('approve')
+                ViewAction::make(),
+                Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check')
                     ->color('success')
@@ -169,7 +170,7 @@ class MarketplacePayoutResource extends Resource
                     ->action(function (MarketplacePayout $record) {
                         $record->approve(auth()->id());
                     }),
-                Tables\Actions\Action::make('process')
+                Action::make('process')
                     ->label('Mark Processing')
                     ->icon('heroicon-o-clock')
                     ->color('primary')
@@ -178,7 +179,7 @@ class MarketplacePayoutResource extends Resource
                     ->action(function (MarketplacePayout $record) {
                         $record->markAsProcessing(auth()->id());
                     }),
-                Tables\Actions\Action::make('complete')
+                Action::make('complete')
                     ->label('Complete')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
@@ -195,7 +196,7 @@ class MarketplacePayoutResource extends Resource
                     ->action(function (MarketplacePayout $record, array $data) {
                         $record->complete($data['payment_reference'], $data['payment_notes'] ?? null);
                     }),
-                Tables\Actions\Action::make('reject')
+                Action::make('reject')
                     ->label('Reject')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')

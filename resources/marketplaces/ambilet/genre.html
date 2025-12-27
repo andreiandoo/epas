@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gen — Ambilet</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { 'sans': ['Plus Jakarta Sans', 'sans-serif'] },
+                    colors: {
+                        'primary': '#A51C30',
+                        'primary-dark': '#8B1728',
+                        'secondary': '#1E293B',
+                        'accent': '#E67E22',
+                        'surface': '#F8FAFC',
+                        'muted': '#64748B',
+                        'border': '#E2E8F0',
+                        'success': '#10B981',
+                        'warning': '#F59E0B',
+                        'error': '#EF4444',
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/assets/css/custom.css">
+</head>
+<body class="min-h-screen bg-surface font-sans">
+    <!-- Header -->
+    <div id="header-container"></div>
+
+    <!-- Hero Section -->
+    <section id="genre-hero" class="bg-gradient-to-r from-accent to-orange-600 text-white py-16 lg:py-24">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center gap-4 mb-4">
+                <div id="genre-icon" class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                    </svg>
+                </div>
+                <div>
+                    <nav class="flex items-center gap-2 text-white/70 text-sm mb-2">
+                        <a href="/" class="hover:text-white">Acasă</a>
+                        <span>/</span>
+                        <a href="#" id="parent-category-link" class="hover:text-white">Categorie</a>
+                        <span>/</span>
+                        <span class="text-white" id="genre-breadcrumb">Gen</span>
+                    </nav>
+                    <h1 id="genre-title" class="text-3xl lg:text-4xl font-extrabold">Gen Muzical</h1>
+                    <p id="genre-description" class="text-white/80 mt-1">Descoperă cele mai bune evenimente</p>
+                </div>
+            </div>
+            <p class="text-white/70"><span id="event-count">0</span> evenimente disponibile</p>
+        </div>
+    </section>
+
+    <!-- Filters & Events -->
+    <section class="container mx-auto px-4 py-8">
+        <!-- Filters Bar -->
+        <div class="bg-white rounded-2xl border border-border p-4 mb-8">
+            <div class="flex flex-col lg:flex-row gap-4">
+                <!-- Search -->
+                <div class="flex-1">
+                    <div class="relative">
+                        <input type="text" id="search-input" placeholder="Caută evenimente..." class="form-input pl-10 w-full">
+                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- City Filter -->
+                <div class="w-full lg:w-48">
+                    <select id="city-filter" class="form-select w-full">
+                        <option value="">Toate orașele</option>
+                    </select>
+                </div>
+
+                <!-- Date Filter -->
+                <div class="w-full lg:w-48">
+                    <select id="date-filter" class="form-select w-full">
+                        <option value="">Oricând</option>
+                        <option value="today">Astăzi</option>
+                        <option value="tomorrow">Mâine</option>
+                        <option value="this_week">Săptămâna aceasta</option>
+                        <option value="this_month">Luna aceasta</option>
+                        <option value="next_month">Luna viitoare</option>
+                    </select>
+                </div>
+
+                <!-- Sort -->
+                <div class="w-full lg:w-48">
+                    <select id="sort-filter" class="form-select w-full">
+                        <option value="date_asc">Dată (crescător)</option>
+                        <option value="date_desc">Dată (descrescător)</option>
+                        <option value="price_asc">Preț (crescător)</option>
+                        <option value="price_desc">Preț (descrescător)</option>
+                        <option value="popular">Popularitate</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Genres -->
+        <div id="related-genres" class="flex flex-wrap gap-2 mb-8">
+            <!-- Related genres will be loaded here -->
+        </div>
+
+        <!-- Events Grid -->
+        <div id="events-grid" class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Events will be loaded here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden text-center py-16">
+            <div class="w-24 h-24 bg-muted/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg class="w-12 h-12 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-secondary mb-2">Nu am găsit evenimente</h3>
+            <p class="text-muted mb-6">Încă nu există evenimente pentru acest gen sau filtrele selectate sunt prea restrictive.</p>
+            <a href="/" class="btn btn-primary">Explorează toate evenimentele</a>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" class="text-center py-16">
+            <div class="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-muted">Se încarcă evenimentele...</p>
+        </div>
+
+        <!-- Pagination -->
+        <div id="pagination" class="hidden flex items-center justify-center gap-2 mt-12">
+            <button onclick="prevPage()" id="prev-btn" class="btn btn-secondary" disabled>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Înapoi
+            </button>
+            <span class="px-4 py-2 text-muted">Pagina <span id="current-page">1</span> din <span id="total-pages">1</span></span>
+            <button onclick="nextPage()" id="next-btn" class="btn btn-secondary">
+                Înainte
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </button>
+        </div>
+    </section>
+
+    <!-- Popular Genres Section -->
+    <section class="bg-white border-t border-border py-12">
+        <div class="container mx-auto px-4">
+            <h2 class="text-2xl font-bold text-secondary mb-6">Genuri Populare</h2>
+            <div id="all-genres" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <!-- Genres will be loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <div id="footer-container"></div>
+
+    <script src="/assets/js/config.js"></script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/auth.js"></script>
+    <script src="/assets/js/cart.js"></script>
+    <script src="/assets/js/utils.js"></script>
+    <script src="/assets/js/components/header.js"></script>
+    <script src="/assets/js/components/footer.js"></script>
+    <script src="/assets/js/components/event-card.js"></script>
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+        let genreSlug = null;
+        let genreData = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get genre slug from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            genreSlug = urlParams.get('slug') || urlParams.get('genre');
+
+            if (!genreSlug) {
+                loadAllGenresPage();
+            } else {
+                loadGenreData();
+            }
+
+            loadCities();
+            loadAllGenres();
+
+            // Event listeners for filters
+            document.getElementById('search-input').addEventListener('input', AmbiletUtils.debounce(filterEvents, 300));
+            document.getElementById('city-filter').addEventListener('change', filterEvents);
+            document.getElementById('date-filter').addEventListener('change', filterEvents);
+            document.getElementById('sort-filter').addEventListener('change', filterEvents);
+        });
+
+        async function loadGenreData() {
+            try {
+                const response = await AmbiletAPI.get(`/events/genres/${genreSlug}`);
+                if (response.success) {
+                    genreData = response.data;
+                    displayGenreInfo(genreData);
+                    loadEvents();
+                }
+            } catch (error) {
+                console.error('Error loading genre:', error);
+                loadMockGenreData();
+            }
+        }
+
+        function loadMockGenreData() {
+            const mockGenres = {
+                'rock': { name: 'Rock', description: 'Concerte rock și rock alternativ', category: { name: 'Concerte', slug: 'concerte' } },
+                'pop': { name: 'Pop', description: 'Muzică pop și dance', category: { name: 'Concerte', slug: 'concerte' } },
+                'jazz': { name: 'Jazz', description: 'Jazz, blues și muzică soul', category: { name: 'Concerte', slug: 'concerte' } },
+                'clasica': { name: 'Muzică Clasică', description: 'Concerte simfonice și recitaluri', category: { name: 'Concerte', slug: 'concerte' } },
+                'hip-hop': { name: 'Hip-Hop', description: 'Hip-hop, rap și trap', category: { name: 'Concerte', slug: 'concerte' } },
+                'electronica': { name: 'Electronică', description: 'Muzică electronică și DJ sets', category: { name: 'Concerte', slug: 'concerte' } },
+                'folk': { name: 'Folk', description: 'Muzică folk și world music', category: { name: 'Concerte', slug: 'concerte' } },
+                'metal': { name: 'Metal', description: 'Heavy metal și rock alternativ', category: { name: 'Concerte', slug: 'concerte' } }
+            };
+
+            genreData = mockGenres[genreSlug] || { name: 'Gen', description: 'Evenimente în acest gen', category: { name: 'Concerte', slug: 'concerte' } };
+            displayGenreInfo(genreData);
+            loadMockEvents();
+        }
+
+        function displayGenreInfo(data) {
+            document.getElementById('genre-title').textContent = data.name;
+            document.getElementById('genre-breadcrumb').textContent = data.name;
+            document.getElementById('genre-description').textContent = data.description || 'Descoperă cele mai bune evenimente';
+            document.title = `${data.name} — Ambilet`;
+
+            if (data.category) {
+                const categoryLink = document.getElementById('parent-category-link');
+                categoryLink.textContent = data.category.name;
+                categoryLink.href = `/category.html?slug=${data.category.slug}`;
+            }
+
+            // Load related genres
+            if (data.related_genres) {
+                displayRelatedGenres(data.related_genres);
+            }
+        }
+
+        function displayRelatedGenres(genres) {
+            const container = document.getElementById('related-genres');
+            if (!genres || genres.length === 0) {
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.innerHTML = `
+                <span class="text-muted text-sm">Genuri similare:</span>
+                ${genres.map(genre => `
+                    <a href="/genre.html?slug=${genre.slug}" class="px-4 py-2 bg-white border border-border hover:border-accent rounded-full text-sm font-medium text-secondary hover:text-accent transition-colors">
+                        ${genre.name}
+                    </a>
+                `).join('')}
+            `;
+        }
+
+        async function loadEvents() {
+            document.getElementById('loading-state').classList.remove('hidden');
+            document.getElementById('events-grid').innerHTML = '';
+            document.getElementById('empty-state').classList.add('hidden');
+
+            const search = document.getElementById('search-input').value;
+            const city = document.getElementById('city-filter').value;
+            const date = document.getElementById('date-filter').value;
+            const sort = document.getElementById('sort-filter').value;
+
+            try {
+                const params = new URLSearchParams({
+                    genre: genreSlug,
+                    page: currentPage,
+                    per_page: 12
+                });
+
+                if (search) params.append('search', search);
+                if (city) params.append('city', city);
+                if (date) params.append('date_filter', date);
+                if (sort) params.append('sort', sort);
+
+                const response = await AmbiletAPI.get(`/events?${params.toString()}`);
+
+                document.getElementById('loading-state').classList.add('hidden');
+
+                if (response.success && response.data.events.length > 0) {
+                    displayEvents(response.data.events);
+                    updatePagination(response.data.pagination);
+                    document.getElementById('event-count').textContent = response.data.pagination.total;
+                } else {
+                    showEmptyState();
+                }
+            } catch (error) {
+                console.error('Error loading events:', error);
+                loadMockEvents();
+            }
+        }
+
+        function loadMockEvents() {
+            document.getElementById('loading-state').classList.add('hidden');
+
+            const mockEvents = [
+                { id: 1, title: 'Rock Legends Live', slug: 'rock-legends-live', date: '2025-01-15', time: '20:00', venue: 'Arenele Romane', city: 'București', image: 'https://placehold.co/400x300/1E293B/FFFFFF?text=Rock', price_from: 120, genre: 'Rock' },
+                { id: 2, title: 'Alternative Rock Night', slug: 'alternative-rock', date: '2025-01-22', time: '21:00', venue: 'Control Club', city: 'București', image: 'https://placehold.co/400x300/A51C30/FFFFFF?text=Alt+Rock', price_from: 80, genre: 'Rock' },
+                { id: 3, title: 'Indie Rock Festival', slug: 'indie-rock-fest', date: '2025-02-05', time: '18:00', venue: 'Fratelli Studios', city: 'București', image: 'https://placehold.co/400x300/E67E22/FFFFFF?text=Indie', price_from: 90, genre: 'Rock' },
+                { id: 4, title: 'Classic Rock Tribute', slug: 'classic-rock-tribute', date: '2025-02-14', time: '20:00', venue: 'Hard Rock Cafe', city: 'București', image: 'https://placehold.co/400x300/10B981/FFFFFF?text=Classic', price_from: 75, genre: 'Rock' },
+                { id: 5, title: 'Progressive Rock Concert', slug: 'prog-rock', date: '2025-02-20', time: '19:30', venue: 'Quantic Club', city: 'București', image: 'https://placehold.co/400x300/8B5CF6/FFFFFF?text=Prog', price_from: 100, genre: 'Rock' },
+                { id: 6, title: 'Punk Rock Reunion', slug: 'punk-rock-reunion', date: '2025-03-01', time: '21:00', venue: 'Fabrica', city: 'București', image: 'https://placehold.co/400x300/EF4444/FFFFFF?text=Punk', price_from: 60, genre: 'Rock' },
+            ];
+
+            displayEvents(mockEvents);
+            document.getElementById('event-count').textContent = mockEvents.length;
+            document.getElementById('pagination').classList.add('hidden');
+        }
+
+        function displayEvents(events) {
+            const container = document.getElementById('events-grid');
+            container.innerHTML = events.map(event => AmbiletEventCard.render(event)).join('');
+        }
+
+        function showEmptyState() {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('empty-state').classList.remove('hidden');
+            document.getElementById('pagination').classList.add('hidden');
+            document.getElementById('event-count').textContent = '0';
+        }
+
+        function updatePagination(pagination) {
+            if (!pagination || pagination.last_page <= 1) {
+                document.getElementById('pagination').classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('pagination').classList.remove('hidden');
+            document.getElementById('current-page').textContent = pagination.current_page;
+            document.getElementById('total-pages').textContent = pagination.last_page;
+            totalPages = pagination.last_page;
+
+            document.getElementById('prev-btn').disabled = pagination.current_page <= 1;
+            document.getElementById('next-btn').disabled = pagination.current_page >= pagination.last_page;
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                loadEvents();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadEvents();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function filterEvents() {
+            currentPage = 1;
+            loadEvents();
+        }
+
+        async function loadCities() {
+            try {
+                const response = await AmbiletAPI.get('/events/cities');
+                if (response.success) {
+                    const select = document.getElementById('city-filter');
+                    response.data.forEach(city => {
+                        const option = document.createElement('option');
+                        option.value = city.slug;
+                        option.textContent = city.name;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                const select = document.getElementById('city-filter');
+                ['București', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Brașov', 'Sibiu'].forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city.toLowerCase().replace(' ', '-');
+                    option.textContent = city;
+                    select.appendChild(option);
+                });
+            }
+        }
+
+        async function loadAllGenres() {
+            try {
+                const response = await AmbiletAPI.get('/events/genres');
+                if (response.success) {
+                    displayAllGenres(response.data);
+                }
+            } catch (error) {
+                displayAllGenres([
+                    { slug: 'rock', name: 'Rock', count: 28 },
+                    { slug: 'pop', name: 'Pop', count: 35 },
+                    { slug: 'jazz', name: 'Jazz', count: 12 },
+                    { slug: 'clasica', name: 'Clasică', count: 18 },
+                    { slug: 'hip-hop', name: 'Hip-Hop', count: 15 },
+                    { slug: 'electronica', name: 'Electronică', count: 22 },
+                    { slug: 'folk', name: 'Folk', count: 8 },
+                    { slug: 'metal', name: 'Metal', count: 10 },
+                    { slug: 'r-n-b', name: 'R&B', count: 7 },
+                    { slug: 'reggae', name: 'Reggae', count: 5 },
+                    { slug: 'country', name: 'Country', count: 4 },
+                    { slug: 'latin', name: 'Latin', count: 9 }
+                ]);
+            }
+        }
+
+        function displayAllGenres(genres) {
+            const container = document.getElementById('all-genres');
+            container.innerHTML = genres.map(genre => `
+                <a href="/genre.html?slug=${genre.slug}" class="bg-surface rounded-xl p-4 hover:bg-accent/5 hover:border-accent border border-transparent transition-colors text-center ${genreSlug === genre.slug ? 'border-accent bg-accent/5' : ''}">
+                    <h3 class="font-semibold text-secondary">${genre.name}</h3>
+                    <p class="text-sm text-muted">${genre.count || 0} evenimente</p>
+                </a>
+            `).join('');
+        }
+
+        function loadAllGenresPage() {
+            document.getElementById('genre-title').textContent = 'Toate Genurile';
+            document.getElementById('genre-breadcrumb').textContent = 'Genuri';
+            document.getElementById('genre-description').textContent = 'Explorează evenimentele pe genuri muzicale';
+            document.title = 'Genuri — Ambilet';
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('events-grid').classList.add('hidden');
+            document.getElementById('parent-category-link').textContent = 'Categorii';
+            document.getElementById('parent-category-link').href = '/category.html';
+
+            loadAllGenres();
+        }
+    </script>
+</body>
+</html>
