@@ -3,8 +3,11 @@
 namespace App\Filament\Resources\MarketplaceClientResource\RelationManagers;
 
 use App\Models\Tenant;
+use Filament\Actions\AttachAction;
 use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DetachAction;
 use Filament\Actions\DetachBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
@@ -81,11 +84,11 @@ class TenantsRelationManager extends RelationManager
                     ->falseLabel('Inactive'),
             ])
             ->headerActions([
-                Tables\Actions\AttachAction::make()
+                AttachAction::make()
                     ->label('Add Tenant')
                     ->preloadRecordSelect()
                     ->recordSelectOptionsQuery(fn ($query) => $query->where('status', 'active'))
-                    ->form(fn (Tables\Actions\AttachAction $action): array => [
+                    ->form(fn (AttachAction $action): array => [
                         $action->getRecordSelect(),
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
@@ -101,10 +104,10 @@ class TenantsRelationManager extends RelationManager
                     ]),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
+                EditAction::make()
                     ->label('Edit')
                     ->modalHeading('Edit Tenant Settings'),
-                Tables\Actions\DetachAction::make()
+                DetachAction::make()
                     ->label('Remove'),
             ])
             ->bulkActions([])
@@ -117,7 +120,7 @@ class TenantsRelationManager extends RelationManager
             ->emptyStateHeading('No tenants assigned')
             ->emptyStateDescription('Add tenants to allow this marketplace client to sell their tickets.')
             ->emptyStateActions([
-                Tables\Actions\AttachAction::make()
+                AttachAction::make()
                     ->label('Add First Tenant')
                     ->preloadRecordSelect(),
             ]);
