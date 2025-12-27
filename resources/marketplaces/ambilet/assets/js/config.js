@@ -1,12 +1,18 @@
 /**
  * Ambilet.ro - Configuration
  * Marketplace client for Tixello
+ *
+ * Note: When using PHP, API credentials are injected via window.AMBILET_CONFIG
+ * from includes/scripts.php for security
  */
 
+// Get PHP-injected config or use defaults
+const PHP_CONFIG = window.AMBILET_CONFIG || {};
+
 const AMBILET_CONFIG = {
-    // API Configuration
-    API_BASE_URL: 'https://core.tixello.com/api/marketplace-client',
-    API_KEY: '', // Will be set after creating MarketplaceClient in admin
+    // API Configuration (prefer PHP-injected values for security)
+    API_BASE_URL: PHP_CONFIG.API_BASE_URL || 'https://core.tixello.com/api/marketplace-client',
+    API_KEY: PHP_CONFIG.API_KEY || '', // Set via PHP for security
 
     // Site Configuration
     SITE_NAME: 'Ambilet',
