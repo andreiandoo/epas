@@ -155,16 +155,16 @@ class MarketplaceClientResource extends Resource
                         Forms\Components\TextInput::make('api_key')
                             ->label('API Key')
                             ->disabled()
-                            ->dehydrated(false)
-                            ->helperText('Auto-generated. Click "Regenerate API Key" to create new credentials.'),
+                            ->helperText('Auto-generated. Click "Regenerate API Key" to create new credentials.')
+                            ->copyable(),
 
                         Forms\Components\TextInput::make('api_secret')
                             ->label('API Secret')
                             ->disabled()
-                            ->dehydrated(false)
                             ->password()
                             ->revealable()
-                            ->helperText('Only shown once when regenerated.'),
+                            ->helperText('Keep this secret! Use it to authenticate API requests.')
+                            ->copyable(),
                     ])
                     ->columns(2)
                     ->visible(fn ($record) => $record !== null),
@@ -257,10 +257,11 @@ class MarketplaceClientResource extends Resource
                     ->modalDescription('This will invalidate the current API key. The client will need to update their integration with the new credentials.')
                     ->action(function (MarketplaceClient $record) {
                         $record->regenerateApiCredentials();
+                        $record->refresh();
 
                         \Filament\Notifications\Notification::make()
                             ->title('API Credentials Regenerated')
-                            ->body("New API Key: {$record->api_key}")
+                            ->body("New API Key: {$record->api_key}\n\nNew API Secret: {$record->api_secret}")
                             ->success()
                             ->persistent()
                             ->send();
