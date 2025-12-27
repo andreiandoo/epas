@@ -26,7 +26,7 @@ class MarketplacePayoutResource extends Resource
 
     protected static UnitEnum|string|null $navigationGroup = 'Marketplace';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 15;
 
     public static function form(Schema $schema): Schema
     {

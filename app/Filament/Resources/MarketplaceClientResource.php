@@ -3,10 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Models\MarketplaceClient;
-use Filament\Actions\Action;
-use Filament\Actions\ViewAction;
-use Filament\Actions\EditAction;
-use Filament\Actions\DeleteAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Forms;
@@ -27,7 +23,7 @@ class MarketplaceClientResource extends Resource
 
     protected static ?string $navigationLabel = 'Marketplace Clients';
 
-    protected static UnitEnum|string|null $navigationGroup = 'Platform';
+    protected static UnitEnum|string|null $navigationGroup = 'Marketplace';
 
     protected static ?int $navigationSort = 10;
 
@@ -247,9 +243,9 @@ class MarketplaceClientResource extends Resource
                     ]),
             ])
             ->actions([
-                ViewAction::make(),
-                EditAction::make(),
-                Action::make('regenerate_api_key')
+                Tables\Actions\ViewAction::make(),
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('regenerate_api_key')
                     ->label('Regenerate Key')
                     ->icon('heroicon-o-key')
                     ->color('warning')
@@ -267,6 +263,7 @@ class MarketplaceClientResource extends Resource
                             ->send();
                     }),
             ])
+            ->bulkActions([])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
