@@ -13,6 +13,7 @@ use BackedEnum;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,8 @@ use Carbon\Carbon;
 
 class AnalyticsDashboard extends Page
 {
+    use HasMarketplaceContext;
+
     use Forms\Concerns\InteractsWithForms;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar-square';
@@ -34,21 +37,21 @@ class AnalyticsDashboard extends Page
     /**
      * Analytics dashboard is tenant-specific, not applicable to marketplace panel
      */
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        return false;
+        return static::marketplaceHasMicroservice('analytics');
     }
 
     public function mount(): void
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$tenant) {
+        if (!$marketplace) {
             abort(404);
         }
 
         // Check if microservice is active
-        $hasAccess = $tenant->microservices()
+        $hasAccess = $marketplace->microservices()
             ->where('microservices.slug', 'analytics')
             ->wherePivot('is_active', true)
             ->exists();
@@ -90,9 +93,9 @@ class AnalyticsDashboard extends Page
 
     public function getMetrics(): array
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$tenant) {
+        if (!$marketplace) {
             return [
                 'total_revenue' => 0,
                 'total_orders' => 0,
@@ -102,7 +105,7 @@ class AnalyticsDashboard extends Page
             ];
         }
 
-        $query = Order::where('tenant_id', $tenant->id);
+        $query = Order::where('marketplace_client_id', $marketplace->id);
 
         // Apply date filter
         $startDate = match ($this->dateRange) {
@@ -123,7 +126,7 @@ class AnalyticsDashboard extends Page
 
         // Get previous period for comparison
         $previousStartDate = $startDate ? (clone $startDate)->subDays($startDate->diffInDays(Carbon::now())) : null;
-        $previousQuery = Order::where('tenant_id', $tenant->id)->where('status', 'paid');
+        $previousQuery = Order::where('marketplace_client_id', $marketplace->id)->where('status', 'paid');
 
         if ($previousStartDate && $startDate) {
             $previousQuery->whereBetween('created_at', [$previousStartDate, $startDate]);
@@ -143,9 +146,9 @@ class AnalyticsDashboard extends Page
 
     public function getSalesData(): array
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$tenant) {
+        if (!$marketplace) {
             return ['labels' => [], 'revenue' => [], 'orders' => []];
         }
 
@@ -156,7 +159,7 @@ class AnalyticsDashboard extends Page
             default => 30,
         };
 
-        $data = Order::where('tenant_id', $tenant->id)
+        $data = Order::where('marketplace_client_id', $marketplace->id)
             ->where('status', 'paid')
             ->where('created_at', '>=', Carbon::now()->subDays($days))
             ->selectRaw('DATE(created_at) as date, SUM(total_cents) as revenue, COUNT(*) as orders')
@@ -186,9 +189,9 @@ class AnalyticsDashboard extends Page
 
     public function getTopEvents(): array
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$tenant) {
+        if (!$marketplace) {
             return [];
         }
 
@@ -201,7 +204,7 @@ class AnalyticsDashboard extends Page
 
         // Get events with ticket sales - sum order totals (not ticket prices) to account for discounts
         // Most orders are for a single event, so we can safely use order totals
-        $orders = Order::where('orders.tenant_id', $tenant->id)
+        $orders = Order::where('orders.tenant_id', $marketplace->id)
             ->where('orders.status', 'paid')
             ->with(['tickets.ticketType:id,event_id'])
             ->when($startDate, fn ($q) => $q->where('orders.created_at', '>=', $startDate))
@@ -261,8 +264,8 @@ class AnalyticsDashboard extends Page
      */
     public function getRealtimeData(): array
     {
-        $tenant = auth()->user()->tenant;
-        $tenantId = $tenant?->id;
+        $marketplace = static::getMarketplaceClient();
+        $tenantId = $marketplace?->id;
 
         // Get real active sessions
         $activeUsers = CoreSession::active()
@@ -412,8 +415,8 @@ class AnalyticsDashboard extends Page
      */
     protected function getRealRecentEvents(): array
     {
-        $tenant = auth()->user()->tenant;
-        $tenantId = $tenant?->id;
+        $marketplace = static::getMarketplaceClient();
+        $tenantId = $marketplace?->id;
         $currencySymbol = $this->getCurrencySymbol();
 
         $events = CoreCustomerEvent::with(['session', 'coreCustomer'])
@@ -466,8 +469,8 @@ class AnalyticsDashboard extends Page
      */
     public function getTrafficSources(): array
     {
-        $tenant = auth()->user()->tenant;
-        $tenantId = $tenant?->id;
+        $marketplace = static::getMarketplaceClient();
+        $tenantId = $marketplace?->id;
 
         $days = match ($this->dateRange) {
             '7d' => 7,
@@ -520,8 +523,8 @@ class AnalyticsDashboard extends Page
      */
     public function getTopPages(): array
     {
-        $tenant = auth()->user()->tenant;
-        $tenantId = $tenant?->id;
+        $marketplace = static::getMarketplaceClient();
+        $tenantId = $marketplace?->id;
 
         $days = match ($this->dateRange) {
             '7d' => 7,
@@ -550,8 +553,8 @@ class AnalyticsDashboard extends Page
      */
     public function getGeographicData(): array
     {
-        $tenant = auth()->user()->tenant;
-        $tenantId = $tenant?->id;
+        $marketplace = static::getMarketplaceClient();
+        $tenantId = $marketplace?->id;
 
         $days = match ($this->dateRange) {
             '7d' => 7,
@@ -600,8 +603,8 @@ class AnalyticsDashboard extends Page
      */
     public function getCurrencySymbol(): string
     {
-        $tenant = auth()->user()->tenant;
-        $currency = $tenant?->currency ?? 'EUR';
+        $marketplace = static::getMarketplaceClient();
+        $currency = $marketplace?->currency ?? 'EUR';
 
         return match (strtoupper($currency)) {
             'RON' => 'RON',
@@ -617,8 +620,8 @@ class AnalyticsDashboard extends Page
      */
     public function getDeviceStats(): array
     {
-        $tenant = auth()->user()->tenant;
-        $tenantId = $tenant?->id;
+        $marketplace = static::getMarketplaceClient();
+        $tenantId = $marketplace?->id;
 
         $days = match ($this->dateRange) {
             '7d' => 7,
@@ -679,8 +682,8 @@ class AnalyticsDashboard extends Page
      */
     public function getBrowserStats(): array
     {
-        $tenant = auth()->user()->tenant;
-        $tenantId = $tenant?->id;
+        $marketplace = static::getMarketplaceClient();
+        $tenantId = $marketplace?->id;
 
         $days = match ($this->dateRange) {
             '7d' => 7,
@@ -751,8 +754,8 @@ class AnalyticsDashboard extends Page
      */
     public function hasTrackingData(): bool
     {
-        $tenant = auth()->user()->tenant;
-        $tenantId = $tenant?->id;
+        $marketplace = static::getMarketplaceClient();
+        $tenantId = $marketplace?->id;
 
         return CoreSession::query()
             ->when($tenantId, fn($q) => $q->forTenant($tenantId))
@@ -765,8 +768,8 @@ class AnalyticsDashboard extends Page
      */
     public function getLandingPages(): array
     {
-        $tenant = auth()->user()->tenant;
-        $tenantId = $tenant?->id;
+        $marketplace = static::getMarketplaceClient();
+        $tenantId = $marketplace?->id;
 
         $days = match ($this->dateRange) {
             '7d' => 7,
@@ -797,8 +800,8 @@ class AnalyticsDashboard extends Page
      */
     public function getExitPages(): array
     {
-        $tenant = auth()->user()->tenant;
-        $tenantId = $tenant?->id;
+        $marketplace = static::getMarketplaceClient();
+        $tenantId = $marketplace?->id;
 
         $days = match ($this->dateRange) {
             '7d' => 7,

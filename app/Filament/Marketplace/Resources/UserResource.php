@@ -11,40 +11,42 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Illuminate\Support\Facades\Hash;
 
 class UserResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = User::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
     protected static ?int $navigationSort = 1;
     protected static ?string $navigationLabel = 'Team Members';
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // UserResource is for tenant staff (editors), not marketplace admins
-        // Marketplace uses MarketplaceAdmin model for its own users
-        return false;
+        // Marketplace staff management is always available
+        return true;
     }
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
         // Get users that belong to this tenant (editors created by tenant)
         return parent::getEloquentQuery()
-            ->where('tenant_id', $tenant?->id)
+            ->where('marketplace_client_id', $marketplace?->id)
             ->where('role', 'editor');
     }
 
     public static function form(Schema $schema): Schema
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
         return $schema
             ->schema([
-                Forms\Components\Hidden::make('tenant_id')
-                    ->default($tenant?->id),
+                Forms\Components\Hidden::make('marketplace_client_id')
+                    ->default($marketplace?->id),
 
                 SC\Section::make('User Details')
                     ->schema([

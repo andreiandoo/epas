@@ -4,9 +4,12 @@ namespace App\Filament\Marketplace\Pages;
 
 use BackedEnum;
 use Filament\Pages\Page;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class TicketCustomizerPage extends Page
 {
+    use HasMarketplaceContext;
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
     protected static ?string $navigationLabel = 'Ticket Customizer';
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
@@ -20,10 +23,9 @@ class TicketCustomizerPage extends Page
         return '';
     }
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // Ticket customizer is tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('ticket-customizer');
     }
 
 }

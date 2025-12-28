@@ -13,6 +13,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Illuminate\Support\Facades\Storage;
@@ -23,6 +24,8 @@ use ZipArchive;
 
 class Invitations extends Page
 {
+    use HasMarketplaceContext;
+
     use Forms\Concerns\InteractsWithForms;
     use WithFileUploads;
 
@@ -62,21 +65,21 @@ class Invitations extends Page
     /**
      * Invitations are tenant-specific, not applicable to marketplace panel
      */
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        return false;
+        return static::marketplaceHasMicroservice('invitations');
     }
 
     public function mount(): void
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$tenant) {
+        if (!$marketplace) {
             abort(404);
         }
 
         // Check if microservice is active
-        $hasAccess = $tenant->microservices()
+        $hasAccess = $marketplace->microservices()
             ->where('microservices.slug', 'invitations')
             ->wherePivot('is_active', true)
             ->exists();
@@ -96,7 +99,7 @@ class Invitations extends Page
         $eventId = request()->query('event');
         if ($eventId) {
             // Verify the event belongs to this tenant
-            $event = Event::where('tenant_id', $tenant->id)->find($eventId);
+            $event = Event::where('marketplace_client_id', $marketplace->id)->find($eventId);
             if ($event) {
                 $this->preselectedEventId = (int) $eventId;
             }
@@ -105,9 +108,9 @@ class Invitations extends Page
 
     public function getBatches()
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        return InviteBatch::where('tenant_id', $tenant->id)
+        return InviteBatch::where('marketplace_client_id', $marketplace->id)
             ->with(['template'])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -122,13 +125,13 @@ class Invitations extends Page
 
     public function getEvents(): array
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$tenant) {
+        if (!$marketplace) {
             return [];
         }
 
-        return Event::where('tenant_id', $tenant->id)
+        return Event::where('marketplace_client_id', $marketplace->id)
             ->orderBy('created_at', 'desc')
             ->get()
             ->mapWithKeys(fn ($event) => [$event->id => $event->getTranslation('title')])
@@ -137,13 +140,13 @@ class Invitations extends Page
 
     public function getTemplates(): array
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$tenant) {
+        if (!$marketplace) {
             return [];
         }
 
-        return TicketTemplate::where('tenant_id', $tenant->id)
+        return TicketTemplate::where('marketplace_client_id', $marketplace->id)
             ->where('status', 'active')
             ->get()
             ->mapWithKeys(fn ($template) => [$template->id => $template->name])
@@ -169,10 +172,10 @@ class Invitations extends Page
 
     public function createBatch(array $data): void
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
         $batch = InviteBatch::create([
-            'tenant_id' => $tenant->id,
+            'marketplace_client_id' => $marketplace->id,
             'event_ref' => $data['event_ref'],
             'name' => $data['name'],
             'qty_planned' => $data['qty_planned'],
@@ -190,7 +193,7 @@ class Invitations extends Page
         for ($i = 0; $i < $data['qty_planned']; $i++) {
             Invite::create([
                 'batch_id' => $batch->id,
-                'tenant_id' => $tenant->id,
+                'marketplace_client_id' => $marketplace->id,
                 'status' => 'created',
             ]);
         }
@@ -231,9 +234,9 @@ class Invitations extends Page
             return;
         }
 
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if ($batch->tenant_id !== $tenant->id) {
+        if ($batch->tenant_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -373,9 +376,9 @@ class Invitations extends Page
             return;
         }
 
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if ($batch->tenant_id !== $tenant->id) {
+        if ($batch->tenant_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -544,9 +547,9 @@ class Invitations extends Page
     public function renderBatch(string $batchId): void
     {
         $batch = InviteBatch::find($batchId);
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $tenant->id) {
+        if (!$batch || $batch->tenant_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -713,9 +716,9 @@ class Invitations extends Page
     public function sendEmails(string $batchId): void
     {
         $batch = InviteBatch::find($batchId);
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $tenant->id) {
+        if (!$batch || $batch->tenant_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -763,9 +766,9 @@ class Invitations extends Page
     public function cancelBatch(string $batchId): void
     {
         $batch = InviteBatch::find($batchId);
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $tenant->id) {
+        if (!$batch || $batch->tenant_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -797,9 +800,9 @@ class Invitations extends Page
     public function deleteBatch(string $batchId): void
     {
         $batch = InviteBatch::find($batchId);
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $tenant->id) {
+        if (!$batch || $batch->tenant_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -849,9 +852,9 @@ class Invitations extends Page
     public function addManualRecipient(): void
     {
         $batch = InviteBatch::find($this->manualBatchId);
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $tenant->id) {
+        if (!$batch || $batch->tenant_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -886,7 +889,7 @@ class Invitations extends Page
             // No available slots, create a new invite
             $invite = Invite::create([
                 'batch_id' => $batch->id,
-                'tenant_id' => $tenant->id,
+                'marketplace_client_id' => $marketplace->id,
                 'status' => 'created',
             ]);
 
@@ -938,9 +941,9 @@ class Invitations extends Page
     public function downloadPdfs(string $batchId)
     {
         $batch = InviteBatch::find($batchId);
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $tenant->id) {
+        if (!$batch || $batch->tenant_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -1050,9 +1053,9 @@ class Invitations extends Page
     public function regeneratePdfs(string $batchId): void
     {
         $batch = InviteBatch::find($batchId);
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $tenant->id) {
+        if (!$batch || $batch->tenant_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -1082,9 +1085,9 @@ class Invitations extends Page
     public function downloadExport(string $batchId): \Symfony\Component\HttpFoundation\StreamedResponse
     {
         $batch = InviteBatch::with('invites')->find($batchId);
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $tenant->id) {
+        if (!$batch || $batch->tenant_id !== $marketplace->id) {
             abort(403);
         }
 

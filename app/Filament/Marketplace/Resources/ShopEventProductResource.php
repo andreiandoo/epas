@@ -19,9 +19,12 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class ShopEventProductResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = ShopEventProduct::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-link';
@@ -38,14 +41,9 @@ class ShopEventProductResource extends Resource
 
     protected static ?int $navigationSort = 70;
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        $tenant = auth()->user()?->tenant;
-
-        return $tenant?->microservices()
-            ->where('slug', 'shop')
-            ->wherePivot('is_active', true)
-            ->exists() ?? false;
+        return static::marketplaceHasMicroservice('shop');
     }
 
     public static function getEloquentQuery(): Builder
@@ -53,13 +51,13 @@ class ShopEventProductResource extends Resource
         $tenantId = auth()->user()?->tenant?->id;
 
         return parent::getEloquentQuery()
-            ->whereHas('event', fn($q) => $q->where('tenant_id', $tenantId));
+            ->whereHas('event', fn($q) => $q->where('marketplace_client_id', $tenantId));
     }
 
     public static function form(Schema $schema): Schema
     {
         $tenantId = auth()->user()?->tenant?->id;
-        $tenantLanguage = auth()->user()?->tenant?->language ?? 'en';
+        $marketplaceLanguage = auth()->user()?->tenant?->language ?? 'en';
 
         return $schema
             ->schema([
@@ -68,11 +66,11 @@ class ShopEventProductResource extends Resource
                         Forms\Components\Select::make('event_id')
                             ->label('Event')
                             ->options(
-                                Event::where('tenant_id', $tenantId)
+                                Event::where('marketplace_client_id', $tenantId)
                                     ->where('is_cancelled', false)
                                     ->orderBy('event_date', 'desc')
                                     ->get()
-                                    ->mapWithKeys(fn($e) => [$e->id => $e->getTranslation('title', $tenantLanguage)])
+                                    ->mapWithKeys(fn($e) => [$e->id => $e->getTranslation('title', $marketplaceLanguage)])
                             )
                             ->searchable()
                             ->required()
@@ -81,11 +79,11 @@ class ShopEventProductResource extends Resource
 
                         Forms\Components\Select::make('product_id')
                             ->label('Product')
-                            ->options(function () use ($tenantId, $tenantLanguage) {
-                                return ShopProduct::where('tenant_id', $tenantId)
+                            ->options(function () use ($tenantId, $marketplaceLanguage) {
+                                return ShopProduct::where('marketplace_client_id', $tenantId)
                                     ->where('status', 'active')
                                     ->get()
-                                    ->mapWithKeys(fn($p) => [$p->id => $p->getTranslation('title', $tenantLanguage)]);
+                                    ->mapWithKeys(fn($p) => [$p->id => $p->getTranslation('title', $marketplaceLanguage)]);
                             })
                             ->searchable()
                             ->required(),
@@ -150,19 +148,19 @@ class ShopEventProductResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $tenantLanguage = auth()->user()?->tenant?->language ?? 'en';
+        $marketplaceLanguage = auth()->user()?->tenant?->language ?? 'en';
 
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('event.title')
                     ->label('Event')
-                    ->formatStateUsing(fn($record) => $record->event?->getTranslation('title', $tenantLanguage))
+                    ->formatStateUsing(fn($record) => $record->event?->getTranslation('title', $marketplaceLanguage))
                     ->searchable()
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('product.title')
                     ->label('Product')
-                    ->formatStateUsing(fn($record) => $record->product?->getTranslation('title', $tenantLanguage))
+                    ->formatStateUsing(fn($record) => $record->product?->getTranslation('title', $marketplaceLanguage))
                     ->searchable(),
 
                 Tables\Columns\BadgeColumn::make('association_type')
@@ -202,13 +200,13 @@ class ShopEventProductResource extends Resource
                     ->label('Event')
                     ->options(function () {
                         $tenantId = auth()->user()?->tenant?->id;
-                        $tenantLanguage = auth()->user()?->tenant?->language ?? 'en';
+                        $marketplaceLanguage = auth()->user()?->tenant?->language ?? 'en';
 
-                        return Event::where('tenant_id', $tenantId)
+                        return Event::where('marketplace_client_id', $tenantId)
                             ->orderBy('event_date', 'desc')
                             ->limit(50)
                             ->get()
-                            ->mapWithKeys(fn($e) => [$e->id => $e->getTranslation('title', $tenantLanguage)]);
+                            ->mapWithKeys(fn($e) => [$e->id => $e->getTranslation('title', $marketplaceLanguage)]);
                     })
                     ->searchable(),
 

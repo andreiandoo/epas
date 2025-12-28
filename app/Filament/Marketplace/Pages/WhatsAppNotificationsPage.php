@@ -4,9 +4,12 @@ namespace App\Filament\Marketplace\Pages;
 
 use BackedEnum;
 use Filament\Pages\Page;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class WhatsAppNotificationsPage extends Page
 {
+    use HasMarketplaceContext;
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chat-bubble-left-right';
     protected static ?string $navigationLabel = 'WhatsApp Notifications';
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
@@ -19,10 +22,9 @@ class WhatsAppNotificationsPage extends Page
         return '';
     }
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // WhatsApp notifications are tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('whatsapp-notifications');
     }
 
 }

@@ -15,9 +15,12 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class AffiliateWithdrawalResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = AffiliateWithdrawal::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-banknotes';
@@ -36,12 +39,12 @@ class AffiliateWithdrawalResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        $tenant = filament()->getTenant();
-        if (!$tenant) {
+        $marketplace = static::getMarketplaceClient();
+        if (!$marketplace) {
             return null;
         }
 
-        $count = AffiliateWithdrawal::where('tenant_id', $tenant->id)
+        $count = AffiliateWithdrawal::where('marketplace_client_id', $marketplace->id)
             ->where('status', 'pending')
             ->count();
 
@@ -53,10 +56,9 @@ class AffiliateWithdrawalResource extends Resource
         return 'warning';
     }
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // Affiliate withdrawals are tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('affiliates');
     }
 
     public static function canCreate(): bool
@@ -311,10 +313,10 @@ class AffiliateWithdrawalResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = filament()->getTenant();
+        $marketplaceClientId = static::getMarketplaceClientId();
 
         return parent::getEloquentQuery()
-            ->where('tenant_id', $tenant?->id)
+            ->where('marketplace_client_id', $marketplaceClientId)
             ->with(['affiliate']);
     }
 }

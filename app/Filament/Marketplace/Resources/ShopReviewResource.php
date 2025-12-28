@@ -16,11 +16,14 @@ use Filament\Actions\ViewAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\BulkAction;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\HtmlString;
 
 class ShopReviewResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = ShopReview::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-star';
@@ -41,20 +44,19 @@ class ShopReviewResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
-        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+        $marketplaceClientId = static::getMarketplaceClientId();
+        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplaceClientId);
     }
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // This is tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('shop');
     }
 
     public static function infolist(Schema $schema): Schema
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $schema
             ->components([
@@ -63,7 +65,7 @@ class ShopReviewResource extends Resource
                     ->schema([
                         Forms\Components\Placeholder::make('product')
                             ->label('Product')
-                            ->content(fn ($record) => $record->product?->title[$tenantLanguage] ?? 'Unknown'),
+                            ->content(fn ($record) => $record->product?->title[$marketplaceLanguage] ?? 'Unknown'),
 
                         Forms\Components\Placeholder::make('rating')
                             ->label('Rating')
@@ -148,14 +150,14 @@ class ShopReviewResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('product.title')
                     ->label('Product')
-                    ->formatStateUsing(fn ($state) => is_array($state) ? ($state[$tenantLanguage] ?? 'Unknown') : $state)
+                    ->formatStateUsing(fn ($state) => is_array($state) ? ($state[$marketplaceLanguage] ?? 'Unknown') : $state)
                     ->limit(25)
                     ->searchable(),
 

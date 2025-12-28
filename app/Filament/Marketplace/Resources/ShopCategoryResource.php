@@ -16,10 +16,13 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Illuminate\Support\Str;
 
 class ShopCategoryResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = ShopCategory::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-squares-2x2';
@@ -40,29 +43,28 @@ class ShopCategoryResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
-        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+        $marketplaceClientId = static::getMarketplaceClientId();
+        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplaceClientId);
     }
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // This is tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('shop');
     }
 
     public static function form(Schema $schema): Schema
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $schema
             ->schema([
-                Forms\Components\Hidden::make('tenant_id')
-                    ->default($tenant?->id),
+                Forms\Components\Hidden::make('marketplace_client_id')
+                    ->default($marketplace?->id),
 
                 SC\Section::make('Category Details')
                     ->schema([
-                        Forms\Components\TextInput::make("name.{$tenantLanguage}")
+                        Forms\Components\TextInput::make("name.{$marketplaceLanguage}")
                             ->label('Category Name')
                             ->required()
                             ->maxLength(190)
@@ -77,7 +79,7 @@ class ShopCategoryResource extends Resource
                             ->maxLength(190)
                             ->rule('alpha_dash'),
 
-                        Forms\Components\Textarea::make("description.{$tenantLanguage}")
+                        Forms\Components\Textarea::make("description.{$marketplaceLanguage}")
                             ->label('Description')
                             ->rows(3)
                             ->columnSpanFull(),
@@ -85,9 +87,9 @@ class ShopCategoryResource extends Resource
                         Forms\Components\Select::make('parent_id')
                             ->label('Parent Category')
                             ->options(function () {
-                                $tenant = auth()->user()->tenant;
-                                $lang = $tenant->language ?? $tenant->locale ?? 'en';
-                                return ShopCategory::where('tenant_id', $tenant?->id)
+                                $marketplace = static::getMarketplaceClient();
+                                $lang = $marketplace->language ?? $marketplace->locale ?? 'en';
+                                return ShopCategory::where('marketplace_client_id', $marketplace?->id)
                                     ->whereNull('parent_id')
                                     ->get()
                                     ->mapWithKeys(fn ($cat) => [$cat->id => $cat->name[$lang] ?? $cat->name['en'] ?? 'Unnamed']);
@@ -162,11 +164,11 @@ class ShopCategoryResource extends Resource
                 SC\Section::make('SEO')
                     ->collapsed()
                     ->schema([
-                        Forms\Components\TextInput::make("meta_title.{$tenantLanguage}")
+                        Forms\Components\TextInput::make("meta_title.{$marketplaceLanguage}")
                             ->label('Meta Title')
                             ->maxLength(70),
 
-                        Forms\Components\Textarea::make("meta_description.{$tenantLanguage}")
+                        Forms\Components\Textarea::make("meta_description.{$marketplaceLanguage}")
                             ->label('Meta Description')
                             ->rows(2)
                             ->maxLength(160),
@@ -176,12 +178,12 @@ class ShopCategoryResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make("name.{$tenantLanguage}")
+                Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
                     ->label('Name')
                     ->searchable()
                     ->sortable(),
@@ -193,9 +195,9 @@ class ShopCategoryResource extends Resource
 
                 Tables\Columns\TextColumn::make('parent.name')
                     ->label('Parent')
-                    ->formatStateUsing(function ($state) use ($tenantLanguage) {
+                    ->formatStateUsing(function ($state) use ($marketplaceLanguage) {
                         if (is_array($state)) {
-                            return $state[$tenantLanguage] ?? $state['en'] ?? '-';
+                            return $state[$marketplaceLanguage] ?? $state['en'] ?? '-';
                         }
                         return $state ?? '-';
                     }),
@@ -224,9 +226,9 @@ class ShopCategoryResource extends Resource
                 Tables\Filters\SelectFilter::make('parent_id')
                     ->label('Parent Category')
                     ->options(function () {
-                        $tenant = auth()->user()->tenant;
-                        $lang = $tenant->language ?? $tenant->locale ?? 'en';
-                        return ShopCategory::where('tenant_id', $tenant?->id)
+                        $marketplace = static::getMarketplaceClient();
+                        $lang = $marketplace->language ?? $marketplace->locale ?? 'en';
+                        return ShopCategory::where('marketplace_client_id', $marketplace?->id)
                             ->whereNull('parent_id')
                             ->get()
                             ->mapWithKeys(fn ($cat) => [$cat->id => $cat->name[$lang] ?? $cat->name['en'] ?? 'Unnamed']);

@@ -17,9 +17,12 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class ShopShippingZoneResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = ShopShippingZone::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-truck';
@@ -40,29 +43,28 @@ class ShopShippingZoneResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
-        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+        $marketplaceClientId = static::getMarketplaceClientId();
+        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplaceClientId);
     }
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // This is tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('shop');
     }
 
     public static function form(Schema $schema): Schema
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $schema
             ->schema([
-                Forms\Components\Hidden::make('tenant_id')
-                    ->default($tenant?->id),
+                Forms\Components\Hidden::make('marketplace_client_id')
+                    ->default($marketplace?->id),
 
                 SC\Section::make('Zone Details')
                     ->schema([
-                        Forms\Components\TextInput::make("name.{$tenantLanguage}")
+                        Forms\Components\TextInput::make("name.{$marketplaceLanguage}")
                             ->label('Zone Name')
                             ->required()
                             ->maxLength(100)
@@ -90,7 +92,7 @@ class ShopShippingZoneResource extends Resource
                             ->schema([
                                 SC\Grid::make(2)
                                     ->schema([
-                                        Forms\Components\TextInput::make("name.{$tenantLanguage}")
+                                        Forms\Components\TextInput::make("name.{$marketplaceLanguage}")
                                             ->label('Method Name')
                                             ->required()
                                             ->maxLength(100)
@@ -171,19 +173,19 @@ class ShopShippingZoneResource extends Resource
                             ->collapsible()
                             ->reorderable()
                             ->orderColumn('sort_order')
-                            ->itemLabel(fn (array $state) => $state['name'][$tenantLanguage] ?? 'New Method'),
+                            ->itemLabel(fn (array $state) => $state['name'][$marketplaceLanguage] ?? 'New Method'),
                     ]),
             ]);
     }
 
     public static function table(Table $table): Table
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make("name.{$tenantLanguage}")
+                Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
                     ->label('Zone Name')
                     ->searchable()
                     ->sortable(),

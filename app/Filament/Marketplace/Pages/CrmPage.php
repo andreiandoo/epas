@@ -4,9 +4,12 @@ namespace App\Filament\Marketplace\Pages;
 
 use BackedEnum;
 use Filament\Pages\Page;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class CrmPage extends Page
 {
+    use HasMarketplaceContext;
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
     protected static ?string $navigationLabel = 'CRM';
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
@@ -19,10 +22,9 @@ class CrmPage extends Page
         return '';
     }
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // CRM is tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('crm');
     }
 
 }

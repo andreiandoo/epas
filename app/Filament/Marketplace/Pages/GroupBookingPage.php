@@ -4,9 +4,12 @@ namespace App\Filament\Marketplace\Pages;
 
 use BackedEnum;
 use Filament\Pages\Page;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class GroupBookingPage extends Page
 {
+    use HasMarketplaceContext;
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
     protected static ?string $navigationLabel = 'Group Booking';
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
@@ -19,10 +22,9 @@ class GroupBookingPage extends Page
         return '';
     }
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // Group booking is tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('group-booking');
     }
 
 }

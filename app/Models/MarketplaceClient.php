@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -27,6 +28,8 @@ class MarketplaceClient extends Model
         'notes',
         'api_calls_count',
         'last_api_call_at',
+        'locale',
+        'language',
     ];
 
     protected $casts = [
@@ -58,6 +61,56 @@ class MarketplaceClient extends Model
                 $client->slug = Str::slug($client->name);
             }
         });
+    }
+
+    /**
+     * Microservices enabled for this marketplace client
+     */
+    public function microservices(): BelongsToMany
+    {
+        return $this->belongsToMany(Microservice::class, 'marketplace_client_microservices')
+            ->withPivot(['is_active', 'activated_at', 'expires_at', 'configuration'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Check if marketplace client has a specific microservice enabled
+     */
+    public function hasMicroservice(string $slug): bool
+    {
+        return $this->microservices()
+            ->where('slug', $slug)
+            ->wherePivot('is_active', true)
+            ->exists();
+    }
+
+    /**
+     * Get microservice configuration
+     */
+    public function getMicroserviceConfig(string $slug): ?array
+    {
+        $microservice = $this->microservices()
+            ->where('slug', $slug)
+            ->wherePivot('is_active', true)
+            ->first();
+
+        return $microservice?->pivot?->configuration;
+    }
+
+    /**
+     * Admins for this marketplace client
+     */
+    public function admins(): HasMany
+    {
+        return $this->hasMany(MarketplaceAdmin::class);
+    }
+
+    /**
+     * Organizers for this marketplace client
+     */
+    public function organizers(): HasMany
+    {
+        return $this->hasMany(MarketplaceOrganizer::class);
     }
 
     /**

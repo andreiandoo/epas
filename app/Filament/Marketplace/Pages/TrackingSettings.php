@@ -8,12 +8,15 @@ use Filament\Forms;
 use Filament\Actions;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Illuminate\Support\HtmlString;
 
 class TrackingSettings extends Page
 {
+    use HasMarketplaceContext;
+
     use Forms\Concerns\InteractsWithForms;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-chart-bar';
@@ -32,21 +35,21 @@ class TrackingSettings extends Page
     /**
      * Tracking settings are tenant-specific, not applicable to marketplace panel
      */
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        return false;
+        return static::marketplaceHasMicroservice('tracking-pixels-manager');
     }
 
     public function mount(): void
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$tenant) {
+        if (!$marketplace) {
             abort(404);
         }
 
         // Check if microservice is active
-        $hasAccess = $tenant->microservices()
+        $hasAccess = $marketplace->microservices()
             ->where('microservices.slug', 'tracking-pixels-manager')
             ->wherePivot('is_active', true)
             ->exists();
@@ -63,7 +66,7 @@ class TrackingSettings extends Page
         }
 
         // Load existing integrations
-        $integrations = TrackingIntegration::where('tenant_id', $tenant->id)->get();
+        $integrations = TrackingIntegration::where('marketplace_client_id', $marketplace->id)->get();
 
         $formData = [];
         foreach (['ga4', 'gtm', 'meta', 'tiktok'] as $provider) {
@@ -270,9 +273,9 @@ class TrackingSettings extends Page
     public function save(): void
     {
         $data = $this->form->getState();
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$tenant) {
+        if (!$marketplace) {
             return;
         }
 
@@ -304,7 +307,7 @@ class TrackingSettings extends Page
             // toggle_enabled in settings stores the UI toggle state
             TrackingIntegration::updateOrCreate(
                 [
-                    'tenant_id' => $tenant->id,
+                    'marketplace_client_id' => $marketplace->id,
                     'provider' => $provider,
                 ],
                 [

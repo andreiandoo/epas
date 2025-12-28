@@ -16,9 +16,12 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class CustomerPointsResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = CustomerPoints::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
@@ -39,16 +42,15 @@ class CustomerPointsResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
         return parent::getEloquentQuery()
-            ->where('tenant_id', $tenant?->id)
+            ->where('marketplace_client_id', $marketplace?->id)
             ->with(['customer']);
     }
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // This is tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('gamification');
     }
 
     public static function form(Schema $schema): Schema

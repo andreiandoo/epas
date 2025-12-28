@@ -17,9 +17,12 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class CouponCampaignResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = CouponCampaign::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
@@ -38,34 +41,33 @@ class CouponCampaignResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
-        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+        $marketplaceClientId = static::getMarketplaceClientId();
+        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplaceClientId);
     }
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // Coupons are tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('coupon-codes');
     }
 
     public static function form(Schema $schema): Schema
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $schema
             ->schema([
-                Forms\Components\Hidden::make('tenant_id')
-                    ->default($tenant?->id),
+                Forms\Components\Hidden::make('marketplace_client_id')
+                    ->default($marketplace?->id),
 
                 SC\Section::make('Campaign Details')
                     ->schema([
-                        Forms\Components\TextInput::make("name.{$tenantLanguage}")
+                        Forms\Components\TextInput::make("name.{$marketplaceLanguage}")
                             ->label('Campaign Name')
                             ->required()
                             ->maxLength(190),
 
-                        Forms\Components\Textarea::make("description.{$tenantLanguage}")
+                        Forms\Components\Textarea::make("description.{$marketplaceLanguage}")
                             ->label('Description')
                             ->rows(3),
 
@@ -108,12 +110,12 @@ class CouponCampaignResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make("name.{$tenantLanguage}")
+                Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
                     ->label('Name')
                     ->searchable()
                     ->sortable(),
@@ -188,11 +190,11 @@ class CouponCampaignResource extends Resource
                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Percentage (e.g., 10 for 10%) or fixed amount in EUR'),
                     ])
                     ->action(function (CouponCampaign $record, array $data): void {
-                        $tenant = auth()->user()->tenant;
+                        $marketplace = static::getMarketplaceClient();
                         for ($i = 0; $i < $data['quantity']; $i++) {
                             \App\Models\Coupon\CouponCode::create([
                                 'campaign_id' => $record->id,
-                                'tenant_id' => $tenant->id,
+                                'marketplace_client_id' => $marketplace->id,
                                 'code' => strtoupper(substr(md5(uniqid()), 0, 8)),
                                 'discount_type' => $data['discount_type'],
                                 'discount_value' => $data['discount_value'],

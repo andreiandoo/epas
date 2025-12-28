@@ -16,10 +16,13 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Illuminate\Support\Str;
 
 class ShopAttributeResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = ShopAttribute::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-adjustments-horizontal';
@@ -40,29 +43,28 @@ class ShopAttributeResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
-        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+        $marketplaceClientId = static::getMarketplaceClientId();
+        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplaceClientId);
     }
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // This is tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('shop');
     }
 
     public static function form(Schema $schema): Schema
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $schema
             ->schema([
-                Forms\Components\Hidden::make('tenant_id')
-                    ->default($tenant?->id),
+                Forms\Components\Hidden::make('marketplace_client_id')
+                    ->default($marketplace?->id),
 
                 SC\Section::make('Attribute Details')
                     ->schema([
-                        Forms\Components\TextInput::make("name.{$tenantLanguage}")
+                        Forms\Components\TextInput::make("name.{$marketplaceLanguage}")
                             ->label('Attribute Name')
                             ->required()
                             ->maxLength(100)
@@ -98,7 +100,7 @@ class ShopAttributeResource extends Resource
                         Forms\Components\Repeater::make('values')
                             ->relationship('values')
                             ->schema([
-                                Forms\Components\TextInput::make("value.{$tenantLanguage}")
+                                Forms\Components\TextInput::make("value.{$marketplaceLanguage}")
                                     ->label('Value')
                                     ->required()
                                     ->maxLength(100)
@@ -129,7 +131,7 @@ class ShopAttributeResource extends Resource
                             ->addActionLabel('Add Value')
                             ->collapsible()
                             ->itemLabel(fn (array $state): ?string =>
-                                $state['value'][$tenantLanguage] ?? $state['slug'] ?? null
+                                $state['value'][$marketplaceLanguage] ?? $state['slug'] ?? null
                             ),
                     ]),
             ]);
@@ -137,12 +139,12 @@ class ShopAttributeResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make("name.{$tenantLanguage}")
+                Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
                     ->label('Name')
                     ->searchable()
                     ->sortable(),

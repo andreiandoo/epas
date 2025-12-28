@@ -15,10 +15,13 @@ use Filament\Actions\EditAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Illuminate\Support\Str;
 
 class BlogCategoryResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = BlogCategory::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-folder';
@@ -37,29 +40,28 @@ class BlogCategoryResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
-        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+        $marketplaceClientId = static::getMarketplaceClientId();
+        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplaceClientId);
     }
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // Blog is tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('blog');
     }
 
     public static function form(Schema $schema): Schema
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $schema
             ->schema([
-                Forms\Components\Hidden::make('tenant_id')
-                    ->default($tenant?->id),
+                Forms\Components\Hidden::make('marketplace_client_id')
+                    ->default($marketplace?->id),
 
                 SC\Section::make('Category Details')
                     ->schema([
-                        Forms\Components\TextInput::make("name.{$tenantLanguage}")
+                        Forms\Components\TextInput::make("name.{$marketplaceLanguage}")
                             ->label('Category Name')
                             ->required()
                             ->maxLength(190)
@@ -74,16 +76,16 @@ class BlogCategoryResource extends Resource
                             ->maxLength(190)
                             ->rule('alpha_dash'),
 
-                        Forms\Components\Textarea::make("description.{$tenantLanguage}")
+                        Forms\Components\Textarea::make("description.{$marketplaceLanguage}")
                             ->label('Description')
                             ->rows(3),
 
                         Forms\Components\Select::make('parent_id')
                             ->label('Parent Category')
                             ->options(function () {
-                                $tenant = auth()->user()->tenant;
-                                $lang = $tenant->language ?? $tenant->locale ?? 'en';
-                                return BlogCategory::where('tenant_id', $tenant?->id)
+                                $marketplace = static::getMarketplaceClient();
+                                $lang = $marketplace->language ?? $marketplace->locale ?? 'en';
+                                return BlogCategory::where('marketplace_client_id', $marketplace?->id)
                                     ->whereNull('parent_id')
                                     ->get()
                                     ->mapWithKeys(fn ($cat) => [$cat->id => $cat->name[$lang] ?? $cat->name['en'] ?? 'Unnamed']);
@@ -121,11 +123,11 @@ class BlogCategoryResource extends Resource
                 SC\Section::make('SEO')
                     ->collapsed()
                     ->schema([
-                        Forms\Components\TextInput::make("meta_title.{$tenantLanguage}")
+                        Forms\Components\TextInput::make("meta_title.{$marketplaceLanguage}")
                             ->label('Meta Title')
                             ->maxLength(70),
 
-                        Forms\Components\Textarea::make("meta_description.{$tenantLanguage}")
+                        Forms\Components\Textarea::make("meta_description.{$marketplaceLanguage}")
                             ->label('Meta Description')
                             ->rows(2)
                             ->maxLength(160),
@@ -135,12 +137,12 @@ class BlogCategoryResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make("name.{$tenantLanguage}")
+                Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
                     ->label('Name')
                     ->searchable()
                     ->sortable(),
@@ -151,9 +153,9 @@ class BlogCategoryResource extends Resource
 
                 Tables\Columns\TextColumn::make('parent.name')
                     ->label('Parent')
-                    ->formatStateUsing(function ($state) use ($tenantLanguage) {
+                    ->formatStateUsing(function ($state) use ($marketplaceLanguage) {
                         if (is_array($state)) {
-                            return $state[$tenantLanguage] ?? $state['en'] ?? '-';
+                            return $state[$marketplaceLanguage] ?? $state['en'] ?? '-';
                         }
                         return $state ?? '-';
                     }),

@@ -11,9 +11,12 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class AffiliateConversionResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = AffiliateConversion::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-currency-dollar';
     protected static ?string $navigationLabel = 'Conversions';
@@ -23,10 +26,10 @@ class AffiliateConversionResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
         return parent::getEloquentQuery()
-            ->where('tenant_id', $tenant?->id)
+            ->where('marketplace_client_id', $marketplace?->id)
             ->with(['affiliate']);
     }
 

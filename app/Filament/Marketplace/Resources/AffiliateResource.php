@@ -16,20 +16,21 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class AffiliateResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = Affiliate::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
     protected static ?string $navigationLabel = 'Affiliates';
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
     protected static ?int $navigationSort = 1;
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // Affiliates are tenant-specific, not applicable to marketplace panel
-        // Marketplace has Organizers instead
-        return false;
+        return static::marketplaceHasMicroservice('affiliates');
     }
 
     public static function getNavigationBadge(): ?string
@@ -44,10 +45,10 @@ class AffiliateResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
         return parent::getEloquentQuery()
-            ->where('tenant_id', $tenant?->id);
+            ->where('marketplace_client_id', $marketplace?->id);
     }
 
     public static function form(Schema $schema): Schema

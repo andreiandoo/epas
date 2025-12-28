@@ -12,9 +12,12 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class GamificationConfigResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = GamificationConfig::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-star';
@@ -33,24 +36,23 @@ class GamificationConfigResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
-        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+        $marketplaceClientId = static::getMarketplaceClientId();
+        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplaceClientId);
     }
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // Gamification is tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('gamification');
     }
 
     public static function form(Schema $schema): Schema
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
         return $schema
             ->schema([
-                Forms\Components\Hidden::make('tenant_id')
-                    ->default($tenant?->id),
+                Forms\Components\Hidden::make('marketplace_client_id')
+                    ->default($marketplace?->id),
 
                 SC\Section::make('Point Value Configuration')
                     ->description('Configure how points are valued and earned')

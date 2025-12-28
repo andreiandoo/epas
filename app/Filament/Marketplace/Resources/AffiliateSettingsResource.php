@@ -12,9 +12,12 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class AffiliateSettingsResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = AffiliateSettings::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-cog-6-tooth';
@@ -34,10 +37,9 @@ class AffiliateSettingsResource extends Resource
         return null;
     }
 
-    public static function shouldRegisterNavigation(): bool
+        public static function shouldRegisterNavigation(): bool
     {
-        // Affiliate settings are tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('affiliates');
     }
 
     public static function form(Schema $schema): Schema
@@ -290,9 +292,9 @@ class AffiliateSettingsResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = filament()->getTenant();
+        $marketplaceClientId = static::getMarketplaceClientId();
 
         return parent::getEloquentQuery()
-            ->where('tenant_id', $tenant?->id);
+            ->where('marketplace_client_id', $marketplaceClientId);
     }
 }

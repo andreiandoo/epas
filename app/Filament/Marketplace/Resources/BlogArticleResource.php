@@ -2,6 +2,7 @@
 
 namespace App\Filament\Marketplace\Resources;
 
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\BlogArticleResource\Pages;
 use App\Models\Blog\BlogArticle;
 use App\Models\Blog\BlogCategory;
@@ -21,11 +22,15 @@ use Illuminate\Support\Str;
 
 class BlogArticleResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = BlogArticle::class;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-newspaper';
 
     protected static ?string $navigationLabel = 'Blog';
+
+    protected static \UnitEnum|string|null $navigationGroup = 'Content';
 
     protected static ?int $navigationSort = 1;
 
@@ -37,25 +42,24 @@ class BlogArticleResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
-        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+        $marketplaceClientId = static::getMarketplaceClientId();
+        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplaceClientId);
     }
 
     public static function shouldRegisterNavigation(): bool
     {
-        // Blog is tenant-specific, not applicable to marketplace panel
-        return false;
+        return static::marketplaceHasMicroservice('blog');
     }
 
     public static function form(Schema $schema): Schema
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $schema
             ->schema([
-                Forms\Components\Hidden::make('tenant_id')
-                    ->default($tenant?->id),
+                Forms\Components\Hidden::make('marketplace_client_id')
+                    ->default($marketplace?->id),
 
                 // Two-column layout: Left (2/3) and Right (1/3)
                 SC\Grid::make(3)
@@ -67,20 +71,20 @@ class BlogArticleResource extends Resource
                                 // Article Content Section
                                 SC\Section::make('Article Content')
                                     ->schema([
-                                        Forms\Components\TextInput::make("title.{$tenantLanguage}")
+                                        Forms\Components\TextInput::make("title.{$marketplaceLanguage}")
                                             ->label('Title')
                                             ->required()
                                             ->maxLength(255)
                                             ->live(onBlur: true)
-                                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) use ($tenantLanguage) {
+                                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) use ($marketplaceLanguage) {
                                                 if ($state) {
                                                     $set('slug', Str::slug($state));
                                                     // Auto-populate SEO if empty
-                                                    if (!$get("meta_title.{$tenantLanguage}")) {
-                                                        $set("meta_title.{$tenantLanguage}", Str::limit($state, 60));
+                                                    if (!$get("meta_title.{$marketplaceLanguage}")) {
+                                                        $set("meta_title.{$marketplaceLanguage}", Str::limit($state, 60));
                                                     }
-                                                    if (!$get("og_title.{$tenantLanguage}")) {
-                                                        $set("og_title.{$tenantLanguage}", Str::limit($state, 60));
+                                                    if (!$get("og_title.{$marketplaceLanguage}")) {
+                                                        $set("og_title.{$marketplaceLanguage}", Str::limit($state, 60));
                                                     }
                                                 }
                                             }),
@@ -91,30 +95,30 @@ class BlogArticleResource extends Resource
                                             ->maxLength(255)
                                             ->rule('alpha_dash'),
 
-                                        Forms\Components\TextInput::make("subtitle.{$tenantLanguage}")
+                                        Forms\Components\TextInput::make("subtitle.{$marketplaceLanguage}")
                                             ->label('Subtitle')
                                             ->maxLength(255)
                                             ->columnSpanFull(),
 
-                                        Forms\Components\Textarea::make("excerpt.{$tenantLanguage}")
+                                        Forms\Components\Textarea::make("excerpt.{$marketplaceLanguage}")
                                             ->label('Excerpt')
                                             ->rows(2)
                                             ->helperText('Short summary for previews and SEO')
                                             ->live(onBlur: true)
-                                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) use ($tenantLanguage) {
+                                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set, \Filament\Schemas\Components\Utilities\Get $get) use ($marketplaceLanguage) {
                                                 if ($state) {
                                                     // Auto-populate meta description if empty
-                                                    if (!$get("meta_description.{$tenantLanguage}")) {
-                                                        $set("meta_description.{$tenantLanguage}", Str::limit($state, 155));
+                                                    if (!$get("meta_description.{$marketplaceLanguage}")) {
+                                                        $set("meta_description.{$marketplaceLanguage}", Str::limit($state, 155));
                                                     }
-                                                    if (!$get("og_description.{$tenantLanguage}")) {
-                                                        $set("og_description.{$tenantLanguage}", Str::limit($state, 155));
+                                                    if (!$get("og_description.{$marketplaceLanguage}")) {
+                                                        $set("og_description.{$marketplaceLanguage}", Str::limit($state, 155));
                                                     }
                                                 }
                                             })
                                             ->columnSpanFull(),
 
-                                        Forms\Components\RichEditor::make("content.{$tenantLanguage}")
+                                        Forms\Components\RichEditor::make("content.{$marketplaceLanguage}")
                                             ->label('Content')
                                             ->required()
                                             ->toolbarButtons([
@@ -143,12 +147,12 @@ class BlogArticleResource extends Resource
                                             ->tabs([
                                                 SC\Tabs\Tab::make('Basic SEO')
                                                     ->schema([
-                                                        Forms\Components\TextInput::make("meta_title.{$tenantLanguage}")
+                                                        Forms\Components\TextInput::make("meta_title.{$marketplaceLanguage}")
                                                             ->label('Meta Title')
                                                             ->maxLength(60)
                                                             ->helperText('Recommended: 50-60 characters. Auto-fills from title.'),
 
-                                                        Forms\Components\Textarea::make("meta_description.{$tenantLanguage}")
+                                                        Forms\Components\Textarea::make("meta_description.{$marketplaceLanguage}")
                                                             ->label('Meta Description')
                                                             ->rows(2)
                                                             ->maxLength(160)
@@ -167,12 +171,12 @@ class BlogArticleResource extends Resource
 
                                                 SC\Tabs\Tab::make('Open Graph')
                                                     ->schema([
-                                                        Forms\Components\TextInput::make("og_title.{$tenantLanguage}")
+                                                        Forms\Components\TextInput::make("og_title.{$marketplaceLanguage}")
                                                             ->label('OG Title')
                                                             ->maxLength(60)
                                                             ->helperText('Title for social media sharing'),
 
-                                                        Forms\Components\Textarea::make("og_description.{$tenantLanguage}")
+                                                        Forms\Components\Textarea::make("og_description.{$marketplaceLanguage}")
                                                             ->label('OG Description')
                                                             ->rows(2)
                                                             ->maxLength(200)
@@ -222,7 +226,7 @@ class BlogArticleResource extends Resource
                                                         Forms\Components\TextInput::make('schema_markup.publisher_name')
                                                             ->label('Publisher Name')
                                                             ->maxLength(100)
-                                                            ->default(fn () => $tenant->public_name ?? $tenant->name ?? ''),
+                                                            ->default(fn () => $marketplace->name ?? ''),
 
                                                         Forms\Components\TextInput::make('schema_markup.publisher_logo')
                                                             ->label('Publisher Logo URL')
@@ -242,7 +246,7 @@ class BlogArticleResource extends Resource
                                                                 'es' => 'Spanish',
                                                                 'it' => 'Italian',
                                                             ])
-                                                            ->default($tenantLanguage),
+                                                            ->default($marketplaceLanguage),
 
                                                         Forms\Components\TextInput::make('reading_time_minutes')
                                                             ->label('Reading Time (minutes)')
@@ -264,11 +268,11 @@ class BlogArticleResource extends Resource
                                     ->schema([
                                         Forms\Components\Select::make('category_id')
                                             ->label('Category')
-                                            ->options(function () use ($tenant, $tenantLanguage) {
-                                                return BlogCategory::where('tenant_id', $tenant?->id)
+                                            ->options(function () use ($marketplace, $marketplaceLanguage) {
+                                                return BlogCategory::where('marketplace_client_id', $marketplace?->id)
                                                     ->get()
-                                                    ->mapWithKeys(function ($cat) use ($tenantLanguage) {
-                                                        $name = $cat->name[$tenantLanguage] ?? $cat->name['en'] ?? $cat->name[array_key_first($cat->name ?? [])] ?? 'Unnamed';
+                                                    ->mapWithKeys(function ($cat) use ($marketplaceLanguage) {
+                                                        $name = $cat->name[$marketplaceLanguage] ?? $cat->name['en'] ?? $cat->name[array_key_first($cat->name ?? [])] ?? 'Unnamed';
                                                         return [$cat->id => $name];
                                                     });
                                             })
@@ -322,8 +326,8 @@ class BlogArticleResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $table
             ->columns([
@@ -332,7 +336,7 @@ class BlogArticleResource extends Resource
                     ->circular(false)
                     ->size(50),
 
-                Tables\Columns\TextColumn::make("title.{$tenantLanguage}")
+                Tables\Columns\TextColumn::make("title.{$marketplaceLanguage}")
                     ->label('Title')
                     ->searchable()
                     ->sortable()
@@ -340,9 +344,9 @@ class BlogArticleResource extends Resource
 
                 Tables\Columns\TextColumn::make('category.name')
                     ->label('Category')
-                    ->formatStateUsing(function ($state) use ($tenantLanguage) {
+                    ->formatStateUsing(function ($state) use ($marketplaceLanguage) {
                         if (is_array($state)) {
-                            return $state[$tenantLanguage] ?? $state['en'] ?? '-';
+                            return $state[$marketplaceLanguage] ?? $state['en'] ?? '-';
                         }
                         return $state ?? '-';
                     }),
