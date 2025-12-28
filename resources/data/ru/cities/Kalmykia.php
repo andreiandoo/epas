@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 97680,
+        'name'      => 'Arshan’',
+        'latitude'  => '46.27320000',
+        'longitude' => '44.22000000',
+    ],
+    [
+        'id'        => 98389,
+        'name'      => 'Elista',
+        'latitude'  => '46.30778000',
+        'longitude' => '44.25583000',
+    ],
+    [
+        'id'        => 98562,
+        'name'      => 'Gorodoviki',
+        'latitude'  => '46.13528000',
+        'longitude' => '41.96556000',
+    ],
+    [
+        'id'        => 98563,
+        'name'      => 'Gorodovikovsk',
+        'latitude'  => '46.08785000',
+        'longitude' => '41.93353000',
+    ],
+    [
+        'id'        => 98636,
+        'name'      => 'Iki-Burul',
+        'latitude'  => '45.82083000',
+        'longitude' => '44.64722000',
+    ],
+    [
+        'id'        => 98637,
+        'name'      => 'Iki-Burul’skiy Rayon',
+        'latitude'  => '45.83333000',
+        'longitude' => '44.66667000',
+    ],
+    [
+        'id'        => 98901,
+        'name'      => 'Kaspiyskiy',
+        'latitude'  => '45.39288000',
+        'longitude' => '47.37073000',
+    ],
+    [
+        'id'        => 99174,
+        'name'      => 'Komsomol’skiy',
+        'latitude'  => '45.33000000',
+        'longitude' => '46.04280000',
+    ],
+    [
+        'id'        => 99773,
+        'name'      => 'Malyye Derbety',
+        'latitude'  => '47.95472000',
+        'longitude' => '44.68083000',
+    ],
+    [
+        'id'        => 100852,
+        'name'      => 'Priyutnoye',
+        'latitude'  => '46.10111000',
+        'longitude' => '43.50722000',
+    ],
+    [
+        'id'        => 101065,
+        'name'      => 'Sadovoye',
+        'latitude'  => '47.77720000',
+        'longitude' => '44.52080000',
+    ],
+    [
+        'id'        => 101123,
+        'name'      => 'Sarpinskiy Rayon',
+        'latitude'  => '47.83333000',
+        'longitude' => '44.83333000',
+    ],
+    [
+        'id'        => 101516,
+        'name'      => 'Sovetskoye',
+        'latitude'  => '47.30868000',
+        'longitude' => '44.52162000',
+    ],
+    [
+        'id'        => 101921,
+        'name'      => 'Troitskoye',
+        'latitude'  => '46.42060000',
+        'longitude' => '44.25910000',
+    ],
+    [
+        'id'        => 101936,
+        'name'      => 'Tsagan Aman',
+        'latitude'  => '47.56390000',
+        'longitude' => '46.72180000',
+    ],
+    [
+        'id'        => 102508,
+        'name'      => 'Yashalta',
+        'latitude'  => '46.33950000',
+        'longitude' => '42.27620000',
+    ],
+    [
+        'id'        => 102509,
+        'name'      => 'Yashaltinskiy Rayon',
+        'latitude'  => '46.25000000',
+        'longitude' => '42.50000000',
+    ],
+    [
+        'id'        => 102511,
+        'name'      => 'Yashkul’',
+        'latitude'  => '46.17110000',
+        'longitude' => '45.34350000',
+    ],
+];

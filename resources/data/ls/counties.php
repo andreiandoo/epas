@@ -1,0 +1,13 @@
+<?php
+return [
+    'Berea',
+    'Butha-Buthe',
+    'Leribe',
+    'Mafeteng',
+    'Maseru',
+    'Mohale\'s Hoek',
+    'Mokhotlong',
+    'Qacha\'s Nek',
+    'Quthing',
+    'Thaba-Tseka',
+];

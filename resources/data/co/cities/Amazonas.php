@@ -1,0 +1,69 @@
+<?php
+return [
+    [
+        'id'        => 20807,
+        'name'      => 'El Encanto',
+        'latitude'  => '-1.56261000',
+        'longitude' => '-73.25684000',
+    ],
+    [
+        'id'        => 20977,
+        'name'      => 'La Chorrera',
+        'latitude'  => '-1.48894000',
+        'longitude' => '-72.72935000',
+    ],
+    [
+        'id'        => 20998,
+        'name'      => 'La Pedrera',
+        'latitude'  => '-1.65596000',
+        'longitude' => '-70.22186000',
+    ],
+    [
+        'id'        => 21014,
+        'name'      => 'La Victoria',
+        'latitude'  => '-0.18311000',
+        'longitude' => '-71.03760000',
+    ],
+    [
+        'id'        => 21027,
+        'name'      => 'Leticia',
+        'latitude'  => '-4.21528000',
+        'longitude' => '-69.94056000',
+    ],
+    [
+        'id'        => 21086,
+        'name'      => 'Miriti - Paraná',
+        'latitude'  => '-0.81858000',
+        'longitude' => '-70.78925000',
+    ],
+    [
+        'id'        => 21231,
+        'name'      => 'Puerto Alegría',
+        'latitude'  => '-0.96886000',
+        'longitude' => '-73.74962000',
+    ],
+    [
+        'id'        => 21232,
+        'name'      => 'Puerto Arica',
+        'latitude'  => '-1.90677000',
+        'longitude' => '-71.14653000',
+    ],
+    [
+        'id'        => 21249,
+        'name'      => 'Puerto Nariño',
+        'latitude'  => '-3.78889000',
+        'longitude' => '-70.35584000',
+    ],
+    [
+        'id'        => 21256,
+        'name'      => 'Puerto Santander',
+        'latitude'  => '-1.09870000',
+        'longitude' => '-71.93911000',
+    ],
+    [
+        'id'        => 21512,
+        'name'      => 'Tarapacá',
+        'latitude'  => '-2.88544000',
+        'longitude' => '-69.77692000',
+    ],
+];

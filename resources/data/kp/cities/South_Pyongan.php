@@ -1,0 +1,51 @@
+<?php
+return [
+    [
+        'id'        => 65182,
+        'name'      => 'Anju',
+        'latitude'  => '39.61778000',
+        'longitude' => '125.66472000',
+    ],
+    [
+        'id'        => 65223,
+        'name'      => 'Namp’o',
+        'latitude'  => '38.73750000',
+        'longitude' => '125.40778000',
+    ],
+    [
+        'id'        => 65233,
+        'name'      => 'P’yŏngsŏng',
+        'latitude'  => '39.24639000',
+        'longitude' => '125.87194000',
+    ],
+    [
+        'id'        => 65236,
+        'name'      => 'Sangsŏng-ni',
+        'latitude'  => '39.16944000',
+        'longitude' => '126.88556000',
+    ],
+    [
+        'id'        => 65238,
+        'name'      => 'Sil-li',
+        'latitude'  => '39.49472000',
+        'longitude' => '125.47361000',
+    ],
+    [
+        'id'        => 65239,
+        'name'      => 'Sinanju',
+        'latitude'  => '39.59806000',
+        'longitude' => '125.60972000',
+    ],
+    [
+        'id'        => 65245,
+        'name'      => 'Sunch’ŏn',
+        'latitude'  => '39.43167000',
+        'longitude' => '125.93278000',
+    ],
+    [
+        'id'        => 65253,
+        'name'      => 'Yonggang-ŭp',
+        'latitude'  => '38.85611000',
+        'longitude' => '125.42444000',
+    ],
+];

@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 107138,
+        'name'      => 'Altıeylül',
+        'latitude'  => '39.64099000',
+        'longitude' => '27.88639000',
+    ],
+    [
+        'id'        => 107233,
+        'name'      => 'Ayvalık',
+        'latitude'  => '39.31927000',
+        'longitude' => '26.69341000',
+    ],
+    [
+        'id'        => 107273,
+        'name'      => 'Balya',
+        'latitude'  => '39.74861000',
+        'longitude' => '27.57889000',
+    ],
+    [
+        'id'        => 107283,
+        'name'      => 'Bandırma',
+        'latitude'  => '40.35222000',
+        'longitude' => '27.97667000',
+    ],
+    [
+        'id'        => 107354,
+        'name'      => 'Bigadiç',
+        'latitude'  => '39.39250000',
+        'longitude' => '28.13111000',
+    ],
+    [
+        'id'        => 107412,
+        'name'      => 'Burhaniye',
+        'latitude'  => '39.50041000',
+        'longitude' => '26.97269000',
+    ],
+    [
+        'id'        => 107532,
+        'name'      => 'Dursunbey',
+        'latitude'  => '39.58596000',
+        'longitude' => '28.62568000',
+    ],
+    [
+        'id'        => 107550,
+        'name'      => 'Edremit',
+        'latitude'  => '39.59611000',
+        'longitude' => '27.02444000',
+    ],
+    [
+        'id'        => 107584,
+        'name'      => 'Erdek',
+        'latitude'  => '40.39960000',
+        'longitude' => '27.79348000',
+    ],
+    [
+        'id'        => 107705,
+        'name'      => 'Gömeç',
+        'latitude'  => '39.39016000',
+        'longitude' => '26.84127000',
+    ],
+    [
+        'id'        => 107708,
+        'name'      => 'Gönen',
+        'latitude'  => '40.10490000',
+        'longitude' => '27.65399000',
+    ],
+    [
+        'id'        => 107806,
+        'name'      => 'Havran',
+        'latitude'  => '39.55833000',
+        'longitude' => '27.09833000',
+    ],
+    [
+        'id'        => 108920,
+        'name'      => 'İvrindi',
+        'latitude'  => '39.58389000',
+        'longitude' => '27.48639000',
+    ],
+    [
+        'id'        => 153352,
+        'name'      => 'Karesi',
+        'latitude'  => '39.64833300',
+        'longitude' => '27.88250000',
+    ],
+    [
+        'id'        => 107982,
+        'name'      => 'Kepsut',
+        'latitude'  => '39.68889000',
+        'longitude' => '28.15222000',
+    ],
+    [
+        'id'        => 108151,
+        'name'      => 'Manyas',
+        'latitude'  => '40.04639000',
+        'longitude' => '27.97000000',
+    ],
+    [
+        'id'        => 108155,
+        'name'      => 'Marmara',
+        'latitude'  => '40.58633000',
+        'longitude' => '27.55541000',
+    ],
+    [
+        'id'        => 108417,
+        'name'      => 'Savaştepe',
+        'latitude'  => '39.38319000',
+        'longitude' => '27.65612000',
+    ],
+    [
+        'id'        => 108527,
+        'name'      => 'Sındırgı',
+        'latitude'  => '39.24128000',
+        'longitude' => '28.17842000',
+    ],
+    [
+        'id'        => 108509,
+        'name'      => 'Susurluk',
+        'latitude'  => '39.91361000',
+        'longitude' => '28.15778000',
+    ],
+];

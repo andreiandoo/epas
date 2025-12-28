@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 56221,
+        'name'      => 'Bima',
+        'latitude'  => '-8.46006000',
+        'longitude' => '118.72667000',
+    ],
+    [
+        'id'        => 56267,
+        'name'      => 'Dompu',
+        'latitude'  => '-8.53650000',
+        'longitude' => '118.46340000',
+    ],
+    [
+        'id'        => 56281,
+        'name'      => 'Gili Air',
+        'latitude'  => '-8.35783000',
+        'longitude' => '116.08240000',
+    ],
+    [
+        'id'        => 56360,
+        'name'      => 'Kabupaten Bima',
+        'latitude'  => '-8.60000000',
+        'longitude' => '118.61667000',
+    ],
+    [
+        'id'        => 56400,
+        'name'      => 'Kabupaten Dompu',
+        'latitude'  => '-8.50940000',
+        'longitude' => '118.48160000',
+    ],
+    [
+        'id'        => 56496,
+        'name'      => 'Kabupaten Lombok Barat',
+        'latitude'  => '-8.69583000',
+        'longitude' => '116.11667000',
+    ],
+    [
+        'id'        => 56497,
+        'name'      => 'Kabupaten Lombok Tengah',
+        'latitude'  => '-8.70000000',
+        'longitude' => '116.30000000',
+    ],
+    [
+        'id'        => 56498,
+        'name'      => 'Kabupaten Lombok Timur',
+        'latitude'  => '-8.53333000',
+        'longitude' => '116.53333000',
+    ],
+    [
+        'id'        => 56499,
+        'name'      => 'Kabupaten Lombok Utara',
+        'latitude'  => '-8.35214000',
+        'longitude' => '116.40152000',
+    ],
+    [
+        'id'        => 56652,
+        'name'      => 'Kabupaten Sumbawa',
+        'latitude'  => '-8.74390000',
+        'longitude' => '117.33240000',
+    ],
+    [
+        'id'        => 56653,
+        'name'      => 'Kabupaten Sumbawa Barat',
+        'latitude'  => '-8.75159000',
+        'longitude' => '116.92132000',
+    ],
+    [
+        'id'        => 56831,
+        'name'      => 'Labuan Lombok',
+        'latitude'  => '-8.50000000',
+        'longitude' => '116.66667000',
+    ],
+    [
+        'id'        => 56843,
+        'name'      => 'Lembar',
+        'latitude'  => '-8.72640000',
+        'longitude' => '116.07440000',
+    ],
+    [
+        'id'        => 56865,
+        'name'      => 'Mataram',
+        'latitude'  => '-8.58333000',
+        'longitude' => '116.11667000',
+    ],
+    [
+        'id'        => 56931,
+        'name'      => 'Pemenang',
+        'latitude'  => '-8.40401000',
+        'longitude' => '116.10255000',
+    ],
+    [
+        'id'        => 56938,
+        'name'      => 'Pototano',
+        'latitude'  => '-8.41260000',
+        'longitude' => '117.48110000',
+    ],
+    [
+        'id'        => 56940,
+        'name'      => 'Praya',
+        'latitude'  => '-8.70536000',
+        'longitude' => '116.27036000',
+    ],
+    [
+        'id'        => 56966,
+        'name'      => 'Senggigi',
+        'latitude'  => '-8.49190000',
+        'longitude' => '116.04240000',
+    ],
+    [
+        'id'        => 57002,
+        'name'      => 'Sumbawa Besar',
+        'latitude'  => '-8.49317000',
+        'longitude' => '117.42024000',
+    ],
+];

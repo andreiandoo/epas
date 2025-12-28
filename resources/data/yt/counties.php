@@ -1,0 +1,20 @@
+<?php
+return [
+    'Acoua',
+    'Bandraboua',
+    'Bandrélé',
+    'Boueni',
+    'Chiconi',
+    'Chirongui',
+    'Dembeni',
+    'Dzaoudzi',
+    'Kani Keli',
+    'Koungou',
+    'M\'Tsangamouji',
+    'Mamoudzou',
+    'Mtsamboro',
+    'Ouangani',
+    'Pamandzi',
+    'Sada',
+    'Tsingoni',
+];

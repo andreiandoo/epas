@@ -1,0 +1,57 @@
+<?php
+return [
+    [
+        'id'        => 67377,
+        'name'      => 'Ampasimanolotra',
+        'latitude'  => '-18.81667000',
+        'longitude' => '49.06667000',
+    ],
+    [
+        'id'        => 67378,
+        'name'      => 'Andovoranto',
+        'latitude'  => '-18.95443000',
+        'longitude' => '49.10940000',
+    ],
+    [
+        'id'        => 67379,
+        'name'      => 'Mahanoro',
+        'latitude'  => '-19.90000000',
+        'longitude' => '48.80000000',
+    ],
+    [
+        'id'        => 67380,
+        'name'      => 'Mahavelona',
+        'latitude'  => '-17.68475000',
+        'longitude' => '49.50869000',
+    ],
+    [
+        'id'        => 67381,
+        'name'      => 'Marolambo',
+        'latitude'  => '-20.05000000',
+        'longitude' => '48.11667000',
+    ],
+    [
+        'id'        => 67382,
+        'name'      => 'Toamasina',
+        'latitude'  => '-18.14920000',
+        'longitude' => '49.40234000',
+    ],
+    [
+        'id'        => 67383,
+        'name'      => 'Toamasina I',
+        'latitude'  => '-18.13863000',
+        'longitude' => '49.39203000',
+    ],
+    [
+        'id'        => 67384,
+        'name'      => 'Toamasina II',
+        'latitude'  => '-17.94053000',
+        'longitude' => '49.14608000',
+    ],
+    [
+        'id'        => 67385,
+        'name'      => 'Vohibinany',
+        'latitude'  => '-17.35000000',
+        'longitude' => '49.03333000',
+    ],
+];

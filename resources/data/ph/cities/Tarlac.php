@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 81257,
+        'name'      => 'Anao',
+        'latitude'  => '15.74348520',
+        'longitude' => '120.57733200',
+    ],
+    [
+        'id'        => 81510,
+        'name'      => 'Bamban',
+        'latitude'  => '15.24958250',
+        'longitude' => '120.31388110',
+    ],
+    [
+        'id'        => 82089,
+        'name'      => 'Camiling',
+        'latitude'  => '15.69344400',
+        'longitude' => '120.31758390',
+    ],
+    [
+        'id'        => 82137,
+        'name'      => 'Capas',
+        'latitude'  => '15.33294730',
+        'longitude' => '120.26422810',
+    ],
+    [
+        'id'        => 154833,
+        'name'      => 'Concepcion',
+        'latitude'  => '15.33908210',
+        'longitude' => '120.60927940',
+    ],
+    [
+        'id'        => 82585,
+        'name'      => 'Gerona',
+        'latitude'  => '15.60013720',
+        'longitude' => '120.48041050',
+    ],
+    [
+        'id'        => 154834,
+        'name'      => 'La Paz',
+        'latitude'  => '15.45716560',
+        'longitude' => '120.63415970',
+    ],
+    [
+        'id'        => 83646,
+        'name'      => 'Mayantoc',
+        'latitude'  => '15.57221810',
+        'longitude' => '120.12983870',
+    ],
+    [
+        'id'        => 83699,
+        'name'      => 'Moncada',
+        'latitude'  => '15.76286300',
+        'longitude' => '120.46074950',
+    ],
+    [
+        'id'        => 83990,
+        'name'      => 'Paniqui',
+        'latitude'  => '15.67708780',
+        'longitude' => '120.46336720',
+    ],
+    [
+        'id'        => 84283,
+        'name'      => 'Pura',
+        'latitude'  => '15.62322250',
+        'longitude' => '120.64037560',
+    ],
+    [
+        'id'        => 84325,
+        'name'      => 'Ramos',
+        'latitude'  => '15.67045640',
+        'longitude' => '120.63318720',
+    ],
+    [
+        'id'        => 84463,
+        'name'      => 'San Clemente',
+        'latitude'  => '15.67877350',
+        'longitude' => '120.24960860',
+    ],
+    [
+        'id'        => 154835,
+        'name'      => 'San Jose',
+        'latitude'  => '15.43212170',
+        'longitude' => '120.19033890',
+    ],
+    [
+        'id'        => 154836,
+        'name'      => 'San Manuel',
+        'latitude'  => '15.82887130',
+        'longitude' => '120.55838760',
+    ],
+    [
+        'id'        => 84672,
+        'name'      => 'Santa Ignacia',
+        'latitude'  => '15.58367330',
+        'longitude' => '120.37297900',
+    ],
+    [
+        'id'        => 85058,
+        'name'      => 'Tarlac City',
+        'latitude'  => '15.47274830',
+        'longitude' => '120.53060610',
+    ],
+    [
+        'id'        => 154837,
+        'name'      => 'Victoria',
+        'latitude'  => '15.57946790',
+        'longitude' => '120.60706980',
+    ],
+];

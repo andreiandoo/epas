@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 97615,
+        'name'      => 'Amurzet',
+        'latitude'  => '47.69541000',
+        'longitude' => '131.09493000',
+    ],
+    [
+        'id'        => 97742,
+        'name'      => 'Babstovo',
+        'latitude'  => '48.11853000',
+        'longitude' => '132.47913000',
+    ],
+    [
+        'id'        => 97932,
+        'name'      => 'Bira',
+        'latitude'  => '49.00135000',
+        'longitude' => '132.46826000',
+    ],
+    [
+        'id'        => 97933,
+        'name'      => 'Birakan',
+        'latitude'  => '48.99302000',
+        'longitude' => '131.72026000',
+    ],
+    [
+        'id'        => 97935,
+        'name'      => 'Birobidzhan',
+        'latitude'  => '48.79284000',
+        'longitude' => '132.92386000',
+    ],
+    [
+        'id'        => 97936,
+        'name'      => 'Birobidzhanskiy Rayon',
+        'latitude'  => '48.50000000',
+        'longitude' => '132.75000000',
+    ],
+    [
+        'id'        => 98760,
+        'name'      => 'Izvestkovyy',
+        'latitude'  => '48.98043000',
+        'longitude' => '131.55274000',
+    ],
+    [
+        'id'        => 98982,
+        'name'      => 'Khingansk',
+        'latitude'  => '49.12821000',
+        'longitude' => '131.19322000',
+    ],
+    [
+        'id'        => 99439,
+        'name'      => 'Kul’dur',
+        'latitude'  => '49.20465000',
+        'longitude' => '131.63840000',
+    ],
+    [
+        'id'        => 99574,
+        'name'      => 'Leninskiy Rayon',
+        'latitude'  => '48.16667000',
+        'longitude' => '132.25000000',
+    ],
+    [
+        'id'        => 99578,
+        'name'      => 'Leninskoye',
+        'latitude'  => '47.93501000',
+        'longitude' => '132.62025000',
+    ],
+    [
+        'id'        => 99660,
+        'name'      => 'Londoko',
+        'latitude'  => '49.01805000',
+        'longitude' => '131.99142000',
+    ],
+    [
+        'id'        => 100385,
+        'name'      => 'Obluchenskiy Rayon',
+        'latitude'  => '49.00000000',
+        'longitude' => '132.00000000',
+    ],
+    [
+        'id'        => 100415,
+        'name'      => 'Oktyabr’skiy Rayon',
+        'latitude'  => '48.16667000',
+        'longitude' => '131.41667000',
+    ],
+    [
+        'id'        => 100813,
+        'name'      => 'Priamurskiy',
+        'latitude'  => '48.52716000',
+        'longitude' => '134.90359000',
+    ],
+    [
+        'id'        => 101411,
+        'name'      => 'Smidovich',
+        'latitude'  => '48.59647000',
+        'longitude' => '133.80866000',
+    ],
+    [
+        'id'        => 101412,
+        'name'      => 'Smidovichskiy Rayon',
+        'latitude'  => '48.50000000',
+        'longitude' => '134.00000000',
+    ],
+    [
+        'id'        => 102349,
+        'name'      => 'Volochayevka Vtoraya',
+        'latitude'  => '48.56695000',
+        'longitude' => '134.58232000',
+    ],
+];
