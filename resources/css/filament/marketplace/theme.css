@@ -1,0 +1,40 @@
+/* Skip @tailwind base to preserve Filament's styles */
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ * MARKETPLACE PANEL THEME
+ * Clean, professional theme for marketplace dashboard
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/* Custom body styling - Emerald accent */
+body {
+    border-top: 3px solid #10b981;
+}
+
+/* Fix dropdown/select option styling */
+@layer components {
+    /* Remove thick borders from select dropdown options */
+    .fi-fo-select [role="listbox"],
+    .choices__list--dropdown,
+    [data-headlessui-state] [role="listbox"] {
+        border: 1px solid rgb(229 231 235) !important;
+        border-radius: 0.5rem;
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+
+    .fi-fo-select [role="option"],
+    .choices__item--choice {
+        border: none !important;
+        outline: none !important;
+    }
+
+    /* Dark mode support */
+    .dark .fi-fo-select [role="listbox"],
+    .dark .choices__list--dropdown,
+    .dark [data-headlessui-state] [role="listbox"] {
+        border-color: rgb(55 65 81) !important;
+    }
+}
