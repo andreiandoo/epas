@@ -2,24 +2,23 @@
 
 namespace App\Filament\Marketplace\Pages;
 
-use App\Models\Tenant;
-use App\Models\Event;
-use App\Models\Order;
-use App\Models\Ticket;
+use App\Models\MarketplaceClient;
+use App\Models\MarketplaceEvent;
 use App\Models\Venue;
 use Carbon\Carbon;
 use Filament\Pages\Page;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Url;
 
 class VenueUsage extends Page
 {
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office-2';
     protected static ?string $navigationLabel = 'Venue Usage';
-    protected static \UnitEnum|string|null $navigationGroup = 'Venue';
+    protected static \UnitEnum|string|null $navigationGroup = 'Content';
     protected static ?int $navigationSort = 50;
     protected string $view = 'filament.marketplace.pages.venue-usage';
 
-    public ?Tenant $tenant = null;
+    public ?MarketplaceClient $marketplace = null;
 
     #[Url]
     public string $venueFilter = 'all';
@@ -29,13 +28,14 @@ class VenueUsage extends Page
 
     public function mount(): void
     {
-        $this->tenant = auth()->user()->tenant;
+        $admin = Auth::guard('marketplace_admin')->user();
+        $this->marketplace = $admin?->marketplaceClient;
     }
 
     public static function shouldRegisterNavigation(): bool
     {
-        $tenant = auth()->user()?->tenant;
-        return $tenant?->ownsVenues() ?? false;
+        // Show venue usage to see events across venues
+        return true;
     }
 
     public function getTitle(): string
@@ -50,38 +50,26 @@ class VenueUsage extends Page
 
     public function getSubheading(): string|null
     {
-        return 'Events happening at your venues';
+        return 'Events happening at venues on your marketplace';
     }
 
     public function getViewData(): array
     {
-        $tenant = $this->tenant;
+        $marketplace = $this->marketplace;
 
-        if (!$tenant) {
+        if (!$marketplace) {
             return [
-                'tenant' => null,
+                'marketplace' => null,
                 'venues' => collect(),
                 'events' => collect(),
                 'stats' => [],
             ];
         }
 
-        // Get venues owned by this tenant
-        $venues = $tenant->venues()->orderBy('name')->get();
-        $venueIds = $venues->pluck('id')->toArray();
-
-        if (empty($venueIds)) {
-            return [
-                'tenant' => $tenant,
-                'venues' => collect(),
-                'events' => collect(),
-                'stats' => [],
-            ];
-        }
-
-        // Build query for events at owned venues
-        $eventsQuery = Event::with(['venue', 'tenant', 'ticketTypes'])
-            ->whereIn('venue_id', $venueIds);
+        // Get events on this marketplace
+        $eventsQuery = MarketplaceEvent::with(['venue', 'organizer'])
+            ->where('marketplace_client_id', $marketplace->id)
+            ->where('status', 'published');
 
         // Apply venue filter
         if ($this->venueFilter !== 'all') {
@@ -90,104 +78,39 @@ class VenueUsage extends Page
 
         // Apply status filter
         if ($this->statusFilter === 'upcoming') {
-            $eventsQuery->upcoming();
+            $eventsQuery->where('start_date', '>=', Carbon::now()->startOfDay());
         } elseif ($this->statusFilter === 'past') {
-            $eventsQuery->past();
+            $eventsQuery->where('start_date', '<', Carbon::now()->startOfDay());
         }
 
-        $events = $eventsQuery->orderBy('event_date', 'asc')->get();
+        $events = $eventsQuery->orderBy('start_date', 'asc')->get();
+
+        // Get venues used in marketplace events
+        $venueIds = MarketplaceEvent::where('marketplace_client_id', $marketplace->id)
+            ->whereNotNull('venue_id')
+            ->pluck('venue_id')
+            ->unique();
+
+        $venues = Venue::whereIn('id', $venueIds)->orderBy('name')->get();
 
         // Calculate stats
-        $stats = $this->calculateStats($venueIds, $tenant->id);
+        $totalEvents = MarketplaceEvent::where('marketplace_client_id', $marketplace->id)->count();
+        $upcomingEvents = MarketplaceEvent::where('marketplace_client_id', $marketplace->id)
+            ->where('status', 'published')
+            ->where('start_date', '>=', Carbon::now()->startOfDay())
+            ->count();
 
         return [
-            'tenant' => $tenant,
+            'marketplace' => $marketplace,
             'venues' => $venues,
             'events' => $events,
-            'stats' => $stats,
+            'stats' => [
+                'total_events' => $totalEvents,
+                'upcoming_events' => $upcomingEvents,
+                'venues_used' => $venues->count(),
+            ],
             'venueFilter' => $this->venueFilter,
             'statusFilter' => $this->statusFilter,
         ];
-    }
-
-    private function calculateStats(array $venueIds, int $tenantId): array
-    {
-        // All events at owned venues
-        $allEventsQuery = Event::whereIn('venue_id', $venueIds);
-
-        // Total events at venues
-        $totalEvents = $allEventsQuery->count();
-
-        // Own events (where tenant_id = current tenant)
-        $ownEvents = (clone $allEventsQuery)->where('tenant_id', $tenantId)->count();
-
-        // Hosted events (where tenant_id != current tenant)
-        $hostedEvents = (clone $allEventsQuery)->where('tenant_id', '!=', $tenantId)->count();
-
-        // Upcoming events at venues
-        $upcomingEvents = (clone $allEventsQuery)->upcoming()->count();
-
-        // Get hosted event IDs for ticket/sales stats
-        $hostedEventIds = Event::whereIn('venue_id', $venueIds)
-            ->where('tenant_id', '!=', $tenantId)
-            ->pluck('id')
-            ->toArray();
-
-        // Tickets sold for hosted events
-        $hostedTicketsSold = 0;
-        $hostedRevenue = 0;
-
-        if (!empty($hostedEventIds)) {
-            $hostedTicketsSold = Ticket::whereHas('ticketType', function ($query) use ($hostedEventIds) {
-                $query->whereIn('event_id', $hostedEventIds);
-            })->whereHas('order', function ($query) {
-                $query->whereIn('status', ['paid', 'confirmed']);
-            })->count();
-
-            // Revenue from hosted events
-            $hostedRevenue = Order::whereIn('status', ['paid', 'confirmed'])
-                ->whereHas('tickets.ticketType', function ($query) use ($hostedEventIds) {
-                    $query->whereIn('event_id', $hostedEventIds);
-                })
-                ->sum('total_cents') / 100;
-        }
-
-        return [
-            'total_events' => $totalEvents,
-            'own_events' => $ownEvents,
-            'hosted_events' => $hostedEvents,
-            'upcoming_events' => $upcomingEvents,
-            'hosted_tickets_sold' => $hostedTicketsSold,
-            'hosted_revenue' => $hostedRevenue,
-        ];
-    }
-
-    public function getEventStats(Event $event): array
-    {
-        $ticketsSold = Ticket::whereHas('ticketType', function ($query) use ($event) {
-            $query->where('event_id', $event->id);
-        })->whereHas('order', function ($query) {
-            $query->whereIn('status', ['paid', 'confirmed']);
-        })->count();
-
-        $revenue = Order::whereIn('status', ['paid', 'confirmed'])
-            ->whereHas('tickets.ticketType', function ($query) use ($event) {
-                $query->where('event_id', $event->id);
-            })
-            ->sum('total_cents') / 100;
-
-        $totalCapacity = $event->ticketTypes->sum('capacity');
-
-        return [
-            'tickets_sold' => $ticketsSold,
-            'revenue' => $revenue,
-            'capacity' => $totalCapacity,
-            'occupancy' => $totalCapacity > 0 ? round(($ticketsSold / $totalCapacity) * 100, 1) : 0,
-        ];
-    }
-
-    public function isOwnEvent(Event $event): bool
-    {
-        return $event->tenant_id === $this->tenant?->id;
     }
 }

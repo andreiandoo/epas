@@ -29,6 +29,14 @@ class PageResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Pages';
 
+    /**
+     * Hide from navigation - PageResource uses TenantPage which is not applicable to Marketplace
+     */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
     public static function getEloquentQuery(): Builder
     {
         $tenant = auth()->user()->tenant;

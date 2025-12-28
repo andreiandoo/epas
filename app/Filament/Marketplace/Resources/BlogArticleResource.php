@@ -43,14 +43,8 @@ class BlogArticleResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        // Only show if tenant has blog microservice active
-        $tenant = auth()->user()->tenant;
-        if (!$tenant) return false;
-
-        return $tenant->microservices()
-            ->where('slug', 'blog')
-            ->wherePivot('is_active', true)
-            ->exists();
+        // Blog is tenant-specific, not applicable to marketplace panel
+        return false;
     }
 
     public static function form(Schema $schema): Schema

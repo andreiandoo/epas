@@ -36,16 +36,8 @@ class AffiliateSettingsResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        // Only show if affiliates microservice is enabled
-        $tenant = filament()->getTenant();
-        if (!$tenant) {
-            return false;
-        }
-
-        return $tenant->microservices()
-            ->where('slug', 'affiliates')
-            ->wherePivot('is_active', true)
-            ->exists();
+        // Affiliate settings are tenant-specific, not applicable to marketplace panel
+        return false;
     }
 
     public static function form(Schema $schema): Schema

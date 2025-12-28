@@ -21,6 +21,13 @@ class UserResource extends Resource
     protected static ?int $navigationSort = 1;
     protected static ?string $navigationLabel = 'Team Members';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        // UserResource is for tenant staff (editors), not marketplace admins
+        // Marketplace uses MarketplaceAdmin model for its own users
+        return false;
+    }
+
     public static function getEloquentQuery(): Builder
     {
         $tenant = auth()->user()->tenant;

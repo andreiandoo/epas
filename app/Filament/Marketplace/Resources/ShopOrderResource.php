@@ -47,13 +47,8 @@ class ShopOrderResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        $tenant = auth()->user()->tenant;
-        if (!$tenant) return false;
-
-        return $tenant->microservices()
-            ->where('slug', 'shop')
-            ->wherePivot('is_active', true)
-            ->exists();
+        // This is tenant-specific, not applicable to marketplace panel
+        return false;
     }
 
     public static function infolist(Schema $schema): Schema

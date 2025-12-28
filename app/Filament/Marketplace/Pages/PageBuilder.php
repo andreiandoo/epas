@@ -41,17 +41,20 @@ class PageBuilder extends Page implements HasForms
     public string $contentLanguage = 'en';
 
     /**
+     * Hide from navigation - PageBuilder uses TenantPage which is not applicable to Marketplace
+     */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
+    /**
      * Check if the current user can access this page
      */
     public static function canAccess(): bool
     {
-        $tenant = auth()->user()?->tenant;
-
-        if (!$tenant) {
-            return false;
-        }
-
-        return $tenant->hasMicroservice(self::MICROSERVICE_SLUG);
+        // PageBuilder is not available for marketplace - it's for tenant websites
+        return false;
     }
 
     public function mount(): void

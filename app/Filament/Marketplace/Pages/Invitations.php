@@ -60,20 +60,11 @@ class Invitations extends Page
     public ?int $preselectedEventId = null;
 
     /**
-     * Only show if tenant has invitations microservice active
+     * Invitations are tenant-specific, not applicable to marketplace panel
      */
     public static function shouldRegisterNavigation(): bool
     {
-        $tenant = auth()->user()?->tenant;
-
-        if (!$tenant) {
-            return false;
-        }
-
-        return $tenant->microservices()
-            ->where('microservices.slug', 'invitations')
-            ->wherePivot('is_active', true)
-            ->exists();
+        return false;
     }
 
     public function mount(): void

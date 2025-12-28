@@ -30,17 +30,20 @@ class ThemeEditor extends Page implements HasForms
     public string $previewUrl = '';
 
     /**
+     * Hide from navigation - ThemeEditor is for tenant websites, not marketplace
+     */
+    public static function shouldRegisterNavigation(): bool
+    {
+        return false;
+    }
+
+    /**
      * Check if the current user can access this page
      */
     public static function canAccess(): bool
     {
-        $tenant = auth()->user()?->tenant;
-
-        if (!$tenant) {
-            return false;
-        }
-
-        return $tenant->hasMicroservice(self::MICROSERVICE_SLUG);
+        // ThemeEditor is not available for marketplace
+        return false;
     }
 
     public function mount(): void

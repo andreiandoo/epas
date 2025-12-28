@@ -55,15 +55,8 @@ class AffiliateWithdrawalResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        $tenant = filament()->getTenant();
-        if (!$tenant) {
-            return false;
-        }
-
-        return $tenant->microservices()
-            ->where('slug', 'affiliates')
-            ->wherePivot('is_active', true)
-            ->exists();
+        // Affiliate withdrawals are tenant-specific, not applicable to marketplace panel
+        return false;
     }
 
     public static function canCreate(): bool

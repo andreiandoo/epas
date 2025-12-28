@@ -30,20 +30,11 @@ class TrackingSettings extends Page
     }
 
     /**
-     * Only show if tenant has tracking-pixels-manager microservice active
+     * Tracking settings are tenant-specific, not applicable to marketplace panel
      */
     public static function shouldRegisterNavigation(): bool
     {
-        $tenant = auth()->user()?->tenant;
-
-        if (!$tenant) {
-            return false;
-        }
-
-        return $tenant->microservices()
-            ->where('microservices.slug', 'tracking-pixels-manager')
-            ->wherePivot('is_active', true)
-            ->exists();
+        return false;
     }
 
     public function mount(): void

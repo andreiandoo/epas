@@ -21,16 +21,8 @@ class CrmPage extends Page
 
     public static function shouldRegisterNavigation(): bool
     {
-        $tenant = auth()->user()?->tenant;
-
-        if (!$tenant) {
-            return false;
-        }
-
-        return $tenant->microservices()
-            ->where('microservices.slug', 'crm')
-            ->wherePivot('is_active', true)
-            ->exists();
+        // CRM is tenant-specific, not applicable to marketplace panel
+        return false;
     }
 
 }

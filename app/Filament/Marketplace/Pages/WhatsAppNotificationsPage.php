@@ -21,17 +21,8 @@ class WhatsAppNotificationsPage extends Page
 
     public static function shouldRegisterNavigation(): bool
     {
-        $tenant = auth()->user()?->tenant;
-
-        if (!$tenant) {
-            return false;
-        }
-
-        // Check for whatsapp or whatsapp-cloud microservice
-        return $tenant->microservices()
-            ->whereIn('microservices.slug', ['whatsapp', 'whatsapp-notifications', 'whatsapp-cloud'])
-            ->wherePivot('is_active', true)
-            ->exists();
+        // WhatsApp notifications are tenant-specific, not applicable to marketplace panel
+        return false;
     }
 
 }

@@ -2,15 +2,17 @@
 
 namespace App\Filament\Marketplace\Pages;
 
-use App\Models\Tenant;
-use App\Models\Event;
+use App\Models\MarketplaceClient;
+use App\Models\MarketplaceEvent;
+use App\Models\MarketplaceOrganizer;
+use App\Models\MarketplacePayout;
+use App\Models\MarketplaceCustomer;
 use App\Models\Order;
 use App\Models\Ticket;
-use App\Models\Customer;
-use App\Models\Venue;
 use BackedEnum;
 use Carbon\Carbon;
 use Filament\Pages\Page;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Url;
 
 class Dashboard extends Page
@@ -20,45 +22,45 @@ class Dashboard extends Page
     protected static ?int $navigationSort = 1;
     protected string $view = 'filament.marketplace.pages.dashboard';
 
-    public ?Tenant $tenant = null;
+    public ?MarketplaceClient $marketplace = null;
 
     #[Url]
     public string $chartPeriod = '30';
 
     public function mount(): void
     {
-        $this->tenant = auth()->user()->tenant;
+        $admin = Auth::guard('marketplace_admin')->user();
+        $this->marketplace = $admin?->marketplaceClient;
     }
 
     public function getTitle(): string
     {
-        return ''; // Empty title as requested
+        return '';
     }
 
     public function getHeading(): string|null
     {
-        return null; // Remove heading
+        return null;
     }
 
     public function updatedChartPeriod(): void
     {
-        // Dispatch browser event to trigger chart re-initialization
         $this->dispatch('charts-updated');
     }
 
     public function getViewData(): array
     {
-        $tenant = $this->tenant;
+        $marketplace = $this->marketplace;
 
-        if (!$tenant) {
+        if (!$marketplace) {
             return [
-                'tenant' => null,
+                'marketplace' => null,
                 'stats' => [],
                 'chartData' => [],
             ];
         }
 
-        $tenantId = $tenant->id;
+        $marketplaceId = $marketplace->id;
 
         // Calculate date range for chart
         $days = (int) $this->chartPeriod;
@@ -66,132 +68,104 @@ class Dashboard extends Page
         $endDate = Carbon::now()->endOfDay();
 
         // Active events (upcoming or ongoing)
-        $activeEvents = Event::where('tenant_id', $tenantId)
+        $activeEvents = MarketplaceEvent::where('marketplace_client_id', $marketplaceId)
+            ->where('status', 'published')
             ->where(function ($query) {
                 $today = Carbon::now()->startOfDay();
-                $query->where('event_date', '>=', $today)
-                    ->orWhere('range_end_date', '>=', $today);
+                $query->where('start_date', '>=', $today)
+                    ->orWhere('end_date', '>=', $today);
             })
-            ->where('is_cancelled', false)
             ->count();
 
-        // Total sales (sum of paid/confirmed orders) - total_cents / 100
-        $totalSales = Order::where('tenant_id', $tenantId)
+        // Total events
+        $totalEvents = MarketplaceEvent::where('marketplace_client_id', $marketplaceId)->count();
+
+        // Total organizers
+        $totalOrganizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)->count();
+
+        // Pending organizers
+        $pendingOrganizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)
+            ->where('status', 'pending')
+            ->count();
+
+        // Total customers
+        $totalCustomers = MarketplaceCustomer::where('marketplace_client_id', $marketplaceId)->count();
+
+        // Total revenue (from orders linked to marketplace events)
+        $eventIds = MarketplaceEvent::where('marketplace_client_id', $marketplaceId)
+            ->pluck('id')
+            ->toArray();
+
+        $totalRevenue = Order::whereIn('marketplace_event_id', $eventIds)
             ->whereIn('status', ['paid', 'confirmed'])
             ->sum('total_cents') / 100;
 
-        // Total tickets sold (filter through orders since tickets don't have tenant_id)
-        $totalTickets = Ticket::whereHas('order', function ($query) use ($tenantId) {
-            $query->where('tenant_id', $tenantId)
+        // Total tickets sold
+        $totalTickets = Ticket::whereHas('order', function ($query) use ($eventIds) {
+            $query->whereIn('marketplace_event_id', $eventIds)
                 ->whereIn('status', ['paid', 'confirmed']);
         })->count();
 
-        // Total customers
-        $totalCustomers = Customer::where('tenant_id', $tenantId)->count();
+        // Pending payouts
+        $pendingPayouts = MarketplacePayout::where('marketplace_client_id', $marketplaceId)
+            ->where('status', 'pending')
+            ->count();
 
-        // Unpaid invoices VALUE - uses 'amount' decimal column
-        $unpaidInvoicesValue = $tenant->invoices()
-            ->whereIn('status', ['pending', 'overdue'])
+        // Pending payouts value
+        $pendingPayoutsValue = MarketplacePayout::where('marketplace_client_id', $marketplaceId)
+            ->where('status', 'pending')
             ->sum('amount');
 
         // Chart data - daily sales for the selected period
-        $chartData = $this->getChartData($tenantId, $startDate, $endDate, $days);
+        $chartData = $this->getChartData($eventIds, $startDate, $endDate, $days);
 
-        // Ticket chart data - daily ticket sales with event breakdown
-        $ticketChartData = $this->getTicketChartData($tenantId, $startDate, $endDate, $days);
+        // Ticket chart data
+        $ticketChartData = $this->getTicketChartData($eventIds, $startDate, $endDate, $days);
 
-        // Venue activity stats (for tenants who own venues)
-        $venueStats = $this->getVenueActivityStats($tenant);
-
-        // Analytics comparison (own vs hosted) - only for venue owners
-        $comparisonData = $this->getComparisonAnalytics($tenant, $startDate, $endDate, $days);
+        // Top organizers
+        $topOrganizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)
+            ->where('status', 'active')
+            ->orderByDesc('total_revenue')
+            ->limit(5)
+            ->get();
 
         return [
-            'tenant' => $tenant,
+            'marketplace' => $marketplace,
             'stats' => [
                 'active_events' => $activeEvents,
-                'total_sales' => $totalSales,
-                'total_tickets' => $totalTickets,
+                'total_events' => $totalEvents,
+                'total_organizers' => $totalOrganizers,
+                'pending_organizers' => $pendingOrganizers,
                 'total_customers' => $totalCustomers,
-                'unpaid_invoices_value' => $unpaidInvoicesValue,
+                'total_revenue' => $totalRevenue,
+                'total_tickets' => $totalTickets,
+                'pending_payouts' => $pendingPayouts,
+                'pending_payouts_value' => $pendingPayoutsValue,
             ],
             'chartData' => $chartData,
             'ticketChartData' => $ticketChartData,
             'chartPeriod' => $this->chartPeriod,
-            'venueStats' => $venueStats,
-            'comparisonData' => $comparisonData,
+            'topOrganizers' => $topOrganizers,
         ];
     }
 
-    /**
-     * Get venue activity statistics for hosted events
-     */
-    private function getVenueActivityStats(Tenant $tenant): ?array
-    {
-        // Check if tenant owns any venues
-        if (!$tenant->ownsVenues()) {
-            return null;
-        }
-
-        $ownedVenueIds = $tenant->venues()->pluck('id')->toArray();
-        $tenantId = $tenant->id;
-
-        // Hosted events (events at owned venues by other tenants)
-        $hostedEventIds = Event::whereIn('venue_id', $ownedVenueIds)
-            ->where('tenant_id', '!=', $tenantId)
-            ->pluck('id')
-            ->toArray();
-
-        if (empty($hostedEventIds)) {
-            return [
-                'has_venues' => true,
-                'venues_count' => count($ownedVenueIds),
-                'hosted_events' => 0,
-                'upcoming_hosted_events' => 0,
-                'hosted_tickets_sold' => 0,
-                'hosted_revenue' => 0,
-            ];
-        }
-
-        // Count hosted events
-        $hostedEventsCount = count($hostedEventIds);
-
-        // Upcoming hosted events
-        $upcomingHostedEvents = Event::whereIn('id', $hostedEventIds)
-            ->upcoming()
-            ->count();
-
-        // Tickets sold for hosted events
-        $hostedTicketsSold = Ticket::whereHas('ticketType', function ($query) use ($hostedEventIds) {
-            $query->whereIn('event_id', $hostedEventIds);
-        })->whereHas('order', function ($query) {
-            $query->whereIn('status', ['paid', 'confirmed']);
-        })->count();
-
-        // Revenue from hosted events
-        $hostedRevenue = Order::whereIn('status', ['paid', 'confirmed'])
-            ->whereHas('tickets.ticketType', function ($query) use ($hostedEventIds) {
-                $query->whereIn('event_id', $hostedEventIds);
-            })
-            ->sum('total_cents') / 100;
-
-        return [
-            'has_venues' => true,
-            'venues_count' => count($ownedVenueIds),
-            'hosted_events' => $hostedEventsCount,
-            'upcoming_hosted_events' => $upcomingHostedEvents,
-            'hosted_tickets_sold' => $hostedTicketsSold,
-            'hosted_revenue' => $hostedRevenue,
-        ];
-    }
-
-    private function getChartData(int $tenantId, Carbon $startDate, Carbon $endDate, int $days): array
+    private function getChartData(array $eventIds, Carbon $startDate, Carbon $endDate, int $days): array
     {
         $labels = [];
         $data = [];
 
-        // Get daily totals (total_cents / 100)
-        $dailySales = Order::where('tenant_id', $tenantId)
+        if (empty($eventIds)) {
+            $current = $startDate->copy();
+            while ($current <= $endDate) {
+                $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
+                $data[] = 0;
+                $current->addDay();
+            }
+            return ['labels' => $labels, 'data' => $data];
+        }
+
+        // Get daily totals
+        $dailySales = Order::whereIn('marketplace_event_id', $eventIds)
             ->whereIn('status', ['paid', 'confirmed'])
             ->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw('DATE(created_at) as date, SUM(total_cents) / 100 as total')
@@ -214,42 +188,38 @@ class Dashboard extends Page
         ];
     }
 
-    private function getTicketChartData(int $tenantId, Carbon $startDate, Carbon $endDate, int $days): array
+    private function getTicketChartData(array $eventIds, Carbon $startDate, Carbon $endDate, int $days): array
     {
         $labels = [];
         $data = [];
-        $tooltipData = [];
 
-        // Get tickets with event info, grouped by date
-        $tickets = Ticket::with(['ticketType.event', 'order'])
-            ->whereHas('order', function ($query) use ($tenantId, $startDate, $endDate) {
-                $query->where('tenant_id', $tenantId)
+        if (empty($eventIds)) {
+            $current = $startDate->copy();
+            while ($current <= $endDate) {
+                $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
+                $data[] = 0;
+                $current->addDay();
+            }
+            return ['labels' => $labels, 'data' => $data, 'tooltipData' => []];
+        }
+
+        // Get tickets grouped by date
+        $tickets = Ticket::with(['ticketType.marketplaceEvent', 'order'])
+            ->whereHas('order', function ($query) use ($eventIds, $startDate, $endDate) {
+                $query->whereIn('marketplace_event_id', $eventIds)
                     ->whereIn('status', ['paid', 'confirmed'])
                     ->whereBetween('created_at', [$startDate, $endDate]);
             })
             ->get();
 
-        // Group by date and event
+        // Group by date
         $dailyTickets = [];
         foreach ($tickets as $ticket) {
             $dateKey = $ticket->order->created_at->format('Y-m-d');
-            $eventTitle = $ticket->ticketType?->event?->getTranslation('title', 'ro')
-                ?? $ticket->ticketType?->event?->getTranslation('title', 'en')
-                ?? 'Eveniment necunoscut';
-
             if (!isset($dailyTickets[$dateKey])) {
-                $dailyTickets[$dateKey] = [
-                    'total' => 0,
-                    'events' => [],
-                ];
+                $dailyTickets[$dateKey] = 0;
             }
-
-            $dailyTickets[$dateKey]['total']++;
-
-            if (!isset($dailyTickets[$dateKey]['events'][$eventTitle])) {
-                $dailyTickets[$dateKey]['events'][$eventTitle] = 0;
-            }
-            $dailyTickets[$dateKey]['events'][$eventTitle]++;
+            $dailyTickets[$dateKey]++;
         }
 
         // Fill in all days
@@ -257,129 +227,14 @@ class Dashboard extends Page
         while ($current <= $endDate) {
             $dateKey = $current->format('Y-m-d');
             $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
-            $data[] = $dailyTickets[$dateKey]['total'] ?? 0;
-
-            // Build tooltip data for this day
-            $dayEvents = $dailyTickets[$dateKey]['events'] ?? [];
-            $tooltipData[] = $dayEvents;
-
+            $data[] = $dailyTickets[$dateKey] ?? 0;
             $current->addDay();
         }
 
         return [
             'labels' => $labels,
             'data' => $data,
-            'tooltipData' => $tooltipData,
-        ];
-    }
-
-    /**
-     * Get comparison analytics between own events and hosted events
-     */
-    private function getComparisonAnalytics(Tenant $tenant, Carbon $startDate, Carbon $endDate, int $days): ?array
-    {
-        // Only for venue owners
-        if (!$tenant->ownsVenues()) {
-            return null;
-        }
-
-        $tenantId = $tenant->id;
-        $ownedVenueIds = $tenant->venues()->pluck('id')->toArray();
-
-        // Get hosted event IDs
-        $hostedEventIds = Event::whereIn('venue_id', $ownedVenueIds)
-            ->where('tenant_id', '!=', $tenantId)
-            ->pluck('id')
-            ->toArray();
-
-        if (empty($hostedEventIds)) {
-            return null;
-        }
-
-        $labels = [];
-        $ownSalesData = [];
-        $hostedSalesData = [];
-        $ownTicketsData = [];
-        $hostedTicketsData = [];
-
-        // Get daily own sales
-        $ownDailySales = Order::where('tenant_id', $tenantId)
-            ->whereIn('status', ['paid', 'confirmed'])
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->selectRaw('DATE(created_at) as date, SUM(total_cents) / 100 as total')
-            ->groupBy('date')
-            ->pluck('total', 'date')
-            ->toArray();
-
-        // Get daily hosted sales (revenue from hosted events)
-        $hostedDailySales = Order::whereIn('status', ['paid', 'confirmed'])
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->whereHas('tickets.ticketType', function ($query) use ($hostedEventIds) {
-                $query->whereIn('event_id', $hostedEventIds);
-            })
-            ->selectRaw('DATE(created_at) as date, SUM(total_cents) / 100 as total')
-            ->groupBy('date')
-            ->pluck('total', 'date')
-            ->toArray();
-
-        // Get daily own tickets
-        $ownTickets = Ticket::with('order')
-            ->whereHas('order', function ($query) use ($tenantId, $startDate, $endDate) {
-                $query->where('tenant_id', $tenantId)
-                    ->whereIn('status', ['paid', 'confirmed'])
-                    ->whereBetween('created_at', [$startDate, $endDate]);
-            })
-            ->get()
-            ->groupBy(fn ($ticket) => $ticket->order->created_at->format('Y-m-d'))
-            ->map(fn ($group) => $group->count())
-            ->toArray();
-
-        // Get daily hosted tickets
-        $hostedTickets = Ticket::with('order')
-            ->whereHas('ticketType', function ($query) use ($hostedEventIds) {
-                $query->whereIn('event_id', $hostedEventIds);
-            })
-            ->whereHas('order', function ($query) use ($startDate, $endDate) {
-                $query->whereIn('status', ['paid', 'confirmed'])
-                    ->whereBetween('created_at', [$startDate, $endDate]);
-            })
-            ->get()
-            ->groupBy(fn ($ticket) => $ticket->order->created_at->format('Y-m-d'))
-            ->map(fn ($group) => $group->count())
-            ->toArray();
-
-        // Fill in all days
-        $current = $startDate->copy();
-        while ($current <= $endDate) {
-            $dateKey = $current->format('Y-m-d');
-            $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
-            $ownSalesData[] = (float) ($ownDailySales[$dateKey] ?? 0);
-            $hostedSalesData[] = (float) ($hostedDailySales[$dateKey] ?? 0);
-            $ownTicketsData[] = (int) ($ownTickets[$dateKey] ?? 0);
-            $hostedTicketsData[] = (int) ($hostedTickets[$dateKey] ?? 0);
-            $current->addDay();
-        }
-
-        // Calculate totals for the period
-        $ownSalesTotal = array_sum($ownSalesData);
-        $hostedSalesTotal = array_sum($hostedSalesData);
-        $ownTicketsTotal = array_sum($ownTicketsData);
-        $hostedTicketsTotal = array_sum($hostedTicketsData);
-
-        return [
-            'labels' => $labels,
-            'sales' => [
-                'own' => $ownSalesData,
-                'hosted' => $hostedSalesData,
-                'own_total' => $ownSalesTotal,
-                'hosted_total' => $hostedSalesTotal,
-            ],
-            'tickets' => [
-                'own' => $ownTicketsData,
-                'hosted' => $hostedTicketsData,
-                'own_total' => $ownTicketsTotal,
-                'hosted_total' => $hostedTicketsTotal,
-            ],
+            'tooltipData' => [],
         ];
     }
 }

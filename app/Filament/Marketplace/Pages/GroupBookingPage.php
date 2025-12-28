@@ -21,16 +21,8 @@ class GroupBookingPage extends Page
 
     public static function shouldRegisterNavigation(): bool
     {
-        $tenant = auth()->user()?->tenant;
-
-        if (!$tenant) {
-            return false;
-        }
-
-        return $tenant->microservices()
-            ->where('microservices.slug', 'group-booking')
-            ->wherePivot('is_active', true)
-            ->exists();
+        // Group booking is tenant-specific, not applicable to marketplace panel
+        return false;
     }
 
 }

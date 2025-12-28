@@ -32,20 +32,11 @@ class AnalyticsDashboard extends Page
     public ?array $data = [];
 
     /**
-     * Only show if tenant has analytics microservice active
+     * Analytics dashboard is tenant-specific, not applicable to marketplace panel
      */
     public static function shouldRegisterNavigation(): bool
     {
-        $tenant = auth()->user()?->tenant;
-
-        if (!$tenant) {
-            return false;
-        }
-
-        return $tenant->microservices()
-            ->where('microservices.slug', 'analytics')
-            ->wherePivot('is_active', true)
-            ->exists();
+        return false;
     }
 
     public function mount(): void

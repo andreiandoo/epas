@@ -25,19 +25,16 @@ class AffiliateResource extends Resource
     protected static \UnitEnum|string|null $navigationGroup = 'Services';
     protected static ?int $navigationSort = 1;
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        // Affiliates are tenant-specific, not applicable to marketplace panel
+        // Marketplace has Organizers instead
+        return false;
+    }
+
     public static function getNavigationBadge(): ?string
     {
-        $tenant = auth()->user()?->tenant;
-        if (!$tenant) {
-            return null;
-        }
-
-        $count = Affiliate::withoutGlobalScopes()
-            ->where('tenant_id', $tenant->id)
-            ->where('status', Affiliate::STATUS_PENDING)
-            ->count();
-
-        return $count > 0 ? (string) $count : null;
+        return null;
     }
 
     public static function getNavigationBadgeColor(): ?string
