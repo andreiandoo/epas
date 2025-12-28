@@ -1,450 +1,368 @@
 # Ambilet Marketplace Admin Dashboard - Implementation Plan
 
-## Current State Analysis
+## Understanding the Architecture
 
-After reviewing the `core-main` branch, the following components **already exist**:
+Based on reviewing `core-main`, there are **two Filament panels**:
 
-### Existing Backend (Laravel)
+1. **Admin Panel** (`/admin`) - Core platform management
+   - Path: `app/Filament/Resources/`
+   - Provider: `AdminPanelProvider.php`
 
-#### Marketplace Models (`app/Models/`)
-- `MarketplaceClient` - The marketplace entity (ambilet)
-- `MarketplaceAdmin` - Admin users with roles & permissions
-- `MarketplaceOrganizer` - Event organizers
-- `MarketplaceCustomer` - Ticket buyers
-- `MarketplaceEvent` - Organizer-created events
-- `MarketplaceTicketType` - Ticket types for events
-- `MarketplacePayout` - Organizer payouts
-- `MarketplaceTransaction` - Financial transactions
-- `MarketplaceCart` - Shopping carts
-- `MarketplaceTicketTransfer` - Ticket transfers between customers
-- `MarketplaceOrganizerPromoCode` - Promo codes
-- `MarketplacePromoCodeUsage` - Promo code usage tracking
+2. **Tenant Panel** (`/tenant`) - Tenant dashboard
+   - Path: `app/Filament/Tenant/Resources/`
+   - Provider: `TenantPanelProvider.php`
 
-#### Marketplace Admin Controllers (`app/Http/Controllers/Api/MarketplaceClient/Admin/`)
-- `AuthController` - Login, logout, password reset
-- `DashboardController` - Stats, timeline, activity, top organizers/events
-- `EventsController` - Approve, reject, feature, suspend events
-- `OrganizersController` - Approve, verify, suspend, manage commission
-- `PayoutsController` - Process payout requests
-- `SettingsController` - Marketplace settings, webhooks, API credentials
+**What we need:**
 
-#### API Routes (already defined in `routes/api.php`)
-- `POST /api/marketplace-client/admin/login` - Admin login
-- `GET /api/marketplace-client/admin/dashboard` - Dashboard stats
-- `GET /api/marketplace-client/admin/events` - List events
-- `GET /api/marketplace-client/admin/organizers` - List organizers
-- `GET /api/marketplace-client/admin/payouts` - List payouts
-- And 50+ more admin endpoints...
-
-#### Core Models (shared, can be used by marketplace)
-- `Artist` - With social stats, genres, types
-- `Venue` - With facilities, categories, types, seating
-- `EventType`, `EventGenre` - Event classification
-- `Affiliate`, `AffiliateLink`, `AffiliateConversion` - Affiliate system
-- `Coupon/*` - Coupon system
-- `Gamification/*` - Points, referrals
-- `Shop/*` - Online shop products
-- And 100+ more models...
+3. **Marketplace Panel** (`/marketplace`) - For ambilet and similar marketplace clients
+   - Path: `app/Filament/Marketplace/Resources/`
+   - Provider: `MarketplacePanelProvider.php`
+   - Same capabilities as Tenant + Organizer management
 
 ---
 
-## What Needs To Be Built
+## Marketplace = Tenant + Organizers
 
-Based on your requirements, here's what's **missing**:
-
-### 1. Backend Additions (Priority)
-
-#### 1.1 New Admin Controllers
-
-```
-app/Http/Controllers/Api/MarketplaceClient/Admin/
-├── TicketsController.php       # View all tickets, check-in history, void tickets
-├── CustomersController.php     # List, view, block customers
-├── OrdersController.php        # List, view, refund orders (extend existing)
-├── ReportsController.php       # Sales, tickets, customers, financial reports
-├── UsersController.php         # Manage admin staff (exists but needs extension)
-├── CategoriesController.php    # Custom event categories for marketplace
-├── ArtistsController.php       # View/add artists (ownership-based)
-├── VenuesController.php        # View/add venues (ownership-based)
-└── MicroservicesController.php # Access enabled microservices
-```
-
-#### 1.2 New Database Migrations
-
-```php
-// Marketplace Event Categories
-Schema::create('marketplace_event_categories', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();
-    $table->foreignId('parent_id')->nullable()->constrained('marketplace_event_categories');
-    $table->string('name');
-    $table->string('slug');
-    $table->text('description')->nullable();
-    $table->string('icon')->nullable();      // Icon name or emoji
-    $table->string('image')->nullable();     // Category image
-    $table->string('color')->nullable();     // Brand color
-    $table->integer('sort_order')->default(0);
-    $table->boolean('is_active')->default(true);
-    $table->boolean('is_featured')->default(false);
-    $table->timestamps();
-
-    $table->unique(['marketplace_client_id', 'slug']);
-});
-
-// Artist ownership for marketplace
-Schema::create('marketplace_artists', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();
-    $table->foreignId('artist_id')->constrained()->cascadeOnDelete();
-    $table->string('ownership')->default('shared'); // owned, shared
-    $table->timestamps();
-
-    $table->unique(['marketplace_client_id', 'artist_id']);
-});
-
-// Venue ownership for marketplace
-Schema::create('marketplace_venues', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();
-    $table->foreignId('venue_id')->constrained()->cascadeOnDelete();
-    $table->string('ownership')->default('shared'); // owned, shared
-    $table->timestamps();
-
-    $table->unique(['marketplace_client_id', 'venue_id']);
-});
-
-// Marketplace enabled microservices
-Schema::create('marketplace_microservices', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();
-    $table->foreignId('microservice_id')->constrained()->cascadeOnDelete();
-    $table->boolean('is_enabled')->default(true);
-    $table->json('settings')->nullable();
-    $table->timestamps();
-
-    $table->unique(['marketplace_client_id', 'microservice_id']);
-});
-
-// Multiple payment gateways per marketplace
-Schema::create('marketplace_payment_gateways', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();
-    $table->string('gateway_code'); // netopia, stripe, paypal
-    $table->string('name');
-    $table->string('platform'); // web, app, pos, all
-    $table->json('credentials'); // encrypted
-    $table->string('mode')->default('sandbox'); // sandbox, live
-    $table->boolean('is_active')->default(true);
-    $table->boolean('is_default')->default(false);
-    $table->decimal('fee_percentage', 5, 2)->default(0);
-    $table->decimal('fee_fixed', 10, 2)->default(0);
-    $table->timestamps();
-
-    $table->index(['marketplace_client_id', 'platform', 'is_active']);
-});
-```
-
-#### 1.3 New API Routes
-
-```php
-// In routes/api.php - add to marketplace admin group
-
-// Tickets Management
-Route::get('admin/tickets', [TicketsController::class, 'index']);
-Route::get('admin/tickets/{ticket}', [TicketsController::class, 'show']);
-Route::post('admin/tickets/{ticket}/void', [TicketsController::class, 'void']);
-Route::get('admin/tickets/{ticket}/history', [TicketsController::class, 'history']);
-
-// Customers Management
-Route::get('admin/customers', [CustomersController::class, 'index']);
-Route::get('admin/customers/{customer}', [CustomersController::class, 'show']);
-Route::put('admin/customers/{customer}', [CustomersController::class, 'update']);
-Route::post('admin/customers/{customer}/block', [CustomersController::class, 'block']);
-Route::post('admin/customers/{customer}/unblock', [CustomersController::class, 'unblock']);
-Route::get('admin/customers/{customer}/orders', [CustomersController::class, 'orders']);
-Route::get('admin/customers/{customer}/tickets', [CustomersController::class, 'tickets']);
-
-// Orders Management (extends existing)
-Route::get('admin/orders', [OrdersController::class, 'index']);
-Route::get('admin/orders/{order}', [OrdersController::class, 'show']);
-Route::post('admin/orders/{order}/refund', [OrdersController::class, 'refund']);
-Route::post('admin/orders/{order}/resend', [OrdersController::class, 'resendTickets']);
-
-// Reports
-Route::get('admin/reports/sales', [ReportsController::class, 'sales']);
-Route::get('admin/reports/tickets', [ReportsController::class, 'tickets']);
-Route::get('admin/reports/customers', [ReportsController::class, 'customers']);
-Route::get('admin/reports/organizers', [ReportsController::class, 'organizers']);
-Route::get('admin/reports/financial', [ReportsController::class, 'financial']);
-Route::get('admin/reports/export/{type}', [ReportsController::class, 'export']);
-
-// Staff Users (extend existing AuthController)
-Route::get('admin/users', [UsersController::class, 'index']);
-Route::post('admin/users', [UsersController::class, 'store']);
-Route::put('admin/users/{user}', [UsersController::class, 'update']);
-Route::delete('admin/users/{user}', [UsersController::class, 'destroy']);
-Route::put('admin/users/{user}/permissions', [UsersController::class, 'updatePermissions']);
-
-// Event Categories
-Route::get('admin/categories', [CategoriesController::class, 'index']);
-Route::post('admin/categories', [CategoriesController::class, 'store']);
-Route::put('admin/categories/{category}', [CategoriesController::class, 'update']);
-Route::delete('admin/categories/{category}', [CategoriesController::class, 'destroy']);
-Route::put('admin/categories/reorder', [CategoriesController::class, 'reorder']);
-
-// Artists (with ownership)
-Route::get('admin/artists', [ArtistsController::class, 'index']);
-Route::post('admin/artists', [ArtistsController::class, 'store']);
-Route::get('admin/artists/{artist}', [ArtistsController::class, 'show']);
-Route::put('admin/artists/{artist}', [ArtistsController::class, 'update']); // only own
-Route::delete('admin/artists/{artist}', [ArtistsController::class, 'destroy']); // only own
-
-// Venues (with ownership)
-Route::get('admin/venues', [VenuesController::class, 'index']);
-Route::post('admin/venues', [VenuesController::class, 'store']);
-Route::get('admin/venues/{venue}', [VenuesController::class, 'show']);
-Route::put('admin/venues/{venue}', [VenuesController::class, 'update']); // only own
-Route::delete('admin/venues/{venue}', [VenuesController::class, 'destroy']); // only own
-Route::get('admin/venues/{venue}/seating', [VenuesController::class, 'seating']);
-
-// Payment Gateways
-Route::get('admin/payment-gateways', [PaymentGatewaysController::class, 'index']);
-Route::post('admin/payment-gateways', [PaymentGatewaysController::class, 'store']);
-Route::put('admin/payment-gateways/{gateway}', [PaymentGatewaysController::class, 'update']);
-Route::delete('admin/payment-gateways/{gateway}', [PaymentGatewaysController::class, 'destroy']);
-Route::post('admin/payment-gateways/{gateway}/test', [PaymentGatewaysController::class, 'test']);
-
-// Microservices
-Route::get('admin/microservices', [MicroservicesController::class, 'index']);
-Route::put('admin/microservices/{code}/toggle', [MicroservicesController::class, 'toggle']);
-Route::put('admin/microservices/{code}/settings', [MicroservicesController::class, 'updateSettings']);
-```
+A **Marketplace** is positioned between Tenant and Core:
+- Has all Tenant capabilities (events, orders, tickets, customers, affiliates, coupons, etc.)
+- Can accept **Organizer** users under its umbrella
+- Uses its own authentication guard (`marketplace_admin`)
 
 ---
 
-### 2. Admin Dashboard Frontend (Next.js)
+## What Exists vs What to Build
 
-This is the main deliverable - a complete admin dashboard.
+### Already Exists (from Tenant - to be copied/adapted):
 
-#### 2.1 Technology Stack
+| Resource | Tenant | Marketplace |
+|----------|--------|-------------|
+| EventResource | ✅ | 📋 Copy & adapt |
+| OrderResource | ✅ | 📋 Copy & adapt |
+| TicketResource | ✅ | 📋 Copy & adapt |
+| CustomerResource | ✅ | 📋 Copy & adapt |
+| VenueResource | ✅ | 📋 Copy & adapt |
+| AffiliateResource | ✅ | 📋 Copy & adapt |
+| CouponCodeResource | ✅ | 📋 Copy & adapt |
+| TicketTemplateResource | ✅ | 📋 Copy & adapt |
+| GamificationConfigResource | ✅ | 📋 Copy & adapt |
+| ShopProductResource | ✅ | 📋 Copy & adapt |
+| UserResource | ✅ | 📋 Copy & adapt |
+| Dashboard | ✅ | 📋 Copy & adapt |
+| Settings | ✅ | 📋 Copy & adapt |
+| MicroserviceSettings | ✅ | 📋 Copy & adapt |
+| PaymentConfig | ✅ | 📋 Copy & adapt |
+| AnalyticsDashboard | ✅ | 📋 Copy & adapt |
+| Invitations | ✅ | 📋 Copy & adapt |
+| TrackingSettings | ✅ | 📋 Copy & adapt |
+
+### New (Marketplace-specific):
+
+| Resource | Description |
+|----------|-------------|
+| OrganizerResource | Manage organizers (approve, verify, suspend, commission) |
+| OrganizerEventResource | View/manage organizer events |
+| PayoutResource | Process organizer payout requests |
+| MarketplaceEventResource | Marketplace-created events (by organizers) |
+
+---
+
+## Implementation Plan
+
+### Phase 1: Marketplace Panel Setup
 
 ```
-Framework:     Next.js 14 (App Router)
-Language:      TypeScript
-Styling:       Tailwind CSS + shadcn/ui
-State:         Zustand
-Forms:         React Hook Form + Zod
-API:           TanStack Query (React Query)
-Charts:        Recharts
-Tables:        TanStack Table
+app/Providers/Filament/MarketplacePanelProvider.php
+
+<?php
+namespace App\Providers\Filament;
+
+use Filament\Panel;
+use Filament\PanelProvider;
+use Filament\Support\Colors\Color;
+// ... middlewares
+
+class MarketplacePanelProvider extends PanelProvider
+{
+    public function panel(Panel $panel): Panel
+    {
+        return $panel
+            ->id('marketplace')
+            ->path('marketplace')        // Login at /marketplace/login
+            ->login()
+            ->authGuard('marketplace_admin')  // Custom guard
+            ->colors([
+                'primary' => Color::Emerald,
+            ])
+            ->discoverResources(
+                in: app_path('Filament/Marketplace/Resources'),
+                for: 'App\\Filament\\Marketplace\\Resources'
+            )
+            ->discoverPages(
+                in: app_path('Filament/Marketplace/Pages'),
+                for: 'App\\Filament\\Marketplace\\Pages'
+            )
+            ->discoverWidgets(
+                in: app_path('Filament/Marketplace/Widgets'),
+                for: 'App\\Filament\\Marketplace\\Widgets'
+            )
+            ->navigationGroups([
+                'Sales',
+                'Organizers',  // NEW - Marketplace specific
+                'Services',
+                'Content',
+                'Settings',
+            ])
+            // ... middlewares
+    }
+}
 ```
 
-#### 2.2 Folder Structure
+### Phase 2: Auth Guard for MarketplaceAdmin
+
+```php
+// config/auth.php - add:
+
+'guards' => [
+    'marketplace_admin' => [
+        'driver' => 'session',
+        'provider' => 'marketplace_admins',
+    ],
+],
+
+'providers' => [
+    'marketplace_admins' => [
+        'driver' => 'eloquent',
+        'model' => App\Models\MarketplaceAdmin::class,
+    ],
+],
+```
+
+### Phase 3: Copy Tenant Resources to Marketplace
 
 ```
-marketplace-clients/ambilet/admin/
-├── app/
-│   ├── (auth)/
-│   │   ├── login/page.tsx
-│   │   └── forgot-password/page.tsx
-│   ├── (dashboard)/
-│   │   ├── layout.tsx                 # Dashboard layout with sidebar
-│   │   ├── page.tsx                   # Main dashboard
-│   │   ├── events/
-│   │   │   ├── page.tsx               # Events list
-│   │   │   ├── pending/page.tsx       # Pending approval
-│   │   │   └── [id]/page.tsx          # Event details
-│   │   ├── orders/
-│   │   │   ├── page.tsx               # Orders list
-│   │   │   └── [id]/page.tsx          # Order details
-│   │   ├── tickets/
-│   │   │   ├── page.tsx               # Tickets list
-│   │   │   └── [id]/page.tsx          # Ticket details
-│   │   ├── organizers/
-│   │   │   ├── page.tsx               # Organizers list
-│   │   │   ├── pending/page.tsx       # Pending approval
-│   │   │   └── [id]/page.tsx          # Organizer details
-│   │   ├── customers/
-│   │   │   ├── page.tsx               # Customers list
-│   │   │   └── [id]/page.tsx          # Customer details
-│   │   ├── payouts/
-│   │   │   ├── page.tsx               # Payouts list
-│   │   │   └── [id]/page.tsx          # Payout details
-│   │   ├── reports/
-│   │   │   ├── page.tsx               # Reports overview
-│   │   │   ├── sales/page.tsx
-│   │   │   ├── tickets/page.tsx
-│   │   │   ├── customers/page.tsx
-│   │   │   └── financial/page.tsx
-│   │   ├── artists/
-│   │   │   ├── page.tsx               # Artists list
-│   │   │   ├── create/page.tsx
-│   │   │   └── [id]/page.tsx          # Artist details/edit
-│   │   ├── venues/
-│   │   │   ├── page.tsx               # Venues list
-│   │   │   ├── create/page.tsx
-│   │   │   └── [id]/page.tsx          # Venue details/edit
-│   │   ├── categories/
-│   │   │   └── page.tsx               # Event categories
-│   │   ├── users/
-│   │   │   └── page.tsx               # Staff users
-│   │   ├── microservices/
-│   │   │   └── page.tsx               # Enabled microservices
-│   │   ├── payments/
-│   │   │   └── page.tsx               # Payment gateways
-│   │   └── settings/
-│   │       ├── page.tsx               # General settings
-│   │       ├── branding/page.tsx
-│   │       └── webhooks/page.tsx
-│   └── layout.tsx
-├── components/
-│   ├── ui/                            # shadcn/ui components
-│   ├── layout/
-│   │   ├── Sidebar.tsx
-│   │   ├── Header.tsx
-│   │   └── Breadcrumbs.tsx
-│   ├── dashboard/
-│   │   ├── StatsCards.tsx
-│   │   ├── RevenueChart.tsx
-│   │   ├── ActivityFeed.tsx
-│   │   └── TopOrganizers.tsx
-│   ├── tables/
-│   │   ├── EventsTable.tsx
-│   │   ├── OrdersTable.tsx
-│   │   ├── TicketsTable.tsx
-│   │   └── ...
-│   └── forms/
-│       ├── CategoryForm.tsx
-│       ├── ArtistForm.tsx
-│       └── ...
-├── lib/
-│   ├── api/
-│   │   ├── client.ts                  # API client
-│   │   ├── auth.ts
-│   │   ├── events.ts
-│   │   ├── orders.ts
-│   │   └── ...
-│   ├── hooks/
-│   │   ├── useAuth.ts
-│   │   ├── useEvents.ts
-│   │   └── ...
-│   └── utils/
-│       ├── formatters.ts
-│       └── validators.ts
-├── stores/
-│   ├── authStore.ts
-│   └── uiStore.ts
-├── types/
-│   ├── api.ts
-│   ├── models.ts
+app/Filament/Marketplace/
+├── Pages/
+│   ├── Dashboard.php           # Adapted from Tenant
+│   ├── Settings.php            # Adapted from Tenant
+│   ├── MicroserviceSettings.php
+│   ├── PaymentConfig.php
+│   ├── AnalyticsDashboard.php
+│   ├── Invitations.php
+│   ├── TrackingSettings.php
 │   └── ...
-├── next.config.js
-├── tailwind.config.js
-├── tsconfig.json
-└── package.json
+├── Resources/
+│   ├── EventResource.php       # Marketplace events
+│   ├── OrderResource.php       # Orders with refund
+│   ├── TicketResource.php      # Ticket management
+│   ├── CustomerResource.php    # Customer management
+│   ├── VenueResource.php       # Venue management
+│   ├── AffiliateResource.php
+│   ├── CouponCodeResource.php
+│   ├── ShopProductResource.php
+│   ├── UserResource.php        # Staff users
+│   │
+│   ├── OrganizerResource.php   # NEW - Organizer management
+│   ├── OrganizerEventResource.php  # NEW - Organizer events
+│   └── PayoutResource.php      # NEW - Payout processing
+└── Widgets/
+    └── ...
 ```
 
-#### 2.3 Key Features by Page
+### Phase 4: Adapt Models for Marketplace Context
 
-| Page | Features |
-|------|----------|
-| **Dashboard** | Revenue chart, tickets sold, orders count, pending items, activity feed, top organizers |
-| **Events** | List with filters (status, date, organizer), approve/reject, feature, suspend |
-| **Orders** | List with filters, view details, refund, resend tickets |
-| **Tickets** | List all tickets, search by barcode, check-in history, void |
-| **Organizers** | List, approve, verify, suspend, set commission, view events/payouts |
-| **Customers** | List, view profile, order history, block/unblock |
-| **Payouts** | Pending requests, approve, process, complete, reject |
-| **Reports** | Sales by period/event/organizer, ticket stats, customer analytics, financial |
-| **Artists** | List all (owned + shared), create new (becomes owned), edit own only |
-| **Venues** | List all (owned + shared), create new (becomes owned), edit own only |
-| **Categories** | CRUD for event categories with icons, images, colors |
-| **Users** | Staff management with roles (super_admin, admin, editor, scanner) |
-| **Microservices** | Enable/disable, configure settings |
-| **Payments** | Configure Netopia (web), Stripe (app), etc. |
-| **Settings** | General, branding, webhooks, API keys |
+The MarketplaceAdmin model needs `canAccessPanel()`:
 
----
+```php
+// app/Models/MarketplaceAdmin.php
 
-## Implementation Phases
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 
-### Phase 1: Backend Extensions (2-3 days)
-- [ ] Create new migrations for categories, artist/venue ownership, payment gateways
-- [ ] Create TicketsController, CustomersController, OrdersController
-- [ ] Create ReportsController with export functionality
-- [ ] Create CategoriesController, ArtistsController, VenuesController
-- [ ] Create PaymentGatewaysController
-- [ ] Add new routes to api.php
-- [ ] Run migrations, create seeders
-
-### Phase 2: Frontend Setup & Auth (1-2 days)
-- [ ] Create Next.js project with TypeScript
-- [ ] Install and configure Tailwind CSS, shadcn/ui
-- [ ] Set up API client with interceptors
-- [ ] Implement login page
-- [ ] Implement auth state management (Zustand)
-- [ ] Create dashboard layout (sidebar, header)
-
-### Phase 3: Core Dashboard Pages (3-4 days)
-- [ ] Dashboard overview with charts and stats
-- [ ] Events list with approval actions
-- [ ] Orders list with refund functionality
-- [ ] Tickets list with search and void
-- [ ] Organizers management
-- [ ] Customers management
-- [ ] Payouts management
-
-### Phase 4: Content Management (2-3 days)
-- [ ] Event categories CRUD
-- [ ] Artists list/create/edit (with ownership)
-- [ ] Venues list/create/edit (with ownership)
-
-### Phase 5: Reports & Settings (2-3 days)
-- [ ] Reports dashboard with charts
-- [ ] Sales, tickets, customers reports
-- [ ] Export functionality (CSV, PDF)
-- [ ] Staff users management
-- [ ] Payment gateways configuration
-- [ ] Microservices settings
-- [ ] General settings, branding, webhooks
-
-### Phase 6: Testing & Polish (1-2 days)
-- [ ] Test all API endpoints
-- [ ] Test all frontend functionality
-- [ ] Mobile responsiveness
-- [ ] Error handling
-- [ ] Loading states
+class MarketplaceAdmin extends Authenticatable implements FilamentUser
+{
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $panel->getId() === 'marketplace'
+            && $this->status === 'active';
+    }
+}
+```
 
 ---
 
-## Summary
+## Folder Structure
 
-| Component | Status | Action Required |
-|-----------|--------|-----------------|
-| **Marketplace Models** | ✅ Complete | None |
-| **Admin Auth API** | ✅ Complete | None |
-| **Dashboard API** | ✅ Complete | None |
-| **Events API** | ✅ Complete | None |
-| **Organizers API** | ✅ Complete | None |
-| **Payouts API** | ✅ Complete | None |
-| **Settings API** | ✅ Complete | None |
-| **Tickets API** | ❌ Missing | Create TicketsController |
-| **Customers API** | ❌ Missing | Create CustomersController |
-| **Orders API** | ⚠️ Partial | Extend with refund, resend |
-| **Reports API** | ❌ Missing | Create ReportsController |
-| **Categories API** | ❌ Missing | Create migration + controller |
-| **Artists API** | ❌ Missing | Create ownership + controller |
-| **Venues API** | ❌ Missing | Create ownership + controller |
-| **Payment Gateways** | ❌ Missing | Create migration + controller |
-| **Admin Frontend** | ❌ Missing | Create Next.js app |
+```
+app/
+├── Filament/
+│   ├── Resources/          # Core Admin panel
+│   ├── Pages/              # Core Admin pages
+│   ├── Tenant/             # Tenant panel (existing)
+│   │   ├── Resources/
+│   │   └── Pages/
+│   └── Marketplace/        # NEW - Marketplace panel
+│       ├── Resources/
+│       │   ├── EventResource.php
+│       │   ├── OrderResource.php
+│       │   ├── TicketResource.php
+│       │   ├── CustomerResource.php
+│       │   ├── VenueResource.php
+│       │   ├── AffiliateResource.php
+│       │   ├── CouponCodeResource.php
+│       │   ├── CouponCampaignResource.php
+│       │   ├── TicketTemplateResource.php
+│       │   ├── GamificationConfigResource.php
+│       │   ├── ShopProductResource.php
+│       │   ├── ShopCategoryResource.php
+│       │   ├── ShopOrderResource.php
+│       │   ├── BlogArticleResource.php
+│       │   ├── BlogCategoryResource.php
+│       │   ├── UserResource.php
+│       │   ├── GroupBookingResource.php
+│       │   ├── CustomerPointsResource.php
+│       │   │
+│       │   ├── OrganizerResource.php       # Marketplace-specific
+│       │   ├── OrganizerEventResource.php  # Marketplace-specific
+│       │   └── PayoutResource.php          # Marketplace-specific
+│       ├── Pages/
+│       │   ├── Dashboard.php
+│       │   ├── Settings.php
+│       │   ├── MicroserviceSettings.php
+│       │   ├── PaymentConfig.php
+│       │   ├── AnalyticsDashboard.php
+│       │   ├── Invitations.php
+│       │   ├── TrackingSettings.php
+│       │   ├── ThemeEditor.php
+│       │   ├── PageBuilder.php
+│       │   ├── VenueUsage.php
+│       │   ├── TaxReports.php
+│       │   └── Domains.php
+│       └── Widgets/
+│           └── ...
+└── Providers/
+    └── Filament/
+        ├── AdminPanelProvider.php       # /admin
+        ├── TenantPanelProvider.php      # /tenant
+        └── MarketplacePanelProvider.php # /marketplace (NEW)
+```
 
-**Total Estimated Time: 12-17 days**
+---
+
+## Navigation Structure
+
+```
+MARKETPLACE PANEL (/marketplace)
+│
+├── 📊 Dashboard
+│
+├── 📅 SALES
+│   ├── Events
+│   ├── Orders
+│   ├── Tickets
+│   └── Customers
+│
+├── 👥 ORGANIZERS (Marketplace-specific)
+│   ├── All Organizers
+│   ├── Pending Approval
+│   ├── Organizer Events
+│   └── Payouts
+│
+├── 🔧 SERVICES
+│   ├── Affiliates
+│   ├── Coupons
+│   ├── Ticket Customizer
+│   ├── Gamification
+│   ├── Group Bookings
+│   ├── Invitations
+│   └── Microservices
+│
+├── 🛍️ SHOP
+│   ├── Products
+│   ├── Categories
+│   ├── Orders
+│   └── Gift Cards
+│
+├── 📝 CONTENT
+│   ├── Venues
+│   ├── Blog
+│   └── Pages
+│
+└── ⚙️ SETTINGS
+    ├── General
+    ├── Staff Users
+    ├── Payment Config
+    ├── Domains
+    ├── Tracking
+    ├── Taxes
+    └── Theme
+```
+
+---
+
+## Implementation Steps
+
+### Step 1: Create MarketplacePanelProvider
+- [ ] Create `app/Providers/Filament/MarketplacePanelProvider.php`
+- [ ] Register in `config/app.php` providers
+- [ ] Add marketplace_admin guard to `config/auth.php`
+- [ ] Update `MarketplaceAdmin` model with `FilamentUser` interface
+
+### Step 2: Create Marketplace Folder Structure
+- [ ] Create `app/Filament/Marketplace/Resources/`
+- [ ] Create `app/Filament/Marketplace/Pages/`
+- [ ] Create `app/Filament/Marketplace/Widgets/`
+
+### Step 3: Copy & Adapt Tenant Resources
+- [ ] Copy all Tenant Resources to Marketplace
+- [ ] Update namespaces
+- [ ] Update model references (Tenant → Marketplace context)
+- [ ] Add tenant_id filtering for shared data
+
+### Step 4: Copy & Adapt Tenant Pages
+- [ ] Copy Dashboard, Settings, etc.
+- [ ] Update namespaces
+- [ ] Adapt for marketplace context
+
+### Step 5: Create Marketplace-Specific Resources
+- [ ] OrganizerResource (approve, verify, suspend, commission)
+- [ ] OrganizerEventResource (view organizer events)
+- [ ] PayoutResource (process payouts)
+
+### Step 6: Permissions & Access Control
+- [ ] Define marketplace admin roles (super_admin, admin, editor, scanner)
+- [ ] Implement permission checks in resources
+- [ ] Add canAccessPanel() to MarketplaceAdmin
+
+### Step 7: Testing
+- [ ] Test login at `/marketplace`
+- [ ] Test all resources
+- [ ] Test organizer management
+
+---
+
+## Estimated Timeline
+
+| Phase | Task | Time |
+|-------|------|------|
+| 1 | Panel Provider + Auth Guard | 0.5 day |
+| 2 | Create folder structure | 0.5 day |
+| 3 | Copy & adapt all Tenant Resources | 2-3 days |
+| 4 | Copy & adapt all Tenant Pages | 1-2 days |
+| 5 | Create OrganizerResource, PayoutResource | 1 day |
+| 6 | Permissions & access control | 1 day |
+| 7 | Testing & fixes | 1 day |
+
+**Total: 7-9 days**
 
 ---
 
 ## Approval Required
 
-Please confirm:
-1. Is the scope correct based on existing code?
-2. Should I proceed with Phase 1 (Backend Extensions)?
-3. Any features to add or remove?
+1. **Is this the correct understanding?**
+   - Marketplace = Tenant + Organizers management
+   - Uses Filament panel at `/marketplace`
+   - Copies Tenant structure and adapts it
+
+2. **Should I proceed with Step 1?** (MarketplacePanelProvider + auth guard)
+
+3. **Any additional features specific to marketplace?**
