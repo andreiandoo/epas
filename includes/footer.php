@@ -64,8 +64,19 @@ $currentYear = date('Y');
             <div class="grid grid-cols-1 gap-8 mb-6 md:grid-cols-2 lg:grid-cols-5 lg:gap-12">
                 <!-- Brand Column -->
                 <div class="text-center lg:col-span-1 lg:text-left">
-                    <a href="/" class="inline-flex items-center gap-2.5 mb-4">
+                    <a href="/" class="hidden items-center gap-2.5 mb-4">
                         <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="w-auto h-10 brightness-0 invert">
+                    </a>
+                    <a href="/" class="flex items-center gap-2.5 mb-4">
+                        <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden h-10 w-auto header-logo <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
+                        <svg class="w-10 h-10" viewBox="0 0 48 48" fill="none">
+                            <path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="white"></path>
+                            <rect x="20" y="27" width="8" height="8" rx="1.5" fill="#A51C30"></rect>
+                        </svg>
+                        <div class="text-[22px] font-extrabold flex">
+                            <span class="text-white/85">Am</span>
+                            <span class="text-white">Bilet</span>
+                        </div>
                     </a>
                     <p class="mb-6 text-sm leading-relaxed text-white/60">
                         Platforma ta de încredere pentru bilete la evenimente. Descoperă concerte, festivaluri, spectacole și experiențe unice în toată România.

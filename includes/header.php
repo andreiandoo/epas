@@ -375,7 +375,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             <!-- Logo -->
             <a href="/" class="flex items-center gap-2.5 no-underline flex-shrink-0">
                 <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden h-10 w-auto header-logo <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
-                <svg class="w-10 h-10" viewBox="0 0 48 48" fill="none">
+                <svg class="w-8 h-8" viewBox="0 0 48 48" fill="none">
                     <defs>
                         <linearGradient id="logoGrad" x1="6" y1="10" x2="42" y2="38">
                             <stop stop-color="#A51C30"/>
@@ -388,8 +388,8 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     <rect x="20" y="27" width="8" height="8" rx="1.5" fill="white"/>
                 </svg>
                 <div class="text-[22px] font-extrabold flex">
-                    <span class="text-white">Am</span>
-                    <span class="text-accent">Bilet</span>
+                    <span class="<?= $transparentHeader ? 'text-white/85' : 'text-slate-800' ?>">Am</span>
+                    <span class="text-accent <?= $transparentHeader ? 'text-white' : 'text-primary' ?>">Bilet</span>
                 </div>
             </a>
 
