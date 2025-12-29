@@ -4,10 +4,13 @@ namespace App\Filament\Marketplace\Pages;
 
 use BackedEnum;
 use Filament\Pages\Page;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Spatie\Activitylog\Models\Activity;
 
 class ActivityLog extends Page
 {
+    use HasMarketplaceContext;
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-clock';
     protected static ?string $navigationLabel = 'Activity Log';
     protected static \UnitEnum|string|null $navigationGroup = 'Help';
@@ -21,25 +24,25 @@ class ActivityLog extends Page
 
     public function getViewData(): array
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$tenant) {
+        if (!$marketplace) {
             return ['activities' => collect()];
         }
 
         // Get activities for this tenant from the 'tenant' log channel
         // Activities are scoped via tenant_id stored in properties JSON
         $activities = Activity::where('log_name', 'tenant')
-            ->where(function ($query) use ($tenant) {
+            ->where(function ($query) use ($marketplace) {
                 // Match by tenant_id in properties JSON
-                $query->whereJsonContains('properties->tenant_id', $tenant->id)
+                $query->whereJsonContains('properties->tenant_id', $marketplace->id)
                     // Also match activities caused by users belonging to this tenant
-                    ->orWhere(function ($q) use ($tenant) {
+                    ->orWhere(function ($q) use ($marketplace) {
                         $q->where('causer_type', 'App\\Models\\User')
-                          ->whereIn('causer_id', function ($subQuery) use ($tenant) {
+                          ->whereIn('causer_id', function ($subQuery) use ($marketplace) {
                               $subQuery->select('id')
                                   ->from('users')
-                                  ->where('tenant_id', $tenant->id);
+                                  ->where('marketplace_client_id', $marketplace->id);
                           });
                     });
             })

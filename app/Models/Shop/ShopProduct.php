@@ -2,6 +2,8 @@
 
 namespace App\Models\Shop;
 
+use App\Models\MarketplaceClient;
+
 use App\Models\Tenant;
 use App\Models\Event;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -23,6 +25,7 @@ class ShopProduct extends Model
     public array $translatable = ['title', 'description', 'short_description'];
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'category_id',
         'title',
@@ -497,4 +500,12 @@ class ShopProduct extends Model
             'average_rating' => $stats->average ? round($stats->average, 1) : null,
         ]);
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

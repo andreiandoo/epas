@@ -12,10 +12,13 @@ use Filament\Schemas\Components\Utilities\Set as SSet;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Illuminate\Support\Str;
 
 class VenueResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = Venue::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office';
     protected static \UnitEnum|string|null $navigationGroup = null;
@@ -23,18 +26,18 @@ class VenueResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
-        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+        $marketplace = static::getMarketplaceClient();
+        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplace?->id);
     }
 
     public static function form(Schema $schema): Schema
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
         return $schema->schema([
             // Hidden tenant_id
-            Forms\Components\Hidden::make('tenant_id')
-                ->default($tenant?->id),
+            Forms\Components\Hidden::make('marketplace_client_id')
+                ->default($marketplace?->id),
 
             // NAME & SLUG - EN/RO
             SC\Section::make('Venue Identity')

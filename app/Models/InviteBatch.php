@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\MarketplaceClient;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +17,7 @@ class InviteBatch extends Model
     protected $table = 'inv_batches';
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'event_ref',
         'name',
@@ -177,4 +180,12 @@ class InviteBatch extends Model
     {
         return $this->status === 'ready' && $this->qty_rendered > 0;
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

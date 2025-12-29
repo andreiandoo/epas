@@ -11,10 +11,13 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Illuminate\Support\HtmlString;
 
 class OrderResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = Order::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-shopping-cart';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
@@ -22,8 +25,8 @@ class OrderResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
-        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+        $marketplace = static::getMarketplaceClient();
+        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplace?->id);
     }
 
     public static function infolist(Schema $schema): Schema

@@ -6,6 +6,7 @@ use BackedEnum;
 use Filament\Forms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Illuminate\Support\Str;
@@ -14,6 +15,8 @@ use Illuminate\Support\Collection;
 
 class Settings extends Page
 {
+    use HasMarketplaceContext;
+
     use Forms\Concerns\InteractsWithForms;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-cog-6-tooth';
@@ -27,42 +30,42 @@ class Settings extends Page
 
     public function mount(): void
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
         // Load domains
-        $this->domains = $tenant ? $tenant->domains()->orderBy('is_primary', 'desc')->orderBy('created_at', 'desc')->get() : collect();
+        $this->domains = $marketplace ? $marketplace->domains()->orderBy('is_primary', 'desc')->orderBy('created_at', 'desc')->get() : collect();
 
-        if ($tenant) {
-            $settings = $tenant->settings ?? [];
+        if ($marketplace) {
+            $settings = $marketplace->settings ?? [];
 
             $this->form->fill([
                 // Business Details
-                'company_name' => $tenant->company_name,
-                'cui' => $tenant->cui,
-                'reg_com' => $tenant->reg_com,
-                'vat_payer' => (bool) $tenant->vat_payer,
-                'tax_display_mode' => $tenant->tax_display_mode ?? 'included',
-                'address' => $tenant->address,
-                'city' => $tenant->city,
-                'state' => $tenant->state,
-                'country' => $tenant->country,
-                'postal_code' => $tenant->postal_code ?? '',
-                'contact_email' => $tenant->contact_email,
-                'contact_phone' => $tenant->contact_phone,
-                'website' => $tenant->website ?? '',
-                'bank_name' => $tenant->bank_name,
-                'bank_account' => $tenant->bank_account,
-                'currency' => $tenant->currency ?? 'EUR',
+                'company_name' => $marketplace->company_name,
+                'cui' => $marketplace->cui,
+                'reg_com' => $marketplace->reg_com,
+                'vat_payer' => (bool) $marketplace->vat_payer,
+                'tax_display_mode' => $marketplace->tax_display_mode ?? 'included',
+                'address' => $marketplace->address,
+                'city' => $marketplace->city,
+                'state' => $marketplace->state,
+                'country' => $marketplace->country,
+                'postal_code' => $marketplace->postal_code ?? '',
+                'contact_email' => $marketplace->contact_email,
+                'contact_phone' => $marketplace->contact_phone,
+                'website' => $marketplace->website ?? '',
+                'bank_name' => $marketplace->bank_name,
+                'bank_account' => $marketplace->bank_account,
+                'currency' => $marketplace->currency ?? 'EUR',
 
                 // Personalization
-                'site_title' => $settings['site_title'] ?? $tenant->public_name ?? $tenant->name ?? '',
+                'site_title' => $settings['site_title'] ?? $marketplace->name ?? $marketplace->name ?? '',
                 // Language is set in Core Admin (Tenant Edit page, not here)
                 // 'site_language' => $settings['site_language'] ?? 'en',
                 'logo' => $settings['branding']['logo'] ?? null,
                 'favicon' => $settings['branding']['favicon'] ?? null,
                 'site_description' => $settings['site_description'] ?? '',
                 'site_tagline' => $settings['site_tagline'] ?? '',
-                'ticket_terms' => $tenant->ticket_terms ?? '',
+                'ticket_terms' => $marketplace->ticket_terms ?? '',
                 'primary_color' => $settings['theme']['primary_color'] ?? '#3B82F6',
                 'secondary_color' => $settings['theme']['secondary_color'] ?? '#1E40AF',
                 'site_template' => $settings['site_template'] ?? 'default',
@@ -475,14 +478,14 @@ class Settings extends Page
     public function save(): void
     {
         $data = $this->form->getState();
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$tenant) {
+        if (!$marketplace) {
             return;
         }
 
         // Update tenant fields
-        $tenant->update([
+        $marketplace->update([
             'company_name' => $data['company_name'],
             'cui' => $data['cui'],
             'reg_com' => $data['reg_com'],
@@ -503,7 +506,7 @@ class Settings extends Page
         ]);
 
         // Update settings JSON
-        $settings = $tenant->settings ?? [];
+        $settings = $marketplace->settings ?? [];
         $settings['site_title'] = $data['site_title'];
         // Language is set in Core Admin (Tenant Edit page)
         // $settings['site_language'] = $data['site_language'];
@@ -585,7 +588,7 @@ class Settings extends Page
 
         $settings['mail'] = $mailSettings;
 
-        $tenant->update([
+        $marketplace->update([
             'settings' => $settings,
         ]);
 

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\MarketplaceClient;
+
 use App\Models\Scopes\TenantScope;
 use App\Notifications\AffiliateApprovedNotification;
 use Illuminate\Database\Eloquent\Model;
@@ -19,6 +21,7 @@ class Affiliate extends Model
     public const STATUS_PENDING = 'pending'; // Pending approval for self-registered
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'customer_id',
         'code',
@@ -416,4 +419,12 @@ class Affiliate extends Model
 
         return number_format($this->commission_rate, 2) . ' ' . ($this->tenant->settings['currency'] ?? 'RON');
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

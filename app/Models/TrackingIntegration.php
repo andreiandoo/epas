@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\MarketplaceClient;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TrackingIntegration extends Model
 {
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'provider',
         'enabled',
@@ -105,4 +108,12 @@ class TrackingIntegration extends Model
     {
         return $this->settings ?? [];
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

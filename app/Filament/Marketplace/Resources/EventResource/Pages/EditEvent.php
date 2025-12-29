@@ -5,9 +5,12 @@ namespace App\Filament\Marketplace\Resources\EventResource\Pages;
 use App\Filament\Marketplace\Resources\EventResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class EditEvent extends EditRecord
 {
+    use HasMarketplaceContext;
+
     protected static string $resource = EventResource::class;
 
     public function mount(int|string $record): void
@@ -15,18 +18,18 @@ class EditEvent extends EditRecord
         parent::mount($record);
 
         // Redirect hosted events to view-guest page (can't edit events you don't own)
-        $tenant = auth()->user()?->tenant;
-        if ($this->record->tenant_id !== $tenant?->id) {
+        $marketplace = static::getMarketplaceClient();
+        if ($this->record->tenant_id !== $marketplace?->id) {
             redirect(EventResource::getUrl('view-guest', ['record' => $this->record]));
         }
     }
 
     protected function getHeaderActions(): array
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
         // Check if invitations microservice is active
-        $hasInvitations = $tenant?->microservices()
+        $hasInvitations = $marketplace?->microservices()
             ->where('microservices.slug', 'invitations')
             ->wherePivot('is_active', true)
             ->exists() ?? false;

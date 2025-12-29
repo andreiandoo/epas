@@ -23,8 +23,8 @@ class VariantsRelationManager extends RelationManager
 
     public function form(Schema $schema): Schema
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $schema
             ->schema([
@@ -93,14 +93,14 @@ class VariantsRelationManager extends RelationManager
                     ->label('Attribute Values')
                     ->multiple()
                     ->relationship('attributeValues', 'slug')
-                    ->options(function () use ($tenantLanguage) {
-                        $tenant = auth()->user()->tenant;
-                        return ShopAttributeValue::whereHas('attribute', fn ($q) => $q->where('tenant_id', $tenant?->id))
+                    ->options(function () use ($marketplaceLanguage) {
+                        $marketplace = static::getMarketplaceClient();
+                        return ShopAttributeValue::whereHas('attribute', fn ($q) => $q->where('marketplace_client_id', $marketplace?->id))
                             ->with('attribute')
                             ->get()
-                            ->mapWithKeys(function ($value) use ($tenantLanguage) {
-                                $attrName = $value->attribute->name[$tenantLanguage] ?? $value->attribute->slug;
-                                $valueName = $value->value[$tenantLanguage] ?? $value->slug;
+                            ->mapWithKeys(function ($value) use ($marketplaceLanguage) {
+                                $attrName = $value->attribute->name[$marketplaceLanguage] ?? $value->attribute->slug;
+                                $valueName = $value->value[$marketplaceLanguage] ?? $value->slug;
                                 return [$value->id => "{$attrName}: {$valueName}"];
                             });
                     })
@@ -111,8 +111,8 @@ class VariantsRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
-        $tenant = auth()->user()->tenant;
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplace = static::getMarketplaceClient();
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $table
             ->columns([
@@ -133,9 +133,9 @@ class VariantsRelationManager extends RelationManager
 
                 Tables\Columns\TextColumn::make('attributeValues.value')
                     ->label('Attributes')
-                    ->formatStateUsing(function ($state, $record) use ($tenantLanguage) {
+                    ->formatStateUsing(function ($state, $record) use ($marketplaceLanguage) {
                         return $record->attributeValues
-                            ->map(fn ($v) => $v->value[$tenantLanguage] ?? $v->slug)
+                            ->map(fn ($v) => $v->value[$marketplaceLanguage] ?? $v->slug)
                             ->join(', ');
                     }),
 

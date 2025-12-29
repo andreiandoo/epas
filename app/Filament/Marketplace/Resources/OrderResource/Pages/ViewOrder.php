@@ -53,7 +53,7 @@ class ViewOrder extends ViewRecord
                     activity('tenant')
                         ->performedOn($this->record)
                         ->withProperties([
-                            'tenant_id' => $this->record->tenant_id,
+                            'marketplace_client_id' => $this->record->tenant_id,
                             'old_status' => $oldStatus,
                             'new_status' => $newStatus,
                             'reason' => $data['reason'] ?? null,

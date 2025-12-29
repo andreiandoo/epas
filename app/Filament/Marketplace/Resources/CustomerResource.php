@@ -11,9 +11,12 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class CustomerResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = Customer::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
@@ -21,8 +24,8 @@ class CustomerResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
-        return parent::getEloquentQuery()->where('tenant_id', $tenant?->id);
+        $marketplace = static::getMarketplaceClient();
+        return parent::getEloquentQuery()->where('marketplace_client_id', $marketplace?->id);
     }
 
     public static function form(Schema $schema): Schema

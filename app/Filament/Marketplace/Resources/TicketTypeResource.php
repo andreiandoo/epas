@@ -11,9 +11,12 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class TicketTypeResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = TicketType::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
     protected static \UnitEnum|string|null $navigationGroup = 'Content';
@@ -23,10 +26,10 @@ class TicketTypeResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
         return parent::getEloquentQuery()
-            ->whereHas('event', function ($query) use ($tenant) {
-                $query->where('tenant_id', $tenant?->id);
+            ->whereHas('event', function ($query) use ($marketplace) {
+                $query->where('marketplace_client_id', $marketplace?->id);
             });
     }
 
@@ -38,8 +41,8 @@ class TicketTypeResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('event_id')
                             ->relationship('event', modifyQueryUsing: function (Builder $query) {
-                                $tenant = auth()->user()->tenant;
-                                return $query->where('tenant_id', $tenant?->id);
+                                $marketplace = static::getMarketplaceClient();
+                                return $query->where('marketplace_client_id', $marketplace?->id);
                             })
                             ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('title', app()->getLocale()))
                             ->required()

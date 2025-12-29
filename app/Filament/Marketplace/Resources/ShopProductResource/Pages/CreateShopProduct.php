@@ -5,18 +5,21 @@ namespace App\Filament\Marketplace\Resources\ShopProductResource\Pages;
 use App\Filament\Marketplace\Resources\ShopProductResource;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Str;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class CreateShopProduct extends CreateRecord
 {
+    use HasMarketplaceContext;
+
     protected static string $resource = ShopProductResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $data['tenant_id'] = auth()->user()->tenant?->id;
+        $data['marketplace_client_id'] = static::getMarketplaceClient()?->id;
 
         // Generate slug if empty
         if (empty($data['slug']) && !empty($data['title'])) {
-            $lang = auth()->user()->tenant?->language ?? 'en';
+            $lang = static::getMarketplaceClient()?->language ?? 'en';
             $title = $data['title'][$lang] ?? reset($data['title']);
             $data['slug'] = Str::slug($title);
         }

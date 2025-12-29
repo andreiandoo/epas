@@ -16,13 +16,13 @@ class ListAffiliateSettings extends ListRecords
         parent::mount();
 
         // Auto-create settings if not exists and redirect to edit
-        $tenant = filament()->getTenant();
+        $marketplace = static::getMarketplaceClient();
 
-        if ($tenant) {
-            $settings = AffiliateSettings::where('tenant_id', $tenant->id)->first();
+        if ($marketplace) {
+            $settings = AffiliateSettings::where('marketplace_client_id', $marketplace->id)->first();
 
             if (!$settings) {
-                $settings = AffiliateSettings::getOrCreate($tenant->id);
+                $settings = AffiliateSettings::getOrCreate($marketplace->id);
             }
 
             // Redirect to edit page
@@ -32,10 +32,10 @@ class ListAffiliateSettings extends ListRecords
 
     protected function getTableQuery(): ?Builder
     {
-        $tenant = filament()->getTenant();
+        $marketplace = static::getMarketplaceClient();
 
         return parent::getTableQuery()
-            ->where('tenant_id', $tenant?->id);
+            ->where('marketplace_client_id', $marketplace?->id);
     }
 
     protected function getHeaderActions(): array

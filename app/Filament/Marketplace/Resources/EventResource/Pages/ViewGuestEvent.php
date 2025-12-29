@@ -25,13 +25,13 @@ class ViewGuestEvent extends Page
         $this->record = $this->resolveRecord($record);
 
         // Verify this is a guest event (happening at venue owned by current tenant)
-        $tenant = auth()->user()?->tenant;
-        $ownedVenueIds = $tenant?->venues()->pluck('id')->toArray() ?? [];
+        $marketplace = static::getMarketplaceClient();
+        $ownedVenueIds = $marketplace?->venues()->pluck('id')->toArray() ?? [];
 
         // Must be at an owned venue AND not owned by current tenant
-        if (!in_array($this->record->venue_id, $ownedVenueIds) || $this->record->tenant_id === $tenant?->id) {
+        if (!in_array($this->record->venue_id, $ownedVenueIds) || $this->record->tenant_id === $marketplace?->id) {
             // If it's their own event, redirect to edit
-            if ($this->record->tenant_id === $tenant?->id) {
+            if ($this->record->tenant_id === $marketplace?->id) {
                 redirect(EventResource::getUrl('edit', ['record' => $this->record]));
                 return;
             }
@@ -101,14 +101,14 @@ class ViewGuestEvent extends Page
      */
     public function getOrganizerData(): array
     {
-        $tenant = $this->record->tenant;
+        $marketplace = $this->record->tenant;
 
         return [
-            'name' => $tenant?->public_name ?? $tenant?->name ?? 'Unknown',
-            'company_name' => $tenant?->company_name,
-            'website' => $tenant?->website,
-            'contact_email' => $tenant?->contact_email,
-            'contact_phone' => $tenant?->contact_phone,
+            'name' => $marketplace?->public_name ?? $marketplace?->name ?? 'Unknown',
+            'company_name' => $marketplace?->company_name,
+            'website' => $marketplace?->website,
+            'contact_email' => $marketplace?->contact_email,
+            'contact_phone' => $marketplace?->contact_phone,
         ];
     }
 

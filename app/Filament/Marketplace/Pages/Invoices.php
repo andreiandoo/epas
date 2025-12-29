@@ -4,9 +4,12 @@ namespace App\Filament\Marketplace\Pages;
 
 use BackedEnum;
 use Filament\Pages\Page;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class Invoices extends Page
 {
+    use HasMarketplaceContext;
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-document-text';
     protected static ?string $navigationLabel = 'Invoices';
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
@@ -20,13 +23,13 @@ class Invoices extends Page
 
     public function getViewData(): array
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$tenant) {
+        if (!$marketplace) {
             return ['invoices' => collect()];
         }
 
-        $invoices = $tenant->invoices()->orderBy('issue_date', 'desc')->get();
+        $invoices = $marketplace->invoices()->orderBy('issue_date', 'desc')->get();
 
         return [
             'invoices' => $invoices,

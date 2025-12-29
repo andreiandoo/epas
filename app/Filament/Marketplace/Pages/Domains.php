@@ -4,9 +4,12 @@ namespace App\Filament\Marketplace\Pages;
 
 use BackedEnum;
 use Filament\Pages\Page;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class Domains extends Page
 {
+    use HasMarketplaceContext;
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-globe-alt';
     protected static ?string $navigationLabel = 'Domains';
     protected static \UnitEnum|string|null $navigationGroup = 'Settings';
@@ -21,13 +24,13 @@ class Domains extends Page
 
     public function getViewData(): array
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$tenant) {
+        if (!$marketplace) {
             return ['domains' => collect()];
         }
 
-        $domains = $tenant->domains()->orderBy('is_primary', 'desc')->orderBy('created_at', 'desc')->get();
+        $domains = $marketplace->domains()->orderBy('is_primary', 'desc')->orderBy('created_at', 'desc')->get();
 
         return [
             'domains' => $domains,

@@ -32,7 +32,7 @@ class ViewTicket extends ViewRecord
                     $ticket = $this->record;
                     $event = $ticket->ticketType?->event;
                     $venue = $event?->venue;
-                    $tenant = $ticket->order?->tenant;
+                    $marketplace = $ticket->order?->tenant;
 
                     $eventTitle = is_array($event?->title)
                         ? ($event->title['en'] ?? $event->title['ro'] ?? reset($event->title))
@@ -50,8 +50,8 @@ class ViewTicket extends ViewRecord
                         'venue' => $venue,
                         'venueName' => $venueName,
                         'beneficiary' => $ticket->meta['beneficiary'] ?? null,
-                        'tenant' => $tenant,
-                        'ticketTerms' => $tenant?->ticket_terms ?? null,
+                        'tenant' => $marketplace,
+                        'ticketTerms' => $marketplace?->ticket_terms ?? null,
                         'qrCodeDataUri' => $qrCodeDataUri,
                     ]);
 

@@ -5,14 +5,17 @@ namespace App\Filament\Marketplace\Resources\AffiliateResource\Pages;
 use App\Filament\Marketplace\Resources\AffiliateResource;
 use App\Models\AffiliateCoupon;
 use Filament\Resources\Pages\CreateRecord;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class CreateAffiliate extends CreateRecord
 {
+    use HasMarketplaceContext;
+
     protected static string $resource = AffiliateResource::class;
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $data['tenant_id'] = auth()->user()->tenant_id;
+        $data['marketplace_client_id'] = static::getMarketplaceClient()_id;
 
         return $data;
     }

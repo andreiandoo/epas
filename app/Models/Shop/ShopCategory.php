@@ -2,6 +2,8 @@
 
 namespace App\Models\Shop;
 
+use App\Models\MarketplaceClient;
+
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +22,7 @@ class ShopCategory extends Model
     public array $translatable = ['name', 'description'];
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'parent_id',
         'name',
@@ -129,4 +132,12 @@ class ShopCategory extends Model
     {
         return $this->products()->where('status', 'active')->count();
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

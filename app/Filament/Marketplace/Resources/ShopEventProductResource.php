@@ -48,7 +48,7 @@ class ShopEventProductResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenantId = auth()->user()?->tenant?->id;
+        $tenantId = static::getMarketplaceClient()?->id;
 
         return parent::getEloquentQuery()
             ->whereHas('event', fn($q) => $q->where('marketplace_client_id', $tenantId));
@@ -56,8 +56,8 @@ class ShopEventProductResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        $tenantId = auth()->user()?->tenant?->id;
-        $marketplaceLanguage = auth()->user()?->tenant?->language ?? 'en';
+        $tenantId = static::getMarketplaceClient()?->id;
+        $marketplaceLanguage = static::getMarketplaceClient()?->language ?? 'en';
 
         return $schema
             ->schema([
@@ -148,7 +148,7 @@ class ShopEventProductResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $marketplaceLanguage = auth()->user()?->tenant?->language ?? 'en';
+        $marketplaceLanguage = static::getMarketplaceClient()?->language ?? 'en';
 
         return $table
             ->columns([
@@ -199,8 +199,8 @@ class ShopEventProductResource extends Resource
                 Tables\Filters\SelectFilter::make('event_id')
                     ->label('Event')
                     ->options(function () {
-                        $tenantId = auth()->user()?->tenant?->id;
-                        $marketplaceLanguage = auth()->user()?->tenant?->language ?? 'en';
+                        $tenantId = static::getMarketplaceClient()?->id;
+                        $marketplaceLanguage = static::getMarketplaceClient()?->language ?? 'en';
 
                         return Event::where('marketplace_client_id', $tenantId)
                             ->orderBy('event_date', 'desc')

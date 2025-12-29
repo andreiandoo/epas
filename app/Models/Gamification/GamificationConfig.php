@@ -2,6 +2,8 @@
 
 namespace App\Models\Gamification;
 
+use App\Models\MarketplaceClient;
+
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +15,7 @@ class GamificationConfig extends Model
     use HasFactory;
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'point_value',
         'currency',
@@ -207,4 +210,12 @@ class GamificationConfig extends Model
             ]
         );
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

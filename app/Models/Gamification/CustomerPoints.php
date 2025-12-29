@@ -2,6 +2,8 @@
 
 namespace App\Models\Gamification;
 
+use App\Models\MarketplaceClient;
+
 use App\Models\Customer;
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,6 +19,7 @@ class CustomerPoints extends Model
     protected $table = 'customer_points';
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'customer_id',
         'total_earned',
@@ -365,4 +368,12 @@ class CustomerPoints extends Model
 
         return "/ref/{$this->referral_code}";
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

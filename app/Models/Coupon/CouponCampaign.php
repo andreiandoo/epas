@@ -2,6 +2,8 @@
 
 namespace App\Models\Coupon;
 
+use App\Models\MarketplaceClient;
+
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\Translatable;
@@ -19,6 +21,7 @@ class CouponCampaign extends Model
     public array $translatable = ['name', 'description'];
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'name',
         'description',
@@ -136,4 +139,12 @@ class CouponCampaign extends Model
     {
         return $query->where('tenant_id', $tenantId);
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

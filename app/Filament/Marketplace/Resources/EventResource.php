@@ -22,12 +22,15 @@ use Filament\Actions\EditAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
 
 class EventResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = Event::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-calendar';
     protected static \UnitEnum|string|null $navigationGroup = null;
@@ -38,12 +41,12 @@ class EventResource extends Resource
      */
     public static function getNavigationBadge(): ?string
     {
-        $tenant = auth()->user()?->tenant;
-        if (!$tenant || !$tenant->ownsVenues()) {
+        $marketplace = static::getMarketplaceClient();
+        if (!$marketplace || !$marketplace->ownsVenues()) {
             return null;
         }
 
-        $hostedCount = $tenant->hostedEvents()->count();
+        $hostedCount = $marketplace->hostedEvents()->count();
         return $hostedCount > 0 ? (string) $hostedCount : null;
     }
 
@@ -65,16 +68,16 @@ class EventResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
-        $tenantId = $tenant?->id;
+        $marketplace = static::getMarketplaceClient();
+        $tenantId = $marketplace?->id;
 
         // Get IDs of venues owned by this tenant
-        $ownedVenueIds = \App\Models\Venue::where('tenant_id', $tenantId)->pluck('id')->toArray();
+        $ownedVenueIds = \App\Models\Venue::where('marketplace_client_id', $tenantId)->pluck('id')->toArray();
 
         return parent::getEloquentQuery()
             ->where(function ($query) use ($tenantId, $ownedVenueIds) {
                 // Own events
-                $query->where('tenant_id', $tenantId)
+                $query->where('marketplace_client_id', $tenantId)
                     // OR events happening at owned venues (guest events)
                     ->orWhereIn('venue_id', $ownedVenueIds);
             });
@@ -85,30 +88,30 @@ class EventResource extends Resource
      */
     public static function isGuestEvent(Event $event): bool
     {
-        $tenant = auth()->user()->tenant;
-        return $event->tenant_id !== $tenant?->id;
+        $marketplace = static::getMarketplaceClient();
+        return $event->tenant_id !== $marketplace?->id;
     }
 
     public static function form(Schema $schema): Schema
     {
         $today = Carbon::today();
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
         // Get tenant's language (check both 'language' and 'locale' columns)
-        $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
+        $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $schema->schema([
             // Hidden tenant_id field
-            Forms\Components\Hidden::make('tenant_id')
-                ->default($tenant?->id),
+            Forms\Components\Hidden::make('marketplace_client_id')
+                ->default($marketplace?->id),
 
             // BASICS - Single Language based on Tenant setting
             SC\Section::make('Event Details')
                 ->schema([
                     SC\Group::make()
                         ->schema([
-                            Forms\Components\TextInput::make("title.{$tenantLanguage}")
-                                ->label($tenantLanguage === 'ro' ? 'Titlu eveniment' : 'Event title')
+                            Forms\Components\TextInput::make("title.{$marketplaceLanguage}")
+                                ->label($marketplaceLanguage === 'ro' ? 'Titlu eveniment' : 'Event title')
                                 ->required()
                                 ->maxLength(190)
                                 ->live(onBlur: true)
@@ -372,11 +375,11 @@ class EventResource extends Resource
                         ->searchable()
                         ->preload()
                         ->live()
-                        ->options(function () use ($tenant) {
+                        ->options(function () use ($marketplace) {
                             return Venue::query()
                                 ->where(fn($q) => $q
-                                    ->whereNull('tenant_id')
-                                    ->orWhere('tenant_id', $tenant?->id))
+                                    ->whereNull('marketplace_client_id')
+                                    ->orWhere('marketplace_client_id', $marketplace?->id))
                                 ->orderBy('name')
                                 ->get()
                                 ->mapWithKeys(fn ($venue) => [
@@ -428,20 +431,20 @@ class EventResource extends Resource
             // CONTENT - Single Language
             SC\Section::make('Content')
                 ->schema([
-                    Forms\Components\Textarea::make("short_description.{$tenantLanguage}")
-                        ->label($tenantLanguage === 'ro' ? 'Descriere scurtă' : 'Short description')
+                    Forms\Components\Textarea::make("short_description.{$marketplaceLanguage}")
+                        ->label($marketplaceLanguage === 'ro' ? 'Descriere scurtă' : 'Short description')
                         ->rows(3)
                         ->columnSpanFull(),
-                    Forms\Components\RichEditor::make("description.{$tenantLanguage}")
-                        ->label($tenantLanguage === 'ro' ? 'Descriere' : 'Description')
+                    Forms\Components\RichEditor::make("description.{$marketplaceLanguage}")
+                        ->label($marketplaceLanguage === 'ro' ? 'Descriere' : 'Description')
                         ->columnSpanFull()
                         ->fileAttachmentsDisk('public')
                         ->fileAttachmentsDirectory('event-descriptions')
                         ->fileAttachmentsVisibility('public'),
-                    Forms\Components\RichEditor::make("ticket_terms.{$tenantLanguage}")
-                        ->label($tenantLanguage === 'ro' ? 'Termeni bilete' : 'Ticket terms')
+                    Forms\Components\RichEditor::make("ticket_terms.{$marketplaceLanguage}")
+                        ->label($marketplaceLanguage === 'ro' ? 'Termeni bilete' : 'Ticket terms')
                         ->columnSpanFull()
-                        ->default($tenant?->ticket_terms ?? null),
+                        ->default($marketplace?->ticket_terms ?? null),
                 ])->columns(1),
 
             // TAXONOMIES
@@ -525,18 +528,18 @@ class EventResource extends Resource
                         ->label('Taxe aplicabile')
                         ->columnSpanFull()
                         ->visible(fn (SGet $get) => !empty($get('eventTypes')))
-                        ->content(function (SGet $get) use ($tenant) {
+                        ->content(function (SGet $get) use ($marketplace) {
                             $eventTypeIds = (array) ($get('eventTypes') ?? []);
                             if (empty($eventTypeIds)) {
                                 return '';
                             }
 
-                            $isVatPayer = $tenant?->vat_payer ?? false;
-                            $taxDisplayMode = $tenant?->tax_display_mode ?? 'included';
+                            $isVatPayer = $marketplace?->vat_payer ?? false;
+                            $taxDisplayMode = $marketplace?->tax_display_mode ?? 'included';
 
                             // Get applicable taxes using the new forEventTypes scope
                             $allTaxes = GeneralTax::query()
-                                ->whereNull('tenant_id') // Global taxes only
+                                ->whereNull('marketplace_client_id') // Global taxes only
                                 ->active()
                                 ->validOn(\Carbon\Carbon::today())
                                 ->forEventTypes($eventTypeIds)
@@ -615,7 +618,7 @@ class EventResource extends Resource
                         ->relationship(
                             name: 'ticketTemplate',
                             modifyQueryUsing: fn (Builder $query) => $query
-                                ->where('tenant_id', auth()->user()->tenant?->id)
+                                ->where('marketplace_client_id', static::getMarketplaceClient()?->id)
                                 ->where('status', 'active')
                                 ->orderBy('name')
                         )
@@ -625,7 +628,7 @@ class EventResource extends Resource
                         ->searchable()
                         ->preload()
                         ->nullable()
-                        ->visible(fn () => auth()->user()->tenant?->microservices()
+                        ->visible(fn () => static::getMarketplaceClient()?->microservices()
                             ->where('slug', 'ticket-customizer')
                             ->wherePivot('is_active', true)
                             ->exists() ?? false),
@@ -639,9 +642,9 @@ class EventResource extends Resource
                                 'added_on_top' => 'Add commission on top (customer pays more)',
                             ])
                             ->placeholder('Use default from contract')
-                            ->helperText(function () use ($tenant) {
-                                $mode = $tenant->commission_mode ?? 'included';
-                                $rate = $tenant->commission_rate ?? 5.00;
+                            ->helperText(function () use ($marketplace) {
+                                $mode = $marketplace->commission_mode ?? 'included';
+                                $rate = $marketplace->commission_rate ?? 5.00;
                                 $modeText = $mode === 'included'
                                     ? 'included in price'
                                     : 'added on top';
@@ -653,10 +656,10 @@ class EventResource extends Resource
                         Forms\Components\Placeholder::make('commission_example')
                             ->label('Example (100 RON ticket)')
                             ->live()
-                            ->content(function (SGet $get) use ($tenant) {
+                            ->content(function (SGet $get) use ($marketplace) {
                                 $eventMode = $get('commission_mode');
-                                $mode = $eventMode ?: ($tenant->commission_mode ?? 'included');
-                                $rate = $tenant->commission_rate ?? 5.00;
+                                $mode = $eventMode ?: ($marketplace->commission_mode ?? 'included');
+                                $rate = $marketplace->commission_rate ?? 5.00;
                                 $ticketPrice = 100;
                                 $commission = round($ticketPrice * ($rate / 100), 2);
 
@@ -705,7 +708,7 @@ class EventResource extends Resource
                             SC\Grid::make(4)->schema([
                                 Forms\Components\TextInput::make('currency')
                                     ->label('Currency')
-                                    ->default($tenant?->currency ?? 'RON')
+                                    ->default($marketplace?->currency ?? 'RON')
                                     ->disabled()
                                     ->dehydrated(true),
                                 Forms\Components\TextInput::make('price_max')
@@ -767,15 +770,15 @@ class EventResource extends Resource
                             Forms\Components\Placeholder::make('ticket_commission_calc')
                                 ->label('💰 Price with Commission')
                                 ->live()
-                                ->content(function (SGet $get) use ($tenant) {
+                                ->content(function (SGet $get) use ($marketplace) {
                                     $price = (float) ($get('price') ?: $get('price_max') ?: 0);
                                     if ($price <= 0) {
                                         return 'Enter a price to see commission calculation.';
                                     }
 
                                     $eventMode = $get('../../commission_mode');
-                                    $mode = $eventMode ?: ($tenant->commission_mode ?? 'included');
-                                    $rate = $tenant->commission_rate ?? 5.00;
+                                    $mode = $eventMode ?: ($marketplace->commission_mode ?? 'included');
+                                    $rate = $marketplace->commission_rate ?? 5.00;
                                     $commission = round($price * ($rate / 100), 2);
                                     $currency = $get('currency') ?: 'RON';
 
@@ -891,13 +894,13 @@ class EventResource extends Resource
                         ])
                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Select templates to add keys. Values will be pre-filled from event data where available.')
                         ->live()
-                        ->afterStateUpdated(function ($state, SSet $set, SGet $get) use ($tenantLanguage, $tenant) {
+                        ->afterStateUpdated(function ($state, SSet $set, SGet $get) use ($marketplaceLanguage, $marketplace) {
                             $seo = (array) ($get('seo') ?? []);
 
                             // Get event data for auto-fill
-                            $title = $get("title.{$tenantLanguage}") ?? '';
+                            $title = $get("title.{$marketplaceLanguage}") ?? '';
                             $slug = $get('slug') ?? '';
-                            $description = $get("short_description.{$tenantLanguage}") ?? $get("description.{$tenantLanguage}") ?? '';
+                            $description = $get("short_description.{$marketplaceLanguage}") ?? $get("description.{$marketplaceLanguage}") ?? '';
                             $shortDesc = strip_tags($description);
                             if (strlen($shortDesc) > 160) {
                                 $shortDesc = substr($shortDesc, 0, 157) . '...';
@@ -916,19 +919,19 @@ class EventResource extends Resource
                             if ($venueId) {
                                 $venue = \App\Models\Venue::find($venueId);
                                 if ($venue) {
-                                    $venueName = $venue->getTranslation('name', $tenantLanguage) ?? $venue->name ?? '';
+                                    $venueName = $venue->getTranslation('name', $marketplaceLanguage) ?? $venue->name ?? '';
                                     $venueAddress = $venue->address ?? '';
                                 }
                             }
 
                             // Get tenant's primary domain for absolute URLs
-                            $primaryDomain = $tenant?->domains()
+                            $primaryDomain = $marketplace?->domains()
                                 ->where('is_primary', true)
                                 ->where('is_active', true)
                                 ->first();
                             $baseUrl = $primaryDomain
                                 ? 'https://' . $primaryDomain->domain
-                                : ($tenant?->website ?? '');
+                                : ($marketplace?->website ?? '');
 
                             // Build absolute event URL
                             $eventUrl = $baseUrl && $slug ? "{$baseUrl}/event/{$slug}" : '';
@@ -958,7 +961,7 @@ class EventResource extends Resource
                                     'referrer'         => 'no-referrer-when-downgrade',
                                 ],
                                 'intl' => [
-                                    'og:locale'        => $tenantLanguage === 'ro' ? 'ro_RO' : 'en_US',
+                                    'og:locale'        => $marketplaceLanguage === 'ro' ? 'ro_RO' : 'en_US',
                                     'hreflang_map'     => '[]',
                                 ],
                                 'open_graph' => [
@@ -970,10 +973,10 @@ class EventResource extends Resource
                                     'og:image:alt'     => $title,
                                     'og:image:width'   => '1200',
                                     'og:image:height'  => '630',
-                                    'og:site_name'     => $tenant?->public_name ?? $tenant?->name ?? '',
+                                    'og:site_name'     => $marketplace?->public_name ?? $marketplace?->name ?? '',
                                 ],
                                 'article' => [
-                                    'article:author'         => $tenant?->public_name ?? '',
+                                    'article:author'         => $marketplace?->public_name ?? '',
                                     'article:section'        => 'Events',
                                     'article:tag'            => '',
                                     'article:published_time' => $now,
@@ -981,7 +984,7 @@ class EventResource extends Resource
                                 ],
                                 'product' => [
                                     'product:price:amount'   => '',
-                                    'product:price:currency' => $tenant?->currency ?? 'RON',
+                                    'product:price:currency' => $marketplace?->currency ?? 'RON',
                                     'product:availability'   => 'instock',
                                 ],
                                 'twitter' => [
@@ -1011,7 +1014,7 @@ class EventResource extends Resource
                                         ],
                                         'organizer' => [
                                             '@type' => 'Organization',
-                                            'name'  => $tenant?->public_name ?? $tenant?->name ?? '',
+                                            'name'  => $marketplace?->public_name ?? $marketplace?->name ?? '',
                                             'url'   => $baseUrl,
                                         ],
                                         'url'     => $eventUrl,
@@ -1075,15 +1078,15 @@ class EventResource extends Resource
 
     public static function table(Table $table): Table
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
                     ->sortable()
-                    ->description(function (Event $record) use ($tenant) {
-                        if ($record->tenant_id !== $tenant?->id) {
+                    ->description(function (Event $record) use ($marketplace) {
+                        if ($record->tenant_id !== $marketplace?->id) {
                             return 'Hosted event by ' . ($record->tenant?->public_name ?? $record->tenant?->name ?? 'Unknown');
                         }
                         return null;
@@ -1091,8 +1094,8 @@ class EventResource extends Resource
                 Tables\Columns\TextColumn::make('ownership')
                     ->label('Type')
                     ->badge()
-                    ->getStateUsing(function (Event $record) use ($tenant) {
-                        return $record->tenant_id === $tenant?->id ? 'Your Event' : 'Hosted';
+                    ->getStateUsing(function (Event $record) use ($marketplace) {
+                        return $record->tenant_id === $marketplace?->id ? 'Your Event' : 'Hosted';
                     })
                     ->color(fn (string $state): string => match ($state) {
                         'Your Event' => 'success',
@@ -1102,7 +1105,7 @@ class EventResource extends Resource
                 Tables\Columns\TextColumn::make('tenant.name')
                     ->label('Organizer')
                     ->getStateUsing(fn (Event $record) => $record->tenant?->public_name ?? $record->tenant?->name)
-                    ->visible(fn () => $tenant?->ownsVenues() ?? false)
+                    ->visible(fn () => $marketplace?->ownsVenues() ?? false)
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('venue.name')
                     ->sortable(),
@@ -1129,14 +1132,14 @@ class EventResource extends Resource
                         'own' => 'Your Events',
                         'hosted' => 'Hosted Events',
                     ])
-                    ->query(function (Builder $query, array $data) use ($tenant) {
+                    ->query(function (Builder $query, array $data) use ($marketplace) {
                         return match ($data['value'] ?? null) {
-                            'own' => $query->where('tenant_id', $tenant?->id),
-                            'hosted' => $query->where('tenant_id', '!=', $tenant?->id),
+                            'own' => $query->where('marketplace_client_id', $marketplace?->id),
+                            'hosted' => $query->where('marketplace_client_id', '!=', $marketplace?->id),
                             default => $query,
                         };
                     })
-                    ->visible(fn () => $tenant?->ownsVenues() ?? false),
+                    ->visible(fn () => $marketplace?->ownsVenues() ?? false),
             ])
             ->actions([])
             ->bulkActions([])
@@ -1147,24 +1150,24 @@ class EventResource extends Resource
                     ->color('info')
                     ->url(fn (Event $record) => static::getUrl('statistics', ['record' => $record])),
                 EditAction::make()
-                    ->visible(fn (Event $record) => $record->tenant_id === $tenant?->id),
+                    ->visible(fn (Event $record) => $record->tenant_id === $marketplace?->id),
                 Action::make('view-guest')
                     ->label('View Details')
                     ->icon('heroicon-o-eye')
                     ->color('gray')
                     ->url(fn (Event $record) => static::getUrl('view-guest', ['record' => $record]))
-                    ->visible(fn (Event $record) => $record->tenant_id !== $tenant?->id),
+                    ->visible(fn (Event $record) => $record->tenant_id !== $marketplace?->id),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
-                        ->before(function ($records) use ($tenant) {
+                        ->before(function ($records) use ($marketplace) {
                             // Filter out hosted events - can only delete own events
-                            return $records->filter(fn ($record) => $record->tenant_id === $tenant?->id);
+                            return $records->filter(fn ($record) => $record->tenant_id === $marketplace?->id);
                         }),
                 ]),
             ])
-            ->checkIfRecordIsSelectableUsing(fn (Event $record) => $record->tenant_id === $tenant?->id)
+            ->checkIfRecordIsSelectableUsing(fn (Event $record) => $record->tenant_id === $marketplace?->id)
             ->defaultSort('created_at', 'desc');
     }
 

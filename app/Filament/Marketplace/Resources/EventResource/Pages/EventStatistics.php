@@ -30,11 +30,11 @@ class EventStatistics extends Page
         $this->record = $this->resolveRecord($record);
 
         // Verify tenant access - allow for own events OR events at owned venues
-        $tenant = auth()->user()?->tenant;
-        $ownedVenueIds = $tenant?->venues()->pluck('id')->toArray() ?? [];
+        $marketplace = static::getMarketplaceClient();
+        $ownedVenueIds = $marketplace?->venues()->pluck('id')->toArray() ?? [];
 
         // Must be either owned by tenant OR happening at tenant's venue
-        $isOwnEvent = $this->record->tenant_id === $tenant?->id;
+        $isOwnEvent = $this->record->tenant_id === $marketplace?->id;
         $isAtOwnedVenue = in_array($this->record->venue_id, $ownedVenueIds);
 
         if (!$isOwnEvent && !$isAtOwnedVenue) {
@@ -47,8 +47,8 @@ class EventStatistics extends Page
      */
     public function isGuestEvent(): bool
     {
-        $tenant = auth()->user()?->tenant;
-        return $this->record->tenant_id !== $tenant?->id;
+        $marketplace = static::getMarketplaceClient();
+        return $this->record->tenant_id !== $marketplace?->id;
     }
 
     public function getBreadcrumb(): string
@@ -221,7 +221,7 @@ class EventStatistics extends Page
             ];
 
             // Query CoreCustomerEvent for page views matching this event's URL
-            $baseQuery = CoreCustomerEvent::where('tenant_id', $tenantId)
+            $baseQuery = CoreCustomerEvent::where('marketplace_client_id', $tenantId)
                 ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                 ->where(function ($q) use ($urlPatterns) {
                     foreach ($urlPatterns as $pattern) {

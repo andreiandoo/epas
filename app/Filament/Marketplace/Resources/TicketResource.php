@@ -9,9 +9,12 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class TicketResource extends Resource
 {
+    use HasMarketplaceContext;
+
     protected static ?string $model = Ticket::class;
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-ticket';
     protected static \UnitEnum|string|null $navigationGroup = 'Sales';
@@ -19,11 +22,11 @@ class TicketResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
         return parent::getEloquentQuery()
-            ->whereHas('ticketType.event', function ($query) use ($tenant) {
-                $query->where('tenant_id', $tenant?->id);
+            ->whereHas('ticketType.event', function ($query) use ($marketplace) {
+                $query->where('marketplace_client_id', $marketplace?->id);
             });
     }
 

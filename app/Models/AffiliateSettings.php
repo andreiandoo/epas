@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\MarketplaceClient;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,6 +13,7 @@ class AffiliateSettings extends Model
     use HasFactory;
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'default_commission_type',
         'default_commission_value',
@@ -130,4 +133,12 @@ class AffiliateSettings extends Model
 
         return (float) $this->default_commission_value;
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

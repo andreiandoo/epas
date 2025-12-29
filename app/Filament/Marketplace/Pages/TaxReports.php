@@ -4,11 +4,14 @@ namespace App\Filament\Marketplace\Pages;
 
 use BackedEnum;
 use Filament\Pages\Page;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Models\Event;
 use App\Services\Tax\TaxReportService;
 
 class TaxReports extends Page
 {
+    use HasMarketplaceContext;
+
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-calculator';
     protected static ?string $navigationLabel = 'Tax Reports';
     protected static \UnitEnum|string|null $navigationGroup = 'Reports';
@@ -26,9 +29,9 @@ class TaxReports extends Page
 
     public function getViewData(): array
     {
-        $tenant = auth()->user()->tenant;
+        $marketplace = static::getMarketplaceClient();
 
-        if (!$tenant) {
+        if (!$marketplace) {
             return [
                 'report' => null,
                 'upcomingDeadlines' => [],
@@ -39,10 +42,10 @@ class TaxReports extends Page
         }
 
         $service = app(TaxReportService::class);
-        $report = $service->getEventsTaxReport($tenant);
+        $report = $service->getEventsTaxReport($marketplace);
 
         // Get event options for selector
-        $eventOptions = Event::where('tenant_id', $tenant->id)
+        $eventOptions = Event::where('marketplace_client_id', $marketplace->id)
             ->orderByDesc('event_date')
             ->orderByDesc('range_start_date')
             ->get()
@@ -91,13 +94,13 @@ class TaxReports extends Page
         ];
 
         return [
-            'tenant' => $tenant,
+            'tenant' => $marketplace,
             'report' => $report,
             'filteredEvents' => $events->values()->toArray(),
             'filteredTotals' => $filteredTotals,
-            'upcomingDeadlines' => $service->getUpcomingDeadlines($tenant, 30),
-            'overduePayments' => $service->getOverduePayments($tenant),
-            'taxSummary' => $service->getTaxSummaryByType($tenant),
+            'upcomingDeadlines' => $service->getUpcomingDeadlines($marketplace, 30),
+            'overduePayments' => $service->getOverduePayments($marketplace),
+            'taxSummary' => $service->getTaxSummaryByType($marketplace),
             'eventOptions' => $eventOptions,
         ];
     }

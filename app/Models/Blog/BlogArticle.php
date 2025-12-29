@@ -2,6 +2,8 @@
 
 namespace App\Models\Blog;
 
+use App\Models\MarketplaceClient;
+
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\Translatable;
@@ -24,6 +26,7 @@ class BlogArticle extends Model
     ];
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'slug',
         'title',
@@ -267,4 +270,12 @@ class BlogArticle extends Model
             ->whereNotNull('scheduled_at')
             ->where('scheduled_at', '<=', now());
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

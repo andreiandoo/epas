@@ -6,9 +6,12 @@ use App\Filament\Marketplace\Resources\AffiliateResource;
 use App\Services\AffiliateTrackingService;
 use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class ViewAffiliate extends ViewRecord
 {
+    use HasMarketplaceContext;
+
     protected static string $resource = AffiliateResource::class;
 
     protected string $view = 'filament.marketplace.pages.view-affiliate';
@@ -31,8 +34,8 @@ class ViewAffiliate extends ViewRecord
         $coupon = $this->record->coupons()->where('active', true)->first();
 
         // Get tenant's primary domain for tracking URL
-        $tenant = auth()->user()->tenant;
-        $primaryDomain = $tenant->domains()->where('is_primary', true)->first();
+        $marketplace = static::getMarketplaceClient();
+        $primaryDomain = $marketplace->domains()->where('is_primary', true)->first();
         $baseUrl = $primaryDomain ? 'https://' . $primaryDomain->domain : url('/');
 
         return [

@@ -6,9 +6,12 @@ use App\Filament\Marketplace\Resources\BlogArticleResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Notifications\Notification;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class EditBlogArticle extends EditRecord
 {
+    use HasMarketplaceContext;
+
     protected static string $resource = BlogArticleResource::class;
 
     protected function getHeaderActions(): array
@@ -58,9 +61,9 @@ class EditBlogArticle extends EditRecord
 
         // Auto-calculate reading time if not set
         if (empty($data['reading_time_minutes'])) {
-            $tenant = auth()->user()->tenant;
-            $tenantLanguage = $tenant->language ?? $tenant->locale ?? 'en';
-            $content = $data['content'][$tenantLanguage] ?? '';
+            $marketplace = static::getMarketplaceClient();
+            $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
+            $content = $data['content'][$marketplaceLanguage] ?? '';
             $wordCount = str_word_count(strip_tags($content));
             $data['reading_time_minutes'] = max(1, (int) ceil($wordCount / 200));
             $data['word_count'] = $wordCount;

@@ -2,6 +2,8 @@
 
 namespace App\Models\Shop;
 
+use App\Models\MarketplaceClient;
+
 use App\Models\Tenant;
 use App\Models\Customer;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -16,6 +18,7 @@ class ShopReview extends Model
     protected $table = 'shop_reviews';
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'product_id',
         'customer_id',
@@ -115,4 +118,12 @@ class ShopReview extends Model
     {
         return str_repeat('★', $this->rating) . str_repeat('☆', 5 - $this->rating);
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }
