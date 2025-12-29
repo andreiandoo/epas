@@ -168,6 +168,14 @@ class MarketplaceNewsletter extends Model
     }
 
     /**
+     * Alias for completeSending
+     */
+    public function markCompleted(): void
+    {
+        $this->completeSending();
+    }
+
+    /**
      * Cancel newsletter
      */
     public function cancel(): void

@@ -15,28 +15,49 @@ class MarketplaceRefundRequest extends Model
         'marketplace_client_id',
         'marketplace_organizer_id',
         'marketplace_customer_id',
+        'marketplace_event_id',
         'order_id',
-        'request_number',
+        'reference',
         'type',
         'reason',
+        'reason_category',
+        'ticket_ids',
         'customer_notes',
         'requested_amount',
         'approved_amount',
+        'currency',
         'status',
         'admin_notes',
-        'processed_by',
-        'processed_at',
+        'rejection_reason',
         'refund_method',
-        'refund_reference',
-        'auto_refund_attempted',
-        'auto_refund_error',
+        'payment_processor',
+        'payment_refund_id',
+        'payment_response',
+        'is_automatic',
+        'organizer_deduction',
+        'commission_refund',
+        'fees_refund',
+        'requested_at',
+        'reviewed_at',
+        'processed_at',
+        'completed_at',
+        'reviewed_by',
+        'processed_by',
     ];
 
     protected $casts = [
         'requested_amount' => 'decimal:2',
         'approved_amount' => 'decimal:2',
+        'organizer_deduction' => 'decimal:2',
+        'commission_refund' => 'decimal:2',
+        'fees_refund' => 'decimal:2',
+        'ticket_ids' => 'array',
+        'payment_response' => 'array',
+        'is_automatic' => 'boolean',
+        'requested_at' => 'datetime',
+        'reviewed_at' => 'datetime',
         'processed_at' => 'datetime',
-        'auto_refund_attempted' => 'boolean',
+        'completed_at' => 'datetime',
     ];
 
     /**
@@ -79,22 +100,30 @@ class MarketplaceRefundRequest extends Model
         parent::boot();
 
         static::creating(function ($model) {
-            if (empty($model->request_number)) {
-                $model->request_number = static::generateRequestNumber($model->marketplace_client_id);
+            if (empty($model->reference)) {
+                $model->reference = static::generateReference($model->marketplace_client_id);
             }
         });
     }
 
     /**
-     * Generate unique request number
+     * Generate unique reference
      */
-    public static function generateRequestNumber(int $marketplaceClientId): string
+    public static function generateReference(int $marketplaceClientId): string
     {
         $prefix = 'REF';
         $date = now()->format('Ymd');
         $random = strtoupper(substr(md5(uniqid()), 0, 6));
 
         return "{$prefix}-{$date}-{$random}";
+    }
+
+    /**
+     * Alias for backwards compatibility
+     */
+    public function getRequestNumberAttribute(): string
+    {
+        return $this->reference;
     }
 
     /**
@@ -194,15 +223,16 @@ class MarketplaceRefundRequest extends Model
         $this->update(['status' => self::STATUS_PROCESSING]);
     }
 
-    public function markRefunded(string $reference = null, int $processedBy = null): void
+    public function markRefunded(string $paymentRefundId = null, int $processedBy = null): void
     {
         $isPartial = $this->approved_amount < $this->requested_amount;
 
         $this->update([
             'status' => $isPartial ? self::STATUS_PARTIALLY_REFUNDED : self::STATUS_REFUNDED,
-            'refund_reference' => $reference,
+            'payment_refund_id' => $paymentRefundId,
             'processed_by' => $processedBy,
             'processed_at' => now(),
+            'completed_at' => now(),
         ]);
 
         // Update order
@@ -217,7 +247,7 @@ class MarketplaceRefundRequest extends Model
             $ticket->update([
                 'is_cancelled' => true,
                 'cancelled_at' => now(),
-                'cancellation_reason' => 'Refund processed: ' . $this->request_number,
+                'cancellation_reason' => 'Refund processed: ' . $this->reference,
             ]);
         }
     }
@@ -226,8 +256,8 @@ class MarketplaceRefundRequest extends Model
     {
         $this->update([
             'status' => self::STATUS_FAILED,
-            'auto_refund_attempted' => true,
-            'auto_refund_error' => $error,
+            'is_automatic' => true,
+            'admin_notes' => $this->admin_notes ? $this->admin_notes . "\n\nAuto-refund error: " . $error : "Auto-refund error: " . $error,
         ]);
     }
 

@@ -58,7 +58,8 @@ class RefundRequestResource extends Resource
             ->components([
                 SC\Section::make('Request Details')
                     ->schema([
-                        Forms\Components\TextInput::make('request_number')
+                        Forms\Components\TextInput::make('reference')
+                            ->label('Reference Number')
                             ->disabled(),
                         Forms\Components\Select::make('type')
                             ->options([
@@ -136,8 +137,8 @@ class RefundRequestResource extends Resource
                                 'manual' => 'Manual (External)',
                             ])
                             ->visible(fn ($record) => $record?->isApproved()),
-                        Forms\Components\TextInput::make('refund_reference')
-                            ->label('Reference Number')
+                        Forms\Components\TextInput::make('payment_refund_id')
+                            ->label('Payment Reference')
                             ->visible(fn ($record) => $record?->isRefunded()),
                         Forms\Components\Placeholder::make('processed_info')
                             ->label('Processed')
@@ -150,16 +151,16 @@ class RefundRequestResource extends Resource
                     ->schema([
                         Forms\Components\Placeholder::make('auto_refund_status')
                             ->content(function ($record) {
-                                if (!$record?->auto_refund_attempted) {
-                                    return 'Auto-refund not attempted';
+                                if (!$record?->is_automatic) {
+                                    return 'Processed manually';
                                 }
-                                if ($record?->auto_refund_error) {
-                                    return new \Illuminate\Support\HtmlString('<span class="text-red-600">Failed: ' . e($record->auto_refund_error) . '</span>');
+                                if ($record?->status === 'failed') {
+                                    return new \Illuminate\Support\HtmlString('<span class="text-red-600">Auto-refund failed</span>');
                                 }
                                 return new \Illuminate\Support\HtmlString('<span class="text-green-600">Auto-refund successful</span>');
                             }),
                     ])
-                    ->visible(fn ($record) => $record?->auto_refund_attempted)
+                    ->visible(fn ($record) => $record?->is_automatic || $record?->status === 'failed')
                     ->collapsed(),
             ]);
     }
@@ -168,8 +169,8 @@ class RefundRequestResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('request_number')
-                    ->label('Request #')
+                Tables\Columns\TextColumn::make('reference')
+                    ->label('Reference')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('customer.full_name')

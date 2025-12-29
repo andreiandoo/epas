@@ -38,14 +38,18 @@ return new class extends Migration
             $table->foreignId('marketplace_event_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('order_id')->nullable()->constrained()->nullOnDelete();
             $table->string('template_slug')->nullable();
+            $table->string('from_email')->nullable();
+            $table->string('from_name')->nullable();
             $table->string('to_email');
             $table->string('to_name')->nullable();
             $table->string('subject');
             $table->text('body_html')->nullable();
-            $table->string('status')->default('pending'); // pending, sent, failed, bounced, opened, clicked
+            $table->text('body_text')->nullable();
+            $table->string('status')->default('pending'); // pending, sent, delivered, failed, bounced, opened, clicked
             $table->string('message_id')->nullable(); // From email provider
             $table->text('error_message')->nullable();
             $table->timestamp('sent_at')->nullable();
+            $table->timestamp('delivered_at')->nullable();
             $table->timestamp('opened_at')->nullable();
             $table->timestamp('clicked_at')->nullable();
             $table->timestamp('bounced_at')->nullable();
@@ -62,6 +66,7 @@ return new class extends Migration
             $table->foreignId('marketplace_client_id')->constrained()->onDelete('cascade');
             $table->string('name');
             $table->text('description')->nullable();
+            $table->boolean('is_active')->default(true);
             $table->boolean('is_default')->default(false);
             $table->integer('subscriber_count')->default(0);
             $table->timestamps();
@@ -141,11 +146,13 @@ return new class extends Migration
             $table->foreignId('newsletter_id')->constrained('marketplace_newsletters')->onDelete('cascade');
             $table->foreignId('marketplace_customer_id')->constrained()->onDelete('cascade');
             $table->string('email');
-            $table->string('status')->default('pending'); // pending, sent, failed, opened, clicked, unsubscribed
+            $table->string('status')->default('pending'); // pending, sent, failed, bounced, opened, clicked, unsubscribed
             $table->string('message_id')->nullable();
             $table->timestamp('sent_at')->nullable();
             $table->timestamp('opened_at')->nullable();
             $table->timestamp('clicked_at')->nullable();
+            $table->timestamp('bounced_at')->nullable();
+            $table->timestamp('unsubscribed_at')->nullable();
             $table->text('error_message')->nullable();
             $table->timestamps();
 

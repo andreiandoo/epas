@@ -15,11 +15,13 @@ class MarketplaceContactList extends Model
         'marketplace_client_id',
         'name',
         'description',
+        'is_active',
         'is_default',
         'subscriber_count',
     ];
 
     protected $casts = [
+        'is_active' => 'boolean',
         'is_default' => 'boolean',
     ];
 
@@ -48,10 +50,12 @@ class MarketplaceContactList extends Model
     /**
      * Add subscriber to list
      */
-    public function addSubscriber(MarketplaceCustomer $customer): void
+    public function addSubscriber(int|MarketplaceCustomer $customer): void
     {
+        $customerId = $customer instanceof MarketplaceCustomer ? $customer->id : $customer;
+
         $this->subscribers()->syncWithoutDetaching([
-            $customer->id => [
+            $customerId => [
                 'status' => 'subscribed',
                 'subscribed_at' => now(),
             ],
@@ -63,9 +67,11 @@ class MarketplaceContactList extends Model
     /**
      * Remove subscriber from list
      */
-    public function removeSubscriber(MarketplaceCustomer $customer): void
+    public function removeSubscriber(int|MarketplaceCustomer $customer): void
     {
-        $this->subscribers()->updateExistingPivot($customer->id, [
+        $customerId = $customer instanceof MarketplaceCustomer ? $customer->id : $customer;
+
+        $this->subscribers()->updateExistingPivot($customerId, [
             'status' => 'unsubscribed',
             'unsubscribed_at' => now(),
         ]);

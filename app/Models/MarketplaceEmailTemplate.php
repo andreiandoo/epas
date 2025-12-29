@@ -29,7 +29,7 @@ class MarketplaceEmailTemplate extends Model
     /**
      * Default template slugs
      */
-    public const TEMPLATES = [
+    public const TEMPLATE_SLUGS = [
         'ticket_purchase' => 'Ticket Purchase Confirmation',
         'order_confirmation' => 'Order Confirmation',
         'welcome' => 'Welcome Email',
