@@ -1385,6 +1385,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Organizer\PayoutController as Org
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\PromoCodeController as OrganizerPromoCodeController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\TaxReportController as OrganizerTaxReportController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\InvitationsController as OrganizerInvitationsController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\RefundReportController as OrganizerRefundReportController;
 use App\Http\Controllers\Api\MarketplaceClient\PromoCodeController as MarketplacePromoCodeController;
 
 Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
@@ -1529,6 +1530,16 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.invitations.stats');
         Route::delete('/invitations/{batch}', [OrganizerInvitationsController::class, 'destroy'])
             ->name('api.marketplace-client.organizer.invitations.destroy');
+
+        // Refund Reports
+        Route::get('/refunds', [OrganizerRefundReportController::class, 'index'])
+            ->name('api.marketplace-client.organizer.refunds');
+        Route::get('/refunds/statistics', [OrganizerRefundReportController::class, 'statistics'])
+            ->name('api.marketplace-client.organizer.refunds.statistics');
+        Route::get('/refunds/export', [OrganizerRefundReportController::class, 'export'])
+            ->name('api.marketplace-client.organizer.refunds.export');
+        Route::get('/refunds/{refund}', [OrganizerRefundReportController::class, 'show'])
+            ->name('api.marketplace-client.organizer.refunds.show');
     });
 });
 
@@ -1545,6 +1556,7 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
 use App\Http\Controllers\Api\MarketplaceClient\Customer\AuthController as CustomerAuthController;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\AccountController as CustomerAccountController;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\TicketTransferController as CustomerTicketTransferController;
+use App\Http\Controllers\Api\MarketplaceClient\Customer\RefundController as CustomerRefundController;
 
 Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no customer auth)
@@ -1600,6 +1612,20 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
             ->name('api.marketplace-client.customer.transfers.accept');
         Route::post('/transfers/{transfer}/reject', [CustomerTicketTransferController::class, 'reject'])
             ->name('api.marketplace-client.customer.transfers.reject');
+
+        // Refund Requests
+        Route::get('/refunds', [CustomerRefundController::class, 'index'])
+            ->name('api.marketplace-client.customer.refunds');
+        Route::get('/refunds/reasons', [CustomerRefundController::class, 'reasons'])
+            ->name('api.marketplace-client.customer.refunds.reasons');
+        Route::post('/refunds/check-eligibility', [CustomerRefundController::class, 'checkEligibility'])
+            ->name('api.marketplace-client.customer.refunds.check-eligibility');
+        Route::post('/refunds', [CustomerRefundController::class, 'store'])
+            ->name('api.marketplace-client.customer.refunds.store');
+        Route::get('/refunds/{refund}', [CustomerRefundController::class, 'show'])
+            ->name('api.marketplace-client.customer.refunds.show');
+        Route::post('/refunds/{refund}/cancel', [CustomerRefundController::class, 'cancel'])
+            ->name('api.marketplace-client.customer.refunds.cancel');
     });
 
     // Public transfer acceptance (by token, no auth required)
