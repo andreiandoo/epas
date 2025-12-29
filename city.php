@@ -72,9 +72,7 @@ $currentPage = 'cities';
 $transparentHeader = true;
 
 require_once __DIR__ . '/includes/head.php';
-?>
-
-<?php require_once __DIR__ . '/includes/header.php'; ?>
+require_once __DIR__ . '/includes/header.php'; ?>
 
 <!-- Hero Banner -->
 <section class="relative h-[420px] md:h-[480px] -mt-[112px] overflow-hidden">
@@ -229,7 +227,7 @@ const CityPage = {
 
         return \`
             <a href="/bilete/\${event.slug}" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary">
-                <div class="relative overflow-hidden h-48">
+                <div class="relative h-48 overflow-hidden">
                     <img src="\${event.image || '/assets/images/placeholder-event.jpg'}" alt="\${event.title}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">
                     <div class="absolute top-3 left-3">
                         <div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">

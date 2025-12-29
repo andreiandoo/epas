@@ -375,6 +375,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             <!-- Logo -->
             <a href="/" class="flex items-center gap-2.5 no-underline flex-shrink-0">
                 <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden h-10 w-auto header-logo <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
+                
                 <svg class="w-8 h-8" viewBox="0 0 48 48" fill="none">
                     <defs>
                         <linearGradient id="logoGrad" x1="6" y1="10" x2="42" y2="38">
@@ -388,8 +389,8 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     <rect x="20" y="27" width="8" height="8" rx="1.5" fill="white"/>
                 </svg>
                 <div class="text-[22px] font-extrabold flex">
-                    <span class="<?= $transparentHeader ? 'text-white/85' : 'text-slate-800' ?>">Am</span>
-                    <span class="text-accent <?= $transparentHeader ? 'text-white' : 'text-primary' ?>">Bilet</span>
+                    <span id="logoTextAm" class="<?= $transparentHeader ? 'text-white/85' : 'text-slate-800' ?>">Am</span>
+                    <span id="logoTextBilet" class="<?= $transparentHeader ? 'text-white' : 'text-primary' ?>">Bilet</span>
                 </div>
             </a>
 
@@ -840,6 +841,8 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     const isTransparentMode = header.dataset.transparent === 'true';
     const headerTopBar = document.getElementById('headerTopBar');
     const headerLogo = document.querySelector('.header-logo');
+    const logoTextAm = document.getElementById('logoTextAm');
+    const logoTextBilet = document.getElementById('logoTextBilet');
     const navBtns = document.querySelectorAll('.nav-btn');
     const actionBtns = document.querySelectorAll('.action-btn');
     const loginBtn = document.getElementById('loginBtn');
@@ -853,6 +856,16 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                 header.classList.add('bg-white', 'border-b', 'border-gray-200', 'shadow-lg');
                 headerTopBar?.classList.add('hidden');
                 headerLogo?.classList.remove('brightness-0', 'invert');
+
+                // Logo text colors
+                if (logoTextAm) {
+                    logoTextAm.classList.remove('text-white/85');
+                    logoTextAm.classList.add('text-slate-800');
+                }
+                if (logoTextBilet) {
+                    logoTextBilet.classList.remove('text-white');
+                    logoTextBilet.classList.add('text-primary');
+                }
 
                 navBtns.forEach(btn => {
                     btn.classList.remove('text-white/90', 'hover:text-white', 'hover:bg-white/10');
@@ -879,6 +892,16 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                 header.classList.remove('bg-white', 'border-b', 'border-gray-200', 'shadow-lg');
                 headerTopBar?.classList.remove('hidden');
                 headerLogo?.classList.add('brightness-0', 'invert');
+
+                // Logo text colors
+                if (logoTextAm) {
+                    logoTextAm.classList.add('text-white/85');
+                    logoTextAm.classList.remove('text-slate-800');
+                }
+                if (logoTextBilet) {
+                    logoTextBilet.classList.add('text-white');
+                    logoTextBilet.classList.remove('text-primary');
+                }
 
                 navBtns.forEach(btn => {
                     btn.classList.add('text-white/90', 'hover:text-white', 'hover:bg-white/10');
