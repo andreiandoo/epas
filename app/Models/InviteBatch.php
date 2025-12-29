@@ -18,6 +18,8 @@ class InviteBatch extends Model
 
     protected $fillable = [
         'marketplace_client_id',
+        'marketplace_organizer_id',
+        'marketplace_event_id',
         'tenant_id',
         'event_ref',
         'name',
@@ -54,6 +56,16 @@ class InviteBatch extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function organizer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrganizer::class, 'marketplace_organizer_id');
+    }
+
+    public function marketplaceEvent(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceEvent::class, 'marketplace_event_id');
     }
 
     public function template(): BelongsTo

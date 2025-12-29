@@ -126,6 +126,19 @@ class OrganizerResource extends Resource
                     ])
                     ->columns(3),
 
+                Forms\Components\Section::make('Feature Access')
+                    ->schema([
+                        Forms\Components\Toggle::make('gamification_enabled')
+                            ->label('Gamification Enabled')
+                            ->helperText('Allow this organizer to use customer points for discounts on their events'),
+
+                        Forms\Components\Toggle::make('invitations_enabled')
+                            ->label('Invitations Enabled')
+                            ->default(true)
+                            ->helperText('Allow this organizer to create and manage event invitations'),
+                    ])
+                    ->columns(2),
+
                 Forms\Components\Section::make('Financial Summary')
                     ->schema([
                         Forms\Components\Placeholder::make('total_revenue_display')

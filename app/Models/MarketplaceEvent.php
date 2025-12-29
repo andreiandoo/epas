@@ -35,6 +35,9 @@ class MarketplaceEvent extends Model
         'status',
         'is_public',
         'is_featured',
+        'gamification_enabled',
+        'points_per_purchase',
+        'max_points_discount_percent',
         'capacity',
         'sales_start_at',
         'sales_end_at',
@@ -60,6 +63,9 @@ class MarketplaceEvent extends Model
         'gallery' => 'array',
         'is_public' => 'boolean',
         'is_featured' => 'boolean',
+        'gamification_enabled' => 'boolean',
+        'points_per_purchase' => 'decimal:2',
+        'max_points_discount_percent' => 'decimal:2',
         'revenue' => 'decimal:2',
     ];
 

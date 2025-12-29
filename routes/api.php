@@ -1383,6 +1383,8 @@ use App\Http\Controllers\Api\MarketplaceClient\Organizer\EventsController as Org
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\DashboardController as OrganizerDashboardController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\PayoutController as OrganizerPayoutController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\PromoCodeController as OrganizerPromoCodeController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\TaxReportController as OrganizerTaxReportController;
+use App\Http\Controllers\Api\MarketplaceClient\Organizer\InvitationsController as OrganizerInvitationsController;
 use App\Http\Controllers\Api\MarketplaceClient\PromoCodeController as MarketplacePromoCodeController;
 
 Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
@@ -1493,6 +1495,40 @@ Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'ma
             ->name('api.marketplace-client.organizer.promo-codes.stats');
         Route::get('/promo-codes/{promoCode}/usage', [OrganizerPromoCodeController::class, 'usageHistory'])
             ->name('api.marketplace-client.organizer.promo-codes.usage');
+
+        // Tax Reports
+        Route::get('/tax/settings', [OrganizerTaxReportController::class, 'settings'])
+            ->name('api.marketplace-client.organizer.tax.settings');
+        Route::put('/tax/settings', [OrganizerTaxReportController::class, 'updateSettings'])
+            ->name('api.marketplace-client.organizer.tax.settings.update');
+        Route::get('/tax/annual', [OrganizerTaxReportController::class, 'annualSummary'])
+            ->name('api.marketplace-client.organizer.tax.annual');
+        Route::get('/tax/quarterly', [OrganizerTaxReportController::class, 'quarterlyReport'])
+            ->name('api.marketplace-client.organizer.tax.quarterly');
+        Route::get('/tax/document', [OrganizerTaxReportController::class, 'taxDocument'])
+            ->name('api.marketplace-client.organizer.tax.document');
+
+        // Invitations
+        Route::get('/invitations', [OrganizerInvitationsController::class, 'index'])
+            ->name('api.marketplace-client.organizer.invitations');
+        Route::post('/invitations', [OrganizerInvitationsController::class, 'store'])
+            ->name('api.marketplace-client.organizer.invitations.store');
+        Route::get('/invitations/{batch}', [OrganizerInvitationsController::class, 'show'])
+            ->name('api.marketplace-client.organizer.invitations.show');
+        Route::post('/invitations/{batch}/generate', [OrganizerInvitationsController::class, 'generate'])
+            ->name('api.marketplace-client.organizer.invitations.generate');
+        Route::get('/invitations/{batch}/invites', [OrganizerInvitationsController::class, 'invitations'])
+            ->name('api.marketplace-client.organizer.invitations.list');
+        Route::post('/invitations/{batch}/send', [OrganizerInvitationsController::class, 'send'])
+            ->name('api.marketplace-client.organizer.invitations.send');
+        Route::get('/invitations/{batch}/download', [OrganizerInvitationsController::class, 'download'])
+            ->name('api.marketplace-client.organizer.invitations.download');
+        Route::post('/invitations/{batch}/void', [OrganizerInvitationsController::class, 'void'])
+            ->name('api.marketplace-client.organizer.invitations.void');
+        Route::get('/invitations/{batch}/stats', [OrganizerInvitationsController::class, 'stats'])
+            ->name('api.marketplace-client.organizer.invitations.stats');
+        Route::delete('/invitations/{batch}', [OrganizerInvitationsController::class, 'destroy'])
+            ->name('api.marketplace-client.organizer.invitations.destroy');
     });
 });
 
