@@ -61,7 +61,7 @@ $currentYear = date('Y');
     <div class="relative z-10 px-6 py-16">
         <div class="mx-auto max-w-7xl">
             <!-- Footer Grid -->
-            <div class="grid grid-cols-1 gap-8 mb-12 md:grid-cols-2 lg:grid-cols-5 lg:gap-12">
+            <div class="grid grid-cols-1 gap-8 mb-6 md:grid-cols-2 lg:grid-cols-5 lg:gap-12">
                 <!-- Brand Column -->
                 <div class="text-center lg:col-span-1 lg:text-left">
                     <a href="/" class="inline-flex items-center gap-2.5 mb-4">
@@ -98,11 +98,7 @@ $currentYear = date('Y');
                     <div class="flex items-center justify-center gap-2 pt-5 mt-5 border-t border-white/10 lg:justify-start">
                         <span class="text-xs text-white/40">Powered by</span>
                         <a href="https://tixello.com" target="_blank" class="flex items-center gap-1 text-xs font-bold transition-colors text-white/60 hover:text-white">
-                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                <rect x="3" y="3" width="18" height="18" rx="3" fill="#A51C30"/>
-                                <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="800">T</text>
-                            </svg>
-                            TIXELLO
+                            <img src="https://tixello.com/wp-content/themes/tix/assets/images/tixello-white.svg" alt="Tixello" class="h-5"/>
                         </a>
                     </div>
                 </div>

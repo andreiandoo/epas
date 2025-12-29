@@ -6,6 +6,9 @@
  * - $currentPage: Current page name for highlighting
  */
 
+// Flag to skip JS component loading (header.js/footer.js) in scripts.php
+$skipJsComponents = true;
+
 $currentPage = $currentPage ?? 'dashboard';
 
 $userNavItems = [

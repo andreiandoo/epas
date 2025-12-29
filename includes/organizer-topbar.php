@@ -2,6 +2,9 @@
 /**
  * Organizer Dashboard Top Header Bar
  */
+
+// Flag to skip JS component loading (header.js/footer.js) in scripts.php
+$skipJsComponents = true;
 ?>
 
 <!-- Top Header -->

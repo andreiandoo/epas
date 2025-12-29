@@ -19,7 +19,9 @@
     <script src="<?= asset('assets/js/api.js') ?>"></script>
     <script src="<?= asset('assets/js/auth.js') ?>"></script>
     <script src="<?= asset('assets/js/cart.js') ?>"></script>
+    <?php if (empty($skipJsComponents)): ?>
     <script src="<?= asset('assets/js/components/header.js') ?>"></script>
+    <?php endif; ?>
     <script src="<?= asset('assets/js/components/notifications.js') ?>"></script>
     <script src="<?= asset('assets/js/components/event-card.js') ?>"></script>
 
