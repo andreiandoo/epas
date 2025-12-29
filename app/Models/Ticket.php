@@ -15,10 +15,16 @@ class Ticket extends Model
         'status',
         'seat_label',
         'meta',
+        'is_cancelled',
+        'cancelled_at',
+        'cancellation_reason',
+        'refund_request_id',
     ];
 
     protected $casts = [
         'meta' => 'array',
+        'is_cancelled' => 'boolean',
+        'cancelled_at' => 'datetime',
     ];
 
     public function order(): BelongsTo
@@ -46,5 +52,24 @@ class Ticket extends Model
             'ticket_type_id',// FK pe tickets
             'event_id'       // FK pe ticket_types
         );
+    }
+
+    public function refundRequest(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceRefundRequest::class, 'refund_request_id');
+    }
+
+    /**
+     * Cancel this ticket
+     */
+    public function cancel(string $reason = null, int $refundRequestId = null): void
+    {
+        $this->update([
+            'is_cancelled' => true,
+            'cancelled_at' => now(),
+            'cancellation_reason' => $reason,
+            'refund_request_id' => $refundRequestId,
+            'status' => 'cancelled',
+        ]);
     }
 }

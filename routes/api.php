@@ -1285,12 +1285,25 @@ use App\Http\Controllers\Api\MarketplaceClient\OrdersController as MarketplaceOr
 use App\Http\Controllers\Api\MarketplaceClient\PaymentController as MarketplacePaymentController;
 use App\Http\Controllers\Api\MarketplaceClient\TicketsController as MarketplaceTicketsController;
 use App\Http\Controllers\Api\MarketplaceClient\StatisticsController as MarketplaceStatisticsController;
+use App\Http\Controllers\Api\MarketplaceClient\NewsletterTrackingController;
 
 Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Handle OPTIONS preflight requests
     Route::options('/{any}', fn () => response('', 200))
         ->where('any', '.*')
         ->name('api.marketplace-client.options');
+
+    // Newsletter Tracking (public, no auth required)
+    Route::get('/newsletter/track/open', [NewsletterTrackingController::class, 'trackOpen'])
+        ->name('api.marketplace-client.newsletter.track.open');
+    Route::get('/newsletter/track/click', [NewsletterTrackingController::class, 'trackClick'])
+        ->name('api.marketplace-client.newsletter.track.click');
+    Route::get('/newsletter/unsubscribe', [NewsletterTrackingController::class, 'unsubscribe'])
+        ->name('api.marketplace-client.newsletter.unsubscribe');
+    Route::get('/newsletter/preferences', [NewsletterTrackingController::class, 'preferences'])
+        ->name('api.marketplace-client.newsletter.preferences');
+    Route::post('/newsletter/preferences', [NewsletterTrackingController::class, 'updatePreferences'])
+        ->name('api.marketplace-client.newsletter.preferences.update');
 
     // Configuration & Authentication
     Route::get('/config', [MarketplaceConfigController::class, 'index'])

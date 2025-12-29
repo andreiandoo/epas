@@ -218,7 +218,7 @@ class NewsletterResource extends Resource
                     ->action(function ($record) {
                         $record->createRecipients();
                         $record->startSending();
-                        // TODO: Dispatch job to send emails
+                        \App\Jobs\SendNewsletterJob::dispatch($record);
                     }),
                 Tables\Actions\Action::make('schedule')
                     ->icon('heroicon-o-clock')
