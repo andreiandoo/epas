@@ -98,7 +98,7 @@ $currentYear = date('Y');
                     <div class="flex items-center justify-center gap-2 pt-5 mt-5 border-t border-white/10 lg:justify-start">
                         <span class="text-xs text-white/40">Powered by</span>
                         <a href="https://tixello.com" target="_blank" class="flex items-center gap-1 text-xs font-bold transition-colors text-white/60 hover:text-white">
-                            <img src="https://tixello.com/wp-content/themes/tix/assets/images/tixello-white.svg" alt="Tixello" class="h-5"/>
+                            <img src="https://tixello.com/wp-content/themes/tix/assets/images/tixello-white.svg" alt="Tixello" class="h-3 transition-opacity duration-200 ease-in-out opacity-50 hover:opacity-100"/>
                         </a>
                     </div>
                 </div>
@@ -213,8 +213,8 @@ $currentYear = date('Y');
 
             <!-- Bottom Section -->
             <div class="flex flex-col flex-wrap items-center justify-between gap-5 lg:flex-row">
-                <div class="text-[13px] text-white/50 text-center lg:text-left">
-                    &copy; <?= $currentYear ?> <a href="/" class="transition-colors text-white/70 hover:text-white"><?= SITE_NAME ?></a>. Toate drepturile rezervate.
+                <div class="text-[13px] text-white/50 text-center lg:text-left w-[33.33%]">
+                    &copy; <?= $currentYear ?> <a href="/" class="transition-colors text-white/70 hover:text-white"><?= SITE_NAME ?></a>. Toate drepturile rezervate.<br/>
                     SC Ambilet.ro SRL • J40/7859/2017 • CUI 37653424
                 </div>
 
@@ -226,23 +226,13 @@ $currentYear = date('Y');
                     <a href="/anpc" class="text-[13px] text-white/50 hover:text-white transition-colors">ANPC</a>
                 </div>
 
-                <div class="flex items-center gap-4">
-                    <button class="flex items-center gap-2 px-3.5 py-2 bg-white/10 border border-white/10 rounded-lg text-white/70 text-[13px] hover:bg-white/15 hover:text-white transition-all">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="2" y1="12" x2="22" y2="12"/>
-                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                        </svg>
-                        Română
-                    </button>
-                    <button onclick="CookieConsent.openSettings()" class="flex items-center gap-1.5 px-3.5 py-2 bg-transparent border border-white/20 rounded-lg text-white/60 text-[13px] hover:border-white/40 hover:text-white transition-all">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="3"/>
-                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                        </svg>
-                        Setări cookies
-                    </button>
-                </div>
+                <button onclick="CookieConsent.openSettings()" class="flex items-center gap-1.5 px-3.5 py-2 bg-transparent border border-white/20 rounded-lg text-white/60 text-[13px] hover:border-white/40 hover:text-white transition-all">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    Setări cookies
+                </button>
             </div>
         </div>
     </div>

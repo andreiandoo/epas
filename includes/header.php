@@ -374,7 +374,23 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         <div class="flex items-center justify-between h-[72px]">
             <!-- Logo -->
             <a href="/" class="flex items-center gap-2.5 no-underline flex-shrink-0">
-                <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="h-10 w-auto header-logo <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
+                <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden h-10 w-auto header-logo <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
+                <svg class="w-10 h-10" viewBox="0 0 48 48" fill="none">
+                    <defs>
+                        <linearGradient id="logoGrad" x1="6" y1="10" x2="42" y2="38">
+                            <stop stop-color="#A51C30"/>
+                            <stop offset="1" stop-color="#C41E3A"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#logoGrad)"/>
+                    <line x1="17" y1="15" x2="31" y2="15" stroke="white" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round"/>
+                    <line x1="15" y1="19" x2="33" y2="19" stroke="white" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/>
+                    <rect x="20" y="27" width="8" height="8" rx="1.5" fill="white"/>
+                </svg>
+                <div class="text-[22px] font-extrabold flex">
+                    <span class="text-white">Am</span>
+                    <span class="text-accent">Bilet</span>
+                </div>
             </a>
 
             <!-- Desktop Navigation -->

@@ -3,10 +3,11 @@
  * Organizers Page - Lista Organizatorilor
  * Ambilet Marketplace
  */
-require_once 'includes/config.php';
+require_once __DIR__ . '/includes/config.php';
 
 $pageTitle = 'Organizatori — ' . SITE_NAME;
 $pageDescription = 'Descoperă organizatorii de evenimente din România. De la festivaluri mari la petreceri intime, găsește evenimentele perfecte pentru tine.';
+
 
 // Stats
 $stats = [
@@ -152,7 +153,7 @@ $gradients = [
     'red' => 'bg-gradient-to-br from-primary to-primary-dark',
     'pink' => 'bg-gradient-to-br from-pink-500 to-pink-600'
 ];
-
+ 
 // CTA features
 $ctaFeatures = [
     ['icon' => 'card', 'title' => 'Plăți securizate', 'desc' => 'Primești banii rapid în cont'],
@@ -160,17 +161,13 @@ $ctaFeatures = [
     ['icon' => 'users', 'title' => 'Suport dedicat', 'desc' => 'Echipă disponibilă 24/7'],
     ['icon' => 'clock', 'title' => 'Setup rapid', 'desc' => 'Primul eveniment în 5 minute']
 ];
-?>
-<!DOCTYPE html>
-<html lang="ro">
-<head>
-    <?php include 'includes/head.php'; ?>
-</head>
-<body class="min-h-screen font-body bg-surface text-secondary">
-    <?php include 'includes/header.php'; ?>
+
+require_once __DIR__ . '/includes/head.php';
+$transparentHeader = true;
+require_once __DIR__ . '/includes/header.php'; ?>
 
     <!-- Hero Section -->
-    <section class="relative px-6 py-16 overflow-hidden text-center bg-gradient-to-br from-slate-800 to-slate-900">
+    <section class="relative px-6 pt-32 pb-16 overflow-hidden text-center bg-gradient-to-br from-slate-800 to-slate-900">
         <div class="absolute rounded-full -top-24 -right-24 w-96 h-96 bg-primary/30 blur-3xl"></div>
         <div class="absolute rounded-full -bottom-36 -left-24 w-80 h-80 bg-primary/20 blur-3xl"></div>
         <div class="relative z-10 max-w-2xl mx-auto">
@@ -255,7 +252,7 @@ $ctaFeatures = [
         <!-- Category Tabs -->
         <div class="flex flex-wrap gap-2 pb-2 mb-8 overflow-x-auto">
             <?php foreach ($categories as $index => $cat): ?>
-            <button class="category-tab flex items-center gap-2 px-5 py-3 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-secondary transition-all whitespace-nowrap <?= $index === 0 ? 'active !bg-gradient-to-r !from-primary !to-primary-dark !border-primary !text-white' : '' ?>" data-category="<?= $cat['slug'] ?>">
+            <button class="category-tab flex items-center gap-2 px-3 py-3 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-secondary transition-all whitespace-nowrap <?= $index === 0 ? 'active !bg-gradient-to-r !from-primary !to-primary-dark !border-primary !text-white' : '' ?>" data-category="<?= $cat['slug'] ?>">
                 <?php if ($cat['icon'] === 'grid'): ?>
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
@@ -431,8 +428,8 @@ $ctaFeatures = [
         </section>
     </main>
 
-    <?php include 'includes/footer.php'; ?>
-    <?php include 'includes/scripts.php'; ?>
+    <?php require_once __DIR__ . '/includes/footer.php'; ?>
+    <?php require_once __DIR__ . '/includes/scripts.php'; ?>
 
     <script>
         // Category tabs
@@ -445,5 +442,3 @@ $ctaFeatures = [
             });
         });
     </script>
-</body>
-</html>
