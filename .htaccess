@@ -81,9 +81,19 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^artist/([a-z0-9-]+)/?$ artist-single.php?slug=$1 [L,QSA]
 
-# Handle organizer public page - /organizator/slug
+# Handle organizer auth pages - must come BEFORE the public profile rule
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/login/?$ organizer/login.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^organizator/register/?$ organizer/register.php [L]
+
+# Handle organizer public page - /organizator/slug (excludes login, register, dashboard routes)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/organizator/(login|register|dashboard|events|settings|analytics|tickets|orders|payouts|team|support|landing|finance|help|participants|promo|sales)/?$
 RewriteRule ^organizator/([a-z0-9-]+)/?$ organizer/public.php?slug=$1 [L,QSA]
 
 # Legacy: redirect /organizer/slug to /organizator/slug

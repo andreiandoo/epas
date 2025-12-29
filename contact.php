@@ -10,6 +10,7 @@ require_once __DIR__ . '/includes/config.php';
 $pageTitle = "Contact — Ambilet";
 $pageDescription = "Contactează-ne pentru întrebări despre bilete, evenimente sau colaborări. Suntem aici să te ajutăm.";
 $bodyClass = 'page-contact';
+$transparentHeader = true;
 
 // Include head
 require_once __DIR__ . '/includes/head.php';

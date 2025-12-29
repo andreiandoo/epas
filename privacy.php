@@ -10,6 +10,7 @@ require_once __DIR__ . '/includes/config.php';
 $pageTitle = "Politica de Confidențialitate — Ambilet";
 $pageDescription = "Află cum colectăm, utilizăm și protejăm datele tale personale când folosești serviciile Ambilet.";
 $bodyClass = 'page-privacy';
+$transparentHeader = true;
 
 // Include head
 require_once __DIR__ . '/includes/head.php';

@@ -7,6 +7,7 @@ require_once 'includes/config.php';
 
 $pageTitle = 'Calendar Evenimente — ' . SITE_NAME;
 $pageDescription = 'Planifică-ți experiențele. Vezi toate evenimentele într-un singur loc.';
+$transparentHeader = true;
 ?>
 <!DOCTYPE html>
 <html lang="ro">

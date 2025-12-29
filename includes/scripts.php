@@ -7,7 +7,8 @@
             siteUrl: '<?= SITE_URL ?>',
             locale: '<?= SITE_LOCALE ?>',
             currency: 'RON',
-            currencySymbol: 'lei'
+            currencySymbol: 'lei',
+            demoMode: <?= DEMO_MODE ? 'true' : 'false' ?>
         };
     </script>
     <script src="<?= asset('assets/js/config.js') ?>"></script>

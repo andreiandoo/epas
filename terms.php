@@ -10,6 +10,7 @@ require_once __DIR__ . '/includes/config.php';
 $pageTitle = "Termeni și Condiții — Ambilet";
 $pageDescription = "Termenii și condițiile de utilizare a platformei Ambilet. Citește cu atenție înainte de a folosi serviciile noastre.";
 $bodyClass = 'page-terms';
+$transparentHeader = true;
 
 // Include head
 require_once __DIR__ . '/includes/head.php';
