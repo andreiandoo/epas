@@ -67,7 +67,7 @@ $currentYear = date('Y');
                     <a href="/" class="hidden items-center gap-2.5 mb-4">
                         <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="w-auto h-10 brightness-0 invert">
                     </a>
-                    <a href="/" class="flex items-center gap-2.5 mb-4">
+                    <a href="/" class="flex items-center mobile:justify-center gap-2.5 mb-4">
                         <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden h-10 w-auto header-logo <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
                         <svg class="w-10 h-10" viewBox="0 0 48 48" fill="none">
                             <path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="white"></path>
@@ -116,60 +116,62 @@ $currentYear = date('Y');
                     </div>
                 </div>
 
-                <!-- Evenimente Column -->
-                <div>
-                    <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Evenimente</h4>
-                    <ul class="space-y-3">
-                        <li><a href="/evenimente" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Toate evenimentele</a></li>
-                        <li><a href="/concerte" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Concerte</a></li>
-                        <li><a href="/festivaluri" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Festivaluri</a></li>
-                        <li><a href="/teatru" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Teatru & Spectacole</a></li>
-                        <li><a href="/sport" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Sport</a></li>
-                        <li><a href="/comedie" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Stand-up Comedy</a></li>
-                        <li><a href="/calendar" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Calendar evenimente</a></li>
-                    </ul>
-                </div>
+                <div class="grid gap-8 mobile:grid-cols-2 lg:col-span-4 lg:grid-cols-4">
+                    <!-- Evenimente Column -->
+                    <div>
+                        <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Evenimente</h4>
+                        <ul class="space-y-3">
+                            <li><a href="/evenimente" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Toate evenimentele</a></li>
+                            <li><a href="/concerte" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Concerte</a></li>
+                            <li><a href="/festivaluri" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Festivaluri</a></li>
+                            <li><a href="/teatru" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Teatru & Spectacole</a></li>
+                            <li><a href="/sport" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Sport</a></li>
+                            <li><a href="/comedie" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Stand-up Comedy</a></li>
+                            <li><a href="/calendar" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Calendar evenimente</a></li>
+                        </ul>
+                    </div>
 
-                <!-- Descoperă Column -->
-                <div>
-                    <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Descoperă</h4>
-                    <ul class="space-y-3">
-                        <li><a href="/orase" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Orașe</a></li>
-                        <li><a href="/locatii" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Locații</a></li>
-                        <li><a href="/artisti" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Artiști</a></li>
-                        <li><a href="/organizatori" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Organizatori</a></li>
-                        <li>
-                            <a href="/card-cadou" class="inline-flex items-center gap-2 text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">
-                                Carduri cadou
-                                <span class="px-2 py-0.5 bg-primary rounded text-[10px] font-bold text-white uppercase">Nou</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+                    <!-- Descoperă Column -->
+                    <div>
+                        <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Descoperă</h4>
+                        <ul class="space-y-3">
+                            <li><a href="/orase" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Orașe</a></li>
+                            <li><a href="/locatii" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Locații</a></li>
+                            <li><a href="/artisti" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Artiști</a></li>
+                            <li><a href="/organizatori" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Organizatori</a></li>
+                            <li>
+                                <a href="/card-cadou" class="inline-flex items-center gap-2 text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">
+                                    Carduri cadou
+                                    <span class="px-2 py-0.5 bg-primary rounded text-[10px] font-bold text-white uppercase">Nou</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
 
-                <!-- Companie Column -->
-                <div>
-                    <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Companie</h4>
-                    <ul class="space-y-3">
-                        <li><a href="/despre" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Despre noi</a></li>
-                        <li><a href="/press" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Press Kit</a></li>
-                        <li><a href="/blog" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Blog</a></li>
-                        <li><a href="/parteneri" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Parteneri</a></li>
-                        <li><a href="/ajutor" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Centru de ajutor</a></li>
-                        <li><a href="/faq" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Întrebări frecvente</a></li>
-                    </ul>
-                </div>
+                    <!-- Companie Column -->
+                    <div>
+                        <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Companie</h4>
+                        <ul class="space-y-3">
+                            <li><a href="/despre" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Despre noi</a></li>
+                            <li><a href="/press" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Press Kit</a></li>
+                            <li><a href="/blog" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Blog</a></li>
+                            <li><a href="/parteneri" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Parteneri</a></li>
+                            <li><a href="/ajutor" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Centru de ajutor</a></li>
+                            <li><a href="/faq" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Întrebări frecvente</a></li>
+                        </ul>
+                    </div>
 
-                <!-- Organizatori Column -->
-                <div>
-                    <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Organizatori</h4>
-                    <ul class="space-y-3">
-                        <li><a href="/organizatori" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Vinde bilete</a></li>
-                        <li><a href="/organizator/inregistrare" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Înregistrare organizator</a></li>
-                        <li><a href="/organizator/login" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Login organizator</a></li>
-                        <li><a href="/ghid-organizator" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Ghid organizatori</a></li>
-                        <li><a href="/comisioane" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Comisioane</a></li>
-                    </ul>
+                    <!-- Organizatori Column -->
+                    <div>
+                        <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Organizatori</h4>
+                        <ul class="space-y-3">
+                            <li><a href="/organizatori" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Vinde bilete</a></li>
+                            <li><a href="/organizator/inregistrare" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Înregistrare organizator</a></li>
+                            <li><a href="/organizator/login" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Login organizator</a></li>
+                            <li><a href="/ghid-organizator" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Ghid organizatori</a></li>
+                            <li><a href="/comisioane" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Comisioane</a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
@@ -177,7 +179,7 @@ $currentYear = date('Y');
             <div class="flex flex-col items-center justify-between gap-6 py-4 mb-4 border-t border-b lg:flex-row border-white/10">
                 <!-- Trust Badges -->
                 <div class="flex flex-wrap items-center justify-center gap-6">
-                    <div class="flex items-center gap-2.5 px-4 py-2.5 bg-white/5 rounded-xl">
+                    <div class="flex items-center gap-2.5 px-4 py-2.5 bg-white/5 rounded-xl mobile:p-2">
                         <div class="flex items-center justify-center rounded-lg w-9 h-9 bg-emerald-500/20 text-emerald-500">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -188,7 +190,7 @@ $currentYear = date('Y');
                             SSL 256-bit encryption
                         </div>
                     </div>
-                    <div class="flex items-center gap-2.5 px-4 py-2.5 bg-white/5 rounded-xl">
+                    <div class="flex items-center gap-2.5 px-4 py-2.5 bg-white/5 rounded-xl mobile:p-2">
                         <div class="flex items-center justify-center rounded-lg w-9 h-9 bg-emerald-500/20 text-emerald-500">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -200,7 +202,7 @@ $currentYear = date('Y');
                             100% autentice
                         </div>
                     </div>
-                    <div class="flex items-center gap-2.5 px-4 py-2.5 bg-white/5 rounded-xl">
+                    <div class="flex items-center gap-2.5 px-4 py-2.5 bg-white/5 rounded-xl mobile:hidden">
                         <div class="flex items-center justify-center rounded-lg w-9 h-9 bg-emerald-500/20 text-emerald-500">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="12" cy="12" r="10"/>
@@ -226,12 +228,12 @@ $currentYear = date('Y');
 
             <!-- Bottom Section -->
             <div class="flex flex-col flex-wrap items-center justify-between gap-5 lg:flex-row">
-                <div class="text-[13px] text-white/50 text-center lg:text-left w-[33.33%]">
+                <div class="text-[13px] text-white/50 text-center lg:text-left w-[33.33%] mobile:w-full">
                     &copy; <?= $currentYear ?> <a href="/" class="transition-colors text-white/70 hover:text-white"><?= SITE_NAME ?></a>. Toate drepturile rezervate.<br/>
                     SC Ambilet.ro SRL • J40/7859/2017 • CUI 37653424
                 </div>
 
-                <div class="flex flex-wrap items-center justify-center gap-6">
+                <div class="flex flex-wrap items-center justify-center gap-6 mobile:gap-4">
                     <a href="/termeni" class="text-[13px] text-white/50 hover:text-white transition-colors">Termeni și Condiții</a>
                     <a href="/confidentialitate" class="text-[13px] text-white/50 hover:text-white transition-colors">Confidențialitate</a>
                     <a href="/cookies" class="text-[13px] text-white/50 hover:text-white transition-colors">Cookies</a>

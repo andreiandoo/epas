@@ -30,7 +30,16 @@
                     'warning': '<?= $THEME['warning'] ?>',
                     'error': '<?= $THEME['error'] ?>',
                 }
-            }
+            },
+            screens: {
+                mobile: { max: "768px" },
+                xs: "480px",
+                sm: "600px",
+                md: "782px",
+                lg: "1024px",
+                xl: "1280px",
+                "2xl": "1440px",
+            },
         }
     }
 </script>

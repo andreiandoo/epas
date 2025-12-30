@@ -775,21 +775,11 @@ const EventPage = {
     },
 
     updateQuantity(ticketId, delta) {
-        console.log('updateQuantity called:', ticketId, delta);
-        console.log('ticketTypes:', this.ticketTypes);
-        console.log('quantities:', this.quantities);
-
-        const tt = this.ticketTypes.find(t => t.id === ticketId);
-        console.log('Found ticket type:', tt);
-
-        if (!tt) {
-            console.error('Ticket type not found for id:', ticketId);
-            return;
-        }
+        // Handle both string and number IDs with loose comparison
+        const tt = this.ticketTypes.find(t => String(t.id) === String(ticketId));
+        if (!tt) return;
 
         const newQty = (this.quantities[ticketId] || 0) + delta;
-        console.log('newQty:', newQty, 'available:', tt.available);
-
         if (newQty >= 0 && newQty <= tt.available) {
             this.quantities[ticketId] = newQty;
             document.getElementById(`qty-${ticketId}`).textContent = newQty;
@@ -807,7 +797,7 @@ const EventPage = {
         let subtotal = 0;
 
         for (const [ticketId, qty] of Object.entries(this.quantities)) {
-            const tt = this.ticketTypes.find(t => t.id === ticketId);
+            const tt = this.ticketTypes.find(t => String(t.id) === String(ticketId));
             if (tt) subtotal += qty * tt.price;
         }
 
@@ -844,7 +834,7 @@ const EventPage = {
     addToCart() {
         for (const [ticketId, qty] of Object.entries(this.quantities)) {
             if (qty > 0) {
-                const tt = this.ticketTypes.find(t => t.id === ticketId);
+                const tt = this.ticketTypes.find(t => String(t.id) === String(ticketId));
                 if (tt) {
                     AmbiletCart.addItem({
                         event_id: this.event.id,
