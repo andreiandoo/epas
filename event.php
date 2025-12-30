@@ -95,8 +95,25 @@ require_once __DIR__ . '/includes/head.php';
                         <img id="mainImage" src="" alt="" class="object-cover w-full h-full">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                         <div class="absolute flex gap-2 top-4 left-4" id="event-badges"></div>
+                        <div class="absolute flex gap-2 top-4 left-4">
+                            <span class="px-3 py-1.5 bg-accent text-white text-xs font-bold rounded-lg uppercase">Rock</span>
+                            <span class="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg uppercase">🔥 Popular</span>
+                        </div>
                         <div class="absolute bottom-4 left-4 right-4">
                             <div class="flex gap-2" id="gallery-thumbs"></div>
+                        </div>
+                        <div class="absolute bottom-4 left-4 right-4">
+                            <div class="flex gap-2">
+                                <button onclick="changeImage(0)" class="w-16 h-12 overflow-hidden border-2 rounded-lg gallery-thumb active border-white/50 opacity-80">
+                                    <img src="https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=200" class="object-cover w-full h-full">
+                                </button>
+                                <button onclick="changeImage(1)" class="w-16 h-12 overflow-hidden border-2 rounded-lg gallery-thumb border-white/50 opacity-80">
+                                    <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200" class="object-cover w-full h-full">
+                                </button>
+                                <button onclick="changeImage(2)" class="w-16 h-12 overflow-hidden border-2 rounded-lg gallery-thumb border-white/50 opacity-80">
+                                    <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200" class="object-cover w-full h-full">
+                                </button>
+                            </div>
                         </div>
                     </div>
 
