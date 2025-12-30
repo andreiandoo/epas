@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\MarketplaceClient\Customer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
+use App\Jobs\SendRefundNotificationsJob;
 use App\Models\MarketplaceRefundRequest;
 use App\Models\MarketplaceCustomer;
 use App\Models\Order;
@@ -152,8 +153,8 @@ class RefundController extends BaseController
                 ->update(['refund_request_id' => $refundRequest->id]);
         }
 
-        // TODO: Send notification to marketplace admins
-        // TODO: Send confirmation email to customer
+        // Send notifications to customer and marketplace admins
+        SendRefundNotificationsJob::dispatch($refundRequest, SendRefundNotificationsJob::TYPE_CREATED);
 
         return $this->success([
             'refund_request' => [

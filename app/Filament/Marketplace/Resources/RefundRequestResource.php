@@ -4,6 +4,7 @@ namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\RefundRequestResource\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Jobs\SendRefundNotificationsJob;
 use App\Models\MarketplaceRefundRequest;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -249,6 +250,10 @@ class RefundRequestResource extends Resource
                         ->visible(fn ($record) => in_array($record->status, ['pending', 'under_review']))
                         ->action(function ($record, array $data) {
                             $record->approve($data['approved_amount'], $data['notes']);
+
+                            // Send notification to customer
+                            SendRefundNotificationsJob::dispatch($record, SendRefundNotificationsJob::TYPE_APPROVED);
+
                             Notification::make()
                                 ->title('Refund Approved')
                                 ->success()
@@ -267,6 +272,10 @@ class RefundRequestResource extends Resource
                         ->requiresConfirmation()
                         ->action(function ($record, array $data) {
                             $record->reject($data['reason']);
+
+                            // Send notification to customer
+                            SendRefundNotificationsJob::dispatch($record, SendRefundNotificationsJob::TYPE_REJECTED);
+
                             Notification::make()
                                 ->title('Refund Rejected')
                                 ->warning()
@@ -283,14 +292,18 @@ class RefundRequestResource extends Resource
                         ->action(function ($record) {
                             $success = $record->attemptAutoRefund();
                             if ($success) {
+                                // Send notification to customer
+                                SendRefundNotificationsJob::dispatch($record->fresh(), SendRefundNotificationsJob::TYPE_COMPLETED);
+
                                 Notification::make()
                                     ->title('Auto Refund Successful')
                                     ->success()
                                     ->send();
                             } else {
+                                $record->refresh();
                                 Notification::make()
                                     ->title('Auto Refund Failed')
-                                    ->body($record->auto_refund_error)
+                                    ->body($record->admin_notes ? 'Check admin notes for details' : 'Requires manual processing')
                                     ->danger()
                                     ->send();
                             }
@@ -308,6 +321,10 @@ class RefundRequestResource extends Resource
                         ->visible(fn ($record) => in_array($record->status, ['approved', 'failed']))
                         ->action(function ($record, array $data) {
                             $record->markRefunded($data['reference'], auth()->id());
+
+                            // Send notification to customer
+                            SendRefundNotificationsJob::dispatch($record, SendRefundNotificationsJob::TYPE_COMPLETED);
+
                             Notification::make()
                                 ->title('Marked as Refunded')
                                 ->success()

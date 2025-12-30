@@ -4,8 +4,10 @@ namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\EmailLogResource\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Jobs\ResendEmailJob;
 use App\Models\MarketplaceEmailLog;
 use Filament\Forms;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
@@ -183,7 +185,14 @@ class EmailLogResource extends Resource
                         $newLog->sent_at = null;
                         $newLog->error_message = null;
                         $newLog->save();
-                        // TODO: Dispatch job to send email
+
+                        // Dispatch job to send email
+                        ResendEmailJob::dispatch($newLog);
+
+                        Notification::make()
+                            ->title('Email queued for resend')
+                            ->success()
+                            ->send();
                     }),
             ]);
     }

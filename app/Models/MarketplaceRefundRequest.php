@@ -273,18 +273,36 @@ class MarketplaceRefundRequest extends Model
         $this->markProcessing();
 
         try {
-            // Get payment method from order
-            $order = $this->order;
-            $paymentMethod = $order->payment_method ?? 'stripe';
+            $refundService = new \App\Services\PaymentRefundService();
+            $result = $refundService->processRefund($this);
 
-            // TODO: Implement actual payment processor refund logic
-            // This would integrate with Stripe, PayPal, etc.
+            if ($result->success) {
+                $this->update([
+                    'is_automatic' => true,
+                    'payment_refund_id' => $result->refundId,
+                    'payment_response' => $result->response,
+                ]);
 
-            // For now, mark as needing manual processing
-            $this->update([
-                'auto_refund_attempted' => true,
-                'auto_refund_error' => 'Automatic refund not implemented for ' . $paymentMethod,
-            ]);
+                // If pending, don't mark as complete yet
+                if (!$result->isPending) {
+                    $this->markRefunded($result->refundId);
+                }
+
+                return true;
+            }
+
+            // If requires manual processing, update status and notes
+            if ($result->requiresManual) {
+                $this->update([
+                    'is_automatic' => false,
+                    'status' => self::STATUS_APPROVED, // Keep approved for manual processing
+                    'admin_notes' => $this->admin_notes
+                        ? $this->admin_notes . "\n\nAuto-refund: " . $result->error
+                        : "Auto-refund: " . $result->error,
+                ]);
+            } else {
+                $this->markFailed($result->error);
+            }
 
             return false;
         } catch (\Exception $e) {
