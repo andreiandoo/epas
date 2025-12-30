@@ -17,6 +17,11 @@ $userNavItems = [
     ['page' => 'orders', 'url' => '/cont/comenzi', 'label' => 'Comenzi'],
     ['page' => 'watchlist', 'url' => '/cont/favorite', 'label' => 'Favorite'],
     ['page' => 'rewards', 'url' => '/cont/puncte', 'label' => 'Recompense'],
+    ['page' => 'profile', 'url' => '/cont/profil', 'label' => 'Profil'],
+    ['page' => 'payments', 'url' => '/cont/plati', 'label' => 'Plati'],
+    ['page' => 'notifications', 'url' => '/cont/notificari', 'label' => 'Notificari'],
+    ['page' => 'settings', 'url' => '/cont/setari', 'label' => 'Setari'],
+    ['page' => 'help', 'url' => '/cont/ajutor', 'label' => 'Ajutor'],
 ];
 
 $userMenuItems = [
@@ -34,15 +39,31 @@ $userMenuItems = [
 ?>
 
 <!-- Mobile Menu Overlay -->
-<div id="menuOverlay" class="overlay fixed inset-0 bg-black/50 z-40 lg:hidden" onclick="toggleMobileMenu()"></div>
+<div id="menuOverlay" class="fixed inset-0 z-40 overlay bg-black/50 lg:hidden" onclick="toggleMobileMenu()"></div>
 
 <!-- Mobile Menu Sidebar -->
-<div id="mobileMenu" class="menu-mobile fixed inset-y-0 left-0 w-72 bg-white z-50 lg:hidden flex flex-col">
-    <div class="p-4 border-b border-border flex items-center justify-between">
+<div id="mobileMenu" class="fixed inset-y-0 left-0 z-50 flex flex-col bg-white menu-mobile w-72 lg:hidden">
+    <div class="flex items-center justify-between p-4 border-b border-border">
         <a href="/" class="flex items-center gap-2">
-            <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="h-9 w-auto">
+            <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden w-auto h-9">
+            <svg class="w-8 h-8" viewBox="0 0 48 48" fill="none">
+                <defs>
+                    <linearGradient id="logoGrad" x1="6" y1="10" x2="42" y2="38">
+                        <stop stop-color="#A51C30"/>
+                        <stop offset="1" stop-color="#C41E3A"/>
+                    </linearGradient>
+                </defs>
+                <path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#logoGrad)"/>
+                <line x1="17" y1="15" x2="31" y2="15" stroke="white" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="15" y1="19" x2="33" y2="19" stroke="white" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/>
+                <rect x="20" y="27" width="8" height="8" rx="1.5" fill="white"/>
+            </svg>
+            <div class="text-[22px] font-extrabold flex">
+                <span id="logoTextAm" class="<?= $transparentHeader ? 'text-white/85' : 'text-slate-800' ?>">Am</span>
+                <span id="logoTextBilet" class="<?= $transparentHeader ? 'text-white' : 'text-primary' ?>">Bilet</span>
+            </div>
         </a>
-        <button onclick="toggleMobileMenu()" class="p-2 hover:bg-surface rounded-lg">
+        <button onclick="toggleMobileMenu()" class="p-2 rounded-lg hover:bg-surface">
             <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
     </div>
@@ -58,7 +79,7 @@ $userMenuItems = [
         <?php endforeach; ?>
     </nav>
     <div class="p-4 border-t border-border">
-        <a href="#" onclick="AmbiletAuth.logout(); window.location.href='/'; return false;" class="flex items-center gap-3 px-4 py-3 text-error hover:bg-error/10 rounded-xl font-medium">
+        <a href="#" onclick="AmbiletAuth.logout(); window.location.href='/'; return false;" class="flex items-center gap-3 px-4 py-3 font-medium text-error hover:bg-error/10 rounded-xl">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
             Deconectare
         </a>
@@ -66,20 +87,36 @@ $userMenuItems = [
 </div>
 
 <!-- Header -->
-<header class="bg-white border-b border-border sticky top-0 z-30 no-print">
-    <div class="max-w-7xl mx-auto px-4">
+<header class="sticky top-0 z-30 bg-white border-b border-border no-print">
+    <div class="px-4 mx-auto max-w-7xl">
         <div class="flex items-center justify-between h-16">
             <div class="flex items-center gap-4">
-                <button onclick="toggleMobileMenu()" class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-surface">
+                <button onclick="toggleMobileMenu()" class="p-2 -ml-2 rounded-lg lg:hidden hover:bg-surface">
                     <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                 </button>
                 <a href="/" class="flex items-center gap-2">
-                    <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="h-9 w-auto">
+                    <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden w-auto h-9">
+                    <svg class="w-8 h-8" viewBox="0 0 48 48" fill="none">
+                        <defs>
+                            <linearGradient id="logoGrad" x1="6" y1="10" x2="42" y2="38">
+                                <stop stop-color="#A51C30"/>
+                                <stop offset="1" stop-color="#C41E3A"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#logoGrad)"/>
+                        <line x1="17" y1="15" x2="31" y2="15" stroke="white" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round"/>
+                        <line x1="15" y1="19" x2="33" y2="19" stroke="white" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/>
+                        <rect x="20" y="27" width="8" height="8" rx="1.5" fill="white"/>
+                    </svg>
+                    <div class="text-[22px] font-extrabold flex">
+                        <span id="logoTextAm" class="<?= $transparentHeader ? 'text-white/85' : 'text-slate-800' ?>">Am</span>
+                        <span id="logoTextBilet" class="<?= $transparentHeader ? 'text-white' : 'text-primary' ?>">Bilet</span>
+                    </div>
                 </a>
             </div>
 
             <!-- Desktop Navigation -->
-            <nav class="hidden lg:flex items-center gap-1">
+            <nav class="items-center hidden gap-1 lg:flex">
                 <?php foreach ($userNavItems as $item):
                     $isActive = $currentPage === $item['page'];
                 ?>
@@ -92,7 +129,7 @@ $userMenuItems = [
                     <svg class="w-4 h-4 text-accent" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
                     <span id="header-user-points" class="text-sm font-bold text-accent">0</span>
                 </div>
-                <div id="header-user-avatar" class="w-9 h-9 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center cursor-pointer">
+                <div id="header-user-avatar" class="flex items-center justify-center rounded-full cursor-pointer w-9 h-9 bg-gradient-to-br from-primary to-accent">
                     <span class="text-sm font-bold text-white">--</span>
                 </div>
             </div>
