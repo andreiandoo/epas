@@ -35,7 +35,7 @@ require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php'; ?>
 
 <!-- Hero Banner -->
-<section class="relative overflow-hidden h-72 md:h-96">
+<section class="relative overflow-hidden  h-[420px] md:h-[480px]">
     <img id="genreBanner" src="<?= htmlspecialchars($genreHeroImage) ?>" alt="<?= htmlspecialchars($pageTitle) ?>" class="absolute inset-0 object-cover w-full h-full">
     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/30"></div>
     <div class="relative flex flex-col justify-end h-full px-4 pb-10 mx-auto max-w-7xl">

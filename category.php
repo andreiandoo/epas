@@ -26,14 +26,12 @@ if ($categoryConfig) {
 }
 
 $currentPage = 'events';
-
+$transparentHeader = true;
 require_once __DIR__ . '/includes/head.php';
-?>
-
-<?php require_once __DIR__ . '/includes/header.php'; ?>
+require_once __DIR__ . '/includes/header.php'; ?>
 
 <!-- Hero Banner -->
-<section class="relative h-64 overflow-hidden md:h-80">
+<section class="relative h-[420px] md:h-[480px] overflow-hidden">
     <img id="categoryBanner" src="<?= htmlspecialchars($categoryHeroImage) ?>" alt="<?= htmlspecialchars($pageTitle) ?>" class="absolute inset-0 object-cover w-full h-full">
     <div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/40"></div>
     <div class="relative flex flex-col justify-center h-full px-4 mx-auto max-w-7xl">
