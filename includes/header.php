@@ -925,6 +925,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         } else {
             // Non-transparent mode - just add shadow on scroll
             header.classList.toggle('shadow-lg', isScrolled);
+            headerTopBar.classList.toggle('hidden', isScrolled);
         }
     }
 
