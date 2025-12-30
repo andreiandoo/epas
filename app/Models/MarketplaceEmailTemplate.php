@@ -50,6 +50,11 @@ class MarketplaceEmailTemplate extends Model
         'organizer_event_rejected' => 'Event Rejected',
         'organizer_daily_report' => 'Organizer Daily Report',
         'organizer_weekly_report' => 'Organizer Weekly Report',
+        // Gift Card Templates
+        'gift_card_delivery' => 'Gift Card Delivery',
+        'gift_card_purchase_confirmation' => 'Gift Card Purchase Confirmation',
+        'gift_card_expiry_reminder' => 'Gift Card Expiry Reminder',
+        'gift_card_claimed' => 'Gift Card Claimed Notification',
     ];
 
     public function marketplaceClient(): BelongsTo
@@ -131,6 +136,38 @@ class MarketplaceEmailTemplate extends Model
                 'payout_amount' => 'Payout amount',
                 'payout_reference' => 'Payout reference',
                 'payout_status' => 'Payout status',
+            ],
+            'gift_card_delivery' => [
+                'recipient_name' => 'Gift card recipient name',
+                'purchaser_name' => 'Name of person who sent the gift card',
+                'gift_card_code' => 'Gift card code',
+                'gift_card_pin' => 'Gift card PIN',
+                'gift_card_amount' => 'Gift card amount',
+                'personal_message' => 'Personal message from sender',
+                'occasion' => 'Occasion (birthday, thank you, etc.)',
+                'expires_at' => 'Expiration date',
+                'claim_url' => 'URL to claim the gift card',
+            ],
+            'gift_card_purchase_confirmation' => [
+                'purchaser_name' => 'Purchaser name',
+                'recipient_name' => 'Recipient name',
+                'recipient_email' => 'Recipient email',
+                'gift_card_amount' => 'Gift card amount',
+                'gift_card_code' => 'Gift card code',
+                'delivery_method' => 'Delivery method',
+                'scheduled_delivery' => 'Scheduled delivery date/time',
+            ],
+            'gift_card_expiry_reminder' => [
+                'recipient_name' => 'Gift card holder name',
+                'gift_card_code' => 'Gift card code (masked)',
+                'remaining_balance' => 'Remaining balance',
+                'expires_at' => 'Expiration date',
+                'days_remaining' => 'Days until expiry',
+            ],
+            'gift_card_claimed' => [
+                'purchaser_name' => 'Purchaser name',
+                'recipient_name' => 'Person who claimed the card',
+                'gift_card_amount' => 'Gift card amount',
             ],
             default => [],
         };

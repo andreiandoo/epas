@@ -1570,6 +1570,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Customer\AuthController as Custom
 use App\Http\Controllers\Api\MarketplaceClient\Customer\AccountController as CustomerAccountController;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\TicketTransferController as CustomerTicketTransferController;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\RefundController as CustomerRefundController;
+use App\Http\Controllers\Api\MarketplaceClient\Customer\GiftCardController as CustomerGiftCardController;
 
 Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no customer auth)
@@ -1639,6 +1640,14 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
             ->name('api.marketplace-client.customer.refunds.show');
         Route::post('/refunds/{refund}/cancel', [CustomerRefundController::class, 'cancel'])
             ->name('api.marketplace-client.customer.refunds.cancel');
+
+        // Gift Cards (authenticated - for viewing own gift cards)
+        Route::get('/gift-cards', [CustomerGiftCardController::class, 'myGiftCards'])
+            ->name('api.marketplace-client.customer.gift-cards');
+        Route::post('/gift-cards/claim', [CustomerGiftCardController::class, 'claim'])
+            ->name('api.marketplace-client.customer.gift-cards.claim');
+        Route::get('/gift-cards/{giftCard}/transactions', [CustomerGiftCardController::class, 'transactions'])
+            ->name('api.marketplace-client.customer.gift-cards.transactions');
     });
 
     // Public transfer acceptance (by token, no auth required)
@@ -1666,6 +1675,18 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
         ->name('api.marketplace-client.customer.checkout.summary');
     Route::post('/checkout', [App\Http\Controllers\Api\MarketplaceClient\Customer\CheckoutController::class, 'checkout'])
         ->name('api.marketplace-client.customer.checkout');
+
+    // Gift Cards (public - for purchasing and checking balance)
+    Route::get('/gift-cards/options', [CustomerGiftCardController::class, 'options'])
+        ->name('api.marketplace-client.customer.gift-cards.options');
+    Route::post('/gift-cards/purchase', [CustomerGiftCardController::class, 'purchase'])
+        ->name('api.marketplace-client.customer.gift-cards.purchase');
+    Route::post('/gift-cards/complete-purchase', [CustomerGiftCardController::class, 'completePurchase'])
+        ->name('api.marketplace-client.customer.gift-cards.complete-purchase');
+    Route::post('/gift-cards/check-balance', [CustomerGiftCardController::class, 'checkBalance'])
+        ->name('api.marketplace-client.customer.gift-cards.check-balance');
+    Route::post('/gift-cards/redeem', [CustomerGiftCardController::class, 'redeem'])
+        ->name('api.marketplace-client.customer.gift-cards.redeem');
 });
 
 /*

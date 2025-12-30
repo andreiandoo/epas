@@ -97,6 +97,32 @@ class MarketplaceCustomer extends Authenticatable
         return $this->hasMany(MarketplaceRefundRequest::class, 'marketplace_customer_id');
     }
 
+    public function purchasedGiftCards(): HasMany
+    {
+        return $this->hasMany(MarketplaceGiftCard::class, 'purchaser_id');
+    }
+
+    public function receivedGiftCards(): HasMany
+    {
+        return $this->hasMany(MarketplaceGiftCard::class, 'recipient_customer_id');
+    }
+
+    public function giftCardsByEmail(): HasMany
+    {
+        return $this->hasMany(MarketplaceGiftCard::class, 'recipient_email', 'email');
+    }
+
+    /**
+     * Get total available gift card balance for this customer
+     */
+    public function getGiftCardBalanceAttribute(): float
+    {
+        return $this->receivedGiftCards()
+            ->where('status', MarketplaceGiftCard::STATUS_ACTIVE)
+            ->where('expires_at', '>', now())
+            ->sum('balance');
+    }
+
     // =========================================
     // Status Checks
     // =========================================
