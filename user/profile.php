@@ -3,7 +3,7 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Profilul meu';
 $currentPage = 'profile';
 require_once dirname(__DIR__) . '/includes/head.php';
-require_once dirname(__DIR__) . '/includes/user-header.php';
+require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
 <style>
@@ -14,8 +14,14 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
     .artist-card:hover { transform: scale(1.05); }
 </style>
 
-<!-- Main Content -->
-<main class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
+<!-- Main Container with Sidebar -->
+<div class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
+    <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Sidebar -->
+        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
+
+        <!-- Main Content -->
+        <main class="flex-1 min-w-0">
     <!-- Profile Header -->
     <div class="bg-white rounded-2xl lg:rounded-3xl border border-border overflow-hidden mb-6">
         <!-- Cover -->
@@ -46,7 +52,7 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
                     </div>
                 </div>
                 <div class="flex gap-2">
-                    <a href="/user/settings" class="flex items-center gap-2 px-4 py-2.5 bg-surface text-secondary rounded-xl text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors">
+                    <a href="/cont/setari" class="flex items-center gap-2 px-4 py-2.5 bg-surface text-secondary rounded-xl text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                         Editeaza profilul
                     </a>
@@ -148,7 +154,7 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
             <div class="bg-white rounded-xl lg:rounded-2xl border border-border p-5 lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-lg font-bold text-secondary">Badge-uri</h2>
-                    <a href="/user/rewards" class="text-sm text-primary font-medium hover:underline">Vezi toate →</a>
+                    <a href="/cont/puncte" class="text-sm text-primary font-medium hover:underline">Vezi toate →</a>
                 </div>
                 <div class="flex flex-wrap gap-3" id="badges-container">
                     <!-- Populated by JavaScript -->
@@ -173,9 +179,11 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
             </div>
         </div>
     </div>
-</main>
+        </main>
+    </div>
+</div>
 
-<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'

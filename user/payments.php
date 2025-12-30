@@ -3,14 +3,20 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Metode de plata';
 $currentPage = 'payments';
 require_once dirname(__DIR__) . '/includes/head.php';
-require_once dirname(__DIR__) . '/includes/user-header.php';
+require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
-    <!-- Main Content -->
-    <main class="max-w-4xl mx-auto px-4 py-6 lg:py-8">
+<!-- Main Container with Sidebar -->
+<div class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
+    <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Sidebar -->
+        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
+
+        <!-- Main Content -->
+        <main class="flex-1 min-w-0">
         <!-- Breadcrumb -->
         <div class="flex items-center gap-2 text-sm mb-6">
-            <a href="/user/settings" class="text-muted hover:text-primary">Setari</a>
+            <a href="/cont/setari" class="text-muted hover:text-primary">Setari</a>
             <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             <span class="text-secondary font-medium">Metode de plata</span>
         </div>
@@ -113,10 +119,12 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
                 <p class="text-sm text-muted">Toate informatiile de plata sunt criptate si procesate in siguranta. Nu stocam niciodata numerele complete ale cardurilor.</p>
             </div>
         </div>
-    </main>
+        </main>
+    </div>
+</div>
 
-    <!-- Add Card Modal -->
-    <div id="cardModal" class="modal fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+<!-- Add Card Modal -->
+    <div id="cardModal" class="modal fixed inset-0 bg-black/50 z-50 items-center justify-center p-4 hidden">
         <div class="modal-content bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div class="p-5 lg:p-6 border-b border-border flex items-center justify-between">
                 <h2 class="text-lg font-bold text-secondary">Adauga card nou</h2>
@@ -185,7 +193,7 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
         </div>
     </div>
 
-<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'
@@ -195,7 +203,7 @@ const PaymentsPage = {
 
     async init() {
         if (!AmbiletAuth.isAuthenticated()) {
-            window.location.href = '/login?redirect=/user/payments';
+            window.location.href = '/autentificare?redirect=/cont/plati';
             return;
         }
 
@@ -321,12 +329,16 @@ const PaymentsPage = {
 };
 
 function openModal() {
-    document.getElementById('cardModal').classList.add('active');
+    const modal = document.getElementById('cardModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
     document.body.style.overflow = 'hidden';
 }
 
 function closeModal() {
-    document.getElementById('cardModal').classList.remove('active');
+    const modal = document.getElementById('cardModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
     document.body.style.overflow = '';
     // Reset form
     document.getElementById('card-form').reset();
@@ -411,7 +423,7 @@ async function saveCard() {
 }
 
 function editAddress() {
-    window.location.href = '/user/profile';
+    window.location.href = '/cont/profil';
 }
 
 function logout() {

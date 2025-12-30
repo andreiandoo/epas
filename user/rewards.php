@@ -3,7 +3,7 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Puncte & Recompense';
 $currentPage = 'rewards';
 require_once dirname(__DIR__) . '/includes/head.php';
-require_once dirname(__DIR__) . '/includes/user-header.php';
+require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
 <style>
@@ -32,8 +32,14 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
     .tab-btn.active { background: white; color: #A51C30; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 </style>
 
-<!-- Main Content -->
-<main class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
+<!-- Main Container with Sidebar -->
+<div class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
+    <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Sidebar -->
+        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
+
+        <!-- Main Content -->
+        <main class="flex-1 min-w-0">
     <!-- Points Overview Hero -->
     <div class="bg-gradient-to-r from-primary via-primary-dark to-secondary rounded-2xl lg:rounded-3xl p-6 lg:p-8 mb-6 text-white relative overflow-hidden">
         <div class="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
@@ -173,9 +179,11 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
             </div>
         </div>
     </div>
-</main>
+        </main>
+    </div>
+</div>
 
-<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'

@@ -3,11 +3,17 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Notificari';
 $currentPage = 'notifications';
 require_once dirname(__DIR__) . '/includes/head.php';
-require_once dirname(__DIR__) . '/includes/user-header.php';
+require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
-    <!-- Main Content -->
-    <main class="max-w-4xl mx-auto px-4 py-6 lg:py-8">
+<!-- Main Container with Sidebar -->
+<div class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
+    <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Sidebar -->
+        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
+
+        <!-- Main Content -->
+        <main class="flex-1 min-w-0">
         <!-- Page Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
@@ -18,7 +24,7 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
                 <button onclick="markAllRead()" class="px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-xl transition-colors">
                     Marcheaza toate ca citite
                 </button>
-                <a href="/user/settings" class="p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-xl transition-colors" title="Setari notificari">
+                <a href="/cont/setari" class="p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-xl transition-colors" title="Setari notificari">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </a>
             </div>
@@ -69,9 +75,11 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
             <p class="text-muted mb-2">Nu ai notificari</p>
             <a href="/" class="text-primary text-sm font-medium hover:underline">Descopera evenimente</a>
         </div>
-    </main>
+        </main>
+    </div>
+</div>
 
-<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'
@@ -83,7 +91,7 @@ const NotificationsPage = {
 
     async init() {
         if (!AmbiletAuth.isAuthenticated()) {
-            window.location.href = '/login?redirect=/user/notifications';
+            window.location.href = '/autentificare?redirect=/cont/notificari';
             return;
         }
 
@@ -130,7 +138,7 @@ const NotificationsPage = {
                 type: 'reminder',
                 title: 'Reminder: Concert Rock',
                 message: 'Evenimentul tau este in 3 zile! Nu uita sa iti descarci biletele.',
-                action_url: '/user/tickets',
+                action_url: '/cont/bilete',
                 action_text: 'Vezi biletele',
                 is_read: false,
                 created_at: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
@@ -141,7 +149,7 @@ const NotificationsPage = {
                 type: 'achievement',
                 title: 'Ai obtinut badge-ul "Rock Veteran"!',
                 message: 'Felicitari! Ai participat la 10+ concerte rock. Ai primit +200 XP.',
-                action_url: '/user/rewards',
+                action_url: '/cont/puncte',
                 action_text: 'Vezi badge-urile',
                 is_read: false,
                 created_at: new Date(now - 5 * 60 * 60 * 1000).toISOString(),
@@ -163,7 +171,7 @@ const NotificationsPage = {
                 type: 'order',
                 title: 'Comanda confirmata #TIX-78453',
                 message: 'Biletele au fost emise cu succes.',
-                action_url: '/user/orders',
+                action_url: '/cont/comenzi',
                 action_text: 'Vezi comanda',
                 is_read: true,
                 created_at: new Date(now - 24 * 60 * 60 * 1000 - 4 * 60 * 60 * 1000).toISOString(),
@@ -174,7 +182,7 @@ const NotificationsPage = {
                 type: 'points',
                 title: 'Ai primit 120 puncte!',
                 message: 'Pentru achizitia biletului. Total puncte: 2,450.',
-                action_url: '/user/rewards',
+                action_url: '/cont/puncte',
                 action_text: 'Vezi recompense',
                 is_read: false,
                 created_at: new Date(now - 2 * 24 * 60 * 60 * 1000).toISOString(),
@@ -185,7 +193,7 @@ const NotificationsPage = {
                 type: 'announcement',
                 title: 'Artistul tau favorit anunta turneu!',
                 message: 'Noi concerte anuntate. Biletele disponibile in curand.',
-                action_url: '/user/watchlist',
+                action_url: '/cont/favorite',
                 action_text: 'Seteaza alerta',
                 is_read: true,
                 created_at: new Date(now - 3 * 24 * 60 * 60 * 1000).toISOString(),
@@ -196,7 +204,7 @@ const NotificationsPage = {
                 type: 'order',
                 title: 'Comanda confirmata #TIX-78501',
                 message: 'Biletele au fost emise cu succes.',
-                action_url: '/user/orders',
+                action_url: '/cont/comenzi',
                 action_text: 'Vezi comanda',
                 is_read: true,
                 created_at: new Date(now - 4 * 24 * 60 * 60 * 1000).toISOString(),

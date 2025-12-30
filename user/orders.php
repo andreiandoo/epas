@@ -3,11 +3,24 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Comenzile mele';
 $currentPage = 'orders';
 require_once dirname(__DIR__) . '/includes/head.php';
-require_once dirname(__DIR__) . '/includes/user-header.php';
+require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
-    <!-- Main Content -->
-    <main class="max-w-4xl mx-auto px-4 py-6 lg:py-8">
+<style>
+    .order-details { display: none; }
+    .order-card.expanded .order-details { display: block; }
+    .order-card .expand-icon { transition: transform 0.2s ease; }
+    .order-card.expanded .expand-icon { transform: rotate(180deg); }
+</style>
+
+<!-- Main Container with Sidebar -->
+<div class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
+    <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Sidebar -->
+        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
+
+        <!-- Main Content -->
+        <main class="flex-1 min-w-0">
         <!-- Page Header -->
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
@@ -54,9 +67,11 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
                 Incarca mai multe comenzi
             </button>
         </div>
-    </main>
+        </main>
+    </div>
+</div>
 
-<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'
@@ -71,7 +86,7 @@ const UserOrders = {
 
     async init() {
         if (!AmbiletAuth.isAuthenticated()) {
-            window.location.href = '/login?redirect=/user/orders';
+            window.location.href = '/autentificare?redirect=/cont/comenzi';
             return;
         }
         this.loadUserInfo();
@@ -295,7 +310,7 @@ const UserOrders = {
 
             <div class="flex flex-wrap gap-2 pt-4 border-t border-border">
                 ${order.status === 'confirmed' ? `
-                <a href="/user/tickets" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">
+                <a href="/cont/bilete" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                     Vezi biletele
                 </a>

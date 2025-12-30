@@ -3,7 +3,7 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Favorite';
 $currentPage = 'watchlist';
 require_once dirname(__DIR__) . '/includes/head.php';
-require_once dirname(__DIR__) . '/includes/user-header.php';
+require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
 <style>
@@ -20,8 +20,14 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
     .tab-btn.active { background: white; color: #A51C30; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 </style>
 
-<!-- Main Content -->
-<main class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
+<!-- Main Container with Sidebar -->
+<div class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
+    <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Sidebar -->
+        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
+
+        <!-- Main Content -->
+        <main class="flex-1 min-w-0">
     <!-- Page Header -->
     <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -55,7 +61,7 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
                     <p class="font-semibold text-secondary">Notificari active pentru <span id="notification-count">0</span> evenimente</p>
                     <p class="text-sm text-muted">Vei fi notificat cand biletele devin disponibile sau se apropie de sold out.</p>
                 </div>
-                <a href="/user/settings" class="text-sm font-medium text-primary hover:underline whitespace-nowrap">Gestioneaza →</a>
+                <a href="/cont/setari" class="text-sm font-medium text-primary hover:underline whitespace-nowrap">Gestioneaza →</a>
             </div>
         </div>
 
@@ -78,9 +84,11 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
             <!-- Populated by JavaScript -->
         </div>
     </div>
-</main>
+        </main>
+    </div>
+</div>
 
-<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'

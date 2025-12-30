@@ -3,11 +3,17 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Ajutor & Suport';
 $currentPage = 'help';
 require_once dirname(__DIR__) . '/includes/head.php';
-require_once dirname(__DIR__) . '/includes/user-header.php';
+require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
-    <!-- Main Content -->
-    <main class="max-w-5xl mx-auto px-4 py-6 lg:py-8">
+<!-- Main Container with Sidebar -->
+<div class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
+    <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Sidebar -->
+        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
+
+        <!-- Main Content -->
+        <main class="flex-1 min-w-0">
         <!-- Search Header -->
         <div class="bg-gradient-to-r from-primary via-primary-dark to-secondary rounded-2xl p-6 lg:p-10 mb-8 text-white text-center relative overflow-hidden">
             <div class="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
@@ -213,9 +219,11 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
         <div class="mt-8 text-center">
             <p class="text-sm text-muted">Program suport: Luni - Vineri 09:00 - 20:00 - Sambata 10:00 - 16:00</p>
         </div>
-    </main>
+        </main>
+    </div>
+</div>
 
-<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'

@@ -3,11 +3,17 @@ require_once dirname(__DIR__) . '/includes/config.php';
 $pageTitle = 'Setari';
 $currentPage = 'settings';
 require_once dirname(__DIR__) . '/includes/head.php';
-require_once dirname(__DIR__) . '/includes/user-header.php';
+require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
-    <!-- Main Content -->
-    <main class="max-w-4xl mx-auto px-4 py-6 lg:py-8">
+<!-- Main Container with Sidebar -->
+<div class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
+    <div class="flex flex-col lg:flex-row gap-6">
+        <!-- Sidebar -->
+        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
+
+        <!-- Main Content -->
+        <main class="flex-1 min-w-0">
         <h1 class="text-2xl font-bold text-secondary mb-6">Setari</h1>
 
         <div class="space-y-6">
@@ -135,7 +141,7 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
                         <h2 class="text-lg font-bold text-secondary">Metode de plata</h2>
                         <p class="text-sm text-muted mt-1">Gestioneaza cardurile salvate si metodele de plata</p>
                     </div>
-                    <a href="/user/payments" class="btn btn-primary">
+                    <a href="/cont/plati" class="btn btn-primary">
                         Gestioneaza
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     </a>
@@ -149,9 +155,11 @@ require_once dirname(__DIR__) . '/includes/user-header.php';
                 </button>
             </div>
         </div>
-    </main>
+        </main>
+    </div>
+</div>
 
-<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'
@@ -159,7 +167,7 @@ $scriptsExtra = <<<'JS'
 const SettingsPage = {
     init() {
         if (!AmbiletAuth.isAuthenticated()) {
-            window.location.href = '/login?redirect=/user/settings';
+            window.location.href = '/autentificare?redirect=/cont/setari';
             return;
         }
 
