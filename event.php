@@ -805,7 +805,7 @@ const EventPage = {
         const points = Math.floor(subtotal / 10);
 
         // Update header cart count
-        document.getElementById('headerCartCount').textContent = totalTickets;
+        this.updateHeaderCart();
 
         // Show/hide cart summary
         const cartSummary = document.getElementById('cartSummary');
