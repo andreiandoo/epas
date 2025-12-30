@@ -33,157 +33,157 @@ require_once dirname(__DIR__) . '/includes/header.php';
 </style>
 
 <!-- Main Container with Sidebar -->
-<div class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
-    <div class="flex flex-col lg:flex-row gap-6">
+<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
+    <div class="flex flex-col gap-6 lg:flex-row">
         <!-- Sidebar -->
         <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
 
         <!-- Main Content -->
-        <main class="flex-1 min-w-0">
-    <!-- Points Overview Hero -->
-    <div class="bg-gradient-to-r from-primary via-primary-dark to-secondary rounded-2xl lg:rounded-3xl p-6 lg:p-8 mb-6 text-white relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
-        <div class="absolute bottom-0 left-1/4 w-32 h-32 bg-white/5 rounded-full translate-y-1/2"></div>
+        <main class="flex-1 min-w-0 lg:pt-24">
+            <!-- Points Overview Hero -->
+            <div class="relative p-6 mb-6 overflow-hidden text-white bg-gradient-to-r from-primary via-primary-dark to-secondary rounded-2xl lg:rounded-3xl lg:p-8">
+                <div class="absolute top-0 right-0 w-64 h-64 translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5"></div>
+                <div class="absolute bottom-0 w-32 h-32 translate-y-1/2 rounded-full left-1/4 bg-white/5"></div>
 
-        <div class="relative">
-            <div class="grid lg:grid-cols-3 gap-6 lg:gap-8">
-                <!-- Points Balance -->
-                <div class="lg:col-span-1">
-                    <p class="text-white/70 text-sm mb-1">Punctele tale</p>
-                    <div class="flex items-baseline gap-2">
-                        <span class="text-4xl lg:text-5xl font-extrabold" id="user-points">0</span>
-                        <span class="text-white/70">puncte</span>
-                    </div>
-                    <p class="text-sm text-white/60 mt-2" id="points-value">≈ 0 lei reducere</p>
-                </div>
-
-                <!-- Level Progress -->
-                <div class="lg:col-span-2">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                                <span class="text-2xl">🎸</span>
+                <div class="relative">
+                    <div class="grid gap-6 lg:grid-cols-3 lg:gap-8">
+                        <!-- Points Balance -->
+                        <div class="lg:col-span-1">
+                            <p class="mb-1 text-sm text-white/70">Punctele tale</p>
+                            <div class="flex items-baseline gap-2">
+                                <span class="text-4xl font-extrabold lg:text-5xl" id="user-points">0</span>
+                                <span class="text-white/70">puncte</span>
                             </div>
-                            <div>
-                                <p class="font-bold text-lg" id="level-info">Nivel 0 - Loading...</p>
-                                <p class="text-sm text-white/70" id="level-remaining">... XP pana la nivelul urmator</p>
+                            <p class="mt-2 text-sm text-white/60" id="points-value">≈ 0 lei reducere</p>
+                        </div>
+
+                        <!-- Level Progress -->
+                        <div class="lg:col-span-2">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center justify-center w-12 h-12 bg-white/20 rounded-xl">
+                                        <span class="text-2xl">🎸</span>
+                                    </div>
+                                    <div>
+                                        <p class="text-lg font-bold" id="level-info">Nivel 0 - Loading...</p>
+                                        <p class="text-sm text-white/70" id="level-remaining">... XP pana la nivelul urmator</p>
+                                    </div>
+                                </div>
+                                <div class="hidden text-right sm:block">
+                                    <p class="text-2xl font-bold" id="xp-progress">0 / 0</p>
+                                    <p class="text-xs text-white/70">XP</p>
+                                </div>
+                            </div>
+                            <div class="h-4 overflow-hidden rounded-full bg-white/20">
+                                <div class="h-full transition-all duration-1000 rounded-full level-progress" style="width: 0%" id="level-bar"></div>
+                            </div>
+                            <div class="flex justify-between mt-2 text-xs text-white/60">
+                                <span id="level-current">Nivel 0</span>
+                                <span id="level-next">Nivel 1 - Loading...</span>
                             </div>
                         </div>
-                        <div class="text-right hidden sm:block">
-                            <p class="text-2xl font-bold" id="xp-progress">0 / 0</p>
-                            <p class="text-xs text-white/70">XP</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex gap-2 p-1 mb-6 overflow-x-auto bg-surface rounded-xl w-fit">
+                <button onclick="showTab('rewards')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn active whitespace-nowrap" id="tab-btn-rewards">
+                    Recompense
+                </button>
+                <button onclick="showTab('badges')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn text-muted whitespace-nowrap" id="tab-btn-badges">
+                    Badge-uri (<span id="badges-count">0/0</span>)
+                </button>
+                <button onclick="showTab('history')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn text-muted whitespace-nowrap" id="tab-btn-history">
+                    Istoric puncte
+                </button>
+                <button onclick="showTab('levels')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn text-muted whitespace-nowrap" id="tab-btn-levels">
+                    Niveluri
+                </button>
+            </div>
+
+            <!-- Rewards Tab -->
+            <div id="tab-rewards">
+                <div class="mb-6">
+                    <h2 class="mb-2 text-xl font-bold text-secondary">Foloseste-ti punctele</h2>
+                    <p class="text-muted">Schimba punctele acumulate pentru reduceri si beneficii exclusive.</p>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6" id="rewards-container">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Badges Tab -->
+            <div id="tab-badges" class="hidden">
+                <div class="mb-6">
+                    <h2 class="mb-2 text-xl font-bold text-secondary">Colectia ta de badge-uri</h2>
+                    <p class="text-muted" id="badges-desc">Loading...</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5" id="badges-container">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- History Tab -->
+            <div id="tab-history" class="hidden">
+                <div class="overflow-hidden bg-white border rounded-xl lg:rounded-2xl border-border">
+                    <div class="p-4 border-b lg:p-5 border-border">
+                        <h2 class="font-bold text-secondary">Istoric puncte</h2>
+                    </div>
+                    <div class="divide-y divide-border" id="history-container">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                    <div class="p-4 text-center border-t border-border">
+                        <button class="text-sm font-medium text-primary hover:underline">Incarca mai mult</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Levels Tab -->
+            <div id="tab-levels" class="hidden">
+                <div class="mb-6">
+                    <h2 class="mb-2 text-xl font-bold text-secondary">Sistemul de niveluri</h2>
+                    <p class="text-muted">Acumuleaza XP pentru a avansa in nivel si a debloca recompense exclusive.</p>
+                </div>
+
+                <div class="space-y-4" id="levels-container">
+                    <!-- Populated by JavaScript -->
+                </div>
+
+                <!-- How to earn XP -->
+                <div class="p-5 mt-8 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
+                    <h3 class="mb-4 font-bold text-secondary">Cum castigi XP?</h3>
+                    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div class="p-4 text-center bg-surface rounded-xl">
+                            <div class="mb-2 text-2xl">🎫</div>
+                            <p class="font-semibold text-secondary">Cumpara bilete</p>
+                            <p class="text-sm font-medium text-success">+2 XP / leu</p>
+                        </div>
+                        <div class="p-4 text-center bg-surface rounded-xl">
+                            <div class="mb-2 text-2xl">✅</div>
+                            <p class="font-semibold text-secondary">Check-in</p>
+                            <p class="text-sm font-medium text-success">+50 XP</p>
+                        </div>
+                        <div class="p-4 text-center bg-surface rounded-xl">
+                            <div class="mb-2 text-2xl">⭐</div>
+                            <p class="font-semibold text-secondary">Lasa o recenzie</p>
+                            <p class="text-sm font-medium text-success">+30 XP</p>
+                        </div>
+                        <div class="p-4 text-center bg-surface rounded-xl">
+                            <div class="mb-2 text-2xl">👥</div>
+                            <p class="font-semibold text-secondary">Invita prieteni</p>
+                            <p class="text-sm font-medium text-success">+100 XP</p>
                         </div>
                     </div>
-                    <div class="h-4 bg-white/20 rounded-full overflow-hidden">
-                        <div class="level-progress h-full rounded-full transition-all duration-1000" style="width: 0%" id="level-bar"></div>
-                    </div>
-                    <div class="flex justify-between mt-2 text-xs text-white/60">
-                        <span id="level-current">Nivel 0</span>
-                        <span id="level-next">Nivel 1 - Loading...</span>
-                    </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="flex gap-2 p-1 bg-surface rounded-xl mb-6 w-fit overflow-x-auto">
-        <button onclick="showTab('rewards')" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap" id="tab-btn-rewards">
-            Recompense
-        </button>
-        <button onclick="showTab('badges')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-muted whitespace-nowrap" id="tab-btn-badges">
-            Badge-uri (<span id="badges-count">0/0</span>)
-        </button>
-        <button onclick="showTab('history')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-muted whitespace-nowrap" id="tab-btn-history">
-            Istoric puncte
-        </button>
-        <button onclick="showTab('levels')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-muted whitespace-nowrap" id="tab-btn-levels">
-            Niveluri
-        </button>
-    </div>
-
-    <!-- Rewards Tab -->
-    <div id="tab-rewards">
-        <div class="mb-6">
-            <h2 class="text-xl font-bold text-secondary mb-2">Foloseste-ti punctele</h2>
-            <p class="text-muted">Schimba punctele acumulate pentru reduceri si beneficii exclusive.</p>
-        </div>
-
-        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6" id="rewards-container">
-            <!-- Populated by JavaScript -->
-        </div>
-    </div>
-
-    <!-- Badges Tab -->
-    <div id="tab-badges" class="hidden">
-        <div class="mb-6">
-            <h2 class="text-xl font-bold text-secondary mb-2">Colectia ta de badge-uri</h2>
-            <p class="text-muted" id="badges-desc">Loading...</p>
-        </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4" id="badges-container">
-            <!-- Populated by JavaScript -->
-        </div>
-    </div>
-
-    <!-- History Tab -->
-    <div id="tab-history" class="hidden">
-        <div class="bg-white rounded-xl lg:rounded-2xl border border-border overflow-hidden">
-            <div class="p-4 lg:p-5 border-b border-border">
-                <h2 class="font-bold text-secondary">Istoric puncte</h2>
-            </div>
-            <div class="divide-y divide-border" id="history-container">
-                <!-- Populated by JavaScript -->
-            </div>
-            <div class="p-4 text-center border-t border-border">
-                <button class="text-primary font-medium text-sm hover:underline">Incarca mai mult</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Levels Tab -->
-    <div id="tab-levels" class="hidden">
-        <div class="mb-6">
-            <h2 class="text-xl font-bold text-secondary mb-2">Sistemul de niveluri</h2>
-            <p class="text-muted">Acumuleaza XP pentru a avansa in nivel si a debloca recompense exclusive.</p>
-        </div>
-
-        <div class="space-y-4" id="levels-container">
-            <!-- Populated by JavaScript -->
-        </div>
-
-        <!-- How to earn XP -->
-        <div class="mt-8 bg-white rounded-xl lg:rounded-2xl border border-border p-5 lg:p-6">
-            <h3 class="font-bold text-secondary mb-4">Cum castigi XP?</h3>
-            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="text-center p-4 bg-surface rounded-xl">
-                    <div class="text-2xl mb-2">🎫</div>
-                    <p class="font-semibold text-secondary">Cumpara bilete</p>
-                    <p class="text-sm text-success font-medium">+2 XP / leu</p>
-                </div>
-                <div class="text-center p-4 bg-surface rounded-xl">
-                    <div class="text-2xl mb-2">✅</div>
-                    <p class="font-semibold text-secondary">Check-in</p>
-                    <p class="text-sm text-success font-medium">+50 XP</p>
-                </div>
-                <div class="text-center p-4 bg-surface rounded-xl">
-                    <div class="text-2xl mb-2">⭐</div>
-                    <p class="font-semibold text-secondary">Lasa o recenzie</p>
-                    <p class="text-sm text-success font-medium">+30 XP</p>
-                </div>
-                <div class="text-center p-4 bg-surface rounded-xl">
-                    <div class="text-2xl mb-2">👥</div>
-                    <p class="font-semibold text-secondary">Invita prieteni</p>
-                    <p class="text-sm text-success font-medium">+100 XP</p>
-                </div>
-            </div>
-        </div>
-    </div>
         </main>
     </div>
 </div>
 
-<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'
@@ -245,24 +245,24 @@ function renderRewards(rewards) {
 
         let statusBadge = '';
         if (reward.status === 'available') {
-            statusBadge = '<span class="px-3 py-1 bg-success/10 text-success text-xs font-bold rounded-full">DISPONIBIL</span>';
+            statusBadge = '<span class="px-3 py-1 text-xs font-bold rounded-full bg-success/10 text-success">DISPONIBIL</span>';
         } else if (isLocked) {
-            statusBadge = `<span class="px-3 py-1 bg-muted/20 text-muted text-xs font-bold rounded-full">${reward.lock_reason}</span>`;
+            statusBadge = `<span class="px-3 py-1 text-xs font-bold rounded-full bg-muted/20 text-muted">${reward.lock_reason}</span>`;
         } else if (isInsufficient) {
-            statusBadge = `<span class="px-3 py-1 bg-warning/10 text-warning text-xs font-bold rounded-full">${(reward.missing || 0).toLocaleString()} LIPSA</span>`;
+            statusBadge = `<span class="px-3 py-1 text-xs font-bold rounded-full bg-warning/10 text-warning">${(reward.missing || 0).toLocaleString()} LIPSA</span>`;
         } else if (isExclusive) {
-            statusBadge = '<span class="px-3 py-1 bg-accent text-white text-xs font-bold rounded-full">EXCLUSIV</span>';
+            statusBadge = '<span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-accent">EXCLUSIV</span>';
         }
 
         let actionBtn = '';
         if (reward.status === 'available') {
-            actionBtn = '<button class="btn-primary px-4 py-2 text-white text-sm font-semibold rounded-lg">Revendica</button>';
+            actionBtn = '<button class="px-4 py-2 text-sm font-semibold text-white rounded-lg btn-primary">Revendica</button>';
         } else if (isLocked) {
-            actionBtn = '<button class="px-4 py-2 bg-surface text-muted text-sm font-semibold rounded-lg cursor-not-allowed">Blocat</button>';
+            actionBtn = '<button class="px-4 py-2 text-sm font-semibold rounded-lg cursor-not-allowed bg-surface text-muted">Blocat</button>';
         } else if (isInsufficient) {
-            actionBtn = '<button class="px-4 py-2 bg-surface text-muted text-sm font-semibold rounded-lg cursor-not-allowed">Insuficient</button>';
+            actionBtn = '<button class="px-4 py-2 text-sm font-semibold rounded-lg cursor-not-allowed bg-surface text-muted">Insuficient</button>';
         } else if (isExclusive) {
-            actionBtn = `<button class="px-4 py-2 bg-surface text-muted text-sm font-semibold rounded-lg cursor-not-allowed">${(reward.missing || 0).toLocaleString()} lipsa</button>`;
+            actionBtn = `<button class="px-4 py-2 text-sm font-semibold rounded-lg cursor-not-allowed bg-surface text-muted">${(reward.missing || 0).toLocaleString()} lipsa</button>`;
         }
 
         const iconColor = (isLocked || isInsufficient || isExclusive) ? 'text-muted' : 'text-accent';
@@ -276,8 +276,8 @@ function renderRewards(rewards) {
                     </div>
                     ${statusBadge}
                 </div>
-                <h3 class="font-bold text-secondary mb-1">${reward.title}</h3>
-                <p class="text-sm text-muted mb-4">${reward.desc}</p>
+                <h3 class="mb-1 font-bold text-secondary">${reward.title}</h3>
+                <p class="mb-4 text-sm text-muted">${reward.desc}</p>
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-1">
                         <svg class="w-5 h-5 ${iconColor}" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
@@ -294,23 +294,23 @@ function renderBadges(badges) {
     const container = document.getElementById('badges-container');
 
     const unlockedHtml = (badges.unlocked || []).map(badge => `
-        <div class="badge-card bg-white rounded-xl border border-border p-4 text-center">
+        <div class="p-4 text-center bg-white border badge-card rounded-xl border-border">
             <div class="w-16 h-16 mx-auto mb-3 bg-gradient-to-br ${badge.gradient} rounded-2xl flex items-center justify-center text-3xl">
                 ${badge.emoji}
             </div>
-            <h4 class="font-bold text-secondary text-sm">${badge.name}</h4>
-            <p class="text-xs text-muted mt-1">${badge.desc}</p>
+            <h4 class="text-sm font-bold text-secondary">${badge.name}</h4>
+            <p class="mt-1 text-xs text-muted">${badge.desc}</p>
             <span class="inline-block mt-2 px-2 py-0.5 bg-success/10 text-success text-xs font-semibold rounded">+${badge.xp} XP</span>
         </div>
     `).join('');
 
     const lockedHtml = (badges.locked || []).map(badge => `
-        <div class="badge-card badge-locked bg-white rounded-xl border border-border p-4 text-center">
-            <div class="w-16 h-16 mx-auto mb-3 bg-gradient-to-br from-gray-300 to-gray-400 rounded-2xl flex items-center justify-center text-3xl">
+        <div class="p-4 text-center bg-white border badge-card badge-locked rounded-xl border-border">
+            <div class="flex items-center justify-center w-16 h-16 mx-auto mb-3 text-3xl bg-gradient-to-br from-gray-300 to-gray-400 rounded-2xl">
                 ${badge.emoji}
             </div>
-            <h4 class="font-bold text-secondary text-sm">${badge.name}</h4>
-            <p class="text-xs text-muted mt-1">${badge.desc}</p>
+            <h4 class="text-sm font-bold text-secondary">${badge.name}</h4>
+            <p class="mt-1 text-xs text-muted">${badge.desc}</p>
             <span class="inline-block mt-2 px-2 py-0.5 bg-muted/20 text-muted text-xs font-semibold rounded">${badge.missing}</span>
         </div>
     `).join('');
@@ -338,7 +338,7 @@ function renderHistory(history) {
         }
 
         return `
-            <div class="p-4 lg:p-5 flex items-center justify-between">
+            <div class="flex items-center justify-between p-4 lg:p-5">
                 <div class="flex items-center gap-4">
                     <div class="w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center">
                         ${iconSvg}
@@ -370,7 +370,7 @@ function renderLevels(levels, userLevel, userPoints) {
 
         let statusText = '';
         if (isCompleted) {
-            statusText = '<span class="text-sm text-success font-medium">✓ Completat</span>';
+            statusText = '<span class="text-sm font-medium text-success">✓ Completat</span>';
         } else if (isCurrent) {
             statusText = '<span class="px-2 py-0.5 bg-primary text-white text-xs font-bold rounded">ACTUAL</span>';
         } else {
@@ -378,10 +378,10 @@ function renderLevels(levels, userLevel, userPoints) {
         }
 
         const currentProgress = isCurrent ? `
-            <div class="h-2 bg-border rounded-full overflow-hidden mt-2">
-                <div class="h-full bg-primary rounded-full" style="width: 38%"></div>
+            <div class="h-2 mt-2 overflow-hidden rounded-full bg-border">
+                <div class="h-full rounded-full bg-primary" style="width: 38%"></div>
             </div>
-            <p class="text-xs text-muted mt-1">${userPoints.toLocaleString()} / 4,000 XP (Nivel ${userLevel})</p>
+            <p class="mt-1 text-xs text-muted">${userPoints.toLocaleString()} / 4,000 XP (Nivel ${userLevel})</p>
         ` : '';
 
         return `

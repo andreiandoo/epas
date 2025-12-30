@@ -906,8 +906,7 @@ const EventPage = {
     },
 
     updateHeaderCart() {
-        const cart = AmbiletCart.getCart();
-        const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+        const count = AmbiletCart.getItemCount();
         document.getElementById('headerCartCount').textContent = count;
     }
 };

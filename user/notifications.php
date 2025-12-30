@@ -7,79 +7,79 @@ require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
 <!-- Main Container with Sidebar -->
-<div class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
-    <div class="flex flex-col lg:flex-row gap-6">
+<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
+    <div class="flex flex-col gap-6 lg:flex-row">
         <!-- Sidebar -->
         <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
 
         <!-- Main Content -->
-        <main class="flex-1 min-w-0">
+        <main class="flex-1 min-w-0 lg:pt-24">
         <!-- Page Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-secondary">Notificari</h1>
-                <p class="text-muted text-sm mt-1" id="unread-count">Se incarca...</p>
+                <p class="mt-1 text-sm text-muted" id="unread-count">Se incarca...</p>
             </div>
             <div class="flex items-center gap-2">
-                <button onclick="markAllRead()" class="px-4 py-2 text-sm font-medium text-primary hover:bg-primary/10 rounded-xl transition-colors">
+                <button onclick="markAllRead()" class="px-4 py-2 text-sm font-medium transition-colors text-primary hover:bg-primary/10 rounded-xl">
                     Marcheaza toate ca citite
                 </button>
-                <a href="/cont/setari" class="p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-xl transition-colors" title="Setari notificari">
+                <a href="/cont/setari" class="p-2 transition-colors text-muted hover:text-primary hover:bg-primary/10 rounded-xl" title="Setari notificari">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </a>
             </div>
         </div>
 
         <!-- Tabs -->
-        <div class="flex gap-2 p-1 bg-surface rounded-xl mb-6 w-fit overflow-x-auto">
-            <button onclick="showTab('all')" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap" data-tab="all">
+        <div class="flex gap-2 p-1 mb-6 overflow-x-auto bg-surface rounded-xl w-fit">
+            <button onclick="showTab('all')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn active whitespace-nowrap" data-tab="all">
                 Toate (<span id="count-all">0</span>)
             </button>
-            <button onclick="showTab('unread')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-muted whitespace-nowrap" data-tab="unread">
+            <button onclick="showTab('unread')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn text-muted whitespace-nowrap" data-tab="unread">
                 Necitite (<span id="count-unread">0</span>)
             </button>
-            <button onclick="showTab('events')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-muted whitespace-nowrap" data-tab="events">
+            <button onclick="showTab('events')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn text-muted whitespace-nowrap" data-tab="events">
                 Evenimente
             </button>
-            <button onclick="showTab('rewards')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-muted whitespace-nowrap" data-tab="rewards">
+            <button onclick="showTab('rewards')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn text-muted whitespace-nowrap" data-tab="rewards">
                 Recompense
             </button>
         </div>
 
         <!-- Notifications List -->
-        <div class="bg-white rounded-xl lg:rounded-2xl border border-border overflow-hidden" id="notifications-container">
+        <div class="overflow-hidden bg-white border rounded-xl lg:rounded-2xl border-border" id="notifications-container">
             <!-- Loading -->
             <div class="p-4 animate-pulse" id="loading-state">
                 <div class="flex gap-4">
                     <div class="w-12 h-12 bg-muted/20 rounded-xl"></div>
                     <div class="flex-1">
-                        <div class="h-4 bg-muted/20 rounded w-2/3 mb-2"></div>
-                        <div class="h-3 bg-muted/20 rounded w-1/2"></div>
+                        <div class="w-2/3 h-4 mb-2 rounded bg-muted/20"></div>
+                        <div class="w-1/2 h-3 rounded bg-muted/20"></div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Load More -->
-        <div class="text-center mt-6" id="load-more-container" style="display: none;">
+        <div class="mt-6 text-center" id="load-more-container" style="display: none;">
             <button onclick="loadMore()" class="px-6 py-2.5 bg-surface text-secondary font-medium rounded-xl text-sm hover:bg-primary/10 hover:text-primary transition-colors">
                 Incarca mai multe
             </button>
         </div>
 
         <!-- Empty State -->
-        <div class="hidden text-center py-12" id="empty-state">
-            <svg class="w-16 h-16 text-muted/30 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="hidden py-12 text-center" id="empty-state">
+            <svg class="w-16 h-16 mx-auto mb-4 text-muted/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
             </svg>
-            <p class="text-muted mb-2">Nu ai notificari</p>
-            <a href="/" class="text-primary text-sm font-medium hover:underline">Descopera evenimente</a>
+            <p class="mb-2 text-muted">Nu ai notificari</p>
+            <a href="/" class="text-sm font-medium text-primary hover:underline">Descopera evenimente</a>
         </div>
         </main>
     </div>
 </div>
 
-<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'
@@ -265,8 +265,8 @@ const NotificationsPage = {
         let html = '';
         for (const [label, items] of Object.entries(groups)) {
             html += `
-                <div class="px-4 py-3 bg-surface border-b border-border">
-                    <p class="text-xs font-semibold text-muted uppercase">${label}</p>
+                <div class="px-4 py-3 border-b bg-surface border-border">
+                    <p class="text-xs font-semibold uppercase text-muted">${label}</p>
                 </div>
             `;
 
@@ -335,12 +335,12 @@ const NotificationsPage = {
                         <div class="flex items-start justify-between gap-2">
                             <div>
                                 <p class="font-${notification.is_read ? 'medium' : 'semibold'} text-secondary">${notification.title}</p>
-                                <p class="text-sm text-muted mt-1">${notification.message}</p>
+                                <p class="mt-1 text-sm text-muted">${notification.message}</p>
                             </div>
-                            ${!notification.is_read ? '<span class="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-2"></span>' : ''}
+                            ${!notification.is_read ? '<span class="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-primary"></span>' : ''}
                         </div>
                         <div class="flex items-center gap-3 mt-3">
-                            ${notification.action_url ? `<a href="${notification.action_url}" class="text-sm text-primary font-medium hover:underline" onclick="event.stopPropagation()">${notification.action_text}</a>` : ''}
+                            ${notification.action_url ? `<a href="${notification.action_url}" class="text-sm font-medium text-primary hover:underline" onclick="event.stopPropagation()">${notification.action_text}</a>` : ''}
                             <span class="text-xs text-muted">${timeAgo}</span>
                         </div>
                     </div>

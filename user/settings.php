@@ -7,22 +7,22 @@ require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
 <!-- Main Container with Sidebar -->
-<div class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
-    <div class="flex flex-col lg:flex-row gap-6">
+<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
+    <div class="flex flex-col gap-6 lg:flex-row">
         <!-- Sidebar -->
         <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
 
         <!-- Main Content -->
-        <main class="flex-1 min-w-0">
-        <h1 class="text-2xl font-bold text-secondary mb-6">Setari</h1>
+        <main class="flex-1 min-w-0 lg:pt-24">
+        <h1 class="mb-6 text-2xl font-bold text-secondary">Setari</h1>
 
         <div class="space-y-6">
             <!-- Notifications -->
-            <div class="bg-white rounded-2xl border border-border p-6">
-                <h2 class="text-lg font-bold text-secondary mb-4">Notificari email</h2>
+            <div class="p-6 bg-white border rounded-2xl border-border">
+                <h2 class="mb-4 text-lg font-bold text-secondary">Notificari email</h2>
 
                 <div class="space-y-4">
-                    <label class="flex items-center justify-between p-3 bg-surface rounded-xl cursor-pointer">
+                    <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
                         <div>
                             <p class="font-medium text-secondary">Confirmare comenzi</p>
                             <p class="text-sm text-muted">Primeste email cu detaliile comenzii si biletele</p>
@@ -30,7 +30,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         <input type="checkbox" class="toggle" id="notif-orders" checked disabled>
                     </label>
 
-                    <label class="flex items-center justify-between p-3 bg-surface rounded-xl cursor-pointer">
+                    <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
                         <div>
                             <p class="font-medium text-secondary">Remindere evenimente</p>
                             <p class="text-sm text-muted">Primeste reminder cu 24h inainte de eveniment</p>
@@ -38,7 +38,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         <input type="checkbox" class="toggle" id="notif-reminders" checked>
                     </label>
 
-                    <label class="flex items-center justify-between p-3 bg-surface rounded-xl cursor-pointer">
+                    <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
                         <div>
                             <p class="font-medium text-secondary">Newsletter si oferte</p>
                             <p class="text-sm text-muted">Afla despre evenimente noi si oferte speciale</p>
@@ -46,7 +46,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         <input type="checkbox" class="toggle" id="notif-newsletter">
                     </label>
 
-                    <label class="flex items-center justify-between p-3 bg-surface rounded-xl cursor-pointer">
+                    <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
                         <div>
                             <p class="font-medium text-secondary">Actualizari favorite</p>
                             <p class="text-sm text-muted">Primeste notificari cand evenimentele favorite se apropie</p>
@@ -57,10 +57,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
 
             <!-- Language & Region -->
-            <div class="bg-white rounded-2xl border border-border p-6">
-                <h2 class="text-lg font-bold text-secondary mb-4">Limba si regiune</h2>
+            <div class="p-6 bg-white border rounded-2xl border-border">
+                <h2 class="mb-4 text-lg font-bold text-secondary">Limba si regiune</h2>
 
-                <div class="grid md:grid-cols-2 gap-4">
+                <div class="grid gap-4 md:grid-cols-2">
                     <div>
                         <label class="label">Limba</label>
                         <select class="input" id="language">
@@ -74,17 +74,17 @@ require_once dirname(__DIR__) . '/includes/header.php';
                             <option value="RON" selected>RON (Lei)</option>
                             <option value="EUR">EUR (Euro)</option>
                         </select>
-                        <p class="text-xs text-muted mt-1">Moneda este determinata automat</p>
+                        <p class="mt-1 text-xs text-muted">Moneda este determinata automat</p>
                     </div>
                 </div>
             </div>
 
             <!-- Privacy -->
-            <div class="bg-white rounded-2xl border border-border p-6">
-                <h2 class="text-lg font-bold text-secondary mb-4">Confidentialitate</h2>
+            <div class="p-6 bg-white border rounded-2xl border-border">
+                <h2 class="mb-4 text-lg font-bold text-secondary">Confidentialitate</h2>
 
                 <div class="space-y-4">
-                    <label class="flex items-center justify-between p-3 bg-surface rounded-xl cursor-pointer">
+                    <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
                         <div>
                             <p class="font-medium text-secondary">Istoric de navigare</p>
                             <p class="text-sm text-muted">Salveaza evenimentele vizualizate pentru recomandari personalizate</p>
@@ -92,7 +92,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         <input type="checkbox" class="toggle" id="privacy-history" checked>
                     </label>
 
-                    <label class="flex items-center justify-between p-3 bg-surface rounded-xl cursor-pointer">
+                    <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
                         <div>
                             <p class="font-medium text-secondary">Cookies de marketing</p>
                             <p class="text-sm text-muted">Permite afisarea de reclame personalizate</p>
@@ -101,7 +101,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     </label>
                 </div>
 
-                <div class="mt-4 pt-4 border-t border-border">
+                <div class="pt-4 mt-4 border-t border-border">
                     <button onclick="downloadData()" class="text-sm text-primary hover:underline">
                         Descarca datele mele personale
                     </button>
@@ -109,13 +109,13 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
 
             <!-- Sessions -->
-            <div class="bg-white rounded-2xl border border-border p-6">
-                <h2 class="text-lg font-bold text-secondary mb-4">Sesiuni active</h2>
+            <div class="p-6 bg-white border rounded-2xl border-border">
+                <h2 class="mb-4 text-lg font-bold text-secondary">Sesiuni active</h2>
 
                 <div class="space-y-3" id="sessions-list">
                     <div class="flex items-center justify-between p-3 bg-surface rounded-xl">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
+                            <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-success/10">
                                 <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                                 </svg>
@@ -135,11 +135,11 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
 
             <!-- Payment Methods Link -->
-            <div class="bg-white rounded-2xl border border-border p-6">
+            <div class="p-6 bg-white border rounded-2xl border-border">
                 <div class="flex items-center justify-between">
                     <div>
                         <h2 class="text-lg font-bold text-secondary">Metode de plata</h2>
-                        <p class="text-sm text-muted mt-1">Gestioneaza cardurile salvate si metodele de plata</p>
+                        <p class="mt-1 text-sm text-muted">Gestioneaza cardurile salvate si metodele de plata</p>
                     </div>
                     <a href="/cont/plati" class="btn btn-primary">
                         Gestioneaza
@@ -159,7 +159,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
     </div>
 </div>
 
-<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'

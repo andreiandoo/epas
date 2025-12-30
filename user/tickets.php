@@ -16,18 +16,18 @@ require_once dirname(__DIR__) . '/includes/header.php';
 </style>
 
 <!-- Main Container with Sidebar -->
-<div class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
-    <div class="flex flex-col lg:flex-row gap-6">
+<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
+    <div class="flex flex-col gap-6 lg:flex-row">
         <!-- Sidebar -->
         <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
 
         <!-- Main Content -->
-        <main class="flex-1 min-w-0">
+        <main class="flex-1 min-w-0 lg:pt-24">
         <!-- Page Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-secondary">Biletele mele</h1>
-                <p class="text-muted text-sm mt-1">Vizualizeaza si descarca biletele tale</p>
+                <p class="mt-1 text-sm text-muted">Vizualizeaza si descarca biletele tale</p>
             </div>
             <button onclick="window.print()" class="no-print flex items-center gap-2 px-4 py-2.5 bg-surface text-secondary rounded-xl text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
@@ -37,19 +37,19 @@ require_once dirname(__DIR__) . '/includes/header.php';
 
         <!-- Tabs -->
         <div class="flex gap-2 mb-6 no-print">
-            <button onclick="UserTickets.showTab('upcoming')" class="tab-btn active px-4 py-2 rounded-xl text-sm font-medium" data-tab="upcoming">
+            <button onclick="UserTickets.showTab('upcoming')" class="px-4 py-2 text-sm font-medium tab-btn active rounded-xl" data-tab="upcoming">
                 Viitoare (<span id="upcoming-count">0</span>)
             </button>
-            <button onclick="UserTickets.showTab('past')" class="tab-btn px-4 py-2 rounded-xl text-sm font-medium text-muted bg-surface" data-tab="past">
+            <button onclick="UserTickets.showTab('past')" class="px-4 py-2 text-sm font-medium tab-btn rounded-xl text-muted bg-surface" data-tab="past">
                 Trecute (<span id="past-count">0</span>)
             </button>
         </div>
 
         <!-- Upcoming Tickets -->
         <div id="tab-upcoming" class="space-y-6">
-            <div class="text-center py-8">
-                <div class="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-                <p class="text-muted mt-2">Se incarca biletele...</p>
+            <div class="py-8 text-center">
+                <div class="w-8 h-8 mx-auto border-4 rounded-full animate-spin border-primary border-t-transparent"></div>
+                <p class="mt-2 text-muted">Se incarca biletele...</p>
             </div>
         </div>
 
@@ -57,12 +57,12 @@ require_once dirname(__DIR__) . '/includes/header.php';
         <div id="tab-past" class="hidden space-y-4"></div>
 
         <!-- Empty State -->
-        <div id="empty-state" class="hidden text-center py-16">
-            <div class="w-20 h-20 bg-surface rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <div id="empty-state" class="hidden py-16 text-center">
+            <div class="flex items-center justify-center w-20 h-20 mx-auto mb-4 bg-surface rounded-2xl">
                 <svg class="w-10 h-10 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
             </div>
-            <h3 class="text-lg font-bold text-secondary mb-2">Nu ai bilete inca</h3>
-            <p class="text-muted mb-6">Descopera evenimente interesante si achizitioneaza primul tau bilet!</p>
+            <h3 class="mb-2 text-lg font-bold text-secondary">Nu ai bilete inca</h3>
+            <p class="mb-6 text-muted">Descopera evenimente interesante si achizitioneaza primul tau bilet!</p>
             <a href="/" class="btn btn-primary">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 Descopera evenimente
@@ -72,7 +72,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
     </div>
 </div>
 
-<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'
@@ -138,27 +138,27 @@ const UserTickets = {
     renderUpcoming() {
         const container = document.getElementById('tab-upcoming');
         if (this.tickets.upcoming.length === 0) {
-            container.innerHTML = '<p class="text-center text-muted py-8">Nu ai bilete pentru evenimente viitoare.</p>';
+            container.innerHTML = '<p class="py-8 text-center text-muted">Nu ai bilete pentru evenimente viitoare.</p>';
             return;
         }
 
         container.innerHTML = this.tickets.upcoming.map((ticket, idx) => `
-            <div class="ticket-card bg-white rounded-2xl border border-border overflow-hidden">
+            <div class="overflow-hidden bg-white border ticket-card rounded-2xl border-border">
                 <!-- Event Header -->
-                <div class="p-5 lg:p-6 border-b border-border">
+                <div class="p-5 border-b lg:p-6 border-border">
                     <div class="flex gap-4">
-                        <div class="w-20 h-20 lg:w-24 lg:h-24 rounded-xl overflow-hidden flex-shrink-0">
-                            <img src="${ticket.event.image}" class="w-full h-full object-cover" alt="">
+                        <div class="flex-shrink-0 w-20 h-20 overflow-hidden lg:w-24 lg:h-24 rounded-xl">
+                            <img src="${ticket.event.image}" class="object-cover w-full h-full" alt="">
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2 mb-2 flex-wrap">
+                            <div class="flex flex-wrap items-center gap-2 mb-2">
                                 <span class="px-2 py-0.5 ${ticket.days_until <= 7 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'} text-xs font-bold rounded">IN ${ticket.days_until} ZILE</span>
                                 <span class="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded">${ticket.event.genre}</span>
                                 <span class="px-2 py-0.5 ${ticket.ticket_type === 'VIP' ? 'bg-accent text-white' : 'bg-surface text-secondary'} text-xs font-semibold rounded">${ticket.quantity}x ${ticket.ticket_type}</span>
                             </div>
-                            <h2 class="text-lg lg:text-xl font-bold text-secondary truncate">${ticket.event.title}</h2>
-                            <p class="text-sm text-muted mt-1 hidden sm:block">${ticket.event.subtitle || ''}</p>
-                            <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                            <h2 class="text-lg font-bold truncate lg:text-xl text-secondary">${ticket.event.title}</h2>
+                            <p class="hidden mt-1 text-sm text-muted sm:block">${ticket.event.subtitle || ''}</p>
+                            <div class="flex flex-wrap mt-3 text-sm gap-x-4 gap-y-1">
                                 <span class="flex items-center gap-1.5 text-secondary">
                                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                     ${this.formatDateShort(ticket.event.date)}
@@ -193,7 +193,7 @@ const UserTickets = {
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-${Math.min(ticket.tickets.length, 4)} gap-3">
                         ${ticket.tickets.map((t, i) => `
-                        <div class="ticket-qr bg-white rounded-xl p-3 border border-border text-center">
+                        <div class="p-3 text-center bg-white border ticket-qr rounded-xl border-border">
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-xs text-muted">#${i + 1}</span>
                                 <span class="px-1.5 py-0.5 bg-success/10 text-success text-[10px] font-bold rounded">VALID</span>
@@ -218,7 +218,7 @@ const UserTickets = {
                                 </svg>
                             </div>
                             <p class="text-[10px] text-muted font-mono truncate">${t.code}</p>
-                            <p class="text-xs font-medium text-secondary mt-1">${t.type}</p>
+                            <p class="mt-1 text-xs font-medium text-secondary">${t.type}</p>
                         </div>
                         `).join('')}
                     </div>
@@ -230,15 +230,15 @@ const UserTickets = {
     renderPast() {
         const container = document.getElementById('tab-past');
         if (this.tickets.past.length === 0) {
-            container.innerHTML = '<p class="text-center text-muted py-8">Nu ai bilete pentru evenimente trecute.</p>';
+            container.innerHTML = '<p class="py-8 text-center text-muted">Nu ai bilete pentru evenimente trecute.</p>';
             return;
         }
 
         container.innerHTML = this.tickets.past.map(ticket => `
-            <div class="bg-white rounded-xl border border-border p-4 lg:p-5 opacity-75">
+            <div class="p-4 bg-white border opacity-75 rounded-xl border-border lg:p-5">
                 <div class="flex gap-4">
-                    <div class="w-16 h-16 lg:w-20 lg:h-20 rounded-lg overflow-hidden flex-shrink-0 grayscale">
-                        <img src="${ticket.event.image}" class="w-full h-full object-cover" alt="">
+                    <div class="flex-shrink-0 w-16 h-16 overflow-hidden rounded-lg lg:w-20 lg:h-20 grayscale">
+                        <img src="${ticket.event.image}" class="object-cover w-full h-full" alt="">
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-1">
@@ -247,7 +247,7 @@ const UserTickets = {
                         </div>
                         <h3 class="font-semibold text-secondary">${ticket.event.title}</h3>
                         <p class="text-sm text-muted">${this.formatDateShort(ticket.event.date)} - ${ticket.event.venue}</p>
-                        <p class="text-xs text-muted mt-1">${ticket.quantity}x ${ticket.ticket_type}</p>
+                        <p class="mt-1 text-xs text-muted">${ticket.quantity}x ${ticket.ticket_type}</p>
                     </div>
                 </div>
             </div>

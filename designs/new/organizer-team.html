@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Echipa mea - Dashboard Organizator - AmBilet.ro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #F8FAFC;
+            color: #1E293B;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1E293B, #0F172A);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+
+        .logo-icon { width: 40px; height: 40px; }
+        .logo-text { font-size: 1.5rem; font-weight: 700; }
+        .logo-text .am { color: white; }
+        .logo-text .bilet { color: #f87171; }
+
+        .header-badge {
+            padding: 0.25rem 0.75rem;
+            background: rgba(165, 28, 48, 0.2);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #f87171;
+            margin-left: 0.75rem;
+        }
+
+        /* Layout */
+        .dashboard-layout {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            min-height: calc(100vh - 65px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: white;
+            border-right: 1px solid #E2E8F0;
+            padding: 1.5rem 0;
+            flex-shrink: 0;
+        }
+
+        .sidebar-nav { list-style: none; }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            color: #64748B;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9375rem;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-nav a:hover { background: #F8FAFC; color: #1E293B; }
+        .sidebar-nav a.active { background: #FEF2F2; color: #A51C30; border-left-color: #A51C30; }
+        .sidebar-nav svg { width: 20px; height: 20px; }
+
+        .sidebar-section {
+            padding: 0.5rem 1.5rem;
+            margin-top: 1rem;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #94A3B8;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+        }
+
+        /* Page Header */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #1E293B;
+        }
+
+        .page-header p {
+            font-size: 0.875rem;
+            color: #64748B;
+            margin-top: 0.25rem;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #A51C30, #C41E3A);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(165, 28, 48, 0.3);
+        }
+
+        .btn svg { width: 18px; height: 18px; }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 1rem;
+            border: 1px solid #E2E8F0;
+            padding: 1.25rem;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .stat-icon svg { width: 20px; height: 20px; }
+        .stat-icon.blue { background: #DBEAFE; color: #2563EB; }
+        .stat-icon.green { background: #D1FAE5; color: #059669; }
+        .stat-icon.yellow { background: #FEF3C7; color: #D97706; }
+        .stat-icon.red { background: #FEE2E2; color: #DC2626; }
+
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: #1E293B; }
+        .stat-label { font-size: 0.8125rem; color: #64748B; }
+
+        /* Team Table */
+        .team-card {
+            background: white;
+            border-radius: 1rem;
+            border: 1px solid #E2E8F0;
+            overflow: hidden;
+        }
+
+        .team-card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #E2E8F0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .team-card-header h2 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1E293B;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: #F8FAFC;
+            border: 1px solid #E2E8F0;
+            border-radius: 0.5rem;
+            width: 250px;
+        }
+
+        .search-box svg { width: 18px; height: 18px; color: #94A3B8; }
+
+        .search-box input {
+            border: none;
+            background: transparent;
+            font-size: 0.875rem;
+            color: #1E293B;
+            width: 100%;
+            outline: none;
+        }
+
+        .search-box input::placeholder { color: #94A3B8; }
+
+        .team-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .team-table th {
+            padding: 0.875rem 1.5rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748B;
+            background: #F8FAFC;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .team-table td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #F1F5F9;
+        }
+
+        .team-table tr:last-child td { border-bottom: none; }
+        .team-table tr:hover { background: #FAFAFA; }
+
+        .member-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .member-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: white;
+        }
+
+        .member-avatar.owner { background: linear-gradient(135deg, #A51C30, #C41E3A); }
+        .member-avatar.admin { background: linear-gradient(135deg, #6366F1, #8B5CF6); }
+        .member-avatar.manager { background: linear-gradient(135deg, #10B981, #059669); }
+        .member-avatar.staff { background: linear-gradient(135deg, #64748B, #475569); }
+
+        .member-details h4 {
+            font-size: 0.9375rem;
+            font-weight: 600;
+            color: #1E293B;
+        }
+
+        .member-details p {
+            font-size: 0.8125rem;
+            color: #64748B;
+        }
+
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .role-badge.owner { background: #FEE2E2; color: #991B1B; }
+        .role-badge.admin { background: #E0E7FF; color: #4338CA; }
+        .role-badge.manager { background: #D1FAE5; color: #065F46; }
+        .role-badge.staff { background: #F1F5F9; color: #475569; }
+
+        .role-badge svg { width: 14px; height: 14px; }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+            font-size: 0.6875rem;
+            font-weight: 600;
+        }
+
+        .status-badge.active { background: #D1FAE5; color: #065F46; }
+        .status-badge.pending { background: #FEF3C7; color: #92400E; }
+        .status-badge.inactive { background: #F1F5F9; color: #64748B; }
+
+        .status-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        .status-badge.active::before { background: #10B981; }
+        .status-badge.pending::before { background: #F59E0B; }
+        .status-badge.inactive::before { background: #94A3B8; }
+
+        .permissions-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.375rem;
+        }
+
+        .permission-tag {
+            padding: 0.25rem 0.5rem;
+            background: #F1F5F9;
+            border-radius: 0.25rem;
+            font-size: 0.6875rem;
+            font-weight: 500;
+            color: #64748B;
+        }
+
+        .permission-tag.all {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .member-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 0.375rem;
+            border: 1px solid #E2E8F0;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748B;
+        }
+
+        .action-btn:hover { border-color: #A51C30; color: #A51C30; }
+        .action-btn.delete:hover { border-color: #EF4444; color: #EF4444; }
+        .action-btn svg { width: 16px; height: 16px; }
+
+        /* Invite Modal Trigger */
+        .pending-invites {
+            background: #FEF3C7;
+            border: 1px solid #F59E0B;
+            border-radius: 0.75rem;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .pending-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .pending-icon {
+            width: 40px;
+            height: 40px;
+            background: white;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pending-icon svg { width: 20px; height: 20px; color: #D97706; }
+
+        .pending-text h4 {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #92400E;
+        }
+
+        .pending-text p {
+            font-size: 0.8125rem;
+            color: #B45309;
+        }
+
+        .pending-action {
+            padding: 0.5rem 1rem;
+            background: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: #92400E;
+            cursor: pointer;
+        }
+
+        .pending-action:hover { background: #FDE68A; }
+
+        /* Roles Card */
+        .roles-card {
+            background: white;
+            border-radius: 1rem;
+            border: 1px solid #E2E8F0;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .roles-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1E293B;
+            margin-bottom: 1rem;
+        }
+
+        .roles-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .role-item {
+            padding: 1rem;
+            border: 1px solid #E2E8F0;
+            border-radius: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .role-item:hover { border-color: #A51C30; }
+
+        .role-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .role-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .role-dot.owner { background: #A51C30; }
+        .role-dot.admin { background: #6366F1; }
+        .role-dot.manager { background: #10B981; }
+        .role-dot.staff { background: #64748B; }
+
+        .role-name {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #1E293B;
+        }
+
+        .role-desc {
+            font-size: 0.75rem;
+            color: #64748B;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .roles-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar { display: none; }
+            .permissions-list { display: none; }
+        }
+
+        @media (max-width: 768px) {
+            .main-content { padding: 1rem; }
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+            .team-card-header { flex-direction: column; gap: 1rem; align-items: stretch; }
+            .search-box { width: 100%; }
+            .team-table { display: block; overflow-x: auto; }
+            .roles-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <a href="/organizer" class="logo">
+                <svg class="logo-icon" viewBox="0 0 48 48" fill="none">
+                    <rect x="4" y="12" width="40" height="24" rx="4" fill="url(#grad)"/>
+                    <path d="M4 16C4 13.7909 5.79086 12 8 12H14V36H8C5.79086 36 4 34.2091 4 32V16Z" fill="#1E293B"/>
+                    <circle cx="14" cy="12" r="3" fill="#F8FAFC"/>
+                    <circle cx="14" cy="36" r="3" fill="#F8FAFC"/>
+                    <defs>
+                        <linearGradient id="grad" x1="4" y1="12" x2="44" y2="36">
+                            <stop stop-color="#A51C30"/>
+                            <stop offset="1" stop-color="#C41E3A"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <span class="logo-text"><span class="am">Am</span><span class="bilet">Bilet</span></span>
+                <span class="header-badge">Organizator</span>
+            </a>
+        </div>
+    </header>
+
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <nav>
+                <ul class="sidebar-nav">
+                    <li><a href="/organizer"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>Dashboard</a></li>
+                    <li><a href="/organizer/events"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>Evenimente</a></li>
+                    <li><a href="/organizer/orders"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>Comenzi</a></li>
+                    <li class="sidebar-section">Setări</li>
+                    <li><a href="/organizer/team" class="active"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>Echipa</a></li>
+                    <li><a href="/organizer/billing"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>Facturare</a></li>
+                    <li><a href="/organizer/settings"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>Setări</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Page Header -->
+            <div class="page-header">
+                <div>
+                    <h1>Gestionare echipă</h1>
+                    <p>Administrează membrii echipei și permisiunile acestora</p>
+                </div>
+                <button class="btn btn-primary">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+                    Invită membru
+                </button>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
+                    <div class="stat-value">8</div>
+                    <div class="stat-label">Total membri</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                    <div class="stat-value">6</div>
+                    <div class="stat-label">Activi</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon yellow"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                    <div class="stat-value">2</div>
+                    <div class="stat-label">Invitații în așteptare</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon red"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg></div>
+                    <div class="stat-value">2</div>
+                    <div class="stat-label">Administratori</div>
+                </div>
+            </div>
+
+            <!-- Pending Invites -->
+            <div class="pending-invites">
+                <div class="pending-info">
+                    <div class="pending-icon"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div>
+                    <div class="pending-text">
+                        <h4>2 invitații în așteptare</h4>
+                        <p>Invitațiile expiră în 7 zile dacă nu sunt acceptate</p>
+                    </div>
+                </div>
+                <button class="pending-action">Retrimite invitațiile</button>
+            </div>
+
+            <!-- Team Table -->
+            <div class="team-card">
+                <div class="team-card-header">
+                    <h2>Membri echipă</h2>
+                    <div class="search-box">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <input type="text" placeholder="Caută membri...">
+                    </div>
+                </div>
+                <table class="team-table">
+                    <thead>
+                        <tr>
+                            <th>Membru</th>
+                            <th>Rol</th>
+                            <th>Permisiuni</th>
+                            <th>Status</th>
+                            <th>Acțiuni</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div class="member-info">
+                                    <div class="member-avatar owner">AP</div>
+                                    <div class="member-details">
+                                        <h4>Andrei Popescu</h4>
+                                        <p>andrei@eventpro.ro</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="role-badge owner"><svg fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>Proprietar</span></td>
+                            <td><div class="permissions-list"><span class="permission-tag all">Acces complet</span></div></td>
+                            <td><span class="status-badge active">Activ</span></td>
+                            <td><div class="member-actions"><span style="color: #94A3B8; font-size: 0.8125rem;">Tu</span></div></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="member-info">
+                                    <div class="member-avatar admin">MI</div>
+                                    <div class="member-details">
+                                        <h4>Maria Ionescu</h4>
+                                        <p>maria@eventpro.ro</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="role-badge admin">Administrator</span></td>
+                            <td><div class="permissions-list"><span class="permission-tag">Evenimente</span><span class="permission-tag">Comenzi</span><span class="permission-tag">Rapoarte</span><span class="permission-tag">Echipă</span></div></td>
+                            <td><span class="status-badge active">Activ</span></td>
+                            <td>
+                                <div class="member-actions">
+                                    <button class="action-btn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                                    <button class="action-btn delete"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="member-info">
+                                    <div class="member-avatar manager">CP</div>
+                                    <div class="member-details">
+                                        <h4>Cristian Popa</h4>
+                                        <p>cristian@eventpro.ro</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="role-badge manager">Manager</span></td>
+                            <td><div class="permissions-list"><span class="permission-tag">Evenimente</span><span class="permission-tag">Comenzi</span><span class="permission-tag">Check-in</span></div></td>
+                            <td><span class="status-badge active">Activ</span></td>
+                            <td>
+                                <div class="member-actions">
+                                    <button class="action-btn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                                    <button class="action-btn delete"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="member-info">
+                                    <div class="member-avatar staff">AD</div>
+                                    <div class="member-details">
+                                        <h4>Alexandru Dima</h4>
+                                        <p>alex@eventpro.ro</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="role-badge staff">Staff</span></td>
+                            <td><div class="permissions-list"><span class="permission-tag">Check-in</span></div></td>
+                            <td><span class="status-badge active">Activ</span></td>
+                            <td>
+                                <div class="member-actions">
+                                    <button class="action-btn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                                    <button class="action-btn delete"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="member-info">
+                                    <div class="member-avatar staff" style="opacity: 0.6;">EN</div>
+                                    <div class="member-details">
+                                        <h4>Elena Neagu</h4>
+                                        <p>elena.neagu@gmail.com</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="role-badge staff">Staff</span></td>
+                            <td><div class="permissions-list"><span class="permission-tag">Check-in</span></div></td>
+                            <td><span class="status-badge pending">Invitație trimisă</span></td>
+                            <td>
+                                <div class="member-actions">
+                                    <button class="action-btn"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg></button>
+                                    <button class="action-btn delete"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Roles Info -->
+            <div class="roles-card">
+                <h3>Despre roluri și permisiuni</h3>
+                <div class="roles-grid">
+                    <div class="role-item">
+                        <div class="role-header"><div class="role-dot owner"></div><span class="role-name">Proprietar</span></div>
+                        <p class="role-desc">Acces complet la toate funcționalitățile, inclusiv ștergerea contului</p>
+                    </div>
+                    <div class="role-item">
+                        <div class="role-header"><div class="role-dot admin"></div><span class="role-name">Administrator</span></div>
+                        <p class="role-desc">Gestionează evenimente, comenzi, rapoarte și membrii echipei</p>
+                    </div>
+                    <div class="role-item">
+                        <div class="role-header"><div class="role-dot manager"></div><span class="role-name">Manager</span></div>
+                        <p class="role-desc">Gestionează evenimente specifice și procesează comenzi</p>
+                    </div>
+                    <div class="role-item">
+                        <div class="role-header"><div class="role-dot staff"></div><span class="role-name">Staff</span></div>
+                        <p class="role-desc">Doar acces la funcția de check-in pentru evenimente</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

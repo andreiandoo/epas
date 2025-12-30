@@ -21,74 +21,74 @@ require_once dirname(__DIR__) . '/includes/header.php';
 </style>
 
 <!-- Main Container with Sidebar -->
-<div class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
-    <div class="flex flex-col lg:flex-row gap-6">
+<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
+    <div class="flex flex-col gap-6 lg:flex-row">
         <!-- Sidebar -->
         <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
 
         <!-- Main Content -->
-        <main class="flex-1 min-w-0">
-    <!-- Page Header -->
-    <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-secondary">Favorite</h1>
-            <p class="mt-1 text-sm text-muted">Evenimente pe care le urmaresti</p>
-        </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="flex gap-2 p-1 mb-6 bg-surface rounded-xl w-fit">
-        <button onclick="showTab('events')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn active" id="tab-btn-events">
-            Evenimente (<span id="events-count">0</span>)
-        </button>
-        <button onclick="showTab('artists')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn text-muted" id="tab-btn-artists">
-            Artisti (<span id="artists-count">0</span>)
-        </button>
-        <button onclick="showTab('venues')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn text-muted" id="tab-btn-venues">
-            Locatii (<span id="venues-count">0</span>)
-        </button>
-    </div>
-
-    <!-- Events Tab -->
-    <div id="tab-events">
-        <!-- Notification Alert -->
-        <div class="p-4 mb-6 border bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20 rounded-xl">
-            <div class="flex items-center gap-3">
-                <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-lg bg-primary/20">
-                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        <main class="flex-1 min-w-0 lg:pt-24">
+            <!-- Page Header -->
+            <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-secondary">Favorite</h1>
+                    <p class="mt-1 text-sm text-muted">Evenimente pe care le urmaresti</p>
                 </div>
-                <div class="flex-1">
-                    <p class="font-semibold text-secondary">Notificari active pentru <span id="notification-count">0</span> evenimente</p>
-                    <p class="text-sm text-muted">Vei fi notificat cand biletele devin disponibile sau se apropie de sold out.</p>
-                </div>
-                <a href="/cont/setari" class="text-sm font-medium text-primary hover:underline whitespace-nowrap">Gestioneaza →</a>
             </div>
-        </div>
 
-        <!-- Events Grid -->
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6" id="events-grid">
-            <!-- Populated by JavaScript -->
-        </div>
-    </div>
+            <!-- Tabs -->
+            <div class="flex gap-2 p-1 mb-6 bg-surface rounded-xl w-fit">
+                <button onclick="showTab('events')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn active" id="tab-btn-events">
+                    Evenimente (<span id="events-count">0</span>)
+                </button>
+                <button onclick="showTab('artists')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn text-muted" id="tab-btn-artists">
+                    Artisti (<span id="artists-count">0</span>)
+                </button>
+                <button onclick="showTab('venues')" class="px-4 py-2 text-sm font-medium rounded-lg tab-btn text-muted" id="tab-btn-venues">
+                    Locatii (<span id="venues-count">0</span>)
+                </button>
+            </div>
 
-    <!-- Artists Tab -->
-    <div id="tab-artists" class="hidden">
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6" id="artists-grid">
-            <!-- Populated by JavaScript -->
-        </div>
-    </div>
+            <!-- Events Tab -->
+            <div id="tab-events">
+                <!-- Notification Alert -->
+                <div class="p-4 mb-6 border bg-gradient-to-r from-primary/10 to-accent/10 border-primary/20 rounded-xl">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center justify-center flex-shrink-0 w-10 h-10 rounded-lg bg-primary/20">
+                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold text-secondary">Notificari active pentru <span id="notification-count">0</span> evenimente</p>
+                            <p class="text-sm text-muted">Vei fi notificat cand biletele devin disponibile sau se apropie de sold out.</p>
+                        </div>
+                        <a href="/cont/setari" class="text-sm font-medium text-primary hover:underline whitespace-nowrap">Gestioneaza →</a>
+                    </div>
+                </div>
 
-    <!-- Venues Tab -->
-    <div id="tab-venues" class="hidden">
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6" id="venues-grid">
-            <!-- Populated by JavaScript -->
-        </div>
-    </div>
+                <!-- Events Grid -->
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6" id="events-grid">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Artists Tab -->
+            <div id="tab-artists" class="hidden">
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6" id="artists-grid">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Venues Tab -->
+            <div id="tab-venues" class="hidden">
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6" id="venues-grid">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
         </main>
     </div>
 </div>
 
-<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'
