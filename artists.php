@@ -35,7 +35,7 @@ require_once __DIR__ . '/includes/head.php';
 <!-- Search Section -->
 <section class="px-4 -mt-7">
     <div class="max-w-2xl mx-auto">
-        <div class="flex items-center gap-2 p-2 bg-white shadow-xl rounded-2xl">
+        <div class="relative z-10 flex items-center gap-2 p-2 bg-white shadow-xl rounded-2xl">
             <input type="text" id="artistSearch" placeholder="Cauta un artist..." class="flex-1 px-5 py-4 text-base border-0 outline-none text-secondary placeholder-muted">
             <button onclick="ArtistsPage.search()" class="flex items-center gap-2 px-6 py-4 font-semibold text-white transition-all btn-primary rounded-xl hover:shadow-lg">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
