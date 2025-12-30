@@ -220,18 +220,6 @@ include __DIR__ . '/includes/header.php';
         </div>
     </section>
 
-    <!-- Newsletter -->
-    <section class="relative p-12 overflow-hidden text-center bg-gradient-to-br from-secondary to-slate-600 rounded-2xl">
-        <div class="absolute -top-24 -right-24 w-72 h-72 bg-[radial-gradient(circle,rgba(165,28,48,0.3)_0%,transparent_70%)] rounded-full"></div>
-        <div class="relative z-10 max-w-md mx-auto">
-            <h2 class="mb-3 text-3xl font-extrabold text-white">Primește noutăți din orașul tău</h2>
-            <p class="mb-6 text-base text-white/70">Abonează-te pentru a primi notificări despre evenimente noi în orașul tău preferat.</p>
-            <form class="flex gap-3">
-                <input type="email" placeholder="Adresa ta de email" class="flex-1 px-5 py-4 text-base text-white transition-all border outline-none bg-white/10 border-white/20 rounded-xl placeholder-white/50 focus:border-primary focus:bg-white/15">
-                <button type="submit" class="px-8 py-4 text-base font-semibold text-white transition-all bg-primary hover:bg-primary-dark rounded-xl">Abonează-te</button>
-            </form>
-        </div>
-    </section>
 </main>
 
 <?php
