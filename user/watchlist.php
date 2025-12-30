@@ -4,294 +4,211 @@ $pageTitle = 'Favorite';
 $currentPage = 'watchlist';
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/user-header.php';
+
+// Demo events
+$events = [
+    ['id' => 1, 'title' => 'Trooper Unplugged', 'image' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400', 'date' => '22 Ian 2025', 'venue' => 'Hard Rock Cafe, Bucuresti', 'price' => 80, 'genre' => 'Rock', 'badge' => '85% Sold', 'badge_color' => 'bg-warning'],
+    ['id' => 2, 'title' => 'Dirty Shirt - Tour 2025', 'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400', 'date' => '5 Feb 2025', 'venue' => 'Sala Palatului, Bucuresti', 'price' => 120, 'genre' => 'Metal', 'badge' => 'NOU', 'badge_color' => 'bg-success'],
+    ['id' => 3, 'title' => 'Iris - Romantic Tour', 'image' => 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400', 'date' => '15 Feb 2025', 'venue' => 'Teatrul National, Cluj', 'price' => 95, 'genre' => 'Rock', 'badge' => null],
+    ['id' => 4, 'title' => 'Rock la Mures 2025', 'image' => 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', 'date' => 'Iulie 2025', 'venue' => 'Targu Mures', 'price' => null, 'genre' => 'Festival', 'badge' => 'IN CURAND', 'badge_color' => 'bg-blue-500'],
+    ['id' => 5, 'title' => 'Phoenix - Turneu National', 'image' => 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400', 'date' => '28 Feb 2025', 'venue' => 'Filarmonica, Timisoara', 'price' => 150, 'genre' => 'Rock', 'badge' => null],
+    ['id' => 6, 'title' => 'Vita de Vie Acoustic', 'image' => 'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=400', 'date' => '10 Ian 2025', 'venue' => 'Control Club, Bucuresti', 'price' => 100, 'genre' => 'Rock', 'badge' => 'SOLD OUT', 'badge_color' => 'bg-error', 'sold_out' => true]
+];
+
+// Demo artists
+$artists = [
+    ['name' => 'Dirty Shirt', 'image' => 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200', 'genre' => 'Metal / Folk', 'events' => 3],
+    ['name' => 'Trooper', 'image' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200', 'genre' => 'Rock', 'events' => 2],
+    ['name' => 'Cargo', 'image' => 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=200', 'genre' => 'Rock', 'events' => 1]
+];
+
+// Demo venues
+$venues = [
+    ['name' => 'Hard Rock Cafe', 'image' => 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400', 'city' => 'Bucuresti', 'events' => 5],
+    ['name' => 'Sala Palatului', 'image' => 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', 'city' => 'Bucuresti', 'events' => 3],
+    ['name' => 'Arenele Romane', 'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400', 'city' => 'Bucuresti', 'events' => 2]
+];
 ?>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
-        <!-- Page Header -->
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <div>
-                <h1 class="text-2xl font-bold text-secondary">Evenimentele tale favorite</h1>
-                <p class="text-muted text-sm mt-1">Tii evidenta evenimentelor care te intereseaza</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <button id="btn-notify-all" class="flex items-center gap-2 px-4 py-2 bg-surface text-secondary rounded-xl text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                    Notifica-ma pentru toate
-                </button>
+<style>
+    .event-card { transition: all 0.3s ease; }
+    .event-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.1); }
+    .heart-btn { transition: all 0.2s ease; }
+    .heart-btn:hover { transform: scale(1.1); }
+    .heart-btn.active { color: #EF4444; }
+    .notification-badge { animation: pulse 2s infinite; }
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+    .tab-btn.active { background: white; color: #A51C30; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+</style>
+
+<!-- Main Content -->
+<main class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
+    <!-- Page Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-secondary">Favorite</h1>
+            <p class="text-muted text-sm mt-1">Evenimente pe care le urmaresti</p>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 p-1 bg-surface rounded-xl mb-6 w-fit">
+        <button onclick="showTab('events')" class="tab-btn active px-4 py-2 rounded-lg text-sm font-medium">
+            Evenimente (<?= count($events) ?>)
+        </button>
+        <button onclick="showTab('artists')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-muted">
+            Artisti (<?= count($artists) ?>)
+        </button>
+        <button onclick="showTab('venues')" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-muted">
+            Locatii (<?= count($venues) ?>)
+        </button>
+    </div>
+
+    <!-- Events Tab -->
+    <div id="tab-events">
+        <!-- Notification Alert -->
+        <div class="bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 rounded-xl p-4 mb-6">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                </div>
+                <div class="flex-1">
+                    <p class="font-semibold text-secondary">Notificari active pentru 8 evenimente</p>
+                    <p class="text-sm text-muted">Vei fi notificat cand biletele devin disponibile sau se apropie de sold out.</p>
+                </div>
+                <a href="/user/settings" class="text-sm text-primary font-medium hover:underline whitespace-nowrap">Gestioneaza →</a>
             </div>
         </div>
 
-        <!-- Filters -->
-        <div class="flex flex-wrap gap-2 mb-6">
-            <button onclick="UserWatchlist.filter('all')" class="filter-btn active px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium" data-filter="all">Toate (<span id="count-all">0</span>)</button>
-            <button onclick="UserWatchlist.filter('upcoming')" class="filter-btn px-4 py-2 bg-surface text-muted rounded-xl text-sm font-medium" data-filter="upcoming">Viitoare (<span id="count-upcoming">0</span>)</button>
-            <button onclick="UserWatchlist.filter('ending-soon')" class="filter-btn px-4 py-2 bg-surface text-muted rounded-xl text-sm font-medium" data-filter="ending-soon">Bilete pe terminate (<span id="count-ending">0</span>)</button>
-        </div>
-
-        <!-- Watchlist Grid -->
-        <div id="watchlist-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-            <div class="text-center py-8 col-span-full">
-                <div class="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-                <p class="text-muted mt-2">Se incarca favoritele...</p>
+        <!-- Events Grid -->
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+            <?php foreach ($events as $event): ?>
+            <?php $isSoldOut = isset($event['sold_out']) && $event['sold_out']; ?>
+            <div class="event-card bg-white rounded-xl lg:rounded-2xl border border-border overflow-hidden <?= $isSoldOut ? 'opacity-75' : '' ?>">
+                <div class="relative">
+                    <img src="<?= $event['image'] ?>" class="w-full h-40 object-cover <?= $isSoldOut ? 'grayscale' : '' ?>" alt="<?= $event['title'] ?>">
+                    <?php if ($isSoldOut): ?>
+                    <div class="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <span class="px-4 py-2 bg-error text-white text-sm font-bold rounded-lg">SOLD OUT</span>
+                    </div>
+                    <?php elseif ($event['badge']): ?>
+                    <div class="absolute top-3 left-3">
+                        <span class="notification-badge px-2 py-1 <?= $event['badge_color'] ?? 'bg-primary' ?> text-white text-xs font-bold rounded-lg flex items-center gap-1">
+                            <?php if ($event['badge'] === '85% Sold'): ?>
+                            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                            <?php endif; ?>
+                            <?= $event['badge'] ?>
+                        </span>
+                    </div>
+                    <?php endif; ?>
+                    <button class="heart-btn active absolute top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-lg">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    </button>
+                </div>
+                <div class="p-4">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="px-2 py-0.5 <?= $isSoldOut ? 'bg-muted/20 text-muted' : 'bg-primary/10 text-primary' ?> text-xs font-semibold rounded"><?= $event['genre'] ?></span>
+                        <span class="text-xs text-muted"><?= $event['date'] ?></span>
+                    </div>
+                    <h3 class="font-bold text-secondary mb-1"><?= $event['title'] ?></h3>
+                    <p class="text-sm text-muted mb-3"><?= $event['venue'] ?></p>
+                    <div class="flex items-center justify-between">
+                        <?php if ($isSoldOut): ?>
+                        <div><span class="text-sm text-muted line-through"><?= $event['price'] ?> lei</span></div>
+                        <button class="px-4 py-2 bg-surface text-muted text-sm font-semibold rounded-lg flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                            Alerta resale
+                        </button>
+                        <?php elseif ($event['price']): ?>
+                        <div>
+                            <span class="text-lg font-bold text-primary"><?= $event['price'] ?> lei</span>
+                            <span class="text-xs text-muted ml-1">de la</span>
+                        </div>
+                        <a href="/event" class="btn-primary px-4 py-2 text-white text-sm font-semibold rounded-lg">Cumpara</a>
+                        <?php else: ?>
+                        <div><span class="text-sm text-muted">Bilete in curand</span></div>
+                        <button class="px-4 py-2 bg-surface text-secondary text-sm font-semibold rounded-lg flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                            Notifica-ma
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
             </div>
+            <?php endforeach; ?>
         </div>
+    </div>
 
-        <!-- Empty State -->
-        <div id="empty-state" class="hidden text-center py-16">
-            <div class="w-20 h-20 bg-surface rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <svg class="w-10 h-10 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+    <!-- Artists Tab -->
+    <div id="tab-artists" class="hidden">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+            <?php foreach ($artists as $artist): ?>
+            <div class="event-card bg-white rounded-xl lg:rounded-2xl border border-border p-5 text-center">
+                <div class="relative inline-block mb-4">
+                    <div class="w-24 h-24 rounded-full overflow-hidden mx-auto">
+                        <img src="<?= $artist['image'] ?>" class="w-full h-full object-cover" alt="<?= $artist['name'] ?>">
+                    </div>
+                    <button class="heart-btn active absolute -bottom-1 -right-1 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg border border-border">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    </button>
+                </div>
+                <h3 class="font-bold text-secondary mb-1"><?= $artist['name'] ?></h3>
+                <p class="text-sm text-muted mb-3"><?= $artist['genre'] ?></p>
+                <div class="flex items-center justify-center gap-2 text-sm">
+                    <span class="px-2 py-1 bg-success/10 text-success rounded-lg font-medium"><?= $artist['events'] ?> eveniment<?= $artist['events'] > 1 ? 'e' : '' ?></span>
+                </div>
             </div>
-            <h3 class="text-lg font-bold text-secondary mb-2">Lista ta de favorite e goala</h3>
-            <p class="text-muted mb-6">Adauga evenimente la favorite pentru a le gasi mai usor!</p>
-            <a href="/" class="btn btn-primary inline-flex items-center gap-2 px-6 py-3 text-white font-semibold rounded-xl">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                Descopera evenimente
-            </a>
+            <?php endforeach; ?>
         </div>
-    </main>
+    </div>
+
+    <!-- Venues Tab -->
+    <div id="tab-venues" class="hidden">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+            <?php foreach ($venues as $venue): ?>
+            <div class="event-card bg-white rounded-xl lg:rounded-2xl border border-border overflow-hidden">
+                <div class="relative h-32">
+                    <img src="<?= $venue['image'] ?>" class="w-full h-full object-cover" alt="<?= $venue['name'] ?>">
+                    <button class="heart-btn active absolute top-3 right-3 w-8 h-8 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-lg">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    </button>
+                </div>
+                <div class="p-4">
+                    <h3 class="font-bold text-secondary mb-1"><?= $venue['name'] ?></h3>
+                    <p class="text-sm text-muted mb-2"><?= $venue['city'] ?></p>
+                    <span class="px-2 py-1 bg-primary/10 text-primary text-xs rounded-lg font-medium"><?= $venue['events'] ?> evenimente</span>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</main>
 
 <?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'
 <script>
-const UserWatchlist = {
-    events: [],
-    currentFilter: 'all',
+function showTab(tabName) {
+    // Hide all tabs
+    document.getElementById('tab-events').classList.add('hidden');
+    document.getElementById('tab-artists').classList.add('hidden');
+    document.getElementById('tab-venues').classList.add('hidden');
 
-    async init() {
-        if (!AmbiletAuth.isAuthenticated()) {
-            window.location.href = '/login?redirect=/user/watchlist';
-            return;
-        }
-        this.loadUserInfo();
-        await this.loadWatchlist();
-    },
+    // Reset all tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.classList.add('text-muted');
+    });
 
-    loadUserInfo() {
-        const user = AmbiletAuth.getUser();
-        if (user) {
-            const initials = user.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U';
-            const headerAvatar = document.getElementById('header-user-avatar');
-            if (headerAvatar) {
-                headerAvatar.innerHTML = `<span class="text-sm font-bold text-white">${initials}</span>`;
-            }
-            const headerPoints = document.getElementById('header-user-points');
-            if (headerPoints) {
-                headerPoints.textContent = (user.points || 0).toLocaleString();
-            }
-        }
-    },
-
-    async loadWatchlist() {
-        try {
-            const response = await AmbiletAPI.get('/customer/watchlist');
-            if (response.success) {
-                this.events = response.data;
-            }
-        } catch (error) {
-            console.log('Using demo data');
-            // Demo data
-            this.events = [
-                {
-                    id: 1,
-                    title: 'Mos Craciun e Rocker',
-                    slug: 'mos-craciun-rocker',
-                    image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400',
-                    date: '2024-12-27',
-                    time: '19:00',
-                    venue: 'Grand Gala, Baia Mare',
-                    city: 'Baia Mare',
-                    price_from: 80,
-                    genre: 'Rock',
-                    tickets_left: 45,
-                    is_ending_soon: true,
-                    notify_enabled: true
-                },
-                {
-                    id: 2,
-                    title: 'Cargo Live',
-                    slug: 'cargo-live',
-                    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
-                    date: '2025-01-15',
-                    time: '20:00',
-                    venue: 'Arenele Romane',
-                    city: 'Bucuresti',
-                    price_from: 120,
-                    genre: 'Rock',
-                    tickets_left: 200,
-                    is_ending_soon: false,
-                    notify_enabled: false
-                },
-                {
-                    id: 3,
-                    title: 'Trooper 30 Years',
-                    slug: 'trooper-30-years',
-                    image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400',
-                    date: '2025-02-20',
-                    time: '20:00',
-                    venue: 'Sala Palatului',
-                    city: 'Bucuresti',
-                    price_from: 100,
-                    genre: 'Rock',
-                    tickets_left: 15,
-                    is_ending_soon: true,
-                    notify_enabled: true
-                },
-                {
-                    id: 4,
-                    title: 'Jazz in the Park',
-                    slug: 'jazz-in-the-park',
-                    image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400',
-                    date: '2025-06-15',
-                    time: '18:00',
-                    venue: 'Parcul Central',
-                    city: 'Cluj-Napoca',
-                    price_from: 0,
-                    genre: 'Jazz',
-                    tickets_left: null,
-                    is_ending_soon: false,
-                    notify_enabled: false
-                }
-            ];
-        }
-
-        this.updateCounts();
-        this.render();
-    },
-
-    updateCounts() {
-        const now = new Date();
-        const upcoming = this.events.filter(e => new Date(e.date) >= now);
-        const ending = this.events.filter(e => e.is_ending_soon);
-
-        document.getElementById('count-all').textContent = this.events.length;
-        document.getElementById('count-upcoming').textContent = upcoming.length;
-        document.getElementById('count-ending').textContent = ending.length;
-    },
-
-    filter(type) {
-        this.currentFilter = type;
-
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.remove('active', 'bg-primary', 'text-white');
-            btn.classList.add('bg-surface', 'text-muted');
-        });
-        document.querySelector(`[data-filter="${type}"]`).classList.add('active', 'bg-primary', 'text-white');
-        document.querySelector(`[data-filter="${type}"]`).classList.remove('bg-surface', 'text-muted');
-
-        this.render();
-    },
-
-    render() {
-        const container = document.getElementById('watchlist-grid');
-        const emptyState = document.getElementById('empty-state');
-
-        let filtered = this.events;
-        const now = new Date();
-
-        if (this.currentFilter === 'upcoming') {
-            filtered = this.events.filter(e => new Date(e.date) >= now);
-        } else if (this.currentFilter === 'ending-soon') {
-            filtered = this.events.filter(e => e.is_ending_soon);
-        }
-
-        if (filtered.length === 0) {
-            container.classList.add('hidden');
-            emptyState.classList.remove('hidden');
-            return;
-        }
-
-        container.classList.remove('hidden');
-        emptyState.classList.add('hidden');
-
-        container.innerHTML = filtered.map(event => this.renderCard(event)).join('');
-    },
-
-    renderCard(event) {
-        const date = new Date(event.date);
-        const days = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sam'];
-        const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const dateStr = `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
-
-        return `
-            <div class="event-card bg-white rounded-2xl border border-border overflow-hidden" data-id="${event.id}">
-                <div class="relative">
-                    <a href="/event/${event.slug}">
-                        <img src="${event.image}" class="w-full h-48 object-cover" alt="${event.title}">
-                    </a>
-                    ${event.is_ending_soon ? '<span class="absolute top-3 left-3 px-2 py-1 bg-error text-white text-xs font-bold rounded">ULTIMELE BILETE</span>' : ''}
-                    <button onclick="UserWatchlist.toggleFavorite(${event.id})" class="heart-btn active absolute top-3 right-3 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
-                        <svg class="w-5 h-5 text-error" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
-                    </button>
-                </div>
-                <div class="p-4">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded">${event.genre}</span>
-                        ${event.tickets_left && event.tickets_left < 50 ? `<span class="text-xs text-warning font-medium">${event.tickets_left} bilete ramase</span>` : ''}
-                    </div>
-                    <a href="/event/${event.slug}">
-                        <h3 class="font-bold text-secondary text-lg mb-2 hover:text-primary transition-colors">${event.title}</h3>
-                    </a>
-                    <div class="space-y-1.5 text-sm text-muted mb-4">
-                        <div class="flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            <span>${dateStr}, ${event.time}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
-                            <span>${event.venue}</span>
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between pt-4 border-t border-border">
-                        <div>
-                            <p class="text-xs text-muted">de la</p>
-                            <p class="text-lg font-bold text-secondary">${event.price_from > 0 ? event.price_from + ' lei' : 'GRATUIT'}</p>
-                        </div>
-                        <a href="/event/${event.slug}" class="btn btn-primary px-4 py-2 text-white text-sm font-semibold rounded-xl">
-                            Cumpara bilete
-                        </a>
-                    </div>
-                </div>
-                <div class="px-4 py-3 bg-surface border-t border-border flex items-center justify-between">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" ${event.notify_enabled ? 'checked' : ''} onchange="UserWatchlist.toggleNotify(${event.id}, this.checked)" class="w-4 h-4 text-primary rounded">
-                        <span class="text-xs text-muted">Notifica-ma cand se pune in vanzare</span>
-                    </label>
-                </div>
-            </div>
-        `;
-    },
-
-    async toggleFavorite(eventId) {
-        try {
-            await AmbiletAPI.delete(`/customer/watchlist/${eventId}`);
-            this.events = this.events.filter(e => e.id !== eventId);
-            this.updateCounts();
-            this.render();
-        } catch (error) {
-            console.error('Error removing from watchlist:', error);
-        }
-    },
-
-    async toggleNotify(eventId, enabled) {
-        try {
-            await AmbiletAPI.put(`/customer/watchlist/${eventId}/notify`, { enabled });
-            const event = this.events.find(e => e.id === eventId);
-            if (event) event.notify_enabled = enabled;
-        } catch (error) {
-            console.error('Error toggling notification:', error);
-        }
-    },
-
-    logout() {
-        AmbiletAuth.logout();
-        window.location.href = '/login';
-    }
-};
-
-document.addEventListener('DOMContentLoaded', () => UserWatchlist.init());
+    // Show selected tab
+    document.getElementById('tab-' + tabName).classList.remove('hidden');
+    event.target.classList.add('active');
+    event.target.classList.remove('text-muted');
+}
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';

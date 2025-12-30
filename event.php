@@ -161,18 +161,131 @@ require_once __DIR__ . '/includes/head.php';
                 <div class="p-6 mb-8 bg-white border rounded-3xl border-border md:p-8">
                     <h2 class="mb-4 text-xl font-bold text-secondary">Despre eveniment</h2>
                     <div id="event-description" class="prose prose-slate max-w-none text-muted"></div>
+                    <div class="prose prose-slate max-w-none">
+                        <p class="mb-4 leading-relaxed text-muted">
+                            Pregătește-te pentru cel mai nebun concert de Crăciun! <strong>Dirty Shirt</strong>, formația care a revoluționat scena rock românească cu mixul lor unic de metal și muzică tradițională, te invită să petreci sărbătorile într-un mod cu totul special.
+                        </p>
+                        <p class="mb-4 leading-relaxed text-muted">
+                            <strong>"Moș Crăciun e Rocker"</strong> este un show conceput special pentru această perioadă magică a anului, unde energia brută a rock-ului se îmbină cu spiritul sărbătorilor de iarnă. Vei auzi cele mai tari hituri ale trupei, dar și surprize speciale pregătite doar pentru această ocazie.
+                        </p>
+                        <p class="mb-4 leading-relaxed text-muted">
+                            Fie că ești fan înrăit sau doar vrei să încerci ceva nou în această perioadă, concertul promite o experiență de neuitat. Adu-ți prietenii, familia (da, și bunicii pot veni!) și pregătește-te să cânți, să dansezi și să simți magia Crăciunului în cel mai rock mod posibil!
+                        </p>
+                        <div class="p-4 mt-6 bg-surface rounded-xl">
+                            <h3 class="mb-2 font-semibold text-secondary">📋 Ce include biletul:</h3>
+                            <ul class="space-y-1 text-sm text-muted">
+                                <li>• Acces la concert (ambele zile pentru biletele VIP)</li>
+                                <li>• Parcare gratuită</li>
+                                <li>• Zonă food & drinks</li>
+                                <li>• Photobooth tematic</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Artist Section -->
                 <div class="p-6 mb-8 bg-white border rounded-3xl border-border md:p-8" id="artist-section" style="display:none;">
                     <h2 class="mb-6 text-xl font-bold text-secondary">Despre artist</h2>
                     <div id="artist-content"></div>
+                    <div class="flex flex-col gap-6 md:flex-row">
+                        <div class="md:w-1/3">
+                            <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400" alt="Dirty Shirt" class="object-cover w-full aspect-square rounded-2xl">
+                        </div>
+                        <div class="md:w-2/3">
+                            <div class="flex items-center gap-3 mb-4">
+                                <h3 class="text-2xl font-bold text-secondary">Dirty Shirt</h3>
+                                <span class="px-3 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary">Verified</span>
+                            </div>
+                            <p class="mb-4 leading-relaxed text-muted">
+                                Dirty Shirt este o formație rock/metal din Satu Mare, România, fondată în 2007. Sunt cunoscuți pentru stilul lor unic care combină heavy metal cu elemente de muzică tradițională românească și instrumentație folk.
+                            </p>
+                            <p class="mb-4 leading-relaxed text-muted">
+                                Trupa a câștigat recunoaștere internațională, participând la festivaluri majore din întreaga Europă, inclusiv Wacken Open Air și Metaldays. Albumul lor "Dirtylicious" a fost aclamat de critici pentru originalitatea și energia debordantă.
+                            </p>
+                            <div class="flex flex-wrap gap-4 mt-4">
+                                <div class="text-center">
+                                    <p class="text-2xl font-bold text-secondary">17</p>
+                                    <p class="text-xs text-muted">Ani de activitate</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-2xl font-bold text-secondary">6</p>
+                                    <p class="text-xs text-muted">Albume</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-2xl font-bold text-secondary">500+</p>
+                                    <p class="text-xs text-muted">Concerte</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-3 mt-6">
+                                <a href="#" class="flex items-center justify-center w-10 h-10 transition-colors bg-surface rounded-xl hover:bg-primary hover:text-white">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                                </a>
+                                <a href="#" class="flex items-center justify-center w-10 h-10 transition-colors bg-surface rounded-xl hover:bg-primary hover:text-white">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                                </a>
+                                <a href="#" class="flex items-center justify-center w-10 h-10 transition-colors bg-surface rounded-xl hover:bg-primary hover:text-white">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+                                </a>
+                                <a href="#" class="flex items-center justify-center w-10 h-10 transition-colors bg-surface rounded-xl hover:bg-primary hover:text-white">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Venue Section -->
                 <div class="p-6 mb-8 bg-white border rounded-3xl border-border md:p-8" id="venue">
                     <h2 class="mb-6 text-xl font-bold text-secondary">Despre locatie</h2>
                     <div id="venue-content"></div>
+                    <div class="flex flex-col gap-6 md:flex-row">
+                        <div class="md:w-1/2">
+                            <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600" alt="Grand Gala" class="object-cover w-full h-64 mb-4 rounded-2xl">
+                            <div class="p-4 bg-surface rounded-xl">
+                                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2700.1234567890123!2d23.5678901234567!3d47.6543210987654!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNDfCsDM5JzE1LjYiTiAyM8KwMzQnMDQuNCJF!5e0!3m2!1sro!2sro!4v1234567890123" width="100%" height="200" style="border:0; border-radius: 12px;" allowfullscreen="" loading="lazy"></iframe>
+                            </div>
+                        </div>
+                        <div class="md:w-1/2">
+                            <h3 class="mb-2 text-xl font-bold text-secondary">Grand Gala Event Hall</h3>
+                            <p class="mb-4 text-muted">Str. Culturii Nr. 12, Baia Mare, Maramureș</p>
+                            
+                            <p class="mb-4 leading-relaxed text-muted">
+                                Grand Gala Event Hall este una dintre cele mai moderne săli de evenimente din Maramureș, cu o capacitate de până la 1.500 de persoane. Sala dispune de un sistem de sunet profesional și iluminat de scenă de ultimă generație.
+                            </p>
+                            
+                            <div class="mb-6 space-y-3">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-success/10">
+                                        <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    </div>
+                                    <span class="text-sm text-secondary">Parcare gratuită (200 locuri)</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-success/10">
+                                        <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    </div>
+                                    <span class="text-sm text-secondary">Accesibil pentru persoane cu dizabilități</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-success/10">
+                                        <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    </div>
+                                    <span class="text-sm text-secondary">Garderobă</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-success/10">
+                                        <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    </div>
+                                    <span class="text-sm text-secondary">Bar & Food Corner</span>
+                                </div>
+                            </div>
+
+                            <a href="#" class="inline-flex items-center gap-2 font-semibold text-primary hover:underline">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                                Deschide în Google Maps
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -263,6 +376,99 @@ require_once __DIR__ . '/includes/head.php';
                 </a>
             </div>
             <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4" id="related-events"></div>
+            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                <!-- Event Card 1 -->
+                <a href="#" class="overflow-hidden bg-white border event-card rounded-2xl border-border group">
+                    <div class="relative overflow-hidden h-44">
+                        <img src="https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600" alt="Concert" class="object-cover w-full h-full event-image">
+                        <div class="absolute top-3 left-3">
+                            <div class="px-3 py-2 text-center text-white shadow-lg date-badge rounded-xl">
+                                <span class="block text-lg font-bold leading-none">26</span>
+                                <span class="block text-[10px] uppercase tracking-wide mt-0.5">Dec</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">Concert Cargo @Club Flex</h3>
+                        <p class="text-sm text-muted mt-2 flex items-center gap-1.5">
+                            <svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                            Club Flex, Arad
+                        </p>
+                        <div class="flex items-center justify-between pt-3 mt-3 border-t border-border">
+                            <span class="font-bold text-primary">de la 60 lei</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Event Card 2 -->
+                <a href="#" class="overflow-hidden bg-white border event-card rounded-2xl border-border group">
+                    <div class="relative overflow-hidden h-44">
+                        <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600" alt="Concert" class="object-cover w-full h-full event-image">
+                        <div class="absolute top-3 left-3">
+                            <div class="px-3 py-2 text-center text-white shadow-lg date-badge rounded-xl">
+                                <span class="block text-lg font-bold leading-none">12</span>
+                                <span class="block text-[10px] uppercase tracking-wide mt-0.5">Feb</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">Dirty Shirt – Dirtylicious Decade Tour</h3>
+                        <p class="text-sm text-muted mt-2 flex items-center gap-1.5">
+                            <svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                            Lokal, Oradea
+                        </p>
+                        <div class="flex items-center justify-between pt-3 mt-3 border-t border-border">
+                            <span class="font-bold text-primary">de la 70 lei</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Event Card 3 -->
+                <a href="#" class="overflow-hidden bg-white border event-card rounded-2xl border-border group">
+                    <div class="relative overflow-hidden h-44">
+                        <img src="https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600" alt="Concert" class="object-cover w-full h-full event-image">
+                        <div class="absolute top-3 left-3">
+                            <div class="px-3 py-2 text-center text-white shadow-lg date-badge rounded-xl">
+                                <span class="block text-lg font-bold leading-none">8</span>
+                                <span class="block text-[10px] uppercase tracking-wide mt-0.5">Mar</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">Trooper – Strigăt În Noapte Tour</h3>
+                        <p class="text-sm text-muted mt-2 flex items-center gap-1.5">
+                            <svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                            Arenele Romane, București
+                        </p>
+                        <div class="flex items-center justify-between pt-3 mt-3 border-t border-border">
+                            <span class="font-bold text-primary">de la 85 lei</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Event Card 4 -->
+                <a href="#" class="overflow-hidden bg-white border event-card rounded-2xl border-border group">
+                    <div class="relative overflow-hidden h-44">
+                        <img src="https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=600" alt="Festival" class="object-cover w-full h-full event-image">
+                        <div class="absolute top-3 left-3">
+                            <div class="px-3 py-2 text-center text-white shadow-lg date-badge rounded-xl">
+                                <span class="block text-lg font-bold leading-none">18-21</span>
+                                <span class="block text-[10px] uppercase tracking-wide mt-0.5">Iun</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">Bikers For Humanity Rock Fest V</h3>
+                        <p class="text-sm text-muted mt-2 flex items-center gap-1.5">
+                            <svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                            Summer Camp, Brezoi
+                        </p>
+                        <div class="flex items-center justify-between pt-3 mt-3 border-t border-border">
+                            <span class="font-bold text-primary">de la 100 lei</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
         </section>
     </main>
 

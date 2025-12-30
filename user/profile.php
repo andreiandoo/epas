@@ -4,285 +4,327 @@ $pageTitle = 'Profilul meu';
 $currentPage = 'profile';
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/user-header.php';
+
+// Demo user data
+$demoUser = [
+    'name' => 'Andrei Popescu',
+    'initials' => 'AP',
+    'member_since' => 'Ianuarie 2023',
+    'level' => 12,
+    'points' => 2450,
+    'type' => 'Rock Enthusiast',
+    'stats' => [
+        'events' => 23,
+        'spent' => 4850,
+        'cities' => 7,
+        'artists' => 15
+    ]
+];
+
+// Demo taste profile
+$tasteProfile = [
+    ['name' => 'Rock / Metal', 'emoji' => '🎸', 'percent' => 65, 'color' => 'from-primary to-primary-dark', 'events' => 15, 'artists' => 'Dirty Shirt, Cargo, Trooper, Iris'],
+    ['name' => 'Pop / Dance', 'emoji' => '🎤', 'percent' => 20, 'color' => 'from-accent to-warning', 'events' => 5, 'artists' => 'Festivaluri de vara'],
+    ['name' => 'Teatru / Stand-up', 'emoji' => '🎭', 'percent' => 10, 'color' => 'from-success to-teal-500', 'events' => 2, 'artists' => ''],
+    ['name' => 'Clasic / Jazz', 'emoji' => '🎻', 'percent' => 5, 'color' => 'from-blue-500 to-indigo-500', 'events' => 1, 'artists' => '']
+];
+
+// Demo artists
+$topArtists = [
+    ['name' => 'Dirty Shirt', 'concerts' => 5, 'image' => 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100'],
+    ['name' => 'Cargo', 'concerts' => 4, 'image' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=100'],
+    ['name' => 'Trooper', 'concerts' => 3, 'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=100'],
+    ['name' => 'Iris', 'concerts' => 3, 'image' => 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=100']
+];
+
+// Demo cities
+$cities = [
+    ['name' => 'Bucuresti', 'count' => 12, 'percent' => 52],
+    ['name' => 'Cluj-Napoca', 'count' => 5, 'percent' => 22],
+    ['name' => 'Constanta', 'count' => 3, 'percent' => 13],
+    ['name' => 'Baia Mare', 'count' => 2, 'percent' => 9],
+    ['name' => 'Timisoara', 'count' => 1, 'percent' => 4]
+];
+
+// Demo insights
+$insights = [
+    ['icon' => '📅', 'label' => 'Ziua preferata', 'value' => 'Vineri seara', 'bg' => 'bg-primary/10'],
+    ['icon' => '🎫', 'label' => 'Tip bilet preferat', 'value' => 'VIP (45%)', 'bg' => 'bg-accent/10'],
+    ['icon' => '💰', 'label' => 'Cheltuiala medie', 'value' => '210 lei / eveniment', 'bg' => 'bg-success/10'],
+    ['icon' => '📍', 'label' => 'Oras preferat', 'value' => 'Bucuresti (12 evenimente)', 'bg' => 'bg-blue-500/10']
+];
+
+// Demo badges
+$badges = [
+    ['emoji' => '🎸', 'name' => 'Rock Veteran', 'gradient' => 'from-yellow-400 to-orange-500'],
+    ['emoji' => '🌟', 'name' => 'Early Bird', 'gradient' => 'from-purple-400 to-pink-500'],
+    ['emoji' => '💎', 'name' => 'VIP Lover', 'gradient' => 'from-green-400 to-emerald-500'],
+    ['emoji' => '🎪', 'name' => 'Festival Fan', 'gradient' => 'from-blue-400 to-cyan-500'],
+    ['emoji' => '❤️', 'name' => 'Loyal Fan', 'gradient' => 'from-red-400 to-pink-500']
+];
+
+// Monthly activity data
+$activityData = [1, 0, 2, 1, 3, 4, 2, 3, 2, 2, 1, 2];
 ?>
 
-    <!-- Main Content -->
-    <main class="max-w-4xl mx-auto px-4 py-6 lg:py-8">
-        <h1 class="text-2xl font-bold text-secondary mb-6">Profilul meu</h1>
+<style>
+    .stat-card { transition: all 0.3s ease; }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+    .taste-bar { transition: width 1s ease-out; }
+    .artist-card { transition: all 0.3s ease; }
+    .artist-card:hover { transform: scale(1.05); }
+</style>
 
-        <!-- Success/Error Messages -->
-        <div id="success-message" class="hidden mb-6 p-4 bg-green-50 border border-green-200 rounded-xl text-sm text-success"></div>
-        <div id="error-message" class="hidden mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-error"></div>
+<!-- Main Content -->
+<main class="max-w-7xl mx-auto px-4 py-6 lg:py-8">
+    <!-- Profile Header -->
+    <div class="bg-white rounded-2xl lg:rounded-3xl border border-border overflow-hidden mb-6">
+        <!-- Cover -->
+        <div class="h-32 lg:h-48 bg-gradient-to-r from-primary via-primary-dark to-secondary relative">
+            <div class="absolute inset-0 bg-black/20"></div>
+            <div class="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+        </div>
 
-        <!-- Profile Form -->
-        <form id="profile-form" class="space-y-6">
-            <!-- Personal Info -->
-            <div class="bg-white rounded-2xl border border-border p-6">
-                <h2 class="text-lg font-bold text-secondary mb-4">Informatii personale</h2>
-
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="label">Prenume</label>
-                        <input type="text" name="first_name" class="input" placeholder="Ion">
+        <!-- Profile Info -->
+        <div class="px-5 lg:px-8 pb-6">
+            <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between -mt-12 lg:-mt-16 gap-4">
+                <div class="flex flex-col lg:flex-row lg:items-end gap-4">
+                    <div class="relative">
+                        <div class="w-24 h-24 lg:w-32 lg:h-32 bg-gradient-to-br from-primary to-accent rounded-2xl lg:rounded-3xl flex items-center justify-center border-4 border-white shadow-lg">
+                            <span class="text-3xl lg:text-4xl font-bold text-white"><?= $demoUser['initials'] ?></span>
+                        </div>
+                        <div class="absolute -bottom-1 -right-1 w-8 h-8 bg-accent rounded-lg flex items-center justify-center border-2 border-white">
+                            <span class="text-xs font-bold text-white"><?= $demoUser['level'] ?></span>
+                        </div>
                     </div>
-                    <div>
-                        <label class="label">Nume</label>
-                        <input type="text" name="last_name" class="input" placeholder="Popescu">
-                    </div>
-                    <div>
-                        <label class="label">Email</label>
-                        <input type="email" name="email" class="input bg-muted/10" readonly>
-                        <p class="text-xs text-muted mt-1">Email-ul nu poate fi schimbat</p>
-                    </div>
-                    <div>
-                        <label class="label">Telefon</label>
-                        <input type="tel" name="phone" class="input" placeholder="+40 7XX XXX XXX">
+                    <div class="lg:pb-2">
+                        <h1 class="text-2xl lg:text-3xl font-bold text-secondary"><?= $demoUser['name'] ?></h1>
+                        <p class="text-muted">Membru din <?= $demoUser['member_since'] ?></p>
+                        <div class="flex items-center gap-2 mt-2">
+                            <span class="px-3 py-1 bg-accent/10 text-accent text-sm font-bold rounded-full">🎸 <?= $demoUser['type'] ?></span>
+                            <span class="px-3 py-1 bg-success/10 text-success text-sm font-bold rounded-full">Nivel <?= $demoUser['level'] ?></span>
+                        </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Address -->
-            <div class="bg-white rounded-2xl border border-border p-6">
-                <h2 class="text-lg font-bold text-secondary mb-4">Adresa de facturare</h2>
-
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div class="md:col-span-2">
-                        <label class="label">Adresa</label>
-                        <input type="text" name="address" class="input" placeholder="Strada, numar, bloc, apartament">
-                    </div>
-                    <div>
-                        <label class="label">Oras</label>
-                        <input type="text" name="city" class="input" placeholder="Bucuresti">
-                    </div>
-                    <div>
-                        <label class="label">Cod postal</label>
-                        <input type="text" name="postal_code" class="input" placeholder="010101">
-                    </div>
-                    <div>
-                        <label class="label">Judet</label>
-                        <input type="text" name="state" class="input" placeholder="Bucuresti">
-                    </div>
-                    <div>
-                        <label class="label">Tara</label>
-                        <select name="country" class="input">
-                            <option value="RO">Romania</option>
-                            <option value="MD">Moldova</option>
-                            <option value="DE">Germania</option>
-                            <option value="UK">Marea Britanie</option>
-                            <option value="US">SUA</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex justify-end">
-                <button type="submit" class="btn btn-primary" id="save-btn">
-                    <span id="btn-text">Salveaza modificarile</span>
-                    <div id="btn-spinner" class="hidden spinner"></div>
-                </button>
-            </div>
-        </form>
-
-        <!-- Change Password -->
-        <form id="password-form" class="mt-6">
-            <div class="bg-white rounded-2xl border border-border p-6">
-                <h2 class="text-lg font-bold text-secondary mb-4">Schimba parola</h2>
-
-                <div class="grid md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="label">Parola curenta</label>
-                        <input type="password" name="current_password" class="input" placeholder="********">
-                    </div>
-                    <div>
-                        <label class="label">Parola noua</label>
-                        <input type="password" name="new_password" class="input" placeholder="Minim 8 caractere">
-                    </div>
-                    <div>
-                        <label class="label">Confirma parola</label>
-                        <input type="password" name="new_password_confirmation" class="input" placeholder="Repeta parola">
-                    </div>
-                </div>
-
-                <div class="flex justify-end mt-4">
-                    <button type="submit" class="btn btn-secondary">
-                        Schimba parola
+                <div class="flex gap-2">
+                    <a href="/user/settings" class="flex items-center gap-2 px-4 py-2.5 bg-surface text-secondary rounded-xl text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        Editeaza profilul
+                    </a>
+                    <button class="flex items-center gap-2 px-4 py-2.5 bg-surface text-secondary rounded-xl text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                        Partajeaza
                     </button>
                 </div>
             </div>
-        </form>
-
-        <!-- Delete Account -->
-        <div class="mt-6 bg-white rounded-2xl border border-error/30 p-6">
-            <h2 class="text-lg font-bold text-error mb-2">Sterge contul</h2>
-            <p class="text-sm text-muted mb-4">Odata ce stergi contul, toate datele vor fi sterse permanent. Aceasta actiune este ireversibila.</p>
-            <button onclick="confirmDeleteAccount()" class="btn bg-error text-white hover:bg-error/90">
-                Sterge contul meu
-            </button>
         </div>
-    </main>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
+        <div class="stat-card bg-white rounded-xl lg:rounded-2xl p-4 lg:p-5 border border-border text-center">
+            <p class="text-3xl lg:text-4xl font-bold text-secondary"><?= $demoUser['stats']['events'] ?></p>
+            <p class="text-sm text-muted mt-1">Evenimente</p>
+        </div>
+        <div class="stat-card bg-white rounded-xl lg:rounded-2xl p-4 lg:p-5 border border-border text-center">
+            <p class="text-3xl lg:text-4xl font-bold text-secondary"><?= number_format($demoUser['stats']['spent']) ?></p>
+            <p class="text-sm text-muted mt-1">Lei cheltuiti</p>
+        </div>
+        <div class="stat-card bg-white rounded-xl lg:rounded-2xl p-4 lg:p-5 border border-border text-center">
+            <p class="text-3xl lg:text-4xl font-bold text-secondary"><?= $demoUser['stats']['cities'] ?></p>
+            <p class="text-sm text-muted mt-1">Orase vizitate</p>
+        </div>
+        <div class="stat-card bg-white rounded-xl lg:rounded-2xl p-4 lg:p-5 border border-border text-center">
+            <p class="text-3xl lg:text-4xl font-bold text-secondary"><?= $demoUser['stats']['artists'] ?></p>
+            <p class="text-sm text-muted mt-1">Artisti vazuti</p>
+        </div>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+        <!-- Left Column -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Taste Profile -->
+            <div class="bg-white rounded-xl lg:rounded-2xl border border-border p-5 lg:p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg font-bold text-secondary">Profilul tau muzical</h2>
+                    <span class="text-xs text-muted">Bazat pe <?= $demoUser['stats']['events'] ?> evenimente</span>
+                </div>
+
+                <!-- User Type Card -->
+                <div class="bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl p-5 border border-primary/10 mb-6">
+                    <div class="flex items-center gap-4">
+                        <div class="w-16 h-16 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center">
+                            <span class="text-3xl">🎸</span>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-secondary"><?= $demoUser['type'] ?></h3>
+                            <p class="text-sm text-muted mt-1">Esti pasionat de concerte rock si metal. Preferi evenimentele live cu energie mare si nu ratezi niciodata o trupa buna din Romania.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Genre Breakdown -->
+                <h3 class="font-semibold text-secondary mb-4">Genuri preferate</h3>
+                <div class="space-y-4">
+                    <?php foreach ($tasteProfile as $genre): ?>
+                    <div>
+                        <div class="flex items-center justify-between text-sm mb-2">
+                            <span class="font-medium text-secondary flex items-center gap-2">
+                                <span class="text-lg"><?= $genre['emoji'] ?></span> <?= $genre['name'] ?>
+                            </span>
+                            <span class="font-bold text-primary"><?= $genre['percent'] ?>%</span>
+                        </div>
+                        <div class="h-3 bg-surface rounded-full overflow-hidden">
+                            <div class="taste-bar h-full bg-gradient-to-r <?= $genre['color'] ?> rounded-full" style="width: <?= $genre['percent'] ?>%"></div>
+                        </div>
+                        <?php if ($genre['artists']): ?>
+                        <p class="text-xs text-muted mt-1"><?= $genre['events'] ?> evenimente • <?= $genre['artists'] ?></p>
+                        <?php else: ?>
+                        <p class="text-xs text-muted mt-1"><?= $genre['events'] ?> eveniment<?= $genre['events'] > 1 ? 'e' : '' ?></p>
+                        <?php endif; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <!-- Activity Chart -->
+            <div class="bg-white rounded-xl lg:rounded-2xl border border-border p-5 lg:p-6">
+                <h2 class="text-lg font-bold text-secondary mb-4">Activitatea ta in 2024</h2>
+                <div class="h-64">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Top Artists -->
+            <div class="bg-white rounded-xl lg:rounded-2xl border border-border p-5 lg:p-6">
+                <h2 class="text-lg font-bold text-secondary mb-4">Artistii tai preferati</h2>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <?php foreach ($topArtists as $artist): ?>
+                    <div class="artist-card text-center">
+                        <div class="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden">
+                            <img src="<?= $artist['image'] ?>" class="w-full h-full object-cover" alt="<?= $artist['name'] ?>">
+                        </div>
+                        <p class="font-semibold text-secondary text-sm"><?= $artist['name'] ?></p>
+                        <p class="text-xs text-muted"><?= $artist['concerts'] ?> concerte</p>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="space-y-6">
+            <!-- Your Insights -->
+            <div class="bg-white rounded-xl lg:rounded-2xl border border-border p-5 lg:p-6">
+                <h2 class="text-lg font-bold text-secondary mb-4">Insights</h2>
+                <div class="space-y-4">
+                    <?php foreach ($insights as $insight): ?>
+                    <div class="p-4 bg-surface rounded-xl">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="w-10 h-10 <?= $insight['bg'] ?> rounded-lg flex items-center justify-center">
+                                <span class="text-lg"><?= $insight['icon'] ?></span>
+                            </div>
+                            <div>
+                                <p class="font-semibold text-secondary"><?= $insight['label'] ?></p>
+                                <p class="text-sm text-muted"><?= $insight['value'] ?></p>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <!-- Cities Map -->
+            <div class="bg-white rounded-xl lg:rounded-2xl border border-border p-5 lg:p-6">
+                <h2 class="text-lg font-bold text-secondary mb-4">Orase vizitate</h2>
+                <div class="space-y-3">
+                    <?php foreach ($cities as $city): ?>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-secondary"><?= $city['name'] ?></span>
+                        <div class="flex items-center gap-2">
+                            <div class="w-24 h-2 bg-surface rounded-full overflow-hidden">
+                                <div class="h-full bg-primary rounded-full" style="width: <?= $city['percent'] ?>%"></div>
+                            </div>
+                            <span class="text-xs text-muted w-8"><?= $city['count'] ?></span>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <!-- Recent Badges -->
+            <div class="bg-white rounded-xl lg:rounded-2xl border border-border p-5 lg:p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-secondary">Badge-uri</h2>
+                    <a href="/user/rewards" class="text-sm text-primary font-medium hover:underline">Vezi toate →</a>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <?php foreach ($badges as $badge): ?>
+                    <div class="w-14 h-14 bg-gradient-to-br <?= $badge['gradient'] ?> rounded-xl flex items-center justify-center text-2xl" title="<?= $badge['name'] ?>"><?= $badge['emoji'] ?></div>
+                    <?php endforeach; ?>
+                    <div class="w-14 h-14 bg-surface rounded-xl flex items-center justify-center text-muted border border-border" title="Mai multe badge-uri">+2</div>
+                </div>
+            </div>
+
+            <!-- Share Profile -->
+            <div class="bg-gradient-to-br from-primary/5 to-accent/5 rounded-xl lg:rounded-2xl border border-primary/20 p-5">
+                <h3 class="font-bold text-secondary mb-2">Partajeaza profilul</h3>
+                <p class="text-sm text-muted mb-4">Arata-le prietenilor ce concerte ai vazut!</p>
+                <div class="flex gap-2">
+                    <button class="flex-1 py-2.5 bg-[#1877F2] text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    </button>
+                    <button class="flex-1 py-2.5 bg-[#1DA1F2] text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg>
+                    </button>
+                    <button class="flex-1 py-2.5 bg-gradient-to-r from-[#833AB4] via-[#FD1D1D] to-[#F77737] text-white rounded-lg text-sm font-medium flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
 
 <?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
 
 <?php
-$scriptsExtra = <<<'JS'
+$scriptsExtra = <<<JS
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const ProfilePage = {
-    user: null,
-
-    async init() {
-        if (!AmbiletAuth.isAuthenticated()) {
-            window.location.href = '/login?redirect=/user/profile';
-            return;
-        }
-
-        this.user = AmbiletAuth.getUser();
-        this.loadUserInfo();
-        this.setupEventListeners();
+// Activity Chart
+const ctx = document.getElementById('activityChart').getContext('2d');
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        datasets: [{
+            label: 'Evenimente',
+            data: [1, 0, 2, 1, 3, 4, 2, 3, 2, 2, 1, 2],
+            backgroundColor: 'rgba(165, 28, 48, 0.8)',
+            borderColor: '#A51C30',
+            borderWidth: 0,
+            borderRadius: 6,
+        }]
     },
-
-    loadUserInfo() {
-        if (!this.user) return;
-
-        const initials = this.user.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U';
-        const headerAvatar = document.getElementById('header-user-avatar');
-        if (headerAvatar) {
-            headerAvatar.innerHTML = `<span class="text-sm font-bold text-white">${initials}</span>`;
-        }
-        const headerPoints = document.getElementById('header-user-points');
-        if (headerPoints) {
-            headerPoints.textContent = this.user.points || '0';
-        }
-
-        // Pre-fill form
-        const form = document.getElementById('profile-form');
-        form.first_name.value = this.user.first_name || '';
-        form.last_name.value = this.user.last_name || '';
-        form.email.value = this.user.email || '';
-        form.phone.value = this.user.phone || '';
-        form.address.value = this.user.address || '';
-        form.city.value = this.user.city || '';
-        form.postal_code.value = this.user.postal_code || '';
-        form.state.value = this.user.state || '';
-        form.country.value = this.user.country || 'RO';
-    },
-
-    setupEventListeners() {
-        // Profile form submission
-        document.getElementById('profile-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await this.saveProfile(e.target);
-        });
-
-        // Password form submission
-        document.getElementById('password-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await this.changePassword(e.target);
-        });
-    },
-
-    async saveProfile(form) {
-        const formData = new FormData(form);
-        const saveBtn = document.getElementById('save-btn');
-        const btnText = document.getElementById('btn-text');
-        const btnSpinner = document.getElementById('btn-spinner');
-        const successDiv = document.getElementById('success-message');
-        const errorDiv = document.getElementById('error-message');
-
-        saveBtn.disabled = true;
-        btnText.classList.add('hidden');
-        btnSpinner.classList.remove('hidden');
-        successDiv.classList.add('hidden');
-        errorDiv.classList.add('hidden');
-
-        try {
-            const result = await AmbiletAPI.put('/customer/profile', {
-                first_name: formData.get('first_name'),
-                last_name: formData.get('last_name'),
-                phone: formData.get('phone'),
-                address: formData.get('address'),
-                city: formData.get('city'),
-                postal_code: formData.get('postal_code'),
-                state: formData.get('state'),
-                country: formData.get('country')
-            });
-
-            if (result.success !== false) {
-                successDiv.textContent = 'Profilul a fost actualizat cu succes!';
-                successDiv.classList.remove('hidden');
-                AmbiletNotifications.success('Profil actualizat!');
-
-                // Update local storage
-                const updatedUser = { ...this.user, ...result.user || result };
-                AmbiletAuth.updateUser(updatedUser);
-            } else {
-                errorDiv.textContent = result.message || 'Eroare la actualizarea profilului.';
-                errorDiv.classList.remove('hidden');
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false }
+        },
+        scales: {
+            x: {
+                grid: { display: false }
+            },
+            y: {
+                beginAtZero: true,
+                ticks: { stepSize: 1 },
+                grid: { color: '#E2E8F0' }
             }
-        } catch (error) {
-            // Demo mode - simulate success
-            successDiv.textContent = 'Profilul a fost actualizat cu succes!';
-            successDiv.classList.remove('hidden');
-            AmbiletNotifications.success('Profil actualizat!');
-        }
-
-        saveBtn.disabled = false;
-        btnText.classList.remove('hidden');
-        btnSpinner.classList.add('hidden');
-    },
-
-    async changePassword(form) {
-        const formData = new FormData(form);
-
-        if (formData.get('new_password') !== formData.get('new_password_confirmation')) {
-            AmbiletNotifications.error('Parolele nu coincid');
-            return;
-        }
-
-        if (formData.get('new_password').length < 8) {
-            AmbiletNotifications.error('Parola trebuie sa aiba minim 8 caractere');
-            return;
-        }
-
-        try {
-            const result = await AmbiletAPI.put('/customer/password', {
-                current_password: formData.get('current_password'),
-                password: formData.get('new_password'),
-                password_confirmation: formData.get('new_password_confirmation')
-            });
-
-            if (result.success !== false) {
-                AmbiletNotifications.success('Parola a fost schimbata cu succes!');
-                form.reset();
-            } else {
-                AmbiletNotifications.error(result.message || 'Eroare la schimbarea parolei.');
-            }
-        } catch (error) {
-            AmbiletNotifications.error('A aparut o eroare. Verifica parola curenta.');
         }
     }
-};
-
-function confirmDeleteAccount() {
-    if (confirm('Esti sigur ca vrei sa stergi contul? Aceasta actiune este ireversibila.')) {
-        if (confirm('Ultima confirmare: toate datele tale vor fi sterse permanent.')) {
-            deleteAccount();
-        }
-    }
-}
-
-async function deleteAccount() {
-    try {
-        await AmbiletAPI.delete('/customer/account');
-        AmbiletNotifications.success('Contul a fost sters.');
-        AmbiletAuth.logout();
-        window.location.href = '/';
-    } catch (error) {
-        AmbiletNotifications.error('Eroare la stergerea contului.');
-    }
-}
-
-// Initialize page
-document.addEventListener('DOMContentLoaded', () => ProfilePage.init());
+});
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';
