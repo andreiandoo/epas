@@ -40,39 +40,17 @@ $darkPage = true;
         .animate-float { animation: float 3s ease-in-out infinite; }
     </style>
 </head>
-<body class="font-sans bg-gradient-to-br from-slate-800 to-slate-900 text-slate-800 min-h-screen flex flex-col">
-
-    <!-- Header -->
-    <header class="h-[72px] bg-white/[0.03] backdrop-blur-md border-b border-white/5 flex items-center px-6 md:px-12">
-        <a href="/" class="flex items-center gap-3 no-underline">
-            <svg class="w-10 h-10" viewBox="0 0 48 48" fill="none">
-                <defs>
-                    <linearGradient id="logoGrad" x1="6" y1="10" x2="42" y2="38">
-                        <stop stop-color="#A51C30"/>
-                        <stop offset="1" stop-color="#C41E3A"/>
-                    </linearGradient>
-                </defs>
-                <path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="url(#logoGrad)"/>
-                <line x1="17" y1="15" x2="31" y2="15" stroke="white" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round"/>
-                <line x1="15" y1="19" x2="33" y2="19" stroke="white" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/>
-                <rect x="20" y="27" width="8" height="8" rx="1.5" fill="white"/>
-            </svg>
-            <div class="text-[22px] font-extrabold flex">
-                <span class="text-white">Am</span>
-                <span class="text-accent">Bilet</span>
-            </div>
-        </a>
-    </header>
+<body class="flex flex-col min-h-screen font-sans bg-gradient-to-br from-slate-800 to-slate-900 text-slate-800">
 
     <!-- Main Content -->
-    <main class="flex-1 flex items-center justify-center p-6 md:p-12 relative overflow-hidden">
+    <main class="relative flex items-center justify-center flex-1 p-6 overflow-hidden md:p-12">
         <!-- Background decorations -->
         <div class="absolute -top-[300px] -right-[300px] w-[800px] h-[800px] bg-[radial-gradient(circle,rgba(165,28,48,0.1)_0%,transparent_70%)] pointer-events-none"></div>
         <div class="absolute -bottom-[200px] -left-[200px] w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(165,28,48,0.08)_0%,transparent_70%)] pointer-events-none"></div>
 
-        <div class="text-center relative z-10 max-w-xl">
+        <div class="relative z-10 max-w-xl text-center">
             <!-- Floating Ticket Visual -->
-            <div class="mb-10 relative">
+            <div class="relative mb-10">
                 <div class="inline-block animate-float">
                     <svg class="w-[150px] h-[150px] md:w-[200px] md:h-[200px]" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <defs>
@@ -104,10 +82,10 @@ $darkPage = true;
 
             <!-- Title & Message -->
             <h1 class="text-2xl md:text-[32px] font-bold text-white mb-4">Biletul nu a fost gasit</h1>
-            <p class="text-base md:text-lg text-white/60 leading-relaxed mb-10">Se pare ca aceasta pagina nu exista sau a fost mutata. Poate biletul a fost deja scanat?</p>
+            <p class="mb-10 text-base leading-relaxed md:text-lg text-white/60">Se pare ca aceasta pagina nu exista sau a fost mutata. Poate biletul a fost deja scanat?</p>
 
             <!-- Action Buttons -->
-            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <div class="flex flex-col justify-center gap-4 sm:flex-row">
                 <a href="/" class="inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl text-[15px] font-bold bg-gradient-to-br from-primary to-red-600 text-white hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(165,28,48,0.4)] transition-all">
                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                     Acasa
@@ -119,9 +97,9 @@ $darkPage = true;
             </div>
 
             <!-- Suggestions -->
-            <div class="mt-14 pt-10 border-t border-white/10">
-                <div class="text-sm font-semibold text-white/40 uppercase tracking-wider mb-5">Link-uri utile</div>
-                <div class="flex flex-wrap gap-6 justify-center">
+            <div class="pt-10 border-t mt-14 border-white/10">
+                <div class="mb-5 text-sm font-semibold tracking-wider uppercase text-white/40">Link-uri utile</div>
+                <div class="flex flex-wrap justify-center gap-6">
                     <a href="/ajutor" class="flex items-center gap-1.5 text-[15px] text-white/60 hover:text-accent transition-colors">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                         Centru de ajutor
@@ -140,7 +118,7 @@ $darkPage = true;
     </main>
 
     <!-- Footer -->
-    <footer class="py-6 px-12 text-center border-t border-white/5">
+    <footer class="px-12 py-6 text-center border-t border-white/5">
         <p class="text-sm text-white/30">&copy; <?= date('Y') ?> <?= SITE_NAME ?> - Toate drepturile rezervate</p>
     </footer>
 </body>
