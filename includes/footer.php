@@ -58,7 +58,7 @@ $currentYear = date('Y');
     </div>
 
     <!-- Main Footer -->
-    <div class="relative z-10 px-6 py-16">
+    <div class="relative z-10 px-6 py-16 mobile:pt-8 mobile:pb-12">
         <div class="mx-auto max-w-7xl">
             <!-- Footer Grid -->
             <div class="grid grid-cols-1 gap-8 mb-6 md:grid-cols-2 lg:grid-cols-5 lg:gap-12">
@@ -68,14 +68,14 @@ $currentYear = date('Y');
                         <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="w-auto h-10 brightness-0 invert">
                     </a>
                     <a href="/" class="flex items-center mobile:justify-center gap-2.5 mb-4">
-                        <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden h-10 w-auto header-logo <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
-                        <svg class="w-10 h-10" viewBox="0 0 48 48" fill="none">
+                        <img src="/assets/images/ambilet-logo.webp" alt="<?= SITE_NAME ?>" class="hidden h-10 w-auto header-logo  <?= $transparentHeader ? 'brightness-0 invert' : '' ?>">
+                        <svg class="w-10 h-10 mobile:h-12 mobile:w-12" viewBox="0 0 48 48" fill="none">
                             <path d="M8 13C8 10.79 9.79 9 12 9H36C38.21 9 40 10.79 40 13V19C37.79 19 36 20.79 36 23V25C36 27.21 37.79 29 40 29V35C40 37.21 38.21 39 36 39H12C9.79 39 8 37.21 8 35V29C10.21 29 12 27.21 12 25V23C12 20.79 10.21 19 8 19V13Z" fill="white"></path>
                             <line x1="17" y1="15" x2="31" y2="15" stroke="#151f31" stroke-opacity="0.25" stroke-width="1.5" stroke-linecap="round"/>
                             <line x1="15" y1="19" x2="33" y2="19" stroke="#151f31" stroke-opacity="0.35" stroke-width="1.5" stroke-linecap="round"/>
                             <rect x="20" y="27" width="8" height="8" rx="1.5" fill="#151f31"></rect>
                         </svg>
-                        <div class="text-[22px] font-extrabold flex">
+                        <div class="text-[22px] font-extrabold flex mobile:text-[30px]">
                             <span class="text-white/85">Am</span>
                             <span class="text-white">Bilet</span>
                         </div>
@@ -132,7 +132,7 @@ $currentYear = date('Y');
                     </div>
 
                     <!-- Descoperă Column -->
-                    <div>
+                    <div class="mobile:text-right">
                         <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Descoperă</h4>
                         <ul class="space-y-3">
                             <li><a href="/orase" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Orașe</a></li>
@@ -162,7 +162,7 @@ $currentYear = date('Y');
                     </div>
 
                     <!-- Organizatori Column -->
-                    <div>
+                    <div class="mobile:text-right">
                         <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Organizatori</h4>
                         <ul class="space-y-3">
                             <li><a href="/organizatori" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Vinde bilete</a></li>
@@ -178,9 +178,9 @@ $currentYear = date('Y');
             <!-- Middle Section -->
             <div class="flex flex-col items-center justify-between gap-6 py-4 mb-4 border-t border-b lg:flex-row border-white/10">
                 <!-- Trust Badges -->
-                <div class="flex flex-wrap items-center justify-center gap-6">
+                <div class="flex flex-wrap items-center justify-center gap-6 mobile:gap-2">
                     <div class="flex items-center gap-2.5 px-4 py-2.5 bg-white/5 rounded-xl mobile:p-2">
-                        <div class="flex items-center justify-center rounded-lg w-9 h-9 bg-emerald-500/20 text-emerald-500">
+                        <div class="flex items-center justify-center rounded-lg w-9 h-9 bg-emerald-500/20 text-emerald-500 mobile:w-8 mobile:h-8">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                             </svg>
@@ -191,7 +191,7 @@ $currentYear = date('Y');
                         </div>
                     </div>
                     <div class="flex items-center gap-2.5 px-4 py-2.5 bg-white/5 rounded-xl mobile:p-2">
-                        <div class="flex items-center justify-center rounded-lg w-9 h-9 bg-emerald-500/20 text-emerald-500">
+                        <div class="flex items-center justify-center rounded-lg w-9 h-9 bg-emerald-500/20 text-emerald-500 mobile:w-8 mobile:h-8">
                             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                                 <polyline points="22 4 12 14.01 9 11.01"/>
