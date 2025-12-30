@@ -775,10 +775,21 @@ const EventPage = {
     },
 
     updateQuantity(ticketId, delta) {
+        console.log('updateQuantity called:', ticketId, delta);
+        console.log('ticketTypes:', this.ticketTypes);
+        console.log('quantities:', this.quantities);
+
         const tt = this.ticketTypes.find(t => t.id === ticketId);
-        if (!tt) return;
+        console.log('Found ticket type:', tt);
+
+        if (!tt) {
+            console.error('Ticket type not found for id:', ticketId);
+            return;
+        }
 
         const newQty = (this.quantities[ticketId] || 0) + delta;
+        console.log('newQty:', newQty, 'available:', tt.available);
+
         if (newQty >= 0 && newQty <= tt.available) {
             this.quantities[ticketId] = newQty;
             document.getElementById(`qty-${ticketId}`).textContent = newQty;

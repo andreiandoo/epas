@@ -115,7 +115,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Section -->
-<section class="relative pt-32 pb-20 -mt-[112px]">
+<section class="relative pt-32 pb-20">
     <div class="absolute inset-0">
         <img src="<?= $venueType['hero_image'] ?>" alt="<?= htmlspecialchars($venueType['name']) ?>" class="object-cover w-full h-full">
         <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/70"></div>

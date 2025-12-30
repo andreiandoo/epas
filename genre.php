@@ -30,11 +30,9 @@ if ($genreConfig) {
 }
 
 $currentPage = 'events';
-
+$transparentHeader = true;
 require_once __DIR__ . '/includes/head.php';
-?>
-
-<?php require_once __DIR__ . '/includes/header.php'; ?>
+require_once __DIR__ . '/includes/header.php'; ?>
 
 <!-- Hero Banner -->
 <section class="relative overflow-hidden h-72 md:h-96">

@@ -75,7 +75,7 @@ require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php'; ?>
 
 <!-- Hero Banner -->
-<section class="relative h-[420px] md:h-[480px] -mt-[112px] overflow-hidden">
+<section class="relative h-[420px] md:h-[480px] overflow-hidden">
     <img src="<?= htmlspecialchars($cityConfig['hero_image']) ?>" alt="<?= htmlspecialchars($cityConfig['name']) ?>" class="absolute inset-0 object-cover w-full h-full">
     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/30"></div>
     <div class="relative flex flex-col justify-end h-full px-4 pb-12 mx-auto max-w-7xl">
