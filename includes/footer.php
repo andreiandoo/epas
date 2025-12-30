@@ -174,7 +174,7 @@ $currentYear = date('Y');
             </div>
 
             <!-- Middle Section -->
-            <div class="flex flex-col items-center justify-between gap-6 py-8 mb-8 border-t border-b lg:flex-row border-white/10">
+            <div class="flex flex-col items-center justify-between gap-6 py-4 mb-4 border-t border-b lg:flex-row border-white/10">
                 <!-- Trust Badges -->
                 <div class="flex flex-wrap items-center justify-center gap-6">
                     <div class="flex items-center gap-2.5 px-4 py-2.5 bg-white/5 rounded-xl">

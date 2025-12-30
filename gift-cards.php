@@ -136,9 +136,9 @@ $faqs = [
                         <label class="block mb-2 text-sm font-semibold text-gray-600">Alege designul</label>
                         <div class="grid grid-cols-3 gap-3">
                             <?php foreach ($designs as $index => $design): ?>
-                            <div class="design-option h-20 rounded-xl border-2 border-transparent cursor-pointer transition-all <?= $design['gradient'] ?> <?= $index === 0 ? 'selected !border-primary relative' : '' ?>" data-design="<?= $design['slug'] ?>">
+                            <div class="design-option relative h-20 rounded-xl border-2 border-transparent cursor-pointer transition-all <?= $design['gradient'] ?> <?= $index === 0 ? 'selected !border-primary' : '' ?>" data-design="<?= $design['slug'] ?>">
                                 <?php if ($index === 0): ?>
-                                <span class="absolute flex items-center justify-center w-5 h-5 text-xs text-white rounded-full top-2 right-2 bg-primary">✓</span>
+                                <span class="absolute flex items-center justify-center w-5 h-5 text-xs bg-white rounded-full text-primary top-2 right-2">✓</span>
                                 <?php endif; ?>
                             </div>
                             <?php endforeach; ?>
@@ -176,7 +176,7 @@ $faqs = [
                     <div class="mb-5">
                         <label class="block mb-2 text-sm font-semibold text-gray-600">Cum dorești să trimiți cardul?</label>
                         <div class="grid grid-cols-2 gap-3">
-                            <div class="delivery-option flex-1 p-4 bg-gray-50 border-2 border-gray-200 rounded-xl cursor-pointer text-center transition-all selected !border-primary !bg-red-50">
+                            <div class="delivery-option flex-1 p-4 bg-gray-50 border-2 border-gray-200 rounded-xl cursor-pointer text-center transition-all selected !border-primary !bg-red-50" data-delivery="instant">
                                 <div class="flex items-center justify-center w-10 h-10 mx-auto mb-2 text-white bg-primary rounded-xl">
                                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
@@ -185,7 +185,7 @@ $faqs = [
                                 <div class="text-sm font-bold text-secondary">Email</div>
                                 <div class="text-xs text-gray-500">Instant</div>
                             </div>
-                            <div class="flex-1 p-4 text-center transition-all border-2 border-gray-200 cursor-pointer delivery-option bg-gray-50 rounded-xl hover:border-gray-300">
+                            <div class="flex-1 p-4 text-center transition-all border-2 border-gray-200 cursor-pointer delivery-option bg-gray-50 rounded-xl hover:border-gray-300" data-delivery="scheduled">
                                 <div class="flex items-center justify-center w-10 h-10 mx-auto mb-2 text-gray-500 bg-gray-200 rounded-xl">
                                     <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
@@ -195,6 +195,22 @@ $faqs = [
                                 <div class="text-xs text-gray-500">Alege data</div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Scheduled Delivery Date/Time (hidden by default) -->
+                    <div id="scheduledDelivery" class="hidden mb-5 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                        <label class="block mb-3 text-sm font-semibold text-gray-700">Când să fie trimis cardul?</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block mb-1.5 text-xs text-gray-500">Data</label>
+                                <input type="date" id="deliveryDate" class="w-full py-3 px-4 bg-white border border-gray-200 rounded-xl text-sm text-secondary outline-none focus:border-primary" min="">
+                            </div>
+                            <div>
+                                <label class="block mb-1.5 text-xs text-gray-500">Ora</label>
+                                <input type="time" id="deliveryTime" value="09:00" class="w-full py-3 px-4 bg-white border border-gray-200 rounded-xl text-sm text-secondary outline-none focus:border-primary">
+                            </div>
+                        </div>
+                        <p class="mt-2 text-xs text-amber-700">Cardul va fi trimis automat la data și ora selectată.</p>
                     </div>
 
                     <!-- Recipient Email -->
@@ -345,13 +361,20 @@ $faqs = [
                 });
                 option.classList.add('selected', '!border-primary');
                 const checkmark = document.createElement('span');
-                checkmark.className = 'absolute top-2 right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center text-xs text-white';
+                checkmark.className = 'absolute top-2 right-2 w-5 h-5 bg-white rounded-full flex items-center justify-center text-xs text-primary';
                 checkmark.textContent = '✓';
                 option.appendChild(checkmark);
             });
         });
 
         // Delivery option selection
+        const scheduledDelivery = document.getElementById('scheduledDelivery');
+        const deliveryDateInput = document.getElementById('deliveryDate');
+
+        // Set minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        if (deliveryDateInput) deliveryDateInput.min = today;
+
         document.querySelectorAll('.delivery-option').forEach(option => {
             option.addEventListener('click', () => {
                 document.querySelectorAll('.delivery-option').forEach(o => {
@@ -367,6 +390,18 @@ $faqs = [
                 if (icon) {
                     icon.classList.remove('bg-gray-200', 'text-gray-500');
                     icon.classList.add('bg-primary', 'text-white');
+                }
+
+                // Show/hide scheduled delivery section
+                const deliveryType = option.dataset.delivery;
+                if (deliveryType === 'scheduled') {
+                    scheduledDelivery.classList.remove('hidden');
+                    // Set default date to tomorrow
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    deliveryDateInput.value = tomorrow.toISOString().split('T')[0];
+                } else {
+                    scheduledDelivery.classList.add('hidden');
                 }
             });
         });
