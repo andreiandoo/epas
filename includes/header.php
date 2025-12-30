@@ -342,34 +342,33 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     </div>
 </div>
 
-<!-- Top Bar -->
-<div class="bg-secondary text-white text-sm py-2.5 <?= $transparentHeader ? 'hidden' : '' ?>" id="headerTopBar">
-    <div class="flex items-center justify-between px-4 mx-auto max-w-7xl">
-        <p class="items-center hidden gap-2 sm:flex">
-            <svg class="w-4 h-4 text-primary-light" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
-            </svg>
-            Peste 500+ evenimente disponibile în toată România
-        </p>
-        <div class="flex items-center gap-6 ml-auto">
-            <a href="#" class="hover:text-primary-light transition-colors flex items-center gap-1.5">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                Ajutor
-            </a>
-            <a href="#" class="hover:text-primary-light transition-colors flex items-center gap-1.5">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                </svg>
-                Organizatori
-            </a>
-        </div>
-    </div>
-</div>
-
 <!-- Header -->
 <header class="fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 <?= $transparentHeader ? 'header-transparent bg-transparent border-transparent' : 'bg-white border-b border-gray-200' ?>" id="header" data-transparent="<?= $transparentHeader ? 'true' : 'false' ?>">
+    <!-- Top Bar -->
+    <div class="bg-secondary text-white text-sm py-2.5 <?= $transparentHeader ? 'hidden' : '' ?>" id="headerTopBar">
+        <div class="flex items-center justify-between px-4 mx-auto max-w-7xl">
+            <p class="items-center hidden gap-2 sm:flex">
+                <svg class="w-4 h-4 text-primary-light" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
+                </svg>
+                Peste 500+ evenimente disponibile în toată România
+            </p>
+            <div class="flex items-center gap-6 ml-auto">
+                <a href="#" class="hover:text-primary-light transition-colors flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Ajutor
+                </a>
+                <a href="#" class="hover:text-primary-light transition-colors flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                    Organizatori
+                </a>
+            </div>
+        </div>
+    </div>
     <div class="max-w-[1400px] mx-auto px-6">
         <div class="flex items-center justify-between h-[72px]">
             <!-- Logo -->
