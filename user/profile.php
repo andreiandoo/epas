@@ -4,67 +4,6 @@ $pageTitle = 'Profilul meu';
 $currentPage = 'profile';
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/user-header.php';
-
-// Demo user data
-$demoUser = [
-    'name' => 'Andrei Popescu',
-    'initials' => 'AP',
-    'member_since' => 'Ianuarie 2023',
-    'level' => 12,
-    'points' => 2450,
-    'type' => 'Rock Enthusiast',
-    'stats' => [
-        'events' => 23,
-        'spent' => 4850,
-        'cities' => 7,
-        'artists' => 15
-    ]
-];
-
-// Demo taste profile
-$tasteProfile = [
-    ['name' => 'Rock / Metal', 'emoji' => '🎸', 'percent' => 65, 'color' => 'from-primary to-primary-dark', 'events' => 15, 'artists' => 'Dirty Shirt, Cargo, Trooper, Iris'],
-    ['name' => 'Pop / Dance', 'emoji' => '🎤', 'percent' => 20, 'color' => 'from-accent to-warning', 'events' => 5, 'artists' => 'Festivaluri de vara'],
-    ['name' => 'Teatru / Stand-up', 'emoji' => '🎭', 'percent' => 10, 'color' => 'from-success to-teal-500', 'events' => 2, 'artists' => ''],
-    ['name' => 'Clasic / Jazz', 'emoji' => '🎻', 'percent' => 5, 'color' => 'from-blue-500 to-indigo-500', 'events' => 1, 'artists' => '']
-];
-
-// Demo artists
-$topArtists = [
-    ['name' => 'Dirty Shirt', 'concerts' => 5, 'image' => 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100'],
-    ['name' => 'Cargo', 'concerts' => 4, 'image' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=100'],
-    ['name' => 'Trooper', 'concerts' => 3, 'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=100'],
-    ['name' => 'Iris', 'concerts' => 3, 'image' => 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=100']
-];
-
-// Demo cities
-$cities = [
-    ['name' => 'Bucuresti', 'count' => 12, 'percent' => 52],
-    ['name' => 'Cluj-Napoca', 'count' => 5, 'percent' => 22],
-    ['name' => 'Constanta', 'count' => 3, 'percent' => 13],
-    ['name' => 'Baia Mare', 'count' => 2, 'percent' => 9],
-    ['name' => 'Timisoara', 'count' => 1, 'percent' => 4]
-];
-
-// Demo insights
-$insights = [
-    ['icon' => '📅', 'label' => 'Ziua preferata', 'value' => 'Vineri seara', 'bg' => 'bg-primary/10'],
-    ['icon' => '🎫', 'label' => 'Tip bilet preferat', 'value' => 'VIP (45%)', 'bg' => 'bg-accent/10'],
-    ['icon' => '💰', 'label' => 'Cheltuiala medie', 'value' => '210 lei / eveniment', 'bg' => 'bg-success/10'],
-    ['icon' => '📍', 'label' => 'Oras preferat', 'value' => 'Bucuresti (12 evenimente)', 'bg' => 'bg-blue-500/10']
-];
-
-// Demo badges
-$badges = [
-    ['emoji' => '🎸', 'name' => 'Rock Veteran', 'gradient' => 'from-yellow-400 to-orange-500'],
-    ['emoji' => '🌟', 'name' => 'Early Bird', 'gradient' => 'from-purple-400 to-pink-500'],
-    ['emoji' => '💎', 'name' => 'VIP Lover', 'gradient' => 'from-green-400 to-emerald-500'],
-    ['emoji' => '🎪', 'name' => 'Festival Fan', 'gradient' => 'from-blue-400 to-cyan-500'],
-    ['emoji' => '❤️', 'name' => 'Loyal Fan', 'gradient' => 'from-red-400 to-pink-500']
-];
-
-// Monthly activity data
-$activityData = [1, 0, 2, 1, 3, 4, 2, 3, 2, 2, 1, 2];
 ?>
 
 <style>
@@ -91,18 +30,18 @@ $activityData = [1, 0, 2, 1, 3, 4, 2, 3, 2, 2, 1, 2];
                 <div class="flex flex-col lg:flex-row lg:items-end gap-4">
                     <div class="relative">
                         <div class="w-24 h-24 lg:w-32 lg:h-32 bg-gradient-to-br from-primary to-accent rounded-2xl lg:rounded-3xl flex items-center justify-center border-4 border-white shadow-lg">
-                            <span class="text-3xl lg:text-4xl font-bold text-white"><?= $demoUser['initials'] ?></span>
+                            <span class="text-3xl lg:text-4xl font-bold text-white" id="user-initials">--</span>
                         </div>
                         <div class="absolute -bottom-1 -right-1 w-8 h-8 bg-accent rounded-lg flex items-center justify-center border-2 border-white">
-                            <span class="text-xs font-bold text-white"><?= $demoUser['level'] ?></span>
+                            <span class="text-xs font-bold text-white" id="user-level-badge">0</span>
                         </div>
                     </div>
                     <div class="lg:pb-2">
-                        <h1 class="text-2xl lg:text-3xl font-bold text-secondary"><?= $demoUser['name'] ?></h1>
-                        <p class="text-muted">Membru din <?= $demoUser['member_since'] ?></p>
+                        <h1 class="text-2xl lg:text-3xl font-bold text-secondary" id="user-name">Loading...</h1>
+                        <p class="text-muted">Membru din <span id="user-member-since">...</span></p>
                         <div class="flex items-center gap-2 mt-2">
-                            <span class="px-3 py-1 bg-accent/10 text-accent text-sm font-bold rounded-full">🎸 <?= $demoUser['type'] ?></span>
-                            <span class="px-3 py-1 bg-success/10 text-success text-sm font-bold rounded-full">Nivel <?= $demoUser['level'] ?></span>
+                            <span class="px-3 py-1 bg-accent/10 text-accent text-sm font-bold rounded-full" id="user-type-badge">...</span>
+                            <span class="px-3 py-1 bg-success/10 text-success text-sm font-bold rounded-full" id="user-level-text">Nivel 0</span>
                         </div>
                     </div>
                 </div>
@@ -123,19 +62,19 @@ $activityData = [1, 0, 2, 1, 3, 4, 2, 3, 2, 2, 1, 2];
     <!-- Stats Cards -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">
         <div class="stat-card bg-white rounded-xl lg:rounded-2xl p-4 lg:p-5 border border-border text-center">
-            <p class="text-3xl lg:text-4xl font-bold text-secondary"><?= $demoUser['stats']['events'] ?></p>
+            <p class="text-3xl lg:text-4xl font-bold text-secondary" id="stat-events">0</p>
             <p class="text-sm text-muted mt-1">Evenimente</p>
         </div>
         <div class="stat-card bg-white rounded-xl lg:rounded-2xl p-4 lg:p-5 border border-border text-center">
-            <p class="text-3xl lg:text-4xl font-bold text-secondary"><?= number_format($demoUser['stats']['spent']) ?></p>
+            <p class="text-3xl lg:text-4xl font-bold text-secondary" id="stat-spent">0</p>
             <p class="text-sm text-muted mt-1">Lei cheltuiti</p>
         </div>
         <div class="stat-card bg-white rounded-xl lg:rounded-2xl p-4 lg:p-5 border border-border text-center">
-            <p class="text-3xl lg:text-4xl font-bold text-secondary"><?= $demoUser['stats']['cities'] ?></p>
+            <p class="text-3xl lg:text-4xl font-bold text-secondary" id="stat-cities">0</p>
             <p class="text-sm text-muted mt-1">Orase vizitate</p>
         </div>
         <div class="stat-card bg-white rounded-xl lg:rounded-2xl p-4 lg:p-5 border border-border text-center">
-            <p class="text-3xl lg:text-4xl font-bold text-secondary"><?= $demoUser['stats']['artists'] ?></p>
+            <p class="text-3xl lg:text-4xl font-bold text-secondary" id="stat-artists">0</p>
             <p class="text-sm text-muted mt-1">Artisti vazuti</p>
         </div>
     </div>
@@ -147,7 +86,7 @@ $activityData = [1, 0, 2, 1, 3, 4, 2, 3, 2, 2, 1, 2];
             <div class="bg-white rounded-xl lg:rounded-2xl border border-border p-5 lg:p-6">
                 <div class="flex items-center justify-between mb-6">
                     <h2 class="text-lg font-bold text-secondary">Profilul tau muzical</h2>
-                    <span class="text-xs text-muted">Bazat pe <?= $demoUser['stats']['events'] ?> evenimente</span>
+                    <span class="text-xs text-muted">Bazat pe <span id="taste-events-count">0</span> evenimente</span>
                 </div>
 
                 <!-- User Type Card -->
@@ -157,33 +96,16 @@ $activityData = [1, 0, 2, 1, 3, 4, 2, 3, 2, 2, 1, 2];
                             <span class="text-3xl">🎸</span>
                         </div>
                         <div>
-                            <h3 class="text-xl font-bold text-secondary"><?= $demoUser['type'] ?></h3>
-                            <p class="text-sm text-muted mt-1">Esti pasionat de concerte rock si metal. Preferi evenimentele live cu energie mare si nu ratezi niciodata o trupa buna din Romania.</p>
+                            <h3 class="text-xl font-bold text-secondary" id="user-type-title">...</h3>
+                            <p class="text-sm text-muted mt-1" id="user-type-desc">...</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Genre Breakdown -->
                 <h3 class="font-semibold text-secondary mb-4">Genuri preferate</h3>
-                <div class="space-y-4">
-                    <?php foreach ($tasteProfile as $genre): ?>
-                    <div>
-                        <div class="flex items-center justify-between text-sm mb-2">
-                            <span class="font-medium text-secondary flex items-center gap-2">
-                                <span class="text-lg"><?= $genre['emoji'] ?></span> <?= $genre['name'] ?>
-                            </span>
-                            <span class="font-bold text-primary"><?= $genre['percent'] ?>%</span>
-                        </div>
-                        <div class="h-3 bg-surface rounded-full overflow-hidden">
-                            <div class="taste-bar h-full bg-gradient-to-r <?= $genre['color'] ?> rounded-full" style="width: <?= $genre['percent'] ?>%"></div>
-                        </div>
-                        <?php if ($genre['artists']): ?>
-                        <p class="text-xs text-muted mt-1"><?= $genre['events'] ?> evenimente • <?= $genre['artists'] ?></p>
-                        <?php else: ?>
-                        <p class="text-xs text-muted mt-1"><?= $genre['events'] ?> eveniment<?= $genre['events'] > 1 ? 'e' : '' ?></p>
-                        <?php endif; ?>
-                    </div>
-                    <?php endforeach; ?>
+                <div class="space-y-4" id="taste-profile-container">
+                    <!-- Populated by JavaScript -->
                 </div>
             </div>
 
@@ -198,16 +120,8 @@ $activityData = [1, 0, 2, 1, 3, 4, 2, 3, 2, 2, 1, 2];
             <!-- Top Artists -->
             <div class="bg-white rounded-xl lg:rounded-2xl border border-border p-5 lg:p-6">
                 <h2 class="text-lg font-bold text-secondary mb-4">Artistii tai preferati</h2>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                    <?php foreach ($topArtists as $artist): ?>
-                    <div class="artist-card text-center">
-                        <div class="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden">
-                            <img src="<?= $artist['image'] ?>" class="w-full h-full object-cover" alt="<?= $artist['name'] ?>">
-                        </div>
-                        <p class="font-semibold text-secondary text-sm"><?= $artist['name'] ?></p>
-                        <p class="text-xs text-muted"><?= $artist['concerts'] ?> concerte</p>
-                    </div>
-                    <?php endforeach; ?>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="top-artists-container">
+                    <!-- Populated by JavaScript -->
                 </div>
             </div>
         </div>
@@ -217,38 +131,16 @@ $activityData = [1, 0, 2, 1, 3, 4, 2, 3, 2, 2, 1, 2];
             <!-- Your Insights -->
             <div class="bg-white rounded-xl lg:rounded-2xl border border-border p-5 lg:p-6">
                 <h2 class="text-lg font-bold text-secondary mb-4">Insights</h2>
-                <div class="space-y-4">
-                    <?php foreach ($insights as $insight): ?>
-                    <div class="p-4 bg-surface rounded-xl">
-                        <div class="flex items-center gap-3 mb-2">
-                            <div class="w-10 h-10 <?= $insight['bg'] ?> rounded-lg flex items-center justify-center">
-                                <span class="text-lg"><?= $insight['icon'] ?></span>
-                            </div>
-                            <div>
-                                <p class="font-semibold text-secondary"><?= $insight['label'] ?></p>
-                                <p class="text-sm text-muted"><?= $insight['value'] ?></p>
-                            </div>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
+                <div class="space-y-4" id="insights-container">
+                    <!-- Populated by JavaScript -->
                 </div>
             </div>
 
             <!-- Cities Map -->
             <div class="bg-white rounded-xl lg:rounded-2xl border border-border p-5 lg:p-6">
                 <h2 class="text-lg font-bold text-secondary mb-4">Orase vizitate</h2>
-                <div class="space-y-3">
-                    <?php foreach ($cities as $city): ?>
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm text-secondary"><?= $city['name'] ?></span>
-                        <div class="flex items-center gap-2">
-                            <div class="w-24 h-2 bg-surface rounded-full overflow-hidden">
-                                <div class="h-full bg-primary rounded-full" style="width: <?= $city['percent'] ?>%"></div>
-                            </div>
-                            <span class="text-xs text-muted w-8"><?= $city['count'] ?></span>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
+                <div class="space-y-3" id="cities-container">
+                    <!-- Populated by JavaScript -->
                 </div>
             </div>
 
@@ -258,11 +150,8 @@ $activityData = [1, 0, 2, 1, 3, 4, 2, 3, 2, 2, 1, 2];
                     <h2 class="text-lg font-bold text-secondary">Badge-uri</h2>
                     <a href="/user/rewards" class="text-sm text-primary font-medium hover:underline">Vezi toate →</a>
                 </div>
-                <div class="flex flex-wrap gap-3">
-                    <?php foreach ($badges as $badge): ?>
-                    <div class="w-14 h-14 bg-gradient-to-br <?= $badge['gradient'] ?> rounded-xl flex items-center justify-center text-2xl" title="<?= $badge['name'] ?>"><?= $badge['emoji'] ?></div>
-                    <?php endforeach; ?>
-                    <div class="w-14 h-14 bg-surface rounded-xl flex items-center justify-center text-muted border border-border" title="Mai multe badge-uri">+2</div>
+                <div class="flex flex-wrap gap-3" id="badges-container">
+                    <!-- Populated by JavaScript -->
                 </div>
             </div>
 
@@ -289,42 +178,168 @@ $activityData = [1, 0, 2, 1, 3, 4, 2, 3, 2, 2, 1, 2];
 <?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
 
 <?php
-$scriptsExtra = <<<JS
+$scriptsExtra = <<<'JS'
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// Activity Chart
-const ctx = document.getElementById('activityChart').getContext('2d');
-new Chart(ctx, {
-    type: 'bar',
-    data: {
-        labels: ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-        datasets: [{
-            label: 'Evenimente',
-            data: [1, 0, 2, 1, 3, 4, 2, 3, 2, 2, 1, 2],
-            backgroundColor: 'rgba(165, 28, 48, 0.8)',
-            borderColor: '#A51C30',
-            borderWidth: 0,
-            borderRadius: 6,
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: { display: false }
+// Render profile from centralized demo data
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof DEMO_DATA === 'undefined') {
+        console.error('DEMO_DATA not loaded');
+        return;
+    }
+
+    const customer = DEMO_DATA.customer || {};
+    const tasteProfile = DEMO_DATA.tasteProfile || [];
+    const topArtists = DEMO_DATA.topArtists || [];
+    const citiesVisited = DEMO_DATA.citiesVisited || [];
+    const insights = DEMO_DATA.insights || [];
+    const badges = DEMO_DATA.badges?.unlocked || [];
+    const activityData = DEMO_DATA.activityData || [];
+
+    // Update user info
+    document.getElementById('user-initials').textContent = customer.initials || '--';
+    document.getElementById('user-name').textContent = customer.name || 'User';
+    document.getElementById('user-member-since').textContent = customer.member_since || '...';
+    document.getElementById('user-level-badge').textContent = customer.level || 0;
+    document.getElementById('user-type-badge').innerHTML = `🎸 ${customer.type || 'Fan'}`;
+    document.getElementById('user-level-text').textContent = `Nivel ${customer.level || 0}`;
+
+    // Update stats
+    const stats = customer.stats || {};
+    document.getElementById('stat-events').textContent = stats.events || 0;
+    document.getElementById('stat-spent').textContent = (stats.spent || 0).toLocaleString();
+    document.getElementById('stat-cities').textContent = stats.cities || 0;
+    document.getElementById('stat-artists').textContent = stats.artists || 0;
+    document.getElementById('taste-events-count').textContent = stats.events || 0;
+
+    // Update user type section
+    document.getElementById('user-type-title').textContent = customer.type || 'Music Fan';
+    document.getElementById('user-type-desc').textContent = 'Esti pasionat de concerte rock si metal. Preferi evenimentele live cu energie mare si nu ratezi niciodata o trupa buna din Romania.';
+
+    // Render taste profile
+    renderTasteProfile(tasteProfile);
+    renderTopArtists(topArtists);
+    renderCities(citiesVisited);
+    renderInsights(insights);
+    renderBadges(badges);
+    initActivityChart(activityData);
+});
+
+function renderTasteProfile(profile) {
+    const container = document.getElementById('taste-profile-container');
+    container.innerHTML = profile.map(genre => `
+        <div>
+            <div class="flex items-center justify-between text-sm mb-2">
+                <span class="font-medium text-secondary flex items-center gap-2">
+                    <span class="text-lg">${genre.emoji}</span> ${genre.name}
+                </span>
+                <span class="font-bold text-primary">${genre.percent}%</span>
+            </div>
+            <div class="h-3 bg-surface rounded-full overflow-hidden">
+                <div class="taste-bar h-full bg-gradient-to-r ${genre.gradient} rounded-full" style="width: ${genre.percent}%"></div>
+            </div>
+            ${genre.artists ? `
+                <p class="text-xs text-muted mt-1">${genre.events} evenimente • ${genre.artists}</p>
+            ` : `
+                <p class="text-xs text-muted mt-1">${genre.events} eveniment${genre.events > 1 ? 'e' : ''}</p>
+            `}
+        </div>
+    `).join('');
+}
+
+function renderTopArtists(artists) {
+    const container = document.getElementById('top-artists-container');
+    container.innerHTML = artists.map(artist => `
+        <div class="artist-card text-center">
+            <div class="w-16 h-16 mx-auto mb-2 rounded-full overflow-hidden">
+                <img src="${artist.image}" class="w-full h-full object-cover" alt="${artist.name}">
+            </div>
+            <p class="font-semibold text-secondary text-sm">${artist.name}</p>
+            <p class="text-xs text-muted">${artist.concerts} concerte</p>
+        </div>
+    `).join('');
+}
+
+function renderCities(cities) {
+    const container = document.getElementById('cities-container');
+    container.innerHTML = cities.map(city => `
+        <div class="flex items-center justify-between">
+            <span class="text-sm text-secondary">${city.name}</span>
+            <div class="flex items-center gap-2">
+                <div class="w-24 h-2 bg-surface rounded-full overflow-hidden">
+                    <div class="h-full bg-primary rounded-full" style="width: ${city.percent}%"></div>
+                </div>
+                <span class="text-xs text-muted w-8">${city.count}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderInsights(insights) {
+    const container = document.getElementById('insights-container');
+    container.innerHTML = insights.map(insight => `
+        <div class="p-4 bg-surface rounded-xl">
+            <div class="flex items-center gap-3 mb-2">
+                <div class="w-10 h-10 ${insight.bg} rounded-lg flex items-center justify-center">
+                    <span class="text-lg">${insight.icon}</span>
+                </div>
+                <div>
+                    <p class="font-semibold text-secondary">${insight.label}</p>
+                    <p class="text-sm text-muted">${insight.value}</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderBadges(badges) {
+    const container = document.getElementById('badges-container');
+    const badgesHtml = badges.slice(0, 5).map(badge => `
+        <div class="w-14 h-14 bg-gradient-to-br ${badge.gradient} rounded-xl flex items-center justify-center text-2xl" title="${badge.name}">${badge.emoji}</div>
+    `).join('');
+
+    const remaining = Math.max(0, badges.length - 5);
+    const moreHtml = remaining > 0 ? `
+        <div class="w-14 h-14 bg-surface rounded-xl flex items-center justify-center text-muted border border-border" title="Mai multe badge-uri">+${remaining}</div>
+    ` : '';
+
+    container.innerHTML = badgesHtml + moreHtml;
+}
+
+function initActivityChart(data) {
+    const ctx = document.getElementById('activityChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            datasets: [{
+                label: 'Evenimente',
+                data: data,
+                backgroundColor: 'rgba(165, 28, 48, 0.8)',
+                borderColor: '#A51C30',
+                borderWidth: 0,
+                borderRadius: 6,
+            }]
         },
-        scales: {
-            x: {
-                grid: { display: false }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
             },
-            y: {
-                beginAtZero: true,
-                ticks: { stepSize: 1 },
-                grid: { color: '#E2E8F0' }
+            scales: {
+                x: {
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: { stepSize: 1 },
+                    grid: { color: '#E2E8F0' }
+                }
             }
         }
-    }
-});
+    });
+}
 </script>
 JS;
 require_once dirname(__DIR__) . '/includes/scripts.php';

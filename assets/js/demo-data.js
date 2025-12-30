@@ -346,20 +346,39 @@ const DEMO_DATA = {
     },
 
     // ===========================================
-    // DEMO CUSTOMER ACCOUNT
+    // DEMO CUSTOMER ACCOUNT (User Profile)
     // ===========================================
     customer: {
         id: 1,
-        email: 'demo@ambilet.ro',
+        email: 'andrei.popescu@email.com',
         password: 'demo123', // For testing only
-        name: 'Ion Popescu',
-        first_name: 'Ion',
+        name: 'Andrei Popescu',
+        first_name: 'Andrei',
         last_name: 'Popescu',
-        phone: '+40721234567',
+        phone: '+40 722 123 456',
         avatar: null,
-        points: 1250,
-        created_at: '2024-01-15',
+        initials: 'AP',
+        member_since: 'Ianuarie 2023',
+        level: 12,
+        level_name: 'Rock Star',
+        points: 2450,
+        next_level_xp: 3000,
+        type: 'Rock Enthusiast',
+        created_at: '2023-01-15',
         email_verified: true,
+        stats: {
+            events: 23,
+            spent: 4850,
+            cities: 7,
+            artists: 15
+        },
+        address: {
+            street: 'Str. Exemplu nr. 10',
+            city: 'Bucuresti',
+            county: 'Bucuresti',
+            postal_code: '010101',
+            country: 'Romania'
+        },
         notifications: {
             orders: true,
             reminders: true,
@@ -369,138 +388,271 @@ const DEMO_DATA = {
     },
 
     // ===========================================
-    // CUSTOMER ORDERS
+    // TASTE PROFILE (for profile page)
+    // ===========================================
+    tasteProfile: [
+        { name: 'Rock / Metal', emoji: '🎸', percent: 65, gradient: 'from-primary to-primary-dark', events: 15, artists: 'Dirty Shirt, Cargo, Trooper, Iris' },
+        { name: 'Pop / Dance', emoji: '🎤', percent: 20, gradient: 'from-accent to-warning', events: 5, artists: 'Festivaluri de vara' },
+        { name: 'Teatru / Stand-up', emoji: '🎭', percent: 10, gradient: 'from-success to-teal-500', events: 2, artists: '' },
+        { name: 'Clasic / Jazz', emoji: '🎻', percent: 5, gradient: 'from-blue-500 to-indigo-500', events: 1, artists: '' }
+    ],
+
+    // ===========================================
+    // TOP ARTISTS (for profile page)
+    // ===========================================
+    topArtists: [
+        { name: 'Dirty Shirt', concerts: 5, image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100' },
+        { name: 'Cargo', concerts: 4, image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=100' },
+        { name: 'Trooper', concerts: 3, image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=100' },
+        { name: 'Iris', concerts: 3, image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=100' }
+    ],
+
+    // ===========================================
+    // CITIES VISITED (for profile page)
+    // ===========================================
+    citiesVisited: [
+        { name: 'Bucuresti', count: 12, percent: 52 },
+        { name: 'Cluj-Napoca', count: 5, percent: 22 },
+        { name: 'Constanta', count: 3, percent: 13 },
+        { name: 'Baia Mare', count: 2, percent: 9 },
+        { name: 'Timisoara', count: 1, percent: 4 }
+    ],
+
+    // ===========================================
+    // INSIGHTS (for profile page)
+    // ===========================================
+    insights: [
+        { icon: '📅', label: 'Ziua preferata', value: 'Vineri seara', bg: 'bg-primary/10' },
+        { icon: '🎫', label: 'Tip bilet preferat', value: 'VIP (45%)', bg: 'bg-accent/10' },
+        { icon: '💰', label: 'Cheltuiala medie', value: '210 lei / eveniment', bg: 'bg-success/10' },
+        { icon: '📍', label: 'Oras preferat', value: 'Bucuresti (12 evenimente)', bg: 'bg-blue-500/10' }
+    ],
+
+    // ===========================================
+    // ACTIVITY DATA (for profile chart)
+    // ===========================================
+    activityData: [1, 0, 2, 1, 3, 4, 2, 3, 2, 2, 1, 2],
+
+    // ===========================================
+    // REWARDS
+    // ===========================================
+    rewards: [
+        { id: 1, emoji: '🎫', title: '10 lei reducere', desc: 'Aplicabil la orice comanda de minim 50 lei', points: 500, status: 'available', gradient: 'from-accent/20 to-warning/20' },
+        { id: 2, emoji: '🎁', title: '25 lei reducere', desc: 'Aplicabil la orice comanda de minim 100 lei', points: 1000, status: 'available', gradient: 'from-primary/20 to-accent/20' },
+        { id: 3, emoji: '⬆️', title: 'Upgrade VIP', desc: 'Transforma un bilet Standard in VIP', points: 2000, status: 'available', gradient: 'from-purple-500/20 to-pink-500/20' },
+        { id: 4, emoji: '🎤', title: 'Meet & Greet', desc: 'Acces la meet & greet cu artistii', points: 5000, status: 'locked', lock_reason: 'NIVEL 15+', gradient: 'from-blue-500/20 to-cyan-500/20' },
+        { id: 5, emoji: '🎫', title: 'Bilet gratuit', desc: 'Un bilet Standard gratuit la orice eveniment', points: 4000, status: 'insufficient', missing: 1550, gradient: 'from-yellow-400/20 to-orange-500/20' },
+        { id: 6, emoji: '👑', title: 'Gold Member', desc: 'Status Gold pentru 1 an - acces prioritar', points: 10000, status: 'exclusive', missing: 7550, gradient: 'from-yellow-400 to-orange-500' }
+    ],
+
+    // ===========================================
+    // BADGES
+    // ===========================================
+    badges: {
+        unlocked: [
+            { id: 1, emoji: '🎸', name: 'Rock Veteran', desc: '10+ concerte rock', xp: 200, gradient: 'from-yellow-400 to-orange-500' },
+            { id: 2, emoji: '🌟', name: 'Early Bird', desc: '5+ bilete early bird', xp: 150, gradient: 'from-purple-400 to-pink-500' },
+            { id: 3, emoji: '💎', name: 'VIP Lover', desc: '3+ bilete VIP', xp: 300, gradient: 'from-green-400 to-emerald-500' },
+            { id: 4, emoji: '🎪', name: 'Festival Fan', desc: '3+ festivaluri', xp: 250, gradient: 'from-blue-400 to-cyan-500' },
+            { id: 5, emoji: '❤️', name: 'Loyal Fan', desc: '1 an pe platforma', xp: 500, gradient: 'from-red-400 to-pink-500' },
+            { id: 6, emoji: '🎭', name: 'Eclectic', desc: '5+ genuri diferite', xp: 200, gradient: 'from-indigo-400 to-purple-500' },
+            { id: 7, emoji: '⭐', name: 'First Timer', desc: 'Primul bilet', xp: 50, gradient: 'from-amber-400 to-yellow-500' }
+        ],
+        locked: [
+            { id: 8, emoji: '🏆', name: 'Champion', desc: '50+ evenimente', missing: '27 lipsa' },
+            { id: 9, emoji: '🌍', name: 'Explorer', desc: '10+ orase diferite', missing: '6 lipsa' },
+            { id: 10, emoji: '👥', name: 'Social', desc: 'Invita 5 prieteni', missing: '5 lipsa' }
+        ]
+    },
+
+    // ===========================================
+    // POINTS HISTORY
+    // ===========================================
+    pointsHistory: [
+        { id: 1, type: 'earned', icon: 'plus', desc: 'Achizitie bilet - Cargo Live', date: '20 Dec 2024, 10:12', points: 120 },
+        { id: 2, type: 'badge', icon: 'badge', desc: 'Badge obtinut - Rock Veteran', date: '18 Dec 2024, 15:30', points: 200 },
+        { id: 3, type: 'spent', icon: 'minus', desc: 'Reducere folosita - 10 lei', date: '15 Dec 2024, 09:45', points: -500 },
+        { id: 4, type: 'earned', icon: 'plus', desc: 'Achizitie bilet - Halloween Rock Night', date: '28 Oct 2024, 18:45', points: 160 },
+        { id: 5, type: 'checkin', icon: 'check', desc: 'Check-in efectuat - Halloween Rock Night', date: '31 Oct 2024, 19:15', points: 50 }
+    ],
+
+    // ===========================================
+    // LEVELS SYSTEM
+    // ===========================================
+    levels: [
+        { range: '1-5', name: 'Newbie', emoji: '🎵', xp: '0 - 500', rewards: '', status: 'completed', gradient: 'from-gray-300 to-gray-400' },
+        { range: '6-10', name: 'Music Lover', emoji: '🎶', xp: '500 - 1,500', rewards: '10 lei reducere', status: 'completed', gradient: 'from-blue-400 to-cyan-500' },
+        { range: '11-15', name: 'Rock Star', emoji: '🎸', xp: '1,500 - 4,000', rewards: 'Upgrade VIP, 25 lei reducere', status: 'current', gradient: 'from-primary to-accent' },
+        { range: '16-20', name: 'Legend', emoji: '👑', xp: '4,000 - 8,000', rewards: 'Meet & Greet, Bilet gratuit', status: 'locked', gradient: 'from-purple-400 to-pink-500' },
+        { range: '21+', name: 'Hall of Fame', emoji: '🏆', xp: '8,000+', rewards: 'Gold Member, Backstage Access', status: 'locked', gradient: 'from-yellow-400 to-orange-500' }
+    ],
+
+    // ===========================================
+    // CUSTOMER ORDERS (for orders page)
     // ===========================================
     customerOrders: [
         {
-            id: 'ORD-2024-001234',
-            event: {
-                id: 3,
-                title: 'Micutzu - Stand-up Comedy',
-                date: '2025-02-14',
-                venue: 'Sala Palatului, Bucuresti',
-                image: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=400'
-            },
-            tickets: [
-                { type: 'Categoria 1', quantity: 2, price: 180 }
-            ],
-            total: 360,
-            service_fee: 18,
-            grand_total: 378,
+            id: 1,
+            reference: 'TIX-78453',
             status: 'confirmed',
-            payment_method: 'card',
-            created_at: '2024-12-20T14:30:00',
-            qr_codes: ['QR001', 'QR002']
+            event: { title: 'Mos Craciun e Rocker', image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=200' },
+            created_at: '2024-12-22T14:35:00',
+            items: [{ name: 'VIP', quantity: 2, price: 150 }],
+            subtotal: 300,
+            discount: 30,
+            discount_code: 'ROCK2024',
+            total: 270,
+            points_earned: 60,
+            payment_method: 'Card •••• 4532',
+            payment_date: '2024-12-22T14:36:00',
+            transaction_id: 'TRX-8F4A2B'
         },
         {
-            id: 'ORD-2024-001189',
-            event: {
-                id: 5,
-                title: 'Untold Festival 2025',
-                date: '2025-08-07',
-                venue: 'Cluj Arena, Cluj-Napoca',
-                image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400'
-            },
-            tickets: [
-                { type: 'General Access - 4 zile', quantity: 1, price: 550 }
-            ],
-            total: 550,
-            service_fee: 27.50,
-            grand_total: 577.50,
+            id: 2,
+            reference: 'TIX-78501',
             status: 'confirmed',
-            payment_method: 'card',
-            created_at: '2024-11-10T18:45:00',
-            qr_codes: ['QR003']
+            event: { title: 'Cargo Live', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200' },
+            created_at: '2024-12-20T10:12:00',
+            items: [{ name: 'Standard', quantity: 1, price: 80 }],
+            subtotal: 80,
+            discount: 0,
+            total: 80,
+            points_earned: 16,
+            payment_method: 'Apple Pay',
+            payment_date: '2024-12-20T10:13:00'
         },
         {
-            id: 'ORD-2024-000892',
-            event: {
+            id: 3,
+            reference: 'TIX-77234',
+            status: 'completed',
+            event: { title: 'Halloween Rock Night', image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200' },
+            created_at: '2024-10-28T18:45:00',
+            items: [{ name: 'Standard', quantity: 2, price: 80 }],
+            subtotal: 160,
+            total: 160,
+            points_earned: 32,
+            checked_in: true
+        },
+        {
+            id: 4,
+            reference: 'TIX-76890',
+            status: 'refunded',
+            event: { title: 'Concert Anulat - Festival X', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200' },
+            created_at: '2024-09-15T09:30:00',
+            items: [{ name: 'Premium', quantity: 1, price: 200 }],
+            subtotal: 200,
+            total: 200,
+            refunded_amount: 200,
+            refund_date: '2024-09-16',
+            refund_reason: 'Eveniment anulat de organizator'
+        },
+        {
+            id: 5,
+            reference: 'TIX-75123',
+            status: 'completed',
+            event: { title: 'Trooper - 30 Years Tour', image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200' },
+            created_at: '2024-09-10T12:20:00',
+            items: [{ name: 'VIP', quantity: 1, price: 150 }],
+            subtotal: 150,
+            total: 150,
+            points_earned: 30
+        }
+    ],
+
+    // ===========================================
+    // CUSTOMER TICKETS (for tickets page)
+    // ===========================================
+    customerTickets: {
+        upcoming: [
+            {
                 id: 1,
-                title: 'Concert Massive Attack',
-                date: '2025-03-15',
-                venue: 'Arenele Romane, Bucuresti',
-                image: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400'
+                code: 'TIX-78453-VIP-001',
+                event: {
+                    title: 'Mos Craciun e Rocker',
+                    subtitle: 'Concert Dirty Shirt & Friends',
+                    date: '2024-12-27',
+                    time: '19:00',
+                    doors: '18:00',
+                    venue: 'Grand Gala, Baia Mare',
+                    image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=300',
+                    genre: 'Rock'
+                },
+                ticket_type: 'VIP',
+                price: 150,
+                quantity: 2,
+                days_until: 3,
+                status: 'valid',
+                tickets: [
+                    { code: 'TIX-78453-VIP-001', type: 'VIP', status: 'valid' },
+                    { code: 'TIX-78453-VIP-002', type: 'VIP', status: 'valid' }
+                ]
             },
-            tickets: [
-                { type: 'Golden Circle', quantity: 2, price: 450 }
-            ],
-            total: 900,
-            service_fee: 45,
-            grand_total: 945,
-            status: 'confirmed',
-            payment_method: 'card',
-            created_at: '2024-10-05T11:20:00',
-            qr_codes: ['QR004', 'QR005']
-        }
-    ],
+            {
+                id: 2,
+                code: 'TIX-78501-STD-001',
+                event: {
+                    title: 'Cargo Live',
+                    subtitle: 'Concert aniversar 40 de ani',
+                    date: '2025-01-15',
+                    time: '20:00',
+                    doors: '19:00',
+                    venue: 'Arenele Romane, Bucuresti',
+                    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300',
+                    genre: 'Rock'
+                },
+                ticket_type: 'Standard',
+                price: 80,
+                quantity: 1,
+                days_until: 22,
+                status: 'valid',
+                tickets: [
+                    { code: 'TIX-78501-STD-001', type: 'Standard', status: 'valid' }
+                ]
+            }
+        ],
+        past: [
+            { id: 3, event: { title: 'Halloween Rock Night', date: '2024-10-31', venue: 'Club Quantic, Bucuresti', image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200' }, ticket_type: 'Standard', quantity: 2, checked_in: true },
+            { id: 4, event: { title: 'Trooper - 30 Years Tour', date: '2024-09-15', venue: 'Sala Palatului', image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200' }, ticket_type: 'VIP', quantity: 1, checked_in: true }
+        ]
+    },
 
     // ===========================================
-    // CUSTOMER TICKETS (active)
-    // ===========================================
-    customerTickets: [
-        {
-            id: 'TKT-001',
-            order_id: 'ORD-2024-001234',
-            event: {
-                id: 3,
-                title: 'Micutzu - Stand-up Comedy',
-                date: '2025-02-14',
-                time: '19:00',
-                venue: 'Sala Palatului',
-                city: 'Bucuresti',
-                image: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=400'
-            },
-            ticket_type: 'Categoria 1',
-            seat: 'Rand 5, Loc 12',
-            qr_code: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-            status: 'valid',
-            checked_in: false
-        },
-        {
-            id: 'TKT-002',
-            order_id: 'ORD-2024-001234',
-            event: {
-                id: 3,
-                title: 'Micutzu - Stand-up Comedy',
-                date: '2025-02-14',
-                time: '19:00',
-                venue: 'Sala Palatului',
-                city: 'Bucuresti',
-                image: 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=400'
-            },
-            ticket_type: 'Categoria 1',
-            seat: 'Rand 5, Loc 13',
-            qr_code: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-            status: 'valid',
-            checked_in: false
-        },
-        {
-            id: 'TKT-003',
-            order_id: 'ORD-2024-001189',
-            event: {
-                id: 5,
-                title: 'Untold Festival 2025',
-                date: '2025-08-07',
-                time: '18:00',
-                venue: 'Cluj Arena',
-                city: 'Cluj-Napoca',
-                image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400'
-            },
-            ticket_type: 'General Access - 4 zile',
-            seat: null,
-            qr_code: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-            status: 'valid',
-            checked_in: false
-        }
-    ],
-
-    // ===========================================
-    // CUSTOMER WATCHLIST
+    // CUSTOMER WATCHLIST (event IDs only - for quick lookup)
     // ===========================================
     customerWatchlist: [
         { event_id: 2, added_at: '2024-12-15' }, // Electric Castle
         { event_id: 8, added_at: '2024-12-10' }, // Carla's Dreams
         { event_id: 10, added_at: '2024-12-05' } // Alternosfera
+    ],
+
+    // ===========================================
+    // WATCHLIST EVENTS (detailed for watchlist page)
+    // ===========================================
+    watchlistEvents: [
+        { id: 1, title: 'Trooper Unplugged', image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400', date: '22 Ian 2025', venue: 'Hard Rock Cafe, Bucuresti', price: 80, genre: 'Rock', badge: '85% Sold', badge_color: 'bg-warning' },
+        { id: 2, title: 'Dirty Shirt - Tour 2025', image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400', date: '5 Feb 2025', venue: 'Sala Palatului, Bucuresti', price: 120, genre: 'Metal', badge: 'NOU', badge_color: 'bg-success' },
+        { id: 3, title: 'Iris - Romantic Tour', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400', date: '15 Feb 2025', venue: 'Teatrul National, Cluj', price: 95, genre: 'Rock', badge: null },
+        { id: 4, title: 'Rock la Mures 2025', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', date: 'Iulie 2025', venue: 'Targu Mures', price: null, genre: 'Festival', badge: 'IN CURAND', badge_color: 'bg-blue-500' },
+        { id: 5, title: 'Phoenix - Turneu National', image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400', date: '28 Feb 2025', venue: 'Filarmonica, Timisoara', price: 150, genre: 'Rock', badge: null },
+        { id: 6, title: 'Vita de Vie Acoustic', image: 'https://images.unsplash.com/photo-1506157786151-b8491531f063?w=400', date: '10 Ian 2025', venue: 'Control Club, Bucuresti', price: 100, genre: 'Rock', badge: 'SOLD OUT', badge_color: 'bg-error', sold_out: true }
+    ],
+
+    // ===========================================
+    // WATCHLIST ARTISTS
+    // ===========================================
+    watchlistArtists: [
+        { name: 'Dirty Shirt', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200', genre: 'Metal / Folk', events: 3 },
+        { name: 'Trooper', image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200', genre: 'Rock', events: 2 },
+        { name: 'Cargo', image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=200', genre: 'Rock', events: 1 }
+    ],
+
+    // ===========================================
+    // WATCHLIST VENUES
+    // ===========================================
+    watchlistVenues: [
+        { name: 'Hard Rock Cafe', image: 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400', city: 'Bucuresti', events: 5 },
+        { name: 'Sala Palatului', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', city: 'Bucuresti', events: 3 },
+        { name: 'Arenele Romane', image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400', city: 'Bucuresti', events: 2 }
     ],
 
     // ===========================================

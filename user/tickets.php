@@ -107,57 +107,15 @@ const UserTickets = {
     },
 
     loadDemoData() {
-        this.tickets.upcoming = [
-            {
-                id: 1,
-                code: 'TIX-78453-VIP-001',
-                event: {
-                    title: 'Mos Craciun e Rocker',
-                    subtitle: 'Concert Dirty Shirt & Friends',
-                    date: '2024-12-27',
-                    time: '19:00',
-                    doors: '18:00',
-                    venue: 'Grand Gala, Baia Mare',
-                    image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=300',
-                    genre: 'Rock'
-                },
-                ticket_type: 'VIP',
-                price: 150,
-                quantity: 2,
-                days_until: 3,
-                status: 'valid',
-                tickets: [
-                    { code: 'TIX-78453-VIP-001', type: 'VIP', status: 'valid' },
-                    { code: 'TIX-78453-VIP-002', type: 'VIP', status: 'valid' }
-                ]
-            },
-            {
-                id: 2,
-                code: 'TIX-78501-STD-001',
-                event: {
-                    title: 'Cargo Live',
-                    subtitle: 'Concert aniversar 40 de ani',
-                    date: '2025-01-15',
-                    time: '20:00',
-                    doors: '19:00',
-                    venue: 'Arenele Romane, Bucuresti',
-                    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300',
-                    genre: 'Rock'
-                },
-                ticket_type: 'Standard',
-                price: 80,
-                quantity: 1,
-                days_until: 22,
-                status: 'valid',
-                tickets: [
-                    { code: 'TIX-78501-STD-001', type: 'Standard', status: 'valid' }
-                ]
-            }
-        ];
-        this.tickets.past = [
-            { id: 3, event: { title: 'Halloween Rock Night', date: '2024-10-31', venue: 'Club Quantic, Bucuresti', image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200' }, ticket_type: 'Standard', quantity: 2, checked_in: true },
-            { id: 4, event: { title: 'Trooper - 30 Years Tour', date: '2024-09-15', venue: 'Sala Palatului', image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200' }, ticket_type: 'VIP', quantity: 1, checked_in: true }
-        ];
+        // Load from centralized DEMO_DATA
+        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.customerTickets) {
+            this.tickets.upcoming = DEMO_DATA.customerTickets.upcoming || [];
+            this.tickets.past = DEMO_DATA.customerTickets.past || [];
+        } else {
+            console.warn('DEMO_DATA.customerTickets not found, using fallback');
+            this.tickets.upcoming = [];
+            this.tickets.past = [];
+        }
     },
 
     renderUpcoming() {

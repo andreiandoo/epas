@@ -103,75 +103,13 @@ const UserOrders = {
             }
         } catch (error) {
             console.log('Using demo data');
-            // Demo data
-            this.orders = [
-                {
-                    id: 1,
-                    reference: 'TIX-78453',
-                    status: 'confirmed',
-                    event: { title: 'Mos Craciun e Rocker', image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=200' },
-                    created_at: '2024-12-22T14:35:00',
-                    items: [{ name: 'VIP', quantity: 2, price: 150 }],
-                    subtotal: 300,
-                    discount: 30,
-                    discount_code: 'ROCK2024',
-                    total: 270,
-                    points_earned: 60,
-                    payment_method: 'Card •••• 4532',
-                    payment_date: '2024-12-22T14:36:00',
-                    transaction_id: 'TRX-8F4A2B'
-                },
-                {
-                    id: 2,
-                    reference: 'TIX-78501',
-                    status: 'confirmed',
-                    event: { title: 'Cargo Live', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200' },
-                    created_at: '2024-12-20T10:12:00',
-                    items: [{ name: 'Standard', quantity: 1, price: 80 }],
-                    subtotal: 80,
-                    discount: 0,
-                    total: 80,
-                    points_earned: 16,
-                    payment_method: 'Apple Pay',
-                    payment_date: '2024-12-20T10:13:00'
-                },
-                {
-                    id: 3,
-                    reference: 'TIX-77234',
-                    status: 'completed',
-                    event: { title: 'Halloween Rock Night', image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200' },
-                    created_at: '2024-10-28T18:45:00',
-                    items: [{ name: 'Standard', quantity: 2, price: 80 }],
-                    subtotal: 160,
-                    total: 160,
-                    points_earned: 32,
-                    checked_in: true
-                },
-                {
-                    id: 4,
-                    reference: 'TIX-76890',
-                    status: 'refunded',
-                    event: { title: 'Concert Anulat - Festival X', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200' },
-                    created_at: '2024-09-15T09:30:00',
-                    items: [{ name: 'Premium', quantity: 1, price: 200 }],
-                    subtotal: 200,
-                    total: 200,
-                    refunded_amount: 200,
-                    refund_date: '2024-09-16',
-                    refund_reason: 'Eveniment anulat de organizator'
-                },
-                {
-                    id: 5,
-                    reference: 'TIX-75123',
-                    status: 'completed',
-                    event: { title: 'Trooper - 30 Years Tour', image: 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200' },
-                    created_at: '2024-09-10T12:20:00',
-                    items: [{ name: 'VIP', quantity: 1, price: 150 }],
-                    subtotal: 150,
-                    total: 150,
-                    points_earned: 30
-                }
-            ];
+            // Load from centralized DEMO_DATA
+            if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.customerOrders) {
+                this.orders = DEMO_DATA.customerOrders;
+            } else {
+                console.warn('DEMO_DATA.customerOrders not found');
+                this.orders = [];
+            }
         }
 
         this.updateStats();
