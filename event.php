@@ -53,7 +53,7 @@ require_once __DIR__ . '/includes/head.php';
 <?php require_once __DIR__ . '/includes/header.php'; ?>
 
     <!-- Breadcrumb -->
-    <div class="bg-white border-b border-border mt-[32px]">
+    <div class="bg-white border-b border-border mt-28">
         <div class="px-4 py-3 mx-auto max-w-7xl">
             <nav class="flex items-center gap-2 text-sm" id="breadcrumb">
                 <a href="/" class="transition-colors text-muted hover:text-primary">Acasa</a>
@@ -907,7 +907,28 @@ const EventPage = {
 
     updateHeaderCart() {
         const count = AmbiletCart.getItemCount();
-        document.getElementById('headerCartCount').textContent = count;
+        const cartBadge = document.getElementById('cartBadge');
+        const cartDrawerCount = document.getElementById('cartDrawerCount');
+
+        if (cartBadge) {
+            if (count > 0) {
+                cartBadge.textContent = count > 99 ? '99+' : count;
+                cartBadge.classList.remove('hidden');
+                cartBadge.classList.add('flex');
+            } else {
+                cartBadge.classList.add('hidden');
+                cartBadge.classList.remove('flex');
+            }
+        }
+
+        if (cartDrawerCount) {
+            if (count > 0) {
+                cartDrawerCount.textContent = count;
+                cartDrawerCount.classList.remove('hidden');
+            } else {
+                cartDrawerCount.classList.add('hidden');
+            }
+        }
     }
 };
 
