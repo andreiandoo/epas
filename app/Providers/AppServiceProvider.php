@@ -5,7 +5,9 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Http\Request;
+use App\Services\Tracking\TxSdkHelper;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -62,5 +64,34 @@ class AppServiceProvider extends ServiceProvider
                 \App\Listeners\IssueInvoiceListener::class,
             ]
         );
+
+        // TX Tracking SDK Blade directives
+        $this->registerTxTrackingDirectives();
+    }
+
+    /**
+     * Register TX Tracking SDK Blade directives.
+     */
+    protected function registerTxTrackingDirectives(): void
+    {
+        // @txTracking($tenantId, $siteId = null, $debug = false)
+        Blade::directive('txTracking', function ($expression) {
+            return "<?php echo \App\Services\Tracking\TxSdkHelper::embedCode({$expression}); ?>";
+        });
+
+        // @txTrackingForTenant($tenant)
+        Blade::directive('txTrackingForTenant', function ($expression) {
+            return "<?php echo \App\Services\Tracking\TxSdkHelper::forTenant({$expression}); ?>";
+        });
+
+        // @txHiddenInputs - for forms that need visitor/session IDs
+        Blade::directive('txHiddenInputs', function () {
+            return "<?php echo \App\Services\Tracking\TxSdkHelper::hiddenInputs(); ?>";
+        });
+
+        // @txTrackEvent('event_name', ['payload' => 'data'])
+        Blade::directive('txTrackEvent', function ($expression) {
+            return "<?php echo \App\Services\Tracking\TxSdkHelper::trackEventScript({$expression}); ?>";
+        });
     }
 }
