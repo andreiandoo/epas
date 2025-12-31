@@ -8,9 +8,13 @@ use App\Events\PromoCodes\PromoCodeExpired;
 use App\Events\PromoCodes\PromoCodeDepleted;
 use App\Events\PromoCodes\PromoCodeUpdated;
 use App\Events\PromoCodes\PromoCodeDeactivated;
+use App\Events\OrderConfirmed;
+use App\Events\PaymentCaptured;
 use App\Listeners\PromoCodes\LogPromoCodeActivity;
 use App\Listeners\PromoCodes\SendPromoCodeAlerts;
 use App\Listeners\PromoCodes\UpdatePromoCodeMetrics;
+use App\Listeners\EmitTxOrderCompletedListener;
+use App\Listeners\EmitTxPaymentEventListener;
 use App\Listeners\Tax\TaxEventSubscriber;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
@@ -51,6 +55,14 @@ class EventServiceProvider extends ServiceProvider
         ],
         PromoCodeDeactivated::class => [
             [LogPromoCodeActivity::class, 'handleDeactivated'],
+        ],
+
+        // TX Tracking Events - Server-side event emission
+        OrderConfirmed::class => [
+            EmitTxOrderCompletedListener::class,
+        ],
+        PaymentCaptured::class => [
+            EmitTxPaymentEventListener::class,
         ],
     ];
 
