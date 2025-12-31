@@ -1925,3 +1925,41 @@ Route::prefix('admin')->middleware(['throttle:api', 'admin.auth'])->group(functi
             ->name('api.admin.api-usage.show');
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| TX Tracking API Routes (Event Intelligence)
+|--------------------------------------------------------------------------
+|
+| Endpoints for the tracking intelligence system.
+| Handles event collection, batch processing, and identity stitching.
+|
+*/
+
+Route::prefix('tx')->group(function () {
+    // Health check (no auth required)
+    Route::get('/health', [App\Http\Controllers\Api\TxTrackingController::class, 'health'])
+        ->name('api.tx.health');
+
+    // Event collection endpoints (CORS enabled, rate limited)
+    Route::middleware(['throttle:1000,1'])->group(function () {
+        // Single event
+        Route::post('/events', [App\Http\Controllers\Api\TxTrackingController::class, 'trackEvent'])
+            ->name('api.tx.events.single');
+
+        // Batch events (up to 100)
+        Route::post('/events/batch', [App\Http\Controllers\Api\TxTrackingController::class, 'trackEventsBatch'])
+            ->name('api.tx.events.batch');
+    });
+
+    // Query endpoints (require authentication for production)
+    Route::middleware(['throttle:api'])->group(function () {
+        // Session information
+        Route::get('/session/{sessionId}', [App\Http\Controllers\Api\TxTrackingController::class, 'getSession'])
+            ->name('api.tx.session');
+
+        // Visitor events
+        Route::get('/visitor/{visitorId}/events', [App\Http\Controllers\Api\TxTrackingController::class, 'getVisitorEvents'])
+            ->name('api.tx.visitor.events');
+    });
+});
