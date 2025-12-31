@@ -11,7 +11,7 @@ Event Intelligence tracking SDK for tenant websites and marketplace.
 <script>
   window.txConfig = {
     tenantId: 'your-tenant-id',  // Required: your tenant ID
-    apiEndpoint: 'https://tixello.com/api/tx/events/batch',  // API endpoint
+    apiEndpoint: 'https://core.tixello.com/api/tx/events/batch',  // API endpoint
     debug: false,  // Enable console logging
     autoTrackPageView: true,  // Auto-track page views
     autoTrackEngagement: true  // Auto-track engagement (scroll, time on page)
@@ -19,17 +19,17 @@ Event Intelligence tracking SDK for tenant websites and marketplace.
 </script>
 
 <!-- Load SDK async -->
-<script src="https://tixello.com/js/tracking/tx-loader.js" async></script>
+<script src="https://core.tixello.com/js/tracking/tx-loader.js" async></script>
 ```
 
 ### Option 2: Direct Include
 
 ```html
-<script src="https://tixello.com/js/tracking/tx-sdk.js"></script>
+<script src="https://core.tixello.com/js/tracking/tx-sdk.js"></script>
 <script>
   const tx = new TxTracker({
     tenantId: 'your-tenant-id',
-    apiEndpoint: 'https://tixello.com/api/tx/events/batch'
+    apiEndpoint: 'https://core.tixello.com/api/tx/events/batch'
   });
 </script>
 ```

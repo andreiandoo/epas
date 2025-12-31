@@ -5,7 +5,7 @@
  * Usage:
  *   const tx = new TxTracker({
  *     tenantId: 'your-tenant-id',
- *     apiEndpoint: 'https://tixello.com/api/tx/events/batch'
+ *     apiEndpoint: 'https://core.tixello.com/api/tx/events/batch'
  *   });
  *   tx.pageView();
  */

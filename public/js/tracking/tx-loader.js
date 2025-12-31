@@ -6,9 +6,9 @@
  *
  * Usage:
  * <script>
- *   window.txConfig = { tenantId: 'your-tenant-id', apiEndpoint: 'https://tixello.com/api/tx/events/batch' };
+ *   window.txConfig = { tenantId: 'your-tenant-id', apiEndpoint: 'https://core.tixello.com/api/tx/events/batch' };
  * </script>
- * <script src="https://tixello.com/js/tracking/tx-loader.js" async></script>
+ * <script src="https://core.tixello.com/js/tracking/tx-loader.js" async></script>
  */
 (function(w, d, s, l) {
   // Create queue for events before SDK loads
@@ -30,7 +30,7 @@
   var f = d.getElementsByTagName(s)[0];
   var j = d.createElement(s);
   j.async = true;
-  j.src = (w.txConfig && w.txConfig.sdkUrl) || 'https://tixello.com/js/tracking/tx-sdk.js';
+  j.src = (w.txConfig && w.txConfig.sdkUrl) || 'https://core.tixello.com/js/tracking/tx-sdk.js';
 
   j.onload = function() {
     // Initialize real tracker
