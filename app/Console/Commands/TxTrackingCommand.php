@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Jobs\Tracking\AggregateEventFunnelsJob;
 use App\Jobs\Tracking\CalculatePersonAffinitiesJob;
+use App\Jobs\Tracking\CalculateTemporalPatternsJob;
 use App\Jobs\Tracking\CalculateTicketPreferencesJob;
 use App\Jobs\Tracking\UpdatePersonDailyStatsJob;
 use App\Models\CustomerSegment;
@@ -17,7 +18,7 @@ class TxTrackingCommand extends Command
      * The name and signature of the console command.
      */
     protected $signature = 'tx:tracking
-                            {action : The action to perform (affinities, preferences, funnels, daily-stats, segments, stats)}
+                            {action : The action to perform (affinities, preferences, funnels, daily-stats, temporal, segments, stats)}
                             {--tenant= : Filter by tenant ID}
                             {--person= : Filter by person ID}
                             {--event= : Filter by event entity ID}
@@ -43,6 +44,7 @@ class TxTrackingCommand extends Command
             'preferences' => $this->runPreferences(),
             'funnels' => $this->runFunnels(),
             'daily-stats' => $this->runDailyStats(),
+            'temporal' => $this->runTemporal(),
             'segments' => $this->runSegments(),
             'stats' => $this->showStats(),
             default => $this->invalidAction($action),
@@ -149,6 +151,31 @@ class TxTrackingCommand extends Command
         return Command::SUCCESS;
     }
 
+    protected function runTemporal(): int
+    {
+        $tenantId = $this->option('tenant') ? (int) $this->option('tenant') : null;
+        $personId = $this->option('person') ? (int) $this->option('person') : null;
+        $days = (int) $this->option('days');
+
+        $this->info("Calculating temporal patterns (activity + purchase windows)...");
+        $this->table(['Option', 'Value'], [
+            ['Tenant ID', $tenantId ?? 'All'],
+            ['Person ID', $personId ?? 'All with activity'],
+            ['Lookback Days', $days],
+        ]);
+
+        if ($this->option('sync')) {
+            $job = new CalculateTemporalPatternsJob($tenantId, $personId, $days);
+            $job->handle();
+            $this->info("Temporal patterns calculated synchronously.");
+        } else {
+            CalculateTemporalPatternsJob::dispatch($tenantId, $personId, $days);
+            $this->info("Job dispatched to queue.");
+        }
+
+        return Command::SUCCESS;
+    }
+
     protected function runSegments(): int
     {
         $tenantId = $this->option('tenant') ? (int) $this->option('tenant') : null;
@@ -246,7 +273,7 @@ class TxTrackingCommand extends Command
     protected function invalidAction(string $action): int
     {
         $this->error("Invalid action: {$action}");
-        $this->line("Available actions: affinities, preferences, funnels, daily-stats, segments, stats");
+        $this->line("Available actions: affinities, preferences, funnels, daily-stats, temporal, segments, stats");
         return Command::FAILURE;
     }
 }

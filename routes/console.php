@@ -575,3 +575,14 @@ Schedule::call(function () {
         \Log::info('TX: Expired tags processed', ['count' => $count]);
     }
 })->dailyAt('01:00')->timezone('Europe/Bucharest');
+
+// Calculate temporal patterns - activity & purchase windows (weekly on Sunday at 4:00 AM)
+Schedule::job(new \App\Jobs\Tracking\CalculateTemporalPatternsJob())
+    ->weeklyOn(0, '04:00')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('TX: Temporal patterns calculated');
+    })
+    ->onFailure(function () {
+        \Log::error('TX: Failed to calculate temporal patterns');
+    });
