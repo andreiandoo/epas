@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Services\Tracking\TxAudienceBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 /**

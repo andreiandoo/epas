@@ -43,23 +43,23 @@ class TxIdentityLinkResource extends Resource
                         Forms\Components\Placeholder::make('person_id')
                             ->label('Person ID')
                             ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold text-primary-600">#' . $record->person_id . '</span>')),
-                        Forms\Components\Placeholder::make('link_type')
+                        Forms\Components\Placeholder::make('link_source')
                             ->label('Link Type')
-                            ->content(fn ($record) => new HtmlString('<span class="px-2 py-1 rounded text-sm font-medium ' . match ($record->link_type) {
+                            ->content(fn ($record) => new HtmlString('<span class="px-2 py-1 rounded text-sm font-medium ' . match ($record->link_source) {
                                 'order_completed' => 'bg-success-100 text-success-700',
                                 'login' => 'bg-primary-100 text-primary-700',
                                 'registration' => 'bg-info-100 text-info-700',
                                 default => 'bg-gray-100 text-gray-700',
-                            } . '">' . ucfirst(str_replace('_', ' ', $record->link_type)) . '</span>')),
-                        Forms\Components\Placeholder::make('confidence_score')
+                            } . '">' . ucfirst(str_replace('_', ' ', $record->link_source)) . '</span>')),
+                        Forms\Components\Placeholder::make('confidence')
                             ->label('Confidence')
-                            ->content(fn ($record) => new HtmlString(self::confidenceBar($record->confidence_score))),
+                            ->content(fn ($record) => new HtmlString(self::confidenceBar($record->confidence))),
                         Forms\Components\Placeholder::make('linked_at')
                             ->label('Linked At')
                             ->content(fn ($record) => $record->linked_at?->format('d M Y H:i:s')),
-                        Forms\Components\Placeholder::make('source_reference')
-                            ->label('Source Reference')
-                            ->content(fn ($record) => $record->source_reference ?? 'N/A'),
+                        Forms\Components\Placeholder::make('order_id')
+                            ->label('Order ID')
+                            ->content(fn ($record) => $record->order_id ? '#' . $record->order_id : 'N/A'),
                     ]),
 
                 SC\Section::make('Person Details')
@@ -85,13 +85,13 @@ class TxIdentityLinkResource extends Resource
                     ->icon('heroicon-o-document-text')
                     ->collapsible()
                     ->collapsed()
-                    ->visible(fn ($record) => !empty($record->meta))
+                    ->visible(fn ($record) => !empty($record->metadata))
                     ->schema([
-                        Forms\Components\Placeholder::make('meta_json')
+                        Forms\Components\Placeholder::make('metadata_json')
                             ->label('')
                             ->content(fn ($record) => new HtmlString(
                                 '<pre class="bg-gray-50 dark:bg-gray-800 p-4 rounded text-xs overflow-x-auto">' .
-                                json_encode($record->meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) .
+                                json_encode($record->metadata, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) .
                                 '</pre>'
                             )),
                     ]),
@@ -122,7 +122,7 @@ class TxIdentityLinkResource extends Resource
                     ->label('Email')
                     ->searchable()
                     ->toggleable(),
-                Tables\Columns\BadgeColumn::make('link_type')
+                Tables\Columns\BadgeColumn::make('link_source')
                     ->label('Type')
                     ->colors([
                         'success' => 'order_completed',
@@ -131,7 +131,7 @@ class TxIdentityLinkResource extends Resource
                         'gray' => true,
                     ])
                     ->formatStateUsing(fn ($state) => ucfirst(str_replace('_', ' ', $state))),
-                Tables\Columns\TextColumn::make('confidence_score')
+                Tables\Columns\TextColumn::make('confidence')
                     ->label('Confidence')
                     ->formatStateUsing(fn ($state) => number_format($state * 100, 0) . '%')
                     ->color(fn ($state) => match (true) {
@@ -139,13 +139,14 @@ class TxIdentityLinkResource extends Resource
                         $state >= 0.7 => 'warning',
                         default => 'danger',
                     }),
-                Tables\Columns\TextColumn::make('source_reference')
-                    ->label('Source')
+                Tables\Columns\TextColumn::make('order_id')
+                    ->label('Order')
+                    ->formatStateUsing(fn ($state) => $state ? '#' . $state : '-')
                     ->placeholder('-')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('link_type')
+                Tables\Filters\SelectFilter::make('link_source')
                     ->label('Link Type')
                     ->options([
                         'order_completed' => 'Order Completed',
@@ -156,7 +157,7 @@ class TxIdentityLinkResource extends Resource
                     ]),
                 Tables\Filters\Filter::make('high_confidence')
                     ->label('High Confidence (≥90%)')
-                    ->query(fn (Builder $query) => $query->where('confidence_score', '>=', 0.9)),
+                    ->query(fn (Builder $query) => $query->where('confidence', '>=', 0.9)),
                 Tables\Filters\Filter::make('linked_at')
                     ->form([
                         Forms\Components\DatePicker::make('from')

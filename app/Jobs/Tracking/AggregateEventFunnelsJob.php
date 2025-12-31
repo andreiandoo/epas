@@ -238,9 +238,9 @@ class AggregateEventFunnelsJob implements ShouldQueue
             $hour = null;
 
             if (isset($eventsByType['event_view'], $eventsByType['add_to_cart'])) {
-                $viewTime = strtotime($eventsByType['event_view']);
-                $cartTime = strtotime($eventsByType['add_to_cart']);
-                $hour = date('Y-m-d H:00:00', $viewTime);
+                $viewTime = $eventsByType['event_view'];
+                $cartTime = $eventsByType['add_to_cart'];
+                $hour = $viewTime->format('Y-m-d H:00:00');
 
                 if (!isset($hourlyTimings[$hour])) {
                     $hourlyTimings[$hour] = [
@@ -250,23 +250,23 @@ class AggregateEventFunnelsJob implements ShouldQueue
                     ];
                 }
 
-                $hourlyTimings[$hour]['time_to_cart'][] = ($cartTime - $viewTime) * 1000;
+                $hourlyTimings[$hour]['time_to_cart'][] = $viewTime->diffInMilliseconds($cartTime);
             }
 
             if (isset($eventsByType['event_view'], $eventsByType['checkout_started'])) {
-                $viewTime = strtotime($eventsByType['event_view']);
-                $checkoutTime = strtotime($eventsByType['checkout_started']);
-                $hour = $hour ?? date('Y-m-d H:00:00', $viewTime);
+                $viewTime = $eventsByType['event_view'];
+                $checkoutTime = $eventsByType['checkout_started'];
+                $hour = $hour ?? $viewTime->format('Y-m-d H:00:00');
 
-                $hourlyTimings[$hour]['time_to_checkout'][] = ($checkoutTime - $viewTime) * 1000;
+                $hourlyTimings[$hour]['time_to_checkout'][] = $viewTime->diffInMilliseconds($checkoutTime);
             }
 
             if (isset($eventsByType['checkout_started'], $eventsByType['order_completed'])) {
-                $checkoutTime = strtotime($eventsByType['checkout_started']);
-                $orderTime = strtotime($eventsByType['order_completed']);
-                $hour = $hour ?? date('Y-m-d H:00:00', $checkoutTime);
+                $checkoutTime = $eventsByType['checkout_started'];
+                $orderTime = $eventsByType['order_completed'];
+                $hour = $hour ?? $checkoutTime->format('Y-m-d H:00:00');
 
-                $hourlyTimings[$hour]['checkout_duration'][] = ($orderTime - $checkoutTime) * 1000;
+                $hourlyTimings[$hour]['checkout_duration'][] = $checkoutTime->diffInMilliseconds($orderTime);
             }
         }
 
