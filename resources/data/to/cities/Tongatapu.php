@@ -1,0 +1,27 @@
+<?php
+return [
+    [
+        'id'        => 107044,
+        'name'      => 'Haveluloto',
+        'latitude'  => '-21.15216000',
+        'longitude' => '-175.21333000',
+    ],
+    [
+        'id'        => 107046,
+        'name'      => 'Kolonga',
+        'latitude'  => '-21.13333000',
+        'longitude' => '-175.06667000',
+    ],
+    [
+        'id'        => 107048,
+        'name'      => 'Nuku‘alofa',
+        'latitude'  => '-21.13938000',
+        'longitude' => '-175.20180000',
+    ],
+    [
+        'id'        => 107050,
+        'name'      => 'Vaini',
+        'latitude'  => '-21.19292000',
+        'longitude' => '-175.17678000',
+    ],
+];

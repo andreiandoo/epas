@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 38771,
+        'name'      => 'Hietalahti',
+        'latitude'  => '63.08480000',
+        'longitude' => '21.61716000',
+    ],
+    [
+        'id'        => 38792,
+        'name'      => 'Isokyrö',
+        'latitude'  => '63.01172000',
+        'longitude' => '22.33332000',
+    ],
+    [
+        'id'        => 38795,
+        'name'      => 'Jakobstad',
+        'latitude'  => '63.67486000',
+        'longitude' => '22.70256000',
+    ],
+    [
+        'id'        => 38834,
+        'name'      => 'Kaskinen',
+        'latitude'  => '62.38444000',
+        'longitude' => '21.22331000',
+    ],
+    [
+        'id'        => 38869,
+        'name'      => 'Korsholm',
+        'latitude'  => '63.11418000',
+        'longitude' => '21.68216000',
+    ],
+    [
+        'id'        => 38870,
+        'name'      => 'Korsnäs',
+        'latitude'  => '62.78333000',
+        'longitude' => '21.20000000',
+    ],
+    [
+        'id'        => 38875,
+        'name'      => 'Kristinestad',
+        'latitude'  => '62.27429000',
+        'longitude' => '21.37596000',
+    ],
+    [
+        'id'        => 38876,
+        'name'      => 'Kronoby',
+        'latitude'  => '63.72859000',
+        'longitude' => '23.03387000',
+    ],
+    [
+        'id'        => 38893,
+        'name'      => 'Laihia',
+        'latitude'  => '62.97609000',
+        'longitude' => '22.01143000',
+    ],
+    [
+        'id'        => 38902,
+        'name'      => 'Larsmo',
+        'latitude'  => '63.75388000',
+        'longitude' => '22.74728000',
+    ],
+    [
+        'id'        => 38927,
+        'name'      => 'Malax',
+        'latitude'  => '62.94225000',
+        'longitude' => '21.57311000',
+    ],
+    [
+        'id'        => 38960,
+        'name'      => 'Nykarleby',
+        'latitude'  => '63.52277000',
+        'longitude' => '22.53073000',
+    ],
+    [
+        'id'        => 38961,
+        'name'      => 'Oravais',
+        'latitude'  => '63.30135000',
+        'longitude' => '22.37821000',
+    ],
+    [
+        'id'        => 38974,
+        'name'      => 'Pedersöre',
+        'latitude'  => '63.65000000',
+        'longitude' => '22.68333000',
+    ],
+    [
+        'id'        => 39022,
+        'name'      => 'Replot',
+        'latitude'  => '63.22882000',
+        'longitude' => '21.41691000',
+    ],
+    [
+        'id'        => 39026,
+        'name'      => 'Ristinummi',
+        'latitude'  => '63.09192000',
+        'longitude' => '21.72297000',
+    ],
+    [
+        'id'        => 39072,
+        'name'      => 'Teeriniemi',
+        'latitude'  => '63.09705000',
+        'longitude' => '21.69590000',
+    ],
+    [
+        'id'        => 39095,
+        'name'      => 'Vaasa',
+        'latitude'  => '63.09600000',
+        'longitude' => '21.61577000',
+    ],
+    [
+        'id'        => 39117,
+        'name'      => 'Vähäkyrö',
+        'latitude'  => '63.05635000',
+        'longitude' => '22.10584000',
+    ],
+    [
+        'id'        => 39120,
+        'name'      => 'Vörå',
+        'latitude'  => '63.13607000',
+        'longitude' => '22.25223000',
+    ],
+];

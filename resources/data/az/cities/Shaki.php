@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 8057,
+        'name'      => 'Baş Göynük',
+        'latitude'  => '41.32582000',
+        'longitude' => '47.11357000',
+    ],
+];

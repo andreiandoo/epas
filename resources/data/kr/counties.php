@@ -1,0 +1,20 @@
+<?php
+return [
+    'Busan',
+    'Daegu',
+    'Daejeon',
+    'Gangwon',
+    'Gwangju',
+    'Gyeonggi',
+    'Incheon',
+    'Jeju',
+    'North Chungcheong',
+    'North Gyeongsang',
+    'North Jeolla',
+    'Sejong City',
+    'Seoul',
+    'South Chungcheong',
+    'South Gyeongsang',
+    'South Jeolla',
+    'Ulsan',
+];

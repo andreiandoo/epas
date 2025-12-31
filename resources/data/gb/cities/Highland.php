@@ -1,0 +1,105 @@
+<?php
+return [
+    [
+        'id'        => 48225,
+        'name'      => 'Alness',
+        'latitude'  => '57.69596000',
+        'longitude' => '-4.25510000',
+    ],
+    [
+        'id'        => 48440,
+        'name'      => 'Beauly',
+        'latitude'  => '57.48345000',
+        'longitude' => '-4.46144000',
+    ],
+    [
+        'id'        => 49091,
+        'name'      => 'Conon Bridge',
+        'latitude'  => '57.56630000',
+        'longitude' => '-4.43678000',
+    ],
+    [
+        'id'        => 49200,
+        'name'      => 'Culloden',
+        'latitude'  => '57.48699000',
+        'longitude' => '-4.14150000',
+    ],
+    [
+        'id'        => 49286,
+        'name'      => 'Dingwall',
+        'latitude'  => '57.59531000',
+        'longitude' => '-4.42721000',
+    ],
+    [
+        'id'        => 49332,
+        'name'      => 'Drumnadrochit',
+        'latitude'  => '57.33438000',
+        'longitude' => '-4.47989000',
+    ],
+    [
+        'id'        => 49493,
+        'name'      => 'Evanton',
+        'latitude'  => '57.66385000',
+        'longitude' => '-4.34004000',
+    ],
+    [
+        'id'        => 49592,
+        'name'      => 'Fortrose',
+        'latitude'  => '57.58087000',
+        'longitude' => '-4.13263000',
+    ],
+    [
+        'id'        => 49936,
+        'name'      => 'Highland',
+        'latitude'  => '57.50000000',
+        'longitude' => '-5.00000000',
+    ],
+    [
+        'id'        => 50060,
+        'name'      => 'Invergordon',
+        'latitude'  => '57.68860000',
+        'longitude' => '-4.16745000',
+    ],
+    [
+        'id'        => 50064,
+        'name'      => 'Inverness',
+        'latitude'  => '57.47908000',
+        'longitude' => '-4.22398000',
+    ],
+    [
+        'id'        => 50523,
+        'name'      => 'Maryburgh',
+        'latitude'  => '57.57420000',
+        'longitude' => '-4.44178000',
+    ],
+    [
+        'id'        => 50595,
+        'name'      => 'Milton of Leys',
+        'latitude'  => '57.45125000',
+        'longitude' => '-4.17592000',
+    ],
+    [
+        'id'        => 50647,
+        'name'      => 'Muir of Ord',
+        'latitude'  => '57.51976000',
+        'longitude' => '-4.45939000',
+    ],
+    [
+        'id'        => 51334,
+        'name'      => 'Smithton',
+        'latitude'  => '57.47956000',
+        'longitude' => '-4.15141000',
+    ],
+    [
+        'id'        => 51493,
+        'name'      => 'Strathpeffer',
+        'latitude'  => '57.58522000',
+        'longitude' => '-4.54195000',
+    ],
+    [
+        'id'        => 51693,
+        'name'      => 'Ullapool',
+        'latitude'  => '57.89872000',
+        'longitude' => '-5.16039000',
+    ],
+];

@@ -1,0 +1,57 @@
+<?php
+return [
+    [
+        'id'        => 109079,
+        'name'      => 'Ilemela District',
+        'latitude'  => '-2.44783000',
+        'longitude' => '33.03177000',
+    ],
+    [
+        'id'        => 109110,
+        'name'      => 'Kihangara',
+        'latitude'  => '-2.58333000',
+        'longitude' => '33.35000000',
+    ],
+    [
+        'id'        => 109171,
+        'name'      => 'Malya',
+        'latitude'  => '-2.98333000',
+        'longitude' => '33.51667000',
+    ],
+    [
+        'id'        => 109199,
+        'name'      => 'Misasi',
+        'latitude'  => '-3.00000000',
+        'longitude' => '33.08333000',
+    ],
+    [
+        'id'        => 109200,
+        'name'      => 'Misungwi',
+        'latitude'  => '-2.85000000',
+        'longitude' => '33.08333000',
+    ],
+    [
+        'id'        => 109232,
+        'name'      => 'Mwanza',
+        'latitude'  => '-2.51667000',
+        'longitude' => '32.90000000',
+    ],
+    [
+        'id'        => 109254,
+        'name'      => 'Ngudu',
+        'latitude'  => '-2.96667000',
+        'longitude' => '33.33333000',
+    ],
+    [
+        'id'        => 109267,
+        'name'      => 'Nyanguge',
+        'latitude'  => '-2.55000000',
+        'longitude' => '33.20000000',
+    ],
+    [
+        'id'        => 109294,
+        'name'      => 'Usagara',
+        'latitude'  => '-2.68333000',
+        'longitude' => '33.00000000',
+    ],
+];

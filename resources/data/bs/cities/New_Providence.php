@@ -1,0 +1,9 @@
+<?php
+return [
+    [
+        'id'        => 143913,
+        'name'      => 'Nassau',
+        'latitude'  => '25.06666667',
+        'longitude' => '-77.33333333',
+    ],
+];

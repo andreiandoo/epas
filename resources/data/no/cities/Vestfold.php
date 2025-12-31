@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 79686,
+        'name'      => 'Årøysund',
+        'latitude'  => '59.18321000',
+        'longitude' => '10.45743000',
+    ],
+    [
+        'id'        => 79689,
+        'name'      => 'Åsgårdstrand',
+        'latitude'  => '59.34938000',
+        'longitude' => '10.46948000',
+    ],
+    [
+        'id'        => 79065,
+        'name'      => 'Barkåker',
+        'latitude'  => '59.31859000',
+        'longitude' => '10.38963000',
+    ],
+    [
+        'id'        => 79070,
+        'name'      => 'Berger',
+        'latitude'  => '59.54994000',
+        'longitude' => '10.38641000',
+    ],
+    [
+        'id'        => 79168,
+        'name'      => 'Færder',
+        'latitude'  => '59.22791000',
+        'longitude' => '10.41530000',
+    ],
+    [
+        'id'        => 79195,
+        'name'      => 'Gullhaug',
+        'latitude'  => '59.50130000',
+        'longitude' => '10.25224000',
+    ],
+    [
+        'id'        => 79229,
+        'name'      => 'Holmestrand',
+        'latitude'  => '59.48976000',
+        'longitude' => '10.31515000',
+    ],
+    [
+        'id'        => 79236,
+        'name'      => 'Horten',
+        'latitude'  => '59.41547000',
+        'longitude' => '10.48527000',
+    ],
+    [
+        'id'        => 79304,
+        'name'      => 'Larvik',
+        'latitude'  => '59.05234000',
+        'longitude' => '10.02701000',
+    ],
+    [
+        'id'        => 79361,
+        'name'      => 'Melsomvik',
+        'latitude'  => '59.22394000',
+        'longitude' => '10.33616000',
+    ],
+    [
+        'id'        => 79482,
+        'name'      => 'Sandefjord',
+        'latitude'  => '59.12881000',
+        'longitude' => '10.21971000',
+    ],
+    [
+        'id'        => 79494,
+        'name'      => 'Selvik',
+        'latitude'  => '59.56645000',
+        'longitude' => '10.26004000',
+    ],
+    [
+        'id'        => 79495,
+        'name'      => 'Sem',
+        'latitude'  => '59.28230000',
+        'longitude' => '10.33004000',
+    ],
+    [
+        'id'        => 79518,
+        'name'      => 'Skoppum',
+        'latitude'  => '59.38613000',
+        'longitude' => '10.41077000',
+    ],
+    [
+        'id'        => 79539,
+        'name'      => 'Stavern',
+        'latitude'  => '59.00000000',
+        'longitude' => '10.03333000',
+    ],
+    [
+        'id'        => 79545,
+        'name'      => 'Stokke',
+        'latitude'  => '59.22255000',
+        'longitude' => '10.30055000',
+    ],
+    [
+        'id'        => 79570,
+        'name'      => 'Svelvik',
+        'latitude'  => '59.60677000',
+        'longitude' => '10.40225000',
+    ],
+    [
+        'id'        => 79596,
+        'name'      => 'Tjøme',
+        'latitude'  => '59.11090000',
+        'longitude' => '10.39330000',
+    ],
+    [
+        'id'        => 79619,
+        'name'      => 'Tønsberg',
+        'latitude'  => '59.26754000',
+        'longitude' => '10.40762000',
+    ],
+];

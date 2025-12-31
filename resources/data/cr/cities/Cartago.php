@@ -1,0 +1,111 @@
+<?php
+return [
+    [
+        'id'        => 21645,
+        'name'      => 'Alvarado',
+        'latitude'  => '9.93333000',
+        'longitude' => '-83.80000000',
+    ],
+    [
+        'id'        => 21659,
+        'name'      => 'Cartago',
+        'latitude'  => '9.86444000',
+        'longitude' => '-83.91944000',
+    ],
+    [
+        'id'        => 21665,
+        'name'      => 'Concepción',
+        'latitude'  => '9.93333000',
+        'longitude' => '-84.00000000',
+    ],
+    [
+        'id'        => 21668,
+        'name'      => 'Cot',
+        'latitude'  => '9.89449000',
+        'longitude' => '-83.87302000',
+    ],
+    [
+        'id'        => 21675,
+        'name'      => 'El Guarco',
+        'latitude'  => '9.75000000',
+        'longitude' => '-83.91667000',
+    ],
+    [
+        'id'        => 21694,
+        'name'      => 'Jiménez',
+        'latitude'  => '9.75000000',
+        'longitude' => '-83.68333000',
+    ],
+    [
+        'id'        => 21699,
+        'name'      => 'La Suiza',
+        'latitude'  => '9.85065000',
+        'longitude' => '-83.61690000',
+    ],
+    [
+        'id'        => 21700,
+        'name'      => 'La Unión',
+        'latitude'  => '9.91667000',
+        'longitude' => '-83.98333000',
+    ],
+    [
+        'id'        => 21717,
+        'name'      => 'Oreamuno',
+        'latitude'  => '10.00000000',
+        'longitude' => '-83.83333000',
+    ],
+    [
+        'id'        => 21718,
+        'name'      => 'Orosí',
+        'latitude'  => '9.79617000',
+        'longitude' => '-83.85383000',
+    ],
+    [
+        'id'        => 21721,
+        'name'      => 'Pacayas',
+        'latitude'  => '9.80709000',
+        'longitude' => '-84.04764000',
+    ],
+    [
+        'id'        => 21725,
+        'name'      => 'Paraíso',
+        'latitude'  => '9.75000000',
+        'longitude' => '-83.80000000',
+    ],
+    [
+        'id'        => 21728,
+        'name'      => 'Pejibaye',
+        'latitude'  => '9.81135000',
+        'longitude' => '-83.70336000',
+    ],
+    [
+        'id'        => 21748,
+        'name'      => 'San Diego',
+        'latitude'  => '9.89898000',
+        'longitude' => '-84.00287000',
+    ],
+    [
+        'id'        => 21790,
+        'name'      => 'Tobosi',
+        'latitude'  => '9.83837000',
+        'longitude' => '-83.98391000',
+    ],
+    [
+        'id'        => 21791,
+        'name'      => 'Tres Ríos',
+        'latitude'  => '9.90644000',
+        'longitude' => '-83.98760000',
+    ],
+    [
+        'id'        => 21792,
+        'name'      => 'Tucurrique',
+        'latitude'  => '9.85336000',
+        'longitude' => '-83.72273000',
+    ],
+    [
+        'id'        => 21793,
+        'name'      => 'Turrialba',
+        'latitude'  => '9.80000000',
+        'longitude' => '-83.53333000',
+    ],
+];

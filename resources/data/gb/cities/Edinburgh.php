@@ -1,0 +1,117 @@
+<?php
+return [
+    [
+        'id'        => 48171,
+        'name'      => 'Aberdour',
+        'latitude'  => '56.05417000',
+        'longitude' => '-3.30058000',
+    ],
+    [
+        'id'        => 48348,
+        'name'      => 'Ballingry',
+        'latitude'  => '56.16392000',
+        'longitude' => '-3.32841000',
+    ],
+    [
+        'id'        => 48780,
+        'name'      => 'Burntisland',
+        'latitude'  => '56.06248000',
+        'longitude' => '-3.23176000',
+    ],
+    [
+        'id'        => 48853,
+        'name'      => 'Cardenden',
+        'latitude'  => '56.14310000',
+        'longitude' => '-3.25687000',
+    ],
+    [
+        'id'        => 49008,
+        'name'      => 'City of Edinburgh',
+        'latitude'  => '55.94973000',
+        'longitude' => '-3.19333000',
+    ],
+    [
+        'id'        => 49051,
+        'name'      => 'Cockenzie',
+        'latitude'  => '55.96823000',
+        'longitude' => '-2.96562000',
+    ],
+    [
+        'id'        => 49069,
+        'name'      => 'Colinton',
+        'latitude'  => '55.90739000',
+        'longitude' => '-3.25609000',
+    ],
+    [
+        'id'        => 49130,
+        'name'      => 'Cowdenbeath',
+        'latitude'  => '56.11194000',
+        'longitude' => '-3.34426000',
+    ],
+    [
+        'id'        => 49176,
+        'name'      => 'Crossgates',
+        'latitude'  => '56.08366000',
+        'longitude' => '-3.37712000',
+    ],
+    [
+        'id'        => 49211,
+        'name'      => 'Currie',
+        'latitude'  => '55.89640000',
+        'longitude' => '-3.30845000',
+    ],
+    [
+        'id'        => 49221,
+        'name'      => 'Dalgety Bay',
+        'latitude'  => '56.03496000',
+        'longitude' => '-3.35049000',
+    ],
+    [
+        'id'        => 49231,
+        'name'      => 'Danderhall',
+        'latitude'  => '55.91434000',
+        'longitude' => '-3.11062000',
+    ],
+    [
+        'id'        => 49441,
+        'name'      => 'Edinburgh',
+        'latitude'  => '55.95206000',
+        'longitude' => '-3.19648000',
+    ],
+    [
+        'id'        => 50163,
+        'name'      => 'Kinghorn',
+        'latitude'  => '56.06896000',
+        'longitude' => '-3.17607000',
+    ],
+    [
+        'id'        => 50202,
+        'name'      => 'Kirkcaldy',
+        'latitude'  => '56.11683000',
+        'longitude' => '-3.15999000',
+    ],
+    [
+        'id'        => 50377,
+        'name'      => 'Lochgelly',
+        'latitude'  => '56.12826000',
+        'longitude' => '-3.30964000',
+    ],
+    [
+        'id'        => 50655,
+        'name'      => 'Musselburgh',
+        'latitude'  => '55.94170000',
+        'longitude' => '-3.04991000',
+    ],
+    [
+        'id'        => 50988,
+        'name'      => 'Prestonpans',
+        'latitude'  => '55.95939000',
+        'longitude' => '-2.98038000',
+    ],
+    [
+        'id'        => 51871,
+        'name'      => 'Whitecraig',
+        'latitude'  => '55.91937000',
+        'longitude' => '-3.04231000',
+    ],
+];

@@ -1,0 +1,123 @@
+<?php
+return [
+    [
+        'id'        => 107052,
+        'name'      => 'Abana',
+        'latitude'  => '41.97858000',
+        'longitude' => '34.01100000',
+    ],
+    [
+        'id'        => 107243,
+        'name'      => 'Ağlı',
+        'latitude'  => '41.69283000',
+        'longitude' => '33.54487000',
+    ],
+    [
+        'id'        => 107177,
+        'name'      => 'Araç',
+        'latitude'  => '41.24222000',
+        'longitude' => '33.32767000',
+    ],
+    [
+        'id'        => 107235,
+        'name'      => 'Azdavay',
+        'latitude'  => '41.64267000',
+        'longitude' => '33.30000000',
+    ],
+    [
+        'id'        => 107383,
+        'name'      => 'Bozkurt',
+        'latitude'  => '41.95769000',
+        'longitude' => '34.01087000',
+    ],
+    [
+        'id'        => 108791,
+        'name'      => 'Çatalzeytin',
+        'latitude'  => '41.93795000',
+        'longitude' => '34.20285000',
+    ],
+    [
+        'id'        => 107430,
+        'name'      => 'Cide',
+        'latitude'  => '41.85583000',
+        'longitude' => '33.03977000',
+    ],
+    [
+        'id'        => 107439,
+        'name'      => 'Daday',
+        'latitude'  => '41.47866000',
+        'longitude' => '33.46667000',
+    ],
+    [
+        'id'        => 107488,
+        'name'      => 'Devrekani',
+        'latitude'  => '41.60303000',
+        'longitude' => '33.83922000',
+    ],
+    [
+        'id'        => 107521,
+        'name'      => 'Doğanyurt',
+        'latitude'  => '42.00457000',
+        'longitude' => '33.46029000',
+    ],
+    [
+        'id'        => 107793,
+        'name'      => 'Hanönü',
+        'latitude'  => '41.62705000',
+        'longitude' => '34.46667000',
+    ],
+    [
+        'id'        => 108881,
+        'name'      => 'İhsangazi',
+        'latitude'  => '41.20432000',
+        'longitude' => '33.55455000',
+    ],
+    [
+        'id'        => 108899,
+        'name'      => 'İnebolu',
+        'latitude'  => '41.97472000',
+        'longitude' => '33.76083000',
+    ],
+    [
+        'id'        => 108088,
+        'name'      => 'Küre',
+        'latitude'  => '41.80578000',
+        'longitude' => '33.71161000',
+    ],
+    [
+        'id'        => 107939,
+        'name'      => 'Merkez',
+        'latitude'  => '41.37805000',
+        'longitude' => '33.77528000',
+    ],
+    [
+        'id'        => 108358,
+        'name'      => 'Pınarbaşı',
+        'latitude'  => '41.60388000',
+        'longitude' => '33.11099000',
+    ],
+    [
+        'id'        => 108954,
+        'name'      => 'Şenpazar',
+        'latitude'  => '41.81651000',
+        'longitude' => '33.21766000',
+    ],
+    [
+        'id'        => 108448,
+        'name'      => 'Seydiler',
+        'latitude'  => '41.62005000',
+        'longitude' => '33.71815000',
+    ],
+    [
+        'id'        => 108548,
+        'name'      => 'Taşköprü',
+        'latitude'  => '41.50980000',
+        'longitude' => '34.21414000',
+    ],
+    [
+        'id'        => 108593,
+        'name'      => 'Tosya',
+        'latitude'  => '41.01545000',
+        'longitude' => '34.04013000',
+    ],
+];
