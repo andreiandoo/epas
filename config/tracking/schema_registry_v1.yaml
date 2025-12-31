@@ -1,0 +1,876 @@
+registry_version: 1
+updated_at: "2025-12-28"
+
+envelope:
+  required_fields:
+    event_id: {type: uuid, notes: "UUID v4, generated client-side; unique per event"}
+    event_name: {type: string}
+    event_version: {type: int, default: 1}
+    occurred_at: {type: iso8601_utc, notes: "Client timestamp; server may add received_at"}
+    tenant_id: {type: string, notes: "Internal tenant identifier"}
+    site_id: {type: string, notes: "Optional if tenant has multiple sites"}
+    source_system: {type: enum, values: [web, mobile, scanner, backend, payments, shop, wallet]}
+    visitor_id: {type: string, notes: "Persistent anonymous id (localStorage tx_vid). Required for web/mobile"}
+    session_id: {type: string, notes: "Rolling session id (localStorage tx_sid). Required for web/mobile"}
+    sequence_no: {type: int, notes: "Incrementing counter per session; helps ordering & timing"}
+    consent_snapshot:
+      type: object
+      notes: "Snapshot at event time"
+      fields:
+        analytics: {type: bool}
+        marketing: {type: bool}
+        data_processing: {type: bool}
+        captured_at: {type: iso8601_utc}
+        copy_hash: {type: string, notes: "Hash of consent UI text/version"}
+    context:
+      type: object
+      fields:
+        page:
+          type: object
+          fields:
+            url: {type: string}
+            path: {type: string}
+            title: {type: string}
+            page_type: {type: enum, values: [home, listing, event, checkout, artist, venue, shop, account, other]}
+        referrer: {type: string}
+        utm:
+          type: object
+          fields:
+            source: {type: string}
+            medium: {type: string}
+            campaign: {type: string}
+            content: {type: string}
+            term: {type: string}
+        click_ids:
+          type: object
+          notes: "First-touch + current touch where available"
+          fields:
+            gclid: {type: string}
+            fbclid: {type: string}
+            ttclid: {type: string}
+            fbp: {type: string}
+            fbc: {type: string}
+        device:
+          type: object
+          fields:
+            device_type: {type: enum, values: [desktop, mobile, tablet, other]}
+            os: {type: string}
+            browser: {type: string}
+            app_version: {type: string}
+        network:
+          type: object
+          fields:
+            ip_country: {type: string, notes: "Prefer server-derived"}
+            user_agent: {type: string}
+    entities:
+      type: object
+      notes: "References only; do not put PII here"
+      allowed_keys:
+        event_entity_id: {type: string}
+        venue_id: {type: string}
+        artist_ids: {type: array_string}
+        order_id: {type: string}
+        cart_id: {type: string}
+        ticket_id: {type: string}
+        ticket_type_id: {type: string}
+        beneficiary_id: {type: string}
+        product_id: {type: string}
+        affiliate_id: {type: string}
+        campaign_id: {type: string}
+        scanner_session_id: {type: string}
+        gate_id: {type: string}
+    payload: {type: object, notes: "Event-specific JSON"}
+  optional_fields:
+    person_id: {type: string, notes: "Set server-side after identify/stitch, or in authenticated contexts"}
+    prev_event_id: {type: uuid, notes: "Optional; client can include to ease timing debug"}
+    received_at: {type: iso8601_utc, notes: "Server timestamp"}
+    idempotency_key: {type: string, notes: "Required for webhooks; optional elsewhere"}
+    debug:
+      type: object
+      fields:
+        client_since_prev_ms: {type: int, notes: "Optional; not authoritative"}
+        sdk_version: {type: string}
+
+consent_scopes:
+  necessary: "Required for service operation (orders, payments, scanning integrity). Not for marketing exports."
+  analytics: "Product analytics & profiling; no ad platform activation unless marketing consent."
+  marketing: "Allows pixels/CAPI & audience exports for ads/email (where applicable)."
+
+events:
+
+  # -------------------------
+  # Web: navigation & intent
+  # -------------------------
+  - name: page_view
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: []
+    payload_schema:
+      page_type: {type: enum, values: [home, listing, event, checkout, artist, venue, shop, account, other]}
+      is_first_touch: {type: bool}
+      navigation_type: {type: enum, values: [navigate, reload, back_forward, prerender, unknown]}
+    trigger: "On page load (DOMContentLoaded)."
+
+  - name: page_engagement
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: []
+    payload_schema:
+      active_ms: {type: int, notes: "Time tab was visible + focused"}
+      total_ms: {type: int, notes: "Wall-clock time on page"}
+      scroll_max_pct: {type: int, notes: "0..100"}
+      visibility_changes: {type: int}
+      focus_changes: {type: int}
+    trigger: "On pagehide/beforeunload."
+
+  - name: search_performed
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: []
+    payload_schema:
+      query: {type: string}
+      filters: {type: object}
+      results_count: {type: int}
+    trigger: "When user executes search."
+
+  - name: filter_changed
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: []
+    payload_schema:
+      filter_name: {type: string}
+      filter_value: {type: any}
+      all_filters: {type: object}
+    trigger: "On listing filter changes (optional; can be noisy)."
+
+  - name: event_list_impression
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: []
+    payload_schema:
+      list_id: {type: string, notes: "e.g. home_featured, listing_default"}
+      item_count: {type: int}
+      event_entity_ids: {type: array_string}
+    trigger: "When a list/grid of events is rendered (optional volume)."
+
+  - name: event_card_click
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [event_entity_id]
+    payload_schema:
+      list_id: {type: string}
+      position: {type: int}
+    trigger: "On click/tap event card."
+
+  - name: event_view
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [event_entity_id]
+    payload_schema:
+      price_from: {type: number}
+      currency: {type: string}
+      availability_snapshot: {type: object, notes: "Optional: remaining per ticket_type"}
+    trigger: "On event page view."
+
+  - name: artist_view
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [artist_ids]
+    payload_schema:
+      artist_id: {type: string}
+    trigger: "On artist page view (if exists)."
+
+  - name: venue_view
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [venue_id]
+    payload_schema:
+      venue_id: {type: string}
+    trigger: "On venue page view (if exists)."
+
+  # -------------------------
+  # Web: ticketing funnel
+  # -------------------------
+  - name: ticket_type_selected
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [event_entity_id, ticket_type_id]
+    payload_schema:
+      qty: {type: int}
+      unit_price: {type: number}
+      fees: {type: number}
+      currency: {type: string}
+      ticket_category: {type: string, notes: "GA/VIP/EarlyBird etc if available"}
+    trigger: "When user selects a ticket type/qty."
+
+  - name: add_to_cart
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [cart_id, event_entity_id]
+    payload_schema:
+      items: {type: array_object}
+      cart_value: {type: number}
+      currency: {type: string}
+    trigger: "On add to cart."
+
+  - name: remove_from_cart
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [cart_id]
+    payload_schema:
+      removed_item: {type: object}
+      cart_value: {type: number}
+      currency: {type: string}
+    trigger: "On remove from cart."
+
+  - name: cart_view
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [cart_id]
+    payload_schema:
+      cart_value: {type: number}
+      currency: {type: string}
+      item_count: {type: int}
+    trigger: "On cart page/open."
+
+  - name: checkout_started
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [cart_id]
+    payload_schema:
+      cart_value: {type: number}
+      currency: {type: string}
+      login_state: {type: enum, values: [guest, authenticated]}
+    trigger: "On entering checkout flow."
+
+  - name: checkout_step_viewed
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [cart_id]
+    payload_schema:
+      step_name: {type: enum, values: [contact, beneficiaries, delivery, payment, review, other]}
+    trigger: "On viewing a checkout step."
+
+  - name: checkout_step_completed
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [cart_id]
+    payload_schema:
+      step_name: {type: enum, values: [contact, beneficiaries, delivery, payment, review, other]}
+      step_duration_ms: {type: int, notes: "Active time in this step; compute client-side"}
+      validation_errors: {type: array_string}
+    trigger: "On completing a checkout step."
+
+  - name: beneficiary_added
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [cart_id, ticket_id]
+    payload_schema:
+      beneficiary_index: {type: int}
+      fields_collected: {type: array_string, notes: "e.g. name,email,phone (do NOT send raw values in payload)"}
+      consent_flags: {type: object, notes: "Optional, if beneficiary consents are collected"}
+    trigger: "When purchaser adds a beneficiary for a ticket."
+
+  - name: beneficiary_updated
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [cart_id, ticket_id]
+    payload_schema:
+      beneficiary_index: {type: int}
+      fields_updated: {type: array_string}
+    trigger: "When beneficiary details are updated."
+
+  - name: beneficiary_removed
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [cart_id, ticket_id]
+    payload_schema:
+      beneficiary_index: {type: int}
+    trigger: "When beneficiary is removed/unassigned."
+
+  - name: discount_code_applied
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [cart_id]
+    payload_schema:
+      code: {type: string}
+      discount_type: {type: enum, values: [percent, fixed, other]}
+      discount_value: {type: number}
+      discount_amount: {type: number}
+      currency: {type: string}
+    trigger: "When discount code is accepted in UI."
+
+  - name: discount_code_rejected
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [cart_id]
+    payload_schema:
+      code: {type: string}
+      reason_code: {type: enum, values: [expired, min_cart, not_eligible, limit_reached, invalid, unknown]}
+    trigger: "When discount code is rejected in UI."
+
+  - name: affiliate_click_captured
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: []
+    payload_schema:
+      affiliate_id: {type: string}
+      campaign_id: {type: string}
+      click_id: {type: string}
+      attribution_window_days: {type: int, default: 7}
+    trigger: "On landing when affiliate params are present; store in session."
+
+  - name: payment_method_selected
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [cart_id]
+    payload_schema:
+      provider: {type: string}
+      method: {type: string}
+      is_3ds_expected: {type: bool}
+    trigger: "When user selects payment method."
+
+  - name: payment_attempted
+    version: 1
+    scope: analytics
+    sources: [web]
+    required_entities: [cart_id]
+    payload_schema:
+      provider: {type: string}
+      method: {type: string}
+      amount: {type: number}
+      currency: {type: string}
+    trigger: "Immediately before redirect/confirm."
+
+  # -------------------------
+  # Backend/Payments: source of truth
+  # -------------------------
+  - name: payment_succeeded
+    version: 1
+    scope: necessary
+    sources: [payments, backend]
+    required_entities: [order_id]
+    payload_schema:
+      provider: {type: string}
+      provider_tx_id: {type: string}
+      amount: {type: number}
+      currency: {type: string}
+      latency_ms: {type: int}
+    trigger: "Payments webhook confirmation (idempotent)."
+
+  - name: payment_failed
+    version: 1
+    scope: necessary
+    sources: [payments, backend]
+    required_entities: [order_id]
+    payload_schema:
+      provider: {type: string}
+      provider_tx_id: {type: string}
+      failure_reason_code: {type: string}
+      latency_ms: {type: int}
+    trigger: "Payments webhook failure (idempotent)."
+
+  - name: order_completed
+    version: 1
+    scope: necessary
+    sources: [backend]
+    required_entities: [order_id]
+    payload_schema:
+      gross_amount: {type: number}
+      net_amount: {type: number}
+      fees_amount: {type: number}
+      discount_total: {type: number}
+      currency: {type: string}
+      items: {type: array_object, notes: "ticket lines + qty + ticket_type_id"}
+      affiliate_id: {type: string}
+      channel: {type: enum, values: [web, mobile, other]}
+      consent_data_processing: {type: bool}
+      consent_marketing: {type: bool}
+    trigger: "After successful order finalize in core (idempotent)."
+
+  - name: order_failed
+    version: 1
+    scope: necessary
+    sources: [backend]
+    required_entities: []
+    payload_schema:
+      cart_id: {type: string}
+      failure_reason_code: {type: string}
+      step_name: {type: string}
+    trigger: "Order creation/finalize fails."
+
+  - name: ticket_delivered
+    version: 1
+    scope: necessary
+    sources: [backend]
+    required_entities: [order_id]
+    payload_schema:
+      delivery_type: {type: enum, values: [email, app, wallet, other]}
+      recipient_count: {type: int}
+      email_delivery_status: {type: string}
+    trigger: "Tickets delivered."
+
+  - name: ticket_assigned
+    version: 1
+    scope: necessary
+    sources: [backend]
+    required_entities: [ticket_id]
+    payload_schema:
+      assigned_to_type: {type: enum, values: [purchaser, beneficiary]}
+      beneficiary_id: {type: string}
+    trigger: "Ticket assigned to final beneficiary."
+
+  - name: ticket_transferred
+    version: 1
+    scope: necessary
+    sources: [backend]
+    required_entities: [ticket_id]
+    payload_schema:
+      from_person_id: {type: string}
+      to_person_id: {type: string}
+      transfer_reason: {type: enum, values: [gift, resale, other]}
+    trigger: "Ticket transfer executed."
+
+  - name: refund_requested
+    version: 1
+    scope: necessary
+    sources: [backend]
+    required_entities: [order_id]
+    payload_schema:
+      reason_code: {type: string}
+      requested_amount: {type: number}
+      currency: {type: string}
+    trigger: "Refund requested."
+
+  - name: refund_completed
+    version: 1
+    scope: necessary
+    sources: [payments, backend]
+    required_entities: [order_id]
+    payload_schema:
+      refunded_amount: {type: number}
+      currency: {type: string}
+      is_partial: {type: bool}
+    trigger: "Refund completed (webhook + idempotency)."
+
+  - name: chargeback_opened
+    version: 1
+    scope: necessary
+    sources: [payments]
+    required_entities: [order_id]
+    payload_schema:
+      provider: {type: string}
+      reason_code: {type: string}
+      amount: {type: number}
+      currency: {type: string}
+    trigger: "Chargeback opened (webhook)."
+
+  - name: chargeback_won
+    version: 1
+    scope: necessary
+    sources: [payments]
+    required_entities: [order_id]
+    payload_schema:
+      provider: {type: string}
+      amount: {type: number}
+      currency: {type: string}
+    trigger: "Chargeback resolved won."
+
+  - name: chargeback_lost
+    version: 1
+    scope: necessary
+    sources: [payments]
+    required_entities: [order_id]
+    payload_schema:
+      provider: {type: string}
+      amount: {type: number}
+      currency: {type: string}
+    trigger: "Chargeback resolved lost."
+
+  # -------------------------
+  # Wallet
+  # -------------------------
+  - name: wallet_pass_created
+    version: 1
+    scope: necessary
+    sources: [backend, wallet]
+    required_entities: [ticket_id]
+    payload_schema:
+      wallet_type: {type: enum, values: [apple, google, other]}
+    trigger: "When pass is generated."
+
+  - name: wallet_pass_installed
+    version: 1
+    scope: analytics
+    sources: [wallet, web, mobile]
+    required_entities: [ticket_id]
+    payload_schema:
+      wallet_type: {type: enum, values: [apple, google, other]}
+    trigger: "When pass is installed (if detectable)."
+
+  - name: wallet_pass_opened
+    version: 1
+    scope: analytics
+    sources: [wallet, web, mobile]
+    required_entities: [ticket_id]
+    payload_schema:
+      wallet_type: {type: enum, values: [apple, google, other]}
+    trigger: "When pass is opened (if detectable)."
+
+  - name: wallet_pass_updated
+    version: 1
+    scope: necessary
+    sources: [backend, wallet]
+    required_entities: [ticket_id]
+    payload_schema:
+      update_reason: {type: string}
+    trigger: "When pass is updated (schedule/seat/gate/etc.)."
+
+  - name: wallet_pass_invalidated
+    version: 1
+    scope: necessary
+    sources: [backend, wallet]
+    required_entities: [ticket_id]
+    payload_schema:
+      invalidation_reason: {type: enum, values: [refund, transfer, fraud, other]}
+    trigger: "When pass invalidated."
+
+  # -------------------------
+  # Scanner (attendance ground truth)
+  # -------------------------
+  - name: scanner_session_started
+    version: 1
+    scope: necessary
+    sources: [scanner, mobile]
+    required_entities: [event_entity_id, venue_id]
+    payload_schema:
+      scanner_session_id: {type: string}
+      staff_id: {type: string}
+      gate_id: {type: string}
+      device_id: {type: string}
+      app_version: {type: string}
+      offline_mode: {type: bool}
+    trigger: "On scanner session start."
+
+  - name: scanner_session_ended
+    version: 1
+    scope: necessary
+    sources: [scanner, mobile]
+    required_entities: [event_entity_id]
+    payload_schema:
+      scanner_session_id: {type: string}
+      totals: {type: object}
+    trigger: "On scanner session end."
+
+  - name: ticket_scan_attempted
+    version: 1
+    scope: necessary
+    sources: [scanner, mobile]
+    required_entities: [event_entity_id, ticket_id]
+    payload_schema:
+      scanner_session_id: {type: string}
+      gate_id: {type: string}
+      scan_type: {type: enum, values: [entry, exit, reentry]}
+      qr_payload_hash: {type: string}
+    trigger: "On scan attempt."
+
+  - name: ticket_scan_result
+    version: 1
+    scope: necessary
+    sources: [scanner, mobile]
+    required_entities: [event_entity_id, ticket_id]
+    payload_schema:
+      scanner_session_id: {type: string}
+      gate_id: {type: string}
+      scan_type: {type: enum, values: [entry, exit, reentry]}
+      result: {type: enum, values: [valid, invalid, already_used, wrong_gate, wrong_day, refunded, unknown]}
+      reason_code: {type: string}
+      latency_ms: {type: int}
+      offline_resolution: {type: bool}
+    trigger: "After scan validation."
+
+  - name: entry_granted
+    version: 1
+    scope: necessary
+    sources: [scanner, mobile]
+    required_entities: [event_entity_id, ticket_id]
+    payload_schema:
+      gate_id: {type: string}
+      entry_time: {type: iso8601_utc}
+      beneficiary_id: {type: string}
+    trigger: "When entry is granted."
+
+  - name: entry_denied
+    version: 1
+    scope: necessary
+    sources: [scanner, mobile]
+    required_entities: [event_entity_id, ticket_id]
+    payload_schema:
+      gate_id: {type: string}
+      denial_reason: {type: string}
+    trigger: "When entry is denied."
+
+  - name: manual_override_used
+    version: 1
+    scope: necessary
+    sources: [scanner, mobile]
+    required_entities: [event_entity_id]
+    payload_schema:
+      staff_id: {type: string}
+      gate_id: {type: string}
+      override_reason: {type: string}
+    trigger: "When staff uses manual override."
+
+  - name: capacity_snapshot
+    version: 1
+    scope: necessary
+    sources: [scanner, mobile]
+    required_entities: [event_entity_id, venue_id]
+    payload_schema:
+      gate_id: {type: string}
+      current_inside: {type: int}
+      total_entries: {type: int}
+      total_denied: {type: int}
+      rate_per_minute: {type: number}
+    trigger: "Periodic snapshot every 1–5 minutes."
+
+  - name: incident_logged
+    version: 1
+    scope: necessary
+    sources: [scanner, mobile]
+    required_entities: [event_entity_id, venue_id]
+    payload_schema:
+      incident_type: {type: enum, values: [fraud_cluster, device_issue, crowding, other]}
+      severity: {type: enum, values: [low, medium, high, critical]}
+      notes: {type: string}
+    trigger: "When staff logs an incident."
+
+  # -------------------------
+  # Shop (physical products)
+  # -------------------------
+  - name: product_view
+    version: 1
+    scope: analytics
+    sources: [shop, web]
+    required_entities: [product_id]
+    payload_schema:
+      price: {type: number}
+      currency: {type: string}
+      category: {type: string}
+    trigger: "On product page view."
+
+  - name: add_to_cart_shop
+    version: 1
+    scope: analytics
+    sources: [shop, web]
+    required_entities: [product_id, cart_id]
+    payload_schema:
+      qty: {type: int}
+      cart_value: {type: number}
+      currency: {type: string}
+    trigger: "On add product to cart."
+
+  - name: checkout_started_shop
+    version: 1
+    scope: analytics
+    sources: [shop, web]
+    required_entities: [cart_id]
+    payload_schema:
+      cart_value: {type: number}
+      currency: {type: string}
+    trigger: "On entering shop checkout."
+
+  - name: order_completed_shop
+    version: 1
+    scope: necessary
+    sources: [backend, shop]
+    required_entities: [order_id]
+    payload_schema:
+      gross_amount: {type: number}
+      currency: {type: string}
+      items: {type: array_object}
+    trigger: "Shop order completed (server)."
+
+  - name: shipment_created
+    version: 1
+    scope: necessary
+    sources: [backend, shop]
+    required_entities: [order_id]
+    payload_schema:
+      carrier: {type: string}
+      tracking_code_hash: {type: string}
+    trigger: "Shipment created."
+
+  - name: delivered
+    version: 1
+    scope: necessary
+    sources: [backend, shop]
+    required_entities: [order_id]
+    payload_schema:
+      delivered_at: {type: iso8601_utc}
+    trigger: "Delivered."
+
+  - name: return_requested
+    version: 1
+    scope: necessary
+    sources: [backend, shop]
+    required_entities: [order_id]
+    payload_schema:
+      reason_code: {type: string}
+    trigger: "Return requested."
+
+  - name: return_completed
+    version: 1
+    scope: necessary
+    sources: [backend, shop]
+    required_entities: [order_id]
+    payload_schema:
+      refunded_amount: {type: number}
+      currency: {type: string}
+    trigger: "Return completed."
+
+  # -------------------------
+  # Gamification
+  # -------------------------
+  - name: points_earned
+    version: 1
+    scope: analytics
+    sources: [backend, web, mobile]
+    required_entities: []
+    payload_schema:
+      rule_id: {type: string}
+      points: {type: int}
+      trigger: {type: enum, values: [purchase, attendance, referral, streak, other]}
+    trigger: "When points are awarded."
+
+  - name: reward_redeemed
+    version: 1
+    scope: analytics
+    sources: [backend, web, mobile]
+    required_entities: []
+    payload_schema:
+      reward_id: {type: string}
+      cost_points: {type: int}
+      benefit_type: {type: enum, values: [discount, upgrade, merch, other]}
+    trigger: "When reward redeemed."
+
+  - name: level_up
+    version: 1
+    scope: analytics
+    sources: [backend, web, mobile]
+    required_entities: []
+    payload_schema:
+      from_level: {type: int}
+      to_level: {type: int}
+    trigger: "When user levels up."
+
+  - name: streak_updated
+    version: 1
+    scope: analytics
+    sources: [backend, web, mobile]
+    required_entities: []
+    payload_schema:
+      streak_type: {type: string}
+      streak_value: {type: int}
+    trigger: "When streak updated."
+
+  # -------------------------
+  # Affiliates (server decisions)
+  # -------------------------
+  - name: affiliate_attribution_set
+    version: 1
+    scope: necessary
+    sources: [backend]
+    required_entities: [order_id]
+    payload_schema:
+      affiliate_id: {type: string}
+      campaign_id: {type: string}
+      attribution_model: {type: enum, values: [last_click, first_click, linear]}
+      window_days: {type: int}
+      click_id: {type: string}
+    trigger: "When server assigns attribution to an order."
+
+  - name: affiliate_commission_accrued
+    version: 1
+    scope: necessary
+    sources: [backend]
+    required_entities: [order_id]
+    payload_schema:
+      affiliate_id: {type: string}
+      commission_amount: {type: number}
+      currency: {type: string}
+      status: {type: enum, values: [pending, approved]}
+    trigger: "When commission accrued."
+
+  - name: affiliate_commission_paid
+    version: 1
+    scope: necessary
+    sources: [backend]
+    required_entities: [order_id]
+    payload_schema:
+      affiliate_id: {type: string}
+      commission_amount: {type: number}
+      currency: {type: string}
+      paid_at: {type: iso8601_utc}
+    trigger: "When commission paid."
+
+  # -------------------------
+  # Pixels / conversions (internal logs)
+  # -------------------------
+  - name: pixel_event_enqueued
+    version: 1
+    scope: marketing
+    sources: [backend]
+    required_entities: [order_id]
+    payload_schema:
+      platform: {type: enum, values: [meta, google, tiktok]}
+      mapped_event: {type: string}
+    trigger: "When conversion event queued for sending."
+
+  - name: pixel_event_sent
+    version: 1
+    scope: marketing
+    sources: [backend]
+    required_entities: [order_id]
+    payload_schema:
+      platform: {type: enum, values: [meta, google, tiktok]}
+      mapped_event: {type: string}
+      sent_at: {type: iso8601_utc}
+      response_code: {type: int}
+    trigger: "When conversion event successfully sent."
+
+  - name: pixel_event_failed
+    version: 1
+    scope: marketing
+    sources: [backend]
+    required_entities: [order_id]
+    payload_schema:
+      platform: {type: enum, values: [meta, google, tiktok]}
+      mapped_event: {type: string}
+      error_code: {type: string}
+      error_message: {type: string}
+      attempt: {type: int}
+    trigger: "When conversion event fails."
