@@ -3,6 +3,8 @@
 namespace App\Listeners;
 
 use App\Events\OrderConfirmed;
+use App\Jobs\Tracking\CalculatePersonAffinitiesJob;
+use App\Jobs\Tracking\CalculateTicketPreferencesJob;
 use App\Models\Order;
 use App\Services\Tracking\TxEventEmitter;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -61,6 +63,25 @@ class EmitTxOrderCompletedListener implements ShouldQueue
                     'order_id' => $order->id,
                     'person_id' => $txEvent->person_id,
                 ]);
+
+                // Dispatch affinity calculation for this person (with delay to allow event processing)
+                if ($txEvent->person_id) {
+                    CalculatePersonAffinitiesJob::dispatch(
+                        $order->tenant_id,
+                        $txEvent->person_id,
+                        365
+                    )->delay(now()->addMinutes(5))->onQueue('tracking-low');
+
+                    CalculateTicketPreferencesJob::dispatch(
+                        $order->tenant_id,
+                        $txEvent->person_id,
+                        365
+                    )->delay(now()->addMinutes(5))->onQueue('tracking-low');
+
+                    Log::info('EmitTxOrderCompletedListener: Affinity jobs dispatched', [
+                        'person_id' => $txEvent->person_id,
+                    ]);
+                }
             }
 
         } catch (\Exception $e) {

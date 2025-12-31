@@ -296,6 +296,25 @@ class CoreCustomer extends Model
         return $this->hasMany(\App\Models\Tracking\TxIdentityLink::class, 'person_id');
     }
 
+    public function personTags(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(
+            \App\Models\Tracking\PersonTag::class,
+            'person_tag_assignments',
+            'person_id',
+            'tag_id'
+        )->withPivot(['source', 'confidence', 'assigned_at', 'expires_at'])
+         ->wherePivot(function ($query) {
+             $query->whereNull('expires_at')
+                   ->orWhere('expires_at', '>', now());
+         });
+    }
+
+    public function tagAssignments(): HasMany
+    {
+        return $this->hasMany(\App\Models\Tracking\PersonTagAssignment::class, 'person_id');
+    }
+
     // Computed attributes
     public function getFullNameAttribute(): ?string
     {
@@ -362,6 +381,57 @@ class CoreCustomer extends Model
     public function scopeWithConsent($query, string $type = 'marketing')
     {
         return $query->where("{$type}_consent", true);
+    }
+
+    public function scopeWithTag($query, int|string $tag)
+    {
+        return $query->whereHas('tagAssignments', function ($q) use ($tag) {
+            $q->where(function ($inner) use ($tag) {
+                $inner->whereNull('expires_at')
+                      ->orWhere('expires_at', '>', now());
+            });
+
+            if (is_int($tag)) {
+                $q->where('tag_id', $tag);
+            } else {
+                $q->whereHas('tag', fn($t) => $t->where('slug', $tag));
+            }
+        });
+    }
+
+    public function scopeWithAnyTag($query, array $tagIds)
+    {
+        return $query->whereHas('tagAssignments', function ($q) use ($tagIds) {
+            $q->whereIn('tag_id', $tagIds)
+              ->where(function ($inner) {
+                  $inner->whereNull('expires_at')
+                        ->orWhere('expires_at', '>', now());
+              });
+        });
+    }
+
+    public function scopeWithAllTags($query, array $tagIds)
+    {
+        foreach ($tagIds as $tagId) {
+            $query->withTag($tagId);
+        }
+        return $query;
+    }
+
+    public function scopeWithoutTag($query, int|string $tag)
+    {
+        return $query->whereDoesntHave('tagAssignments', function ($q) use ($tag) {
+            $q->where(function ($inner) {
+                $inner->whereNull('expires_at')
+                      ->orWhere('expires_at', '>', now());
+            });
+
+            if (is_int($tag)) {
+                $q->where('tag_id', $tag);
+            } else {
+                $q->whereHas('tag', fn($t) => $t->where('slug', $tag));
+            }
+        });
     }
 
     // Lookup methods

@@ -8,6 +8,8 @@ use App\Models\FeatureStore\FsPersonAffinityArtist;
 use App\Models\FeatureStore\FsPersonAffinityGenre;
 use App\Models\FeatureStore\FsPersonTicketPref;
 use App\Models\FeatureStore\FsPersonDaily;
+use App\Models\Tracking\PersonTag;
+use App\Models\Tracking\PersonTagAssignment;
 use App\Models\Tracking\TxEvent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -197,6 +199,64 @@ class TxAudienceBuilder
     }
 
     /**
+     * Find people with specific tags (all must match).
+     *
+     * @param array $tagIds Tag IDs or slugs
+     */
+    public function withTags(array $tagIds): self
+    {
+        $this->criteria[] = [
+            'type' => 'with_tags',
+            'tag_ids' => $tagIds,
+            'match' => 'all',
+        ];
+        return $this;
+    }
+
+    /**
+     * Find people with any of the specified tags.
+     *
+     * @param array $tagIds Tag IDs or slugs
+     */
+    public function withAnyTags(array $tagIds): self
+    {
+        $this->criteria[] = [
+            'type' => 'with_tags',
+            'tag_ids' => $tagIds,
+            'match' => 'any',
+        ];
+        return $this;
+    }
+
+    /**
+     * Find people without specific tags.
+     *
+     * @param array $tagIds Tag IDs or slugs
+     */
+    public function withoutTags(array $tagIds): self
+    {
+        $this->criteria[] = [
+            'type' => 'without_tags',
+            'tag_ids' => $tagIds,
+        ];
+        return $this;
+    }
+
+    /**
+     * Find people in a specific tag category.
+     *
+     * @param string $category Tag category (lifecycle, behavior, preference, etc.)
+     */
+    public function inTagCategory(string $category): self
+    {
+        $this->criteria[] = [
+            'type' => 'tag_category',
+            'category' => $category,
+        ];
+        return $this;
+    }
+
+    /**
      * Limit the number of results.
      */
     public function limit(int $limit): self
@@ -326,6 +386,9 @@ class TxAudienceBuilder
             'viewed_events' => $this->queryViewedEvents($criterion),
             'not_purchased_events' => $this->queryNotPurchasedEvents($criterion),
             'abandoned_checkout' => $this->queryAbandonedCheckout($criterion),
+            'with_tags' => $this->queryWithTags($criterion),
+            'without_tags' => $this->queryWithoutTags($criterion),
+            'tag_category' => $this->queryTagCategory($criterion),
             default => collect(),
         };
     }
@@ -450,6 +513,104 @@ class TxAudienceBuilder
             ->unique();
 
         return $startedCheckout->diff($completed);
+    }
+
+    protected function queryWithTags(array $criterion): Collection
+    {
+        $tagIds = $this->resolveTagIds($criterion['tag_ids']);
+        $match = $criterion['match'] ?? 'all';
+
+        if (empty($tagIds)) {
+            return collect();
+        }
+
+        $query = PersonTagAssignment::where('tenant_id', $this->tenantId)
+            ->whereIn('tag_id', $tagIds)
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>', now());
+            });
+
+        if ($match === 'all') {
+            return $query->groupBy('person_id')
+                ->havingRaw('COUNT(DISTINCT tag_id) = ?', [count($tagIds)])
+                ->pluck('person_id');
+        }
+
+        return $query->pluck('person_id')->unique();
+    }
+
+    protected function queryWithoutTags(array $criterion): Collection
+    {
+        $tagIds = $this->resolveTagIds($criterion['tag_ids']);
+
+        if (empty($tagIds)) {
+            // Return all persons in tenant if no tags specified
+            return CoreCustomer::fromTenant($this->tenantId)
+                ->notMerged()
+                ->pluck('id');
+        }
+
+        // Get persons who have any of the excluded tags
+        $excluded = PersonTagAssignment::where('tenant_id', $this->tenantId)
+            ->whereIn('tag_id', $tagIds)
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>', now());
+            })
+            ->pluck('person_id')
+            ->unique();
+
+        // Return all persons except excluded
+        return CoreCustomer::fromTenant($this->tenantId)
+            ->notMerged()
+            ->whereNotIn('id', $excluded)
+            ->pluck('id');
+    }
+
+    protected function queryTagCategory(array $criterion): Collection
+    {
+        $tagIds = PersonTag::where('tenant_id', $this->tenantId)
+            ->where('category', $criterion['category'])
+            ->pluck('id');
+
+        if ($tagIds->isEmpty()) {
+            return collect();
+        }
+
+        return PersonTagAssignment::where('tenant_id', $this->tenantId)
+            ->whereIn('tag_id', $tagIds)
+            ->where(function ($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>', now());
+            })
+            ->pluck('person_id')
+            ->unique();
+    }
+
+    /**
+     * Resolve tag IDs from mixed input (IDs or slugs).
+     */
+    protected function resolveTagIds(array $tags): array
+    {
+        $ids = [];
+
+        foreach ($tags as $tag) {
+            if (is_int($tag) || is_numeric($tag)) {
+                $ids[] = (int) $tag;
+            } else {
+                // Assume it's a slug
+                $tagModel = PersonTag::where('tenant_id', $this->tenantId)
+                    ->where('slug', $tag)
+                    ->first();
+
+                if ($tagModel) {
+                    $ids[] = $tagModel->id;
+                }
+            }
+        }
+
+        return $ids;
     }
 
     /**

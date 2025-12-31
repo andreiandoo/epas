@@ -478,3 +478,100 @@ Schedule::command('activitylog:cleanup --days=10')
     ->onFailure(function () {
         \Log::error('Failed to cleanup tenant activity logs');
     });
+
+/*
+|--------------------------------------------------------------------------
+| TX Tracking & Feature Store Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Update person daily stats (daily at 2:15 AM - after basic analytics)
+Schedule::job(new \App\Jobs\Tracking\UpdatePersonDailyStatsJob())
+    ->dailyAt('02:15')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('TX: Person daily stats updated');
+    })
+    ->onFailure(function () {
+        \Log::error('TX: Failed to update person daily stats');
+    });
+
+// Aggregate event funnels (hourly)
+Schedule::job(new \App\Jobs\Tracking\AggregateEventFunnelsJob(null, null, 2))
+    ->hourly()
+    ->onSuccess(function () {
+        \Log::info('TX: Event funnels aggregated');
+    })
+    ->onFailure(function () {
+        \Log::error('TX: Failed to aggregate event funnels');
+    });
+
+// Calculate person affinities (weekly on Sunday at 3:15 AM)
+Schedule::job(new \App\Jobs\Tracking\CalculatePersonAffinitiesJob())
+    ->weeklyOn(0, '03:15')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('TX: Person affinities calculated');
+    })
+    ->onFailure(function () {
+        \Log::error('TX: Failed to calculate person affinities');
+    });
+
+// Calculate ticket preferences (weekly on Sunday at 3:30 AM)
+Schedule::job(new \App\Jobs\Tracking\CalculateTicketPreferencesJob())
+    ->weeklyOn(0, '03:30')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('TX: Ticket preferences calculated');
+    })
+    ->onFailure(function () {
+        \Log::error('TX: Failed to calculate ticket preferences');
+    });
+
+// Recalculate dynamic audience segments (daily at 6 AM)
+Schedule::call(function () {
+    $segments = \App\Models\CustomerSegment::where('is_dynamic', true)
+        ->whereNotNull('conditions')
+        ->get();
+
+    foreach ($segments as $segment) {
+        try {
+            \App\Services\Tracking\TxAudienceBuilder::recalculateSegment($segment);
+            \Log::info('TX: Segment recalculated', ['segment_id' => $segment->id]);
+        } catch (\Exception $e) {
+            \Log::error('TX: Failed to recalculate segment', [
+                'segment_id' => $segment->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+})->dailyAt('06:00')->timezone('Europe/Bucharest');
+
+// Cleanup old tx_events (monthly - keep 2 years)
+Schedule::call(function () {
+    $deleted = \App\Models\Tracking\TxEvent::where('occurred_at', '<', now()->subYears(2))
+        ->delete();
+
+    if ($deleted > 0) {
+        \Log::info('TX: Old events cleaned up', ['deleted' => $deleted]);
+    }
+})->monthlyOn(1, '04:00')->timezone('Europe/Bucharest');
+
+// Apply auto-tagging rules (every 4 hours)
+Schedule::job(new \App\Jobs\Tracking\ApplyAutoTaggingRulesJob())
+    ->everyFourHours()
+    ->onSuccess(function () {
+        \Log::info('TX: Auto-tagging rules applied');
+    })
+    ->onFailure(function () {
+        \Log::error('TX: Failed to apply auto-tagging rules');
+    });
+
+// Process expired tags (daily at 1 AM)
+Schedule::call(function () {
+    $service = new \App\Services\Tracking\PersonTaggingService();
+    $count = $service->processExpiredTags();
+    if ($count > 0) {
+        \Log::info('TX: Expired tags processed', ['count' => $count]);
+    }
+})->dailyAt('01:00')->timezone('Europe/Bucharest');
