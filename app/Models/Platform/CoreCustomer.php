@@ -286,6 +286,16 @@ class CoreCustomer extends Model
         return $this->hasMany(PlatformConversion::class, 'customer_id');
     }
 
+    public function txEvents(): HasMany
+    {
+        return $this->hasMany(\App\Models\Tracking\TxEvent::class, 'person_id');
+    }
+
+    public function identityLinks(): HasMany
+    {
+        return $this->hasMany(\App\Models\Tracking\TxIdentityLink::class, 'person_id');
+    }
+
     // Computed attributes
     public function getFullNameAttribute(): ?string
     {
