@@ -1962,4 +1962,31 @@ Route::prefix('tx')->group(function () {
         Route::get('/visitor/{visitorId}/events', [App\Http\Controllers\Api\TxTrackingController::class, 'getVisitorEvents'])
             ->name('api.tx.visitor.events');
     });
+
+    // Audience Builder API (require authentication)
+    Route::prefix('audiences')->middleware(['throttle:api'])->group(function () {
+        // Build audience based on criteria
+        Route::post('/build', [App\Http\Controllers\Api\TxAudienceController::class, 'build'])
+            ->name('api.tx.audiences.build');
+
+        // Get propensity scores for an event
+        Route::post('/propensity', [App\Http\Controllers\Api\TxAudienceController::class, 'propensity'])
+            ->name('api.tx.audiences.propensity');
+
+        // Save audience as segment
+        Route::post('/save', [App\Http\Controllers\Api\TxAudienceController::class, 'save'])
+            ->name('api.tx.audiences.save');
+
+        // Recalculate dynamic segment
+        Route::post('/segments/{id}/recalculate', [App\Http\Controllers\Api\TxAudienceController::class, 'recalculate'])
+            ->name('api.tx.audiences.recalculate');
+
+        // Get audience statistics
+        Route::get('/stats', [App\Http\Controllers\Api\TxAudienceController::class, 'stats'])
+            ->name('api.tx.audiences.stats');
+
+        // Find lookalike audience
+        Route::post('/lookalike', [App\Http\Controllers\Api\TxAudienceController::class, 'lookalike'])
+            ->name('api.tx.audiences.lookalike');
+    });
 });
