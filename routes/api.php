@@ -1989,4 +1989,73 @@ Route::prefix('tx')->group(function () {
         Route::post('/lookalike', [App\Http\Controllers\Api\TxAudienceController::class, 'lookalike'])
             ->name('api.tx.audiences.lookalike');
     });
+
+    // Intelligence API (recommendations, next-best-action, forecasting)
+    Route::prefix('intelligence')->middleware(['throttle:api'])->group(function () {
+        // Recommendations
+        Route::get('/{tenantId}/recommendations/{personId}', [App\Http\Controllers\Api\TxIntelligenceController::class, 'recommendations'])
+            ->name('api.tx.intelligence.recommendations');
+        Route::get('/{tenantId}/recommendations/{personId}/artists', [App\Http\Controllers\Api\TxIntelligenceController::class, 'artistRecommendations'])
+            ->name('api.tx.intelligence.recommendations.artists');
+        Route::get('/{tenantId}/recommendations/{personId}/cross-sell/{eventId}', [App\Http\Controllers\Api\TxIntelligenceController::class, 'crossSellRecommendations'])
+            ->name('api.tx.intelligence.recommendations.cross-sell');
+
+        // Next Best Action
+        Route::get('/{tenantId}/nba/{personId}', [App\Http\Controllers\Api\TxIntelligenceController::class, 'nextBestAction'])
+            ->name('api.tx.intelligence.nba');
+        Route::get('/{tenantId}/nba/{personId}/queue', [App\Http\Controllers\Api\TxIntelligenceController::class, 'actionQueue'])
+            ->name('api.tx.intelligence.nba.queue');
+
+        // Win-Back Campaigns
+        Route::get('/{tenantId}/winback/candidates', [App\Http\Controllers\Api\TxIntelligenceController::class, 'winBackCandidates'])
+            ->name('api.tx.intelligence.winback.candidates');
+        Route::get('/{tenantId}/winback/stats', [App\Http\Controllers\Api\TxIntelligenceController::class, 'winBackStats'])
+            ->name('api.tx.intelligence.winback.stats');
+        Route::post('/{tenantId}/winback/contacted', [App\Http\Controllers\Api\TxIntelligenceController::class, 'markWinBackContacted'])
+            ->name('api.tx.intelligence.winback.contacted');
+
+        // Alerts
+        Route::get('/{tenantId}/alerts', [App\Http\Controllers\Api\TxIntelligenceController::class, 'pendingAlerts'])
+            ->name('api.tx.intelligence.alerts');
+        Route::get('/{tenantId}/alerts/stats', [App\Http\Controllers\Api\TxIntelligenceController::class, 'alertStats'])
+            ->name('api.tx.intelligence.alerts.stats');
+        Route::post('/{tenantId}/alerts/{alertId}/handle', [App\Http\Controllers\Api\TxIntelligenceController::class, 'handleAlert'])
+            ->name('api.tx.intelligence.alerts.handle');
+
+        // Lookalike Audiences
+        Route::post('/{tenantId}/lookalikes', [App\Http\Controllers\Api\TxIntelligenceController::class, 'findLookalikes'])
+            ->name('api.tx.intelligence.lookalikes');
+        Route::get('/{tenantId}/lookalikes/high-value', [App\Http\Controllers\Api\TxIntelligenceController::class, 'highValueLookalikes'])
+            ->name('api.tx.intelligence.lookalikes.high-value');
+        Route::get('/{tenantId}/lookalikes/event/{eventId}', [App\Http\Controllers\Api\TxIntelligenceController::class, 'eventPurchaserLookalikes'])
+            ->name('api.tx.intelligence.lookalikes.event');
+        Route::get('/{tenantId}/lookalikes/similar/{personId}', [App\Http\Controllers\Api\TxIntelligenceController::class, 'similarPersons'])
+            ->name('api.tx.intelligence.lookalikes.similar');
+        Route::post('/{tenantId}/lookalikes/export', [App\Http\Controllers\Api\TxIntelligenceController::class, 'exportLookalikes'])
+            ->name('api.tx.intelligence.lookalikes.export');
+
+        // Demand Forecasting
+        Route::get('/{tenantId}/forecast/event/{eventId}', [App\Http\Controllers\Api\TxIntelligenceController::class, 'forecastEvent'])
+            ->name('api.tx.intelligence.forecast.event');
+        Route::get('/{tenantId}/forecast/upcoming', [App\Http\Controllers\Api\TxIntelligenceController::class, 'forecastAllEvents'])
+            ->name('api.tx.intelligence.forecast.upcoming');
+        Route::get('/{tenantId}/forecast/pricing/{eventId}', [App\Http\Controllers\Api\TxIntelligenceController::class, 'pricingRecommendations'])
+            ->name('api.tx.intelligence.forecast.pricing');
+
+        // Customer Journey
+        Route::get('/{tenantId}/journey/{personId}', [App\Http\Controllers\Api\TxIntelligenceController::class, 'journeyStage'])
+            ->name('api.tx.intelligence.journey.stage');
+        Route::get('/{tenantId}/journey/{personId}/full', [App\Http\Controllers\Api\TxIntelligenceController::class, 'fullJourney'])
+            ->name('api.tx.intelligence.journey.full');
+        Route::get('/{tenantId}/journey/analytics', [App\Http\Controllers\Api\TxIntelligenceController::class, 'journeyAnalytics'])
+            ->name('api.tx.intelligence.journey.analytics');
+        Route::get('/{tenantId}/journey/stuck', [App\Http\Controllers\Api\TxIntelligenceController::class, 'stuckCustomers'])
+            ->name('api.tx.intelligence.journey.stuck');
+        Route::post('/{tenantId}/journey/{personId}/transition', [App\Http\Controllers\Api\TxIntelligenceController::class, 'recordTransition'])
+            ->name('api.tx.intelligence.journey.transition');
+
+        // Cache management
+        Route::delete('/{tenantId}/cache/{personId}', [App\Http\Controllers\Api\TxIntelligenceController::class, 'invalidateCaches'])
+            ->name('api.tx.intelligence.cache.invalidate');
+    });
 });
