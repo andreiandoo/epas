@@ -19,7 +19,7 @@ class ManageSubscribers extends Page implements HasTable
     use HasMarketplaceContext;
 
     protected static string $resource = ContactListResource::class;
-    protected static string $view = 'filament.marketplace.pages.manage-subscribers';
+    protected string $view = 'filament.marketplace.pages.manage-subscribers';
 
     public $record;
 
