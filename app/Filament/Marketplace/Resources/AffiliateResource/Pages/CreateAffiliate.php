@@ -15,7 +15,7 @@ class CreateAffiliate extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $data['marketplace_client_id'] = static::getMarketplaceClient()_id;
+        $data['marketplace_client_id'] = static::getMarketplaceClient()->id;
 
         return $data;
     }
