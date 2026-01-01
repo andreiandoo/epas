@@ -19,7 +19,7 @@ class EmailSettings extends Page
     protected static \UnitEnum|string|null $navigationGroup = 'Communications';
     protected static ?int $navigationSort = 10;
     protected static ?string $navigationLabel = 'Email Settings';
-    protected static string $view = 'filament.marketplace.pages.email-settings';
+    protected string $view = 'filament.marketplace.pages.email-settings';
 
     public ?array $smtpData = [];
     public ?array $emailData = [];
