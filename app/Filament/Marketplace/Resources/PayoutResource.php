@@ -17,7 +17,7 @@ class PayoutResource extends Resource
 {
     protected static ?string $model = MarketplacePayout::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-banknotes';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-banknotes';
 
     protected static \UnitEnum|string|null $navigationGroup = 'Organizers';
 

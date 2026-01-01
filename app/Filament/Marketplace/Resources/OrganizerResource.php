@@ -16,7 +16,7 @@ class OrganizerResource extends Resource
 {
     protected static ?string $model = MarketplaceOrganizer::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-group';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-user-group';
 
     protected static \UnitEnum|string|null $navigationGroup = 'Organizers';
 
