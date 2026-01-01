@@ -7,6 +7,7 @@ export default defineConfig({
       input: [
         'resources/css/filament/admin/theme.css',
         'resources/css/filament/tenant/theme.css',
+        'resources/css/filament/marketplace/theme.css',
       ],
       refresh: true,
     }),
