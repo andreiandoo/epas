@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -68,6 +69,58 @@ class MarketplaceCustomer extends Authenticatable
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class, 'marketplace_customer_id');
+    }
+
+    public function contactLists(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            MarketplaceContactList::class,
+            'marketplace_contact_list_members',
+            'marketplace_customer_id',
+            'list_id'
+        )->withPivot(['status', 'subscribed_at', 'unsubscribed_at'])
+         ->withTimestamps();
+    }
+
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            MarketplaceContactTag::class,
+            'marketplace_customer_tags',
+            'marketplace_customer_id',
+            'tag_id'
+        )->withTimestamps();
+    }
+
+    public function refundRequests(): HasMany
+    {
+        return $this->hasMany(MarketplaceRefundRequest::class, 'marketplace_customer_id');
+    }
+
+    public function purchasedGiftCards(): HasMany
+    {
+        return $this->hasMany(MarketplaceGiftCard::class, 'purchaser_id');
+    }
+
+    public function receivedGiftCards(): HasMany
+    {
+        return $this->hasMany(MarketplaceGiftCard::class, 'recipient_customer_id');
+    }
+
+    public function giftCardsByEmail(): HasMany
+    {
+        return $this->hasMany(MarketplaceGiftCard::class, 'recipient_email', 'email');
+    }
+
+    /**
+     * Get total available gift card balance for this customer
+     */
+    public function getGiftCardBalanceAttribute(): float
+    {
+        return $this->receivedGiftCards()
+            ->where('status', MarketplaceGiftCard::STATUS_ACTIVE)
+            ->where('expires_at', '>', now())
+            ->sum('balance');
     }
 
     // =========================================

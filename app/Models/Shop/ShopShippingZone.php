@@ -2,6 +2,8 @@
 
 namespace App\Models\Shop;
 
+use App\Models\MarketplaceClient;
+
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -16,6 +18,7 @@ class ShopShippingZone extends Model
     protected $table = 'shop_shipping_zones';
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'name',
         'countries',
@@ -96,4 +99,12 @@ class ShopShippingZone extends Model
             ->where('is_default', true)
             ->first();
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

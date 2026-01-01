@@ -2,6 +2,8 @@
 
 namespace App\Models\Coupon;
 
+use App\Models\MarketplaceClient;
+
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -17,6 +19,7 @@ class CouponCode extends Model
     protected $table = 'coupon_codes';
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'campaign_id',
         'code',
@@ -231,4 +234,12 @@ class CouponCode extends Model
     {
         return $query->where('code', strtoupper($code));
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

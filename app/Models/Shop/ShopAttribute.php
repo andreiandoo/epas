@@ -2,6 +2,8 @@
 
 namespace App\Models\Shop;
 
+use App\Models\MarketplaceClient;
+
 use App\Models\Tenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +22,7 @@ class ShopAttribute extends Model
     public array $translatable = ['name'];
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'name',
         'slug',
@@ -74,4 +77,12 @@ class ShopAttribute extends Model
     {
         return $this->type === 'select';
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

@@ -1,0 +1,240 @@
+<?php
+
+namespace App\Filament\Marketplace\Pages;
+
+use App\Models\MarketplaceClient;
+use App\Models\MarketplaceEvent;
+use App\Models\MarketplaceOrganizer;
+use App\Models\MarketplacePayout;
+use App\Models\MarketplaceCustomer;
+use App\Models\Order;
+use App\Models\Ticket;
+use BackedEnum;
+use Carbon\Carbon;
+use Filament\Pages\Page;
+use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Url;
+
+class Dashboard extends Page
+{
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-home';
+    protected static ?string $navigationLabel = 'Dashboard';
+    protected static ?int $navigationSort = 1;
+    protected string $view = 'filament.marketplace.pages.dashboard';
+
+    public ?MarketplaceClient $marketplace = null;
+
+    #[Url]
+    public string $chartPeriod = '30';
+
+    public function mount(): void
+    {
+        $admin = Auth::guard('marketplace_admin')->user();
+        $this->marketplace = $admin?->marketplaceClient;
+    }
+
+    public function getTitle(): string
+    {
+        return '';
+    }
+
+    public function getHeading(): string|null
+    {
+        return null;
+    }
+
+    public function updatedChartPeriod(): void
+    {
+        $this->dispatch('charts-updated');
+    }
+
+    public function getViewData(): array
+    {
+        $marketplace = $this->marketplace;
+
+        if (!$marketplace) {
+            return [
+                'marketplace' => null,
+                'stats' => [],
+                'chartData' => [],
+            ];
+        }
+
+        $marketplaceId = $marketplace->id;
+
+        // Calculate date range for chart
+        $days = (int) $this->chartPeriod;
+        $startDate = Carbon::now()->subDays($days)->startOfDay();
+        $endDate = Carbon::now()->endOfDay();
+
+        // Active events (upcoming or ongoing)
+        $activeEvents = MarketplaceEvent::where('marketplace_client_id', $marketplaceId)
+            ->where('status', 'published')
+            ->where(function ($query) {
+                $today = Carbon::now()->startOfDay();
+                $query->where('start_date', '>=', $today)
+                    ->orWhere('end_date', '>=', $today);
+            })
+            ->count();
+
+        // Total events
+        $totalEvents = MarketplaceEvent::where('marketplace_client_id', $marketplaceId)->count();
+
+        // Total organizers
+        $totalOrganizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)->count();
+
+        // Pending organizers
+        $pendingOrganizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)
+            ->where('status', 'pending')
+            ->count();
+
+        // Total customers
+        $totalCustomers = MarketplaceCustomer::where('marketplace_client_id', $marketplaceId)->count();
+
+        // Total revenue (from orders linked to marketplace events)
+        $eventIds = MarketplaceEvent::where('marketplace_client_id', $marketplaceId)
+            ->pluck('id')
+            ->toArray();
+
+        $totalRevenue = Order::whereIn('marketplace_event_id', $eventIds)
+            ->whereIn('status', ['paid', 'confirmed'])
+            ->sum('total_cents') / 100;
+
+        // Total tickets sold
+        $totalTickets = Ticket::whereHas('order', function ($query) use ($eventIds) {
+            $query->whereIn('marketplace_event_id', $eventIds)
+                ->whereIn('status', ['paid', 'confirmed']);
+        })->count();
+
+        // Pending payouts
+        $pendingPayouts = MarketplacePayout::where('marketplace_client_id', $marketplaceId)
+            ->where('status', 'pending')
+            ->count();
+
+        // Pending payouts value
+        $pendingPayoutsValue = MarketplacePayout::where('marketplace_client_id', $marketplaceId)
+            ->where('status', 'pending')
+            ->sum('amount');
+
+        // Chart data - daily sales for the selected period
+        $chartData = $this->getChartData($eventIds, $startDate, $endDate, $days);
+
+        // Ticket chart data
+        $ticketChartData = $this->getTicketChartData($eventIds, $startDate, $endDate, $days);
+
+        // Top organizers
+        $topOrganizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)
+            ->where('status', 'active')
+            ->orderByDesc('total_revenue')
+            ->limit(5)
+            ->get();
+
+        return [
+            'marketplace' => $marketplace,
+            'stats' => [
+                'active_events' => $activeEvents,
+                'total_events' => $totalEvents,
+                'total_organizers' => $totalOrganizers,
+                'pending_organizers' => $pendingOrganizers,
+                'total_customers' => $totalCustomers,
+                'total_revenue' => $totalRevenue,
+                'total_tickets' => $totalTickets,
+                'pending_payouts' => $pendingPayouts,
+                'pending_payouts_value' => $pendingPayoutsValue,
+            ],
+            'chartData' => $chartData,
+            'ticketChartData' => $ticketChartData,
+            'chartPeriod' => $this->chartPeriod,
+            'topOrganizers' => $topOrganizers,
+        ];
+    }
+
+    private function getChartData(array $eventIds, Carbon $startDate, Carbon $endDate, int $days): array
+    {
+        $labels = [];
+        $data = [];
+
+        if (empty($eventIds)) {
+            $current = $startDate->copy();
+            while ($current <= $endDate) {
+                $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
+                $data[] = 0;
+                $current->addDay();
+            }
+            return ['labels' => $labels, 'data' => $data];
+        }
+
+        // Get daily totals
+        $dailySales = Order::whereIn('marketplace_event_id', $eventIds)
+            ->whereIn('status', ['paid', 'confirmed'])
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('DATE(created_at) as date, SUM(total_cents) / 100 as total')
+            ->groupBy('date')
+            ->pluck('total', 'date')
+            ->toArray();
+
+        // Fill in all days
+        $current = $startDate->copy();
+        while ($current <= $endDate) {
+            $dateKey = $current->format('Y-m-d');
+            $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
+            $data[] = (float) ($dailySales[$dateKey] ?? 0);
+            $current->addDay();
+        }
+
+        return [
+            'labels' => $labels,
+            'data' => $data,
+        ];
+    }
+
+    private function getTicketChartData(array $eventIds, Carbon $startDate, Carbon $endDate, int $days): array
+    {
+        $labels = [];
+        $data = [];
+
+        if (empty($eventIds)) {
+            $current = $startDate->copy();
+            while ($current <= $endDate) {
+                $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
+                $data[] = 0;
+                $current->addDay();
+            }
+            return ['labels' => $labels, 'data' => $data, 'tooltipData' => []];
+        }
+
+        // Get tickets grouped by date
+        $tickets = Ticket::with(['ticketType.marketplaceEvent', 'order'])
+            ->whereHas('order', function ($query) use ($eventIds, $startDate, $endDate) {
+                $query->whereIn('marketplace_event_id', $eventIds)
+                    ->whereIn('status', ['paid', 'confirmed'])
+                    ->whereBetween('created_at', [$startDate, $endDate]);
+            })
+            ->get();
+
+        // Group by date
+        $dailyTickets = [];
+        foreach ($tickets as $ticket) {
+            $dateKey = $ticket->order->created_at->format('Y-m-d');
+            if (!isset($dailyTickets[$dateKey])) {
+                $dailyTickets[$dateKey] = 0;
+            }
+            $dailyTickets[$dateKey]++;
+        }
+
+        // Fill in all days
+        $current = $startDate->copy();
+        while ($current <= $endDate) {
+            $dateKey = $current->format('Y-m-d');
+            $labels[] = $current->format($days <= 7 ? 'D' : ($days <= 30 ? 'M d' : 'M d'));
+            $data[] = $dailyTickets[$dateKey] ?? 0;
+            $current->addDay();
+        }
+
+        return [
+            'labels' => $labels,
+            'data' => $data,
+            'tooltipData' => [],
+        ];
+    }
+}

@@ -2,6 +2,8 @@
 
 namespace App\Models\Blog;
 
+use App\Models\MarketplaceClient;
+
 use App\Models\Tenant;
 use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Model;
@@ -17,6 +19,7 @@ class BlogCategory extends Model
     public array $translatable = ['name', 'description', 'meta_title', 'meta_description'];
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'parent_id',
         'name',
@@ -81,4 +84,12 @@ class BlogCategory extends Model
             'article_count' => $this->articles()->where('status', 'published')->count(),
         ]);
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\MarketplaceClient;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +18,7 @@ class Invite extends Model
     protected $table = 'inv_invites';
 
     protected $fillable = [
+        'marketplace_client_id',
         'batch_id',
         'tenant_id',
         'invite_code',
@@ -337,4 +340,12 @@ class Invite extends Model
             'code' => $this->invite_code,
         ]);
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

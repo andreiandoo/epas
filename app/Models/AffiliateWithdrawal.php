@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\MarketplaceClient;
+
 use App\Notifications\AffiliateWithdrawalStatusNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +23,7 @@ class AffiliateWithdrawal extends Model
     public const STATUS_CANCELLED = 'cancelled';
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'affiliate_id',
         'reference',
@@ -297,4 +300,12 @@ class AffiliateWithdrawal extends Model
             default => json_encode($details),
         };
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

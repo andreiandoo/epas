@@ -2,6 +2,8 @@
 
 namespace App\Models\Shop;
 
+use App\Models\MarketplaceClient;
+
 use App\Models\Tenant;
 use App\Models\Customer;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -18,6 +20,7 @@ class ShopGiftCard extends Model
     protected $table = 'shop_gift_cards';
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'code',
         'initial_balance_cents',
@@ -222,4 +225,12 @@ class ShopGiftCard extends Model
             ->where('code', strtoupper($code))
             ->first();
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

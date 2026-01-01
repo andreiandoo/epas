@@ -2,6 +2,8 @@
 
 namespace App\Models\Shop;
 
+use App\Models\MarketplaceClient;
+
 use App\Models\Tenant;
 use App\Models\Customer;
 use App\Models\Event;
@@ -18,6 +20,7 @@ class ShopOrder extends Model
     protected $table = 'shop_orders';
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'order_number',
         'customer_id',
@@ -331,4 +334,12 @@ class ShopOrder extends Model
 
         return implode("\n", $parts);
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

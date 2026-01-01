@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\MarketplaceClient;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,6 +14,7 @@ class GroupBooking extends Model
     use HasFactory;
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id', 'event_id', 'organizer_customer_id', 'group_name', 'group_type',
         'total_tickets', 'total_amount', 'discount_percentage', 'discount_amount',
         'status', 'payment_type', 'notes', 'meta', 'confirmed_at', 'deadline_at',
@@ -54,4 +57,12 @@ class GroupBooking extends Model
         $paid = $this->members()->sum('amount_paid');
         return $this->getFinalAmount() > 0 ? ($paid / $this->getFinalAmount()) * 100 : 0;
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

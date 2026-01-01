@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -9,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class MarketplaceAdmin extends Authenticatable
+class MarketplaceAdmin extends Authenticatable implements FilamentUser
 {
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
@@ -49,6 +51,18 @@ class MarketplaceAdmin extends Authenticatable
     public function marketplaceClient(): BelongsTo
     {
         return $this->belongsTo(MarketplaceClient::class);
+    }
+
+    /**
+     * Check if user can access the Filament panel
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        if ($panel->getId() === 'marketplace') {
+            return $this->isActive() && $this->marketplaceClient?->status === 'active';
+        }
+
+        return false;
     }
 
     /**

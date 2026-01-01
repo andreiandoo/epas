@@ -40,6 +40,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        'marketplace_admin' => [
+            'driver' => 'session',
+            'provider' => 'marketplace_admins',
+        ],
     ],
 
     /*
@@ -63,6 +68,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', App\Models\User::class),
+        ],
+
+        'marketplace_admins' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\MarketplaceAdmin::class,
         ],
 
         // 'users' => [
@@ -94,6 +104,13 @@ return [
         'users' => [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        'marketplace_admins' => [
+            'provider' => 'marketplace_admins',
+            'table' => 'marketplace_password_resets',
             'expire' => 60,
             'throttle' => 60,
         ],

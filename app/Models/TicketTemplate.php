@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\MarketplaceClient;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -11,6 +13,7 @@ class TicketTemplate extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'marketplace_client_id',
         'tenant_id',
         'name',
         'description',
@@ -150,4 +153,12 @@ class TicketTemplate extends Model
 
         $this->update(['is_default' => true]);
     }
+    /**
+     * Get the marketplace client that owns this record
+     */
+    public function marketplaceClient()
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
 }

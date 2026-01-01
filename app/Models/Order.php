@@ -113,6 +113,18 @@ class Order extends Model
         return $this->hasMany(OrderReminder::class);
     }
 
+    public function refundRequests(): HasMany
+    {
+        return $this->hasMany(MarketplaceRefundRequest::class);
+    }
+
+    public function activeRefundRequest()
+    {
+        return $this->hasOne(MarketplaceRefundRequest::class)
+            ->whereIn('status', ['pending', 'under_review', 'approved', 'processing'])
+            ->latest();
+    }
+
     protected static function booted(): void
     {
         static::saving(function (Order $order) {
