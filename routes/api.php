@@ -1,7 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Public\SeatingController;
+use App\Http\Controllers\Api\PublicApi\SeatingController;
 use App\Http\Controllers\Api\PublicDataController;
 use App\Http\Controllers\Api\AffiliateController;
 use App\Http\Controllers\Api\TrackingController;
