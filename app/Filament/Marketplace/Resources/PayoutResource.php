@@ -6,7 +6,7 @@ use App\Filament\Marketplace\Resources\PayoutResource\Pages;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceAdmin;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -50,7 +50,7 @@ class PayoutResource extends Resource
             ->where('marketplace_client_id', $marketplaceAdmin?->marketplace_client_id);
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form
             ->schema([

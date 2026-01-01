@@ -5,7 +5,7 @@ namespace App\Filament\Marketplace\Resources;
 use App\Filament\Marketplace\Resources\OrganizerResource\Pages;
 use App\Models\MarketplaceOrganizer;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -49,7 +49,7 @@ class OrganizerResource extends Resource
             ->where('marketplace_client_id', $marketplaceAdmin?->marketplace_client_id);
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $form): Schema
     {
         return $form
             ->schema([

@@ -4,7 +4,7 @@ namespace App\Filament\Marketplace\Pages;
 
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Pages\Page;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -51,7 +51,7 @@ class EmailSettings extends Page
         ];
     }
 
-    public function smtpForm(Form $form): Form
+    public function smtpForm(Schema $form): Schema
     {
         return $form
             ->schema([
@@ -89,7 +89,7 @@ class EmailSettings extends Page
             ->statePath('smtpData');
     }
 
-    public function emailForm(Form $form): Form
+    public function emailForm(Schema $form): Schema
     {
         return $form
             ->schema([
