@@ -15,7 +15,7 @@ class EmailSettings extends Page
 {
     use HasMarketplaceContext;
 
-    protected static ?string $navigationIcon = 'heroicon-o-cog-6-tooth';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-cog-6-tooth';
     protected static \UnitEnum|string|null $navigationGroup = 'Communications';
     protected static ?int $navigationSort = 10;
     protected static ?string $navigationLabel = 'Email Settings';
