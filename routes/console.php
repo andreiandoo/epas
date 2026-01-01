@@ -586,3 +586,14 @@ Schedule::job(new \App\Jobs\Tracking\CalculateTemporalPatternsJob())
     ->onFailure(function () {
         \Log::error('TX: Failed to calculate temporal patterns');
     });
+
+// Calculate engagement metrics - email fatigue & channel affinity (weekly on Sunday at 4:30 AM)
+Schedule::job(new \App\Jobs\Tracking\CalculateEngagementMetricsJob())
+    ->weeklyOn(0, '04:30')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('TX: Engagement metrics calculated');
+    })
+    ->onFailure(function () {
+        \Log::error('TX: Failed to calculate engagement metrics');
+    });

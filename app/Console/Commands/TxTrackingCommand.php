@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Jobs\Tracking\AggregateEventFunnelsJob;
+use App\Jobs\Tracking\CalculateEngagementMetricsJob;
 use App\Jobs\Tracking\CalculatePersonAffinitiesJob;
 use App\Jobs\Tracking\CalculateTemporalPatternsJob;
 use App\Jobs\Tracking\CalculateTicketPreferencesJob;
@@ -18,7 +19,7 @@ class TxTrackingCommand extends Command
      * The name and signature of the console command.
      */
     protected $signature = 'tx:tracking
-                            {action : The action to perform (affinities, preferences, funnels, daily-stats, temporal, segments, stats)}
+                            {action : The action to perform (affinities, preferences, funnels, daily-stats, temporal, engagement, segments, stats)}
                             {--tenant= : Filter by tenant ID}
                             {--person= : Filter by person ID}
                             {--event= : Filter by event entity ID}
@@ -45,6 +46,7 @@ class TxTrackingCommand extends Command
             'funnels' => $this->runFunnels(),
             'daily-stats' => $this->runDailyStats(),
             'temporal' => $this->runTemporal(),
+            'engagement' => $this->runEngagement(),
             'segments' => $this->runSegments(),
             'stats' => $this->showStats(),
             default => $this->invalidAction($action),
@@ -176,6 +178,29 @@ class TxTrackingCommand extends Command
         return Command::SUCCESS;
     }
 
+    protected function runEngagement(): int
+    {
+        $tenantId = $this->option('tenant') ? (int) $this->option('tenant') : null;
+        $personId = $this->option('person') ? (int) $this->option('person') : null;
+
+        $this->info("Calculating engagement metrics (email fatigue + channel affinity)...");
+        $this->table(['Option', 'Value'], [
+            ['Tenant ID', $tenantId ?? 'All'],
+            ['Person ID', $personId ?? 'All with email'],
+        ]);
+
+        if ($this->option('sync')) {
+            $job = new CalculateEngagementMetricsJob($tenantId, $personId);
+            $job->handle();
+            $this->info("Engagement metrics calculated synchronously.");
+        } else {
+            CalculateEngagementMetricsJob::dispatch($tenantId, $personId);
+            $this->info("Job dispatched to queue.");
+        }
+
+        return Command::SUCCESS;
+    }
+
     protected function runSegments(): int
     {
         $tenantId = $this->option('tenant') ? (int) $this->option('tenant') : null;
@@ -273,7 +298,7 @@ class TxTrackingCommand extends Command
     protected function invalidAction(string $action): int
     {
         $this->error("Invalid action: {$action}");
-        $this->line("Available actions: affinities, preferences, funnels, daily-stats, temporal, segments, stats");
+        $this->line("Available actions: affinities, preferences, funnels, daily-stats, temporal, engagement, segments, stats");
         return Command::FAILURE;
     }
 }

@@ -4,8 +4,12 @@ namespace App\Services\Tracking;
 
 use App\Models\CustomerSegment;
 use App\Models\Platform\CoreCustomer;
+use App\Models\FeatureStore\FsPersonActivityPattern;
 use App\Models\FeatureStore\FsPersonAffinityArtist;
 use App\Models\FeatureStore\FsPersonAffinityGenre;
+use App\Models\FeatureStore\FsPersonChannelAffinity;
+use App\Models\FeatureStore\FsPersonEmailMetrics;
+use App\Models\FeatureStore\FsPersonPurchaseWindow;
 use App\Models\FeatureStore\FsPersonTicketPref;
 use App\Models\FeatureStore\FsPersonDaily;
 use App\Models\Tracking\PersonTag;
@@ -257,6 +261,107 @@ class TxAudienceBuilder
     }
 
     /**
+     * Find people with specific purchase window preference.
+     *
+     * @param string $windowType Window type: last_minute, week, two_weeks, month, early_bird
+     * @param float $minScore Minimum preference score (0-1)
+     */
+    public function withPurchaseWindow(string $windowType, float $minScore = 0.3): self
+    {
+        $this->criteria[] = [
+            'type' => 'purchase_window',
+            'window_type' => $windowType,
+            'min_score' => $minScore,
+        ];
+        return $this;
+    }
+
+    /**
+     * Find early bird buyers (purchase 31+ days before event).
+     */
+    public function earlyBirdBuyers(float $minScore = 0.4): self
+    {
+        return $this->withPurchaseWindow('early_bird', $minScore);
+    }
+
+    /**
+     * Find last minute buyers (purchase 0-1 days before event).
+     */
+    public function lastMinuteBuyers(float $minScore = 0.4): self
+    {
+        return $this->withPurchaseWindow('last_minute', $minScore);
+    }
+
+    /**
+     * Find people active during specific hours.
+     *
+     * @param int $startHour Start hour (0-23)
+     * @param int $endHour End hour (0-23)
+     */
+    public function activeInHours(int $startHour, int $endHour): self
+    {
+        $this->criteria[] = [
+            'type' => 'activity_hours',
+            'start_hour' => $startHour,
+            'end_hour' => $endHour,
+        ];
+        return $this;
+    }
+
+    /**
+     * Find weekend buyers.
+     */
+    public function weekendBuyers(): self
+    {
+        $this->criteria[] = [
+            'type' => 'weekend_buyer',
+        ];
+        return $this;
+    }
+
+    /**
+     * Find people who prefer a specific channel.
+     *
+     * @param string $channel Channel: email, organic, paid_search, paid_social, direct, etc.
+     */
+    public function withChannelPreference(string $channel): self
+    {
+        $this->criteria[] = [
+            'type' => 'channel_preference',
+            'channel' => $channel,
+        ];
+        return $this;
+    }
+
+    /**
+     * Find people with low email fatigue (good for campaigns).
+     *
+     * @param float $maxFatigue Maximum fatigue score (0-100)
+     */
+    public function withLowEmailFatigue(float $maxFatigue = 50): self
+    {
+        $this->criteria[] = [
+            'type' => 'email_fatigue',
+            'max_fatigue' => $maxFatigue,
+        ];
+        return $this;
+    }
+
+    /**
+     * Find people with high email engagement.
+     *
+     * @param float $minOpenRate Minimum open rate (0-1)
+     */
+    public function withEmailEngagement(float $minOpenRate = 0.2): self
+    {
+        $this->criteria[] = [
+            'type' => 'email_engagement',
+            'min_open_rate' => $minOpenRate,
+        ];
+        return $this;
+    }
+
+    /**
      * Limit the number of results.
      */
     public function limit(int $limit): self
@@ -389,6 +494,12 @@ class TxAudienceBuilder
             'with_tags' => $this->queryWithTags($criterion),
             'without_tags' => $this->queryWithoutTags($criterion),
             'tag_category' => $this->queryTagCategory($criterion),
+            'purchase_window' => $this->queryPurchaseWindow($criterion),
+            'activity_hours' => $this->queryActivityHours($criterion),
+            'weekend_buyer' => $this->queryWeekendBuyer($criterion),
+            'channel_preference' => $this->queryChannelPreference($criterion),
+            'email_fatigue' => $this->queryEmailFatigue($criterion),
+            'email_engagement' => $this->queryEmailEngagement($criterion),
             default => collect(),
         };
     }
@@ -584,6 +695,68 @@ class TxAudienceBuilder
                 $q->whereNull('expires_at')
                   ->orWhere('expires_at', '>', now());
             })
+            ->pluck('person_id')
+            ->unique();
+    }
+
+    protected function queryPurchaseWindow(array $criterion): Collection
+    {
+        return FsPersonPurchaseWindow::where('tenant_id', $this->tenantId)
+            ->where('window_type', $criterion['window_type'])
+            ->where('preference_score', '>=', $criterion['min_score'])
+            ->pluck('person_id')
+            ->unique();
+    }
+
+    protected function queryActivityHours(array $criterion): Collection
+    {
+        $startHour = $criterion['start_hour'];
+        $endHour = $criterion['end_hour'];
+
+        return FsPersonActivityPattern::where('tenant_id', $this->tenantId)
+            ->where(function ($query) use ($startHour, $endHour) {
+                if ($startHour <= $endHour) {
+                    $query->whereBetween('preferred_hour', [$startHour, $endHour]);
+                } else {
+                    // Handle overnight range (e.g., 22 to 4)
+                    $query->where('preferred_hour', '>=', $startHour)
+                          ->orWhere('preferred_hour', '<=', $endHour);
+                }
+            })
+            ->pluck('person_id')
+            ->unique();
+    }
+
+    protected function queryWeekendBuyer(array $criterion): Collection
+    {
+        return FsPersonActivityPattern::where('tenant_id', $this->tenantId)
+            ->where('is_weekend_buyer', true)
+            ->pluck('person_id')
+            ->unique();
+    }
+
+    protected function queryChannelPreference(array $criterion): Collection
+    {
+        // Find persons where the specified channel has the highest conversion rate
+        return FsPersonChannelAffinity::where('tenant_id', $this->tenantId)
+            ->where('channel', $criterion['channel'])
+            ->where('conversion_count', '>', 0)
+            ->pluck('person_id')
+            ->unique();
+    }
+
+    protected function queryEmailFatigue(array $criterion): Collection
+    {
+        return FsPersonEmailMetrics::where('tenant_id', $this->tenantId)
+            ->where('fatigue_score', '<=', $criterion['max_fatigue'])
+            ->pluck('person_id')
+            ->unique();
+    }
+
+    protected function queryEmailEngagement(array $criterion): Collection
+    {
+        return FsPersonEmailMetrics::where('tenant_id', $this->tenantId)
+            ->where('open_rate_30d', '>=', $criterion['min_open_rate'])
             ->pluck('person_id')
             ->unique();
     }
