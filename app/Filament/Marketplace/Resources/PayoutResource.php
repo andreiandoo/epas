@@ -19,7 +19,7 @@ class PayoutResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-banknotes';
 
-    protected static ?string $navigationGroup = 'Organizers';
+    protected static \UnitEnum|string|null $navigationGroup = 'Organizers';
 
     protected static ?int $navigationSort = 4;
 
