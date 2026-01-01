@@ -234,6 +234,11 @@ Route::middleware(['web', 'auth'])->prefix('tenant')->group(function () {
         ->name('tenant.ticket-customizer.update');
 });
 
+// Intelligence Monitor Fullscreen (Admin Only)
+Route::middleware(['web', 'auth'])->get('/admin/intelligence-monitor/fullscreen', function () {
+    return view('intelligence-monitor-fullscreen');
+})->name('admin.intelligence-monitor.fullscreen');
+
 // Public Contract Signing Routes (no auth required - token-based)
 Route::prefix('contract')->group(function () {
     Route::get('/{token}', [ContractSigningController::class, 'view'])->name('contract.view');
