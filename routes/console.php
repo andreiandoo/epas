@@ -597,3 +597,19 @@ Schedule::job(new \App\Jobs\Tracking\CalculateEngagementMetricsJob())
     ->onFailure(function () {
         \Log::error('TX: Failed to calculate engagement metrics');
     });
+
+// Send automated win-back campaigns (weekly on Tuesday at 10:00 AM)
+Schedule::call(function () {
+    $tenants = \App\Models\Tenant::whereHas('microservices', function ($q) {
+        $q->where('microservices.slug', 'intelligence')
+            ->wherePivot('is_active', true);
+    })->get();
+
+    foreach ($tenants as $tenant) {
+        dispatch(new \App\Jobs\Tracking\SendWinBackCampaignJob($tenant->id, 'all', 50))
+            ->onQueue('emails');
+    }
+
+    \Log::info('TX: Win-back campaigns dispatched for ' . $tenants->count() . ' tenants');
+})->weeklyOn(2, '10:00')
+    ->timezone('Europe/Bucharest');
