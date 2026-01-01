@@ -19,6 +19,10 @@ class IntelligenceMonitor extends Component
     public array $systemStats = [];
     public array $eventTypeStats = [];
     public array $tenants = [];
+    public array $aiInsights = [];
+    public array $historicalTrends = [];
+    public array $geoData = [];
+    public array $revenueForecast = [];
 
     public function mount(): void
     {
@@ -57,6 +61,412 @@ class IntelligenceMonitor extends Component
 
         // Load event type distribution
         $this->eventTypeStats = $this->getEventTypeStats($tenantFilter);
+
+        // Load AI insights
+        $this->aiInsights = $this->generateAIInsights($tenantFilter);
+
+        // Load historical trends
+        $this->historicalTrends = $this->getHistoricalTrends($tenantFilter);
+
+        // Load geographic data
+        $this->geoData = $this->getGeographicData($tenantFilter);
+
+        // Load revenue forecast
+        $this->revenueForecast = $this->getRevenueForecast($tenantFilter);
+    }
+
+    protected function generateAIInsights(?int $tenantId): array
+    {
+        $insights = [];
+        $today = now()->startOfDay();
+        $yesterday = now()->subDay()->startOfDay();
+        $lastWeek = now()->subWeek()->startOfDay();
+
+        // Revenue comparison
+        $revenueToday = DB::table('core_customer_events')
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->where('occurred_at', '>=', $today)
+            ->where('event_type', 'purchase')
+            ->sum('event_value') ?? 0;
+
+        $revenueYesterday = DB::table('core_customer_events')
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->whereBetween('occurred_at', [$yesterday, $today])
+            ->where('event_type', 'purchase')
+            ->sum('event_value') ?? 0;
+
+        if ($revenueYesterday > 0) {
+            $revenueChange = (($revenueToday - $revenueYesterday) / $revenueYesterday) * 100;
+            $insights[] = [
+                'type' => $revenueChange >= 0 ? 'positive' : 'negative',
+                'icon' => $revenueChange >= 0 ? 'trending-up' : 'trending-down',
+                'message' => 'Revenue is ' . abs(round($revenueChange)) . '% ' . ($revenueChange >= 0 ? 'above' : 'below') . ' yesterday',
+                'detail' => '€' . number_format($revenueToday, 0) . ' vs €' . number_format($revenueYesterday, 0),
+                'priority' => abs($revenueChange) > 20 ? 'high' : 'medium',
+            ];
+        }
+
+        // Conversion rate analysis
+        $visitsToday = DB::table('core_customer_events')
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->where('occurred_at', '>=', $today)
+            ->where('event_type', 'pageview')
+            ->count();
+
+        $purchasesToday = DB::table('core_customer_events')
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->where('occurred_at', '>=', $today)
+            ->where('event_type', 'purchase')
+            ->count();
+
+        if ($visitsToday > 0) {
+            $conversionRate = ($purchasesToday / $visitsToday) * 100;
+            $insights[] = [
+                'type' => $conversionRate >= 2 ? 'positive' : ($conversionRate >= 1 ? 'neutral' : 'warning'),
+                'icon' => 'chart-pie',
+                'message' => 'Conversion rate at ' . number_format($conversionRate, 2) . '%',
+                'detail' => $purchasesToday . ' purchases from ' . number_format($visitsToday) . ' visits',
+                'priority' => 'medium',
+            ];
+        }
+
+        // Cart abandonment detection
+        $cartsToday = DB::table('core_customer_events')
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->where('occurred_at', '>=', $today)
+            ->where('event_type', 'add_to_cart')
+            ->count();
+
+        $checkoutsToday = DB::table('core_customer_events')
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->where('occurred_at', '>=', $today)
+            ->where('event_type', 'begin_checkout')
+            ->count();
+
+        if ($cartsToday > 0) {
+            $abandonRate = (($cartsToday - $checkoutsToday) / $cartsToday) * 100;
+            if ($abandonRate > 70) {
+                $insights[] = [
+                    'type' => 'warning',
+                    'icon' => 'shopping-cart',
+                    'message' => 'High cart abandonment detected: ' . round($abandonRate) . '%',
+                    'detail' => ($cartsToday - $checkoutsToday) . ' carts abandoned today',
+                    'priority' => 'high',
+                ];
+            }
+        }
+
+        // Traffic anomaly detection
+        $avgHourlyEvents = DB::table('core_customer_events')
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->whereBetween('occurred_at', [$lastWeek, $today])
+            ->count() / (7 * 24);
+
+        $eventsLastHour = DB::table('core_customer_events')
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->where('occurred_at', '>=', now()->subHour())
+            ->count();
+
+        if ($avgHourlyEvents > 0) {
+            $trafficChange = (($eventsLastHour - $avgHourlyEvents) / $avgHourlyEvents) * 100;
+            if (abs($trafficChange) > 50) {
+                $insights[] = [
+                    'type' => $trafficChange > 0 ? 'positive' : 'warning',
+                    'icon' => 'bolt',
+                    'message' => 'Traffic ' . ($trafficChange > 0 ? 'surge' : 'drop') . ' detected: ' . abs(round($trafficChange)) . '%',
+                    'detail' => number_format($eventsLastHour) . ' events in the last hour',
+                    'priority' => 'high',
+                ];
+            }
+        }
+
+        // At-risk customer alert
+        $atRiskCount = DB::table('core_customers')
+            ->when($tenantId, fn($q) => $q->whereJsonContains('tenant_ids', $tenantId))
+            ->where('journey_stage', 'at_risk')
+            ->count();
+
+        $lapsedCount = DB::table('core_customers')
+            ->when($tenantId, fn($q) => $q->whereJsonContains('tenant_ids', $tenantId))
+            ->where('journey_stage', 'lapsed')
+            ->count();
+
+        if ($atRiskCount > 0) {
+            $insights[] = [
+                'type' => 'warning',
+                'icon' => 'user-minus',
+                'message' => $atRiskCount . ' customers at risk of churning',
+                'detail' => 'Plus ' . $lapsedCount . ' already lapsed',
+                'priority' => $atRiskCount > 10 ? 'high' : 'medium',
+            ];
+        }
+
+        // Peak hour detection
+        $currentHour = now()->hour;
+        $hourlyData = DB::table('core_customer_events')
+            ->selectRaw('EXTRACT(HOUR FROM occurred_at) as hour, COUNT(*) as count')
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->where('occurred_at', '>=', $today)
+            ->groupByRaw('EXTRACT(HOUR FROM occurred_at)')
+            ->orderByDesc('count')
+            ->first();
+
+        if ($hourlyData && $hourlyData->hour == $currentHour) {
+            $insights[] = [
+                'type' => 'positive',
+                'icon' => 'fire',
+                'message' => 'Peak activity hour in progress',
+                'detail' => number_format($hourlyData->count) . ' events this hour',
+                'priority' => 'low',
+            ];
+        }
+
+        // Top performing content
+        $topContent = DB::table('core_customer_events')
+            ->select('content_name', DB::raw('COUNT(*) as views'))
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->where('occurred_at', '>=', $today)
+            ->whereNotNull('content_name')
+            ->where('event_type', 'view_item')
+            ->groupBy('content_name')
+            ->orderByDesc('views')
+            ->first();
+
+        if ($topContent) {
+            $insights[] = [
+                'type' => 'positive',
+                'icon' => 'star',
+                'message' => 'Top event: ' . $topContent->content_name,
+                'detail' => number_format($topContent->views) . ' views today',
+                'priority' => 'low',
+            ];
+        }
+
+        // Sort by priority
+        usort($insights, function ($a, $b) {
+            $priorityOrder = ['high' => 0, 'medium' => 1, 'low' => 2];
+            return ($priorityOrder[$a['priority']] ?? 2) <=> ($priorityOrder[$b['priority']] ?? 2);
+        });
+
+        return array_slice($insights, 0, 6);
+    }
+
+    protected function getHistoricalTrends(?int $tenantId): array
+    {
+        $trends = [];
+
+        // Get hourly data for today and yesterday
+        for ($i = 23; $i >= 0; $i--) {
+            $hourStart = now()->subHours($i)->startOfHour();
+            $hourEnd = now()->subHours($i)->endOfHour();
+
+            $events = DB::table('core_customer_events')
+                ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+                ->whereBetween('occurred_at', [$hourStart, $hourEnd])
+                ->count();
+
+            $revenue = DB::table('core_customer_events')
+                ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+                ->whereBetween('occurred_at', [$hourStart, $hourEnd])
+                ->where('event_type', 'purchase')
+                ->sum('event_value') ?? 0;
+
+            $conversions = DB::table('core_customer_events')
+                ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+                ->whereBetween('occurred_at', [$hourStart, $hourEnd])
+                ->where('event_type', 'purchase')
+                ->count();
+
+            $trends[] = [
+                'hour' => $hourStart->format('H:i'),
+                'label' => $hourStart->format('ga'),
+                'events' => $events,
+                'revenue' => $revenue,
+                'conversions' => $conversions,
+                'is_today' => $hourStart->isToday(),
+            ];
+        }
+
+        // Calculate comparisons
+        $todayTotal = collect($trends)->where('is_today', true)->sum('events');
+        $yesterdayTotal = collect($trends)->where('is_today', false)->sum('events');
+
+        $todayRevenue = collect($trends)->where('is_today', true)->sum('revenue');
+        $yesterdayRevenue = collect($trends)->where('is_today', false)->sum('revenue');
+
+        return [
+            'hourly' => $trends,
+            'summary' => [
+                'events_today' => $todayTotal,
+                'events_yesterday' => $yesterdayTotal,
+                'events_change' => $yesterdayTotal > 0 ? round((($todayTotal - $yesterdayTotal) / $yesterdayTotal) * 100, 1) : 0,
+                'revenue_today' => $todayRevenue,
+                'revenue_yesterday' => $yesterdayRevenue,
+                'revenue_change' => $yesterdayRevenue > 0 ? round((($todayRevenue - $yesterdayRevenue) / $yesterdayRevenue) * 100, 1) : 0,
+            ],
+        ];
+    }
+
+    protected function getGeographicData(?int $tenantId): array
+    {
+        $geoStats = DB::table('core_customer_events')
+            ->select('country_code', 'city', DB::raw('COUNT(*) as events'), DB::raw('SUM(CASE WHEN event_type = \'purchase\' THEN event_value ELSE 0 END) as revenue'))
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->where('occurred_at', '>=', now()->startOfDay())
+            ->whereNotNull('country_code')
+            ->groupBy('country_code', 'city')
+            ->orderByDesc('events')
+            ->limit(50)
+            ->get();
+
+        // Aggregate by country
+        $countries = [];
+        foreach ($geoStats as $stat) {
+            $code = $stat->country_code;
+            if (!isset($countries[$code])) {
+                $countries[$code] = [
+                    'code' => $code,
+                    'name' => $this->getCountryName($code),
+                    'events' => 0,
+                    'revenue' => 0,
+                    'cities' => [],
+                ];
+            }
+            $countries[$code]['events'] += $stat->events;
+            $countries[$code]['revenue'] += $stat->revenue;
+            if ($stat->city) {
+                $countries[$code]['cities'][] = [
+                    'name' => $stat->city,
+                    'events' => $stat->events,
+                    'revenue' => $stat->revenue,
+                ];
+            }
+        }
+
+        // Sort by events
+        usort($countries, fn($a, $b) => $b['events'] <=> $a['events']);
+
+        // Calculate total for percentages
+        $totalEvents = array_sum(array_column($countries, 'events'));
+
+        // Add percentages
+        foreach ($countries as &$country) {
+            $country['percentage'] = $totalEvents > 0 ? round(($country['events'] / $totalEvents) * 100, 1) : 0;
+            // Sort cities by events
+            usort($country['cities'], fn($a, $b) => $b['events'] <=> $a['events']);
+            $country['cities'] = array_slice($country['cities'], 0, 5);
+        }
+
+        return [
+            'countries' => array_slice($countries, 0, 10),
+            'total_events' => $totalEvents,
+            'total_countries' => count($countries),
+        ];
+    }
+
+    protected function getRevenueForecast(?int $tenantId): array
+    {
+        // Get hourly revenue for the past 7 days
+        $hourlyRevenue = [];
+        for ($day = 6; $day >= 0; $day--) {
+            $date = now()->subDays($day);
+            $dayStart = $date->copy()->startOfDay();
+            $dayEnd = $date->copy()->endOfDay();
+
+            $dayRevenue = DB::table('core_customer_events')
+                ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+                ->whereBetween('occurred_at', [$dayStart, $dayEnd])
+                ->where('event_type', 'purchase')
+                ->sum('event_value') ?? 0;
+
+            $hourlyRevenue[] = [
+                'date' => $date->format('M d'),
+                'day' => $date->format('D'),
+                'revenue' => $dayRevenue,
+                'is_today' => $day === 0,
+            ];
+        }
+
+        // Calculate today's projected revenue based on current run rate
+        $todayStart = now()->startOfDay();
+        $hoursElapsed = now()->diffInHours($todayStart) ?: 1;
+        $revenueToday = DB::table('core_customer_events')
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->where('occurred_at', '>=', $todayStart)
+            ->where('event_type', 'purchase')
+            ->sum('event_value') ?? 0;
+
+        $hourlyRate = $revenueToday / $hoursElapsed;
+        $hoursRemaining = 24 - $hoursElapsed;
+        $projectedTotal = $revenueToday + ($hourlyRate * $hoursRemaining);
+
+        // Calculate 7-day average
+        $avgDailyRevenue = collect($hourlyRevenue)->where('is_today', false)->avg('revenue') ?? 0;
+
+        // Simple linear forecast for next 3 days
+        $forecast = [];
+        $trend = $avgDailyRevenue > 0 ? ($projectedTotal / $avgDailyRevenue - 1) : 0;
+
+        for ($i = 1; $i <= 3; $i++) {
+            $forecastDate = now()->addDays($i);
+            $forecastRevenue = $avgDailyRevenue * (1 + ($trend * 0.5)); // Dampen the trend
+
+            $forecast[] = [
+                'date' => $forecastDate->format('M d'),
+                'day' => $forecastDate->format('D'),
+                'revenue' => round($forecastRevenue, 2),
+                'is_forecast' => true,
+                'confidence' => max(60, 90 - ($i * 10)), // Decreasing confidence
+            ];
+        }
+
+        return [
+            'historical' => $hourlyRevenue,
+            'forecast' => $forecast,
+            'today' => [
+                'actual' => $revenueToday,
+                'projected' => round($projectedTotal, 2),
+                'hourly_rate' => round($hourlyRate, 2),
+                'hours_remaining' => $hoursRemaining,
+            ],
+            'summary' => [
+                'avg_daily' => round($avgDailyRevenue, 2),
+                'trend_percent' => round($trend * 100, 1),
+                'best_day' => collect($hourlyRevenue)->sortByDesc('revenue')->first(),
+                'total_7_days' => collect($hourlyRevenue)->sum('revenue'),
+            ],
+        ];
+    }
+
+    public function getCountryFlag(string $code): string
+    {
+        // Convert country code to regional indicator symbols (flag emoji)
+        $code = strtoupper($code);
+        if (strlen($code) !== 2) {
+            return '🌍';
+        }
+
+        $flag = '';
+        foreach (str_split($code) as $char) {
+            $flag .= mb_chr(ord($char) - ord('A') + 0x1F1E6);
+        }
+        return $flag;
+    }
+
+    protected function getCountryName(string $code): string
+    {
+        $countries = [
+            'US' => 'United States', 'GB' => 'United Kingdom', 'DE' => 'Germany', 'FR' => 'France',
+            'ES' => 'Spain', 'IT' => 'Italy', 'NL' => 'Netherlands', 'BE' => 'Belgium', 'AT' => 'Austria',
+            'CH' => 'Switzerland', 'PL' => 'Poland', 'RO' => 'Romania', 'CZ' => 'Czech Republic',
+            'PT' => 'Portugal', 'SE' => 'Sweden', 'NO' => 'Norway', 'DK' => 'Denmark', 'FI' => 'Finland',
+            'IE' => 'Ireland', 'GR' => 'Greece', 'HU' => 'Hungary', 'SK' => 'Slovakia', 'BG' => 'Bulgaria',
+            'HR' => 'Croatia', 'SI' => 'Slovenia', 'LT' => 'Lithuania', 'LV' => 'Latvia', 'EE' => 'Estonia',
+            'CA' => 'Canada', 'AU' => 'Australia', 'NZ' => 'New Zealand', 'JP' => 'Japan', 'KR' => 'South Korea',
+            'CN' => 'China', 'IN' => 'India', 'BR' => 'Brazil', 'MX' => 'Mexico', 'AR' => 'Argentina',
+        ];
+
+        return $countries[$code] ?? $code;
     }
 
     protected function getRecentEvents(?int $tenantId): array
