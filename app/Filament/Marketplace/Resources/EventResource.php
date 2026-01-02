@@ -37,17 +37,20 @@ class EventResource extends Resource
     protected static ?int $navigationSort = 2;
 
     /**
-     * Navigation badge showing hosted events count
+     * Navigation badge showing pending events count
      */
     public static function getNavigationBadge(): ?string
     {
         $marketplace = static::getMarketplaceClient();
-        if (!$marketplace || !$marketplace->ownsVenues()) {
+        if (!$marketplace) {
             return null;
         }
 
-        $hostedCount = $marketplace->hostedEvents()->count();
-        return $hostedCount > 0 ? (string) $hostedCount : null;
+        $pendingCount = static::getEloquentQuery()
+            ->where('status', 'pending')
+            ->count();
+
+        return $pendingCount > 0 ? (string) $pendingCount : null;
     }
 
     /**
@@ -55,7 +58,7 @@ class EventResource extends Resource
      */
     public static function getNavigationBadgeColor(): ?string
     {
-        return 'info';
+        return 'warning';
     }
 
     /**
@@ -63,33 +66,15 @@ class EventResource extends Resource
      */
     public static function getNavigationBadgeTooltip(): ?string
     {
-        return 'Hosted events at your venues';
+        return 'Pending events awaiting approval';
     }
 
     public static function getEloquentQuery(): Builder
     {
         $marketplace = static::getMarketplaceClient();
-        $tenantId = $marketplace?->id;
-
-        // Get IDs of venues owned by this tenant
-        $ownedVenueIds = \App\Models\Venue::where('marketplace_client_id', $tenantId)->pluck('id')->toArray();
 
         return parent::getEloquentQuery()
-            ->where(function ($query) use ($tenantId, $ownedVenueIds) {
-                // Own events
-                $query->where('marketplace_client_id', $tenantId)
-                    // OR events happening at owned venues (guest events)
-                    ->orWhereIn('venue_id', $ownedVenueIds);
-            });
-    }
-
-    /**
-     * Check if an event is a guest event (not owned by current tenant but at their venue)
-     */
-    public static function isGuestEvent(Event $event): bool
-    {
-        $marketplace = static::getMarketplaceClient();
-        return $event->tenant_id !== $marketplace?->id;
+            ->where('marketplace_client_id', $marketplace?->id);
     }
 
     public static function form(Schema $schema): Schema
@@ -1102,11 +1087,10 @@ class EventResource extends Resource
                         'Hosted' => 'info',
                         default => 'gray',
                     }),
-                Tables\Columns\TextColumn::make('tenant.name')
+                Tables\Columns\TextColumn::make('marketplaceOrganizer.name')
                     ->label('Organizer')
-                    ->getStateUsing(fn (Event $record) => $record->tenant?->public_name ?? $record->tenant?->name)
-                    ->visible(fn () => $marketplace?->ownsVenues() ?? false)
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('venue.name')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('event_date')
@@ -1126,20 +1110,9 @@ class EventResource extends Resource
             ->filters([
                 Tables\Filters\TernaryFilter::make('is_cancelled'),
                 Tables\Filters\TernaryFilter::make('is_sold_out'),
-                Tables\Filters\SelectFilter::make('ownership')
-                    ->label('Event Type')
-                    ->options([
-                        'own' => 'Your Events',
-                        'hosted' => 'Hosted Events',
-                    ])
-                    ->query(function (Builder $query, array $data) use ($marketplace) {
-                        return match ($data['value'] ?? null) {
-                            'own' => $query->where('marketplace_client_id', $marketplace?->id),
-                            'hosted' => $query->where('marketplace_client_id', '!=', $marketplace?->id),
-                            default => $query,
-                        };
-                    })
-                    ->visible(fn () => $marketplace?->ownsVenues() ?? false),
+                Tables\Filters\SelectFilter::make('marketplace_organizer_id')
+                    ->label('Organizer')
+                    ->relationship('marketplaceOrganizer', 'name'),
             ])
             ->actions([])
             ->bulkActions([])
