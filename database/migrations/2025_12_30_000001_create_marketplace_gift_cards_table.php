@@ -170,8 +170,8 @@ return new class extends Migration
         // Add gift card columns to orders table
         if (!Schema::hasColumn('orders', 'gift_card_amount')) {
             Schema::table('orders', function (Blueprint $table) {
-                $table->decimal('gift_card_amount', 10, 2)->nullable()->after('total');
-                $table->json('gift_card_codes')->nullable()->after('gift_card_amount');
+                $table->decimal('gift_card_amount', 10, 2)->nullable();
+                $table->json('gift_card_codes')->nullable();
             });
         }
     }
