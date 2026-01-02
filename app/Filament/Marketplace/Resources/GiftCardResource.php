@@ -15,6 +15,9 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Actions;
+use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
+use Filament\Actions\ViewAction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\HtmlString;
 
@@ -373,10 +376,10 @@ class GiftCardResource extends Resource
                     ->label('Expiring Soon (30 days)')
                     ->query(fn (Builder $query) => $query->where('expires_at', '<=', now()->addDays(30))->where('expires_at', '>', now())),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\ActionGroup::make([
-                    Tables\Actions\Action::make('send_email')
+            ->recordActions([
+                ViewAction::make(),
+                ActionGroup::make([
+                    Action::make('send_email')
                         ->label('Send/Resend Email')
                         ->icon('heroicon-o-envelope')
                         ->color('primary')
@@ -392,7 +395,7 @@ class GiftCardResource extends Resource
                                 ->send();
                         }),
 
-                    Tables\Actions\Action::make('activate')
+                    Action::make('activate')
                         ->label('Activate')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
@@ -406,7 +409,7 @@ class GiftCardResource extends Resource
                                 ->send();
                         }),
 
-                    Tables\Actions\Action::make('revoke')
+                    Action::make('revoke')
                         ->label('Revoke')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
@@ -426,7 +429,7 @@ class GiftCardResource extends Resource
                                 ->send();
                         }),
 
-                    Tables\Actions\Action::make('adjust_balance')
+                    Action::make('adjust_balance')
                         ->label('Adjust Balance')
                         ->icon('heroicon-o-currency-dollar')
                         ->color('warning')
@@ -457,7 +460,7 @@ class GiftCardResource extends Resource
                         }),
                 ]),
             ])
-            ->bulkActions([]);
+            ->toolbarActions([]);
     }
 
     public static function getPages(): array

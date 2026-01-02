@@ -14,6 +14,10 @@ use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
 
 class GiftCardDesignResource extends Resource
@@ -163,9 +167,9 @@ class GiftCardDesignResource extends Resource
                 Tables\Filters\SelectFilter::make('occasion')
                     ->options(MarketplaceGiftCard::OCCASIONS),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('set_default')
+            ->recordActions([
+                EditAction::make(),
+                Action::make('set_default')
                     ->label('Set as Default')
                     ->icon('heroicon-o-star')
                     ->color('warning')
@@ -179,9 +183,9 @@ class GiftCardDesignResource extends Resource
                             ->send();
                     }),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

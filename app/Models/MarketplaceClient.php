@@ -120,6 +120,14 @@ class MarketplaceClient extends Model
     }
 
     /**
+     * Invoices for this marketplace client
+     */
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    /**
      * Tenants this marketplace client can sell tickets for
      */
     public function tenants(): BelongsToMany

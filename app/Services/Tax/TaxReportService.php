@@ -4,6 +4,7 @@ namespace App\Services\Tax;
 
 use App\Models\Event;
 use App\Models\Tenant;
+use App\Models\MarketplaceClient;
 use App\Models\Tax\GeneralTax;
 use App\Models\Tax\LocalTax;
 use Carbon\Carbon;
@@ -18,9 +19,10 @@ class TaxReportService
     /**
      * Get comprehensive tax report for all events of a tenant
      */
-    public function getEventsTaxReport(Tenant $tenant): array
+    public function getEventsTaxReport(Tenant|MarketplaceClient $tenant): array
     {
-        $events = Event::where('tenant_id', $tenant->id)
+        $isMarketplace = $tenant instanceof MarketplaceClient;
+        $events = Event::where($isMarketplace ? 'marketplace_client_id' : 'tenant_id', $tenant->id)
             ->with(['venue', 'eventTypes', 'ticketTypes'])
             ->orderByDesc('event_date')
             ->orderByDesc('range_start_date')
@@ -67,7 +69,7 @@ class TaxReportService
     /**
      * Calculate taxes for a single event
      */
-    public function calculateEventTaxes(Event $event, Tenant $tenant): array
+    public function calculateEventTaxes(Event $event, Tenant|MarketplaceClient $tenant): array
     {
         $eventDate = $event->start_date;
         $venue = $event->venue;
@@ -151,7 +153,7 @@ class TaxReportService
      * Get all applicable taxes for an event context
      */
     protected function getApplicableTaxesForEvent(
-        Tenant $tenant,
+        Tenant|MarketplaceClient $tenant,
         ?int $eventTypeId,
         string $country,
         ?string $county,
@@ -375,7 +377,7 @@ class TaxReportService
     /**
      * Get tax summary grouped by tax type
      */
-    public function getTaxSummaryByType(Tenant $tenant): array
+    public function getTaxSummaryByType(Tenant|MarketplaceClient $tenant): array
     {
         $report = $this->getEventsTaxReport($tenant);
         $summary = [];
@@ -398,7 +400,7 @@ class TaxReportService
     /**
      * Get upcoming payment deadlines
      */
-    public function getUpcomingDeadlines(Tenant $tenant, int $days = 30): array
+    public function getUpcomingDeadlines(Tenant|MarketplaceClient $tenant, int $days = 30): array
     {
         $report = $this->getEventsTaxReport($tenant);
         $deadlines = [];
@@ -431,7 +433,7 @@ class TaxReportService
     /**
      * Get overdue tax payments
      */
-    public function getOverduePayments(Tenant $tenant): array
+    public function getOverduePayments(Tenant|MarketplaceClient $tenant): array
     {
         $report = $this->getEventsTaxReport($tenant);
         $overdue = [];
