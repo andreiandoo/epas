@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Models\MarketplaceClient;
+use App\Models\Microservice;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
@@ -15,6 +16,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Schemas\Components as SC;
 use Illuminate\Support\Str;
+use Illuminate\Support\HtmlString;
 use BackedEnum;
 use UnitEnum;
 
@@ -187,7 +189,79 @@ class MarketplaceClientResource extends Resource
                                 ->columns(2),
                         ]),
 
-                    // TAB 3: Statistics
+                    // TAB 3: Microservices
+                    SC\Tabs\Tab::make('Microservices')
+                        ->icon('heroicon-o-puzzle-piece')
+                        ->schema([
+                            SC\Section::make('Enable Microservices')
+                                ->description('Select which microservices to enable for this marketplace')
+                                ->schema([
+                                    Forms\Components\CheckboxList::make('enabled_microservices')
+                                        ->label('')
+                                        ->options(fn () => Microservice::active()->pluck('name', 'id')->map(fn ($name) => is_array($name) ? ($name['en'] ?? $name['ro'] ?? reset($name)) : $name))
+                                        ->descriptions(fn () => Microservice::active()->pluck('short_description', 'id')->map(fn ($desc) => is_array($desc) ? ($desc['en'] ?? $desc['ro'] ?? reset($desc) ?? '') : ($desc ?? '')))
+                                        ->columns(2)
+                                        ->bulkToggleable()
+                                        ->afterStateHydrated(function ($component, $record) {
+                                            if ($record) {
+                                                $enabledIds = $record->microservices()
+                                                    ->wherePivot('is_active', true)
+                                                    ->pluck('microservices.id')
+                                                    ->toArray();
+                                                $component->state($enabledIds);
+                                            }
+                                        })
+                                        ->dehydrated(false),
+                                ]),
+
+                            SC\Section::make('Save Changes')
+                                ->schema([
+                                    Forms\Components\Actions::make([
+                                        Forms\Components\Actions\Action::make('save_microservices')
+                                            ->label('Save Microservices')
+                                            ->icon('heroicon-o-check')
+                                            ->color('primary')
+                                            ->action(function ($record, $get) {
+                                                $enabledIds = $get('enabled_microservices') ?? [];
+
+                                                // Get all microservices
+                                                $allMicroservices = Microservice::active()->pluck('id')->toArray();
+
+                                                foreach ($allMicroservices as $microserviceId) {
+                                                    $isEnabled = in_array($microserviceId, $enabledIds);
+                                                    $existing = $record->microservices()->where('microservices.id', $microserviceId)->first();
+
+                                                    if ($isEnabled && !$existing) {
+                                                        // Attach new
+                                                        $record->microservices()->attach($microserviceId, [
+                                                            'is_active' => true,
+                                                            'activated_at' => now(),
+                                                        ]);
+                                                    } elseif ($isEnabled && $existing) {
+                                                        // Update to active
+                                                        $record->microservices()->updateExistingPivot($microserviceId, [
+                                                            'is_active' => true,
+                                                        ]);
+                                                    } elseif (!$isEnabled && $existing) {
+                                                        // Deactivate
+                                                        $record->microservices()->updateExistingPivot($microserviceId, [
+                                                            'is_active' => false,
+                                                        ]);
+                                                    }
+                                                }
+
+                                                \Filament\Notifications\Notification::make()
+                                                    ->title('Microservices Updated')
+                                                    ->success()
+                                                    ->send();
+                                            }),
+                                    ]),
+                                ])
+                                ->visible(fn ($record) => $record !== null),
+                        ])
+                        ->visible(fn ($record) => $record !== null),
+
+                    // TAB 4: Statistics
                     SC\Tabs\Tab::make('Statistics')
                         ->icon('heroicon-o-chart-bar')
                         ->schema([
@@ -246,7 +320,8 @@ class MarketplaceClientResource extends Resource
                     ->label('Client')
                     ->searchable()
                     ->sortable()
-                    ->description(fn ($record) => $record->domain),
+                    ->description(fn ($record) => $record->domain)
+                    ->url(fn ($record) => static::getUrl('edit', ['record' => $record])),
 
                 Tables\Columns\TextColumn::make('slug')
                     ->label('Slug')
@@ -310,28 +385,7 @@ class MarketplaceClientResource extends Resource
                         'suspended' => 'Suspended',
                     ]),
             ])
-            ->actions([
-                ViewAction::make(),
-                EditAction::make(),
-                Action::make('regenerate_api_key')
-                    ->label('Regenerate Key')
-                    ->icon('heroicon-o-key')
-                    ->color('warning')
-                    ->requiresConfirmation()
-                    ->modalHeading('Regenerate API Credentials')
-                    ->modalDescription('This will invalidate the current API key. The client will need to update their integration with the new credentials.')
-                    ->action(function (MarketplaceClient $record) {
-                        $record->regenerateApiCredentials();
-                        $record->refresh();
-
-                        \Filament\Notifications\Notification::make()
-                            ->title('API Credentials Regenerated')
-                            ->body("New API Key: {$record->api_key}\n\nNew API Secret: {$record->api_secret}")
-                            ->success()
-                            ->persistent()
-                            ->send();
-                    }),
-            ])
+            ->actions([])
             ->bulkActions([])
             ->toolbarActions([
                 BulkActionGroup::make([
