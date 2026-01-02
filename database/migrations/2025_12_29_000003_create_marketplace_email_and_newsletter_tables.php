@@ -96,7 +96,7 @@ return new class extends Migration
             $table->timestamp('unsubscribed_at')->nullable();
             $table->timestamps();
 
-            $table->unique(['list_id', 'marketplace_customer_id']);
+            $table->unique(['list_id', 'marketplace_customer_id'], 'mkt_list_customer_unique');
         });
 
         // Contact Tag assignments (pivot)
@@ -106,7 +106,7 @@ return new class extends Migration
             $table->foreignId('tag_id')->constrained('marketplace_contact_tags')->onDelete('cascade');
             $table->timestamps();
 
-            $table->unique(['marketplace_customer_id', 'tag_id']);
+            $table->unique(['marketplace_customer_id', 'tag_id'], 'mkt_customer_tag_unique');
         });
 
         // Newsletters/Campaigns
