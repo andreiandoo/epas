@@ -42,6 +42,8 @@ class MarketplaceOrganizer extends Authenticatable
         'invitations_enabled',
         'tax_settings',
         'payout_details',
+        'bank_name',
+        'iban',
         'total_events',
         'total_tickets_sold',
         'total_revenue',

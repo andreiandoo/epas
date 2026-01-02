@@ -606,9 +606,8 @@ class GlobalSearchController extends Controller
                 })->toArray();
             }
 
-            // Search Venues (by name - translatable JSON field)
+            // Search Venues (global - all venues, links to public site)
             $venues = Venue::query()
-                ->where('marketplace_client_id', $marketplaceId)
                 ->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
                 ->limit(5)
                 ->get();
@@ -619,7 +618,24 @@ class GlobalSearchController extends Controller
                         'id' => $venue->id,
                         'name' => $venue->getTranslation('name', $locale) ?? $venue->getTranslation('name', 'en') ?? 'Unnamed',
                         'subtitle' => $venue->city ?? '',
-                        'url' => "/marketplace/venues/{$venue->id}/edit",
+                        'url' => "https://tixello.com/venue/{$venue->slug}",
+                    ];
+                })->toArray();
+            }
+
+            // Search Artists (global - all artists, links to public site)
+            $artists = Artist::query()
+                ->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
+                ->limit(5)
+                ->get();
+
+            if ($artists->isNotEmpty()) {
+                $results['artists'] = $artists->map(function ($artist) {
+                    return [
+                        'id' => $artist->id,
+                        'name' => $artist->name ?? 'Unnamed',
+                        'subtitle' => 'View on Tixello',
+                        'url' => "https://tixello.com/artist/{$artist->slug}",
                     ];
                 })->toArray();
             }

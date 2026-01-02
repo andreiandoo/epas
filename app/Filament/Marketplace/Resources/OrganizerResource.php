@@ -103,6 +103,17 @@ class OrganizerResource extends Resource
                         Forms\Components\Textarea::make('company_address')
                             ->rows(2)
                             ->columnSpanFull(),
+
+                        Forms\Components\TextInput::make('bank_name')
+                            ->label('Bank Name')
+                            ->maxLength(255)
+                            ->placeholder('e.g., ING Bank, BRD, BCR'),
+
+                        Forms\Components\TextInput::make('iban')
+                            ->label('IBAN')
+                            ->maxLength(34)
+                            ->placeholder('e.g., RO49AAAA1B31007593840000')
+                            ->helperText('Used for payouts to this organizer'),
                     ])
                     ->columns(2)
                     ->collapsed(),

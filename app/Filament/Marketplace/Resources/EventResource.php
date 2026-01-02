@@ -6,6 +6,7 @@ use App\Filament\Marketplace\Resources\EventResource\Pages;
 use App\Models\Event;
 use App\Models\EventGenre;
 use App\Models\EventType;
+use App\Models\MarketplaceOrganizer;
 use App\Models\Tax\GeneralTax;
 use App\Models\Venue;
 use Filament\Forms;
@@ -86,9 +87,73 @@ class EventResource extends Resource
         $marketplaceLanguage = $marketplace->language ?? $marketplace->locale ?? 'en';
 
         return $schema->schema([
-            // Hidden tenant_id field
+            // Hidden marketplace_client_id field
             Forms\Components\Hidden::make('marketplace_client_id')
                 ->default($marketplace?->id),
+
+            // Organizer selector - marketplace selects which organizer owns this event
+            SC\Section::make('Organizer')
+                ->description('Select the organizer who will own this event')
+                ->schema([
+                    Forms\Components\Select::make('marketplace_organizer_id')
+                        ->label('Organizer')
+                        ->options(function () use ($marketplace) {
+                            return MarketplaceOrganizer::query()
+                                ->where('marketplace_client_id', $marketplace?->id)
+                                ->where('status', 'active')
+                                ->orderBy('name')
+                                ->pluck('name', 'id');
+                        })
+                        ->required()
+                        ->searchable()
+                        ->preload()
+                        ->live()
+                        ->afterStateUpdated(function ($state, SSet $set) use ($marketplace) {
+                            // When organizer changes, update commission info
+                            if ($state) {
+                                $organizer = MarketplaceOrganizer::find($state);
+                                if ($organizer) {
+                                    // Pre-fill custom commission with organizer's rate if set
+                                    $rate = $organizer->commission_rate ?? $marketplace?->commission_rate;
+                                    $set('commission_rate', $rate);
+                                }
+                            }
+                        })
+                        ->helperText('The selected organizer will receive payouts for this event'),
+
+                    Forms\Components\Placeholder::make('organizer_info')
+                        ->label('Organizer Details')
+                        ->visible(fn (SGet $get) => (bool) $get('marketplace_organizer_id'))
+                        ->content(function (SGet $get) use ($marketplace) {
+                            $organizerId = $get('marketplace_organizer_id');
+                            if (!$organizerId) return '';
+
+                            $organizer = MarketplaceOrganizer::find($organizerId);
+                            if (!$organizer) return '';
+
+                            $status = match($organizer->status) {
+                                'active' => '<span class="text-green-600">Active</span>',
+                                'pending' => '<span class="text-yellow-600">Pending</span>',
+                                'suspended' => '<span class="text-red-600">Suspended</span>',
+                                default => $organizer->status,
+                            };
+
+                            $verified = $organizer->verified_at
+                                ? '<span class="text-green-600">✓ Verified</span>'
+                                : '<span class="text-gray-500">Not verified</span>';
+
+                            $commissionRate = $organizer->commission_rate ?? $marketplace?->commission_rate ?? 5;
+
+                            return new HtmlString("
+                                <div class='text-sm space-y-1'>
+                                    <div><strong>Email:</strong> {$organizer->email}</div>
+                                    <div><strong>Status:</strong> {$status} | {$verified}</div>
+                                    <div><strong>Default Commission:</strong> {$commissionRate}%</div>
+                                    <div><strong>Events:</strong> {$organizer->total_events} | <strong>Revenue:</strong> " . number_format($organizer->total_revenue, 2) . " RON</div>
+                                </div>
+                            ");
+                        }),
+                ])->columns(2),
 
             // BASICS - Single Language based on Tenant setting
             SC\Section::make('Event Details')
@@ -618,23 +683,43 @@ class EventResource extends Resource
                             ->wherePivot('is_active', true)
                             ->exists() ?? false),
 
-                    // Commission Mode for event
-                    SC\Grid::make(2)->schema([
+                    // Commission Mode and Rate for event
+                    SC\Grid::make(3)->schema([
                         Forms\Components\Select::make('commission_mode')
                             ->label('Commission Mode')
                             ->options([
-                                'included' => 'Include commission in ticket price (you receive less)',
-                                'added_on_top' => 'Add commission on top (customer pays more)',
+                                'included' => 'Include in price (organizer receives less)',
+                                'added_on_top' => 'Add on top (customer pays more)',
                             ])
                             ->placeholder('Use default from contract')
                             ->helperText(function () use ($marketplace) {
                                 $mode = $marketplace->commission_mode ?? 'included';
-                                $rate = $marketplace->commission_rate ?? 5.00;
                                 $modeText = $mode === 'included'
                                     ? 'included in price'
                                     : 'added on top';
-                                return "Your default: {$rate}% {$modeText}. Leave empty to use this default.";
+                                return "Default: {$modeText}";
                             })
+                            ->live()
+                            ->nullable(),
+
+                        Forms\Components\TextInput::make('commission_rate')
+                            ->label('Custom Commission Rate (%)')
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(50)
+                            ->step(0.5)
+                            ->suffix('%')
+                            ->placeholder(function (SGet $get) use ($marketplace) {
+                                $organizerId = $get('marketplace_organizer_id');
+                                if ($organizerId) {
+                                    $organizer = MarketplaceOrganizer::find($organizerId);
+                                    if ($organizer && $organizer->commission_rate !== null) {
+                                        return $organizer->commission_rate . '% (organizer default)';
+                                    }
+                                }
+                                return ($marketplace->commission_rate ?? 5) . '% (marketplace default)';
+                            })
+                            ->helperText('Leave empty to use organizer\'s or marketplace default rate')
                             ->live()
                             ->nullable(),
 
@@ -644,16 +729,30 @@ class EventResource extends Resource
                             ->content(function (SGet $get) use ($marketplace) {
                                 $eventMode = $get('commission_mode');
                                 $mode = $eventMode ?: ($marketplace->commission_mode ?? 'included');
-                                $rate = $marketplace->commission_rate ?? 5.00;
+
+                                // Get effective commission rate: event custom > organizer > marketplace
+                                $eventRate = $get('commission_rate');
+                                if ($eventRate !== null && $eventRate !== '') {
+                                    $rate = (float) $eventRate;
+                                } else {
+                                    $organizerId = $get('marketplace_organizer_id');
+                                    if ($organizerId) {
+                                        $organizer = MarketplaceOrganizer::find($organizerId);
+                                        $rate = $organizer?->commission_rate ?? $marketplace->commission_rate ?? 5.00;
+                                    } else {
+                                        $rate = $marketplace->commission_rate ?? 5.00;
+                                    }
+                                }
+
                                 $ticketPrice = 100;
                                 $commission = round($ticketPrice * ($rate / 100), 2);
 
                                 if ($mode === 'included') {
                                     $revenue = $ticketPrice - $commission;
-                                    return "Customer pays: **{$ticketPrice} RON** → You receive: **{$revenue} RON** (commission: {$commission} RON)";
+                                    return "Customer pays: **{$ticketPrice} RON** → Organizer receives: **{$revenue} RON** (commission: {$commission} RON @ {$rate}%)";
                                 } else {
                                     $total = $ticketPrice + $commission;
-                                    return "Customer pays: **{$total} RON** → You receive: **{$ticketPrice} RON** (commission: {$commission} RON)";
+                                    return "Customer pays: **{$total} RON** → Organizer receives: **{$ticketPrice} RON** (commission: {$commission} RON @ {$rate}%)";
                                 }
                             }),
                     ]),
@@ -763,16 +862,30 @@ class EventResource extends Resource
 
                                     $eventMode = $get('../../commission_mode');
                                     $mode = $eventMode ?: ($marketplace->commission_mode ?? 'included');
-                                    $rate = $marketplace->commission_rate ?? 5.00;
+
+                                    // Get effective commission rate: event custom > organizer > marketplace
+                                    $eventRate = $get('../../commission_rate');
+                                    if ($eventRate !== null && $eventRate !== '') {
+                                        $rate = (float) $eventRate;
+                                    } else {
+                                        $organizerId = $get('../../marketplace_organizer_id');
+                                        if ($organizerId) {
+                                            $organizer = MarketplaceOrganizer::find($organizerId);
+                                            $rate = $organizer?->commission_rate ?? $marketplace->commission_rate ?? 5.00;
+                                        } else {
+                                            $rate = $marketplace->commission_rate ?? 5.00;
+                                        }
+                                    }
+
                                     $commission = round($price * ($rate / 100), 2);
                                     $currency = $get('currency') ?: 'RON';
 
                                     if ($mode === 'included') {
                                         $revenue = round($price - $commission, 2);
-                                        return "Customer pays: **{$price} {$currency}** → You receive: **{$revenue} {$currency}** (Tixello commission: {$commission} {$currency})";
+                                        return "Customer pays: **{$price} {$currency}** → Organizer receives: **{$revenue} {$currency}** (Tixello: {$commission} {$currency} @ {$rate}%)";
                                     } else {
                                         $total = round($price + $commission, 2);
-                                        return "Customer pays: **{$total} {$currency}** → You receive: **{$price} {$currency}** (Tixello commission: {$commission} {$currency})";
+                                        return "Customer pays: **{$total} {$currency}** → Organizer receives: **{$price} {$currency}** (Tixello: {$commission} {$currency} @ {$rate}%)";
                                     }
                                 })
                                 ->columnSpan(12),
