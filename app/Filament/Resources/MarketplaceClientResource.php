@@ -280,6 +280,7 @@ class MarketplaceClientResource extends Resource
     {
         return [
             MarketplaceClientResource\RelationManagers\TenantsRelationManager::class,
+            MarketplaceClientResource\RelationManagers\AdminsRelationManager::class,
         ];
     }
 
