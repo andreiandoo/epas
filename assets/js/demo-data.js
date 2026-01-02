@@ -350,7 +350,7 @@ const DEMO_DATA = {
     // ===========================================
     customer: {
         id: 1,
-        email: 'andrei.popescu@email.com',
+        email: 'demo@ambilet.ro',
         password: 'demo123', // For testing only
         name: 'Andrei Popescu',
         first_name: 'Andrei',

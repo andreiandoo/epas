@@ -172,6 +172,9 @@ RewriteRule ^user/payments/?$ /cont/plati [R=301,L]
 RewriteRule ^user/notifications/?$ /cont/notificari [R=301,L]
 RewriteRule ^user/settings/?$ /cont/setari [R=301,L]
 RewriteRule ^user/help/?$ /cont/ajutor [R=301,L]
+RewriteRule ^user/gift-cards/?$ /cont/carduri-cadou [R=301,L]
+RewriteRule ^user/referrals/?$ /cont/invitatii [R=301,L]
+RewriteRule ^user/reviews/?$ /cont/recenzii [R=301,L]
 
 # ============================================
 # ORGANIZER DASHBOARD ROUTES - /organizator/*
