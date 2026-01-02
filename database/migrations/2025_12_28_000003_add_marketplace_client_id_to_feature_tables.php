@@ -37,8 +37,8 @@ return new class extends Migration
         // Group Booking
         'group_bookings',
         // Invitations
-        'invite_batches',
-        'invites',
+        'inv_batches',
+        'inv_invites',
         // Tracking/Analytics
         'tracking_integrations',
         // Users (marketplace staff)
