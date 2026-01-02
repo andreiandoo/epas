@@ -18,9 +18,14 @@ use Illuminate\Database\Seeder;
  * - Rewards (redeemable with points)
  *
  * Usage:
+ *   # Seed for a specific marketplace (recommended)
+ *   MARKETPLACE_ID=1 php artisan db:seed --class=GamificationSeeder
+ *
+ *   # Seed for a specific tenant
+ *   TENANT_ID=1 php artisan db:seed --class=GamificationSeeder
+ *
+ *   # Global (no scoping)
  *   php artisan db:seed --class=GamificationSeeder
- *   php artisan db:seed --class=GamificationSeeder -- --marketplace=1
- *   php artisan db:seed --class=GamificationSeeder -- --tenant=1
  */
 class GamificationSeeder extends Seeder
 {
@@ -29,10 +34,13 @@ class GamificationSeeder extends Seeder
      */
     public function run(): void
     {
-        $marketplaceClientId = $this->command->option('marketplace') ?? null;
-        $tenantId = $this->command->option('tenant') ?? null;
+        // Get IDs from environment variables
+        $marketplaceClientId = env('MARKETPLACE_ID') ? (int) env('MARKETPLACE_ID') : null;
+        $tenantId = env('TENANT_ID') ? (int) env('TENANT_ID') : null;
 
         $this->command->info('Seeding gamification data...');
+        $this->command->info("  Marketplace ID: " . ($marketplaceClientId ?? 'null'));
+        $this->command->info("  Tenant ID: " . ($tenantId ?? 'null'));
 
         // Seed in order of dependencies
         $this->seedExperienceConfig($tenantId, $marketplaceClientId);
