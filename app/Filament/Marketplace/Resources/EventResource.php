@@ -589,7 +589,7 @@ class EventResource extends Resource
 
                             // Get applicable taxes using the new forEventTypes scope
                             $allTaxes = GeneralTax::query()
-                                ->whereNull('marketplace_client_id') // Global taxes only
+                                ->whereNull('tenant_id') // Global taxes only (not tenant-specific)
                                 ->active()
                                 ->validOn(\Carbon\Carbon::today())
                                 ->forEventTypes($eventTypeIds)
