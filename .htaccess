@@ -88,7 +88,7 @@ RewriteRule ^organizator/login/?$ organizer/login.php [L]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^organizator/register/?$ organizer/register.php [L]
+RewriteRule ^organizator/inregistrare/?$ organizer/register.php [L]
 
 # Handle organizer public page - /organizator/slug (excludes login, register, dashboard routes)
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -271,6 +271,15 @@ RewriteRule ^calendar/?$ events-calendar.php [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^contact/?$ contact.php [L]
+
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^despre-noi/?$ about.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^parteneri/?$ partners.php [L]
 
 # ============================================
 # FALLBACK: Remove .php extension from URLs

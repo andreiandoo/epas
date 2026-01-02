@@ -153,7 +153,7 @@ $currentYear = date('Y');
                         <h4 class="mb-5 text-sm font-bold tracking-wider text-white uppercase">Companie</h4>
                         <ul class="space-y-3">
                             <li><a href="/despre" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Despre noi</a></li>
-                            <li><a href="/press" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Press Kit</a></li>
+                            <li><a href="/press-kit" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Press Kit</a></li>
                             <li><a href="/blog" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Blog</a></li>
                             <li><a href="/parteneri" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Parteneri</a></li>
                             <li><a href="/ajutor" class="inline-block text-sm transition-all text-white/60 hover:text-white hover:translate-x-1">Centru de ajutor</a></li>

@@ -8,19 +8,11 @@ require_once 'includes/config.php';
 $pageTitle = 'Calendar Evenimente — ' . SITE_NAME;
 $pageDescription = 'Planifică-ți experiențele. Vezi toate evenimentele într-un singur loc.';
 $transparentHeader = true;
-?>
-<!DOCTYPE html>
-<html lang="ro">
-<head>
-    <?php include 'includes/head.php'; ?>
-    <title><?= $pageTitle ?></title>
-    <meta name="description" content="<?= $pageDescription ?>">
-</head>
-<body class="min-h-screen font-body bg-surface text-secondary">
-    <?php include 'includes/header.php'; ?>
+include 'includes/head.php';
+include 'includes/header.php'; ?>
 
     <!-- Page Hero -->
-    <section class="relative px-6 py-12 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900">
+    <section class="relative px-6 pt-32 pb-16 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900">
         <div class="absolute -top-24 -right-24 w-[400px] h-[400px] bg-[radial-gradient(circle,rgba(165,28,48,0.3)_0%,transparent_70%)] rounded-full"></div>
         <div class="relative z-10 flex flex-col items-center justify-between gap-6 mx-auto max-w-7xl md:flex-row">
             <div>
@@ -131,18 +123,6 @@ $transparentHeader = true;
             </div>
         </section>
 
-        <!-- Subscribe Section -->
-        <section class="bg-gradient-to-r from-primary to-[#7f1627] rounded-2xl p-10 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden">
-            <div class="absolute -top-12 -right-12 w-48 h-48 bg-[radial-gradient(circle,rgba(255,255,255,0.1)_0%,transparent_70%)] rounded-full"></div>
-            <div class="relative z-10 text-center md:text-left">
-                <h2 class="mb-2 text-2xl font-bold text-white">Nu rata niciun eveniment!</h2>
-                <p class="text-[15px] text-white/80">Primește notificări când apar evenimente noi în orașul tău.</p>
-            </div>
-            <form class="relative z-10 flex flex-col w-full gap-3 sm:flex-row md:w-auto">
-                <input type="email" placeholder="Adresa ta de email" class="px-5 py-4 bg-white/15 border border-white/20 rounded-xl text-[15px] text-white placeholder-white/50 outline-none focus:border-white w-full sm:w-[300px]">
-                <button type="submit" class="px-7 py-4 bg-white rounded-xl text-primary text-[15px] font-semibold hover:-translate-y-0.5 hover:shadow-lg transition-all">Abonează-te</button>
-            </form>
-        </section>
     </main>
 
     <?php include 'includes/footer.php'; ?>
@@ -262,5 +242,3 @@ $transparentHeader = true;
         renderFeaturedEvents();
     });
     </script>
-</body>
-</html>
