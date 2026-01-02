@@ -100,6 +100,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         try {
             const response = await fetch(`${endpoint}?q=${encodeURIComponent(query)}`, {
+                method: 'GET',
+                credentials: 'same-origin',
                 headers: {
                     'Accept': 'application/json',
                     'X-Requested-With': 'XMLHttpRequest',

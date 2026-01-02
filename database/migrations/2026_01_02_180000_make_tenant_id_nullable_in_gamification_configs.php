@@ -11,31 +11,35 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Step 1: Drop the foreign key constraint first
         Schema::table('gamification_configs', function (Blueprint $table) {
-            // Drop the foreign key constraint first
             $table->dropForeign(['tenant_id']);
+        });
 
-            // Make tenant_id nullable
-            $table->foreignId('tenant_id')->nullable()->change();
+        // Step 2: Drop the unique index (now that foreign key is gone)
+        Schema::table('gamification_configs', function (Blueprint $table) {
+            $table->dropUnique(['tenant_id']);
+        });
 
-            // Re-add the foreign key with nullable support
+        // Step 3: Make tenant_id nullable
+        Schema::table('gamification_configs', function (Blueprint $table) {
+            $table->unsignedBigInteger('tenant_id')->nullable()->change();
+        });
+
+        // Step 4: Re-add the foreign key with nullable support
+        Schema::table('gamification_configs', function (Blueprint $table) {
             $table->foreign('tenant_id')
                 ->references('id')
                 ->on('tenants')
                 ->nullOnDelete();
         });
 
-        // Also drop the unique constraint on tenant_id since marketplace configs won't have tenant_id
-        Schema::table('gamification_configs', function (Blueprint $table) {
-            $table->dropUnique(['tenant_id']);
-        });
-
-        // Add a composite unique for marketplace_client_id (if not exists)
+        // Step 5: Add marketplace_client_id column if not exists
         if (!Schema::hasColumn('gamification_configs', 'marketplace_client_id')) {
             Schema::table('gamification_configs', function (Blueprint $table) {
                 $table->foreignId('marketplace_client_id')
                     ->nullable()
-                    ->after('tenant_id')
+                    ->after('id')
                     ->constrained('marketplace_clients')
                     ->nullOnDelete();
             });
@@ -47,13 +51,25 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Remove marketplace_client_id if we added it
+        if (Schema::hasColumn('gamification_configs', 'marketplace_client_id')) {
+            Schema::table('gamification_configs', function (Blueprint $table) {
+                $table->dropForeign(['marketplace_client_id']);
+                $table->dropColumn('marketplace_client_id');
+            });
+        }
+
         Schema::table('gamification_configs', function (Blueprint $table) {
             // Remove the nullable foreign key
             $table->dropForeign(['tenant_id']);
+        });
 
-            // Make tenant_id NOT NULL again
-            $table->foreignId('tenant_id')->nullable(false)->change();
+        Schema::table('gamification_configs', function (Blueprint $table) {
+            // Make tenant_id NOT NULL again (requires existing rows to have values)
+            $table->unsignedBigInteger('tenant_id')->nullable(false)->change();
+        });
 
+        Schema::table('gamification_configs', function (Blueprint $table) {
             // Re-add the original foreign key
             $table->foreign('tenant_id')
                 ->references('id')
