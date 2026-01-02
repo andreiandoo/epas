@@ -19,6 +19,19 @@ class Reward extends Model
 
     public array $translatable = ['name', 'description'];
 
+    // Reward types
+    public const TYPE_FIXED_DISCOUNT = 'fixed_discount';
+    public const TYPE_PERCENTAGE_DISCOUNT = 'percentage_discount';
+    public const TYPE_FREE_ITEM = 'free_item';
+    public const TYPE_VOUCHER_CODE = 'voucher_code';
+
+    public const TYPES = [
+        self::TYPE_FIXED_DISCOUNT => 'Fixed Discount',
+        self::TYPE_PERCENTAGE_DISCOUNT => 'Percentage Discount',
+        self::TYPE_FREE_ITEM => 'Free Item',
+        self::TYPE_VOUCHER_CODE => 'Voucher Code',
+    ];
+
     protected $fillable = [
         'tenant_id',
         'marketplace_client_id',
