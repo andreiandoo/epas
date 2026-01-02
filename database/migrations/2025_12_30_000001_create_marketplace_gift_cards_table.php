@@ -14,7 +14,7 @@ return new class extends Migration
         // Gift Cards table
         Schema::create('marketplace_gift_cards', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('marketplace_client_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('marketplace_client_id');
 
             // Card identification
             $table->string('code', 20)->unique(); // e.g., GC-XXXX-XXXX-XXXX
@@ -26,10 +26,10 @@ return new class extends Migration
             $table->string('currency', 3)->default('RON');
 
             // Purchaser info
-            $table->foreignId('purchaser_id')->nullable()->constrained('marketplace_customers')->nullOnDelete();
+            $table->unsignedBigInteger('purchaser_id')->nullable();
             $table->string('purchaser_email');
             $table->string('purchaser_name')->nullable();
-            $table->foreignId('purchase_order_id')->nullable()->constrained('orders')->nullOnDelete();
+            $table->unsignedBigInteger('purchase_order_id')->nullable();
 
             // Recipient info
             $table->string('recipient_email');
@@ -51,7 +51,7 @@ return new class extends Migration
             $table->timestamp('last_used_at')->nullable();
 
             // Recipient account link (when redeemed/claimed)
-            $table->foreignId('recipient_customer_id')->nullable()->constrained('marketplace_customers')->nullOnDelete();
+            $table->unsignedBigInteger('recipient_customer_id')->nullable();
             $table->timestamp('claimed_at')->nullable();
 
             // Template/design
@@ -65,8 +65,18 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
+            // Foreign keys with short names
+            $table->foreign('marketplace_client_id', 'mkt_gc_client_fk')
+                ->references('id')->on('marketplace_clients')->onDelete('cascade');
+            $table->foreign('purchaser_id', 'mkt_gc_purchaser_fk')
+                ->references('id')->on('marketplace_customers')->nullOnDelete();
+            $table->foreign('purchase_order_id', 'mkt_gc_order_fk')
+                ->references('id')->on('orders')->nullOnDelete();
+            $table->foreign('recipient_customer_id', 'mkt_gc_recipient_fk')
+                ->references('id')->on('marketplace_customers')->nullOnDelete();
+
             // Indexes
-            $table->index(['marketplace_client_id', 'status']);
+            $table->index(['marketplace_client_id', 'status'], 'mkt_gc_status_idx');
             $table->index('code');
             $table->index('recipient_email');
             $table->index('purchaser_email');
@@ -76,8 +86,8 @@ return new class extends Migration
         // Gift Card Transactions (usage history)
         Schema::create('marketplace_gift_card_transactions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('marketplace_gift_card_id')->constrained()->onDelete('cascade');
-            $table->foreignId('marketplace_client_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('marketplace_gift_card_id');
+            $table->unsignedBigInteger('marketplace_client_id');
 
             // Transaction type
             $table->string('type'); // purchase, redemption, refund, adjustment, expiry
@@ -89,11 +99,11 @@ return new class extends Migration
             $table->string('currency', 3)->default('RON');
 
             // Related order (for redemption)
-            $table->foreignId('order_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('order_id')->nullable();
 
             // Who performed the transaction
-            $table->foreignId('performed_by_customer_id')->nullable()->constrained('marketplace_customers')->nullOnDelete();
-            $table->foreignId('performed_by_admin_id')->nullable()->constrained('marketplace_admins')->nullOnDelete();
+            $table->unsignedBigInteger('performed_by_customer_id')->nullable();
+            $table->unsignedBigInteger('performed_by_admin_id')->nullable();
 
             // Details
             $table->string('description')->nullable();
@@ -102,15 +112,27 @@ return new class extends Migration
 
             $table->timestamps();
 
+            // Foreign keys with short names
+            $table->foreign('marketplace_gift_card_id', 'mkt_gc_tx_card_fk')
+                ->references('id')->on('marketplace_gift_cards')->onDelete('cascade');
+            $table->foreign('marketplace_client_id', 'mkt_gc_tx_client_fk')
+                ->references('id')->on('marketplace_clients')->onDelete('cascade');
+            $table->foreign('order_id', 'mkt_gc_tx_order_fk')
+                ->references('id')->on('orders')->nullOnDelete();
+            $table->foreign('performed_by_customer_id', 'mkt_gc_tx_cust_fk')
+                ->references('id')->on('marketplace_customers')->nullOnDelete();
+            $table->foreign('performed_by_admin_id', 'mkt_gc_tx_admin_fk')
+                ->references('id')->on('marketplace_admins')->nullOnDelete();
+
             // Indexes
-            $table->index(['marketplace_gift_card_id', 'created_at']);
+            $table->index(['marketplace_gift_card_id', 'created_at'], 'mkt_gc_tx_created_idx');
             $table->index('order_id');
         });
 
         // Gift Card Designs/Templates
         Schema::create('marketplace_gift_card_designs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('marketplace_client_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('marketplace_client_id');
 
             $table->string('name');
             $table->string('slug')->unique();
@@ -131,19 +153,27 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['marketplace_client_id', 'is_active']);
+            // Foreign keys with short names
+            $table->foreign('marketplace_client_id', 'mkt_gc_design_client_fk')
+                ->references('id')->on('marketplace_clients')->onDelete('cascade');
+
+            $table->index(['marketplace_client_id', 'is_active'], 'mkt_gc_design_active_idx');
         });
 
         // Add gift card settings to marketplace_clients
-        Schema::table('marketplace_clients', function (Blueprint $table) {
-            $table->json('gift_card_settings')->nullable()->after('email_settings');
-        });
+        if (!Schema::hasColumn('marketplace_clients', 'gift_card_settings')) {
+            Schema::table('marketplace_clients', function (Blueprint $table) {
+                $table->json('gift_card_settings')->nullable()->after('email_settings');
+            });
+        }
 
         // Add gift card columns to orders table
-        Schema::table('orders', function (Blueprint $table) {
-            $table->decimal('gift_card_amount', 10, 2)->nullable()->after('total');
-            $table->json('gift_card_codes')->nullable()->after('gift_card_amount');
-        });
+        if (!Schema::hasColumn('orders', 'gift_card_amount')) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->decimal('gift_card_amount', 10, 2)->nullable()->after('total');
+                $table->json('gift_card_codes')->nullable()->after('gift_card_amount');
+            });
+        }
     }
 
     /**
@@ -151,13 +181,17 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->dropColumn(['gift_card_amount', 'gift_card_codes']);
-        });
+        if (Schema::hasColumn('orders', 'gift_card_amount')) {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->dropColumn(['gift_card_amount', 'gift_card_codes']);
+            });
+        }
 
-        Schema::table('marketplace_clients', function (Blueprint $table) {
-            $table->dropColumn('gift_card_settings');
-        });
+        if (Schema::hasColumn('marketplace_clients', 'gift_card_settings')) {
+            Schema::table('marketplace_clients', function (Blueprint $table) {
+                $table->dropColumn('gift_card_settings');
+            });
+        }
 
         Schema::dropIfExists('marketplace_gift_card_designs');
         Schema::dropIfExists('marketplace_gift_card_transactions');
