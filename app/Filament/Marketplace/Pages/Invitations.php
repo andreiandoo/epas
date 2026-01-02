@@ -236,7 +236,7 @@ class Invitations extends Page
 
         $marketplace = static::getMarketplaceClient();
 
-        if ($batch->tenant_id !== $marketplace->id) {
+        if ($batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -378,7 +378,7 @@ class Invitations extends Page
 
         $marketplace = static::getMarketplaceClient();
 
-        if ($batch->tenant_id !== $marketplace->id) {
+        if ($batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -549,7 +549,7 @@ class Invitations extends Page
         $batch = InviteBatch::find($batchId);
         $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $marketplace->id) {
+        if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -718,7 +718,7 @@ class Invitations extends Page
         $batch = InviteBatch::find($batchId);
         $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $marketplace->id) {
+        if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -768,7 +768,7 @@ class Invitations extends Page
         $batch = InviteBatch::find($batchId);
         $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $marketplace->id) {
+        if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -802,7 +802,7 @@ class Invitations extends Page
         $batch = InviteBatch::find($batchId);
         $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $marketplace->id) {
+        if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -854,7 +854,7 @@ class Invitations extends Page
         $batch = InviteBatch::find($this->manualBatchId);
         $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $marketplace->id) {
+        if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -943,7 +943,7 @@ class Invitations extends Page
         $batch = InviteBatch::find($batchId);
         $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $marketplace->id) {
+        if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -1055,7 +1055,7 @@ class Invitations extends Page
         $batch = InviteBatch::find($batchId);
         $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $marketplace->id) {
+        if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             Notification::make()
                 ->danger()
                 ->title('Access denied')
@@ -1087,7 +1087,7 @@ class Invitations extends Page
         $batch = InviteBatch::with('invites')->find($batchId);
         $marketplace = static::getMarketplaceClient();
 
-        if (!$batch || $batch->tenant_id !== $marketplace->id) {
+        if (!$batch || $batch->marketplace_client_id !== $marketplace->id) {
             abort(403);
         }
 
