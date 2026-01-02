@@ -234,6 +234,53 @@ class AuthController extends BaseController
     }
 
     /**
+     * Update customer settings (notification preferences, etc.)
+     */
+    public function updateSettings(Request $request): JsonResponse
+    {
+        $customer = $request->user();
+
+        if (!$customer instanceof MarketplaceCustomer) {
+            return $this->error('Unauthorized', 401);
+        }
+
+        $validated = $request->validate([
+            'accepts_marketing' => 'sometimes|boolean',
+            'notification_preferences' => 'sometimes|array',
+            'notification_preferences.reminders' => 'sometimes|boolean',
+            'notification_preferences.newsletter' => 'sometimes|boolean',
+            'notification_preferences.favorites' => 'sometimes|boolean',
+            'notification_preferences.history' => 'sometimes|boolean',
+            'notification_preferences.marketing' => 'sometimes|boolean',
+        ]);
+
+        $updates = [];
+
+        // Update marketing preference if provided
+        if (isset($validated['accepts_marketing'])) {
+            $updates['accepts_marketing'] = $validated['accepts_marketing'];
+            $updates['marketing_consent_at'] = $validated['accepts_marketing'] ? now() : null;
+        }
+
+        // Update settings JSON
+        if (isset($validated['notification_preferences'])) {
+            $currentSettings = $customer->settings ?? [];
+            $updates['settings'] = array_merge($currentSettings, [
+                'notification_preferences' => $validated['notification_preferences'],
+            ]);
+        }
+
+        if (!empty($updates)) {
+            $customer->update($updates);
+        }
+
+        return $this->success([
+            'settings' => $customer->fresh()->settings,
+            'accepts_marketing' => $customer->fresh()->accepts_marketing,
+        ], 'Settings updated');
+    }
+
+    /**
      * Send password reset link
      */
     public function forgotPassword(Request $request): JsonResponse
@@ -434,6 +481,7 @@ class AuthController extends BaseController
             'country' => $customer->country,
             'locale' => $customer->locale,
             'accepts_marketing' => $customer->accepts_marketing,
+            'settings' => $customer->settings,
             'is_guest' => $customer->isGuest(),
             'email_verified' => $customer->isEmailVerified(),
             'stats' => [

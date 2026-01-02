@@ -1,27 +1,239 @@
 /**
  * Ambilet.ro - API Client
  * Wrapper for fetch with automatic authentication and error handling
+ *
+ * Supports DEMO_MODE for testing without API connection
  */
 
 const AmbiletAPI = {
     /**
-     * Make an API request
+     * Check if demo mode is enabled
+     */
+    isDemoMode() {
+        // Check both old and new config structures for backwards compatibility
+        return window.AMBILET?.demoMode === true || window.AMBILET_CONFIG?.DEMO_MODE === true;
+    },
+
+    /**
+     * Get API base URL (uses proxy for security)
+     */
+    getApiUrl() {
+        return window.AMBILET?.apiUrl || '/api/proxy.php';
+    },
+
+    /**
+     * Handle demo mode requests
+     */
+    handleDemoRequest(endpoint, options = {}) {
+        const method = options.method || 'GET';
+        const body = options.body ? JSON.parse(options.body) : {};
+
+        // Simulate network delay
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                try {
+                    const result = this.getDemoResponse(endpoint, method, body);
+                    resolve(result);
+                } catch (error) {
+                    reject(error);
+                }
+            }, 200 + Math.random() * 300);
+        });
+    },
+
+    /**
+     * Get demo response based on endpoint
+     */
+    getDemoResponse(endpoint, method, body) {
+        // Public endpoints
+        if (endpoint.includes('/marketplace-events/featured')) {
+            const events = DEMO_DATA.events.filter(e => e.is_featured).map(e => ({ ...e, date: e.start_date }));
+            return { success: true, data: events };
+        }
+        if (endpoint.includes('/marketplace-events/categories')) {
+            return { success: true, data: DEMO_DATA.categories };
+        }
+        if (endpoint.includes('/marketplace-events/cities')) {
+            return { success: true, data: DEMO_DATA.cities };
+        }
+        if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+$/i)) {
+            const slug = endpoint.split('/').pop();
+            const event = DEMO_DATA.events.find(e => e.slug === slug);
+            if (event) {
+                const eventWithTickets = { ...event };
+                eventWithTickets.ticket_types = DEMO_DATA.ticketTypes[event.id] || [];
+                eventWithTickets.date = event.start_date;
+                return { success: true, data: eventWithTickets };
+            }
+            return { success: false, message: 'Eveniment negasit' };
+        }
+        if (endpoint.includes('/marketplace-events')) {
+            const events = DEMO_DATA.events.map(e => ({ ...e, date: e.start_date }));
+            return { success: true, data: events };
+        }
+
+        // Customer endpoints
+        if (endpoint === '/customer/login' && method === 'POST') {
+            if (body.email === DEMO_DATA.customer.email && body.password === DEMO_DATA.customer.password) {
+                localStorage.setItem('demo_customer_logged_in', 'true');
+                return {
+                    success: true,
+                    data: {
+                        token: 'demo_customer_token_' + Date.now(),
+                        customer: DEMO_DATA.customer
+                    }
+                };
+            }
+            return { success: false, message: 'Email sau parola incorecta' };
+        }
+        if (endpoint === '/customer/me') {
+            if (localStorage.getItem('demo_customer_logged_in') === 'true') {
+                return { success: true, data: DEMO_DATA.customer };
+            }
+            throw new APIError('Nu esti autentificat', 401);
+        }
+        if (endpoint === '/customer/stats' || endpoint.startsWith('/customer/stats?')) {
+            return {
+                success: true,
+                data: {
+                    active_tickets: DEMO_DATA.customerTickets.filter(t => t.status === 'valid').length,
+                    attended_events: 5,
+                    points: DEMO_DATA.customer.points || 0,
+                    favorites: DEMO_DATA.customerWatchlist?.length || 0
+                }
+            };
+        }
+        if (endpoint === '/customer/orders' || endpoint.startsWith('/customer/orders?')) {
+            // Normalize order data for dashboard compatibility
+            const orders = DEMO_DATA.customerOrders.map(order => ({
+                ...order,
+                reference: order.id, // Add reference alias for id
+                total: order.grand_total || order.total,
+                status: order.status === 'confirmed' ? 'completed' : order.status
+            }));
+            return { success: true, data: orders };
+        }
+        if (endpoint === '/customer/tickets' || endpoint.startsWith('/customer/tickets?')) {
+            // Normalize ticket data for dashboard compatibility
+            const tickets = DEMO_DATA.customerTickets.map(ticket => ({
+                ...ticket,
+                ticket_type: { name: ticket.ticket_type },
+                event: {
+                    ...ticket.event,
+                    date: ticket.event.date,
+                    image: ticket.event.image
+                }
+            }));
+            return { success: true, data: tickets };
+        }
+        if (endpoint === '/customer/logout' && method === 'POST') {
+            localStorage.removeItem('demo_customer_logged_in');
+            return { success: true };
+        }
+        if (endpoint === '/customer/register' && method === 'POST') {
+            localStorage.setItem('demo_customer_logged_in', 'true');
+            return {
+                success: true,
+                data: {
+                    token: 'demo_customer_token_' + Date.now(),
+                    customer: { ...DEMO_DATA.customer, name: body.name || body.first_name, email: body.email }
+                }
+            };
+        }
+
+        // Organizer endpoints
+        if (endpoint === '/organizer/login' && method === 'POST') {
+            if (body.email === DEMO_DATA.organizer.email && body.password === DEMO_DATA.organizer.password) {
+                localStorage.setItem('demo_organizer_logged_in', 'true');
+                return {
+                    success: true,
+                    data: {
+                        token: 'demo_organizer_token_' + Date.now(),
+                        organizer: DEMO_DATA.organizer
+                    }
+                };
+            }
+            return { success: false, message: 'Email sau parola incorecta' };
+        }
+        if (endpoint === '/organizer/me') {
+            if (localStorage.getItem('demo_organizer_logged_in') === 'true') {
+                return { success: true, data: DEMO_DATA.organizer };
+            }
+            throw new APIError('Nu esti autentificat', 401);
+        }
+        if (endpoint === '/organizer/logout' && method === 'POST') {
+            localStorage.removeItem('demo_organizer_logged_in');
+            return { success: true };
+        }
+        if (endpoint === '/organizer/register' && method === 'POST') {
+            localStorage.setItem('demo_organizer_logged_in', 'true');
+            return {
+                success: true,
+                data: {
+                    token: 'demo_organizer_token_' + Date.now(),
+                    organizer: { ...DEMO_DATA.organizer, name: body.company_name, email: body.email }
+                }
+            };
+        }
+        if (endpoint === '/organizer/dashboard') {
+            return { success: true, data: DEMO_DATA.organizerSales };
+        }
+        if (endpoint === '/organizer/events') {
+            if (method === 'POST') {
+                return { success: true, data: { id: 999, ...body }, message: 'Eveniment creat cu succes' };
+            }
+            return { success: true, data: DEMO_DATA.organizerEvents };
+        }
+        if (endpoint === '/organizer/balance') {
+            return { success: true, data: DEMO_DATA.organizerFinance };
+        }
+        if (endpoint === '/organizer/transactions') {
+            return { success: true, data: DEMO_DATA.organizerFinance.transactions };
+        }
+        if (endpoint === '/organizer/promo-codes') {
+            if (method === 'POST') {
+                return { success: true, data: { id: 999, ...body }, message: 'Cod promotional creat' };
+            }
+            return { success: true, data: DEMO_DATA.organizerPromoCodes };
+        }
+        if (endpoint.includes('/organizer/events') && endpoint.includes('/participants')) {
+            return { success: true, data: DEMO_DATA.organizerParticipants };
+        }
+
+        // Default success response for other endpoints
+        return { success: true, data: null, message: 'Demo mode - endpoint not implemented' };
+    },
+
+    /**
+     * Make an API request via proxy
      * @param {string} endpoint - API endpoint (without base URL)
      * @param {Object} options - Fetch options
      * @returns {Promise<Object>} - API response data
      */
     async request(endpoint, options = {}) {
-        const url = `${AMBILET_CONFIG.API_BASE_URL}${endpoint}`;
+        // Check for demo mode
+        if (this.isDemoMode()) {
+            return this.handleDemoRequest(endpoint, options);
+        }
+
+        // Build proxy URL - the API key is handled server-side
+        const baseUrl = this.getApiUrl();
+        const action = this.getProxyAction(endpoint);
+        const params = this.getProxyParams(endpoint);
+
+        let url = `${baseUrl}?action=${action}`;
+        if (params) {
+            url += '&' + params;
+        }
 
         const headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'X-API-Key': AMBILET_CONFIG.API_KEY,
             ...options.headers
         };
 
         // Add auth token if available
-        const authToken = AmbiletAuth.getToken();
+        const authToken = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getToken() : null;
         if (authToken) {
             headers['Authorization'] = `Bearer ${authToken}`;
         }
@@ -35,7 +247,7 @@ const AmbiletAPI = {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new APIError(data.message || 'An error occurred', response.status, data.errors);
+                throw new APIError(data.message || data.error || 'An error occurred', response.status, data.errors);
             }
 
             return data;
@@ -45,6 +257,77 @@ const AmbiletAPI = {
             }
             throw new APIError('Network error. Please check your connection.', 0);
         }
+    },
+
+    /**
+     * Convert endpoint to proxy action
+     */
+    getProxyAction(endpoint) {
+        // Customer auth endpoints
+        if (endpoint === '/customer/register') return 'customer.register';
+        if (endpoint === '/customer/login') return 'customer.login';
+        if (endpoint === '/customer/logout') return 'customer.logout';
+        if (endpoint === '/customer/me') return 'customer.me';
+        if (endpoint === '/customer/profile') return 'customer.profile';
+        if (endpoint === '/customer/password') return 'customer.password';
+        if (endpoint === '/customer/settings') return 'customer.settings';
+        if (endpoint === '/customer/forgot-password') return 'customer.forgot-password';
+        if (endpoint === '/customer/reset-password') return 'customer.reset-password';
+        if (endpoint === '/customer/verify-email') return 'customer.verify-email';
+        if (endpoint === '/customer/resend-verification') return 'customer.resend-verification';
+        if (endpoint.includes('/customer/orders/')) return 'customer.order';
+        if (endpoint.includes('/customer/orders')) return 'customer.orders';
+        if (endpoint.includes('/customer/tickets')) return 'customer.tickets';
+        if (endpoint.includes('/customer/stats')) return 'customer.stats';
+
+        // Public endpoints
+        if (endpoint.includes('/search')) return 'search';
+        if (endpoint.includes('/marketplace-events/categories')) return 'categories';
+        if (endpoint.includes('/marketplace-events/cities')) return 'cities';
+        if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+$/i)) return 'event';
+        if (endpoint.includes('/marketplace-events')) return 'events';
+        if (endpoint.match(/\/venues\/[a-z0-9-]+$/i)) return 'venue';
+        if (endpoint.includes('/venues')) return 'venues';
+        if (endpoint.match(/\/artists\/[a-z0-9-]+$/i)) return 'artist';
+        if (endpoint.includes('/artists')) return 'artists';
+        if (endpoint.includes('/cart')) return 'cart';
+        if (endpoint.includes('/checkout')) return 'checkout';
+        return 'events'; // default
+    },
+
+    /**
+     * Extract params from endpoint for proxy
+     */
+    getProxyParams(endpoint) {
+        // Extract order ID from /customer/orders/{id}
+        const orderMatch = endpoint.match(/\/customer\/orders\/(\d+)/);
+        if (orderMatch) {
+            return `id=${encodeURIComponent(orderMatch[1])}`;
+        }
+
+        // Extract slug from endpoints like /marketplace-events/event-slug
+        const eventMatch = endpoint.match(/\/marketplace-events\/([a-z0-9-]+)$/i);
+        if (eventMatch) {
+            return `slug=${encodeURIComponent(eventMatch[1])}`;
+        }
+
+        const venueMatch = endpoint.match(/\/venues\/([a-z0-9-]+)$/i);
+        if (venueMatch) {
+            return `slug=${encodeURIComponent(venueMatch[1])}`;
+        }
+
+        const artistMatch = endpoint.match(/\/artists\/([a-z0-9-]+)$/i);
+        if (artistMatch) {
+            return `slug=${encodeURIComponent(artistMatch[1])}`;
+        }
+
+        // Pass through query params
+        const queryStart = endpoint.indexOf('?');
+        if (queryStart !== -1) {
+            return endpoint.substring(queryStart + 1);
+        }
+
+        return '';
     },
 
     /**

@@ -1600,6 +1600,8 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
             ->name('api.marketplace-client.customer.password.update');
         Route::put('/marketing', [CustomerAuthController::class, 'updateMarketingPreferences'])
             ->name('api.marketplace-client.customer.marketing.update');
+        Route::put('/settings', [CustomerAuthController::class, 'updateSettings'])
+            ->name('api.marketplace-client.customer.settings.update');
 
         // Account
         Route::get('/orders', [CustomerAccountController::class, 'orders'])

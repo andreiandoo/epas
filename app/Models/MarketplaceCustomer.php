@@ -37,6 +37,7 @@ class MarketplaceCustomer extends Authenticatable
         'last_login_at',
         'accepts_marketing',
         'marketing_consent_at',
+        'settings',
         'total_orders',
         'total_spent',
     ];
@@ -54,6 +55,7 @@ class MarketplaceCustomer extends Authenticatable
         'birth_date' => 'date',
         'password' => 'hashed',
         'accepts_marketing' => 'boolean',
+        'settings' => 'array',
         'total_spent' => 'decimal:2',
     ];
 
