@@ -12,9 +12,9 @@ include 'includes/head.php';
 include 'includes/header.php'; ?>
 
     <!-- Page Hero -->
-    <section class="relative px-6 pt-32 pb-16 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900">
+    <section class="relative px-6 pt-40 pb-8 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900">
         <div class="absolute -top-24 -right-24 w-[400px] h-[400px] bg-[radial-gradient(circle,rgba(165,28,48,0.3)_0%,transparent_70%)] rounded-full"></div>
-        <div class="relative z-10 flex flex-col items-center justify-between gap-6 mx-auto max-w-7xl md:flex-row">
+        <div class="relative z-10 flex flex-col items-center justify-between gap-6 px-6 mx-auto max-w-7xl md:flex-row">
             <div>
                 <h1 class="mb-2 text-3xl font-extrabold text-white md:text-4xl">Calendar Evenimente</h1>
                 <p class="text-base text-white/70">Planifică-ți experiențele. Vezi toate evenimentele într-un singur loc.</p>

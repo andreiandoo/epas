@@ -7,7 +7,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
     <!-- Hero -->
-    <section class="relative px-6 pt-32 pb-16 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 md:px-12">
+    <section class="relative px-6 pt-40 pb-8 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900 md:px-12">
         <div class="absolute -top-[200px] -right-[200px] w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(165,28,48,0.15)_0%,transparent_70%)] pointer-events-none"></div>
         <div class="relative z-10 max-w-3xl mx-auto text-center">
             <div class="inline-flex items-center gap-2 px-4 py-2 mb-6 text-sm font-semibold border rounded-full bg-primary/20 border-primary/30 text-accent">

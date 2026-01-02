@@ -148,6 +148,18 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^cont/ajutor/?$ user/help.php [L]
 
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/carduri-cadou/?$ user/gift-cards.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/invitatii/?$ user/referrals.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^cont/recenzii/?$ user/reviews.php [L]
+
 # Legacy: redirect /user/* to /cont/*
 RewriteRule ^user/?$ /cont [R=301,L]
 RewriteRule ^user/dashboard/?$ /cont/dashboard [R=301,L]

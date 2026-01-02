@@ -345,7 +345,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 <!-- Header -->
 <header class="fixed top-0 left-0 right-0 z-[1000] transition-all duration-300 <?= $transparentHeader ? 'header-transparent bg-transparent border-transparent' : 'bg-white border-b border-gray-200' ?>" id="header" data-transparent="<?= $transparentHeader ? 'true' : 'false' ?>">
     <!-- Top Bar -->
-    <div class="bg-secondary text-white text-sm py-2.5 transition-all duration-200 ease-in-out <?= $transparentHeader ? 'hidden' : '' ?>" id="headerTopBar">
+    <div class="mobile:hidden bg-secondary text-white text-sm py-2.5 transition-all duration-200 ease-in-out <?= $transparentHeader ? 'hidden' : '' ?>" id="headerTopBar">
         <div class="flex items-center justify-between px-4 mx-auto max-w-7xl">
             <p class="items-center hidden gap-2 sm:flex">
                 <svg class="w-4 h-4 text-primary-light" fill="currentColor" viewBox="0 0 24 24">

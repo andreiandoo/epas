@@ -23,7 +23,7 @@ require_once __DIR__ . '/includes/head.php';
 <?php require_once __DIR__ . '/includes/header.php'; ?>
 
 <!-- Page Hero -->
-<section class="relative pt-32 pb-16 overflow-hidden bg-gradient-to-br from-secondary via-secondary to-secondary/90">
+<section class="relative pt-40 pb-16 overflow-hidden bg-gradient-to-br from-secondary via-secondary to-secondary/90">
     <div class="absolute rounded-full -top-24 -right-24 w-96 h-96 bg-primary/20 blur-3xl"></div>
     <div class="absolute rounded-full -bottom-32 -left-24 w-80 h-80 bg-primary/15 blur-3xl"></div>
     <div class="relative z-10 px-4 mx-auto text-center max-w-7xl">
@@ -192,22 +192,6 @@ require_once __DIR__ . '/includes/head.php';
 
     <!-- Pagination -->
     <div class="flex items-center justify-center gap-2 mt-12" id="pagination"></div>
-
-    <!-- Newsletter -->
-    <section class="relative p-12 mt-16 overflow-hidden text-center bg-gradient-to-br from-secondary via-secondary to-secondary/90 rounded-3xl">
-        <div class="absolute rounded-full w-72 h-72 -top-24 -right-24 bg-primary/20 blur-3xl"></div>
-        <div class="relative z-10 max-w-lg mx-auto">
-            <h2 class="mb-3 text-2xl font-extrabold text-white md:text-3xl">Urmareste artistii preferati</h2>
-            <p class="mb-6 text-white/70">Aboneaza-te pentru a primi notificari cand artistii tai preferati anunta noi evenimente.</p>
-            <form class="flex flex-col gap-3 sm:flex-row" onsubmit="return ArtistsPage.subscribeNewsletter(event)">
-                <input type="email" id="newsletterEmail" placeholder="Adresa ta de email" required
-                       class="flex-1 px-5 py-4 text-white border bg-white/10 border-white/20 rounded-xl placeholder-white/50 focus:outline-none focus:border-primary">
-                <button type="submit" class="px-8 py-4 font-semibold text-white transition-colors bg-primary rounded-xl hover:bg-primary-dark">
-                    Aboneaza-te
-                </button>
-            </form>
-        </div>
-    </section>
 
 </main>
 
