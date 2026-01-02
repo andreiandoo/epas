@@ -64,6 +64,11 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/api/search/tenant/{tenant}', [GlobalSearchController::class, 'searchTenant'])->name('tenant.api.global-search');
 });
 
+// Marketplace Search API (uses marketplace_admin guard)
+Route::middleware(['web', 'auth:marketplace_admin'])->group(function () {
+    Route::get('/api/search/marketplace/{marketplace}', [GlobalSearchController::class, 'searchMarketplace'])->name('marketplace.api.global-search');
+});
+
 // DEBUG: Test session and cookies
 Route::middleware(['web'])->get('/test-session', function() {
     session(['test_key' => 'test_value_' . time()]);

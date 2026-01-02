@@ -12,26 +12,28 @@ use Filament\Schemas\Components as SC;
 use BackedEnum;
 use UnitEnum;
 
-class MarketplaceAdminResource extends Resource
+class MarketplaceUserResource extends Resource
 {
     protected static ?string $model = MarketplaceAdmin::class;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-user-circle';
 
-    protected static ?string $navigationLabel = 'Marketplace Admins';
+    protected static ?string $navigationLabel = 'Marketplace Users';
 
     protected static UnitEnum|string|null $navigationGroup = 'Marketplace';
 
     protected static ?int $navigationSort = 15;
 
-    protected static ?string $modelLabel = 'Marketplace Admin';
+    protected static ?string $modelLabel = 'Marketplace User';
 
-    protected static ?string $pluralModelLabel = 'Marketplace Admins';
+    protected static ?string $pluralModelLabel = 'Marketplace Users';
+
+    protected static ?string $slug = 'marketplace-users';
 
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            SC\Section::make('Admin Information')
+            SC\Section::make('User Information')
                 ->schema([
                     Forms\Components\Select::make('marketplace_client_id')
                         ->label('Marketplace')
@@ -168,9 +170,9 @@ class MarketplaceAdminResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => MarketplaceAdminResource\Pages\ListMarketplaceAdmins::route('/'),
-            'create' => MarketplaceAdminResource\Pages\CreateMarketplaceAdmin::route('/create'),
-            'edit' => MarketplaceAdminResource\Pages\EditMarketplaceAdmin::route('/{record}/edit'),
+            'index' => MarketplaceUserResource\Pages\ListMarketplaceUsers::route('/'),
+            'create' => MarketplaceUserResource\Pages\CreateMarketplaceUser::route('/create'),
+            'edit' => MarketplaceUserResource\Pages\EditMarketplaceUser::route('/{record}/edit'),
         ];
     }
 }

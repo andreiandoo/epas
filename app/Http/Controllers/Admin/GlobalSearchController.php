@@ -13,6 +13,10 @@ use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\TicketType;
 use App\Models\Invite;
+use App\Models\MarketplaceClient;
+use App\Models\MarketplaceOrganizer;
+use App\Models\MarketplaceCustomer;
+use App\Models\MarketplaceOrder;
 use Illuminate\Http\Request;
 
 class GlobalSearchController extends Controller
@@ -502,6 +506,220 @@ class GlobalSearchController extends Controller
             // Bottom
             ['name' => 'Documentation', 'keywords' => ['documentation', 'docs', 'documentatie', 'help', 'ajutor'], 'url' => '/tenant/documentation', 'subtitle' => 'Help & documentation'],
             ['name' => 'Activity Log', 'keywords' => ['activity', 'log', 'activitate', 'jurnal', 'history', 'istoric'], 'url' => '/tenant/activity-log', 'subtitle' => 'View activity history'],
+        ];
+
+        $lowerQuery = mb_strtolower($query);
+        $matches = [];
+
+        foreach ($pages as $page) {
+            // Check name match
+            if (mb_stripos($page['name'], $query) !== false) {
+                $matches[] = [
+                    'name' => $page['name'],
+                    'subtitle' => $page['subtitle'],
+                    'url' => $page['url'],
+                ];
+                continue;
+            }
+
+            // Check keywords match
+            foreach ($page['keywords'] as $keyword) {
+                if (mb_stripos($keyword, $lowerQuery) !== false) {
+                    $matches[] = [
+                        'name' => $page['name'],
+                        'subtitle' => $page['subtitle'],
+                        'url' => $page['url'],
+                    ];
+                    break;
+                }
+            }
+        }
+
+        return array_slice($matches, 0, 5);
+    }
+
+    /**
+     * Search for marketplace panel (marketplace-scoped search)
+     */
+    public function searchMarketplace(Request $request, $marketplaceId)
+    {
+        try {
+            $query = $request->input('q', '');
+
+            if (strlen($query) < 3) {
+                return response()->json([]);
+            }
+
+            $results = [];
+            $locale = app()->getLocale();
+            $lowerQuery = '%' . mb_strtolower($query) . '%';
+
+            // Verify marketplace exists
+            $marketplace = MarketplaceClient::find($marketplaceId);
+            if (!$marketplace) {
+                return response()->json([]);
+            }
+
+            // Search Navigation/Pages first
+            $pages = $this->searchMarketplacePages($query);
+            if (!empty($pages)) {
+                $results['pages'] = $pages;
+            }
+
+            // Search Events (by title - translatable JSON field)
+            $events = Event::query()
+                ->where('marketplace_client_id', $marketplaceId)
+                ->whereRaw("LOWER(title) LIKE ?", [$lowerQuery])
+                ->limit(5)
+                ->get();
+
+            if ($events->isNotEmpty()) {
+                $results['events'] = $events->map(function ($event) use ($locale) {
+                    return [
+                        'id' => $event->id,
+                        'name' => $event->getTranslation('title', $locale) ?? $event->getTranslation('title', 'en') ?? 'Unnamed',
+                        'subtitle' => $event->start_date ? $event->start_date->format('Y-m-d') : '',
+                        'url' => "/marketplace/events/{$event->id}/edit",
+                    ];
+                })->toArray();
+            }
+
+            // Search Organizers (by name or email)
+            $organizers = MarketplaceOrganizer::query()
+                ->where('marketplace_client_id', $marketplaceId)
+                ->where(function ($q) use ($lowerQuery) {
+                    $q->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
+                        ->orWhereRaw("LOWER(email) LIKE ?", [$lowerQuery])
+                        ->orWhereRaw("LOWER(company_name) LIKE ?", [$lowerQuery]);
+                })
+                ->limit(5)
+                ->get();
+
+            if ($organizers->isNotEmpty()) {
+                $results['organizers'] = $organizers->map(function ($organizer) {
+                    return [
+                        'id' => $organizer->id,
+                        'name' => $organizer->name ?? 'Unnamed',
+                        'subtitle' => $organizer->company_name ?? $organizer->email ?? '',
+                        'url' => "/marketplace/organizers/{$organizer->id}",
+                    ];
+                })->toArray();
+            }
+
+            // Search Venues (by name - translatable JSON field)
+            $venues = Venue::query()
+                ->where('marketplace_client_id', $marketplaceId)
+                ->whereRaw("LOWER(name) LIKE ?", [$lowerQuery])
+                ->limit(5)
+                ->get();
+
+            if ($venues->isNotEmpty()) {
+                $results['venues'] = $venues->map(function ($venue) use ($locale) {
+                    return [
+                        'id' => $venue->id,
+                        'name' => $venue->getTranslation('name', $locale) ?? $venue->getTranslation('name', 'en') ?? 'Unnamed',
+                        'subtitle' => $venue->city ?? '',
+                        'url' => "/marketplace/venues/{$venue->id}/edit",
+                    ];
+                })->toArray();
+            }
+
+            // Search Customers (by first_name, last_name, email, or phone)
+            if (class_exists(MarketplaceCustomer::class)) {
+                $customers = MarketplaceCustomer::query()
+                    ->where('marketplace_client_id', $marketplaceId)
+                    ->where(function ($q) use ($lowerQuery) {
+                        $q->whereRaw("LOWER(first_name) LIKE ?", [$lowerQuery])
+                            ->orWhereRaw("LOWER(last_name) LIKE ?", [$lowerQuery])
+                            ->orWhereRaw("LOWER(email) LIKE ?", [$lowerQuery])
+                            ->orWhereRaw("LOWER(phone) LIKE ?", [$lowerQuery]);
+                    })
+                    ->limit(5)
+                    ->get();
+
+                if ($customers->isNotEmpty()) {
+                    $results['customers'] = $customers->map(function ($customer) {
+                        $name = trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? ''));
+                        return [
+                            'id' => $customer->id,
+                            'name' => $name ?: ($customer->email ?? 'Unnamed'),
+                            'subtitle' => $customer->email ?? '',
+                            'url' => "/marketplace/customers/{$customer->id}/edit",
+                        ];
+                    })->toArray();
+                }
+            }
+
+            // Search Orders (by customer_email or ID)
+            if (class_exists(MarketplaceOrder::class)) {
+                $orders = MarketplaceOrder::query()
+                    ->where('marketplace_client_id', $marketplaceId)
+                    ->where(function ($q) use ($lowerQuery, $query) {
+                        $q->whereRaw("LOWER(customer_email) LIKE ?", [$lowerQuery])
+                            ->orWhere('id', 'LIKE', "%{$query}%");
+                    })
+                    ->limit(5)
+                    ->get();
+
+                if ($orders->isNotEmpty()) {
+                    $results['orders'] = $orders->map(function ($order) {
+                        return [
+                            'id' => $order->id,
+                            'name' => "Order #{$order->id}",
+                            'subtitle' => $order->customer_email ?? '',
+                            'url' => "/marketplace/orders/{$order->id}",
+                        ];
+                    })->toArray();
+                }
+            }
+
+            return response()->json($results);
+        } catch (\Exception $e) {
+            \Log::error('Marketplace search error: ' . $e->getMessage(), [
+                'query' => $request->input('q'),
+                'marketplace' => $marketplaceId,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Search marketplace panel navigation pages
+     */
+    private function searchMarketplacePages(string $query): array
+    {
+        $pages = [
+            // Top level
+            ['name' => 'Dashboard', 'keywords' => ['dashboard', 'acasa', 'home', 'panou'], 'url' => '/marketplace', 'subtitle' => 'Overview dashboard'],
+            ['name' => 'Events', 'keywords' => ['events', 'event', 'evenimente'], 'url' => '/marketplace/events', 'subtitle' => 'Manage events'],
+            ['name' => 'Venues', 'keywords' => ['venues', 'venue', 'locatii', 'location'], 'url' => '/marketplace/venues', 'subtitle' => 'Manage venues'],
+
+            // Organizers
+            ['name' => 'Organizers', 'keywords' => ['organizers', 'organizer', 'organizatori'], 'url' => '/marketplace/organizers', 'subtitle' => 'Manage organizers'],
+
+            // Sales
+            ['name' => 'Orders', 'keywords' => ['orders', 'order', 'comenzi', 'comanda', 'sales', 'vanzari'], 'url' => '/marketplace/orders', 'subtitle' => 'View orders'],
+            ['name' => 'Tickets', 'keywords' => ['tickets', 'ticket', 'bilete', 'bilet'], 'url' => '/marketplace/tickets', 'subtitle' => 'View tickets'],
+            ['name' => 'Customers', 'keywords' => ['customers', 'customer', 'clienti', 'client'], 'url' => '/marketplace/customers', 'subtitle' => 'Customer database'],
+            ['name' => 'Payouts', 'keywords' => ['payouts', 'payout', 'plati', 'payments'], 'url' => '/marketplace/payouts', 'subtitle' => 'Payout management'],
+            ['name' => 'Refund Requests', 'keywords' => ['refund', 'refunds', 'rambursari', 'rambursare'], 'url' => '/marketplace/refund-requests', 'subtitle' => 'Handle refunds'],
+
+            // Services
+            ['name' => 'Microservices', 'keywords' => ['microservices', 'micro', 'services', 'servicii', 'integrations'], 'url' => '/marketplace/microservices', 'subtitle' => 'Integrations'],
+
+            // Content
+            ['name' => 'Pages', 'keywords' => ['pages', 'page', 'pagini', 'content'], 'url' => '/marketplace/pages', 'subtitle' => 'Website pages'],
+            ['name' => 'Blog', 'keywords' => ['blog', 'articles', 'articole'], 'url' => '/marketplace/blog-articles', 'subtitle' => 'Blog articles'],
+
+            // Settings
+            ['name' => 'Settings', 'keywords' => ['settings', 'setari', 'configuration', 'config'], 'url' => '/marketplace/settings', 'subtitle' => 'Account settings'],
+            ['name' => 'Email Templates', 'keywords' => ['email', 'templates', 'sabloane email', 'mail'], 'url' => '/marketplace/email-templates', 'subtitle' => 'Email templates'],
+            ['name' => 'Users', 'keywords' => ['users', 'user', 'utilizatori', 'admin', 'admins'], 'url' => '/marketplace/users', 'subtitle' => 'Platform users'],
+
+            // Shop
+            ['name' => 'Shop Products', 'keywords' => ['shop', 'products', 'produse', 'magazin'], 'url' => '/marketplace/shop-products', 'subtitle' => 'Shop products'],
+            ['name' => 'Gift Cards', 'keywords' => ['gift', 'cards', 'carduri', 'cadou'], 'url' => '/marketplace/gift-cards', 'subtitle' => 'Gift cards'],
         ];
 
         $lowerQuery = mb_strtolower($query);
