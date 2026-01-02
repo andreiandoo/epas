@@ -25,6 +25,11 @@ class ExperienceAction extends Model
     public const ACTION_FIRST_PURCHASE = 'first_purchase';
     public const ACTION_BADGE_EARNED = 'badge_earned';
     public const ACTION_SOCIAL_SHARE = 'social_share';
+    public const ACTION_WISHLIST_ADD = 'wishlist_add';
+    public const ACTION_NEWSLETTER_SUBSCRIBE = 'newsletter_subscribe';
+    public const ACTION_APP_INSTALL = 'app_install';
+    public const ACTION_EARLY_BIRD_PURCHASE = 'early_bird_purchase';
+    public const ACTION_VIP_PURCHASE = 'vip_purchase';
 
     public const ACTION_TYPES = [
         self::ACTION_TICKET_PURCHASE => 'Ticket Purchase',
@@ -35,6 +40,11 @@ class ExperienceAction extends Model
         self::ACTION_FIRST_PURCHASE => 'First Purchase',
         self::ACTION_BADGE_EARNED => 'Badge Earned',
         self::ACTION_SOCIAL_SHARE => 'Social Share',
+        self::ACTION_WISHLIST_ADD => 'Wishlist Add',
+        self::ACTION_NEWSLETTER_SUBSCRIBE => 'Newsletter Subscribe',
+        self::ACTION_APP_INSTALL => 'App Install',
+        self::ACTION_EARLY_BIRD_PURCHASE => 'Early Bird Purchase',
+        self::ACTION_VIP_PURCHASE => 'VIP Purchase',
     ];
 
     // XP types
