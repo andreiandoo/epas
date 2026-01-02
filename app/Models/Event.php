@@ -22,6 +22,8 @@ class Event extends Model
 
     protected $fillable = [
         'tenant_id',
+        'marketplace_client_id',
+        'marketplace_organizer_id',
         'venue_id',
         'ticket_template_id',
         'commission_mode',
@@ -92,6 +94,16 @@ class Event extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function marketplaceClient(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
+    public function marketplaceOrganizer(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceOrganizer::class);
     }
 
     /* Taxonomies (normalized) */
