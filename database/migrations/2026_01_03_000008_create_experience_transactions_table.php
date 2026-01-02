@@ -41,11 +41,11 @@ return new class extends Migration
 
             $table->timestamps();
 
-            // Indexes
-            $table->index(['tenant_id', 'customer_id', 'created_at']);
-            $table->index(['marketplace_client_id', 'customer_id', 'created_at']);
-            $table->index(['customer_id', 'action_type']);
-            $table->index(['triggered_level_up']);
+            // Indexes (shortened names to avoid MySQL 64-char limit)
+            $table->index(['tenant_id', 'customer_id', 'created_at'], 'exp_trans_tenant_cust_created_idx');
+            $table->index(['marketplace_client_id', 'customer_id', 'created_at'], 'exp_trans_mp_cust_created_idx');
+            $table->index(['customer_id', 'action_type'], 'exp_trans_cust_action_idx');
+            $table->index(['triggered_level_up'], 'exp_trans_level_up_idx');
         });
 
         // Add foreign key to customer_badges for experience_transaction_id

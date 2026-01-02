@@ -33,11 +33,11 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
 
-            // Indexes
-            $table->index(['tenant_id', 'action_type', 'is_active']);
-            $table->index(['marketplace_client_id', 'action_type', 'is_active']);
-            $table->unique(['tenant_id', 'action_type']);
-            $table->unique(['marketplace_client_id', 'action_type']);
+            // Indexes (shortened names to avoid MySQL 64-char limit)
+            $table->index(['tenant_id', 'action_type', 'is_active'], 'exp_actions_tenant_type_active_idx');
+            $table->index(['marketplace_client_id', 'action_type', 'is_active'], 'exp_actions_mp_type_active_idx');
+            $table->unique(['tenant_id', 'action_type'], 'exp_actions_tenant_type_unique');
+            $table->unique(['marketplace_client_id', 'action_type'], 'exp_actions_mp_type_unique');
         });
     }
 
