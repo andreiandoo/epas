@@ -56,7 +56,7 @@ class MicroservicesRelationManager extends RelationManager
                     ->label('Microservice')
                     ->searchable()
                     ->sortable()
-                    ->description(fn ($record) => $record->short_description),
+                    ->description(fn ($record) => $record->getTranslation('short_description', app()->getLocale()) ?? ''),
 
                 Tables\Columns\TextColumn::make('slug')
                     ->label('Slug')
