@@ -32,8 +32,8 @@ class Settings extends Page
     {
         $marketplace = static::getMarketplaceClient();
 
-        // Load domains
-        $this->domains = $marketplace ? $marketplace->domains()->orderBy('is_primary', 'desc')->orderBy('created_at', 'desc')->get() : collect();
+        // Domains - MarketplaceClient uses single domain field, not a domains relation
+        $this->domains = collect();
 
         if ($marketplace) {
             $settings = $marketplace->settings ?? [];
