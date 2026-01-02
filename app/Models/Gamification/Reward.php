@@ -10,12 +10,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
-use Spatie\Translatable\HasTranslations;
+use App\Support\Translatable;
 
 class Reward extends Model
 {
     use HasFactory;
-    use HasTranslations;
+    use Translatable;
 
     public array $translatable = ['name', 'description'];
 

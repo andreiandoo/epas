@@ -10,12 +10,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Spatie\Translatable\HasTranslations;
+use App\Support\Translatable;
 
 class ExperienceTransaction extends Model
 {
     use HasFactory;
-    use HasTranslations;
+    use Translatable;
 
     public array $translatable = ['description'];
 
