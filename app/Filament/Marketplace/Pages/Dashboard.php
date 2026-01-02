@@ -3,7 +3,7 @@
 namespace App\Filament\Marketplace\Pages;
 
 use App\Models\MarketplaceClient;
-use App\Models\MarketplaceEvent;
+use App\Models\Event;
 use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplacePayout;
 use App\Models\MarketplaceCustomer;
@@ -67,18 +67,31 @@ class Dashboard extends Page
         $startDate = Carbon::now()->subDays($days)->startOfDay();
         $endDate = Carbon::now()->endOfDay();
 
-        // Active events (upcoming or ongoing)
-        $activeEvents = MarketplaceEvent::where('marketplace_client_id', $marketplaceId)
-            ->where('status', 'published')
-            ->where(function ($query) {
-                $today = Carbon::now()->startOfDay();
-                $query->where('start_date', '>=', $today)
-                    ->orWhere('end_date', '>=', $today);
+        // Active events (upcoming or ongoing) - using Event model with correct fields
+        $today = Carbon::now()->startOfDay();
+        $activeEvents = Event::where('marketplace_client_id', $marketplaceId)
+            ->where('is_cancelled', false)
+            ->where(function ($query) use ($today) {
+                // Single day events
+                $query->where(function ($q) use ($today) {
+                    $q->where('duration_mode', 'single_day')
+                      ->where('event_date', '>=', $today);
+                })
+                // Range events
+                ->orWhere(function ($q) use ($today) {
+                    $q->where('duration_mode', 'range')
+                      ->where('range_end_date', '>=', $today);
+                })
+                // Multi-day events
+                ->orWhere(function ($q) use ($today) {
+                    $q->whereNotIn('duration_mode', ['single_day', 'range'])
+                      ->whereNotNull('multi_slots');
+                });
             })
             ->count();
 
         // Total events
-        $totalEvents = MarketplaceEvent::where('marketplace_client_id', $marketplaceId)->count();
+        $totalEvents = Event::where('marketplace_client_id', $marketplaceId)->count();
 
         // Total organizers
         $totalOrganizers = MarketplaceOrganizer::where('marketplace_client_id', $marketplaceId)->count();
@@ -92,17 +105,17 @@ class Dashboard extends Page
         $totalCustomers = MarketplaceCustomer::where('marketplace_client_id', $marketplaceId)->count();
 
         // Total revenue (from orders linked to marketplace events)
-        $eventIds = MarketplaceEvent::where('marketplace_client_id', $marketplaceId)
+        $eventIds = Event::where('marketplace_client_id', $marketplaceId)
             ->pluck('id')
             ->toArray();
 
-        $totalRevenue = Order::whereIn('marketplace_event_id', $eventIds)
+        $totalRevenue = Order::whereIn('event_id', $eventIds)
             ->whereIn('status', ['paid', 'confirmed'])
             ->sum('total_cents') / 100;
 
         // Total tickets sold
         $totalTickets = Ticket::whereHas('order', function ($query) use ($eventIds) {
-            $query->whereIn('marketplace_event_id', $eventIds)
+            $query->whereIn('event_id', $eventIds)
                 ->whereIn('status', ['paid', 'confirmed']);
         })->count();
 
@@ -165,7 +178,7 @@ class Dashboard extends Page
         }
 
         // Get daily totals
-        $dailySales = Order::whereIn('marketplace_event_id', $eventIds)
+        $dailySales = Order::whereIn('event_id', $eventIds)
             ->whereIn('status', ['paid', 'confirmed'])
             ->whereBetween('created_at', [$startDate, $endDate])
             ->selectRaw('DATE(created_at) as date, SUM(total_cents) / 100 as total')
@@ -204,9 +217,9 @@ class Dashboard extends Page
         }
 
         // Get tickets grouped by date
-        $tickets = Ticket::with(['ticketType.marketplaceEvent', 'order'])
+        $tickets = Ticket::with(['ticketType.event', 'order'])
             ->whereHas('order', function ($query) use ($eventIds, $startDate, $endDate) {
-                $query->whereIn('marketplace_event_id', $eventIds)
+                $query->whereIn('event_id', $eventIds)
                     ->whereIn('status', ['paid', 'confirmed'])
                     ->whereBetween('created_at', [$startDate, $endDate]);
             })
