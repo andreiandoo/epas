@@ -135,7 +135,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
 
             <div class="p-5 lg:p-6">
                 <!-- Card Preview -->
-                <div class="p-5 mb-6 text-white credit-card">
+                <div class="p-5 mb-6 text-white credit-card" style="background: linear-gradient(135deg, #1E293B 0%, #334155 100%);    border-radius: 16px;    aspect-ratio: 1.586;    max-width: 400px;">
                     <div class="flex items-start justify-between mb-8">
                         <div class="w-12 h-10 rounded bg-gradient-to-br from-yellow-200 to-yellow-400"></div>
                         <svg class="w-12 h-8" viewBox="0 0 60 20" fill="white">

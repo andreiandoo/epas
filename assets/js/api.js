@@ -263,6 +263,24 @@ const AmbiletAPI = {
      * Convert endpoint to proxy action
      */
     getProxyAction(endpoint) {
+        // Customer auth endpoints
+        if (endpoint === '/customer/register') return 'customer.register';
+        if (endpoint === '/customer/login') return 'customer.login';
+        if (endpoint === '/customer/logout') return 'customer.logout';
+        if (endpoint === '/customer/me') return 'customer.me';
+        if (endpoint === '/customer/profile') return 'customer.profile';
+        if (endpoint === '/customer/password') return 'customer.password';
+        if (endpoint === '/customer/settings') return 'customer.settings';
+        if (endpoint === '/customer/forgot-password') return 'customer.forgot-password';
+        if (endpoint === '/customer/reset-password') return 'customer.reset-password';
+        if (endpoint === '/customer/verify-email') return 'customer.verify-email';
+        if (endpoint === '/customer/resend-verification') return 'customer.resend-verification';
+        if (endpoint.includes('/customer/orders/')) return 'customer.order';
+        if (endpoint.includes('/customer/orders')) return 'customer.orders';
+        if (endpoint.includes('/customer/tickets')) return 'customer.tickets';
+        if (endpoint.includes('/customer/stats')) return 'customer.stats';
+
+        // Public endpoints
         if (endpoint.includes('/search')) return 'search';
         if (endpoint.includes('/marketplace-events/categories')) return 'categories';
         if (endpoint.includes('/marketplace-events/cities')) return 'cities';
@@ -281,6 +299,12 @@ const AmbiletAPI = {
      * Extract params from endpoint for proxy
      */
     getProxyParams(endpoint) {
+        // Extract order ID from /customer/orders/{id}
+        const orderMatch = endpoint.match(/\/customer\/orders\/(\d+)/);
+        if (orderMatch) {
+            return `id=${encodeURIComponent(orderMatch[1])}`;
+        }
+
         // Extract slug from endpoints like /marketplace-events/event-slug
         const eventMatch = endpoint.match(/\/marketplace-events\/([a-z0-9-]+)$/i);
         if (eventMatch) {

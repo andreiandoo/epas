@@ -60,13 +60,38 @@ require_once dirname(__DIR__) . '/includes/header.php';
             <div class="p-6 bg-white border rounded-2xl border-border">
                 <h2 class="mb-4 text-lg font-bold text-secondary">Limba si regiune</h2>
 
-                <div class="grid gap-4 md:grid-cols-2">
+                <div class="grid gap-4 md:grid-cols-3">
                     <div>
                         <label class="label">Limba</label>
                         <select class="input" id="language">
                             <option value="ro" selected>Romana</option>
                             <option value="en">English</option>
                         </select>
+                    </div>
+                    <div>
+                        <label class="label">Oras de baza</label>
+                        <select class="input" id="city">
+                            <option value="">Selecteaza orasul</option>
+                            <option value="București">București</option>
+                            <option value="Cluj-Napoca">Cluj-Napoca</option>
+                            <option value="Timișoara">Timișoara</option>
+                            <option value="Iași">Iași</option>
+                            <option value="Constanța">Constanța</option>
+                            <option value="Craiova">Craiova</option>
+                            <option value="Brașov">Brașov</option>
+                            <option value="Galați">Galați</option>
+                            <option value="Ploiești">Ploiești</option>
+                            <option value="Oradea">Oradea</option>
+                            <option value="Sibiu">Sibiu</option>
+                            <option value="Arad">Arad</option>
+                            <option value="Pitești">Pitești</option>
+                            <option value="Bacău">Bacău</option>
+                            <option value="Târgu Mureș">Târgu Mureș</option>
+                            <option value="Baia Mare">Baia Mare</option>
+                            <option value="Buzău">Buzău</option>
+                            <option value="Suceava">Suceava</option>
+                        </select>
+                        <p class="mt-1 text-xs text-muted">Vei vedea prioritar evenimente din acest oras</p>
                     </div>
                     <div>
                         <label class="label">Moneda</label>
@@ -165,6 +190,8 @@ require_once dirname(__DIR__) . '/includes/header.php';
 $scriptsExtra = <<<'JS'
 <script>
 const SettingsPage = {
+    isSaving: false,
+
     init() {
         if (!AmbiletAuth.isAuthenticated()) {
             window.location.href = '/autentificare?redirect=/cont/setari';
@@ -173,6 +200,7 @@ const SettingsPage = {
 
         this.loadUserInfo();
         this.loadSettings();
+        this.loadProfileFromAPI();
     },
 
     loadUserInfo() {
@@ -191,7 +219,7 @@ const SettingsPage = {
     },
 
     loadSettings() {
-        // Load saved settings from localStorage
+        // Load notification/privacy settings from localStorage cache
         const settings = JSON.parse(localStorage.getItem('ambilet_settings') || '{}');
 
         if (settings.reminders !== undefined) {
@@ -209,28 +237,114 @@ const SettingsPage = {
         if (settings.marketing !== undefined) {
             document.getElementById('privacy-marketing').checked = settings.marketing;
         }
-        if (settings.language) {
+
+        // Load city and language from user cache first (instant)
+        const cachedProfile = JSON.parse(localStorage.getItem('ambilet_profile') || '{}');
+        if (cachedProfile.city) {
+            document.getElementById('city').value = cachedProfile.city;
+        }
+        if (cachedProfile.locale) {
+            document.getElementById('language').value = cachedProfile.locale;
+        } else if (settings.language) {
             document.getElementById('language').value = settings.language;
+        }
+    },
+
+    async loadProfileFromAPI() {
+        try {
+            const response = await AmbiletAPI.customer.getProfile();
+            if (response.success && response.data?.customer) {
+                const customer = response.data.customer;
+
+                // Update city and language from API
+                if (customer.city) {
+                    document.getElementById('city').value = customer.city;
+                }
+                if (customer.locale) {
+                    document.getElementById('language').value = customer.locale;
+                }
+                if (customer.accepts_marketing !== undefined) {
+                    document.getElementById('notif-newsletter').checked = customer.accepts_marketing;
+                }
+
+                // Cache profile data
+                localStorage.setItem('ambilet_profile', JSON.stringify({
+                    city: customer.city,
+                    locale: customer.locale
+                }));
+            }
+        } catch (error) {
+            console.log('Could not load profile from API, using cached settings');
         }
     }
 };
 
-function saveSettings() {
-    const settings = {
-        reminders: document.getElementById('notif-reminders').checked,
-        newsletter: document.getElementById('notif-newsletter').checked,
-        favorites: document.getElementById('notif-favorites').checked,
-        history: document.getElementById('privacy-history').checked,
-        marketing: document.getElementById('privacy-marketing').checked,
-        language: document.getElementById('language').value
-    };
+async function saveSettings() {
+    if (SettingsPage.isSaving) return;
+    SettingsPage.isSaving = true;
 
-    localStorage.setItem('ambilet_settings', JSON.stringify(settings));
+    const saveBtn = document.querySelector('button[onclick="saveSettings()"]');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<span class="loading-spinner"></span> Se salveaza...';
+    saveBtn.disabled = true;
 
-    // Try to save to API
-    AmbiletAPI.put('/customer/settings', settings).catch(() => {});
+    try {
+        // Gather all settings
+        const notificationSettings = {
+            reminders: document.getElementById('notif-reminders').checked,
+            newsletter: document.getElementById('notif-newsletter').checked,
+            favorites: document.getElementById('notif-favorites').checked,
+            history: document.getElementById('privacy-history').checked,
+            marketing: document.getElementById('privacy-marketing').checked
+        };
 
-    AmbiletNotifications.success('Setarile au fost salvate!');
+        const profileData = {
+            city: document.getElementById('city').value,
+            locale: document.getElementById('language').value
+        };
+
+        // Save notification preferences to localStorage (and API for newsletter)
+        localStorage.setItem('ambilet_settings', JSON.stringify({
+            ...notificationSettings,
+            language: profileData.locale
+        }));
+
+        // Cache profile data
+        localStorage.setItem('ambilet_profile', JSON.stringify(profileData));
+
+        // Save profile data (city, locale) to API
+        let apiSuccess = true;
+        try {
+            await AmbiletAPI.put('/customer/profile', profileData);
+        } catch (error) {
+            console.error('Failed to save profile to API:', error);
+            apiSuccess = false;
+        }
+
+        // Save marketing preference to API
+        try {
+            await AmbiletAPI.put('/customer/settings', {
+                accepts_marketing: notificationSettings.newsletter,
+                notification_preferences: notificationSettings
+            });
+        } catch (error) {
+            console.error('Failed to save settings to API:', error);
+        }
+
+        if (apiSuccess) {
+            AmbiletNotifications.success('Setarile au fost salvate!');
+        } else {
+            AmbiletNotifications.success('Setarile au fost salvate local. Vor fi sincronizate cand conexiunea este disponibila.');
+        }
+
+    } catch (error) {
+        console.error('Error saving settings:', error);
+        AmbiletNotifications.error('A aparut o eroare la salvare. Te rugam sa incerci din nou.');
+    } finally {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+        SettingsPage.isSaving = false;
+    }
 }
 
 function downloadData() {
