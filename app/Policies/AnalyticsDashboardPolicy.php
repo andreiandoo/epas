@@ -3,34 +3,45 @@
 namespace App\Policies;
 
 use App\Models\User;
+use App\Models\MarketplaceAdmin;
 use App\Models\AnalyticsDashboard;
+use Illuminate\Contracts\Auth\Authenticatable;
 
 class AnalyticsDashboardPolicy
 {
-    public function viewAny(User $user): bool
+    public function viewAny(Authenticatable $user): bool
     {
         return true;
     }
 
-    public function view(User $user, AnalyticsDashboard $dashboard): bool
+    public function view(Authenticatable $user, AnalyticsDashboard $dashboard): bool
     {
+        if ($user instanceof MarketplaceAdmin) {
+            return $dashboard->marketplace_client_id === $user->marketplace_client_id;
+        }
         return $user->tenant_id === $dashboard->tenant_id
             && ($dashboard->user_id === $user->id || $dashboard->is_shared);
     }
 
-    public function create(User $user): bool
+    public function create(Authenticatable $user): bool
     {
         return true;
     }
 
-    public function update(User $user, AnalyticsDashboard $dashboard): bool
+    public function update(Authenticatable $user, AnalyticsDashboard $dashboard): bool
     {
+        if ($user instanceof MarketplaceAdmin) {
+            return $dashboard->marketplace_client_id === $user->marketplace_client_id;
+        }
         return $user->tenant_id === $dashboard->tenant_id
             && $dashboard->user_id === $user->id;
     }
 
-    public function delete(User $user, AnalyticsDashboard $dashboard): bool
+    public function delete(Authenticatable $user, AnalyticsDashboard $dashboard): bool
     {
+        if ($user instanceof MarketplaceAdmin) {
+            return $dashboard->marketplace_client_id === $user->marketplace_client_id && !$dashboard->is_default;
+        }
         return $user->tenant_id === $dashboard->tenant_id
             && $dashboard->user_id === $user->id
             && !$dashboard->is_default;
