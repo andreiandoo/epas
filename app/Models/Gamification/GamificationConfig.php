@@ -210,6 +210,31 @@ class GamificationConfig extends Model
             ]
         );
     }
+
+    /**
+     * Get or create config for a marketplace client
+     */
+    public static function getOrCreateForMarketplace(int $marketplaceClientId): self
+    {
+        return self::firstOrCreate(
+            ['marketplace_client_id' => $marketplaceClientId],
+            [
+                'point_value' => 0.01,
+                'currency' => 'RON',
+                'earn_percentage' => 5.00,
+                'min_order_for_earning' => 0,
+                'min_redeem_points' => 100,
+                'max_redeem_percentage' => 50.00,
+                'birthday_bonus_points' => 100,
+                'signup_bonus_points' => 50,
+                'referral_bonus_points' => 200,
+                'referred_bonus_points' => 100,
+                'points_name' => 'puncte',
+                'points_name_singular' => 'punct',
+                'is_active' => true,
+            ]
+        );
+    }
     /**
      * Get the marketplace client that owns this record
      */

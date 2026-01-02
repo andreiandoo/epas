@@ -23,7 +23,7 @@ class ListGamificationConfigs extends ListRecords
         // Auto-create config if it doesn't exist and redirect to edit
         $marketplace = static::getMarketplaceClient();
         if ($marketplace) {
-            $config = GamificationConfig::getOrCreateForTenant($marketplace->id);
+            $config = GamificationConfig::getOrCreateForMarketplace($marketplace->id);
             $this->redirect(GamificationConfigResource::getUrl('edit', ['record' => $config]));
             return;
         }
