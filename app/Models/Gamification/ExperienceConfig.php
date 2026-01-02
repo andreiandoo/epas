@@ -38,6 +38,8 @@ class ExperienceConfig extends Model
     ];
 
     protected $casts = [
+        'xp_name' => 'array',
+        'level_name' => 'array',
         'base_xp_per_level' => 'integer',
         'level_multiplier' => 'decimal:2',
         'custom_levels' => 'array',

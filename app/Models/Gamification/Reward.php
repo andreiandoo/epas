@@ -44,6 +44,8 @@ class Reward extends Model
     ];
 
     protected $casts = [
+        'name' => 'array',
+        'description' => 'array',
         'points_cost' => 'integer',
         'value' => 'decimal:2',
         'min_order_value' => 'decimal:2',

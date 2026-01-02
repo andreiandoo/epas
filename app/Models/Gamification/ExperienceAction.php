@@ -58,6 +58,8 @@ class ExperienceAction extends Model
     ];
 
     protected $casts = [
+        'name' => 'array',
+        'description' => 'array',
         'xp_amount' => 'integer',
         'xp_per_currency_unit' => 'decimal:2',
         'max_xp_per_action' => 'integer',

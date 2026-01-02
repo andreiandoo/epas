@@ -69,6 +69,8 @@ class Badge extends Model
     ];
 
     protected $casts = [
+        'name' => 'array',
+        'description' => 'array',
         'xp_reward' => 'integer',
         'bonus_points' => 'integer',
         'conditions' => 'array',
