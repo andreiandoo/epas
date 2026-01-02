@@ -14,7 +14,7 @@ return new class extends Migration
         // Email Templates for marketplace
         Schema::create('marketplace_email_templates', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('marketplace_client_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('marketplace_client_id');
             $table->string('slug')->index(); // e.g., 'ticket_purchase', 'welcome', 'points_earned'
             $table->string('name');
             $table->string('subject');
@@ -26,17 +26,19 @@ return new class extends Migration
             $table->boolean('is_default')->default(false);
             $table->timestamps();
 
-            $table->unique(['marketplace_client_id', 'slug']);
+            $table->foreign('marketplace_client_id', 'mkt_email_tpl_client_fk')
+                ->references('id')->on('marketplace_clients')->onDelete('cascade');
+            $table->unique(['marketplace_client_id', 'slug'], 'mkt_email_tpl_client_slug_unique');
         });
 
         // Email Logs
         Schema::create('marketplace_email_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('marketplace_client_id')->constrained()->onDelete('cascade');
-            $table->foreignId('marketplace_organizer_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('marketplace_customer_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('marketplace_event_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('order_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('marketplace_client_id');
+            $table->unsignedBigInteger('marketplace_organizer_id')->nullable();
+            $table->unsignedBigInteger('marketplace_customer_id')->nullable();
+            $table->unsignedBigInteger('marketplace_event_id')->nullable();
+            $table->unsignedBigInteger('order_id')->nullable();
             $table->string('template_slug')->nullable();
             $table->string('from_email')->nullable();
             $table->string('from_name')->nullable();
@@ -56,14 +58,24 @@ return new class extends Migration
             $table->json('metadata')->nullable();
             $table->timestamps();
 
-            $table->index(['marketplace_client_id', 'status']);
+            $table->foreign('marketplace_client_id', 'mkt_email_log_client_fk')
+                ->references('id')->on('marketplace_clients')->onDelete('cascade');
+            $table->foreign('marketplace_organizer_id', 'mkt_email_log_org_fk')
+                ->references('id')->on('marketplace_organizers')->nullOnDelete();
+            $table->foreign('marketplace_customer_id', 'mkt_email_log_cust_fk')
+                ->references('id')->on('marketplace_customers')->nullOnDelete();
+            $table->foreign('marketplace_event_id', 'mkt_email_log_event_fk')
+                ->references('id')->on('marketplace_events')->nullOnDelete();
+            $table->foreign('order_id', 'mkt_email_log_order_fk')
+                ->references('id')->on('orders')->nullOnDelete();
+            $table->index(['marketplace_client_id', 'status'], 'mkt_email_log_status_idx');
             $table->index('to_email');
         });
 
         // Contact Lists for newsletters
         Schema::create('marketplace_contact_lists', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('marketplace_client_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('marketplace_client_id');
             $table->string('name');
             $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);
@@ -72,47 +84,59 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
+            $table->foreign('marketplace_client_id', 'mkt_contact_list_client_fk')
+                ->references('id')->on('marketplace_clients')->onDelete('cascade');
             $table->index('marketplace_client_id');
         });
 
         // Contact Tags
         Schema::create('marketplace_contact_tags', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('marketplace_client_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('marketplace_client_id');
             $table->string('name');
             $table->string('color')->default('#6366f1');
             $table->timestamps();
 
-            $table->unique(['marketplace_client_id', 'name']);
+            $table->foreign('marketplace_client_id', 'mkt_contact_tag_client_fk')
+                ->references('id')->on('marketplace_clients')->onDelete('cascade');
+            $table->unique(['marketplace_client_id', 'name'], 'mkt_contact_tag_unique');
         });
 
         // Contact List Members (pivot)
         Schema::create('marketplace_contact_list_members', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('list_id')->constrained('marketplace_contact_lists')->onDelete('cascade');
-            $table->foreignId('marketplace_customer_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('list_id');
+            $table->unsignedBigInteger('marketplace_customer_id');
             $table->string('status')->default('subscribed'); // subscribed, unsubscribed, bounced
             $table->timestamp('subscribed_at')->nullable();
             $table->timestamp('unsubscribed_at')->nullable();
             $table->timestamps();
 
+            $table->foreign('list_id', 'mkt_list_member_list_fk')
+                ->references('id')->on('marketplace_contact_lists')->onDelete('cascade');
+            $table->foreign('marketplace_customer_id', 'mkt_list_member_cust_fk')
+                ->references('id')->on('marketplace_customers')->onDelete('cascade');
             $table->unique(['list_id', 'marketplace_customer_id'], 'mkt_list_customer_unique');
         });
 
         // Contact Tag assignments (pivot)
         Schema::create('marketplace_customer_tags', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('marketplace_customer_id')->constrained()->onDelete('cascade');
-            $table->foreignId('tag_id')->constrained('marketplace_contact_tags')->onDelete('cascade');
+            $table->unsignedBigInteger('marketplace_customer_id');
+            $table->unsignedBigInteger('tag_id');
             $table->timestamps();
 
+            $table->foreign('marketplace_customer_id', 'mkt_cust_tag_cust_fk')
+                ->references('id')->on('marketplace_customers')->onDelete('cascade');
+            $table->foreign('tag_id', 'mkt_cust_tag_tag_fk')
+                ->references('id')->on('marketplace_contact_tags')->onDelete('cascade');
             $table->unique(['marketplace_customer_id', 'tag_id'], 'mkt_customer_tag_unique');
         });
 
         // Newsletters/Campaigns
         Schema::create('marketplace_newsletters', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('marketplace_client_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('marketplace_client_id');
             $table->string('name');
             $table->string('subject');
             $table->string('preview_text')->nullable();
@@ -133,18 +157,22 @@ return new class extends Migration
             $table->integer('opened_count')->default(0);
             $table->integer('clicked_count')->default(0);
             $table->integer('unsubscribed_count')->default(0);
-            $table->foreignId('created_by')->nullable()->constrained('marketplace_admins')->nullOnDelete();
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['marketplace_client_id', 'status']);
+            $table->foreign('marketplace_client_id', 'mkt_newsletter_client_fk')
+                ->references('id')->on('marketplace_clients')->onDelete('cascade');
+            $table->foreign('created_by', 'mkt_newsletter_admin_fk')
+                ->references('id')->on('marketplace_admins')->nullOnDelete();
+            $table->index(['marketplace_client_id', 'status'], 'mkt_newsletter_status_idx');
         });
 
         // Newsletter Recipients
         Schema::create('marketplace_newsletter_recipients', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('newsletter_id')->constrained('marketplace_newsletters')->onDelete('cascade');
-            $table->foreignId('marketplace_customer_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('newsletter_id');
+            $table->unsignedBigInteger('marketplace_customer_id');
             $table->string('email');
             $table->string('status')->default('pending'); // pending, sent, failed, bounced, opened, clicked, unsubscribed
             $table->string('message_id')->nullable();
@@ -156,7 +184,11 @@ return new class extends Migration
             $table->text('error_message')->nullable();
             $table->timestamps();
 
-            $table->index(['newsletter_id', 'status']);
+            $table->foreign('newsletter_id', 'mkt_nl_recip_newsletter_fk')
+                ->references('id')->on('marketplace_newsletters')->onDelete('cascade');
+            $table->foreign('marketplace_customer_id', 'mkt_nl_recip_customer_fk')
+                ->references('id')->on('marketplace_customers')->onDelete('cascade');
+            $table->index(['newsletter_id', 'status'], 'mkt_nl_recip_status_idx');
         });
 
         // SMTP Settings (add to marketplace_clients settings or separate table)
