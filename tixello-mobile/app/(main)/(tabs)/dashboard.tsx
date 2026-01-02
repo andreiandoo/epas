@@ -15,14 +15,16 @@ import { useAuthStore } from '../../../src/stores/authStore';
 import { useEventStore } from '../../../src/stores/eventStore';
 import { useAppStore } from '../../../src/stores/appStore';
 import { useCartStore } from '../../../src/stores/cartStore';
+import { useCheckInStore } from '../../../src/stores/checkInStore';
 import { eventsApi, reportsApi } from '../../../src/api';
 import { colors, spacing, typography, borderRadius } from '../../../src/utils/theme';
 
 export default function DashboardScreen() {
-  const { user, tenant } = useAuthStore();
+  const { user, tenant, canViewRevenue, canAccessSales, isStaff } = useAuthStore();
   const { selectedEvent, setSelectedEvent, events, setEvents, setLiveStats } = useEventStore();
   const { isOnline, shiftStartTime, notifications, setShowNotifications } = useAppStore();
   const { shiftCashCollected, shiftCardCollected } = useCartStore();
+  const { scanHistory } = useCheckInStore();
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [stats, setStats] = useState({
@@ -32,7 +34,12 @@ export default function DashboardScreen() {
     ticketsSold: 0,
   });
 
-  const isAdmin = user?.role === 'admin';
+  // Get staff scan stats from history
+  const staffScansToday = scanHistory.filter(s => {
+    const scanDate = new Date(s.scanned_at).toDateString();
+    return scanDate === new Date().toDateString();
+  }).length;
+  const validScans = scanHistory.filter(s => s.status === 'valid').length;
 
   useEffect(() => {
     loadData();
@@ -138,8 +145,8 @@ export default function DashboardScreen() {
           />
         }
       >
-        {isAdmin ? (
-          // Admin Dashboard
+        {!isStaff() ? (
+          // Admin/Supervisor Dashboard - Full Stats
           <>
             {/* Stats Grid */}
             <View style={styles.statsGrid}>
@@ -154,10 +161,12 @@ export default function DashboardScreen() {
                 </View>
               </Card>
 
-              <Card style={styles.statCard}>
-                <Text style={styles.statValue}>{formatCurrency(stats.totalRevenue)}</Text>
-                <Text style={styles.statLabel}>Total Revenue</Text>
-              </Card>
+              {canViewRevenue() && (
+                <Card style={styles.statCard}>
+                  <Text style={styles.statValue}>{formatCurrency(stats.totalRevenue)}</Text>
+                  <Text style={styles.statLabel}>Total Revenue</Text>
+                </Card>
+              )}
 
               <Card style={styles.statCard}>
                 <Text style={styles.statValue}>{stats.capacity}%</Text>
@@ -185,15 +194,17 @@ export default function DashboardScreen() {
                 <Text style={styles.actionLabel}>Scan</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => router.push('/(main)/(tabs)/sales')}
-              >
-                <View style={[styles.actionIcon, { backgroundColor: colors.successLight }]}>
-                  <Ionicons name="cart" size={22} color={colors.success} />
-                </View>
-                <Text style={styles.actionLabel}>Sell</Text>
-              </TouchableOpacity>
+              {canAccessSales() && (
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => router.push('/(main)/(tabs)/sales')}
+                >
+                  <View style={[styles.actionIcon, { backgroundColor: colors.successLight }]}>
+                    <Ionicons name="cart" size={22} color={colors.success} />
+                  </View>
+                  <Text style={styles.actionLabel}>Sell</Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity style={styles.actionButton}>
                 <View style={[styles.actionIcon, { backgroundColor: colors.infoLight }]}>
@@ -211,56 +222,85 @@ export default function DashboardScreen() {
             </View>
           </>
         ) : (
-          // Scanner/Staff Dashboard
+          // Staff Dashboard (Scanner/POS) - Simplified View
           <>
-            {/* Shift Summary Card */}
+            {/* Staff Stats Card */}
             <Card style={styles.shiftCard}>
               <View style={styles.shiftHeader}>
-                <Ionicons name="cash" size={20} color={colors.textPrimary} />
-                <Text style={styles.shiftTitle}>Shift Summary</Text>
+                <Ionicons name="stats-chart" size={20} color={colors.textPrimary} />
+                <Text style={styles.shiftTitle}>Your Shift</Text>
+                <Text style={styles.shiftTime}>Started {shiftStartTime || '—'}</Text>
               </View>
-              <View style={styles.shiftGrid}>
-                <View style={styles.shiftItem}>
-                  <View style={[styles.shiftIcon, { backgroundColor: colors.successLight }]}>
-                    <Ionicons name="cash-outline" size={24} color={colors.success} />
-                  </View>
-                  <View>
-                    <Text style={styles.shiftItemLabel}>Cash to turn over</Text>
-                    <Text style={[styles.shiftItemValue, { color: colors.success }]}>
-                      {formatCurrency(shiftCashCollected)}
-                    </Text>
-                  </View>
+              <View style={styles.staffStatsGrid}>
+                <View style={styles.staffStatItem}>
+                  <Text style={styles.staffStatValue}>{staffScansToday}</Text>
+                  <Text style={styles.staffStatLabel}>Scans Today</Text>
                 </View>
-                <View style={styles.shiftItem}>
-                  <View style={[styles.shiftIcon, { backgroundColor: colors.infoLight }]}>
-                    <Ionicons name="card-outline" size={24} color={colors.info} />
-                  </View>
-                  <View>
-                    <Text style={styles.shiftItemLabel}>Card payments</Text>
-                    <Text style={[styles.shiftItemValue, { color: colors.info }]}>
-                      {formatCurrency(shiftCardCollected)}
-                    </Text>
-                  </View>
+                <View style={styles.staffStatDivider} />
+                <View style={styles.staffStatItem}>
+                  <Text style={[styles.staffStatValue, { color: colors.success }]}>{validScans}</Text>
+                  <Text style={styles.staffStatLabel}>Valid</Text>
+                </View>
+                <View style={styles.staffStatDivider} />
+                <View style={styles.staffStatItem}>
+                  <Text style={[styles.staffStatValue, { color: colors.error }]}>{staffScansToday - validScans}</Text>
+                  <Text style={styles.staffStatLabel}>Invalid</Text>
                 </View>
               </View>
             </Card>
+
+            {/* Shift Summary Card - only for POS role */}
+            {canAccessSales() && (
+              <Card style={styles.shiftCard}>
+                <View style={styles.shiftHeader}>
+                  <Ionicons name="cash" size={20} color={colors.textPrimary} />
+                  <Text style={styles.shiftTitle}>Sales Summary</Text>
+                </View>
+                <View style={styles.shiftGrid}>
+                  <View style={styles.shiftItem}>
+                    <View style={[styles.shiftIcon, { backgroundColor: colors.successLight }]}>
+                      <Ionicons name="cash-outline" size={24} color={colors.success} />
+                    </View>
+                    <View>
+                      <Text style={styles.shiftItemLabel}>Cash to turn over</Text>
+                      <Text style={[styles.shiftItemValue, { color: colors.success }]}>
+                        {formatCurrency(shiftCashCollected)}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.shiftItem}>
+                    <View style={[styles.shiftIcon, { backgroundColor: colors.infoLight }]}>
+                      <Ionicons name="card-outline" size={24} color={colors.info} />
+                    </View>
+                    <View>
+                      <Text style={styles.shiftItemLabel}>Card payments</Text>
+                      <Text style={[styles.shiftItemValue, { color: colors.info }]}>
+                        {formatCurrency(shiftCardCollected)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </Card>
+            )}
 
             {/* Quick Actions for Staff */}
             <View style={styles.staffActions}>
               <Button
                 title="Scan Tickets"
                 onPress={() => router.push('/(main)/(tabs)/checkin')}
-                icon={<Ionicons name="camera" size={20} color={colors.textPrimary} />}
+                icon={<Ionicons name="camera" size={20} color="#fff" />}
                 size="lg"
                 style={styles.staffActionButton}
               />
-              <Button
-                title="Sell Tickets"
-                onPress={() => router.push('/(main)/(tabs)/sales')}
-                icon={<Ionicons name="cart" size={20} color={colors.textPrimary} />}
-                size="lg"
-                style={[styles.staffActionButton, { backgroundColor: colors.success }]}
-              />
+              {canAccessSales() && (
+                <Button
+                  title="Sell Tickets"
+                  onPress={() => router.push('/(main)/(tabs)/sales')}
+                  icon={<Ionicons name="cart" size={20} color="#fff" />}
+                  size="lg"
+                  style={[styles.staffActionButton, { backgroundColor: colors.success }]}
+                />
+              )}
             </View>
           </>
         )}
@@ -454,6 +494,36 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.lg,
     fontWeight: '600',
     color: colors.textPrimary,
+    flex: 1,
+  },
+  shiftTime: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textMuted,
+  },
+  staffStatsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  staffStatItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  staffStatValue: {
+    fontSize: typography.fontSize.xxl,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    fontFamily: typography.fontFamily.mono,
+  },
+  staffStatLabel: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
+  },
+  staffStatDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: colors.border,
   },
   shiftGrid: {
     gap: spacing.md,

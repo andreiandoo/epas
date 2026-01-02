@@ -1,10 +1,53 @@
+// User Roles
+export type UserRole = 'admin' | 'supervisor' | 'pos' | 'scanner';
+
+// Role permissions - defines what each role can access
+export const ROLE_PERMISSIONS = {
+  admin: {
+    canAccessDashboard: true,
+    canAccessCheckIn: true,
+    canAccessSales: true,
+    canAccessReports: true,
+    canAccessSettings: true,
+    canViewRevenue: true,
+    canManageStaff: true,
+  },
+  supervisor: {
+    canAccessDashboard: true,
+    canAccessCheckIn: true,
+    canAccessSales: true,
+    canAccessReports: true,
+    canAccessSettings: true,
+    canViewRevenue: true,
+    canManageStaff: false,
+  },
+  pos: {
+    canAccessDashboard: true,
+    canAccessCheckIn: true,
+    canAccessSales: true,
+    canAccessReports: false,
+    canAccessSettings: true,
+    canViewRevenue: false,
+    canManageStaff: false,
+  },
+  scanner: {
+    canAccessDashboard: true,
+    canAccessCheckIn: true,
+    canAccessSales: false,
+    canAccessReports: false,
+    canAccessSettings: true,
+    canViewRevenue: false,
+    canManageStaff: false,
+  },
+} as const;
+
 // User and Authentication Types
 export interface User {
   id: number;
   email: string;
   first_name: string;
   last_name: string;
-  role: 'admin' | 'scanner' | 'pos' | 'supervisor';
+  role: UserRole;
   tenant_id: number;
 }
 

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
-import { User, Tenant } from '../types';
+import { User, Tenant, ROLE_PERMISSIONS, UserRole } from '../types';
 
 interface AuthState {
   user: User | null;
@@ -9,6 +9,14 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+
+  // Role permission helpers
+  canAccessSales: () => boolean;
+  canAccessReports: () => boolean;
+  canViewRevenue: () => boolean;
+  canManageStaff: () => boolean;
+  isAdmin: () => boolean;
+  isStaff: () => boolean;
 
   // Actions
   setUser: (user: User | null) => void;
@@ -21,6 +29,12 @@ interface AuthState {
   loadStoredAuth: () => Promise<void>;
 }
 
+// Helper function to get permissions for a role
+const getPermissions = (role: UserRole | undefined) => {
+  if (!role) return ROLE_PERMISSIONS.scanner; // Default to most restricted
+  return ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS.scanner;
+};
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
@@ -28,6 +42,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: true,
   error: null,
+
+  // Role permission helpers
+  canAccessSales: () => getPermissions(get().user?.role).canAccessSales,
+  canAccessReports: () => getPermissions(get().user?.role).canAccessReports,
+  canViewRevenue: () => getPermissions(get().user?.role).canViewRevenue,
+  canManageStaff: () => getPermissions(get().user?.role).canManageStaff,
+  isAdmin: () => get().user?.role === 'admin',
+  isStaff: () => {
+    const role = get().user?.role;
+    return role === 'scanner' || role === 'pos';
+  },
 
   setUser: (user) => set({ user }),
   setToken: (token) => set({ token }),

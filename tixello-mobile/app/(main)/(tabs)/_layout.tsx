@@ -5,8 +5,7 @@ import { useAuthStore } from '../../../src/stores/authStore';
 import { colors, spacing, typography } from '../../../src/utils/theme';
 
 export default function TabLayout() {
-  const { user } = useAuthStore();
-  const isAdmin = user?.role === 'admin';
+  const { canAccessSales, canAccessReports } = useAuthStore();
 
   return (
     <Tabs
@@ -44,6 +43,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="cart" size={24} color={color} />
           ),
+          // Hide sales tab for users without sales permission (scanner role)
+          href: canAccessSales() ? undefined : null,
         }}
       />
       <Tabs.Screen
@@ -53,8 +54,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="bar-chart" size={24} color={color} />
           ),
-          // Hide reports tab for non-admin users
-          href: isAdmin ? undefined : null,
+          // Hide reports tab for users without reports permission
+          href: canAccessReports() ? undefined : null,
         }}
       />
       <Tabs.Screen
