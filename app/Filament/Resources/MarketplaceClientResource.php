@@ -4,7 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Models\MarketplaceClient;
 use App\Models\Microservice;
-use Filament\Actions\Action;
+use Filament\Actions;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -214,50 +214,46 @@ class MarketplaceClientResource extends Resource
                                         ->dehydrated(false),
                                 ]),
 
-                            SC\Section::make('Save Changes')
-                                ->schema([
-                                    Forms\Components\Actions::make([
-                                        Forms\Components\Actions\Action::make('save_microservices')
-                                            ->label('Save Microservices')
-                                            ->icon('heroicon-o-check')
-                                            ->color('primary')
-                                            ->action(function ($record, $get) {
-                                                $enabledIds = $get('enabled_microservices') ?? [];
+                            SC\Actions::make([
+                                Actions\Action::make('save_microservices')
+                                    ->label('Save Microservices')
+                                    ->icon('heroicon-o-check')
+                                    ->color('primary')
+                                    ->action(function ($record, \Filament\Schemas\Components\Utilities\Get $get) {
+                                        $enabledIds = $get('enabled_microservices') ?? [];
 
-                                                // Get all microservices
-                                                $allMicroservices = Microservice::active()->pluck('id')->toArray();
+                                        // Get all microservices
+                                        $allMicroservices = Microservice::active()->pluck('id')->toArray();
 
-                                                foreach ($allMicroservices as $microserviceId) {
-                                                    $isEnabled = in_array($microserviceId, $enabledIds);
-                                                    $existing = $record->microservices()->where('microservices.id', $microserviceId)->first();
+                                        foreach ($allMicroservices as $microserviceId) {
+                                            $isEnabled = in_array($microserviceId, $enabledIds);
+                                            $existing = $record->microservices()->where('microservices.id', $microserviceId)->first();
 
-                                                    if ($isEnabled && !$existing) {
-                                                        // Attach new
-                                                        $record->microservices()->attach($microserviceId, [
-                                                            'is_active' => true,
-                                                            'activated_at' => now(),
-                                                        ]);
-                                                    } elseif ($isEnabled && $existing) {
-                                                        // Update to active
-                                                        $record->microservices()->updateExistingPivot($microserviceId, [
-                                                            'is_active' => true,
-                                                        ]);
-                                                    } elseif (!$isEnabled && $existing) {
-                                                        // Deactivate
-                                                        $record->microservices()->updateExistingPivot($microserviceId, [
-                                                            'is_active' => false,
-                                                        ]);
-                                                    }
-                                                }
+                                            if ($isEnabled && !$existing) {
+                                                // Attach new
+                                                $record->microservices()->attach($microserviceId, [
+                                                    'is_active' => true,
+                                                    'activated_at' => now(),
+                                                ]);
+                                            } elseif ($isEnabled && $existing) {
+                                                // Update to active
+                                                $record->microservices()->updateExistingPivot($microserviceId, [
+                                                    'is_active' => true,
+                                                ]);
+                                            } elseif (!$isEnabled && $existing) {
+                                                // Deactivate
+                                                $record->microservices()->updateExistingPivot($microserviceId, [
+                                                    'is_active' => false,
+                                                ]);
+                                            }
+                                        }
 
-                                                \Filament\Notifications\Notification::make()
-                                                    ->title('Microservices Updated')
-                                                    ->success()
-                                                    ->send();
-                                            }),
-                                    ]),
-                                ])
-                                ->visible(fn ($record) => $record !== null),
+                                        \Filament\Notifications\Notification::make()
+                                            ->title('Microservices Updated')
+                                            ->success()
+                                            ->send();
+                                    }),
+                            ])->visible(fn ($record) => $record !== null),
                         ])
                         ->visible(fn ($record) => $record !== null),
 
