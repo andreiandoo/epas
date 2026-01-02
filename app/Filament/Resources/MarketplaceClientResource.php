@@ -42,141 +42,200 @@ class MarketplaceClientResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema
-            ->schema([
-                SC\Section::make('Client Information')
-                    ->schema([
-                        Forms\Components\TextInput::make('name')
-                            ->label('Client Name')
-                            ->required()
-                            ->maxLength(255)
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(fn ($state, $set, $get) =>
-                                $get('slug') ? null : $set('slug', Str::slug($state))
-                            ),
+        return $schema->schema([
+            SC\Tabs::make('MarketplaceClient')
+                ->tabs([
+                    // TAB 1: General Information
+                    SC\Tabs\Tab::make('General')
+                        ->icon('heroicon-o-building-storefront')
+                        ->schema([
+                            SC\Section::make('Client Information')
+                                ->schema([
+                                    Forms\Components\TextInput::make('name')
+                                        ->label('Client Name')
+                                        ->required()
+                                        ->maxLength(255)
+                                        ->live(onBlur: true)
+                                        ->afterStateUpdated(fn ($state, $set, $get) =>
+                                            $get('slug') ? null : $set('slug', Str::slug($state))
+                                        ),
 
-                        Forms\Components\TextInput::make('slug')
-                            ->label('Slug')
-                            ->required()
-                            ->unique(ignoreRecord: true)
-                            ->maxLength(255)
-                            ->helperText('Used for folder organization'),
+                                    Forms\Components\TextInput::make('slug')
+                                        ->label('Slug')
+                                        ->required()
+                                        ->unique(ignoreRecord: true)
+                                        ->maxLength(255)
+                                        ->helperText('Used for folder organization'),
 
-                        Forms\Components\TextInput::make('domain')
-                            ->label('Domain')
-                            ->url()
-                            ->placeholder('https://example.com')
-                            ->maxLength(255),
+                                    Forms\Components\TextInput::make('domain')
+                                        ->label('Domain')
+                                        ->url()
+                                        ->placeholder('https://example.com')
+                                        ->maxLength(255),
 
-                        Forms\Components\Select::make('status')
-                            ->label('Status')
-                            ->options([
-                                'active' => 'Active',
-                                'inactive' => 'Inactive',
-                                'suspended' => 'Suspended',
-                            ])
-                            ->default('active')
-                            ->required(),
-                    ])
-                    ->columns(2),
+                                    Forms\Components\Select::make('status')
+                                        ->label('Status')
+                                        ->options([
+                                            'active' => 'Active',
+                                            'inactive' => 'Inactive',
+                                            'suspended' => 'Suspended',
+                                        ])
+                                        ->default('active')
+                                        ->required(),
+                                ])
+                                ->columns(2),
 
-                SC\Section::make('Contact Information')
-                    ->schema([
-                        Forms\Components\TextInput::make('contact_email')
-                            ->label('Contact Email')
-                            ->email()
-                            ->required()
-                            ->maxLength(255),
+                            SC\Section::make('Contact Information')
+                                ->schema([
+                                    Forms\Components\TextInput::make('contact_email')
+                                        ->label('Contact Email')
+                                        ->email()
+                                        ->required()
+                                        ->maxLength(255),
 
-                        Forms\Components\TextInput::make('contact_phone')
-                            ->label('Contact Phone')
-                            ->tel()
-                            ->maxLength(50),
+                                    Forms\Components\TextInput::make('contact_phone')
+                                        ->label('Contact Phone')
+                                        ->tel()
+                                        ->maxLength(50),
 
-                        Forms\Components\TextInput::make('company_name')
-                            ->label('Company Name')
-                            ->maxLength(255),
-                    ])
-                    ->columns(3),
+                                    Forms\Components\TextInput::make('company_name')
+                                        ->label('Company Name')
+                                        ->maxLength(255),
+                                ])
+                                ->columns(3),
 
-                SC\Section::make('Commission Settings')
-                    ->schema([
-                        Forms\Components\TextInput::make('commission_rate')
-                            ->label('Commission Rate (%)')
-                            ->numeric()
-                            ->minValue(0)
-                            ->maxValue(100)
-                            ->step(0.01)
-                            ->default(0)
-                            ->suffix('%')
-                            ->helperText('Percentage of each sale'),
-                    ])
-                    ->columns(1),
+                            SC\Section::make('Commission Settings')
+                                ->schema([
+                                    Forms\Components\TextInput::make('commission_rate')
+                                        ->label('Commission Rate (%)')
+                                        ->numeric()
+                                        ->minValue(0)
+                                        ->maxValue(100)
+                                        ->step(0.01)
+                                        ->default(0)
+                                        ->suffix('%')
+                                        ->helperText('Percentage of each sale'),
+                                ])
+                                ->columns(1),
 
-                SC\Section::make('Security Settings')
-                    ->schema([
-                        Forms\Components\Repeater::make('settings.allowed_ips')
-                            ->label('Allowed IP Addresses')
-                            ->simple(
-                                Forms\Components\TextInput::make('ip')
-                                    ->placeholder('192.168.1.1 or 10.0.0.0/24')
-                            )
-                            ->helperText('Leave empty to allow all IPs. Supports CIDR notation.'),
+                            SC\Section::make('Notes')
+                                ->schema([
+                                    Forms\Components\Textarea::make('notes')
+                                        ->label('Internal Notes')
+                                        ->rows(3),
+                                ])
+                                ->collapsed(),
+                        ]),
 
-                        Forms\Components\Repeater::make('settings.allowed_domains')
-                            ->label('Allowed Domains')
-                            ->simple(
-                                Forms\Components\TextInput::make('domain')
-                                    ->placeholder('example.com or *.example.com')
-                            )
-                            ->helperText('Leave empty to allow all domains. Supports wildcard subdomains.'),
-                    ])
-                    ->columns(2),
+                    // TAB 2: API & Security
+                    SC\Tabs\Tab::make('API & Security')
+                        ->icon('heroicon-o-key')
+                        ->schema([
+                            SC\Section::make('API Credentials')
+                                ->schema([
+                                    Forms\Components\TextInput::make('api_key')
+                                        ->label('API Key')
+                                        ->disabled()
+                                        ->helperText('Auto-generated. Use the "Regenerate Key" action to create new credentials.')
+                                        ->copyable(),
 
-                SC\Section::make('Webhook Settings')
-                    ->schema([
-                        Forms\Components\TextInput::make('settings.webhook_url')
-                            ->label('Webhook URL')
-                            ->url()
-                            ->placeholder('https://example.com/webhook')
-                            ->helperText('URL to receive order notifications'),
+                                    Forms\Components\TextInput::make('api_secret')
+                                        ->label('API Secret')
+                                        ->disabled()
+                                        ->password()
+                                        ->revealable()
+                                        ->helperText('Keep this secret! Use it to authenticate API requests.')
+                                        ->copyable(),
+                                ])
+                                ->columns(2)
+                                ->visible(fn ($record) => $record !== null),
 
-                        Forms\Components\TextInput::make('settings.webhook_secret')
-                            ->label('Webhook Secret')
-                            ->password()
-                            ->revealable()
-                            ->helperText('Used to sign webhook payloads'),
-                    ])
-                    ->columns(2)
-                    ->collapsed(),
+                            SC\Section::make('Security Settings')
+                                ->schema([
+                                    Forms\Components\Repeater::make('settings.allowed_ips')
+                                        ->label('Allowed IP Addresses')
+                                        ->simple(
+                                            Forms\Components\TextInput::make('ip')
+                                                ->placeholder('192.168.1.1 or 10.0.0.0/24')
+                                        )
+                                        ->helperText('Leave empty to allow all IPs. Supports CIDR notation.'),
 
-                SC\Section::make('API Credentials')
-                    ->schema([
-                        Forms\Components\TextInput::make('api_key')
-                            ->label('API Key')
-                            ->disabled()
-                            ->helperText('Auto-generated. Click "Regenerate API Key" to create new credentials.')
-                            ->copyable(),
+                                    Forms\Components\Repeater::make('settings.allowed_domains')
+                                        ->label('Allowed Domains')
+                                        ->simple(
+                                            Forms\Components\TextInput::make('domain')
+                                                ->placeholder('example.com or *.example.com')
+                                        )
+                                        ->helperText('Leave empty to allow all domains. Supports wildcard subdomains.'),
+                                ])
+                                ->columns(2),
 
-                        Forms\Components\TextInput::make('api_secret')
-                            ->label('API Secret')
-                            ->disabled()
-                            ->password()
-                            ->revealable()
-                            ->helperText('Keep this secret! Use it to authenticate API requests.')
-                            ->copyable(),
-                    ])
-                    ->columns(2)
-                    ->visible(fn ($record) => $record !== null),
+                            SC\Section::make('Webhook Settings')
+                                ->schema([
+                                    Forms\Components\TextInput::make('settings.webhook_url')
+                                        ->label('Webhook URL')
+                                        ->url()
+                                        ->placeholder('https://example.com/webhook')
+                                        ->helperText('URL to receive order notifications'),
 
-                SC\Section::make('Notes')
-                    ->schema([
-                        Forms\Components\Textarea::make('notes')
-                            ->label('Internal Notes')
-                            ->rows(3),
-                    ])
-                    ->collapsed(),
-            ]);
+                                    Forms\Components\TextInput::make('settings.webhook_secret')
+                                        ->label('Webhook Secret')
+                                        ->password()
+                                        ->revealable()
+                                        ->helperText('Used to sign webhook payloads'),
+                                ])
+                                ->columns(2),
+                        ]),
+
+                    // TAB 3: Statistics
+                    SC\Tabs\Tab::make('Statistics')
+                        ->icon('heroicon-o-chart-bar')
+                        ->schema([
+                            SC\Section::make('Usage Statistics')
+                                ->schema([
+                                    Forms\Components\Placeholder::make('api_calls_count')
+                                        ->label('Total API Calls')
+                                        ->content(fn ($record) => number_format($record?->api_calls_count ?? 0)),
+
+                                    Forms\Components\Placeholder::make('last_api_call_at')
+                                        ->label('Last API Call')
+                                        ->content(fn ($record) => $record?->last_api_call_at?->diffForHumans() ?? 'Never'),
+
+                                    Forms\Components\Placeholder::make('organizers_count')
+                                        ->label('Organizers')
+                                        ->content(fn ($record) => $record?->organizers()->count() ?? 0),
+
+                                    Forms\Components\Placeholder::make('admins_count')
+                                        ->label('Admins')
+                                        ->content(fn ($record) => $record?->admins()->count() ?? 0),
+
+                                    Forms\Components\Placeholder::make('tenants_count')
+                                        ->label('Linked Tenants')
+                                        ->content(fn ($record) => $record?->tenants()->count() ?? 0),
+
+                                    Forms\Components\Placeholder::make('microservices_count')
+                                        ->label('Active Microservices')
+                                        ->content(fn ($record) => $record?->microservices()->wherePivot('is_active', true)->count() ?? 0),
+                                ])
+                                ->columns(3),
+
+                            SC\Section::make('Account Information')
+                                ->schema([
+                                    Forms\Components\Placeholder::make('created_at')
+                                        ->label('Created')
+                                        ->content(fn ($record) => $record?->created_at?->format('d M Y H:i') ?? 'N/A'),
+
+                                    Forms\Components\Placeholder::make('updated_at')
+                                        ->label('Last Updated')
+                                        ->content(fn ($record) => $record?->updated_at?->format('d M Y H:i') ?? 'N/A'),
+                                ])
+                                ->columns(2),
+                        ])
+                        ->visible(fn ($record) => $record !== null),
+                ])
+                ->columnSpanFull()
+                ->persistTabInQueryString('tab'),
+        ]);
     }
 
     public static function table(Table $table): Table
@@ -209,6 +268,12 @@ class MarketplaceClientResource extends Resource
                     ->label('Commission')
                     ->suffix('%')
                     ->sortable(),
+
+                Tables\Columns\TextColumn::make('organizers_count')
+                    ->label('Organizers')
+                    ->counts('organizers')
+                    ->badge()
+                    ->color('primary'),
 
                 Tables\Columns\TextColumn::make('tenants_count')
                     ->label('Tenants')
@@ -281,6 +346,8 @@ class MarketplaceClientResource extends Resource
         return [
             MarketplaceClientResource\RelationManagers\TenantsRelationManager::class,
             MarketplaceClientResource\RelationManagers\AdminsRelationManager::class,
+            MarketplaceClientResource\RelationManagers\OrganizersRelationManager::class,
+            MarketplaceClientResource\RelationManagers\MicroservicesRelationManager::class,
         ];
     }
 

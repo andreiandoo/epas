@@ -9,7 +9,7 @@ trait HasMarketplaceContext
     /**
      * Get the current marketplace client
      */
-    protected static function getMarketplaceClient(): ?MarketplaceClient
+    public static function getMarketplaceClient(): ?MarketplaceClient
     {
         $user = auth()->user();
 
