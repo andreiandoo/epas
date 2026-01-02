@@ -40,8 +40,12 @@
 
     // Get marketplace client ID for search API (marketplace panel only)
     $marketplaceClientId = null;
-    if ($isMarketplacePanel && auth('marketplace_admin')->check()) {
-        $marketplaceClientId = auth('marketplace_admin')->user()->marketplace_client_id;
+    if ($isMarketplacePanel) {
+        // Use Filament's auth in panel context, fall back to guard
+        $mpUser = filament()->auth()->user() ?? auth('marketplace_admin')->user();
+        if ($mpUser && isset($mpUser->marketplace_client_id)) {
+            $marketplaceClientId = $mpUser->marketplace_client_id;
+        }
     }
 @endphp
 <div class="sticky top-0 z-20 px-4 fi-custom-topbar">

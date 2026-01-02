@@ -34,8 +34,8 @@ class VenueUsage extends Page
 
     public static function shouldRegisterNavigation(): bool
     {
-        // Show venue usage to see events across venues
-        return true;
+        // Disabled for now - not relevant for marketplace panel
+        return false;
     }
 
     public function getTitle(): string

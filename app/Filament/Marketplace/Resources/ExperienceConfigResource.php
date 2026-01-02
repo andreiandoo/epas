@@ -160,9 +160,9 @@ class ExperienceConfigResource extends Resource
                                     ->label('Bonus Points')
                                     ->numeric()
                                     ->default(0),
-                                Forms\Components\Select::make('badge_id')
-                                    ->label('Award Badge')
-                                    ->relationship('badges', 'name->en')
+                                Forms\Components\TextInput::make('reward_description')
+                                    ->label('Reward Description')
+                                    ->placeholder('e.g., Unlock VIP access, Free merchandise')
                                     ->nullable(),
                             ])
                             ->columns(3)
