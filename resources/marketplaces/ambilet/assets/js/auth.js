@@ -272,6 +272,36 @@ const AmbiletAuth = {
     // ==================== COMMON ====================
 
     /**
+     * Generic login method (defaults to customer)
+     * Alias for loginCustomer for convenience
+     */
+    async login(email, password) {
+        return this.loginCustomer(email, password);
+    },
+
+    /**
+     * Generic register method (defaults to customer)
+     * Alias for registerCustomer for convenience
+     */
+    async register(data) {
+        return this.registerCustomer(data);
+    },
+
+    /**
+     * Check if authenticated (customer or organizer)
+     */
+    isAuthenticated() {
+        return this.isLoggedIn();
+    },
+
+    /**
+     * Get user data (alias for getCurrentUser)
+     */
+    getUser() {
+        return this.getCurrentUser();
+    },
+
+    /**
      * Get current user data (customer or organizer)
      */
     getCurrentUser() {
@@ -326,7 +356,7 @@ const AmbiletAuth = {
         if (!this.isCustomer()) {
             const currentUrl = redirectUrl || window.location.href;
             this.setRedirectAfterLogin(currentUrl);
-            window.location.href = '/login.html';
+            window.location.href = '/login';
             return false;
         }
         return true;
@@ -340,7 +370,7 @@ const AmbiletAuth = {
         if (!this.isOrganizer()) {
             const currentUrl = redirectUrl || window.location.href;
             this.setRedirectAfterLogin(currentUrl);
-            window.location.href = '/organizer/login.html';
+            window.location.href = '/organizer/login';
             return false;
         }
         return true;
