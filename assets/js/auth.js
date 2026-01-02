@@ -280,6 +280,14 @@ const AmbiletAuth = {
     },
 
     /**
+     * Generic register method (defaults to customer)
+     * Alias for registerCustomer for convenience
+     */
+    async register(data) {
+        return this.registerCustomer(data);
+    },
+
+    /**
      * Check if authenticated (customer or organizer)
      */
     isAuthenticated() {
