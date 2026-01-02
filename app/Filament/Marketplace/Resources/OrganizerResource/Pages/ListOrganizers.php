@@ -5,7 +5,7 @@ namespace App\Filament\Marketplace\Resources\OrganizerResource\Pages;
 use App\Filament\Marketplace\Resources\OrganizerResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
-use Filament\Resources\Components\Tab;
+use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 
 class ListOrganizers extends ListRecords

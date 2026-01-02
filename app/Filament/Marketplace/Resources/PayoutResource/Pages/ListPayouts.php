@@ -4,7 +4,7 @@ namespace App\Filament\Marketplace\Resources\PayoutResource\Pages;
 
 use App\Filament\Marketplace\Resources\PayoutResource;
 use Filament\Resources\Pages\ListRecords;
-use Filament\Resources\Components\Tab;
+use Filament\Schemas\Components\Tabs\Tab;
 use Illuminate\Database\Eloquent\Builder;
 
 class ListPayouts extends ListRecords
