@@ -5,6 +5,7 @@ namespace App\Filament\Marketplace\Resources;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\CustomerExperienceResource\Pages;
 use App\Models\Gamification\CustomerExperience;
+use Filament\Actions\ViewAction;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -109,8 +110,8 @@ class CustomerExperienceResource extends Resource
                         ->toArray()
                     ),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
+            ->recordActions([
+                ViewAction::make(),
             ]);
     }
 

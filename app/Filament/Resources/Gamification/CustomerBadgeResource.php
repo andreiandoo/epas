@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Gamification;
 
 use App\Filament\Resources\Gamification\CustomerBadgeResource\Pages;
 use App\Models\Gamification\CustomerBadge;
+use Filament\Actions\ViewAction;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -72,8 +73,8 @@ class CustomerBadgeResource extends Resource
                     ->label('Marketplace')
                     ->relationship('marketplaceClient', 'name'),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
+            ->recordActions([
+                ViewAction::make(),
             ]);
     }
 

@@ -5,6 +5,8 @@ namespace App\Filament\Marketplace\Resources;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\RewardRedemptionResource\Pages;
 use App\Models\Gamification\RewardRedemption;
+use Filament\Actions\Action;
+use Filament\Actions\ViewAction;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -110,9 +112,9 @@ class RewardRedemptionResource extends Resource
                     ->label('Reward')
                     ->relationship('reward', 'name->en'),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\Action::make('cancel')
+            ->recordActions([
+                ViewAction::make(),
+                Action::make('cancel')
                     ->label('Cancel')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')

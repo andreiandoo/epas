@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Gamification;
 
 use App\Filament\Resources\Gamification\BadgeResource\Pages;
 use App\Models\Gamification\Badge;
+use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -155,13 +156,8 @@ class BadgeResource extends Resource
                 Tables\Filters\SelectFilter::make('category')
                     ->options(Badge::CATEGORIES),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
+            ->recordActions([
+                EditAction::make(),
             ]);
     }
 

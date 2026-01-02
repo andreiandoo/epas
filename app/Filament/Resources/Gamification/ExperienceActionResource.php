@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Gamification;
 
 use App\Filament\Resources\Gamification\ExperienceActionResource\Pages;
 use App\Models\Gamification\ExperienceAction;
+use Filament\Actions\ViewAction;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -71,8 +72,8 @@ class ExperienceActionResource extends Resource
                     ->label('Marketplace')
                     ->relationship('marketplaceClient', 'name'),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
+            ->recordActions([
+                ViewAction::make(),
             ]);
     }
 

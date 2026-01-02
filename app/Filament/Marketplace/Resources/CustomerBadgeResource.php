@@ -5,6 +5,7 @@ namespace App\Filament\Marketplace\Resources;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Filament\Marketplace\Resources\CustomerBadgeResource\Pages;
 use App\Models\Gamification\CustomerBadge;
+use Filament\Actions\ViewAction;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -95,8 +96,8 @@ class CustomerBadgeResource extends Resource
                     ->label('Badge')
                     ->relationship('badge', 'name->en'),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
+            ->recordActions([
+                ViewAction::make(),
             ]);
     }
 

@@ -4,6 +4,8 @@ namespace App\Filament\Tenant\Resources;
 
 use App\Filament\Tenant\Resources\RewardRedemptionResource\Pages;
 use App\Models\Gamification\RewardRedemption;
+use Filament\Actions\Action;
+use Filament\Actions\ViewAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -115,9 +117,9 @@ class RewardRedemptionResource extends Resource
                     ->label('Reward')
                     ->relationship('reward', 'name->en'),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\Action::make('cancel')
+            ->recordActions([
+                ViewAction::make(),
+                Action::make('cancel')
                     ->label('Cancel')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')

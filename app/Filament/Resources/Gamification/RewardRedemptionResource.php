@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Gamification;
 
 use App\Filament\Resources\Gamification\RewardRedemptionResource\Pages;
 use App\Models\Gamification\RewardRedemption;
+use Filament\Actions\ViewAction;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -90,8 +91,8 @@ class RewardRedemptionResource extends Resource
                         'cancelled' => 'Cancelled',
                     ]),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
+            ->recordActions([
+                ViewAction::make(),
             ]);
     }
 
