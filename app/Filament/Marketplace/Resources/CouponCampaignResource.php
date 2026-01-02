@@ -160,7 +160,7 @@ class CouponCampaignResource extends Resource
                         'archived' => 'Archived',
                     ]),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
                 Actions\Action::make('generate_codes')
                     ->label('Generate Codes')
@@ -208,7 +208,7 @@ class CouponCampaignResource extends Resource
                             ->send();
                     }),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),

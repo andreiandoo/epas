@@ -249,7 +249,7 @@ class CouponCodeResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_public')
                     ->label('Public'),
             ])
-            ->actions([
+            ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
                 Actions\Action::make('toggle_status')
@@ -263,7 +263,7 @@ class CouponCodeResource extends Resource
                     })
                     ->requiresConfirmation(),
             ])
-            ->bulkActions([])
+            ->toolbarActions([])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),

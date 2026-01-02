@@ -506,7 +506,7 @@ class ShopProductResource extends Resource
                     ->label('Out of Stock')
                     ->query(fn (Builder $query): Builder => $query->outOfStock()),
             ])
-            ->actions([
+            ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
                 Actions\Action::make('toggle_visibility')
@@ -516,7 +516,7 @@ class ShopProductResource extends Resource
                     ->action(fn ($record) => $record->update(['is_visible' => !$record->is_visible])),
                 DeleteAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                     BulkAction::make('activate')

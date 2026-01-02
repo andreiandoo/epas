@@ -205,7 +205,7 @@ class CustomerPointsResource extends Resource
                     ->label('Has Points')
                     ->query(fn (Builder $query) => $query->where('current_balance', '>', 0)),
             ])
-            ->actions([
+            ->recordActions([
                 ViewAction::make(),
                 Action::make('adjust')
                     ->label('Adjust Points')
@@ -233,7 +233,7 @@ class CustomerPointsResource extends Resource
                             ->send();
                     }),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     BulkAction::make('bulk_adjust')
                         ->label('Bulk Adjust Points')

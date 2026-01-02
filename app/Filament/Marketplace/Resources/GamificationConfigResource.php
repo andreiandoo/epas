@@ -254,7 +254,7 @@ class GamificationConfigResource extends Resource
                     ->dateTime()
                     ->sortable(),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
             ]);
     }

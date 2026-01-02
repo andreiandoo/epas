@@ -6,11 +6,17 @@ use App\Filament\Marketplace\Resources\OrganizerResource\Pages;
 use App\Models\MarketplaceOrganizer;
 use Filament\Forms;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
 
 class OrganizerResource extends Resource
 {
@@ -53,7 +59,7 @@ class OrganizerResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Organizer Information')
+                Section::make('Organizer Information')
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->required()
@@ -81,7 +87,7 @@ class OrganizerResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Company Information')
+                Section::make('Company Information')
                     ->schema([
                         Forms\Components\TextInput::make('company_name')
                             ->maxLength(255),
@@ -101,7 +107,7 @@ class OrganizerResource extends Resource
                     ->columns(2)
                     ->collapsed(),
 
-                Forms\Components\Section::make('Status & Commission')
+                Section::make('Status & Commission')
                     ->schema([
                         Forms\Components\Select::make('status')
                             ->options([
@@ -126,7 +132,7 @@ class OrganizerResource extends Resource
                     ])
                     ->columns(3),
 
-                Forms\Components\Section::make('Feature Access')
+                Section::make('Feature Access')
                     ->schema([
                         Forms\Components\Toggle::make('gamification_enabled')
                             ->label('Gamification Enabled')
@@ -139,7 +145,7 @@ class OrganizerResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Section::make('Financial Summary')
+                Section::make('Financial Summary')
                     ->schema([
                         Forms\Components\Placeholder::make('total_revenue_display')
                             ->label('Total Revenue')
@@ -233,8 +239,8 @@ class OrganizerResource extends Resource
                         false: fn (Builder $query) => $query->whereNull('verified_at'),
                     ),
             ])
-            ->actions([
-                Tables\Actions\Action::make('approve')
+            ->recordActions([
+                Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check')
                     ->color('success')
@@ -244,7 +250,7 @@ class OrganizerResource extends Resource
                         $record->update(['status' => 'active']);
                     }),
 
-                Tables\Actions\Action::make('verify')
+                Action::make('verify')
                     ->label('Verify')
                     ->icon('heroicon-o-check-badge')
                     ->color('info')
@@ -254,7 +260,7 @@ class OrganizerResource extends Resource
                         $record->update(['verified_at' => now()]);
                     }),
 
-                Tables\Actions\Action::make('suspend')
+                Action::make('suspend')
                     ->label('Suspend')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -264,7 +270,7 @@ class OrganizerResource extends Resource
                         $record->update(['status' => 'suspended']);
                     }),
 
-                Tables\Actions\Action::make('reactivate')
+                Action::make('reactivate')
                     ->label('Reactivate')
                     ->icon('heroicon-o-arrow-path')
                     ->color('success')
@@ -274,12 +280,12 @@ class OrganizerResource extends Resource
                         $record->update(['status' => 'active']);
                     }),
 
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
+                ViewAction::make(),
+                EditAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\BulkAction::make('approve_selected')
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    BulkAction::make('approve_selected')
                         ->label('Approve Selected')
                         ->icon('heroicon-o-check')
                         ->color('success')

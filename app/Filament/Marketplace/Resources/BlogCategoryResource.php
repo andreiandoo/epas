@@ -181,10 +181,10 @@ class BlogCategoryResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_visible')
                     ->label('Visible'),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),

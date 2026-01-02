@@ -105,8 +105,8 @@ class AffiliateConversionResource extends Resource
                     ->label('Affiliate')
                     ->relationship('affiliate', 'name'),
             ])
-            ->actions([])
-            ->bulkActions([])
+            ->recordActions([])
+            ->toolbarActions([])
             ->toolbarActions([
                 BulkActionGroup::make([
                     BulkAction::make('approve_selected')

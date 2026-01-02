@@ -207,7 +207,7 @@ class AffiliateWithdrawalResource extends Resource
                         'wise' => 'Wise',
                     ]),
             ])
-            ->actions([
+            ->recordActions([
                 Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check')
@@ -273,7 +273,7 @@ class AffiliateWithdrawalResource extends Resource
 
                 ViewAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkAction::make('bulk_approve')
                     ->label('Approve Selected')
                     ->icon('heroicon-o-check')

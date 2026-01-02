@@ -21,6 +21,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Actions\BulkAction;
 
 class OrganizerPromoCodeResource extends Resource
 {
@@ -354,7 +355,7 @@ class OrganizerPromoCodeResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_public')
                     ->label('Public'),
             ])
-            ->actions([
+            ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
 
@@ -397,18 +398,18 @@ class OrganizerPromoCodeResource extends Resource
                             ->send();
                     }),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
 
-                    Tables\Actions\BulkAction::make('bulk_activate')
+                    BulkAction::make('bulk_activate')
                         ->label('Activate Selected')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->requiresConfirmation()
                         ->action(fn ($records) => $records->each->activate()),
 
-                    Tables\Actions\BulkAction::make('bulk_deactivate')
+                    BulkAction::make('bulk_deactivate')
                         ->label('Deactivate Selected')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')

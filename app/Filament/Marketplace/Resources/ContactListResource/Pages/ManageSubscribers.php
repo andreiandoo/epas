@@ -12,6 +12,8 @@ use Filament\Tables\Table;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 
 class ManageSubscribers extends Page implements HasTable
 {
@@ -70,7 +72,7 @@ class ManageSubscribers extends Page implements HasTable
                     ->dateTime(),
             ])
             ->headerActions([
-                Tables\Actions\Action::make('add_subscriber')
+                Action::make('add_subscriber')
                     ->label('Add Subscriber')
                     ->icon('heroicon-o-plus')
                     ->form([
@@ -98,8 +100,8 @@ class ManageSubscribers extends Page implements HasTable
                         $this->record->addSubscriber($data['customer_id']);
                     }),
             ])
-            ->actions([
-                Tables\Actions\Action::make('unsubscribe')
+            ->recordActions([
+                Action::make('unsubscribe')
                     ->icon('heroicon-o-x-mark')
                     ->color('danger')
                     ->requiresConfirmation()
@@ -107,8 +109,8 @@ class ManageSubscribers extends Page implements HasTable
                         $this->record->removeSubscriber($record->id);
                     }),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkAction::make('unsubscribe_selected')
+            ->toolbarActions([
+                BulkAction::make('unsubscribe_selected')
                     ->label('Unsubscribe Selected')
                     ->icon('heroicon-o-x-mark')
                     ->color('danger')

@@ -14,6 +14,8 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Actions\ViewAction;
+use Filament\Actions\Action;
 
 class EmailLogResource extends Resource
 {
@@ -172,9 +174,9 @@ class EmailLogResource extends Resource
                             );
                     }),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\Action::make('resend')
+            ->recordActions([
+                ViewAction::make(),
+                Action::make('resend')
                     ->icon('heroicon-o-arrow-path')
                     ->requiresConfirmation()
                     ->visible(fn ($record) => in_array($record->status, ['failed', 'bounced']))

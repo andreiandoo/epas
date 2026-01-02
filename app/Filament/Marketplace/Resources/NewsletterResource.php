@@ -14,6 +14,10 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Actions\EditAction;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 
 class NewsletterResource extends Resource
 {
@@ -206,9 +210,9 @@ class NewsletterResource extends Resource
                         'cancelled' => 'Cancelled',
                     ]),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('send')
+            ->recordActions([
+                EditAction::make(),
+                Action::make('send')
                     ->icon('heroicon-o-paper-airplane')
                     ->color('success')
                     ->requiresConfirmation()
@@ -220,7 +224,7 @@ class NewsletterResource extends Resource
                         $record->startSending();
                         \App\Jobs\SendNewsletterJob::dispatch($record);
                     }),
-                Tables\Actions\Action::make('schedule')
+                Action::make('schedule')
                     ->icon('heroicon-o-clock')
                     ->color('warning')
                     ->form([
@@ -234,13 +238,13 @@ class NewsletterResource extends Resource
                         $record->createRecipients();
                         $record->schedule(new \DateTime($data['scheduled_at']));
                     }),
-                Tables\Actions\Action::make('cancel')
+                Action::make('cancel')
                     ->icon('heroicon-o-x-mark')
                     ->color('danger')
                     ->requiresConfirmation()
                     ->visible(fn ($record) => $record->status === 'scheduled')
                     ->action(fn ($record) => $record->cancel()),
-                Tables\Actions\Action::make('duplicate')
+                Action::make('duplicate')
                     ->icon('heroicon-o-document-duplicate')
                     ->action(function ($record) {
                         $new = $record->replicate();
@@ -260,9 +264,9 @@ class NewsletterResource extends Resource
                         return redirect(static::getUrl('edit', ['record' => $new]));
                     }),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
                         ->visible(fn ($records) => $records->every(fn ($r) => $r->status === 'draft')),
                 ]),
             ]);

@@ -1114,8 +1114,8 @@ class EventResource extends Resource
                     ->label('Organizer')
                     ->relationship('marketplaceOrganizer', 'name'),
             ])
-            ->actions([])
-            ->bulkActions([])
+            ->recordActions([])
+            ->toolbarActions([])
             ->recordActions([
                 Action::make('statistics')
                     ->label('Statistics')

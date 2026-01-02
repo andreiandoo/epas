@@ -226,7 +226,7 @@ class TicketTemplateResource extends Resource
                         'archived' => 'Archived',
                     ]),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
                 Actions\Action::make('editor')
                     ->label('Visual Editor')
@@ -242,7 +242,7 @@ class TicketTemplateResource extends Resource
                     ->action(fn ($record) => $record->setAsDefault())
                     ->requiresConfirmation(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),

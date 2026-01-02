@@ -376,7 +376,7 @@ class ShopOrderResource extends Resource
                             ->when($data['created_until'], fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date));
                     }),
             ])
-            ->actions([
+            ->recordActions([
                 ViewAction::make(),
                 Actions\Action::make('mark_shipped')
                     ->label('Mark Shipped')
@@ -413,7 +413,7 @@ class ShopOrderResource extends Resource
                         ]);
                     }),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     BulkAction::make('mark_processing')
                         ->label('Mark Processing')

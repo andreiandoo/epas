@@ -277,7 +277,7 @@ class GroupBookingResource extends Resource
                     ->searchable()
                     ->preload(),
             ])
-            ->actions([
+            ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
                 Actions\Action::make('confirm')
@@ -300,7 +300,7 @@ class GroupBookingResource extends Resource
                     ->action(fn ($record) => $record->update(['status' => 'paid']))
                     ->requiresConfirmation(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),

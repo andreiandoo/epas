@@ -213,7 +213,7 @@ class ShopEventProductResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active'),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
                 Action::make('toggle')
                     ->label(fn($record) => $record->is_active ? 'Deactivate' : 'Activate')
@@ -222,7 +222,7 @@ class ShopEventProductResource extends Resource
                     ->action(fn($record) => $record->update(['is_active' => !$record->is_active])),
                 DeleteAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),

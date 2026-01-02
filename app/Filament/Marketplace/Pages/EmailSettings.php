@@ -5,6 +5,7 @@ namespace App\Filament\Marketplace\Pages;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Filament\Forms;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
 use Filament\Pages\Page;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -55,7 +56,7 @@ class EmailSettings extends Page
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('SMTP Configuration')
+                Section::make('SMTP Configuration')
                     ->description('Configure your SMTP server for sending newsletters and transactional emails')
                     ->schema([
                         Forms\Components\TextInput::make('host')
@@ -93,7 +94,7 @@ class EmailSettings extends Page
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Default Email Settings')
+                Section::make('Default Email Settings')
                     ->description('Default sender information for all outgoing emails')
                     ->schema([
                         Forms\Components\TextInput::make('from_name')

@@ -217,7 +217,7 @@ class ShopReviewResource extends Resource
                 Tables\Filters\TernaryFilter::make('verified_purchase')
                     ->label('Verified Purchase'),
             ])
-            ->actions([
+            ->recordActions([
                 ViewAction::make(),
                 Actions\Action::make('approve')
                     ->label('Approve')
@@ -240,7 +240,7 @@ class ShopReviewResource extends Resource
                         $record->product?->updateReviewStats();
                     }),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     BulkAction::make('approve')
                         ->label('Approve Selected')

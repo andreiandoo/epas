@@ -7,11 +7,14 @@ use App\Models\MarketplacePayout;
 use App\Models\MarketplaceAdmin;
 use Filament\Forms;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Filament\Actions\ViewAction;
+use Filament\Actions\Action;
 
 class PayoutResource extends Resource
 {
@@ -54,7 +57,7 @@ class PayoutResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Section::make('Payout Request')
+                Section::make('Payout Request')
                     ->schema([
                         Forms\Components\Placeholder::make('reference_display')
                             ->label('Reference')
@@ -75,7 +78,7 @@ class PayoutResource extends Resource
                     ])
                     ->columns(4),
 
-                Forms\Components\Section::make('Amount Breakdown')
+                Section::make('Amount Breakdown')
                     ->schema([
                         Forms\Components\Placeholder::make('gross_amount_display')
                             ->label('Gross Amount')
@@ -99,7 +102,7 @@ class PayoutResource extends Resource
                     ])
                     ->columns(4),
 
-                Forms\Components\Section::make('Admin Notes')
+                Section::make('Admin Notes')
                     ->schema([
                         Forms\Components\Textarea::make('admin_notes')
                             ->rows(3)
@@ -172,8 +175,8 @@ class PayoutResource extends Resource
                 Tables\Filters\SelectFilter::make('organizer')
                     ->relationship('organizer', 'name'),
             ])
-            ->actions([
-                Tables\Actions\Action::make('approve')
+            ->recordActions([
+                Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check')
                     ->color('success')
@@ -184,7 +187,7 @@ class PayoutResource extends Resource
                         $record->approve($admin->id);
                     }),
 
-                Tables\Actions\Action::make('process')
+                Action::make('process')
                     ->label('Mark Processing')
                     ->icon('heroicon-o-arrow-path')
                     ->color('info')
@@ -195,7 +198,7 @@ class PayoutResource extends Resource
                         $record->markAsProcessing($admin->id);
                     }),
 
-                Tables\Actions\Action::make('complete')
+                Action::make('complete')
                     ->label('Complete')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
@@ -213,7 +216,7 @@ class PayoutResource extends Resource
                         $record->complete($data['payment_reference'], $data['payment_notes'] ?? null);
                     }),
 
-                Tables\Actions\Action::make('reject')
+                Action::make('reject')
                     ->label('Reject')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -229,9 +232,9 @@ class PayoutResource extends Resource
                         $record->reject($admin->id, $data['rejection_reason']);
                     }),
 
-                Tables\Actions\ViewAction::make(),
+                ViewAction::make(),
             ])
-            ->bulkActions([])
+            ->toolbarActions([])
             ->defaultSort('created_at', 'desc');
     }
 

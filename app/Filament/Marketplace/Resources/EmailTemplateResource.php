@@ -12,6 +12,10 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Actions\EditAction;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 
 class EmailTemplateResource extends Resource
 {
@@ -125,17 +129,17 @@ class EmailTemplateResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_active')
                     ->label('Active'),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('preview')
+            ->recordActions([
+                EditAction::make(),
+                Action::make('preview')
                     ->icon('heroicon-o-eye')
                     ->modalContent(fn ($record) => view('filament.marketplace.email-preview', ['template' => $record]))
                     ->modalHeading('Email Preview')
                     ->modalSubmitAction(false),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

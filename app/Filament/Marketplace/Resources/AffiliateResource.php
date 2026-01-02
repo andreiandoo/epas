@@ -215,7 +215,7 @@ class AffiliateResource extends Resource
                         'inactive' => 'Inactive',
                     ]),
             ])
-            ->actions([
+            ->recordActions([
                 Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check-circle')
@@ -282,7 +282,7 @@ class AffiliateResource extends Resource
                             ->send();
                     }),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkAction::make('bulk_approve')
                     ->label('Approve Selected')
                     ->icon('heroicon-o-check-circle')

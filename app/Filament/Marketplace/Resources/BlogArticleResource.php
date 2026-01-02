@@ -388,7 +388,7 @@ class BlogArticleResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_featured')
                     ->label('Featured'),
             ])
-            ->actions([
+            ->recordActions([
                 EditAction::make(),
                 Actions\Action::make('publish')
                     ->label('Publish')
@@ -397,7 +397,7 @@ class BlogArticleResource extends Resource
                     ->visible(fn (BlogArticle $record) => $record->status !== 'published')
                     ->action(fn (BlogArticle $record) => $record->publish()),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),

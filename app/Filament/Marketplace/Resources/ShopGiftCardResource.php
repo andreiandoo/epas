@@ -317,7 +317,7 @@ class ShopGiftCardResource extends Resource
                 Tables\Filters\TernaryFilter::make('is_sent')
                     ->label('Email Sent'),
             ])
-            ->actions([
+            ->recordActions([
                 ViewAction::make(),
                 Actions\Action::make('send_email')
                     ->label('Send Email')
@@ -340,7 +340,7 @@ class ShopGiftCardResource extends Resource
                     ->requiresConfirmation()
                     ->action(fn ($record) => $record->update(['status' => 'disabled'])),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),

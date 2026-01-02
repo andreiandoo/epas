@@ -14,6 +14,9 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Notifications\Notification;
+use Filament\Actions\ViewAction;
+use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 
 class RefundRequestResource extends Resource
 {
@@ -225,16 +228,16 @@ class RefundRequestResource extends Resource
                 Tables\Filters\SelectFilter::make('organizer')
                     ->relationship('organizer', 'name'),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\ActionGroup::make([
-                    Tables\Actions\Action::make('review')
+            ->recordActions([
+                ViewAction::make(),
+                ActionGroup::make([
+                    Action::make('review')
                         ->icon('heroicon-o-eye')
                         ->color('info')
                         ->visible(fn ($record) => $record->status === 'pending')
                         ->action(fn ($record) => $record->markUnderReview()),
 
-                    Tables\Actions\Action::make('approve')
+                    Action::make('approve')
                         ->icon('heroicon-o-check')
                         ->color('success')
                         ->form([
@@ -260,7 +263,7 @@ class RefundRequestResource extends Resource
                                 ->send();
                         }),
 
-                    Tables\Actions\Action::make('reject')
+                    Action::make('reject')
                         ->icon('heroicon-o-x-mark')
                         ->color('danger')
                         ->form([
@@ -282,7 +285,7 @@ class RefundRequestResource extends Resource
                                 ->send();
                         }),
 
-                    Tables\Actions\Action::make('process_auto')
+                    Action::make('process_auto')
                         ->label('Auto Refund')
                         ->icon('heroicon-o-bolt')
                         ->color('warning')
@@ -309,7 +312,7 @@ class RefundRequestResource extends Resource
                             }
                         }),
 
-                    Tables\Actions\Action::make('process_manual')
+                    Action::make('process_manual')
                         ->label('Mark as Refunded')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
@@ -332,7 +335,7 @@ class RefundRequestResource extends Resource
                         }),
                 ]),
             ])
-            ->bulkActions([]);
+            ->toolbarActions([]);
     }
 
     public static function getPages(): array
