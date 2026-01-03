@@ -11,11 +11,13 @@ class RomaniaRegionsCitiesSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     *
+     * Usage: MARKETPLACE_ID=1 php artisan db:seed --class=RomaniaRegionsCitiesSeeder
      */
     public function run(): void
     {
-        // Get marketplace_client_id from argument or use 1
-        $marketplaceClientId = $this->command->option('marketplace') ?? 1;
+        // Get marketplace_client_id from environment variable or use 1
+        $marketplaceClientId = env('MARKETPLACE_ID', 1);
 
         $this->command->info("Seeding Romanian regions and cities for marketplace_client_id: {$marketplaceClientId}");
 
