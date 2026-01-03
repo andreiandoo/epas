@@ -31,9 +31,9 @@ return new class extends Migration
             $table->integer('event_count')->default(0);
             $table->timestamps();
 
-            $table->unique(['marketplace_client_id', 'slug']);
-            $table->index(['marketplace_client_id', 'parent_id']);
-            $table->index(['marketplace_client_id', 'is_visible', 'sort_order']);
+            $table->unique(['marketplace_client_id', 'slug'], 'mp_evt_cats_client_slug_unique');
+            $table->index(['marketplace_client_id', 'parent_id'], 'mp_evt_cats_parent_idx');
+            $table->index(['marketplace_client_id', 'is_visible', 'sort_order'], 'mp_evt_cats_visible_idx');
         });
     }
 

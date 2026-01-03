@@ -35,10 +35,10 @@ return new class extends Migration
             $table->integer('event_count')->default(0);
             $table->timestamps();
 
-            $table->unique(['marketplace_client_id', 'slug']);
-            $table->index(['marketplace_client_id', 'region_id']);
-            $table->index(['marketplace_client_id', 'is_visible', 'sort_order']);
-            $table->index(['marketplace_client_id', 'is_featured']);
+            $table->unique(['marketplace_client_id', 'slug'], 'mp_cities_client_slug_unique');
+            $table->index(['marketplace_client_id', 'region_id'], 'mp_cities_region_idx');
+            $table->index(['marketplace_client_id', 'is_visible', 'sort_order'], 'mp_cities_visible_idx');
+            $table->index(['marketplace_client_id', 'is_featured'], 'mp_cities_featured_idx');
         });
     }
 
