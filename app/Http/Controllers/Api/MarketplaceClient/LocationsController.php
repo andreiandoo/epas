@@ -125,62 +125,58 @@ class LocationsController extends BaseController
             ->where('is_visible', true)
             ->with(['region:id,name', 'county:id,name,code']);
 
-        // Filter by letter
-        if ($request->has('letter')) {
+        // Filter by letter - use slug which is always ASCII
+        if ($request->has('letter') && $request->letter) {
             $letter = strtoupper($request->letter);
-            // Use JSON extraction for filtering by first letter
-            $query->whereRaw("UPPER(LEFT(JSON_UNQUOTE(JSON_EXTRACT(name, '$.\"{$lang}\"')), 1)) = ?", [$letter]);
+            $query->whereRaw("UPPER(LEFT(slug, 1)) = ?", [$letter]);
         }
 
-        // Search
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search, $lang) {
-                $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.\"{$lang}\"')) LIKE ?", ["%{$search}%"])
-                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.\"ro\"')) LIKE ?", ["%{$search}%"])
-                    ->orWhere('slug', 'like', "%{$search}%");
-            });
+        // Search by slug (most reliable)
+        if ($request->has('search') && $request->search) {
+            $search = trim($request->search);
+            $query->where('slug', 'like', "%{$search}%");
         }
 
-        // Sort by event count by default
-        $sortBy = $request->get('sort', 'events');
-        if ($sortBy === 'events') {
-            // Get city IDs sorted by event count (most events first)
-            $cityIds = $eventCounts->sortDesc()->keys()->toArray();
-            if (!empty($cityIds)) {
-                // FIELD returns position (1,2,3...) or 0 if not in list
-                // First sort to put cities with events first (FIELD != 0)
-                // Then sort by position in the sorted list (ASC = 1,2,3...)
-                $idList = implode(',', array_map('intval', $cityIds));
-                $query->orderByRaw("FIELD(id, {$idList}) = 0 ASC, FIELD(id, {$idList}) ASC");
-            } else {
-                // No events, just sort by name
-                $query->orderByRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.\"{$lang}\"'))");
-            }
-        } elseif ($sortBy === 'name') {
-            $query->orderByRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.\"{$lang}\"'))");
-        } else {
-            $query->orderBy('sort_order');
-        }
+        // Default sort by sort_order, then slug
+        $query->orderBy('sort_order')->orderBy('slug');
 
         // Pagination
         $perPage = min((int) $request->get('per_page', 8), 50);
         $cities = $query->paginate($perPage);
 
-        return $this->paginated($cities, function ($city) use ($eventCounts, $lang) {
+        // Transform results
+        $transformedData = $cities->getCollection()->map(function ($city) use ($eventCounts, $lang) {
             return [
                 'id' => $city->id,
-                'name' => $city->name[$lang] ?? $city->name['ro'] ?? array_values((array)$city->name)[0] ?? '',
+                'name' => $city->name[$lang] ?? $city->name['ro'] ?? array_values((array)$city->name)[0] ?? $city->slug,
                 'slug' => $city->slug,
                 'image' => $city->image_url,
                 'region' => $city->region ? ($city->region->name[$lang] ?? $city->region->name['ro'] ?? '') : null,
                 'county' => $city->county ? [
                     'name' => $city->county->name[$lang] ?? $city->county->name['ro'] ?? '',
-                    'code' => $city->county->code,
+                    'code' => $city->county->code ?? '',
                 ] : null,
                 'events_count' => $eventCounts[$city->id] ?? 0,
             ];
         });
+
+        // Sort by events if requested (do it in PHP to avoid complex SQL)
+        $sortBy = $request->get('sort', 'events');
+        if ($sortBy === 'events') {
+            $transformedData = $transformedData->sortByDesc('events_count')->values();
+        }
+
+        // Return in paginated format (data at root, meta separate)
+        return response()->json([
+            'success' => true,
+            'data' => $transformedData->toArray(),
+            'meta' => [
+                'current_page' => $cities->currentPage(),
+                'last_page' => $cities->lastPage(),
+                'per_page' => $cities->perPage(),
+                'total' => $cities->total(),
+            ],
+        ]);
     }
 
     /**
@@ -189,11 +185,11 @@ class LocationsController extends BaseController
     public function alphabet(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
-        $lang = $client->language ?? $client->locale ?? 'ro';
 
+        // Use slug for alphabet (always ASCII, more reliable)
         $letters = MarketplaceCity::where('marketplace_client_id', $client->id)
             ->where('is_visible', true)
-            ->selectRaw("UPPER(LEFT(JSON_UNQUOTE(JSON_EXTRACT(name, '$.\"{$lang}\"')), 1)) as letter")
+            ->selectRaw("UPPER(LEFT(slug, 1)) as letter")
             ->distinct()
             ->pluck('letter')
             ->filter()
