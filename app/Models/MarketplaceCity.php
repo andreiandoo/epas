@@ -20,6 +20,7 @@ class MarketplaceCity extends Model
     protected $fillable = [
         'marketplace_client_id',
         'region_id',
+        'county_id',
         'name',
         'slug',
         'description',
@@ -93,6 +94,11 @@ class MarketplaceCity extends Model
     public function region(): BelongsTo
     {
         return $this->belongsTo(MarketplaceRegion::class, 'region_id');
+    }
+
+    public function county(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceCounty::class, 'county_id');
     }
 
     public function events(): HasMany

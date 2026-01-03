@@ -4,6 +4,7 @@ namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\CityResource\Pages;
 use App\Models\MarketplaceCity;
+use App\Models\MarketplaceCounty;
 use App\Models\MarketplaceRegion;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -31,7 +32,7 @@ class CityResource extends Resource
 
     protected static ?string $navigationParentItem = 'Venues';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $modelLabel = 'City';
 
@@ -86,6 +87,33 @@ class CityResource extends Resource
                             ->maxLength(190)
                             ->rule('alpha_dash'),
 
+                        Forms\Components\Select::make('county_id')
+                            ->label('County (Județ)')
+                            ->options(function () {
+                                $marketplace = static::getMarketplaceClient();
+                                $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
+                                return MarketplaceCounty::where('marketplace_client_id', $marketplace?->id)
+                                    ->with('region')
+                                    ->orderBy('code')
+                                    ->get()
+                                    ->mapWithKeys(fn ($c) => [
+                                        $c->id => $c->code . ' - ' . ($c->name[$lang] ?? $c->name['ro'] ?? 'Unnamed')
+                                            . ($c->region ? ' (' . ($c->region->name[$lang] ?? $c->region->name['ro'] ?? '') . ')' : '')
+                                    ]);
+                            })
+                            ->searchable()
+                            ->required()
+                            ->placeholder('Select a county')
+                            ->live()
+                            ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
+                                if ($state) {
+                                    $county = MarketplaceCounty::find($state);
+                                    if ($county) {
+                                        $set('region_id', $county->region_id);
+                                    }
+                                }
+                            }),
+
                         Forms\Components\Select::make('region_id')
                             ->label('Region')
                             ->options(function () {
@@ -97,7 +125,9 @@ class CityResource extends Resource
                                     ->mapWithKeys(fn ($r) => [$r->id => $r->name[$lang] ?? $r->name['en'] ?? 'Unnamed']);
                             })
                             ->searchable()
-                            ->placeholder('Select a region'),
+                            ->disabled()
+                            ->dehydrated()
+                            ->helperText('Auto-selected based on county'),
 
                         Forms\Components\Select::make('country')
                             ->label('Country')
@@ -209,11 +239,16 @@ class CityResource extends Resource
                     ->searchable()
                     ->sortable(),
 
+                Tables\Columns\TextColumn::make('county.code')
+                    ->label('County')
+                    ->badge()
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('region.name')
                     ->label('Region')
                     ->formatStateUsing(function ($state) use ($marketplaceLanguage) {
                         if (is_array($state)) {
-                            return $state[$marketplaceLanguage] ?? $state['en'] ?? '-';
+                            return $state[$marketplaceLanguage] ?? $state['ro'] ?? '-';
                         }
                         return $state ?? '-';
                     }),

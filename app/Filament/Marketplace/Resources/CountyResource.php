@@ -2,8 +2,9 @@
 
 namespace App\Filament\Marketplace\Resources;
 
-use App\Filament\Marketplace\Resources\EventCategoryResource\Pages;
-use App\Models\MarketplaceEventCategory;
+use App\Filament\Marketplace\Resources\CountyResource\Pages;
+use App\Models\MarketplaceCounty;
+use App\Models\MarketplaceRegion;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -18,25 +19,25 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Illuminate\Support\Str;
 
-class EventCategoryResource extends Resource
+class CountyResource extends Resource
 {
     use HasMarketplaceContext;
 
-    protected static ?string $model = MarketplaceEventCategory::class;
+    protected static ?string $model = MarketplaceCounty::class;
 
-    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-tag';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-map';
 
-    protected static ?string $navigationLabel = 'Event Categories';
+    protected static ?string $navigationLabel = 'Counties';
 
     protected static ?string $navigationParentItem = 'Venues';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 2;
 
-    protected static ?string $modelLabel = 'Event Category';
+    protected static ?string $modelLabel = 'County';
 
-    protected static ?string $pluralModelLabel = 'Event Categories';
+    protected static ?string $pluralModelLabel = 'Counties';
 
-    protected static ?string $slug = 'event-categories';
+    protected static ?string $slug = 'counties';
 
     public static function getEloquentQuery(): Builder
     {
@@ -54,14 +55,14 @@ class EventCategoryResource extends Resource
                 Forms\Components\Hidden::make('marketplace_client_id')
                     ->default($marketplace?->id),
 
-                SC\Section::make('Category Details')
+                SC\Section::make('County Details')
                     ->schema([
                         SC\Tabs::make('Name Translations')
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
                                     ->schema([
                                         Forms\Components\TextInput::make('name.ro')
-                                            ->label('Nume categorie (RO)')
+                                            ->label('Nume județ (RO)')
                                             ->required()
                                             ->maxLength(190)
                                             ->live(onBlur: true)
@@ -74,7 +75,7 @@ class EventCategoryResource extends Resource
                                 SC\Tabs\Tab::make('English')
                                     ->schema([
                                         Forms\Components\TextInput::make('name.en')
-                                            ->label('Category name (EN)')
+                                            ->label('County name (EN)')
                                             ->maxLength(190),
                                     ]),
                             ])->columnSpanFull(),
@@ -85,19 +86,26 @@ class EventCategoryResource extends Resource
                             ->maxLength(190)
                             ->rule('alpha_dash'),
 
-                        Forms\Components\Select::make('parent_id')
-                            ->label('Parent Category')
+                        Forms\Components\TextInput::make('code')
+                            ->label('County Code')
+                            ->required()
+                            ->maxLength(2)
+                            ->placeholder('CJ')
+                            ->helperText('2-letter county code (e.g., CJ for Cluj)'),
+
+                        Forms\Components\Select::make('region_id')
+                            ->label('Region')
                             ->options(function () {
                                 $marketplace = static::getMarketplaceClient();
                                 $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
-                                return MarketplaceEventCategory::where('marketplace_client_id', $marketplace?->id)
-                                    ->whereNull('parent_id')
+                                return MarketplaceRegion::where('marketplace_client_id', $marketplace?->id)
                                     ->orderBy('sort_order')
                                     ->get()
-                                    ->mapWithKeys(fn ($c) => [$c->id => $c->name[$lang] ?? $c->name['en'] ?? 'Unnamed']);
+                                    ->mapWithKeys(fn ($r) => [$r->id => $r->name[$lang] ?? $r->name['ro'] ?? 'Unnamed']);
                             })
                             ->searchable()
-                            ->placeholder('None (Top-level category)'),
+                            ->required()
+                            ->placeholder('Select a region'),
 
                         Forms\Components\TextInput::make('sort_order')
                             ->label('Sort Order')
@@ -106,26 +114,22 @@ class EventCategoryResource extends Resource
                     ])->columns(2),
 
                 SC\Section::make('Appearance')
+                    ->collapsed()
                     ->schema([
-                        Forms\Components\TextInput::make('icon_emoji')
-                            ->label('Emoji Icon')
-                            ->placeholder('🎵')
-                            ->maxLength(10),
+                        Forms\Components\FileUpload::make('image_url')
+                            ->label('Image')
+                            ->image()
+                            ->disk('public')
+                            ->directory('counties')
+                            ->visibility('public'),
 
                         Forms\Components\TextInput::make('icon')
-                            ->label('Heroicon')
-                            ->placeholder('heroicon-o-musical-note')
+                            ->label('Icon')
+                            ->placeholder('heroicon-o-map')
                             ->maxLength(100),
 
                         Forms\Components\ColorPicker::make('color')
                             ->label('Color'),
-
-                        Forms\Components\FileUpload::make('image_url')
-                            ->label('Category Image')
-                            ->image()
-                            ->disk('public')
-                            ->directory('event-categories')
-                            ->visibility('public'),
 
                         Forms\Components\Toggle::make('is_visible')
                             ->label('Visible')
@@ -154,34 +158,6 @@ class EventCategoryResource extends Resource
                                     ]),
                             ])->columnSpanFull(),
                     ]),
-
-                SC\Section::make('SEO')
-                    ->collapsed()
-                    ->schema([
-                        SC\Tabs::make('SEO Translations')
-                            ->tabs([
-                                SC\Tabs\Tab::make('Română')
-                                    ->schema([
-                                        Forms\Components\TextInput::make('meta_title.ro')
-                                            ->label('Meta Title (RO)')
-                                            ->maxLength(70),
-                                        Forms\Components\Textarea::make('meta_description.ro')
-                                            ->label('Meta Description (RO)')
-                                            ->rows(2)
-                                            ->maxLength(160),
-                                    ]),
-                                SC\Tabs\Tab::make('English')
-                                    ->schema([
-                                        Forms\Components\TextInput::make('meta_title.en')
-                                            ->label('Meta Title (EN)')
-                                            ->maxLength(70),
-                                        Forms\Components\Textarea::make('meta_description.en')
-                                            ->label('Meta Description (EN)')
-                                            ->rows(2)
-                                            ->maxLength(160),
-                                    ]),
-                            ])->columnSpanFull(),
-                    ]),
             ]);
     }
 
@@ -192,27 +168,28 @@ class EventCategoryResource extends Resource
 
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('icon_emoji')
-                    ->label('')
-                    ->alignCenter()
-                    ->width(50),
+                Tables\Columns\TextColumn::make('code')
+                    ->label('Code')
+                    ->searchable()
+                    ->sortable()
+                    ->badge(),
 
                 Tables\Columns\TextColumn::make("name.{$marketplaceLanguage}")
                     ->label('Name')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('parent.name')
-                    ->label('Parent')
+                Tables\Columns\TextColumn::make('region.name')
+                    ->label('Region')
                     ->formatStateUsing(function ($state) use ($marketplaceLanguage) {
                         if (is_array($state)) {
-                            return $state[$marketplaceLanguage] ?? $state['en'] ?? '-';
+                            return $state[$marketplaceLanguage] ?? $state['ro'] ?? '-';
                         }
                         return $state ?? '-';
                     }),
 
-                Tables\Columns\TextColumn::make('event_count')
-                    ->label('Events')
+                Tables\Columns\TextColumn::make('city_count')
+                    ->label('Cities')
                     ->sortable(),
 
                 Tables\Columns\ColorColumn::make('color')
@@ -231,16 +208,15 @@ class EventCategoryResource extends Resource
                     ->sortable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('parent_id')
-                    ->label('Parent Category')
+                Tables\Filters\SelectFilter::make('region_id')
+                    ->label('Region')
                     ->options(function () {
                         $marketplace = static::getMarketplaceClient();
                         $lang = $marketplace->language ?? $marketplace->locale ?? 'ro';
-                        return MarketplaceEventCategory::where('marketplace_client_id', $marketplace?->id)
-                            ->whereNull('parent_id')
+                        return MarketplaceRegion::where('marketplace_client_id', $marketplace?->id)
                             ->orderBy('sort_order')
                             ->get()
-                            ->mapWithKeys(fn ($c) => [$c->id => $c->name[$lang] ?? $c->name['en'] ?? 'Unnamed']);
+                            ->mapWithKeys(fn ($r) => [$r->id => $r->name[$lang] ?? $r->name['ro'] ?? 'Unnamed']);
                     }),
                 Tables\Filters\TernaryFilter::make('is_visible')
                     ->label('Visible'),
@@ -269,9 +245,9 @@ class EventCategoryResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListEventCategories::route('/'),
-            'create' => Pages\CreateEventCategory::route('/create'),
-            'edit' => Pages\EditEventCategory::route('/{record}/edit'),
+            'index' => Pages\ListCounties::route('/'),
+            'create' => Pages\CreateCounty::route('/create'),
+            'edit' => Pages\EditCounty::route('/{record}/edit'),
         ];
     }
 }

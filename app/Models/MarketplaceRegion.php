@@ -73,6 +73,11 @@ class MarketplaceRegion extends Model
         return $this->belongsTo(MarketplaceClient::class);
     }
 
+    public function counties(): HasMany
+    {
+        return $this->hasMany(MarketplaceCounty::class, 'region_id');
+    }
+
     public function cities(): HasMany
     {
         return $this->hasMany(MarketplaceCity::class, 'region_id');
