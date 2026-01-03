@@ -477,6 +477,8 @@ const CitiesPage = {
             return;
         }
 
+        // When appending, we already have the full cities array, so just re-render all
+        // This ensures no duplicates and is simpler than tracking indices
         const html = this.cities.map(city => {
             const cityUrl = `/${city.slug}`;
             const image = city.image || defaultImage;
@@ -500,11 +502,8 @@ const CitiesPage = {
             `;
         }).join('');
 
-        if (append) {
-            container.insertAdjacentHTML('beforeend', html);
-        } else {
-            container.innerHTML = html;
-        }
+        // Always replace the entire content - the cities array already contains all cities
+        container.innerHTML = html;
     },
 
     updateLoadMoreButton() {

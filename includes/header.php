@@ -367,12 +367,19 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                             <div class="w-[250px] p-5 bg-gray-50 border-r border-gray-200">
                                 <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 px-3">Categorii</div>
                                 <?php foreach ($navCategories as $index => $cat): ?>
-                                <a href="/<?= $cat['slug'] ?>" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm transition-all mb-1 group/cat <?= $index === 0 ? 'bg-white text-gray-900 shadow-sm border-l-[3px] border-primary' : '' ?>" title="<?= htmlspecialchars($cat['name']) ?>">
+                                <a href="/<?= $cat['slug'] ?>" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm transition-all mb-1 group/cat <?= $index === 0 ? 'bg-white text-gray-900 shadow-sm' : '' ?>" title="<?= htmlspecialchars($cat['name']) ?>">
                                     <div class="w-[38px] h-[38px] bg-white rounded-lg flex items-center justify-center shadow-sm text-gray-500 transition-all group-hover/cat:bg-gradient-to-br group-hover/cat:from-primary group-hover/cat:to-primary-light group-hover/cat:text-white <?= $index === 0 ? '!bg-gradient-to-br !from-primary !to-primary-light !text-white' : '' ?>">
-                                        <?php if (!empty($cat['icon'])): ?>
+                                        <?php
+                                        // Prioritize emoji icon, or use SVG only if it contains actual path data
+                                        $hasEmoji = !empty($cat['icon_emoji']);
+                                        $hasSvgPath = !empty($cat['icon']) && (str_contains($cat['icon'], '<path') || str_contains($cat['icon'], '<circle') || str_contains($cat['icon'], '<rect'));
+                                        ?>
+                                        <?php if ($hasEmoji): ?>
+                                        <span class="text-xl"><?= $cat['icon_emoji'] ?></span>
+                                        <?php elseif ($hasSvgPath): ?>
                                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><?= $cat['icon'] ?></svg>
                                         <?php else: ?>
-                                        <span class="text-xl"><?= $cat['icon_emoji'] ?? '🎫' ?></span>
+                                        <span class="text-xl">🎫</span>
                                         <?php endif; ?>
                                     </div>
                                     <div class="flex-1">
