@@ -25,51 +25,8 @@ require_once __DIR__ . '/nav-cache.php';
 // These can be overridden before including this file
 // Counts are automatically updated from cache
 
-// Cities for mega menu
-$navCities = $navCities ?? [
-    [
-        'name' => 'București',
-        'slug' => 'bucuresti',
-        'image' => 'https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=600&h=600&fit=crop',
-        'count' => 238,
-        'featured' => true
-    ],
-    [
-        'name' => 'Cluj-Napoca',
-        'slug' => 'cluj',
-        'image' => 'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=400&h=400&fit=crop',
-        'count' => 94,
-        'featured' => false
-    ],
-    [
-        'name' => 'Timișoara',
-        'slug' => 'timisoara',
-        'image' => 'https://images.unsplash.com/photo-1598971861713-54ad16a7e72e?w=400&h=400&fit=crop',
-        'count' => 67,
-        'featured' => false
-    ],
-    [
-        'name' => 'Iași',
-        'slug' => 'iasi',
-        'image' => 'https://images.unsplash.com/photo-1560969184-10fe8719e047?w=400&h=400&fit=crop',
-        'count' => 52,
-        'featured' => false
-    ],
-    [
-        'name' => 'Brașov',
-        'slug' => 'brasov',
-        'image' => 'https://images.unsplash.com/photo-1565264216052-3c9012481015?w=400&h=400&fit=crop',
-        'count' => 41,
-        'featured' => false
-    ],
-    [
-        'name' => 'Constanța',
-        'slug' => 'constanta',
-        'image' => 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop',
-        'count' => 38,
-        'featured' => false
-    ]
-];
+// Cities for mega menu - loaded from API with caching (30 min TTL)
+$navCities = $navCities ?? getFeaturedCities();
 
 // Event categories
 $navCategories = $navCategories ?? [
@@ -225,7 +182,7 @@ $navPopularSearches = $navPopularSearches ?? [
 
 // ==================== APPLY CACHED COUNTS ====================
 // Update counts from cache (refreshes every 6 hours)
-$navCities = applyNavCounts($navCities, 'cities');
+// Note: $navCities already has counts from API, no need to apply cache
 $navCategories = applyNavCounts($navCategories, 'categories');
 $navVenues = applyNavCounts($navVenues, 'venues');
 $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');

@@ -73,7 +73,7 @@ include __DIR__ . '/includes/header.php';
             </h2>
         </div>
 
-        <div id="featuredCities" class="grid grid-cols-3 gap-6 mobile:grid-cols-1">
+        <div id="featuredCities" class="grid grid-cols-4 gap-6 mobile:grid-cols-1">
             <!-- First card spans 2 rows -->
             <a href="/bucuresti" class="relative row-span-2 overflow-hidden rounded-2xl group">
                 <img src="https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=800&h=1000&fit=crop" alt="București" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
@@ -336,7 +336,7 @@ const CitiesPage = {
 
         container.innerHTML = this.featuredCities.map((city, index) => {
             const isFirst = index === 0;
-            const cityUrl = `/oras/${city.slug}`;
+            const cityUrl = `/${city.slug}`;
             const image = city.image || defaultImage;
 
             if (isFirst) {
@@ -370,7 +370,7 @@ const CitiesPage = {
             } else {
                 // Regular cards
                 return `
-                    <a href="${cityUrl}" class="relative rounded-2xl overflow-hidden aspect-[4/5] group">
+                    <a href="${cityUrl}" class="relative rounded-2xl overflow-hidden aspect-[5/5] group">
                         <img src="${image}" alt="${city.name}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10"></div>
                         <div class="absolute bottom-0 left-0 right-0 p-7">
@@ -478,7 +478,7 @@ const CitiesPage = {
         }
 
         const html = this.cities.map(city => {
-            const cityUrl = `/oras/${city.slug}`;
+            const cityUrl = `/${city.slug}`;
             const image = city.image || defaultImage;
             const countyCode = city.county?.code || '';
             const region = city.region || '';
@@ -594,7 +594,7 @@ const CitiesPage = {
                     </div>
                     <div class="flex flex-wrap gap-2">
                         ${topCities.map(city => `
-                            <a href="/oras/${city.slug}" class="px-3.5 py-2 bg-surface rounded-lg text-gray-600 text-sm font-medium hover:bg-primary hover:text-white transition-all">${city.name}</a>
+                            <a href="/${city.slug}" class="px-3.5 py-2 bg-surface rounded-lg text-gray-600 text-sm font-medium hover:bg-primary hover:text-white transition-all">${city.name}</a>
                         `).join('')}
                         ${region.cities_count > 5 ? `
                             <a href="${regionUrl}" class="px-3.5 py-2 bg-primary/10 rounded-lg text-primary text-sm font-medium hover:bg-primary hover:text-white transition-all">Vezi toate →</a>

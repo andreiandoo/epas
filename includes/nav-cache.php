@@ -188,3 +188,157 @@ function applyNavCounts(array $items, string $type): array {
 
     return $items;
 }
+
+// ==================== FEATURED CITIES CACHE ====================
+
+define('FEATURED_CITIES_CACHE_FILE', __DIR__ . '/cache/featured-cities.json');
+define('FEATURED_CITIES_CACHE_TTL', 30 * 60); // 30 minutes
+
+/**
+ * Get featured cities for navigation with caching
+ *
+ * @return array Featured cities array
+ */
+function getFeaturedCities(): array {
+    // Check if cache exists and is valid
+    if (isFeaturedCitiesCacheValid()) {
+        return loadFeaturedCitiesCache();
+    }
+
+    // Fetch fresh data from API
+    $freshData = fetchFeaturedCitiesFromAPI();
+
+    // Save to cache
+    saveFeaturedCitiesCache($freshData);
+
+    return $freshData;
+}
+
+/**
+ * Check if featured cities cache is still valid
+ */
+function isFeaturedCitiesCacheValid(): bool {
+    if (!file_exists(FEATURED_CITIES_CACHE_FILE)) {
+        return false;
+    }
+
+    $cacheTime = filemtime(FEATURED_CITIES_CACHE_FILE);
+    return (time() - $cacheTime) < FEATURED_CITIES_CACHE_TTL;
+}
+
+/**
+ * Load featured cities from cache file
+ */
+function loadFeaturedCitiesCache(): array {
+    $content = file_get_contents(FEATURED_CITIES_CACHE_FILE);
+    $data = json_decode($content, true);
+
+    return $data ?: getDefaultFeaturedCities();
+}
+
+/**
+ * Save featured cities to cache file
+ */
+function saveFeaturedCitiesCache(array $data): void {
+    $cacheDir = dirname(FEATURED_CITIES_CACHE_FILE);
+
+    if (!is_dir($cacheDir)) {
+        mkdir($cacheDir, 0755, true);
+    }
+
+    file_put_contents(FEATURED_CITIES_CACHE_FILE, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
+/**
+ * Fetch featured cities from API via proxy
+ */
+function fetchFeaturedCitiesFromAPI(): array {
+    require_once __DIR__ . '/../includes/config.php';
+
+    // Use internal API call via proxy
+    $proxyUrl = '/api/proxy.php?action=locations.cities.featured';
+    $fullUrl = (defined('SITE_URL') ? SITE_URL : '') . $proxyUrl;
+
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 5,
+            'ignore_errors' => true
+        ]
+    ]);
+
+    $response = @file_get_contents($fullUrl, false, $context);
+
+    if ($response === false) {
+        return getDefaultFeaturedCities();
+    }
+
+    $data = json_decode($response, true);
+
+    if (!$data || !isset($data['success']) || !$data['success'] || !isset($data['data']['cities'])) {
+        return getDefaultFeaturedCities();
+    }
+
+    // Transform API response to nav format
+    $cities = [];
+    foreach ($data['data']['cities'] as $index => $city) {
+        $cities[] = [
+            'name' => $city['name'],
+            'slug' => $city['slug'],
+            'image' => $city['image'] ?? 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=600&h=600&fit=crop',
+            'count' => $city['events_count'] ?? 0,
+            'featured' => $index === 0 // First city is featured (larger card)
+        ];
+    }
+
+    return $cities;
+}
+
+/**
+ * Get default featured cities (fallback)
+ */
+function getDefaultFeaturedCities(): array {
+    return [
+        [
+            'name' => 'București',
+            'slug' => 'bucuresti',
+            'image' => 'https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=600&h=600&fit=crop',
+            'count' => 238,
+            'featured' => true
+        ],
+        [
+            'name' => 'Cluj-Napoca',
+            'slug' => 'cluj-napoca',
+            'image' => 'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=400&h=400&fit=crop',
+            'count' => 94,
+            'featured' => false
+        ],
+        [
+            'name' => 'Timișoara',
+            'slug' => 'timisoara',
+            'image' => 'https://images.unsplash.com/photo-1598971861713-54ad16a7e72e?w=400&h=400&fit=crop',
+            'count' => 67,
+            'featured' => false
+        ],
+        [
+            'name' => 'Iași',
+            'slug' => 'iasi',
+            'image' => 'https://images.unsplash.com/photo-1560969184-10fe8719e047?w=400&h=400&fit=crop',
+            'count' => 52,
+            'featured' => false
+        ],
+        [
+            'name' => 'Brașov',
+            'slug' => 'brasov',
+            'image' => 'https://images.unsplash.com/photo-1565264216052-3c9012481015?w=400&h=400&fit=crop',
+            'count' => 41,
+            'featured' => false
+        ],
+        [
+            'name' => 'Constanța',
+            'slug' => 'constanta',
+            'image' => 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=400&fit=crop',
+            'count' => 38,
+            'featured' => false
+        ]
+    ];
+}
