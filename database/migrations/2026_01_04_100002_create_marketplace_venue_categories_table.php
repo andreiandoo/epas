@@ -29,8 +29,8 @@ return new class extends Migration
 
             $table->timestamps();
 
-            $table->index(['marketplace_client_id', 'is_active']);
-            $table->index(['marketplace_client_id', 'sort_order']);
+            $table->index(['marketplace_client_id', 'is_active'], 'mvc_client_active_idx');
+            $table->index(['marketplace_client_id', 'sort_order'], 'mvc_client_sort_idx');
         });
 
         // Pivot table for venue-category relationships
