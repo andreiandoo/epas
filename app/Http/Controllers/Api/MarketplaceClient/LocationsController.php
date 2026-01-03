@@ -145,10 +145,17 @@ class LocationsController extends BaseController
         // Sort by event count by default
         $sortBy = $request->get('sort', 'events');
         if ($sortBy === 'events') {
-            // Get city IDs sorted by event count
+            // Get city IDs sorted by event count (most events first)
             $cityIds = $eventCounts->sortDesc()->keys()->toArray();
             if (!empty($cityIds)) {
-                $query->orderByRaw('FIELD(id, ' . implode(',', $cityIds) . ') DESC');
+                // FIELD returns position (1,2,3...) or 0 if not in list
+                // First sort to put cities with events first (FIELD != 0)
+                // Then sort by position in the sorted list (ASC = 1,2,3...)
+                $idList = implode(',', array_map('intval', $cityIds));
+                $query->orderByRaw("FIELD(id, {$idList}) = 0 ASC, FIELD(id, {$idList}) ASC");
+            } else {
+                // No events, just sort by name
+                $query->orderByRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.\"{$lang}\"'))");
             }
         } elseif ($sortBy === 'name') {
             $query->orderByRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.\"{$lang}\"'))");
