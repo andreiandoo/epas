@@ -2,27 +2,51 @@
 /**
  * Category / Events Listing Page
  * Based on category.html template
+ *
+ * Loads category data from:
+ * 1. API cache (nav-cache.php) for dynamic categories from DB
+ * 2. Fallback to static category-config.php for defaults
  */
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/nav-cache.php';
 require_once __DIR__ . '/includes/category-config.php';
 
 $categorySlug = $_GET['type'] ?? $_GET['slug'] ?? '';
 
-// Get category config from centralized file
-$categoryConfig = getCategory($categorySlug);
+// First try to get category from API cache (dynamic DB data)
+$apiCategories = getEventCategories();
+$apiCategory = null;
+foreach ($apiCategories as $cat) {
+    if ($cat['slug'] === $categorySlug) {
+        $apiCategory = $cat;
+        break;
+    }
+}
 
-if ($categoryConfig) {
-    $pageTitle = $categoryConfig['name'];
-    $pageDescription = $categoryConfig['description'];
-    $categoryIcon = $categoryConfig['icon'];
-    $categoryHeroImage = $categoryConfig['hero_image'];
-    $categoryColor = $categoryConfig['color'];
+if ($apiCategory) {
+    // Use API data (from DB)
+    $pageTitle = $apiCategory['name'];
+    $pageDescription = $apiCategory['description'] ?? 'Descopera evenimentele din aceasta categorie.';
+    $categoryIcon = $apiCategory['icon_emoji'] ?? '🎫';
+    $categoryHeroImage = $apiCategory['image'] ?? getHeroImage($categorySlug, 'category');
+    $categoryColor = $apiCategory['color'] ?? '#A51C30';
 } else {
-    $pageTitle = $categorySlug ? ucfirst(str_replace('-', ' ', $categorySlug)) : 'Toate evenimentele';
-    $pageDescription = 'Descopera evenimentele din aceasta categorie.';
-    $categoryIcon = '🎫';
-    $categoryHeroImage = getHeroImage('concerte', 'category');
-    $categoryColor = '#A51C30';
+    // Fallback to static config file
+    $categoryConfig = getCategory($categorySlug);
+
+    if ($categoryConfig) {
+        $pageTitle = $categoryConfig['name'];
+        $pageDescription = $categoryConfig['description'];
+        $categoryIcon = $categoryConfig['icon'];
+        $categoryHeroImage = $categoryConfig['hero_image'];
+        $categoryColor = $categoryConfig['color'];
+    } else {
+        $pageTitle = $categorySlug ? ucfirst(str_replace('-', ' ', $categorySlug)) : 'Toate evenimentele';
+        $pageDescription = 'Descopera evenimentele din aceasta categorie.';
+        $categoryIcon = '🎫';
+        $categoryHeroImage = getHeroImage('concerte', 'category');
+        $categoryColor = '#A51C30';
+    }
 }
 
 $currentPage = 'events';
@@ -41,7 +65,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
             <span class="text-white" id="breadcrumbTitle"><?= htmlspecialchars($pageTitle) ?></span>
         </nav>
         <h1 id="pageTitle" class="mb-3 text-4xl font-extrabold text-white md:text-5xl"><?= $categoryIcon ?> <?= htmlspecialchars($pageTitle) ?></h1>
-        <p id="pageDescription" class="max-w-xl text-lg text-white/80">Descopera cele mai tari evenimente din aceasta categorie.</p>
+        <p id="pageDescription" class="max-w-xl text-lg text-white/80"><?= htmlspecialchars($pageDescription) ?></p>
         <div class="flex items-center gap-4 mt-6">
             <span id="eventsCount" class="px-4 py-2 text-sm font-medium text-white rounded-full bg-white/10 backdrop-blur-sm">-- evenimente</span>
             <span id="citiesCount" class="px-4 py-2 text-sm font-medium text-white rounded-full bg-white/10 backdrop-blur-sm">-- orase</span>
@@ -168,11 +192,12 @@ const CategoryPage = {
         if (!this.category) return;
 
         try {
-            const response = await AmbiletAPI.get('/categories');
-            if (response.data) {
-                const cat = response.data.find(c => c.slug === this.category);
+            // Use the new event-categories endpoint from API
+            const response = await AmbiletAPI.get('event-categories');
+            if (response.data?.categories) {
+                const cat = response.data.categories.find(c => c.slug === this.category);
                 if (cat) {
-                    document.getElementById('pageTitle').innerHTML = (cat.icon || '🎫') + ' ' + cat.name;
+                    document.getElementById('pageTitle').innerHTML = (cat.icon_emoji || '🎫') + ' ' + cat.name;
                     document.getElementById('breadcrumbTitle').textContent = cat.name;
                     if (cat.description) {
                         document.getElementById('pageDescription').textContent = cat.description;

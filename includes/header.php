@@ -28,45 +28,8 @@ require_once __DIR__ . '/nav-cache.php';
 // Cities for mega menu - loaded from API with caching (30 min TTL)
 $navCities = $navCities ?? getFeaturedCities();
 
-// Event categories
-$navCategories = $navCategories ?? [
-    [
-        'name' => 'Concerte',
-        'slug' => 'concerte',
-        'count' => 156,
-        'icon' => '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'
-    ],
-    [
-        'name' => 'Festivaluri',
-        'slug' => 'festivaluri',
-        'count' => 24,
-        'icon' => '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>'
-    ],
-    [
-        'name' => 'Teatru',
-        'slug' => 'teatru',
-        'count' => 89,
-        'icon' => '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>'
-    ],
-    [
-        'name' => 'Stand-up',
-        'slug' => 'stand-up',
-        'count' => 67,
-        'icon' => '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>'
-    ],
-    [
-        'name' => 'Sport',
-        'slug' => 'sport',
-        'count' => 34,
-        'icon' => '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>'
-    ],
-    [
-        'name' => 'Cluburi',
-        'slug' => 'cluburi',
-        'count' => 112,
-        'icon' => '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>'
-    ]
-];
+// Event categories - loaded from API with caching (30 min TTL)
+$navCategories = $navCategories ?? getEventCategories();
 
 // Featured/trending events
 $navFeaturedEvents = $navFeaturedEvents ?? [
@@ -406,11 +369,15 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                 <?php foreach ($navCategories as $index => $cat): ?>
                                 <a href="/<?= $cat['slug'] ?>" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm transition-all mb-1 group/cat <?= $index === 0 ? 'bg-white text-gray-900 shadow-sm border-l-[3px] border-primary' : '' ?>" title="<?= htmlspecialchars($cat['name']) ?>">
                                     <div class="w-[38px] h-[38px] bg-white rounded-lg flex items-center justify-center shadow-sm text-gray-500 transition-all group-hover/cat:bg-gradient-to-br group-hover/cat:from-primary group-hover/cat:to-primary-light group-hover/cat:text-white <?= $index === 0 ? '!bg-gradient-to-br !from-primary !to-primary-light !text-white' : '' ?>">
+                                        <?php if (!empty($cat['icon'])): ?>
                                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><?= $cat['icon'] ?></svg>
+                                        <?php else: ?>
+                                        <span class="text-xl"><?= $cat['icon_emoji'] ?? '🎫' ?></span>
+                                        <?php endif; ?>
                                     </div>
                                     <div class="flex-1">
                                         <div class="text-sm font-semibold"><?= htmlspecialchars($cat['name']) ?></div>
-                                        <div class="text-xs text-gray-400"><?= $cat['count'] ?> evenimente</div>
+                                        <div class="text-xs text-gray-400"><?= $cat['count'] ?? 0 ?> evenimente</div>
                                     </div>
                                     <svg class="w-4 h-4 text-gray-300 transition-all group-hover/cat:text-primary group-hover/cat:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M9 18l6-6-6-6"/>
