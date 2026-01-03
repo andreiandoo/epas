@@ -156,15 +156,15 @@ switch ($action) {
     // ==================== LOCATIONS ====================
 
     case 'locations.stats':
-        $endpoint = '/locations/stats';
+        $endpoint = '/marketplace-client/locations/stats';
         break;
 
     case 'locations.cities.featured':
-        $endpoint = '/locations/cities/featured';
+        $endpoint = '/marketplace-client/locations/cities/featured';
         break;
 
     case 'locations.cities.alphabet':
-        $endpoint = '/locations/cities/alphabet';
+        $endpoint = '/marketplace-client/locations/cities/alphabet';
         break;
 
     case 'locations.cities':
@@ -174,11 +174,11 @@ switch ($action) {
         if (isset($_GET['sort'])) $params['sort'] = $_GET['sort'];
         if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
         if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
-        $endpoint = '/locations/cities' . ($params ? '?' . http_build_query($params) : '');
+        $endpoint = '/marketplace-client/locations/cities' . ($params ? '?' . http_build_query($params) : '');
         break;
 
     case 'locations.regions':
-        $endpoint = '/locations/regions';
+        $endpoint = '/marketplace-client/locations/regions';
         break;
 
     case 'locations.region':
@@ -188,7 +188,7 @@ switch ($action) {
             echo json_encode(['error' => 'Missing region identifier']);
             exit;
         }
-        $endpoint = '/locations/regions/' . urlencode($identifier);
+        $endpoint = '/marketplace-client/locations/regions/' . urlencode($identifier);
         break;
 
     case 'cart':
