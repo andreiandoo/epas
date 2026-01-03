@@ -56,14 +56,18 @@ class PartnerVenues extends Page implements HasForms, HasTable
         return $table
             ->query(
                 Venue::query()
-                    // Show venues that are NOT already associated with this marketplace
-                    ->whereNull('marketplace_client_id')
-                    // Or show venues that are associated but as partners only (not created by marketplace)
-                    ->orWhere(function (Builder $query) use ($marketplace) {
-                        $query->where('marketplace_client_id', $marketplace?->id)
-                            ->where('is_partner', true);
+                    ->where(function (Builder $query) use ($marketplace) {
+                        // Show venues that are NOT already associated with any marketplace
+                        $query->whereNull('marketplace_client_id')
+                            // Or show venues that belong to this marketplace as partners
+                            ->orWhere(function (Builder $q) use ($marketplace) {
+                                $q->where('marketplace_client_id', $marketplace?->id)
+                                    ->where('is_partner', true);
+                            });
                     })
             )
+            ->searchable()
+            ->searchPlaceholder('Caută locații...')
             ->columns([
                 Tables\Columns\ImageColumn::make('image_url')
                     ->label('Imagine')
@@ -71,22 +75,11 @@ class PartnerVenues extends Page implements HasForms, HasTable
                     ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=V&color=7F9CF5&background=EBF4FF'),
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nume')
-                    ->formatStateUsing(fn ($record) => $record->getTranslation('name', 'ro') ?? $record->getTranslation('name', 'en'))
-                    ->searchable(query: function (Builder $query, string $search): Builder {
-                        $search = static::normalizeSearch($search);
-                        return $query->where(function (Builder $q) use ($search) {
-                            $q->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ["%{$search}%"])
-                              ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", ["%{$search}%"]);
-                        });
-                    })
+                    ->formatStateUsing(fn ($record) => static::getVenueName($record))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('city')
                     ->label('Oraș')
-                    ->sortable()
-                    ->searchable(query: function (Builder $query, string $search): Builder {
-                        $search = static::normalizeSearch($search);
-                        return $query->whereRaw("LOWER(city) LIKE ?", ["%{$search}%"]);
-                    }),
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('capacity_total')
                     ->label('Capacitate')
                     ->numeric(),
@@ -127,16 +120,20 @@ class PartnerVenues extends Page implements HasForms, HasTable
                     ->icon('heroicon-o-plus-circle')
                     ->color('success')
                     ->visible(fn (Venue $record): bool => $record->marketplace_client_id !== $marketplace?->id)
-                    ->modalHeading(fn (Venue $record): string => 'Adaugă "' . static::getVenueName($record) . '" ca partener')
-                    ->modalDescription('Ești sigur că vrei să adaugi această locație ca parteneră?')
+                    ->modalHeading('Adaugă locație ca partener')
+                    ->modalDescription('Confirmă adăugarea acestei locații ca partener.')
                     ->form([
-                        Forms\Components\Placeholder::make('venue_info')
+                        Forms\Components\TextInput::make('venue_name')
                             ->label('Locație')
-                            ->content(fn (Venue $record): string => static::getVenueName($record) . ($record->city ? ' - ' . $record->city : '')),
+                            ->disabled()
+                            ->dehydrated(false),
                         Forms\Components\Textarea::make('partner_notes')
                             ->label('Note parteneriat (opțional)')
                             ->placeholder('Note interne despre acest parteneriat...')
                             ->rows(3),
+                    ])
+                    ->fillForm(fn (Venue $record): array => [
+                        'venue_name' => static::getVenueName($record) . ($record->city ? ' - ' . $record->city : ''),
                     ])
                     ->action(function (Venue $record, array $data) use ($marketplace) {
                         $venueName = static::getVenueName($record);
@@ -154,12 +151,12 @@ class PartnerVenues extends Page implements HasForms, HasTable
                     }),
 
                 Actions\Action::make('remove_partner')
-                    ->label('Elimină partener')
+                    ->label('Elimină')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(fn (Venue $record): bool => $record->marketplace_client_id === $marketplace?->id && $record->is_partner)
                     ->requiresConfirmation()
-                    ->modalHeading(fn (Venue $record): string => 'Elimină "' . static::getVenueName($record) . '" din parteneri')
+                    ->modalHeading('Elimină locația din parteneri')
                     ->modalDescription('Această acțiune va elimina locația din lista de parteneri.')
                     ->action(function (Venue $record) {
                         $venueName = static::getVenueName($record);
@@ -180,12 +177,19 @@ class PartnerVenues extends Page implements HasForms, HasTable
                     ->label('Note')
                     ->icon('heroicon-o-pencil-square')
                     ->visible(fn (Venue $record): bool => $record->marketplace_client_id === $marketplace?->id)
-                    ->modalHeading(fn (Venue $record): string => 'Note pentru "' . static::getVenueName($record) . '"')
+                    ->modalHeading('Editează notele')
                     ->form([
+                        Forms\Components\TextInput::make('venue_name')
+                            ->label('Locație')
+                            ->disabled()
+                            ->dehydrated(false),
                         Forms\Components\Textarea::make('partner_notes')
                             ->label('Note parteneriat')
-                            ->default(fn (Venue $record): ?string => $record->partner_notes)
                             ->rows(3),
+                    ])
+                    ->fillForm(fn (Venue $record): array => [
+                        'venue_name' => static::getVenueName($record) . ($record->city ? ' - ' . $record->city : ''),
+                        'partner_notes' => $record->partner_notes,
                     ])
                     ->action(function (Venue $record, array $data) {
                         $record->update([
@@ -226,6 +230,31 @@ class PartnerVenues extends Page implements HasForms, HasTable
             ->emptyStateHeading('Nu există locații disponibile')
             ->emptyStateDescription('Nu am găsit locații disponibile pentru parteneriat.')
             ->defaultSort('city');
+    }
+
+    /**
+     * Global table search - searches in name (JSON) and city
+     */
+    protected function applySearchToTableQuery(Builder $query): Builder
+    {
+        $search = $this->getTableSearch();
+
+        if (blank($search)) {
+            return $query;
+        }
+
+        $normalizedSearch = static::normalizeSearch($search);
+
+        return $query->where(function (Builder $q) use ($normalizedSearch, $search) {
+            // Search in name JSON field (both ro and en)
+            $q->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ["%{$normalizedSearch}%"])
+              ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", ["%{$normalizedSearch}%"])
+              // Also search in city
+              ->orWhereRaw("LOWER(city) LIKE ?", ["%{$normalizedSearch}%"])
+              // Fallback: also search with original (non-normalized) for exact matches
+              ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ["%" . mb_strtolower($search) . "%"])
+              ->orWhereRaw("LOWER(city) LIKE ?", ["%" . mb_strtolower($search) . "%"]);
+        });
     }
 
     protected function getHeaderActions(): array
