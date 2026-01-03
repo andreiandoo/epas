@@ -1,70 +1,26 @@
 <?php
 /**
  * City Page - Events filtered by city
+ *
+ * Dynamically loads city data from API
  */
 require_once __DIR__ . '/includes/config.php';
 
 $citySlug = $_GET['slug'] ?? '';
 
-// City configuration
-$cities = [
-    'bucuresti' => [
-        'name' => 'București',
-        'description' => 'Capitala României, cel mai mare centru cultural și de entertainment. Descopera concerte, festivaluri și evenimente pentru toate gusturile.',
-        'hero_image' => 'https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=1920&q=80',
-        'count' => 238
-    ],
-    'cluj' => [
-        'name' => 'Cluj-Napoca',
-        'description' => 'Inima Transilvaniei și gazda celor mai mari festivaluri din Europa. UNTOLD, Electric Castle și multe altele te așteaptă.',
-        'hero_image' => 'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=1920&q=80',
-        'count' => 94
-    ],
-    'timisoara' => [
-        'name' => 'Timișoara',
-        'description' => 'Capitala Europeană a Culturii 2023, cu o scenă artistică vibrantă și evenimente de top.',
-        'hero_image' => 'https://images.unsplash.com/photo-1598971861713-54ad16a7e72e?w=1920&q=80',
-        'count' => 67
-    ],
-    'iasi' => [
-        'name' => 'Iași',
-        'description' => 'Capitala culturală a Moldovei, cu tradiție în teatru, muzică și artă.',
-        'hero_image' => 'https://images.unsplash.com/photo-1560969184-10fe8719e047?w=1920&q=80',
-        'count' => 52
-    ],
-    'brasov' => [
-        'name' => 'Brașov',
-        'description' => 'La poalele Tâmpei, cu evenimente speciale în inima munților.',
-        'hero_image' => 'https://images.unsplash.com/photo-1565264216052-3c9012481015?w=1920&q=80',
-        'count' => 41
-    ],
-    'constanta' => [
-        'name' => 'Constanța',
-        'description' => 'Perla Mării Negre, cu festivaluri pe plajă și evenimente estivale de neuitat.',
-        'hero_image' => 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1920&q=80',
-        'count' => 38
-    ],
-    'sibiu' => [
-        'name' => 'Sibiu',
-        'description' => 'Orașul cu cele mai multe festivaluri din România. TIFF, Jazz Festival și multe altele.',
-        'hero_image' => 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&q=80',
-        'count' => 35
-    ],
-    'craiova' => [
-        'name' => 'Craiova',
-        'description' => 'Capitala Olteniei, cu tradiție în muzică și evenimente culturale.',
-        'hero_image' => 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1920&q=80',
-        'count' => 28
-    ],
-];
-
-$cityConfig = $cities[$citySlug] ?? null;
-
-if (!$cityConfig) {
-    // Redirect to cities listing if city not found
+if (!$citySlug) {
     header('Location: /orase');
     exit;
 }
+
+// Default city config (will be overwritten by API data via JavaScript)
+// This provides fallback data for SEO and initial render
+$cityConfig = [
+    'name' => ucwords(str_replace('-', ' ', $citySlug)),
+    'description' => 'Descopera cele mai bune evenimente din acest oras.',
+    'hero_image' => 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=1920&q=80',
+    'count' => 0
+];
 
 $pageTitle = 'Evenimente în ' . $cityConfig['name'];
 $pageDescription = $cityConfig['description'];
@@ -170,11 +126,70 @@ $scriptsExtra = <<<SCRIPTS
 <script>
 const CityPage = {
     city: '{$citySlugJS}',
+    cityData: null,
     page: 1,
     filters: {},
 
     async init() {
+        // First, load city data from API to verify the city exists
+        const cityValid = await this.loadCityData();
+        if (!cityValid) {
+            // City not found - redirect to cities listing
+            window.location.href = '/orase';
+            return;
+        }
         await this.loadEvents();
+    },
+
+    async loadCityData() {
+        try {
+            // Search for city in the cities list
+            const response = await AmbiletAPI.get('/api/proxy.php?action=locations.cities&search=' + encodeURIComponent(this.city) + '&per_page=1');
+
+            if (response.success && response.data && response.data.length > 0) {
+                // Find exact match
+                const city = response.data.find(c => c.slug === this.city);
+                if (city) {
+                    this.cityData = city;
+                    this.updatePageWithCityData(city);
+                    return true;
+                }
+            }
+
+            // City not found in API - use demo mode or show basic info
+            console.warn('City not found in API, using fallback');
+            return true; // Still allow page to render with fallback data
+
+        } catch (e) {
+            console.error('Failed to load city data:', e);
+            // On error, still allow page to work with fallback data
+            return true;
+        }
+    },
+
+    updatePageWithCityData(city) {
+        // Update page title
+        document.title = 'Evenimente in ' + city.name + ' - AmBilet.ro';
+
+        // Update hero section
+        const heroTitle = document.querySelector('h1');
+        if (heroTitle) {
+            heroTitle.textContent = city.name;
+        }
+
+        // Update description if we have region info
+        const descEl = document.querySelector('.hero-description, .text-white\\/80');
+        if (descEl && city.region) {
+            descEl.textContent = 'Descopera cele mai bune evenimente din ' + city.name + ', ' + city.region + '.';
+        }
+
+        // Update events count badge
+        if (city.events_count !== undefined) {
+            const countEl = document.getElementById('eventsCount');
+            if (countEl) {
+                countEl.textContent = city.events_count + ' evenimente disponibile';
+            }
+        }
     },
 
     async loadEvents() {

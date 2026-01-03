@@ -64,10 +64,13 @@ RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^orase/?$ cities.php [L]
 
-# Handle single city pages - /bucuresti, /cluj, etc.
+# Handle regions - /regiune/slug
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(bucuresti|cluj|timisoara|iasi|brasov|constanta|sibiu|craiova|oradea|arad|ploiesti|galati|pitesti|baia-mare|buzau|satu-mare|botosani|targu-mures|piatra-neamt|suceava|deva|alba-iulia|focsani|tulcea|targoviste|resita|ramnicu-valcea|vaslui|giurgiu|calarasi|alexandria|slobozia|zalau|bistrita|miercurea-ciuc|sfantu-gheorghe|drobeta-turnu-severin)/?$ city.php?slug=$1 [L,QSA]
+RewriteRule ^regiune/([a-z0-9-]+)/?$ region.php?slug=$1 [L,QSA]
+
+# Legacy: redirect /region/slug to /regiune/slug
+RewriteRule ^region/([a-z0-9-]+)/?$ /regiune/$1 [R=301,L]
 
 # Legacy: redirect /cities to /orase
 RewriteRule ^cities/?$ /orase [R=301,L]
@@ -312,6 +315,17 @@ RewriteRule ^email-confirmat/?$ email-confirmed.php [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^dezabonare/?$ newsletter-unsubscribed.php [L]
+
+# ============================================
+# DYNAMIC CITY PAGES - Catch-all for city slugs
+# Must come after all other explicit routes
+# ============================================
+
+# Handle single city pages - dynamic routing for any city slug
+# The city.php file validates the slug against the API and redirects if not found
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-z][a-z0-9-]{1,50})/?$ city.php?slug=$1 [L,QSA]
 
 # ============================================
 # FALLBACK: Remove .php extension from URLs
