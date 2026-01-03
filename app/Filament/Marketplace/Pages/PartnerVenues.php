@@ -29,6 +29,26 @@ class PartnerVenues extends Page implements HasForms, HasTable
     protected static ?int $navigationSort = 5;
     protected string $view = 'filament.marketplace.pages.partner-venues';
 
+    /**
+     * Normalize search string - lowercase and remove diacritics
+     */
+    protected static function normalizeSearch(string $search): string
+    {
+        $search = mb_strtolower($search);
+        // Replace Romanian diacritics with base letters
+        $diacritics = ['ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ț' => 't',
+                       'Ă' => 'a', 'Â' => 'a', 'Î' => 'i', 'Ș' => 's', 'Ț' => 't'];
+        return strtr($search, $diacritics);
+    }
+
+    /**
+     * Get venue display name
+     */
+    protected static function getVenueName(Venue $venue): string
+    {
+        return $venue->getTranslation('name', 'ro') ?? $venue->getTranslation('name', 'en') ?? 'Locație';
+    }
+
     public function table(Table $table): Table
     {
         $marketplace = static::getMarketplaceClient();
@@ -52,12 +72,21 @@ class PartnerVenues extends Page implements HasForms, HasTable
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nume')
                     ->formatStateUsing(fn ($record) => $record->getTranslation('name', 'ro') ?? $record->getTranslation('name', 'en'))
-                    ->searchable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $search = static::normalizeSearch($search);
+                        return $query->where(function (Builder $q) use ($search) {
+                            $q->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ["%{$search}%"])
+                              ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", ["%{$search}%"]);
+                        });
+                    })
                     ->sortable(),
                 Tables\Columns\TextColumn::make('city')
                     ->label('Oraș')
                     ->sortable()
-                    ->searchable(),
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $search = static::normalizeSearch($search);
+                        return $query->whereRaw("LOWER(city) LIKE ?", ["%{$search}%"]);
+                    }),
                 Tables\Columns\TextColumn::make('capacity_total')
                     ->label('Capacitate')
                     ->numeric(),
@@ -97,17 +126,20 @@ class PartnerVenues extends Page implements HasForms, HasTable
                     ->label('Adaugă partener')
                     ->icon('heroicon-o-plus-circle')
                     ->color('success')
-                    ->visible(fn ($record) => $record->marketplace_client_id !== $marketplace?->id)
-                    ->requiresConfirmation()
-                    ->modalHeading('Adaugă locație ca partener')
-                    ->modalDescription(fn ($record) => 'Ești sigur că vrei să adaugi "' . ($record->getTranslation('name', 'ro') ?? $record->getTranslation('name', 'en')) . '" ca locație parteneră?')
+                    ->visible(fn (Venue $record): bool => $record->marketplace_client_id !== $marketplace?->id)
+                    ->modalHeading(fn (Venue $record): string => 'Adaugă "' . static::getVenueName($record) . '" ca partener')
+                    ->modalDescription('Ești sigur că vrei să adaugi această locație ca parteneră?')
                     ->form([
+                        Forms\Components\Placeholder::make('venue_info')
+                            ->label('Locație')
+                            ->content(fn (Venue $record): string => static::getVenueName($record) . ($record->city ? ' - ' . $record->city : '')),
                         Forms\Components\Textarea::make('partner_notes')
                             ->label('Note parteneriat (opțional)')
                             ->placeholder('Note interne despre acest parteneriat...')
                             ->rows(3),
                     ])
                     ->action(function (Venue $record, array $data) use ($marketplace) {
+                        $venueName = static::getVenueName($record);
                         $record->update([
                             'marketplace_client_id' => $marketplace?->id,
                             'is_partner' => true,
@@ -116,7 +148,7 @@ class PartnerVenues extends Page implements HasForms, HasTable
 
                         Notification::make()
                             ->title('Locație adăugată')
-                            ->body('Locația a fost adăugată ca partener.')
+                            ->body('"' . $venueName . '" a fost adăugată ca partener.')
                             ->success()
                             ->send();
                     }),
@@ -125,11 +157,12 @@ class PartnerVenues extends Page implements HasForms, HasTable
                     ->label('Elimină partener')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
-                    ->visible(fn ($record) => $record->marketplace_client_id === $marketplace?->id && $record->is_partner)
+                    ->visible(fn (Venue $record): bool => $record->marketplace_client_id === $marketplace?->id && $record->is_partner)
                     ->requiresConfirmation()
-                    ->modalHeading('Elimină locația din parteneri')
-                    ->modalDescription(fn ($record) => 'Ești sigur că vrei să elimini "' . ($record->getTranslation('name', 'ro') ?? $record->getTranslation('name', 'en')) . '" din lista de parteneri?')
+                    ->modalHeading(fn (Venue $record): string => 'Elimină "' . static::getVenueName($record) . '" din parteneri')
+                    ->modalDescription('Această acțiune va elimina locația din lista de parteneri.')
                     ->action(function (Venue $record) {
+                        $venueName = static::getVenueName($record);
                         $record->update([
                             'marketplace_client_id' => null,
                             'is_partner' => false,
@@ -138,7 +171,7 @@ class PartnerVenues extends Page implements HasForms, HasTable
 
                         Notification::make()
                             ->title('Locație eliminată')
-                            ->body('Locația a fost eliminată din lista de parteneri.')
+                            ->body('"' . $venueName . '" a fost eliminată din lista de parteneri.')
                             ->success()
                             ->send();
                     }),
@@ -146,11 +179,12 @@ class PartnerVenues extends Page implements HasForms, HasTable
                 Actions\Action::make('edit_notes')
                     ->label('Note')
                     ->icon('heroicon-o-pencil-square')
-                    ->visible(fn ($record) => $record->marketplace_client_id === $marketplace?->id)
+                    ->visible(fn (Venue $record): bool => $record->marketplace_client_id === $marketplace?->id)
+                    ->modalHeading(fn (Venue $record): string => 'Note pentru "' . static::getVenueName($record) . '"')
                     ->form([
                         Forms\Components\Textarea::make('partner_notes')
                             ->label('Note parteneriat')
-                            ->default(fn ($record) => $record->partner_notes)
+                            ->default(fn (Venue $record): ?string => $record->partner_notes)
                             ->rows(3),
                     ])
                     ->action(function (Venue $record, array $data) {
