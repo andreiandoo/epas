@@ -103,6 +103,12 @@ class MarketplaceClientAuth
             return true;
         }
 
+        // Filter out null/empty values
+        $allowedIps = array_filter($allowedIps, fn($ip) => !empty($ip));
+        if (empty($allowedIps)) {
+            return true;
+        }
+
         $clientIp = $request->ip();
 
         foreach ($allowedIps as $allowedIp) {
@@ -127,6 +133,12 @@ class MarketplaceClientAuth
         $allowedDomains = $client->settings['allowed_domains'] ?? null;
 
         // If no domain restriction is set, allow all
+        if (empty($allowedDomains)) {
+            return true;
+        }
+
+        // Filter out null/empty values
+        $allowedDomains = array_filter($allowedDomains, fn($domain) => !empty($domain));
         if (empty($allowedDomains)) {
             return true;
         }
