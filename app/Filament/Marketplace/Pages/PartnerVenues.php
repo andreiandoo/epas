@@ -27,7 +27,7 @@ class PartnerVenues extends Page implements HasForms, HasTable
     protected static ?string $title = 'Locații Partenere';
     protected static ?string $navigationParentItem = 'Venues';
     protected static ?int $navigationSort = 5;
-    protected static string $view = 'filament.marketplace.pages.partner-venues';
+    protected string $view = 'filament.marketplace.pages.partner-venues';
 
     public function table(Table $table): Table
     {
