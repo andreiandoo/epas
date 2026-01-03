@@ -149,6 +149,22 @@ switch ($action) {
         $endpoint = '/categories';
         break;
 
+    case 'event-categories':
+        $params = [];
+        if (isset($_GET['featured'])) $params['featured'] = $_GET['featured'];
+        $endpoint = '/event-categories' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'event-category':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing category slug']);
+            exit;
+        }
+        $endpoint = '/event-categories/' . urlencode($slug);
+        break;
+
     case 'cities':
         $endpoint = '/cities';
         break;

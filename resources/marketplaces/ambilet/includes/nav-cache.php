@@ -342,3 +342,178 @@ function getDefaultFeaturedCities(): array {
         ]
     ];
 }
+
+// ==================== EVENT CATEGORIES CACHE ====================
+
+define('EVENT_CATEGORIES_CACHE_FILE', __DIR__ . '/cache/event-categories.json');
+define('EVENT_CATEGORIES_CACHE_TTL', 30 * 60); // 30 minutes
+
+/**
+ * Get event categories for navigation with caching
+ *
+ * @return array Event categories array
+ */
+function getEventCategories(): array {
+    // Check if cache exists and is valid
+    if (isEventCategoriesCacheValid()) {
+        return loadEventCategoriesCache();
+    }
+
+    // Fetch fresh data from API
+    $freshData = fetchEventCategoriesFromAPI();
+
+    // Save to cache
+    saveEventCategoriesCache($freshData);
+
+    return $freshData;
+}
+
+/**
+ * Check if event categories cache is still valid
+ */
+function isEventCategoriesCacheValid(): bool {
+    if (!file_exists(EVENT_CATEGORIES_CACHE_FILE)) {
+        return false;
+    }
+
+    $cacheTime = filemtime(EVENT_CATEGORIES_CACHE_FILE);
+    return (time() - $cacheTime) < EVENT_CATEGORIES_CACHE_TTL;
+}
+
+/**
+ * Load event categories from cache file
+ */
+function loadEventCategoriesCache(): array {
+    $content = file_get_contents(EVENT_CATEGORIES_CACHE_FILE);
+    $data = json_decode($content, true);
+
+    return $data ?: getDefaultEventCategories();
+}
+
+/**
+ * Save event categories to cache file
+ */
+function saveEventCategoriesCache(array $data): void {
+    $cacheDir = dirname(EVENT_CATEGORIES_CACHE_FILE);
+
+    if (!is_dir($cacheDir)) {
+        mkdir($cacheDir, 0755, true);
+    }
+
+    file_put_contents(EVENT_CATEGORIES_CACHE_FILE, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
+/**
+ * Fetch event categories from API via proxy
+ */
+function fetchEventCategoriesFromAPI(): array {
+    require_once __DIR__ . '/../includes/config.php';
+
+    // Use internal API call via proxy
+    $proxyUrl = '/api/proxy.php?action=event-categories';
+    $fullUrl = (defined('SITE_URL') ? SITE_URL : '') . $proxyUrl;
+
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 5,
+            'ignore_errors' => true
+        ]
+    ]);
+
+    $response = @file_get_contents($fullUrl, false, $context);
+
+    if ($response === false) {
+        return getDefaultEventCategories();
+    }
+
+    $data = json_decode($response, true);
+
+    if (!$data || !isset($data['success']) || !$data['success'] || !isset($data['data']['categories'])) {
+        return getDefaultEventCategories();
+    }
+
+    // Transform API response to nav format
+    $categories = [];
+    foreach ($data['data']['categories'] as $category) {
+        $categories[] = [
+            'name' => $category['name'],
+            'slug' => $category['slug'],
+            'icon' => $category['icon'] ?? '',
+            'icon_emoji' => $category['icon_emoji'] ?? '🎫',
+            'description' => $category['description'] ?? '',
+            'image' => $category['image'] ?? '',
+            'color' => $category['color'] ?? '#A51C30',
+            'count' => $category['event_count'] ?? 0,
+        ];
+    }
+
+    return $categories;
+}
+
+/**
+ * Get default event categories (fallback)
+ */
+function getDefaultEventCategories(): array {
+    return [
+        [
+            'name' => 'Concerte',
+            'slug' => 'concerte',
+            'icon' => '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+            'icon_emoji' => '🎸',
+            'description' => 'Descopera cele mai tari concerte din Romania.',
+            'image' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=1920&q=80',
+            'color' => '#A51C30',
+            'count' => 156
+        ],
+        [
+            'name' => 'Festivaluri',
+            'slug' => 'festivaluri',
+            'icon' => '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+            'icon_emoji' => '🎪',
+            'description' => 'Cele mai mari festivaluri de muzica din Romania.',
+            'image' => 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=1920&q=80',
+            'color' => '#E67E22',
+            'count' => 24
+        ],
+        [
+            'name' => 'Teatru',
+            'slug' => 'teatru',
+            'icon' => '<circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>',
+            'icon_emoji' => '🎭',
+            'description' => 'Spectacole de teatru, opere si balet.',
+            'image' => 'https://images.unsplash.com/photo-1503095396549-807759245b35?w=1920&q=80',
+            'color' => '#8B1728',
+            'count' => 89
+        ],
+        [
+            'name' => 'Stand-up',
+            'slug' => 'stand-up',
+            'icon' => '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>',
+            'icon_emoji' => '😂',
+            'description' => 'Show-uri de stand-up comedy.',
+            'image' => 'https://images.unsplash.com/photo-1585699324551-f6c309eedeca?w=1920&q=80',
+            'color' => '#F59E0B',
+            'count' => 67
+        ],
+        [
+            'name' => 'Sport',
+            'slug' => 'sport',
+            'icon' => '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+            'icon_emoji' => '⚽',
+            'description' => 'Evenimente sportive din Romania.',
+            'image' => 'https://images.unsplash.com/photo-1461896836934-474a6c1d0f75?w=1920&q=80',
+            'color' => '#3B82F6',
+            'count' => 34
+        ],
+        [
+            'name' => 'Expozitii',
+            'slug' => 'expozitii',
+            'icon' => '<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+            'icon_emoji' => '🖼️',
+            'description' => 'Expozitii de arta, fotografie si cultura.',
+            'image' => 'https://images.unsplash.com/photo-1536924940846-227afb31e2a5?w=1920&q=80',
+            'color' => '#8B5CF6',
+            'count' => 45
+        ]
+    ];
+}

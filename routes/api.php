@@ -1870,6 +1870,7 @@ Route::prefix('marketplace-client/marketplace-events')->middleware(['throttle:12
 */
 
 use App\Http\Controllers\Api\MarketplaceClient\LocationsController as MarketplaceLocationsController;
+use App\Http\Controllers\Api\MarketplaceClient\CategoriesController as MarketplaceCategoriesController;
 
 Route::prefix('marketplace-client/locations')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     Route::get('/stats', [MarketplaceLocationsController::class, 'stats'])
@@ -1884,6 +1885,14 @@ Route::prefix('marketplace-client/locations')->middleware(['throttle:120,1', 'ma
         ->name('api.marketplace-client.locations.regions');
     Route::get('/regions/{identifier}', [MarketplaceLocationsController::class, 'region'])
         ->name('api.marketplace-client.locations.region');
+});
+
+// Event Categories
+Route::prefix('marketplace-client/event-categories')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+    Route::get('/', [MarketplaceCategoriesController::class, 'index'])
+        ->name('api.marketplace-client.event-categories');
+    Route::get('/{slug}', [MarketplaceCategoriesController::class, 'show'])
+        ->name('api.marketplace-client.event-categories.show');
 });
 
 /*
