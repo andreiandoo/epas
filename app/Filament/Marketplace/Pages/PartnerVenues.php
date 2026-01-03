@@ -93,7 +93,7 @@ class PartnerVenues extends Page implements HasForms, HasTable
                     ->searchable(),
             ])
             ->actions([
-                Tables\Actions\Action::make('add_partner')
+                Actions\Action::make('add_partner')
                     ->label('Adaugă partener')
                     ->icon('heroicon-o-plus-circle')
                     ->color('success')
@@ -121,7 +121,7 @@ class PartnerVenues extends Page implements HasForms, HasTable
                             ->send();
                     }),
 
-                Tables\Actions\Action::make('remove_partner')
+                Actions\Action::make('remove_partner')
                     ->label('Elimină partener')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
@@ -143,7 +143,7 @@ class PartnerVenues extends Page implements HasForms, HasTable
                             ->send();
                     }),
 
-                Tables\Actions\Action::make('edit_notes')
+                Actions\Action::make('edit_notes')
                     ->label('Note')
                     ->icon('heroicon-o-pencil-square')
                     ->visible(fn ($record) => $record->marketplace_client_id === $marketplace?->id)
@@ -165,7 +165,7 @@ class PartnerVenues extends Page implements HasForms, HasTable
                     }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkAction::make('bulk_add_partners')
+                Actions\BulkAction::make('bulk_add_partners')
                     ->label('Adaugă ca parteneri')
                     ->icon('heroicon-o-plus-circle')
                     ->color('success')
