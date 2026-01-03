@@ -193,24 +193,12 @@ require_once __DIR__ . '/includes/header.php';
             <!-- Loading skeletons -->
             <?php for ($i = 0; $i < 5; $i++): ?>
             <div class="p-5 text-center bg-white border rounded-xl border-border">
-                <div class="mx-auto mb-2 text-2xl skeleton w-8 h-8 rounded-full"></div>
+                <div class="w-8 h-8 mx-auto mb-2 text-2xl rounded-full skeleton"></div>
                 <div class="w-3/4 mx-auto mb-1 skeleton skeleton-title"></div>
                 <div class="w-1/2 mx-auto skeleton skeleton-text"></div>
             </div>
             <?php endfor; ?>
         </div>
-    </section>
-
-    <!-- Newsletter Section -->
-    <section class="p-8 text-center md:p-12 rounded-3xl bg-gradient-to-br from-slate-800 to-slate-900">
-        <h2 class="mb-2 text-xl font-bold text-white md:text-2xl">Fii la curent cu evenimentele</h2>
-        <p class="mb-6 text-slate-400">Primeste notificari despre cele mai noi evenimente din regiune</p>
-        <form class="flex flex-col max-w-md gap-3 mx-auto sm:flex-row" onsubmit="return false;">
-            <input type="email" placeholder="Adresa ta de email" class="flex-1 px-5 py-3 text-white rounded-lg bg-white/10 border border-white/20 placeholder:text-slate-500 focus:outline-none focus:border-primary">
-            <button type="submit" class="px-6 py-3 font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-primary to-primary-dark hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/40">
-                Aboneaza-te
-            </button>
-        </form>
     </section>
 </main>
 
@@ -218,10 +206,11 @@ require_once __DIR__ . '/includes/header.php';
 
 <?php
 $regionSlugJS = htmlspecialchars($regionSlug);
-$scriptsExtra = <<<SCRIPTS
+ob_start();
+?>
 <script>
 const RegionPage = {
-    slug: '{$regionSlugJS}',
+    slug: '<?= $regionSlugJS ?>',
     region: null,
     cities: [],
     otherRegions: [],
@@ -342,7 +331,7 @@ const RegionPage = {
         ];
 
         document.getElementById('regionHighlights').innerHTML = highlights
-            .map(h => \`<span class="px-3 py-1.5 text-sm font-medium rounded-full bg-slate-100 text-slate-600">\${h.icon} \${h.label}</span>\`)
+            .map(h => `<span class="px-3 py-1.5 text-sm font-medium rounded-full bg-slate-100 text-slate-600">${h.icon} ${h.label}</span>`)
             .join('');
     },
 
@@ -359,11 +348,11 @@ const RegionPage = {
         container.innerHTML = this.cities.slice(0, 4).map(city => this.renderCityCard(city)).join('');
 
         // Render city tabs
-        const cityTabs = this.cities.slice(0, 7).map(city => \`
-            <a href="/\${city.slug}" class="flex items-center flex-shrink-0 gap-2 px-6 py-4 text-sm font-semibold transition-colors border-b-[3px] border-transparent text-muted hover:text-secondary hover:bg-slate-50">
-                \${city.name} <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-slate-200">\${city.events_count}</span>
+        const cityTabs = this.cities.slice(0, 7).map(city => `
+            <a href="/${city.slug}" class="flex items-center flex-shrink-0 gap-2 px-6 py-4 text-sm font-semibold transition-colors border-b-[3px] border-transparent text-muted hover:text-secondary hover:bg-slate-50">
+                ${city.name} <span class="px-2 py-0.5 text-xs font-bold rounded-full bg-slate-200">${city.events_count}</span>
             </a>
-        \`).join('');
+        `).join('');
 
         // Keep the "All cities" tab and add city tabs
         const allTab = tabsContainer.querySelector('a');
@@ -381,21 +370,21 @@ const RegionPage = {
         const gradient = gradients[city.id % gradients.length];
 
         const imageHtml = city.image
-            ? \`<img src="\${city.image}" alt="\${city.name}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105">\`
-            : \`<div class="flex items-center justify-center w-full h-full bg-gradient-to-br \${gradient}">
+            ? `<img src="${city.image}" alt="${city.name}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105">`
+            : `<div class="flex items-center justify-center w-full h-full bg-gradient-to-br ${gradient}">
                 <svg class="w-10 h-10 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                 </svg>
-               </div>\`;
+               </div>`;
 
-        return \`
-            <a href="/\${city.slug}" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary">
-                <div class="relative h-32 overflow-hidden">\${imageHtml}</div>
+        return `
+            <a href="/${city.slug}" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary">
+                <div class="relative h-32 overflow-hidden">${imageHtml}</div>
                 <div class="p-4">
-                    <div class="mb-1 font-bold text-secondary">\${city.name}</div>
+                    <div class="mb-1 font-bold text-secondary">${city.name}</div>
                     <div class="flex items-center justify-between">
-                        <span class="text-sm text-muted">\${city.events_count} evenimente</span>
-                        <div class="flex items-center justify-center w-7 h-7 transition-colors rounded-full bg-slate-100 group-hover:bg-primary">
+                        <span class="text-sm text-muted">${city.events_count} evenimente</span>
+                        <div class="flex items-center justify-center transition-colors rounded-full w-7 h-7 bg-slate-100 group-hover:bg-primary">
                             <svg class="w-3.5 h-3.5 text-muted group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
@@ -403,7 +392,7 @@ const RegionPage = {
                     </div>
                 </div>
             </a>
-        \`;
+        `;
     },
 
     async loadEvents() {
@@ -452,12 +441,12 @@ const RegionPage = {
         const gradient = gradients[Math.floor(Math.random() * gradients.length)];
 
         const imageHtml = event.image
-            ? \`<img src="\${event.image}" alt="\${event.title}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105">\`
-            : \`<div class="flex items-center justify-center w-full h-full bg-gradient-to-br \${gradient}">
+            ? `<img src="${event.image}" alt="${event.title}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105">`
+            : `<div class="flex items-center justify-center w-full h-full bg-gradient-to-br ${gradient}">
                 <svg class="w-10 h-10 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
                 </svg>
-               </div>\`;
+               </div>`;
 
         const badgeHtml = event.badge === 'hot'
             ? '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 left-3 bg-amber-500">Hot</span>'
@@ -466,15 +455,15 @@ const RegionPage = {
             : '';
 
         const cityName = event.venue?.city || '';
-        const cityBadge = cityName ? \`<span class="absolute px-2 py-1 text-xs font-semibold text-white rounded backdrop-blur-sm bottom-3 left-3 bg-black/60">\${cityName}</span>\` : '';
+        const cityBadge = cityName ? `<span class="absolute px-2 py-1 text-xs font-semibold text-white rounded backdrop-blur-sm bottom-3 left-3 bg-black/60">${cityName}</span>` : '';
 
-        return \`
+        return `
             <div class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl">
-                <div class="relative h-44 overflow-hidden">
-                    \${imageHtml}
-                    \${badgeHtml}
-                    \${cityBadge}
-                    <button class="absolute flex items-center justify-center w-9 h-9 bg-white rounded-full top-3 right-3 hover:scale-110 transition-transform">
+                <div class="relative overflow-hidden h-44">
+                    ${imageHtml}
+                    ${badgeHtml}
+                    ${cityBadge}
+                    <button class="absolute flex items-center justify-center transition-transform bg-white rounded-full w-9 h-9 top-3 right-3 hover:scale-110">
                         <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                         </svg>
@@ -482,28 +471,28 @@ const RegionPage = {
                 </div>
                 <div class="p-5">
                     <div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">
-                        \${date.getDate()} \${months[date.getMonth()]} \${date.getFullYear()} \${event.time ? '• ' + event.time : ''}
+                        ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()} ${event.time ? '• ' + event.time : ''}
                     </div>
                     <h3 class="mb-1 font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">
-                        <a href="/bilete/\${event.slug}">\${event.title}</a>
+                        <a href="/bilete/${event.slug}">${event.title}</a>
                     </h3>
                     <div class="flex items-center gap-1 mb-4 text-sm text-muted">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                         </svg>
-                        \${event.venue?.name || 'Locatie TBA'}
+                        ${event.venue?.name || 'Locatie TBA'}
                     </div>
                     <div class="flex items-center justify-between pt-4 border-t border-slate-100">
                         <div class="font-bold text-secondary">
-                            \${event.min_price || 50} RON <span class="text-xs font-normal text-muted">de la</span>
+                            ${event.min_price || 50} RON <span class="text-xs font-normal text-muted">de la</span>
                         </div>
-                        <a href="/bilete/\${event.slug}" class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-primary to-primary-dark hover:-translate-y-0.5 hover:shadow-md">
+                        <a href="/bilete/${event.slug}" class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-primary to-primary-dark hover:-translate-y-0.5 hover:shadow-md">
                             Cumpara
                         </a>
                     </div>
                 </div>
             </div>
-        \`;
+        `;
     },
 
     async loadFestivals() {
@@ -522,36 +511,36 @@ const RegionPage = {
     renderFestivals(festivals) {
         const container = document.getElementById('festivalsGrid');
 
-        container.innerHTML = festivals.map(fest => \`
+        container.innerHTML = festivals.map(fest => `
             <div class="overflow-hidden transition-all bg-white border rounded-2xl border-border hover:-translate-y-0.5 hover:shadow-xl">
                 <div class="grid grid-cols-1 md:grid-cols-[200px_1fr]">
-                    <div class="relative flex items-center justify-center h-40 md:h-full bg-gradient-to-br \${fest.gradient}">
-                        \${fest.badge ? \`<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded top-3 left-3 bg-amber-500">\${fest.badge}</span>\` : ''}
+                    <div class="relative flex items-center justify-center h-40 md:h-full bg-gradient-to-br ${fest.gradient}">
+                        ${fest.badge ? `<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded top-3 left-3 bg-amber-500">${fest.badge}</span>` : ''}
                         <svg class="w-12 h-12 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                         </svg>
                     </div>
                     <div class="flex flex-col justify-center p-5">
-                        <div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">\${fest.date}</div>
+                        <div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">${fest.date}</div>
                         <h3 class="mb-1 text-lg font-bold text-secondary hover:text-primary">
-                            <a href="/bilete/\${fest.slug}">\${fest.title}</a>
+                            <a href="/bilete/${fest.slug}">${fest.title}</a>
                         </h3>
                         <div class="flex items-center gap-1 mb-3 text-sm text-muted">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                             </svg>
-                            \${fest.venue.name}, \${fest.venue.city}
+                            ${fest.venue.name}, ${fest.venue.city}
                         </div>
                         <div class="flex items-center justify-between">
-                            <div class="font-bold text-secondary">\${fest.min_price} RON <span class="text-xs font-normal text-muted">de la</span></div>
-                            <a href="/bilete/\${fest.slug}" class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-primary to-primary-dark hover:-translate-y-0.5 hover:shadow-md">
+                            <div class="font-bold text-secondary">${fest.min_price} RON <span class="text-xs font-normal text-muted">de la</span></div>
+                            <a href="/bilete/${fest.slug}" class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-primary to-primary-dark hover:-translate-y-0.5 hover:shadow-md">
                                 Cumpara
                             </a>
                         </div>
                     </div>
                 </div>
             </div>
-        \`).join('');
+        `).join('');
     },
 
     renderOtherRegions() {
@@ -568,31 +557,32 @@ const RegionPage = {
             'transilvania': '🗻'
         };
 
-        container.innerHTML = this.otherRegions.slice(0, 5).map(region => \`
-            <a href="/regiune/\${region.slug}" class="block p-5 text-center transition-all bg-white border rounded-xl border-border hover:border-primary hover:-translate-y-0.5 hover:shadow-lg">
-                <div class="mb-2 text-2xl">\${region.icon || icons[region.slug] || '📍'}</div>
-                <div class="mb-0.5 font-semibold text-secondary">\${region.name}</div>
-                <div class="text-xs text-muted">\${region.events_count} evenimente</div>
+        container.innerHTML = this.otherRegions.slice(0, 5).map(region => `
+            <a href="/regiune/${region.slug}" class="block p-5 text-center transition-all bg-white border rounded-xl border-border hover:border-primary hover:-translate-y-0.5 hover:shadow-lg">
+                <div class="mb-2 text-2xl">${region.icon || icons[region.slug] || '📍'}</div>
+                <div class="mb-0.5 font-semibold text-secondary">${region.name}</div>
+                <div class="text-xs text-muted">${region.events_count} evenimente</div>
             </a>
-        \`).join('');
+        `).join('');
     },
 
     getEmptyState(message) {
-        return \`
+        return `
             <div class="py-12 text-center col-span-full">
                 <svg class="w-16 h-16 mx-auto mb-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
                 <h3 class="mb-2 text-lg font-semibold text-secondary">Nu am gasit rezultate</h3>
-                <p class="text-muted">\${message}</p>
+                <p class="text-muted">${message}</p>
             </div>
-        \`;
+        `;
     }
 };
 
 document.addEventListener('DOMContentLoaded', () => RegionPage.init());
 </script>
-SCRIPTS;
+<?php
+$scriptsExtra = ob_get_clean();
 
 require_once __DIR__ . '/includes/scripts.php';
 ?>
