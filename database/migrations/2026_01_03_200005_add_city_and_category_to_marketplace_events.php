@@ -11,19 +11,38 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('marketplace_events', function (Blueprint $table) {
-            // Add city reference (after venue_city for logical grouping)
-            $table->foreignId('marketplace_city_id')->nullable()->after('venue_city')
-                ->constrained('marketplace_cities')->nullOnDelete();
+        // Add city reference (if not exists)
+        if (!Schema::hasColumn('marketplace_events', 'marketplace_city_id')) {
+            Schema::table('marketplace_events', function (Blueprint $table) {
+                $table->foreignId('marketplace_city_id')->nullable()->after('venue_city')
+                    ->constrained('marketplace_cities')->nullOnDelete();
+            });
+        }
 
-            // Add custom event category (after category)
-            $table->foreignId('marketplace_event_category_id')->nullable()->after('category')
-                ->constrained('marketplace_event_categories')->nullOnDelete();
+        // Add custom event category (if not exists)
+        if (!Schema::hasColumn('marketplace_events', 'marketplace_event_category_id')) {
+            Schema::table('marketplace_events', function (Blueprint $table) {
+                $table->foreignId('marketplace_event_category_id')->nullable()->after('category')
+                    ->constrained('marketplace_event_categories')->nullOnDelete();
+            });
+        }
 
-            // Add indexes for filtering
-            $table->index(['marketplace_client_id', 'marketplace_city_id', 'status'], 'mkt_events_city_status_idx');
-            $table->index(['marketplace_client_id', 'marketplace_event_category_id', 'status'], 'mkt_events_category_status_idx');
-        });
+        // Add indexes for filtering (wrap in try-catch)
+        try {
+            Schema::table('marketplace_events', function (Blueprint $table) {
+                $table->index(['marketplace_client_id', 'marketplace_city_id', 'status'], 'mkt_events_city_status_idx');
+            });
+        } catch (\Exception $e) {
+            // Index already exists
+        }
+
+        try {
+            Schema::table('marketplace_events', function (Blueprint $table) {
+                $table->index(['marketplace_client_id', 'marketplace_event_category_id', 'status'], 'mkt_events_category_status_idx');
+            });
+        } catch (\Exception $e) {
+            // Index already exists
+        }
     }
 
     /**

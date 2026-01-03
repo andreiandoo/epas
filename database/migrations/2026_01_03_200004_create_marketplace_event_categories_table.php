@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('marketplace_event_categories')) {
+            return; // Table already exists from previous partial migration
+        }
+
         Schema::create('marketplace_event_categories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();
