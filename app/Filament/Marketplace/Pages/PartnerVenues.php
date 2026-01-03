@@ -22,7 +22,7 @@ class PartnerVenues extends Page implements HasForms, HasTable
     use InteractsWithForms;
     use InteractsWithTable;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-library';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-library';
     protected static ?string $navigationLabel = 'Locații Partenere';
     protected static ?string $title = 'Locații Partenere';
     protected static ?string $navigationParentItem = 'Venues';
