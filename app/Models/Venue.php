@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\Translatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
@@ -277,12 +278,13 @@ class Venue extends Model
     ];
 
     protected $fillable = [
-        'tenant_id','venue_type_id','venue_tag','facilities','name','slug','address','city','state','country',
+        'tenant_id','marketplace_client_id','venue_type_id','venue_tag','facilities','name','slug','address','city','state','country',
         'website_url','phone','phone2','email','email2',
         'facebook_url','instagram_url','tiktok_url',
         'image_url','video_type','video_url','gallery',
         'capacity','capacity_total','capacity_standing','capacity_seated',
-        'lat','lng','google_maps_url','established_at','description','meta',
+        'lat','lng','google_maps_url','established_at','description','schedule','meta',
+        'is_partner','partner_notes',
     ];
 
     protected $casts = [
@@ -294,13 +296,29 @@ class Venue extends Model
         'established_at' => 'date',
         'lat' => 'decimal:7',
         'lng' => 'decimal:7',
+        'is_partner' => 'boolean',
     ];
 
     public function tenant(): BelongsTo { return $this->belongsTo(Tenant::class); }
 
+    public function marketplaceClient(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceClient::class);
+    }
+
     public function venueType(): BelongsTo
     {
         return $this->belongsTo(VenueType::class);
+    }
+
+    public function venueCategories(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            MarketplaceVenueCategory::class,
+            'marketplace_venue_category_venue',
+            'venue_id',
+            'marketplace_venue_category_id'
+        )->withPivot('sort_order')->withTimestamps();
     }
 
     public function events(): HasMany

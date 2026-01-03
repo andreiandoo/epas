@@ -4,6 +4,7 @@ namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\VenueResource\Pages;
 use App\Models\Venue;
+use App\Models\MarketplaceVenueCategory;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -260,6 +261,64 @@ class VenueResource extends Resource
                                 ]),
                         ])->columnSpanFull(),
                 ]),
+
+            // SCHEDULE
+            SC\Section::make('Program')
+                ->description('Program de funcționare al locației')
+                ->schema([
+                    Forms\Components\Textarea::make('schedule')
+                        ->label('Program')
+                        ->placeholder("Luni - Vineri: 10:00 - 22:00\nSâmbătă - Duminică: 12:00 - 24:00")
+                        ->rows(5)
+                        ->columnSpanFull(),
+                ]),
+
+            // VENUE CATEGORIES
+            SC\Section::make('Categorii')
+                ->description('Adaugă locația în una sau mai multe categorii')
+                ->schema([
+                    Forms\Components\Select::make('venueCategories')
+                        ->label('Categorii locație')
+                        ->relationship(
+                            'venueCategories',
+                            'name',
+                            fn (Builder $query) => $query->where('marketplace_client_id', static::getMarketplaceClient()?->id)
+                        )
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro') ?? $record->getTranslation('name', 'en'))
+                        ->multiple()
+                        ->preload()
+                        ->searchable()
+                        ->createOptionForm([
+                            Forms\Components\TextInput::make('name.ro')
+                                ->label('Nume categorie (RO)')
+                                ->required(),
+                            Forms\Components\TextInput::make('name.en')
+                                ->label('Category name (EN)'),
+                            Forms\Components\TextInput::make('icon')
+                                ->label('Icon (emoji)')
+                                ->placeholder('🎭'),
+                            Forms\Components\ColorPicker::make('color')
+                                ->label('Culoare'),
+                        ])
+                        ->createOptionUsing(function (array $data) {
+                            $data['marketplace_client_id'] = static::getMarketplaceClient()?->id;
+                            return MarketplaceVenueCategory::create($data)->id;
+                        })
+                        ->columnSpanFull(),
+                ]),
+
+            // PARTNER NOTES (internal)
+            SC\Section::make('Note interne')
+                ->description('Note interne despre această locație (nu sunt vizibile public)')
+                ->collapsible()
+                ->collapsed()
+                ->schema([
+                    Forms\Components\Textarea::make('partner_notes')
+                        ->label('Note')
+                        ->placeholder('Note despre parteneriat, contracte, etc.')
+                        ->rows(4)
+                        ->columnSpanFull(),
+                ]),
         ]);
     }
 
@@ -267,18 +326,50 @@ class VenueResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\ImageColumn::make('image_url')
+                    ->label('Imagine')
+                    ->circular()
+                    ->defaultImageUrl(fn () => 'https://ui-avatars.com/api/?name=V&color=7F9CF5&background=EBF4FF'),
                 Tables\Columns\TextColumn::make('name')
+                    ->label('Nume')
+                    ->formatStateUsing(fn ($record) => $record->getTranslation('name', 'ro') ?? $record->getTranslation('name', 'en'))
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('city')
+                    ->label('Oraș')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('capacity')
-                    ->sortable(),
-                Tables\Columns\IconColumn::make('is_active')
-                    ->boolean(),
+                Tables\Columns\TextColumn::make('capacity_total')
+                    ->label('Capacitate')
+                    ->sortable()
+                    ->numeric(),
+                Tables\Columns\TextColumn::make('venueCategories.name')
+                    ->label('Categorii')
+                    ->badge()
+                    ->separator(',')
+                    ->formatStateUsing(fn ($state, $record) => $record->venueCategories->map(fn ($c) => $c->icon . ' ' . ($c->getTranslation('name', 'ro') ?? $c->getTranslation('name', 'en')))->join(', '))
+                    ->toggleable(),
+                Tables\Columns\IconColumn::make('is_partner')
+                    ->label('Partener')
+                    ->boolean()
+                    ->toggleable(),
             ])
             ->filters([
-                Tables\Filters\TernaryFilter::make('is_active'),
+                Tables\Filters\TernaryFilter::make('is_partner')
+                    ->label('Doar parteneri'),
+                Tables\Filters\SelectFilter::make('venueCategories')
+                    ->label('Categorie')
+                    ->relationship('venueCategories', 'name')
+                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->icon . ' ' . ($record->getTranslation('name', 'ro') ?? $record->getTranslation('name', 'en')))
+                    ->preload()
+                    ->multiple(),
+            ])
+            ->actions([
+                Tables\Actions\EditAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
             ]);
     }
 
