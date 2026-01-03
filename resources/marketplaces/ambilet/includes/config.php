@@ -12,14 +12,46 @@ if (!defined('AMBILET_ROOT')) {
 
 // API Configuration
 define('API_BASE_URL', 'https://core.tixello.com/api/marketplace-client');
-define('API_KEY', 'mpc_YOUR_API_KEY_HERE'); // Replace with actual API key
-define('API_SECRET', 'YOUR_API_SECRET_HERE'); // Replace with actual secret
+define('API_KEY', 'mpc_4qkv4pcuogusFM9234dwihfTrrkBNT2PzpHflnLLmKfSXgkef9BvefCISPFB'); // Replace with actual API key
+
+// Demo Mode - set to true to use mock data instead of API
+define('DEMO_MODE', false);
 
 // Site Configuration
 define('SITE_NAME', 'Ambilet');
 define('SITE_TAGLINE', 'Bilete Evenimente Romania');
 define('SITE_URL', 'https://bilete.online'); // Change to ambilet.ro in production
 define('SITE_LOCALE', 'ro');
+
+// Support Contact
+define('SUPPORT_EMAIL', 'suport@bilete.online'); // Change to suport@ambilet.ro in production
+define('SUPPORT_PHONE', '+40 21 XXX XXXX'); // Replace with actual phone number
+
+// ===========================================
+// BREVO (Sendinblue) Email Configuration
+// ===========================================
+// Get your API key from: https://app.brevo.com/settings/keys/api
+define('BREVO_API_KEY', 'xkeysib-YOUR-API-KEY-HERE'); // Replace with actual Brevo API key
+define('BREVO_SENDER_NAME', SITE_NAME);
+define('BREVO_SENDER_EMAIL', 'noreply@bilete.online'); // Must be verified in Brevo
+
+// Email templates directory
+define('EMAIL_TEMPLATES_DIR', AMBILET_ROOT . '/emails');
+
+// Email template IDs (for Brevo template-based sending, optional)
+$EMAIL_TEMPLATES = [
+    'client_welcome' => 1,
+    'client_email_confirmation' => 2,
+    'client_order_confirmation' => 3,
+    'client_referral_invitation' => 4,
+    'organizer_welcome' => 5,
+    'organizer_email_confirmation' => 6,
+    'organizer_payment_confirmation' => 7,
+    'organizer_weekly_report' => 8,
+    'organizer_monthly_report' => 9,
+    'organizer_event_finished_report' => 10,
+    'ticket_beneficiary' => 11,
+];
 
 // Theme Colors (for PHP-generated content)
 $THEME = [

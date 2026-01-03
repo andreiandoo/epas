@@ -27,7 +27,9 @@ class MarketplaceEvent extends Model
         'venue_name',
         'venue_address',
         'venue_city',
+        'marketplace_city_id',
         'category',
+        'marketplace_event_category_id',
         'tags',
         'image',
         'cover_image',
@@ -122,6 +124,16 @@ class MarketplaceEvent extends Model
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceCity::class, 'marketplace_city_id');
+    }
+
+    public function eventCategory(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceEventCategory::class, 'marketplace_event_category_id');
     }
 
     // =========================================

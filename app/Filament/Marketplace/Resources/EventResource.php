@@ -6,7 +6,10 @@ use App\Filament\Marketplace\Resources\EventResource\Pages;
 use App\Models\Event;
 use App\Models\EventGenre;
 use App\Models\EventType;
+use App\Models\MarketplaceCity;
+use App\Models\MarketplaceEventCategory;
 use App\Models\MarketplaceOrganizer;
+use App\Models\MarketplaceRegion;
 use App\Models\Tax\GeneralTax;
 use App\Models\Venue;
 use Filament\Forms;
@@ -446,6 +449,25 @@ class EventResource extends Resource
                             }
                         })
                         ->nullable(),
+                    Forms\Components\Select::make('marketplace_city_id')
+                        ->label('City')
+                        ->options(function () use ($marketplace, $marketplaceLanguage) {
+                            return MarketplaceCity::query()
+                                ->where('marketplace_client_id', $marketplace?->id)
+                                ->where('is_visible', true)
+                                ->with('region')
+                                ->orderBy('sort_order')
+                                ->get()
+                                ->mapWithKeys(fn ($city) => [
+                                    $city->id => ($city->region ? ($city->region->name[$marketplaceLanguage] ?? $city->region->name['ro'] ?? '') . ' > ' : '')
+                                        . ($city->name[$marketplaceLanguage] ?? $city->name['ro'] ?? 'Unnamed')
+                                ]);
+                        })
+                        ->searchable()
+                        ->preload()
+                        ->placeholder('Select a city')
+                        ->helperText('Filter events by city on the website')
+                        ->nullable(),
                     Forms\Components\TextInput::make('address')
                         ->label('Address')
                         ->maxLength(255),
@@ -500,6 +522,27 @@ class EventResource extends Resource
             // TAXONOMIES
             SC\Section::make('Taxonomies & Relations')
                 ->schema([
+                    Forms\Components\Select::make('marketplace_event_category_id')
+                        ->label('Event Category')
+                        ->options(function () use ($marketplace, $marketplaceLanguage) {
+                            return MarketplaceEventCategory::query()
+                                ->where('marketplace_client_id', $marketplace?->id)
+                                ->where('is_visible', true)
+                                ->with('parent')
+                                ->orderBy('sort_order')
+                                ->get()
+                                ->mapWithKeys(fn ($cat) => [
+                                    $cat->id => ($cat->icon_emoji ? $cat->icon_emoji . ' ' : '')
+                                        . ($cat->parent ? ($cat->parent->name[$marketplaceLanguage] ?? $cat->parent->name['ro'] ?? '') . ' > ' : '')
+                                        . ($cat->name[$marketplaceLanguage] ?? $cat->name['ro'] ?? 'Unnamed')
+                                ]);
+                        })
+                        ->searchable()
+                        ->preload()
+                        ->placeholder('Select a category')
+                        ->helperText('Custom marketplace event category')
+                        ->nullable(),
+
                     Forms\Components\Select::make('eventTypes')
                         ->label('Event types')
                         ->relationship(

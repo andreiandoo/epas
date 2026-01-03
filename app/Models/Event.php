@@ -51,6 +51,7 @@ class Event extends Model
 
         // location & links
         'address', 'website_url', 'facebook_url', 'event_website_url',
+        'marketplace_city_id', 'marketplace_event_category_id',
 
         // content
         'short_description', 'description', 'ticket_terms',
@@ -104,6 +105,16 @@ class Event extends Model
     public function marketplaceOrganizer(): BelongsTo
     {
         return $this->belongsTo(MarketplaceOrganizer::class);
+    }
+
+    public function marketplaceCity(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceCity::class);
+    }
+
+    public function marketplaceEventCategory(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceEventCategory::class);
     }
 
     /* Taxonomies (normalized) */
