@@ -1862,6 +1862,32 @@ Route::prefix('marketplace-client/marketplace-events')->middleware(['throttle:12
 
 /*
 |--------------------------------------------------------------------------
+| Marketplace Client Locations API Routes
+|--------------------------------------------------------------------------
+|
+| Public API endpoints for marketplace locations (regions, counties, cities)
+|
+*/
+
+use App\Http\Controllers\Api\MarketplaceClient\LocationsController as MarketplaceLocationsController;
+
+Route::prefix('marketplace-client/locations')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+    Route::get('/stats', [MarketplaceLocationsController::class, 'stats'])
+        ->name('api.marketplace-client.locations.stats');
+    Route::get('/cities/featured', [MarketplaceLocationsController::class, 'featuredCities'])
+        ->name('api.marketplace-client.locations.cities.featured');
+    Route::get('/cities/alphabet', [MarketplaceLocationsController::class, 'alphabet'])
+        ->name('api.marketplace-client.locations.cities.alphabet');
+    Route::get('/cities', [MarketplaceLocationsController::class, 'cities'])
+        ->name('api.marketplace-client.locations.cities');
+    Route::get('/regions', [MarketplaceLocationsController::class, 'regions'])
+        ->name('api.marketplace-client.locations.regions');
+    Route::get('/regions/{identifier}', [MarketplaceLocationsController::class, 'region'])
+        ->name('api.marketplace-client.locations.region');
+});
+
+/*
+|--------------------------------------------------------------------------
 | Platform Analytics API Routes
 |--------------------------------------------------------------------------
 |
