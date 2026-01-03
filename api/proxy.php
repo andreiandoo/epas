@@ -153,6 +153,44 @@ switch ($action) {
         $endpoint = '/cities';
         break;
 
+    // ==================== LOCATIONS ====================
+
+    case 'locations.stats':
+        $endpoint = '/locations/stats';
+        break;
+
+    case 'locations.cities.featured':
+        $endpoint = '/locations/cities/featured';
+        break;
+
+    case 'locations.cities.alphabet':
+        $endpoint = '/locations/cities/alphabet';
+        break;
+
+    case 'locations.cities':
+        $params = [];
+        if (isset($_GET['letter'])) $params['letter'] = $_GET['letter'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['sort'])) $params['sort'] = $_GET['sort'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/locations/cities' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'locations.regions':
+        $endpoint = '/locations/regions';
+        break;
+
+    case 'locations.region':
+        $identifier = $_GET['id'] ?? $_GET['slug'] ?? '';
+        if (!$identifier) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing region identifier']);
+            exit;
+        }
+        $endpoint = '/locations/regions/' . urlencode($identifier);
+        break;
+
     case 'cart':
         $method = 'POST';
         $body = file_get_contents('php://input');
@@ -400,6 +438,280 @@ function getMockData($action, $params) {
                 ['slug' => 'cluj', 'name' => 'Cluj-Napoca', 'count' => 94],
                 ['slug' => 'timisoara', 'name' => 'Timișoara', 'count' => 67],
                 ['slug' => 'iasi', 'name' => 'Iași', 'count' => 52]
+            ];
+
+        // ==================== LOCATIONS (Demo Mode) ====================
+
+        case 'locations.stats':
+            return [
+                'success' => true,
+                'data' => [
+                    'active_cities' => 42,
+                    'live_events' => 1247,
+                    'venues' => 290,
+                    'regions' => 8,
+                ]
+            ];
+
+        case 'locations.cities.featured':
+            return [
+                'success' => true,
+                'data' => [
+                    'cities' => [
+                        [
+                            'id' => 1,
+                            'name' => 'București',
+                            'slug' => 'bucuresti',
+                            'image' => 'https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=800&h=1000&fit=crop',
+                            'region' => 'Muntenia',
+                            'county' => ['name' => 'București', 'code' => 'B'],
+                            'events_count' => 238,
+                            'is_capital' => true,
+                        ],
+                        [
+                            'id' => 2,
+                            'name' => 'Cluj-Napoca',
+                            'slug' => 'cluj-napoca',
+                            'image' => 'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=600&h=750&fit=crop',
+                            'region' => 'Transilvania',
+                            'county' => ['name' => 'Cluj', 'code' => 'CJ'],
+                            'events_count' => 94,
+                            'is_capital' => false,
+                        ],
+                        [
+                            'id' => 3,
+                            'name' => 'Timișoara',
+                            'slug' => 'timisoara',
+                            'image' => 'https://images.unsplash.com/photo-1598971861713-54ad16a7e72e?w=600&h=750&fit=crop',
+                            'region' => 'Banat',
+                            'county' => ['name' => 'Timiș', 'code' => 'TM'],
+                            'events_count' => 67,
+                            'is_capital' => false,
+                        ],
+                        [
+                            'id' => 4,
+                            'name' => 'Iași',
+                            'slug' => 'iasi',
+                            'image' => 'https://images.unsplash.com/photo-1560969184-10fe8719e047?w=600&h=750&fit=crop',
+                            'region' => 'Moldova',
+                            'county' => ['name' => 'Iași', 'code' => 'IS'],
+                            'events_count' => 52,
+                            'is_capital' => false,
+                        ],
+                        [
+                            'id' => 5,
+                            'name' => 'Brașov',
+                            'slug' => 'brasov',
+                            'image' => 'https://images.unsplash.com/photo-1565264216052-3c9012481015?w=600&h=750&fit=crop',
+                            'region' => 'Transilvania',
+                            'county' => ['name' => 'Brașov', 'code' => 'BV'],
+                            'events_count' => 41,
+                            'is_capital' => false,
+                        ],
+                    ]
+                ]
+            ];
+
+        case 'locations.cities.alphabet':
+            return [
+                'success' => true,
+                'data' => [
+                    'letters' => ['A', 'B', 'C', 'D', 'F', 'G', 'H', 'I', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'V', 'Z']
+                ]
+            ];
+
+        case 'locations.cities':
+            $letter = $params['letter'] ?? null;
+            $page = (int)($params['page'] ?? 1);
+            $perPage = (int)($params['per_page'] ?? 8);
+
+            $allCities = [
+                ['id' => 6, 'name' => 'Alba Iulia', 'slug' => 'alba-iulia', 'image' => 'https://images.unsplash.com/photo-1565264216052-3c9012481015?w=200&h=200&fit=crop', 'region' => 'Transilvania', 'county' => ['name' => 'Alba', 'code' => 'AB'], 'events_count' => 12],
+                ['id' => 7, 'name' => 'Arad', 'slug' => 'arad', 'image' => 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=200&h=200&fit=crop', 'region' => 'Crișana', 'county' => ['name' => 'Arad', 'code' => 'AR'], 'events_count' => 18],
+                ['id' => 8, 'name' => 'Bacău', 'slug' => 'bacau', 'image' => 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=200&h=200&fit=crop', 'region' => 'Moldova', 'county' => ['name' => 'Bacău', 'code' => 'BC'], 'events_count' => 14],
+                ['id' => 9, 'name' => 'Baia Mare', 'slug' => 'baia-mare', 'image' => 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=200&h=200&fit=crop', 'region' => 'Maramureș', 'county' => ['name' => 'Maramureș', 'code' => 'MM'], 'events_count' => 9],
+                ['id' => 1, 'name' => 'București', 'slug' => 'bucuresti', 'image' => 'https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=200&h=200&fit=crop', 'region' => 'Muntenia', 'county' => ['name' => 'București', 'code' => 'B'], 'events_count' => 238],
+                ['id' => 5, 'name' => 'Brașov', 'slug' => 'brasov', 'image' => 'https://images.unsplash.com/photo-1565264216052-3c9012481015?w=200&h=200&fit=crop', 'region' => 'Transilvania', 'county' => ['name' => 'Brașov', 'code' => 'BV'], 'events_count' => 41],
+                ['id' => 2, 'name' => 'Cluj-Napoca', 'slug' => 'cluj-napoca', 'image' => 'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=200&h=200&fit=crop', 'region' => 'Transilvania', 'county' => ['name' => 'Cluj', 'code' => 'CJ'], 'events_count' => 94],
+                ['id' => 10, 'name' => 'Constanța', 'slug' => 'constanta', 'image' => 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=200&h=200&fit=crop', 'region' => 'Dobrogea', 'county' => ['name' => 'Constanța', 'code' => 'CT'], 'events_count' => 38],
+                ['id' => 11, 'name' => 'Craiova', 'slug' => 'craiova', 'image' => 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=200&h=200&fit=crop', 'region' => 'Oltenia', 'county' => ['name' => 'Dolj', 'code' => 'DJ'], 'events_count' => 24],
+                ['id' => 12, 'name' => 'Galați', 'slug' => 'galati', 'image' => 'https://images.unsplash.com/photo-1514924013411-cbf25faa35bb?w=200&h=200&fit=crop', 'region' => 'Moldova', 'county' => ['name' => 'Galați', 'code' => 'GL'], 'events_count' => 16],
+                ['id' => 4, 'name' => 'Iași', 'slug' => 'iasi', 'image' => 'https://images.unsplash.com/photo-1560969184-10fe8719e047?w=200&h=200&fit=crop', 'region' => 'Moldova', 'county' => ['name' => 'Iași', 'code' => 'IS'], 'events_count' => 52],
+                ['id' => 13, 'name' => 'Oradea', 'slug' => 'oradea', 'image' => 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=200&h=200&fit=crop', 'region' => 'Crișana', 'county' => ['name' => 'Bihor', 'code' => 'BH'], 'events_count' => 21],
+                ['id' => 14, 'name' => 'Pitești', 'slug' => 'pitesti', 'image' => 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=200&h=200&fit=crop', 'region' => 'Muntenia', 'county' => ['name' => 'Argeș', 'code' => 'AG'], 'events_count' => 15],
+                ['id' => 15, 'name' => 'Ploiești', 'slug' => 'ploiesti', 'image' => 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=200&h=200&fit=crop', 'region' => 'Muntenia', 'county' => ['name' => 'Prahova', 'code' => 'PH'], 'events_count' => 19],
+                ['id' => 16, 'name' => 'Sibiu', 'slug' => 'sibiu', 'image' => 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=200&h=200&fit=crop', 'region' => 'Transilvania', 'county' => ['name' => 'Sibiu', 'code' => 'SB'], 'events_count' => 35],
+                ['id' => 3, 'name' => 'Timișoara', 'slug' => 'timisoara', 'image' => 'https://images.unsplash.com/photo-1598971861713-54ad16a7e72e?w=200&h=200&fit=crop', 'region' => 'Banat', 'county' => ['name' => 'Timiș', 'code' => 'TM'], 'events_count' => 67],
+            ];
+
+            // Filter by letter if provided
+            if ($letter) {
+                $allCities = array_filter($allCities, fn($c) => strtoupper(substr($c['name'], 0, 1)) === strtoupper($letter));
+            }
+
+            // Sort by events_count descending
+            usort($allCities, fn($a, $b) => $b['events_count'] - $a['events_count']);
+
+            $total = count($allCities);
+            $cities = array_slice(array_values($allCities), ($page - 1) * $perPage, $perPage);
+
+            return [
+                'success' => true,
+                'data' => $cities,
+                'meta' => [
+                    'current_page' => $page,
+                    'last_page' => (int)ceil($total / $perPage),
+                    'per_page' => $perPage,
+                    'total' => $total,
+                ]
+            ];
+
+        case 'locations.regions':
+            return [
+                'success' => true,
+                'data' => [
+                    'regions' => [
+                        [
+                            'id' => 1,
+                            'name' => 'Transilvania',
+                            'slug' => 'transilvania',
+                            'description' => 'Inima României, cu orașe pline de istorie și cultură.',
+                            'image' => null,
+                            'cities_count' => 12,
+                            'events_count' => 245,
+                            'top_cities' => [
+                                ['id' => 2, 'name' => 'Cluj-Napoca', 'slug' => 'cluj-napoca', 'events_count' => 94],
+                                ['id' => 5, 'name' => 'Brașov', 'slug' => 'brasov', 'events_count' => 41],
+                                ['id' => 16, 'name' => 'Sibiu', 'slug' => 'sibiu', 'events_count' => 35],
+                                ['id' => 17, 'name' => 'Târgu Mureș', 'slug' => 'targu-mures', 'events_count' => 28],
+                                ['id' => 6, 'name' => 'Alba Iulia', 'slug' => 'alba-iulia', 'events_count' => 12],
+                            ]
+                        ],
+                        [
+                            'id' => 2,
+                            'name' => 'Muntenia',
+                            'slug' => 'muntenia',
+                            'description' => 'Regiunea capitalei, centrul cultural și economic al țării.',
+                            'image' => null,
+                            'cities_count' => 8,
+                            'events_count' => 312,
+                            'top_cities' => [
+                                ['id' => 1, 'name' => 'București', 'slug' => 'bucuresti', 'events_count' => 238],
+                                ['id' => 15, 'name' => 'Ploiești', 'slug' => 'ploiesti', 'events_count' => 19],
+                                ['id' => 14, 'name' => 'Pitești', 'slug' => 'pitesti', 'events_count' => 15],
+                                ['id' => 18, 'name' => 'Târgoviște', 'slug' => 'targoviste', 'events_count' => 8],
+                            ]
+                        ],
+                        [
+                            'id' => 3,
+                            'name' => 'Moldova',
+                            'slug' => 'moldova',
+                            'description' => 'Regiunea cu tradiții bogate și peisaje naturale uimitoare.',
+                            'image' => null,
+                            'cities_count' => 9,
+                            'events_count' => 156,
+                            'top_cities' => [
+                                ['id' => 4, 'name' => 'Iași', 'slug' => 'iasi', 'events_count' => 52],
+                                ['id' => 12, 'name' => 'Galați', 'slug' => 'galati', 'events_count' => 16],
+                                ['id' => 8, 'name' => 'Bacău', 'slug' => 'bacau', 'events_count' => 14],
+                                ['id' => 19, 'name' => 'Suceava', 'slug' => 'suceava', 'events_count' => 11],
+                            ]
+                        ],
+                        [
+                            'id' => 4,
+                            'name' => 'Dobrogea',
+                            'slug' => 'dobrogea',
+                            'description' => 'Destinația de vară cu plaje și stațiuni la Marea Neagră.',
+                            'image' => null,
+                            'cities_count' => 4,
+                            'events_count' => 89,
+                            'top_cities' => [
+                                ['id' => 10, 'name' => 'Constanța', 'slug' => 'constanta', 'events_count' => 38],
+                                ['id' => 20, 'name' => 'Mamaia', 'slug' => 'mamaia', 'events_count' => 25],
+                                ['id' => 21, 'name' => 'Tulcea', 'slug' => 'tulcea', 'events_count' => 8],
+                                ['id' => 22, 'name' => 'Mangalia', 'slug' => 'mangalia', 'events_count' => 6],
+                            ]
+                        ],
+                        [
+                            'id' => 5,
+                            'name' => 'Banat',
+                            'slug' => 'banat',
+                            'description' => 'Regiunea vestică, poartă către Europa Centrală.',
+                            'image' => null,
+                            'cities_count' => 5,
+                            'events_count' => 112,
+                            'top_cities' => [
+                                ['id' => 3, 'name' => 'Timișoara', 'slug' => 'timisoara', 'events_count' => 67],
+                                ['id' => 7, 'name' => 'Arad', 'slug' => 'arad', 'events_count' => 18],
+                                ['id' => 23, 'name' => 'Reșița', 'slug' => 'resita', 'events_count' => 9],
+                                ['id' => 24, 'name' => 'Lugoj', 'slug' => 'lugoj', 'events_count' => 5],
+                            ]
+                        ],
+                        [
+                            'id' => 6,
+                            'name' => 'Oltenia',
+                            'slug' => 'oltenia',
+                            'description' => 'Leagănul culturii tradiționale românești.',
+                            'image' => null,
+                            'cities_count' => 6,
+                            'events_count' => 78,
+                            'top_cities' => [
+                                ['id' => 11, 'name' => 'Craiova', 'slug' => 'craiova', 'events_count' => 24],
+                                ['id' => 25, 'name' => 'Râmnicu Vâlcea', 'slug' => 'ramnicu-valcea', 'events_count' => 12],
+                                ['id' => 26, 'name' => 'Drobeta-Turnu Severin', 'slug' => 'drobeta-turnu-severin', 'events_count' => 8],
+                            ]
+                        ],
+                        [
+                            'id' => 7,
+                            'name' => 'Crișana',
+                            'slug' => 'crisana',
+                            'description' => 'Regiunea cu arhitectură Art Nouveau și termale naturale.',
+                            'image' => null,
+                            'cities_count' => 4,
+                            'events_count' => 65,
+                            'top_cities' => [
+                                ['id' => 13, 'name' => 'Oradea', 'slug' => 'oradea', 'events_count' => 21],
+                                ['id' => 27, 'name' => 'Satu Mare', 'slug' => 'satu-mare', 'events_count' => 14],
+                                ['id' => 28, 'name' => 'Zalău', 'slug' => 'zalau', 'events_count' => 8],
+                            ]
+                        ],
+                        [
+                            'id' => 8,
+                            'name' => 'Maramureș',
+                            'slug' => 'maramures',
+                            'description' => 'Regiunea cu biserici de lemn și tradiții autentice.',
+                            'image' => null,
+                            'cities_count' => 3,
+                            'events_count' => 32,
+                            'top_cities' => [
+                                ['id' => 9, 'name' => 'Baia Mare', 'slug' => 'baia-mare', 'events_count' => 9],
+                                ['id' => 29, 'name' => 'Sighetu Marmației', 'slug' => 'sighetu-marmatiei', 'events_count' => 6],
+                            ]
+                        ],
+                    ]
+                ]
+            ];
+
+        case 'locations.region':
+            $identifier = $params['id'] ?? $params['slug'] ?? 'transilvania';
+            return [
+                'success' => true,
+                'data' => [
+                    'region' => [
+                        'id' => 1,
+                        'name' => 'Transilvania',
+                        'slug' => 'transilvania',
+                        'description' => 'Inima României, cu orașe pline de istorie și cultură.',
+                        'image' => null,
+                    ],
+                    'cities' => [
+                        ['id' => 2, 'name' => 'Cluj-Napoca', 'slug' => 'cluj-napoca', 'image' => 'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=200&h=200&fit=crop', 'events_count' => 94],
+                        ['id' => 5, 'name' => 'Brașov', 'slug' => 'brasov', 'image' => 'https://images.unsplash.com/photo-1565264216052-3c9012481015?w=200&h=200&fit=crop', 'events_count' => 41],
+                        ['id' => 16, 'name' => 'Sibiu', 'slug' => 'sibiu', 'image' => 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=200&h=200&fit=crop', 'events_count' => 35],
+                        ['id' => 17, 'name' => 'Târgu Mureș', 'slug' => 'targu-mures', 'image' => null, 'events_count' => 28],
+                        ['id' => 6, 'name' => 'Alba Iulia', 'slug' => 'alba-iulia', 'image' => 'https://images.unsplash.com/photo-1565264216052-3c9012481015?w=200&h=200&fit=crop', 'events_count' => 12],
+                    ]
+                ]
             ];
 
         // ==================== CUSTOMER AUTH (Demo Mode) ====================
