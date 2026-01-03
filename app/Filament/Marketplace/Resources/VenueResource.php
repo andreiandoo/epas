@@ -5,7 +5,6 @@ namespace App\Filament\Marketplace\Resources;
 use App\Filament\Marketplace\Resources\VenueResource\Pages;
 use App\Models\Venue;
 use App\Models\MarketplaceVenueCategory;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -368,9 +367,7 @@ class VenueResource extends Resource
             ->actions([
                 EditAction::make(),
             ])
-            ->bulkActions([
-                DeleteBulkAction::make(),
-            ]);
+            ->bulkActions([]);
     }
 
     public static function getPages(): array
