@@ -1286,6 +1286,7 @@ use App\Http\Controllers\Api\MarketplaceClient\PaymentController as MarketplaceP
 use App\Http\Controllers\Api\MarketplaceClient\TicketsController as MarketplaceTicketsController;
 use App\Http\Controllers\Api\MarketplaceClient\StatisticsController as MarketplaceStatisticsController;
 use App\Http\Controllers\Api\MarketplaceClient\NewsletterTrackingController;
+use App\Http\Controllers\Api\MarketplaceClient\PromoCodeController as MarketplacePromoCodeController;
 
 Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Handle OPTIONS preflight requests
@@ -1399,7 +1400,6 @@ use App\Http\Controllers\Api\MarketplaceClient\Organizer\PromoCodeController as 
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\TaxReportController as OrganizerTaxReportController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\InvitationsController as OrganizerInvitationsController;
 use App\Http\Controllers\Api\MarketplaceClient\Organizer\RefundReportController as OrganizerRefundReportController;
-use App\Http\Controllers\Api\MarketplaceClient\PromoCodeController as MarketplacePromoCodeController;
 
 Route::prefix('marketplace-client/organizer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no organizer auth)
