@@ -7,7 +7,7 @@ require_once 'includes/config.php';
 
 $pageTitle = 'Carduri Cadou — ' . SITE_NAME;
 $pageDescription = 'Dăruiește experiențe, nu obiecte. Cardurile cadou Ambilet sunt valabile pentru concerte, festivaluri, teatru și multe altele.';
-
+$transparentHeader = true;
 // Predefined amounts
 $amounts = [
     ['value' => 50, 'description' => 'Pentru un film sau spectacol'],
@@ -51,7 +51,7 @@ $faqs = [
     <?php include 'includes/header.php'; ?>
 
     <!-- Hero Section -->
-    <section class="relative px-6 py-20 overflow-hidden text-center bg-gradient-to-br from-slate-800 to-slate-900">
+    <section class="relative px-6 pt-40 pb-20 overflow-hidden text-center bg-gradient-to-br from-slate-800 to-slate-900">
         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/40 rounded-full blur-[200px]"></div>
         <div class="relative z-10 max-w-2xl mx-auto">
             <div class="inline-flex items-center gap-2 px-4 py-2 mb-6 text-sm font-semibold text-red-300 border rounded-full bg-primary/20 border-primary/30">
@@ -198,16 +198,16 @@ $faqs = [
                     </div>
 
                     <!-- Scheduled Delivery Date/Time (hidden by default) -->
-                    <div id="scheduledDelivery" class="hidden mb-5 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                    <div id="scheduledDelivery" class="hidden p-4 mb-5 border bg-amber-50 border-amber-200 rounded-xl">
                         <label class="block mb-3 text-sm font-semibold text-gray-700">Când să fie trimis cardul?</label>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
                                 <label class="block mb-1.5 text-xs text-gray-500">Data</label>
-                                <input type="date" id="deliveryDate" class="w-full py-3 px-4 bg-white border border-gray-200 rounded-xl text-sm text-secondary outline-none focus:border-primary" min="">
+                                <input type="date" id="deliveryDate" class="w-full px-4 py-3 text-sm bg-white border border-gray-200 outline-none rounded-xl text-secondary focus:border-primary" min="">
                             </div>
                             <div>
                                 <label class="block mb-1.5 text-xs text-gray-500">Ora</label>
-                                <input type="time" id="deliveryTime" value="09:00" class="w-full py-3 px-4 bg-white border border-gray-200 rounded-xl text-sm text-secondary outline-none focus:border-primary">
+                                <input type="time" id="deliveryTime" value="09:00" class="w-full px-4 py-3 text-sm bg-white border border-gray-200 outline-none rounded-xl text-secondary focus:border-primary">
                             </div>
                         </div>
                         <p class="mt-2 text-xs text-amber-700">Cardul va fi trimis automat la data și ora selectată.</p>
