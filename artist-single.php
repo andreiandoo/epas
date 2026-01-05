@@ -29,7 +29,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Section -->
-<section class="relative h-[480px] overflow-hidden" id="artistHero">
+<section class="relative h-[480px] overflow-hidden mt-24 mobile:mt-0" id="artistHero">
     <!-- Skeleton -->
     <div class="absolute inset-0 bg-gray-200 skeleton-hero animate-pulse"></div>
     <!-- Hero Image (loaded via JS) -->
@@ -187,6 +187,19 @@ require_once __DIR__ . '/includes/header.php';
                         <div class="w-32 h-4 bg-gray-100 rounded animate-pulse"></div>
                     </div>
                     <?php endfor; ?>
+                </div>
+            </div>
+
+            <!-- Booking Agency (hidden by default, shown if data exists) -->
+            <div id="bookingAgencyCard" class="hidden p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
+                <h3 class="flex items-center gap-2 mb-5 text-base font-bold text-gray-900">
+                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                    Agenție de Booking
+                </h3>
+                <div id="bookingAgencyContent" class="space-y-3">
+                    <!-- Content will be loaded dynamically -->
                 </div>
             </div>
         </div>
@@ -397,7 +410,8 @@ const ArtistPage = {
                 image: a.image || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop'
             })),
             social: api.social || {},
-            youtubeVideos: api.youtube_videos || []
+            youtubeVideos: api.youtube_videos || [],
+            bookingAgency: api.booking_agency || null
         };
     },
 
@@ -531,6 +545,56 @@ const ArtistPage = {
                 '</div>';
         });
         document.getElementById('factsCard').innerHTML = factsHtml;
+
+        // Booking Agency
+        if (data.bookingAgency && (data.bookingAgency.name || data.bookingAgency.email || data.bookingAgency.phone || data.bookingAgency.website)) {
+            const agencyCard = document.getElementById('bookingAgencyCard');
+            const agencyContent = document.getElementById('bookingAgencyContent');
+
+            if (agencyCard && agencyContent) {
+                agencyCard.classList.remove('hidden');
+
+                let agencyHtml = '';
+
+                if (data.bookingAgency.name) {
+                    agencyHtml += '<div class="flex items-start gap-3 py-3 border-b border-gray-100">' +
+                        '<svg class="w-5 h-5 mt-0.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>' +
+                        '</svg>' +
+                        '<span class="text-sm font-semibold text-gray-900">' + data.bookingAgency.name + '</span>' +
+                    '</div>';
+                }
+
+                if (data.bookingAgency.email) {
+                    agencyHtml += '<a href="mailto:' + data.bookingAgency.email + '" class="flex items-center gap-3 py-3 text-gray-600 transition-colors border-b border-gray-100 hover:text-primary">' +
+                        '<svg class="flex-shrink-0 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>' +
+                        '</svg>' +
+                        '<span class="text-sm">' + data.bookingAgency.email + '</span>' +
+                    '</a>';
+                }
+
+                if (data.bookingAgency.phone) {
+                    agencyHtml += '<a href="tel:' + data.bookingAgency.phone + '" class="flex items-center gap-3 py-3 text-gray-600 transition-colors border-b border-gray-100 hover:text-primary">' +
+                        '<svg class="flex-shrink-0 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>' +
+                        '</svg>' +
+                        '<span class="text-sm">' + data.bookingAgency.phone + '</span>' +
+                    '</a>';
+                }
+
+                if (data.bookingAgency.website) {
+                    agencyHtml += '<a href="' + data.bookingAgency.website + '" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 py-3 text-gray-600 transition-colors hover:text-primary">' +
+                        '<svg class="flex-shrink-0 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>' +
+                        '</svg>' +
+                        '<span class="text-sm">' + data.bookingAgency.website.replace(/^https?:\\/\\//, '') + '</span>' +
+                    '</a>';
+                }
+
+                agencyContent.innerHTML = agencyHtml;
+            }
+        }
 
         // YouTube Videos
         if (data.youtubeVideos && data.youtubeVideos.length > 0) {
