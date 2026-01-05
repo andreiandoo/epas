@@ -263,6 +263,62 @@ class LocationsController extends BaseController
     }
 
     /**
+     * Get single city by slug
+     */
+    public function city(Request $request, $identifier): JsonResponse
+    {
+        $client = $this->requireClient($request);
+        $lang = $client->language ?? $client->locale ?? 'ro';
+
+        $query = MarketplaceCity::where('marketplace_client_id', $client->id)
+            ->where('is_visible', true);
+
+        if (is_numeric($identifier)) {
+            $query->where('id', $identifier);
+        } else {
+            $query->where('slug', $identifier);
+        }
+
+        $city = $query->with(['region:id,name,slug', 'county:id,name,code'])->first();
+
+        if (!$city) {
+            return $this->error('City not found', 404);
+        }
+
+        // Get event count for this city
+        $eventCount = MarketplaceEvent::where('marketplace_client_id', $client->id)
+            ->where('marketplace_city_id', $city->id)
+            ->where('status', 'published')
+            ->where('is_public', true)
+            ->where('starts_at', '>=', now())
+            ->count();
+
+        return $this->success([
+            'city' => [
+                'id' => $city->id,
+                'name' => $city->name[$lang] ?? $city->name['ro'] ?? array_values((array)$city->name)[0] ?? '',
+                'slug' => $city->slug,
+                'description' => isset($city->description[$lang]) ? $city->description[$lang] : ($city->description['ro'] ?? null),
+                'image' => $city->image_url,
+                'cover_image' => $city->cover_image_url,
+                'region' => $city->region ? [
+                    'name' => $city->region->name[$lang] ?? $city->region->name['ro'] ?? '',
+                    'slug' => $city->region->slug,
+                ] : null,
+                'county' => $city->county ? [
+                    'name' => $city->county->name[$lang] ?? $city->county->name['ro'] ?? '',
+                    'code' => $city->county->code,
+                ] : null,
+                'events_count' => $eventCount,
+                'population' => $city->population,
+                'latitude' => $city->latitude,
+                'longitude' => $city->longitude,
+                'is_capital' => $city->is_capital,
+            ],
+        ]);
+    }
+
+    /**
      * Get single region with all cities
      */
     public function region(Request $request, $identifier): JsonResponse

@@ -252,6 +252,16 @@ switch ($action) {
         $endpoint = '/locations/regions/' . urlencode($identifier);
         break;
 
+    case 'locations.city':
+        $identifier = $_GET['id'] ?? $_GET['slug'] ?? '';
+        if (!$identifier) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing city identifier']);
+            exit;
+        }
+        $endpoint = '/locations/cities/' . urlencode($identifier);
+        break;
+
     // ==================== VENUES ====================
 
     case 'venues.featured':
@@ -792,6 +802,21 @@ function getMockData($action, $params) {
                         ['id' => 17, 'name' => 'Târgu Mureș', 'slug' => 'targu-mures', 'image' => null, 'events_count' => 28],
                         ['id' => 6, 'name' => 'Alba Iulia', 'slug' => 'alba-iulia', 'image' => 'https://images.unsplash.com/photo-1565264216052-3c9012481015?w=200&h=200&fit=crop', 'events_count' => 12],
                     ]
+                ]
+            ];
+
+        case 'locations.city':
+            $identifier = $params['id'] ?? $params['slug'] ?? 'bucuresti';
+            $demoCity = [
+                'bucuresti' => ['id' => 1, 'name' => 'București', 'slug' => 'bucuresti', 'description' => 'Capitala României, centrul cultural și economic al țării.', 'image' => 'https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=200&h=200&fit=crop', 'cover_image' => 'https://images.unsplash.com/photo-1584646098378-0874589d76b1?w=1920&q=80', 'region' => ['name' => 'Muntenia', 'slug' => 'muntenia'], 'county' => ['name' => 'București', 'code' => 'B'], 'events_count' => 238, 'population' => 1900000, 'is_capital' => true],
+                'cluj-napoca' => ['id' => 2, 'name' => 'Cluj-Napoca', 'slug' => 'cluj-napoca', 'description' => 'Capitala neoficială a Transilvaniei, un hub cultural și tehnologic.', 'image' => 'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=200&h=200&fit=crop', 'cover_image' => 'https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=1920&q=80', 'region' => ['name' => 'Transilvania', 'slug' => 'transilvania'], 'county' => ['name' => 'Cluj', 'code' => 'CJ'], 'events_count' => 94, 'population' => 320000, 'is_capital' => false],
+                'brasov' => ['id' => 5, 'name' => 'Brașov', 'slug' => 'brasov', 'description' => 'Poarta către munții Carpați, un oraș plin de istorie.', 'image' => 'https://images.unsplash.com/photo-1565264216052-3c9012481015?w=200&h=200&fit=crop', 'cover_image' => 'https://images.unsplash.com/photo-1565264216052-3c9012481015?w=1920&q=80', 'region' => ['name' => 'Transilvania', 'slug' => 'transilvania'], 'county' => ['name' => 'Brașov', 'code' => 'BV'], 'events_count' => 41, 'population' => 280000, 'is_capital' => false],
+            ];
+            $city = $demoCity[$identifier] ?? $demoCity['bucuresti'];
+            return [
+                'success' => true,
+                'data' => [
+                    'city' => $city
                 ]
             ];
 

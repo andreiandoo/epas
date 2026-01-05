@@ -109,15 +109,15 @@ class ArtistResource extends Resource
                 ->schema([
                     Forms\Components\Select::make('artistTypes')
                         ->label('Tip artist')
-                        ->relationship('artistTypes', 'name')
-                        ->getOptionLabelFromRecordUsing(fn ($record) => is_array($record->name) ? ($record->name['ro'] ?? $record->name['en'] ?? array_values($record->name)[0] ?? '') : $record->name)
+                        ->relationship(name: 'artistTypes', titleAttribute: 'id')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en') ?: ($record->name['ro'] ?? $record->name['en'] ?? 'N/A'))
                         ->multiple()
                         ->preload()
                         ->searchable(),
                     Forms\Components\Select::make('artistGenres')
                         ->label('Genuri muzicale')
-                        ->relationship('artistGenres', 'name')
-                        ->getOptionLabelFromRecordUsing(fn ($record) => is_array($record->name) ? ($record->name['ro'] ?? $record->name['en'] ?? array_values($record->name)[0] ?? '') : $record->name)
+                        ->relationship(name: 'artistGenres', titleAttribute: 'id')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en') ?: ($record->name['ro'] ?? $record->name['en'] ?? 'N/A'))
                         ->multiple()
                         ->preload()
                         ->searchable(),

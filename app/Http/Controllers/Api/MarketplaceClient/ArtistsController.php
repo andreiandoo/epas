@@ -18,11 +18,7 @@ class ArtistsController extends BaseController
         $client = $this->requireClient($request);
 
         $query = Artist::query()
-            ->where(function ($q) use ($client) {
-                // Show partner artists for this marketplace
-                $q->where('marketplace_client_id', $client->id)
-                  ->where('is_partner', true);
-            })
+            ->where('marketplace_client_id', $client->id)
             ->where('is_active', true);
 
         // Filter by letter
@@ -120,7 +116,6 @@ class ArtistsController extends BaseController
 
         $artists = Artist::query()
             ->where('marketplace_client_id', $client->id)
-            ->where('is_partner', true)
             ->where('is_featured', true)
             ->where('is_active', true)
             ->limit($request->input('limit', 6))
@@ -142,7 +137,6 @@ class ArtistsController extends BaseController
 
         $artists = Artist::query()
             ->where('marketplace_client_id', $client->id)
-            ->where('is_partner', true)
             ->where('is_active', true)
             ->whereHas('events', function ($q) {
                 $q->where('event_date', '>=', now()->toDateString())
@@ -173,7 +167,6 @@ class ArtistsController extends BaseController
         $genres = ArtistGenre::query()
             ->withCount(['artists' => function ($q) use ($client) {
                 $q->where('marketplace_client_id', $client->id)
-                  ->where('is_partner', true)
                   ->where('is_active', true);
             }])
             ->having('artists_count', '>', 0)
@@ -202,7 +195,6 @@ class ArtistsController extends BaseController
 
         $letters = Artist::query()
             ->where('marketplace_client_id', $client->id)
-            ->where('is_partner', true)
             ->where('is_active', true)
             ->whereNotNull('letter')
             ->distinct()
@@ -224,8 +216,8 @@ class ArtistsController extends BaseController
 
         $artist = Artist::query()
             ->where('marketplace_client_id', $client->id)
-            ->where('is_partner', true)
             ->where('slug', $slug)
+            ->where('is_active', true)
             ->first();
 
         if (!$artist) {
@@ -271,7 +263,6 @@ class ArtistsController extends BaseController
         if ($genreIds->isNotEmpty()) {
             $similarArtists = Artist::query()
                 ->where('marketplace_client_id', $client->id)
-                ->where('is_partner', true)
                 ->where('is_active', true)
                 ->where('id', '!=', $artist->id)
                 ->whereHas('artistGenres', function ($q) use ($genreIds) {
@@ -344,8 +335,8 @@ class ArtistsController extends BaseController
 
         $artist = Artist::query()
             ->where('marketplace_client_id', $client->id)
-            ->where('is_partner', true)
             ->where('slug', $slug)
+            ->where('is_active', true)
             ->first();
 
         if (!$artist) {
@@ -411,6 +402,8 @@ class ArtistsController extends BaseController
             'name' => $artist->name,
             'slug' => $artist->slug,
             'image' => $artist->main_image_url,
+            'portrait' => $artist->portrait_url,
+            'logo' => $artist->logo_url,
             'city' => $artist->city,
             'is_verified' => $artist->is_featured,
         ];
