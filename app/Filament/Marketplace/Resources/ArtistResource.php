@@ -205,11 +205,15 @@ class ArtistResource extends Resource
                         ->label('YouTube Subscribers')
                         ->numeric()
                         ->placeholder('200000'),
+                    Forms\Components\TextInput::make('youtube_total_views')
+                        ->label('YouTube Total Views')
+                        ->numeric()
+                        ->placeholder('10000000'),
                     Forms\Components\TextInput::make('tiktok_followers')
                         ->label('TikTok Followers')
                         ->numeric()
                         ->placeholder('100000'),
-                ])->columns(3),
+                ])->columns(4),
 
             // YOUTUBE VIDEOS
             SC\Section::make('Videoclipuri YouTube')
@@ -220,15 +224,12 @@ class ArtistResource extends Resource
                     Forms\Components\Repeater::make('youtube_videos')
                         ->label('')
                         ->schema([
-                            Forms\Components\TextInput::make('video_id')
-                                ->label('YouTube Video ID')
-                                ->placeholder('e.g. dQw4w9WgXcQ')
+                            Forms\Components\TextInput::make('url')
+                                ->label('YouTube URL')
+                                ->placeholder('https://www.youtube.com/watch?v=...')
+                                ->url()
                                 ->required(),
-                            Forms\Components\TextInput::make('title')
-                                ->label('Titlu video')
-                                ->placeholder('Numele piesei'),
                         ])
-                        ->columns(2)
                         ->maxItems(5)
                         ->defaultItems(0)
                         ->addActionLabel('Adaugă videoclip')

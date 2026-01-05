@@ -346,6 +346,27 @@ class ArtistResource extends Resource
                             Forms\Components\TextInput::make('agent_website')->label('Website')->url()->rule('url')->maxLength(255)->prefixIcon('heroicon-m-globe-alt'),
                         ]),
                     ])->collapsible(),
+
+                    // Booking Agency (JSON)
+                    SC\Section::make("Booking Agency")->schema([
+                        SC\Grid::make(4)->schema([
+                            Forms\Components\TextInput::make('booking_agency.name')
+                                ->label('Agency Name')
+                                ->placeholder('e.g. Universal Music Romania'),
+                            Forms\Components\TextInput::make('booking_agency.email')
+                                ->label('Email')
+                                ->email()
+                                ->placeholder('booking@agency.com'),
+                            Forms\Components\TextInput::make('booking_agency.phone')
+                                ->label('Phone')
+                                ->placeholder('+40 ...'),
+                            Forms\Components\TextInput::make('booking_agency.website')
+                                ->label('Website')
+                                ->url()
+                                ->placeholder('https://...'),
+                        ]),
+                    ])->collapsible()
+                      ->collapsed(),
                 ])
                 ->columns(1),
 
