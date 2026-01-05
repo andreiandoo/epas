@@ -207,6 +207,26 @@ switch ($action) {
         $endpoint = '/locations/regions/' . urlencode($identifier);
         break;
 
+    // ==================== VENUES ====================
+
+    case 'venues.featured':
+        $endpoint = '/venues/featured';
+        break;
+
+    case 'venue-categories':
+        $endpoint = '/venue-categories';
+        break;
+
+    case 'venue-category':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing venue category slug']);
+            exit;
+        }
+        $endpoint = '/venue-categories/' . urlencode($slug);
+        break;
+
     case 'cart':
         $method = 'POST';
         $body = file_get_contents('php://input');
@@ -726,6 +746,102 @@ function getMockData($action, $params) {
                         ['id' => 16, 'name' => 'Sibiu', 'slug' => 'sibiu', 'image' => 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=200&h=200&fit=crop', 'events_count' => 35],
                         ['id' => 17, 'name' => 'Târgu Mureș', 'slug' => 'targu-mures', 'image' => null, 'events_count' => 28],
                         ['id' => 6, 'name' => 'Alba Iulia', 'slug' => 'alba-iulia', 'image' => 'https://images.unsplash.com/photo-1565264216052-3c9012481015?w=200&h=200&fit=crop', 'events_count' => 12],
+                    ]
+                ]
+            ];
+
+        // ==================== VENUES (Demo Mode) ====================
+
+        case 'venues.featured':
+            return [
+                'success' => true,
+                'data' => [
+                    'venues' => [
+                        [
+                            'id' => 1,
+                            'name' => 'Arena Națională',
+                            'slug' => 'arena-nationala',
+                            'city' => 'București',
+                            'events_count' => 12,
+                            'image' => 'https://images.unsplash.com/photo-1522158637959-30385a09e0da?w=200&h=200&fit=crop'
+                        ],
+                        [
+                            'id' => 2,
+                            'name' => 'Sala Palatului',
+                            'slug' => 'sala-palatului',
+                            'city' => 'București',
+                            'events_count' => 28,
+                            'image' => 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=200&h=200&fit=crop'
+                        ],
+                        [
+                            'id' => 3,
+                            'name' => 'BT Arena',
+                            'slug' => 'bt-arena',
+                            'city' => 'Cluj-Napoca',
+                            'events_count' => 18,
+                            'image' => 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=200&h=200&fit=crop'
+                        ],
+                        [
+                            'id' => 4,
+                            'name' => 'Teatrul Național',
+                            'slug' => 'tnb',
+                            'city' => 'București',
+                            'events_count' => 42,
+                            'image' => 'https://images.unsplash.com/photo-1503095396549-807759245b35?w=200&h=200&fit=crop'
+                        ],
+                        [
+                            'id' => 5,
+                            'name' => 'Arenele Romane',
+                            'slug' => 'arenele-romane',
+                            'city' => 'București',
+                            'events_count' => 15,
+                            'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200&h=200&fit=crop'
+                        ],
+                        [
+                            'id' => 6,
+                            'name' => 'Romexpo',
+                            'slug' => 'romexpo',
+                            'city' => 'București',
+                            'events_count' => 8,
+                            'image' => 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=200&h=200&fit=crop'
+                        ]
+                    ]
+                ]
+            ];
+
+        case 'venue-categories':
+            return [
+                'success' => true,
+                'data' => [
+                    'categories' => [
+                        [
+                            'id' => 1,
+                            'name' => 'Arene & Stadioane',
+                            'slug' => 'arene',
+                            'icon' => '<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/>',
+                            'venues_count' => 24
+                        ],
+                        [
+                            'id' => 2,
+                            'name' => 'Teatre & Săli',
+                            'slug' => 'teatre',
+                            'icon' => '<path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><line x1="2" y1="20" x2="2" y2="20"/>',
+                            'venues_count' => 86
+                        ],
+                        [
+                            'id' => 3,
+                            'name' => 'Cluburi & Baruri',
+                            'slug' => 'cluburi',
+                            'icon' => '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+                            'venues_count' => 142
+                        ],
+                        [
+                            'id' => 4,
+                            'name' => 'Open Air',
+                            'slug' => 'open-air',
+                            'icon' => '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
+                            'venues_count' => 38
+                        ]
                     ]
                 ]
             ];

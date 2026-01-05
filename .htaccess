@@ -40,7 +40,7 @@ RewriteRule ^genre/([a-z0-9-]+)/?$ /gen/$1 [R=301,L]
 # Handle all events listing - /evenimente
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^evenimente/?$ category.php?view=all [L,QSA]
+RewriteRule ^evenimente/?$ events.php [L,QSA]
 
 # Handle venues - /locatii and /locatie/venue-slug
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -315,6 +315,10 @@ RewriteRule ^email-confirmat/?$ email-confirmed.php [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^dezabonare/?$ newsletter-unsubscribed.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^blog/?$ blog.php [L]
 
 # ============================================
 # DYNAMIC CITY PAGES - Catch-all for city slugs

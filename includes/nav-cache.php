@@ -450,6 +450,295 @@ function fetchEventCategoriesFromAPI(): array {
     return $categories;
 }
 
+// ==================== FEATURED VENUES CACHE ====================
+
+define('FEATURED_VENUES_CACHE_FILE', __DIR__ . '/cache/featured-venues.json');
+define('FEATURED_VENUES_CACHE_TTL', 30 * 60); // 30 minutes
+
+/**
+ * Get featured venues for navigation with caching
+ *
+ * @return array Featured venues array
+ */
+function getFeaturedVenues(): array {
+    // Check if cache exists and is valid
+    if (isFeaturedVenuesCacheValid()) {
+        return loadFeaturedVenuesCache();
+    }
+
+    // Fetch fresh data from API
+    $freshData = fetchFeaturedVenuesFromAPI();
+
+    // Save to cache
+    saveFeaturedVenuesCache($freshData);
+
+    return $freshData;
+}
+
+/**
+ * Check if featured venues cache is still valid
+ */
+function isFeaturedVenuesCacheValid(): bool {
+    if (!file_exists(FEATURED_VENUES_CACHE_FILE)) {
+        return false;
+    }
+
+    $cacheTime = filemtime(FEATURED_VENUES_CACHE_FILE);
+    return (time() - $cacheTime) < FEATURED_VENUES_CACHE_TTL;
+}
+
+/**
+ * Load featured venues from cache file
+ */
+function loadFeaturedVenuesCache(): array {
+    $content = file_get_contents(FEATURED_VENUES_CACHE_FILE);
+    $data = json_decode($content, true);
+
+    return $data ?: getDefaultFeaturedVenues();
+}
+
+/**
+ * Save featured venues to cache file
+ */
+function saveFeaturedVenuesCache(array $data): void {
+    $cacheDir = dirname(FEATURED_VENUES_CACHE_FILE);
+
+    if (!is_dir($cacheDir)) {
+        mkdir($cacheDir, 0755, true);
+    }
+
+    file_put_contents(FEATURED_VENUES_CACHE_FILE, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
+/**
+ * Fetch featured venues from API via proxy
+ */
+function fetchFeaturedVenuesFromAPI(): array {
+    require_once __DIR__ . '/../includes/config.php';
+
+    // Use internal API call via proxy
+    $proxyUrl = '/api/proxy.php?action=venues.featured';
+    $fullUrl = (defined('SITE_URL') ? SITE_URL : '') . $proxyUrl;
+
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 5,
+            'ignore_errors' => true
+        ]
+    ]);
+
+    $response = @file_get_contents($fullUrl, false, $context);
+
+    if ($response === false) {
+        return getDefaultFeaturedVenues();
+    }
+
+    $data = json_decode($response, true);
+
+    if (!$data || !isset($data['success']) || !$data['success'] || !isset($data['data']['venues'])) {
+        return getDefaultFeaturedVenues();
+    }
+
+    // Transform API response to nav format
+    $venues = [];
+    foreach ($data['data']['venues'] as $venue) {
+        $venues[] = [
+            'name' => $venue['name'],
+            'slug' => $venue['slug'],
+            'address' => $venue['city'] ?? '',
+            'count' => $venue['events_count'] ?? 0,
+            'image' => $venue['image'] ?? 'https://images.unsplash.com/photo-1522158637959-30385a09e0da?w=200&h=200&fit=crop'
+        ];
+    }
+
+    return $venues;
+}
+
+/**
+ * Get default featured venues (fallback)
+ */
+function getDefaultFeaturedVenues(): array {
+    return [
+        [
+            'name' => 'Arena Națională',
+            'slug' => 'arena-nationala',
+            'address' => 'București',
+            'count' => 12,
+            'image' => 'https://images.unsplash.com/photo-1522158637959-30385a09e0da?w=200&h=200&fit=crop'
+        ],
+        [
+            'name' => 'Sala Palatului',
+            'slug' => 'sala-palatului',
+            'address' => 'București',
+            'count' => 28,
+            'image' => 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?w=200&h=200&fit=crop'
+        ],
+        [
+            'name' => 'BT Arena',
+            'slug' => 'bt-arena',
+            'address' => 'Cluj-Napoca',
+            'count' => 18,
+            'image' => 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=200&h=200&fit=crop'
+        ],
+        [
+            'name' => 'Teatrul Național',
+            'slug' => 'tnb',
+            'address' => 'București',
+            'count' => 42,
+            'image' => 'https://images.unsplash.com/photo-1503095396549-807759245b35?w=200&h=200&fit=crop'
+        ],
+        [
+            'name' => 'Arenele Romane',
+            'slug' => 'arenele-romane',
+            'address' => 'București',
+            'count' => 15,
+            'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200&h=200&fit=crop'
+        ],
+        [
+            'name' => 'Romexpo',
+            'slug' => 'romexpo',
+            'address' => 'București',
+            'count' => 8,
+            'image' => 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=200&h=200&fit=crop'
+        ]
+    ];
+}
+
+// ==================== VENUE CATEGORIES CACHE ====================
+
+define('VENUE_CATEGORIES_CACHE_FILE', __DIR__ . '/cache/venue-categories.json');
+define('VENUE_CATEGORIES_CACHE_TTL', 30 * 60); // 30 minutes
+
+/**
+ * Get venue categories for navigation with caching
+ *
+ * @return array Venue categories array
+ */
+function getVenueCategories(): array {
+    // Check if cache exists and is valid
+    if (isVenueCategoriesCacheValid()) {
+        return loadVenueCategoriesCache();
+    }
+
+    // Fetch fresh data from API
+    $freshData = fetchVenueCategoriesFromAPI();
+
+    // Save to cache
+    saveVenueCategoriesCache($freshData);
+
+    return $freshData;
+}
+
+/**
+ * Check if venue categories cache is still valid
+ */
+function isVenueCategoriesCacheValid(): bool {
+    if (!file_exists(VENUE_CATEGORIES_CACHE_FILE)) {
+        return false;
+    }
+
+    $cacheTime = filemtime(VENUE_CATEGORIES_CACHE_FILE);
+    return (time() - $cacheTime) < VENUE_CATEGORIES_CACHE_TTL;
+}
+
+/**
+ * Load venue categories from cache file
+ */
+function loadVenueCategoriesCache(): array {
+    $content = file_get_contents(VENUE_CATEGORIES_CACHE_FILE);
+    $data = json_decode($content, true);
+
+    return $data ?: getDefaultVenueCategories();
+}
+
+/**
+ * Save venue categories to cache file
+ */
+function saveVenueCategoriesCache(array $data): void {
+    $cacheDir = dirname(VENUE_CATEGORIES_CACHE_FILE);
+
+    if (!is_dir($cacheDir)) {
+        mkdir($cacheDir, 0755, true);
+    }
+
+    file_put_contents(VENUE_CATEGORIES_CACHE_FILE, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
+/**
+ * Fetch venue categories from API via proxy
+ */
+function fetchVenueCategoriesFromAPI(): array {
+    require_once __DIR__ . '/../includes/config.php';
+
+    // Use internal API call via proxy
+    $proxyUrl = '/api/proxy.php?action=venue-categories';
+    $fullUrl = (defined('SITE_URL') ? SITE_URL : '') . $proxyUrl;
+
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 5,
+            'ignore_errors' => true
+        ]
+    ]);
+
+    $response = @file_get_contents($fullUrl, false, $context);
+
+    if ($response === false) {
+        return getDefaultVenueCategories();
+    }
+
+    $data = json_decode($response, true);
+
+    if (!$data || !isset($data['success']) || !$data['success'] || !isset($data['data']['categories'])) {
+        return getDefaultVenueCategories();
+    }
+
+    // Transform API response to nav format
+    $categories = [];
+    foreach ($data['data']['categories'] as $category) {
+        $categories[] = [
+            'name' => $category['name'],
+            'slug' => $category['slug'],
+            'icon' => $category['icon'] ?? '',
+            'count' => $category['venues_count'] ?? 0,
+        ];
+    }
+
+    return $categories;
+}
+
+/**
+ * Get default venue categories (fallback)
+ */
+function getDefaultVenueCategories(): array {
+    return [
+        [
+            'name' => 'Arene & Stadioane',
+            'slug' => 'arene',
+            'count' => 24,
+            'icon' => '<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/>'
+        ],
+        [
+            'name' => 'Teatre & Săli',
+            'slug' => 'teatre',
+            'count' => 86,
+            'icon' => '<path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><line x1="2" y1="20" x2="2" y2="20"/>'
+        ],
+        [
+            'name' => 'Cluburi & Baruri',
+            'slug' => 'cluburi',
+            'count' => 142,
+            'icon' => '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'
+        ],
+        [
+            'name' => 'Open Air',
+            'slug' => 'open-air',
+            'count' => 38,
+            'icon' => '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
+        ]
+    ];
+}
+
 /**
  * Get default event categories (fallback)
  */
