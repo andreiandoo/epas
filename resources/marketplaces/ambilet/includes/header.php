@@ -258,7 +258,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                         </svg>
                     </button>
                     <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
-                        <div class="w-[700px] bg-white border border-gray-200 rounded-2xl shadow-xl p-6">
+                        <div class="w-[700px] bg-white border border-gray-200 rounded-2xl shadow-xl py-3 px-2">
                             <div class="flex items-center justify-between mb-5">
                                 <span class="text-[13px] font-semibold text-gray-400 uppercase tracking-wider">Alege orașul</span>
                                 <a href="/orase" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
@@ -298,7 +298,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
                         <div class="w-[820px] bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden flex">
                             <!-- Categories -->
-                            <div class="w-[250px] p-5 bg-gray-50 border-r border-gray-200">
+                            <div class="w-[250px] px-3 py-2 bg-gray-50 border-r border-gray-200">
                                 <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 px-3">Categorii</div>
                                 <?php foreach ($navCategories as $index => $cat): ?>
                                 <a href="/<?= $cat['slug'] ?>" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm transition-all mb-1 group/cat <?= $index === 0 ? 'bg-white text-gray-900 shadow-sm' : '' ?>" title="<?= htmlspecialchars($cat['name']) ?>">
@@ -331,7 +331,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                             </div>
 
                             <!-- Featured Events -->
-                            <div class="flex-1 p-5">
+                            <div class="flex-1 p-3">
                                 <div class="flex items-center justify-between mb-4">
                                     <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                                         <svg class="w-3.5 h-3.5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
@@ -391,7 +391,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                         </svg>
                     </button>
                     <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
-                        <div class="w-[780px] bg-white border border-gray-200 rounded-2xl shadow-xl p-6">
+                        <div class="w-[780px] bg-white border border-gray-200 rounded-2xl shadow-xl py-3 px-2">
                             <div class="flex items-center justify-between mb-5">
                                 <span class="text-[13px] font-semibold text-gray-400 uppercase tracking-wider">Locații populare</span>
                                 <a href="/locatii" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">

@@ -42,14 +42,14 @@ if ($searchQuery) {
 
 $pageDescription = 'Descoperă cele mai bune evenimente din România. Concerte, festivaluri, teatru, stand-up și multe altele.';
 $currentPage = 'events';
-$transparentHeader = false;
+$transparentHeader = true;
 
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Banner -->
-<section class="relative py-12 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+<section class="relative pt-40 pb-8 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
     <div class="absolute inset-0 opacity-10">
         <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"1\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
     </div>
@@ -67,24 +67,6 @@ require_once __DIR__ . '/includes/header.php';
             <p class="max-w-2xl mb-8 text-lg text-gray-300">
                 Găsește și cumpără bilete pentru cele mai tari concerte, festivaluri, spectacole de teatru și multe altele.
             </p>
-
-            <!-- Search Bar -->
-            <div class="relative w-full max-w-2xl">
-                <input
-                    type="text"
-                    id="searchInput"
-                    value="<?= htmlspecialchars($searchQuery) ?>"
-                    placeholder="Caută evenimente, artiști, locații..."
-                    class="w-full px-6 py-4 pl-14 text-lg text-white placeholder-gray-400 border border-gray-600 bg-gray-800/50 backdrop-blur rounded-2xl focus:ring-2 focus:ring-primary focus:border-primary"
-                    onkeypress="if(event.key==='Enter') EventsPage.search()"
-                >
-                <svg class="absolute w-6 h-6 text-gray-400 -translate-y-1/2 left-5 top-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                </svg>
-                <button onclick="EventsPage.search()" class="absolute px-6 py-2 font-semibold text-white transition-colors -translate-y-1/2 rounded-xl bg-primary hover:bg-primary-dark right-2 top-1/2">
-                    Caută
-                </button>
-            </div>
         </div>
     </div>
 </section>
@@ -406,13 +388,13 @@ const EventsPage = {
         const formattedDay = date.toLocaleDateString('ro-RO', { weekday: 'short' });
 
         return `
-            <a href="/eveniment/${event.slug}" class="group overflow-hidden transition-all bg-white rounded-2xl border border-gray-200 hover:shadow-xl hover:-translate-y-1">
+            <a href="/eveniment/${event.slug}" class="overflow-hidden transition-all bg-white border border-gray-200 group rounded-2xl hover:shadow-xl hover:-translate-y-1">
                 <div class="relative aspect-[16/10] overflow-hidden">
                     <img src="${event.image}" alt="${event.title}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105">
                     <div class="absolute top-3 left-3">
                         <span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-primary">${event.category}</span>
                     </div>
-                    <div class="absolute flex flex-col items-center justify-center w-14 h-14 text-center bg-white rounded-xl shadow-lg top-3 right-3">
+                    <div class="absolute flex flex-col items-center justify-center text-center bg-white shadow-lg w-14 h-14 rounded-xl top-3 right-3">
                         <span class="text-xs font-medium text-gray-500 uppercase">${formattedDay}</span>
                         <span class="text-lg font-bold text-gray-900">${date.getDate()}</span>
                         <span class="text-[10px] font-medium text-gray-500 uppercase">${date.toLocaleDateString('ro-RO', { month: 'short' })}</span>
