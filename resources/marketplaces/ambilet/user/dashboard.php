@@ -1,221 +1,410 @@
 <?php
-/**
- * User Dashboard
- */
 require_once dirname(__DIR__) . '/includes/config.php';
-
-$pageTitle = 'Dashboard';
-$bodyClass = 'min-h-screen bg-surface';
+$pageTitle = 'Contul Meu';
 $currentPage = 'dashboard';
-
 require_once dirname(__DIR__) . '/includes/head.php';
+require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
-    <div id="header-container"></div>
+<style>
+    .level-progress { background: linear-gradient(90deg, #A51C30 0%, #E67E22 100%); }
+    .badge-glow { box-shadow: 0 0 10px rgba(230, 126, 34, 0.5); }
+    .taste-bar { transition: width 1s ease-out; }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.08); }
+</style>
 
-    <div class="max-w-7xl mx-auto px-4 py-8">
-        <div class="flex flex-col lg:flex-row gap-8">
-            <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
+<!-- Main Container with Sidebar -->
+<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
+    <div class="flex flex-col gap-6 lg:flex-row">
+        <!-- Sidebar -->
+        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
 
-            <!-- Main Content -->
-            <main class="flex-1">
-                <!-- Welcome Section -->
-                <div class="bg-gradient-to-r from-primary to-primary-dark rounded-2xl p-8 text-white mb-8">
-                    <h1 class="text-2xl font-bold mb-2">Bine ai venit, <span id="welcome-name">utilizator</span>!</h1>
-                    <p class="text-white/80">Gestioneaza biletele, vezi comenzile si acumuleaza puncte.</p>
-                </div>
+        <!-- Main Content -->
+        <main class="flex-1 min-w-0 lg:pt-24">
+            <!-- Welcome Section with Level -->
+            <div class="relative p-5 mb-6 overflow-hidden text-white bg-gradient-to-r from-primary via-primary-dark to-secondary rounded-2xl lg:rounded-3xl lg:p-8">
+                <div class="absolute top-0 right-0 w-64 h-64 translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5"></div>
+                <div class="absolute bottom-0 w-48 h-48 translate-y-1/2 rounded-full left-1/2 bg-white/5"></div>
 
-                <!-- Quick Stats -->
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                    <div class="bg-white rounded-2xl border border-border p-6">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center">
-                                <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
-                                </svg>
+                <div class="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="relative">
+                            <div class="flex items-center justify-center w-16 h-16 lg:w-20 lg:h-20 bg-white/20 rounded-2xl backdrop-blur">
+                                <span id="welcome-initials" class="text-2xl font-bold lg:text-3xl">--</span>
                             </div>
-                            <div>
-                                <p class="text-2xl font-bold text-secondary" id="stat-tickets">0</p>
-                                <p class="text-sm text-muted">Bilete active</p>
+                            <div class="absolute flex items-center justify-center rounded-lg -bottom-1 -right-1 w-7 h-7 bg-accent badge-glow">
+                                <span id="user-level" class="text-xs font-bold">1</span>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm text-white/70">Bun venit inapoi,</p>
+                            <h1 id="welcome-name" class="text-xl font-bold lg:text-2xl">--</h1>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span id="user-badge" class="px-2 py-0.5 bg-accent/20 text-accent text-xs font-bold rounded">ROCK ENTHUSIAST</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-2xl border border-border p-6">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-success/10 rounded-xl flex items-center justify-center">
-                                <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="text-2xl font-bold text-secondary" id="stat-attended">0</p>
-                                <p class="text-sm text-muted">Evenimente vizitate</p>
+                    <!-- Level Progress -->
+                    <div class="lg:w-80">
+                        <div class="flex items-center justify-between mb-2">
+                            <span id="level-title" class="text-sm text-white/70">Nivel 1 - Incepator</span>
+                            <span id="level-xp" class="text-sm font-bold">0 / 500 XP</span>
+                        </div>
+                        <div class="h-3 overflow-hidden rounded-full bg-white/20">
+                            <div id="level-progress" class="h-full rounded-full level-progress" style="width: 0%"></div>
+                        </div>
+                        <p id="level-remaining" class="mt-1 text-xs text-white/50">500 XP pana la nivelul 2</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-2 gap-3 mb-6 lg:grid-cols-4 lg:gap-4">
+                <div class="p-4 bg-white border rounded-xl lg:rounded-2xl lg:p-5 border-border">
+                    <div class="flex items-center justify-center w-10 h-10 mb-3 bg-primary/10 rounded-xl">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                    </div>
+                    <p id="stat-events" class="text-2xl font-bold lg:text-3xl text-secondary">0</p>
+                    <p class="text-xs lg:text-sm text-muted">Evenimente participat</p>
+                </div>
+
+                <div class="p-4 bg-white border rounded-xl lg:rounded-2xl lg:p-5 border-border">
+                    <div class="flex items-center justify-center w-10 h-10 mb-3 bg-accent/10 rounded-xl">
+                        <svg class="w-5 h-5 text-accent" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
+                    </div>
+                    <p id="stat-points" class="text-2xl font-bold lg:text-3xl text-secondary">0</p>
+                    <p class="text-xs lg:text-sm text-muted">Puncte acumulate</p>
+                </div>
+
+                <div class="p-4 bg-white border rounded-xl lg:rounded-2xl lg:p-5 border-border">
+                    <div class="flex items-center justify-center w-10 h-10 mb-3 bg-success/10 rounded-xl">
+                        <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                    </div>
+                    <p id="stat-badges" class="text-2xl font-bold lg:text-3xl text-secondary">0</p>
+                    <p class="text-xs lg:text-sm text-muted">Badge-uri obtinute</p>
+                </div>
+
+                <div class="p-4 bg-white border rounded-xl lg:rounded-2xl lg:p-5 border-border">
+                    <div class="flex items-center justify-center w-10 h-10 mb-3 bg-error/10 rounded-xl">
+                        <svg class="w-5 h-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                    </div>
+                    <p id="stat-favorites" class="text-2xl font-bold lg:text-3xl text-secondary">0</p>
+                    <p class="text-xs lg:text-sm text-muted">Evenimente favorite</p>
+                </div>
+            </div>
+
+            <div class="grid gap-6 lg:grid-cols-5">
+                <!-- Left Column -->
+                <div class="space-y-6 lg:col-span-3">
+                    <!-- Upcoming Events -->
+                    <div class="p-4 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-bold text-secondary">Evenimentele mele urmatoare</h2>
+                            <a href="/cont/bilete" class="text-sm font-medium text-primary hover:underline">Vezi toate</a>
+                        </div>
+                        <div id="upcoming-events" class="space-y-3">
+                            <div class="flex gap-4 p-3 animate-pulse bg-surface rounded-xl">
+                                <div class="w-20 h-20 bg-gray-200 rounded-xl"></div>
+                                <div class="flex-1 space-y-2">
+                                    <div class="w-1/4 h-4 bg-gray-200 rounded"></div>
+                                    <div class="w-3/4 h-5 bg-gray-200 rounded"></div>
+                                    <div class="w-1/2 h-4 bg-gray-200 rounded"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="bg-white rounded-2xl border border-border p-6">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center">
-                                <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="text-2xl font-bold text-secondary" id="stat-points">0</p>
-                                <p class="text-sm text-muted">Puncte acumulate</p>
-                            </div>
+                    <!-- Recommended Events -->
+                    <div class="p-4 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-bold text-secondary">Recomandate pentru tine</h2>
+                            <a href="/" class="text-sm font-medium text-primary hover:underline">Vezi toate</a>
                         </div>
-                    </div>
-
-                    <div class="bg-white rounded-2xl border border-border p-6">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-error/10 rounded-xl flex items-center justify-center">
-                                <svg class="w-6 h-6 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-                                </svg>
+                        <div id="recommended-events" class="grid gap-4 sm:grid-cols-2">
+                            <div class="overflow-hidden border animate-pulse rounded-xl border-border">
+                                <div class="h-32 bg-gray-200"></div>
+                                <div class="p-3 space-y-2">
+                                    <div class="w-3/4 h-4 bg-gray-200 rounded"></div>
+                                    <div class="w-1/2 h-3 bg-gray-200 rounded"></div>
+                                </div>
                             </div>
-                            <div>
-                                <p class="text-2xl font-bold text-secondary" id="stat-favorites">0</p>
-                                <p class="text-sm text-muted">Favorite</p>
+                            <div class="overflow-hidden border animate-pulse rounded-xl border-border">
+                                <div class="h-32 bg-gray-200"></div>
+                                <div class="p-3 space-y-2">
+                                    <div class="w-3/4 h-4 bg-gray-200 rounded"></div>
+                                    <div class="w-1/2 h-3 bg-gray-200 rounded"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Upcoming Events -->
-                <div class="bg-white rounded-2xl border border-border p-6 mb-8">
-                    <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-xl font-bold text-secondary">Evenimentele tale</h2>
-                        <a href="/user/tickets.php" class="text-primary font-medium hover:underline">Vezi toate</a>
+                <!-- Right Column -->
+                <div class="space-y-6 lg:col-span-2">
+                    <!-- Quick Actions -->
+                    <div class="p-4 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
+                        <h2 class="mb-4 font-bold text-secondary">Actiuni rapide</h2>
+                        <div class="space-y-2">
+                            <a href="/cont/bilete" class="flex items-center gap-3 p-3 transition-colors bg-surface rounded-xl hover:bg-primary/10 group">
+                                <div class="flex items-center justify-center w-10 h-10 transition-colors rounded-lg bg-primary/10 group-hover:bg-primary">
+                                    <svg class="w-5 h-5 text-primary group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+                                </div>
+                                <span class="text-sm font-medium text-secondary">Descarca biletele</span>
+                            </a>
+                            <a href="/" class="flex items-center gap-3 p-3 transition-colors bg-surface rounded-xl hover:bg-primary/10 group">
+                                <div class="flex items-center justify-center w-10 h-10 transition-colors rounded-lg bg-success/10 group-hover:bg-success">
+                                    <svg class="w-5 h-5 text-success group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                </div>
+                                <span class="text-sm font-medium text-secondary">Descopera evenimente</span>
+                            </a>
+                            <a href="/cont/puncte" class="flex items-center gap-3 p-3 transition-colors bg-surface rounded-xl hover:bg-primary/10 group">
+                                <div class="flex items-center justify-center w-10 h-10 transition-colors rounded-lg bg-accent/10 group-hover:bg-accent">
+                                    <svg class="w-5 h-5 text-accent group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
+                                </div>
+                                <span class="text-sm font-medium text-secondary">Foloseste punctele</span>
+                            </a>
+                        </div>
                     </div>
 
-                    <div id="upcoming-events" class="space-y-4">
-                        <div class="skeleton h-24 rounded-xl"></div>
-                        <div class="skeleton h-24 rounded-xl"></div>
+                    <!-- Recent Badges -->
+                    <div class="p-4 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="font-bold text-secondary">Badge-uri recente</h2>
+                            <a href="/cont/puncte" class="text-sm font-medium text-primary hover:underline">Toate</a>
+                        </div>
+                        <div id="recent-badges" class="space-y-3">
+                            <div class="flex items-center gap-3 p-3 bg-surface rounded-xl">
+                                <div class="flex items-center justify-center w-12 h-12 text-2xl bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl">🎸</div>
+                                <div>
+                                    <p class="text-sm font-semibold text-secondary">Rock Veteran</p>
+                                    <p class="text-xs text-muted">10+ concerte rock</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 p-3 bg-surface rounded-xl">
+                                <div class="flex items-center justify-center w-12 h-12 text-2xl bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl">🌟</div>
+                                <div>
+                                    <p class="text-sm font-semibold text-secondary">Early Bird</p>
+                                    <p class="text-xs text-muted">5+ bilete early bird</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Favorite Artists -->
+                    <div class="p-4 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
+                        <h2 class="mb-4 font-bold text-secondary">Artistii tai preferati</h2>
+                        <div id="favorite-artists" class="flex flex-wrap gap-2">
+                            <a href="/artist/dirty-shirt" class="px-3 py-1.5 bg-primary/10 text-primary text-sm font-medium rounded-full hover:bg-primary hover:text-white transition-colors">Dirty Shirt</a>
+                            <a href="/artist/cargo" class="px-3 py-1.5 bg-primary/10 text-primary text-sm font-medium rounded-full hover:bg-primary hover:text-white transition-colors">Cargo</a>
+                            <a href="/artist/trooper" class="px-3 py-1.5 bg-primary/10 text-primary text-sm font-medium rounded-full hover:bg-primary hover:text-white transition-colors">Trooper</a>
+                            <span class="px-3 py-1.5 bg-surface text-muted text-sm font-medium rounded-full border border-border">+5 altii</span>
+                        </div>
                     </div>
                 </div>
-
-                <!-- Recent Orders -->
-                <div class="bg-white rounded-2xl border border-border p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <h2 class="text-xl font-bold text-secondary">Comenzi recente</h2>
-                        <a href="/user/orders.php" class="text-primary font-medium hover:underline">Vezi toate</a>
-                    </div>
-
-                    <div id="recent-orders" class="space-y-4">
-                        <div class="skeleton h-16 rounded-xl"></div>
-                        <div class="skeleton h-16 rounded-xl"></div>
-                    </div>
-                </div>
-            </main>
-        </div>
+            </div>
+        </main>
     </div>
+</div>
 
-    <div id="footer"></div>
+<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
 
 <?php
 $scriptsExtra = <<<'JS'
 <script>
 const UserDashboard = {
+    user: null,
+    stats: null,
+
     async init() {
-        // Check authentication
-        if (!AmbiletAuth.isAuthenticated()) {
-            window.location.href = '/login.php?redirect=/user/dashboard.php';
+        if (!AmbiletAuth.isLoggedIn()) {
+            window.location.href = '/autentificare?redirect=/cont';
             return;
         }
 
-        // Load user data
-        const user = AmbiletAuth.getUser();
-        if (user) {
-            document.getElementById('user-initials').textContent = user.name?.substring(0, 2).toUpperCase() || '--';
-            document.getElementById('user-name').textContent = user.name || 'Utilizator';
-            document.getElementById('user-email').textContent = user.email || '';
-            document.getElementById('welcome-name').textContent = user.first_name || user.name?.split(' ')[0] || 'utilizator';
-        }
-
-        // Load dashboard data
-        await Promise.all([
-            this.loadStats(),
-            this.loadUpcomingEvents(),
-            this.loadRecentOrders()
-        ]);
+        this.user = AmbiletAuth.getCurrentUser();
+        await this.loadDashboard();
+        this.renderUser();
     },
 
-    async loadStats() {
+    async loadDashboard() {
         try {
             const response = await AmbiletAPI.get('/customer/stats');
-            if (response.success) {
-                document.getElementById('stat-tickets').textContent = response.data.active_tickets || 0;
-                document.getElementById('stat-attended').textContent = response.data.attended_events || 0;
-                document.getElementById('stat-points').textContent = response.data.points || 0;
-                document.getElementById('stat-favorites').textContent = response.data.favorites || 0;
+            if (response.success && response.data) {
+                this.stats = response.data;
+                this.renderStats();
             }
         } catch (error) {
-            console.error('Failed to load stats:', error);
+            // Use demo data from DEMO_DATA if available
+            if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.customer) {
+                const c = DEMO_DATA.customer;
+                this.stats = {
+                    events_attended: c.stats?.events || 23,
+                    points: c.points || 2450,
+                    badges: DEMO_DATA.badges?.unlocked?.length || 7,
+                    favorites: DEMO_DATA.watchlistEvents?.length || 12,
+                    level: c.level || 12,
+                    level_title: c.level_name || 'Rock Star',
+                    xp: c.points || 2450,
+                    xp_next: c.next_level_xp || 3000,
+                    badge_title: c.type || 'ROCK ENTHUSIAST'
+                };
+            } else {
+                this.stats = {
+                    events_attended: 23, points: 2450, badges: 7, favorites: 12,
+                    level: 12, level_title: 'Rock Star', xp: 2450, xp_next: 3000,
+                    badge_title: 'ROCK ENTHUSIAST'
+                };
+            }
+            this.renderStats();
+        }
+
+        await this.loadUpcomingEvents();
+        await this.loadRecommendedEvents();
+    },
+
+    renderUser() {
+        if (!this.user) return;
+        const initials = this.getInitials(this.user.first_name, this.user.last_name);
+        const fullName = `${this.user.first_name || ''} ${this.user.last_name || ''}`.trim() || this.user.name || 'Utilizator';
+
+        document.getElementById('welcome-initials').textContent = initials;
+        document.getElementById('welcome-name').textContent = fullName;
+    },
+
+    renderStats() {
+        if (!this.stats) return;
+
+        document.getElementById('stat-events').textContent = this.stats.events_attended || 0;
+        document.getElementById('stat-points').textContent = this.formatNumber(this.stats.points || 0);
+        document.getElementById('stat-badges').textContent = this.stats.badges || 0;
+        document.getElementById('stat-favorites').textContent = this.stats.favorites || 0;
+
+        const level = this.stats.level || 1;
+        const xp = this.stats.xp || 0;
+        const xpNext = this.stats.xp_next || 500;
+        const levelTitle = this.stats.level_title || 'Incepator';
+        const progress = Math.min(100, (xp / xpNext) * 100);
+
+        document.getElementById('user-level').textContent = level;
+        document.getElementById('level-title').textContent = `Nivel ${level} - ${levelTitle}`;
+        document.getElementById('level-xp').textContent = `${this.formatNumber(xp)} / ${this.formatNumber(xpNext)} XP`;
+        document.getElementById('level-progress').style.width = `${progress}%`;
+        document.getElementById('level-remaining').textContent = `${this.formatNumber(xpNext - xp)} XP pana la nivelul ${level + 1}`;
+
+        if (this.stats.badge_title) {
+            document.getElementById('user-badge').textContent = '🎸 ' + this.stats.badge_title;
         }
     },
 
     async loadUpcomingEvents() {
-        const container = document.getElementById('upcoming-events');
         try {
-            const response = await AmbiletAPI.get('/customer/tickets?status=valid&limit=3');
-            if (response.success && response.data.length > 0) {
-                container.innerHTML = response.data.map(ticket => `
-                    <div class="flex items-center gap-4 p-4 bg-surface rounded-xl">
-                        <img src="${ticket.event?.image || '/assets/images/placeholder-event.jpg'}" alt="${ticket.event?.title}" class="w-20 h-20 rounded-lg object-cover">
-                        <div class="flex-1">
-                            <h3 class="font-semibold text-secondary">${ticket.event?.title || 'Eveniment'}</h3>
-                            <p class="text-sm text-muted">${AmbiletUtils.formatDate(ticket.event?.date)}</p>
-                            <p class="text-sm text-muted">${ticket.ticket_type?.name || ''}</p>
-                        </div>
-                        <a href="/user/tickets.php?id=${ticket.id}" class="btn btn-secondary btn-sm">
-                            Vezi bilet
-                        </a>
-                    </div>
-                `).join('');
-            } else {
-                container.innerHTML = `
-                    <div class="text-center py-8">
-                        <svg class="w-12 h-12 text-muted mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
-                        </svg>
-                        <p class="text-muted">Nu ai bilete active</p>
-                        <a href="/" class="btn btn-primary mt-4">Descopera evenimente</a>
-                    </div>
-                `;
+            const response = await AmbiletAPI.get('/customer/tickets', { upcoming: true, limit: 2 });
+            if (response.success && response.data?.length) {
+                this.renderUpcomingEvents(response.data);
+                return;
             }
-        } catch (error) {
-            container.innerHTML = '<p class="text-center text-muted py-4">Nu s-au putut incarca biletele</p>';
+        } catch (e) {}
+
+        // Use demo data
+        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.customerTickets?.upcoming) {
+            this.renderUpcomingEvents(DEMO_DATA.customerTickets.upcoming.slice(0, 2).map(t => ({
+                event: { title: t.event.title, image: t.event.image, start_date: t.event.date, start_time: t.event.time, venue: { name: t.event.venue } },
+                ticket_type: t.ticket_type, quantity: t.quantity, days_until: t.days_until
+            })));
+        } else {
+            this.renderUpcomingEvents([]);
         }
     },
 
-    async loadRecentOrders() {
-        const container = document.getElementById('recent-orders');
-        try {
-            const response = await AmbiletAPI.get('/customer/orders?limit=3');
-            if (response.success && response.data.length > 0) {
-                container.innerHTML = response.data.map(order => `
-                    <div class="flex items-center justify-between p-4 bg-surface rounded-xl">
-                        <div>
-                            <p class="font-semibold text-secondary">#${order.reference}</p>
-                            <p class="text-sm text-muted">${AmbiletUtils.formatDate(order.created_at)}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-bold text-secondary">${AmbiletUtils.formatCurrency(order.total)}</p>
-                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${order.status === 'completed' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}">
-                                ${order.status === 'completed' ? 'Finalizata' : 'In procesare'}
-                            </span>
+    renderUpcomingEvents(tickets) {
+        const container = document.getElementById('upcoming-events');
+        if (!tickets.length) {
+            container.innerHTML = '<p class="py-8 text-center text-muted">Nu ai evenimente programate</p>';
+            return;
+        }
+
+        container.innerHTML = tickets.map(t => {
+            const event = t.event;
+            const daysClass = t.days_until <= 7 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning';
+            const typeClass = t.ticket_type.toLowerCase().includes('vip') ? 'bg-primary/10 text-primary' : 'bg-surface text-secondary border border-border';
+
+            return `
+                <a href="/bilete/${event.slug || ''}" class="flex gap-4 p-3 card-hover bg-surface rounded-xl">
+                    <div class="flex-shrink-0 w-20 h-20 overflow-hidden rounded-xl">
+                        <img src="${event.image || '/assets/images/placeholder-event.jpg'}" class="object-cover w-full h-full" alt="">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <span class="px-2 py-0.5 ${daysClass} text-xs font-semibold rounded">In ${t.days_until} zile</span>
+                        <h3 class="mt-1 font-semibold text-secondary">${event.title}</h3>
+                        <p class="mt-1 text-sm text-muted">${this.formatDate(event.start_date)}, ${event.start_time || '20:00'}</p>
+                        <div class="flex items-center gap-2 mt-2">
+                            <span class="px-2 py-0.5 ${typeClass} text-xs font-semibold rounded">${t.quantity}x ${t.ticket_type}</span>
                         </div>
                     </div>
-                `).join('');
-            } else {
-                container.innerHTML = '<p class="text-center text-muted py-4">Nu ai comenzi inca</p>';
+                </a>
+            `;
+        }).join('');
+    },
+
+    async loadRecommendedEvents() {
+        try {
+            const response = await AmbiletAPI.get('/events', { limit: 2, recommended: true });
+            if (response.success && response.data?.length) {
+                this.renderRecommendedEvents(response.data);
+                return;
             }
-        } catch (error) {
-            container.innerHTML = '<p class="text-center text-muted py-4">Nu s-au putut incarca comenzile</p>';
+        } catch (e) {}
+
+        // Use demo data
+        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.events) {
+            this.renderRecommendedEvents(DEMO_DATA.events.slice(0, 2).map(e => ({
+                slug: e.id, title: e.title, image: e.image, start_date: e.date, venue: { name: e.venue }, min_price: e.price, category: e.genre, match: 90
+            })));
+        } else {
+            this.renderRecommendedEvents([]);
         }
+    },
+
+    renderRecommendedEvents(events) {
+        const container = document.getElementById('recommended-events');
+        if (!events.length) {
+            container.innerHTML = '<p class="py-8 text-center text-muted">Descopera evenimente noi</p>';
+            return;
+        }
+
+        container.innerHTML = events.map(e => `
+            <a href="/bilete/${e.slug}" class="overflow-hidden border card-hover group rounded-xl border-border">
+                <div class="relative h-32">
+                    <img src="${e.image || '/assets/images/placeholder-event.jpg'}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" alt="">
+                    <div class="absolute px-2 py-1 text-xs font-bold text-white rounded top-2 left-2 bg-primary">${e.match || 90}% MATCH</div>
+                </div>
+                <div class="p-3">
+                    <h3 class="text-sm font-semibold text-secondary">${e.title}</h3>
+                    <p class="mt-1 text-xs text-muted">${this.formatDate(e.start_date)} • ${e.venue?.name || ''}</p>
+                    <div class="flex items-center justify-between mt-2">
+                        <span class="text-sm font-bold text-primary">de la ${e.min_price || 50} lei</span>
+                        <span class="px-2 py-0.5 bg-accent/10 text-accent text-xs font-semibold rounded">${e.category || 'Concert'}</span>
+                    </div>
+                </div>
+            </a>
+        `).join('');
+    },
+
+    getInitials(firstName, lastName) {
+        return ((firstName?.[0] || '') + (lastName?.[0] || '')).toUpperCase() || '--';
+    },
+
+    formatNumber(num) {
+        return new Intl.NumberFormat('ro-RO').format(num);
+    },
+
+    formatDate(dateStr) {
+        if (!dateStr) return '';
+        const date = new Date(dateStr);
+        const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
     }
 };
 

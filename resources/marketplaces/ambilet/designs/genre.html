@@ -31,29 +31,29 @@
     </script>
     <link rel="stylesheet" href="/assets/css/custom.css">
 </head>
-<body class="min-h-screen bg-surface font-sans">
+<body class="min-h-screen font-sans bg-surface">
     <!-- Header -->
     <div id="header-container"></div>
 
     <!-- Hero Section -->
-    <section id="genre-hero" class="bg-gradient-to-r from-accent to-orange-600 text-white py-16 lg:py-24">
-        <div class="container mx-auto px-4">
+    <section id="genre-hero" class="py-16 text-white bg-gradient-to-r from-accent to-orange-600 lg:py-24">
+        <div class="container px-4 mx-auto">
             <div class="flex items-center gap-4 mb-4">
-                <div id="genre-icon" class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center">
+                <div id="genre-icon" class="flex items-center justify-center w-16 h-16 bg-white/20 rounded-2xl">
                     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
                     </svg>
                 </div>
                 <div>
-                    <nav class="flex items-center gap-2 text-white/70 text-sm mb-2">
+                    <nav class="flex items-center gap-2 mb-2 text-sm text-white/70">
                         <a href="/" class="hover:text-white">Acasă</a>
                         <span>/</span>
                         <a href="#" id="parent-category-link" class="hover:text-white">Categorie</a>
                         <span>/</span>
                         <span class="text-white" id="genre-breadcrumb">Gen</span>
                     </nav>
-                    <h1 id="genre-title" class="text-3xl lg:text-4xl font-extrabold">Gen Muzical</h1>
-                    <p id="genre-description" class="text-white/80 mt-1">Descoperă cele mai bune evenimente</p>
+                    <h1 id="genre-title" class="text-3xl font-extrabold lg:text-4xl">Gen Muzical</h1>
+                    <p id="genre-description" class="mt-1 text-white/80">Descoperă cele mai bune evenimente</p>
                 </div>
             </div>
             <p class="text-white/70"><span id="event-count">0</span> evenimente disponibile</p>
@@ -61,15 +61,15 @@
     </section>
 
     <!-- Filters & Events -->
-    <section class="container mx-auto px-4 py-8">
+    <section class="container px-4 py-8 mx-auto">
         <!-- Filters Bar -->
-        <div class="bg-white rounded-2xl border border-border p-4 mb-8">
-            <div class="flex flex-col lg:flex-row gap-4">
+        <div class="p-4 mb-8 bg-white border rounded-2xl border-border">
+            <div class="flex flex-col gap-4 lg:flex-row">
                 <!-- Search -->
                 <div class="flex-1">
                     <div class="relative">
-                        <input type="text" id="search-input" placeholder="Caută evenimente..." class="form-input pl-10 w-full">
-                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <input type="text" id="search-input" placeholder="Caută evenimente..." class="w-full pl-10 form-input">
+                        <svg class="absolute w-5 h-5 -translate-y-1/2 left-3 top-1/2 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>
                     </div>
@@ -77,14 +77,14 @@
 
                 <!-- City Filter -->
                 <div class="w-full lg:w-48">
-                    <select id="city-filter" class="form-select w-full">
+                    <select id="city-filter" class="w-full form-select">
                         <option value="">Toate orașele</option>
                     </select>
                 </div>
 
                 <!-- Date Filter -->
                 <div class="w-full lg:w-48">
-                    <select id="date-filter" class="form-select w-full">
+                    <select id="date-filter" class="w-full form-select">
                         <option value="">Oricând</option>
                         <option value="today">Astăzi</option>
                         <option value="tomorrow">Mâine</option>
@@ -96,7 +96,7 @@
 
                 <!-- Sort -->
                 <div class="w-full lg:w-48">
-                    <select id="sort-filter" class="form-select w-full">
+                    <select id="sort-filter" class="w-full form-select">
                         <option value="date_asc">Dată (crescător)</option>
                         <option value="date_desc">Dată (descrescător)</option>
                         <option value="price_asc">Preț (crescător)</option>
@@ -113,30 +113,30 @@
         </div>
 
         <!-- Events Grid -->
-        <div id="events-grid" class="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div id="events-grid" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <!-- Events will be loaded here -->
         </div>
 
         <!-- Empty State -->
-        <div id="empty-state" class="hidden text-center py-16">
-            <div class="w-24 h-24 bg-muted/10 rounded-full flex items-center justify-center mx-auto mb-6">
+        <div id="empty-state" class="hidden py-16 text-center">
+            <div class="flex items-center justify-center w-24 h-24 mx-auto mb-6 rounded-full bg-muted/10">
                 <svg class="w-12 h-12 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
                 </svg>
             </div>
-            <h3 class="text-xl font-bold text-secondary mb-2">Nu am găsit evenimente</h3>
-            <p class="text-muted mb-6">Încă nu există evenimente pentru acest gen sau filtrele selectate sunt prea restrictive.</p>
+            <h3 class="mb-2 text-xl font-bold text-secondary">Nu am găsit evenimente</h3>
+            <p class="mb-6 text-muted">Încă nu există evenimente pentru acest gen sau filtrele selectate sunt prea restrictive.</p>
             <a href="/" class="btn btn-primary">Explorează toate evenimentele</a>
         </div>
 
         <!-- Loading State -->
-        <div id="loading-state" class="text-center py-16">
-            <div class="animate-spin w-12 h-12 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+        <div id="loading-state" class="py-16 text-center">
+            <div class="w-12 h-12 mx-auto mb-4 border-4 rounded-full animate-spin border-primary border-t-transparent"></div>
             <p class="text-muted">Se încarcă evenimentele...</p>
         </div>
 
         <!-- Pagination -->
-        <div id="pagination" class="hidden flex items-center justify-center gap-2 mt-12">
+        <div id="pagination" class="flex items-center justify-center hidden gap-2 mt-12">
             <button onclick="prevPage()" id="prev-btn" class="btn btn-secondary" disabled>
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
@@ -154,10 +154,10 @@
     </section>
 
     <!-- Popular Genres Section -->
-    <section class="bg-white border-t border-border py-12">
-        <div class="container mx-auto px-4">
-            <h2 class="text-2xl font-bold text-secondary mb-6">Genuri Populare</h2>
-            <div id="all-genres" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+    <section class="py-12 bg-white border-t border-border">
+        <div class="container px-4 mx-auto">
+            <h2 class="mb-6 text-2xl font-bold text-secondary">Genuri Populare</h2>
+            <div id="all-genres" class="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
                 <!-- Genres will be loaded here -->
             </div>
         </div>
@@ -241,7 +241,7 @@
             if (data.category) {
                 const categoryLink = document.getElementById('parent-category-link');
                 categoryLink.textContent = data.category.name;
-                categoryLink.href = `/category.html?slug=${data.category.slug}`;
+                categoryLink.href = `/category.php?slug=${data.category.slug}`;
             }
 
             // Load related genres
@@ -258,9 +258,9 @@
             }
 
             container.innerHTML = `
-                <span class="text-muted text-sm">Genuri similare:</span>
+                <span class="text-sm text-muted">Genuri similare:</span>
                 ${genres.map(genre => `
-                    <a href="/genre.html?slug=${genre.slug}" class="px-4 py-2 bg-white border border-border hover:border-accent rounded-full text-sm font-medium text-secondary hover:text-accent transition-colors">
+                    <a href="/genre.php?slug=${genre.slug}" class="px-4 py-2 text-sm font-medium transition-colors bg-white border rounded-full border-border hover:border-accent text-secondary hover:text-accent">
                         ${genre.name}
                     </a>
                 `).join('')}
@@ -421,7 +421,7 @@
         function displayAllGenres(genres) {
             const container = document.getElementById('all-genres');
             container.innerHTML = genres.map(genre => `
-                <a href="/genre.html?slug=${genre.slug}" class="bg-surface rounded-xl p-4 hover:bg-accent/5 hover:border-accent border border-transparent transition-colors text-center ${genreSlug === genre.slug ? 'border-accent bg-accent/5' : ''}">
+                <a href="/genre.php?slug=${genre.slug}" class="bg-surface rounded-xl p-4 hover:bg-accent/5 hover:border-accent border border-transparent transition-colors text-center ${genreSlug === genre.slug ? 'border-accent bg-accent/5' : ''}">
                     <h3 class="font-semibold text-secondary">${genre.name}</h3>
                     <p class="text-sm text-muted">${genre.count || 0} evenimente</p>
                 </a>
@@ -436,7 +436,7 @@
             document.getElementById('loading-state').classList.add('hidden');
             document.getElementById('events-grid').classList.add('hidden');
             document.getElementById('parent-category-link').textContent = 'Categorii';
-            document.getElementById('parent-category-link').href = '/category.html';
+            document.getElementById('parent-category-link').href = '/category.php';
 
             loadAllGenres();
         }

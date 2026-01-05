@@ -2,21 +2,21 @@
  * Ambilet.ro - Configuration
  * Marketplace client for Tixello
  *
- * Note: When using PHP, API credentials are injected via window.AMBILET_CONFIG
- * from includes/scripts.php for security
+ * SECURITY: API credentials are handled server-side via /api/proxy.php
+ * The client never sees the API key - all requests go through the proxy
  */
 
-// Get PHP-injected config or use defaults
-const PHP_CONFIG = window.AMBILET_CONFIG || {};
+// Merge PHP-injected config with defaults
+const PHP_CONFIG = window.AMBILET || {};
 
 const AMBILET_CONFIG = {
-    // API Configuration (prefer PHP-injected values for security)
-    API_BASE_URL: PHP_CONFIG.API_BASE_URL || 'https://core.tixello.com/api/marketplace-client',
-    API_KEY: PHP_CONFIG.API_KEY || '', // Set via PHP for security
+    // API is handled via server-side proxy for security
+    // Client only needs to know the proxy URL
+    API_PROXY_URL: PHP_CONFIG.apiUrl || '/api/proxy.php',
 
-    // Site Configuration
-    SITE_NAME: 'Ambilet',
-    SITE_URL: 'https://ambilet.ro',
+    // Site Configuration (from PHP if available)
+    SITE_NAME: PHP_CONFIG.siteName || 'Ambilet',
+    SITE_URL: PHP_CONFIG.siteUrl || 'https://ambilet.ro',
     SUPPORT_EMAIL: 'support@ambilet.ro',
 
     // Currency

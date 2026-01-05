@@ -28,7 +28,7 @@ class EventCategoryResource extends Resource
 
     protected static ?string $navigationLabel = 'Event Categories';
 
-    protected static ?string $navigationParentItem = 'Venues';
+    protected static ?string $navigationParentItem = 'Events';
 
     protected static ?int $navigationSort = 4;
 
@@ -79,6 +79,22 @@ class EventCategoryResource extends Resource
                                     ]),
                             ])->columnSpanFull(),
 
+                        SC\Tabs::make('Description Translations')
+                            ->tabs([
+                                SC\Tabs\Tab::make('Română')
+                                    ->schema([
+                                        Forms\Components\Textarea::make('description.ro')
+                                            ->label('Descriere (RO)')
+                                            ->rows(3),
+                                    ]),
+                                SC\Tabs\Tab::make('English')
+                                    ->schema([
+                                        Forms\Components\Textarea::make('description.en')
+                                            ->label('Description (EN)')
+                                            ->rows(3),
+                                    ]),
+                            ])->columnSpanFull(),
+
                         Forms\Components\TextInput::make('slug')
                             ->label('Slug')
                             ->required()
@@ -103,10 +119,7 @@ class EventCategoryResource extends Resource
                             ->label('Sort Order')
                             ->numeric()
                             ->default(0),
-                    ])->columns(2),
 
-                SC\Section::make('Appearance')
-                    ->schema([
                         Forms\Components\TextInput::make('icon_emoji')
                             ->label('Emoji Icon')
                             ->placeholder('🎵')
@@ -133,31 +146,7 @@ class EventCategoryResource extends Resource
 
                         Forms\Components\Toggle::make('is_featured')
                             ->label('Featured'),
-                    ])->columns(3),
 
-                SC\Section::make('Description')
-                    ->collapsed()
-                    ->schema([
-                        SC\Tabs::make('Description Translations')
-                            ->tabs([
-                                SC\Tabs\Tab::make('Română')
-                                    ->schema([
-                                        Forms\Components\Textarea::make('description.ro')
-                                            ->label('Descriere (RO)')
-                                            ->rows(3),
-                                    ]),
-                                SC\Tabs\Tab::make('English')
-                                    ->schema([
-                                        Forms\Components\Textarea::make('description.en')
-                                            ->label('Description (EN)')
-                                            ->rows(3),
-                                    ]),
-                            ])->columnSpanFull(),
-                    ]),
-
-                SC\Section::make('SEO')
-                    ->collapsed()
-                    ->schema([
                         SC\Tabs::make('SEO Translations')
                             ->tabs([
                                 SC\Tabs\Tab::make('Română')
@@ -181,8 +170,8 @@ class EventCategoryResource extends Resource
                                             ->maxLength(160),
                                     ]),
                             ])->columnSpanFull(),
-                    ]),
-            ]);
+                    ])->columns(3),
+            ]) ->columns(1);
     }
 
     public static function table(Table $table): Table

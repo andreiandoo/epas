@@ -47,7 +47,7 @@ require_once __DIR__ . '/includes/auth-branding.php';
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <label for="password" class="block text-sm font-medium text-secondary">Parola</label>
-                            <a href="/forgot-password.php" class="text-sm text-primary hover:underline">Ai uitat parola?</a>
+                            <a href="/forgot-password" class="text-sm text-primary hover:underline">Ai uitat parola?</a>
                         </div>
                         <input type="password" id="password" name="password" required
                                class="input w-full"
@@ -96,7 +96,7 @@ require_once __DIR__ . '/includes/auth-branding.php';
 
                 <p class="text-center text-muted mt-8">
                     Nu ai cont?
-                    <a href="/register.php" class="text-primary font-medium hover:underline">Creeaza cont gratuit</a>
+                    <a href="/register" class="text-primary font-medium hover:underline">Creeaza cont gratuit</a>
                 </p>
             </div>
         </div>
@@ -115,7 +115,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         const result = await AmbiletAuth.login(email, password, remember);
         if (result.success) {
             AmbiletNotifications.success('Conectare reusita!');
-            const redirect = AmbiletUtils.getUrlParam('redirect') || '/user/dashboard.php';
+            const redirect = AmbiletUtils.getUrlParam('redirect') || '/user/dashboard';
             setTimeout(() => window.location.href = redirect, 500);
         } else {
             AmbiletNotifications.error(result.message || 'Email sau parola incorecta');

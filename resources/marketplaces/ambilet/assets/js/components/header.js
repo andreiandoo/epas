@@ -8,9 +8,64 @@ const AmbiletHeader = {
      * Initialize header
      */
     init() {
+        // Skip JS header if PHP mega-header is already rendered
+        // PHP header includes #cartDrawer and #searchOverlay elements
+        if (document.getElementById('cartDrawer') && document.getElementById('searchOverlay')) {
+            console.log('[AmbiletHeader] PHP mega-header detected, skipping JS render');
+            this.bindAuthEvents();
+            return;
+        }
+
         this.render();
         this.bindEvents();
         this.updateUI();
+    },
+
+    /**
+     * Bind only auth-related events (for PHP header)
+     * Used when PHP header is present but we still need auth state updates
+     */
+    bindAuthEvents() {
+        // Listen for auth changes to update user menu
+        window.addEventListener('ambilet:auth:login', () => this.updatePHPHeaderAuth());
+        window.addEventListener('ambilet:auth:logout', () => this.updatePHPHeaderAuth());
+
+        // Initial auth state check
+        this.updatePHPHeaderAuth();
+    },
+
+    /**
+     * Update PHP header's auth state
+     */
+    updatePHPHeaderAuth() {
+        const isLoggedIn = typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isLoggedIn();
+        const loginLink = document.querySelector('a[href="/login"]');
+        const userMenu = document.getElementById('headerUserMenu');
+
+        if (isLoggedIn && userMenu) {
+            const user = AmbiletAuth.getCurrentUser();
+            loginLink?.closest('.hidden')?.classList.add('!hidden');
+            userMenu.style.display = '';
+
+            // Update user info
+            const initialsEl = document.getElementById('headerUserInitials');
+            const nameEl = document.getElementById('headerUserName');
+            const emailEl = document.getElementById('headerUserEmail');
+
+            if (initialsEl && user) {
+                const name = user.first_name || user.name || user.email?.split('@')[0] || 'U';
+                initialsEl.textContent = name.charAt(0).toUpperCase();
+            }
+            if (nameEl && user) {
+                nameEl.textContent = user.first_name || user.name || user.email?.split('@')[0] || 'Utilizator';
+            }
+            if (emailEl && user) {
+                emailEl.textContent = user.email || '';
+            }
+        } else if (userMenu) {
+            userMenu.style.display = 'none';
+            loginLink?.closest('.hidden')?.classList.remove('!hidden');
+        }
     },
 
     /**
@@ -58,15 +113,15 @@ const AmbiletHeader = {
                             </button>
                             <div class="nav-dropdown absolute top-full left-0 pt-2 w-56">
                                 <div class="bg-white rounded-xl shadow-xl border border-border py-2">
-                                    <a href="/category.html?type=concert" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Concerte</a>
-                                    <a href="/category.html?type=festival" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Festivaluri</a>
-                                    <a href="/category.html?type=theater" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Teatru</a>
-                                    <a href="/category.html?type=sport" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Sport</a>
-                                    <a href="/category.html?type=comedy" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Stand-up Comedy</a>
+                                    <a href="/concerte" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Concerte</a>
+                                    <a href="/festivaluri" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Festivaluri</a>
+                                    <a href="/teatru" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Teatru</a>
+                                    <a href="/sport" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Sport</a>
+                                    <a href="/stand-up" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Stand-up Comedy</a>
                                 </div>
                             </div>
                         </div>
-                        <a href="/organizer/landing.html" class="text-sm font-medium text-muted hover:text-primary transition-colors">Pentru Organizatori</a>
+                        <a href="/organizatori" class="text-sm font-medium text-muted hover:text-primary transition-colors">Pentru Organizatori</a>
                     </nav>
 
                     <!-- Right Side -->
@@ -85,10 +140,8 @@ const AmbiletHeader = {
                         </div>
 
                         <!-- Cart -->
-                        <a href="/cart.html" class="relative p-2 hover:bg-surface rounded-xl transition-colors">
-                            <svg class="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
-                            </svg>
+                        <a href="/cart" class="relative p-2 hover:bg-surface rounded-xl transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" class="w-6 h-6 text-secondary"><g><path d="M29.31 13.44H30V9.785a3.214 3.214 0 0 0-3.215-3.215h-5.447v3.5a.9.9 0 0 1-1.8 0v-3.5H5.215A3.214 3.214 0 0 0 2 9.785v3.655h.69a2.56 2.56 0 1 1 0 5.12H2v3.655a3.214 3.214 0 0 0 3.215 3.215h14.322v-3.5a.9.9 0 0 1 1.8 0v3.5h5.447a3.214 3.214 0 0 0 3.215-3.215V18.56h-.69a2.56 2.56 0 1 1 .001-5.12zm-7.97 4.37a.9.9 0 0 1-1.799 0v-3.62a.9.9 0 0 1 1.799 0z" fill="currentColor" opacity="1" class=""></path></g></svg>
                             <span data-cart-count class="absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-xs font-bold rounded-full flex items-center justify-center ${cartCount === 0 ? 'hidden' : ''}">${cartCount}</span>
                         </a>
 
@@ -129,18 +182,18 @@ const AmbiletHeader = {
                         <!-- Mobile Nav Links -->
                         <nav class="space-y-2">
                             <a href="/" class="block px-4 py-3 text-secondary font-medium rounded-xl hover:bg-surface">Acasă</a>
-                            <a href="/category.html?type=concert" class="block px-4 py-3 text-muted rounded-xl hover:bg-surface hover:text-primary">Concerte</a>
-                            <a href="/category.html?type=festival" class="block px-4 py-3 text-muted rounded-xl hover:bg-surface hover:text-primary">Festivaluri</a>
-                            <a href="/category.html?type=theater" class="block px-4 py-3 text-muted rounded-xl hover:bg-surface hover:text-primary">Teatru</a>
-                            <a href="/category.html?type=sport" class="block px-4 py-3 text-muted rounded-xl hover:bg-surface hover:text-primary">Sport</a>
-                            <a href="/organizer/landing.html" class="block px-4 py-3 text-muted rounded-xl hover:bg-surface hover:text-primary">Pentru Organizatori</a>
+                            <a href="/concerte" class="block px-4 py-3 text-muted rounded-xl hover:bg-surface hover:text-primary">Concerte</a>
+                            <a href="/festivaluri" class="block px-4 py-3 text-muted rounded-xl hover:bg-surface hover:text-primary">Festivaluri</a>
+                            <a href="/teatru" class="block px-4 py-3 text-muted rounded-xl hover:bg-surface hover:text-primary">Teatru</a>
+                            <a href="/sport" class="block px-4 py-3 text-muted rounded-xl hover:bg-surface hover:text-primary">Sport</a>
+                            <a href="/organizatori" class="block px-4 py-3 text-muted rounded-xl hover:bg-surface hover:text-primary">Pentru Organizatori</a>
                         </nav>
                     </div>
 
                     <div class="p-4 border-t border-border">
                         ${isLoggedIn
-                            ? `<a href="${isOrganizer ? '/organizer/dashboard.html' : '/user/dashboard.html'}" class="btn btn-primary w-full">Contul meu</a>`
-                            : `<a href="/login.html" class="btn btn-primary w-full">Autentificare</a>`
+                            ? `<a href="${isOrganizer ? '/organizer/dashboard' : '/user/dashboard'}" class="btn btn-primary w-full">Contul meu</a>`
+                            : `<a href="/login" class="btn btn-primary w-full">Autentificare</a>`
                         }
                     </div>
                 </div>
@@ -178,14 +231,14 @@ const AmbiletHeader = {
                         <p class="text-xs text-muted">${user?.email || ''}</p>
                     </div>
                     ${isOrganizer
-                        ? `<a href="/organizer/dashboard.html" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Dashboard</a>
-                           <a href="/organizer/events.html" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Evenimentele mele</a>
-                           <a href="/organizer/finance.html" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Finanțe</a>`
-                        : `<a href="/user/dashboard.html" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Contul meu</a>
-                           <a href="/user/tickets.html" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Biletele mele</a>
-                           <a href="/user/orders.html" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Comenzile mele</a>`
+                        ? `<a href="/organizer/dashboard" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Dashboard</a>
+                           <a href="/organizer/events" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Evenimentele mele</a>
+                           <a href="/organizer/finance" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Finanțe</a>`
+                        : `<a href="/user/dashboard" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Contul meu</a>
+                           <a href="/user/tickets" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Biletele mele</a>
+                           <a href="/user/orders" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Comenzile mele</a>`
                     }
-                    <a href="/user/settings.html" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Setări</a>
+                    <a href="/user/settings" class="block px-4 py-2 text-sm text-secondary hover:bg-surface hover:text-primary transition-colors">Setări</a>
                     <div class="border-t border-border mt-2 pt-2">
                         <button id="logout-btn" class="block w-full text-left px-4 py-2 text-sm text-error hover:bg-red-50 transition-colors">Deconectare</button>
                     </div>
@@ -201,8 +254,8 @@ const AmbiletHeader = {
     getAuthLinks() {
         return `
         <div class="hidden lg:flex items-center gap-3">
-            <a href="/login.html" class="text-sm font-medium text-muted hover:text-primary transition-colors">Autentificare</a>
-            <a href="/register.html" class="btn btn-primary btn-sm">Înregistrare</a>
+            <a href="/login" class="text-sm font-medium text-muted hover:text-primary transition-colors">Autentificare</a>
+            <a href="/register" class="btn btn-primary btn-sm">Înregistrare</a>
         </div>
         `;
     },
@@ -224,7 +277,7 @@ const AmbiletHeader = {
             if (e.key === 'Enter') {
                 const query = e.target.value.trim();
                 if (query) {
-                    window.location.href = `/index.html?search=${encodeURIComponent(query)}`;
+                    window.location.href = `/?search=${encodeURIComponent(query)}`;
                 }
             }
         });

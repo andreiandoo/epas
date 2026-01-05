@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dezabonare Newsletter - AmBilet.ro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8FAFC; min-height: 100vh; display: flex; flex-direction: column; color: #1E293B; }
+
+        .header { background: white; border-bottom: 1px solid #E2E8F0; padding: 1rem 2rem; }
+        .header-content { max-width: 600px; margin: 0 auto; display: flex; justify-content: center; }
+        .logo { display: flex; align-items: center; gap: 0.75rem; text-decoration: none; }
+        .logo-icon { width: 40px; height: 40px; }
+        .logo-text { font-size: 1.5rem; font-weight: 700; }
+        .logo-text .am { color: #1E293B; }
+        .logo-text .bilet { color: #A51C30; }
+
+        .main-container { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+        .content-card { background: white; border-radius: 1.5rem; border: 1px solid #E2E8F0; max-width: 500px; width: 100%; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+
+        .card-header { padding: 2rem; text-align: center; background: linear-gradient(135deg, #FEF2F2, #FEE2E2); border-bottom: 1px solid #FECACA; }
+        .header-icon { width: 64px; height: 64px; margin: 0 auto 1rem; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header-icon svg { width: 32px; height: 32px; color: #A51C30; }
+        .card-header h1 { font-size: 1.375rem; font-weight: 700; color: #1E293B; margin-bottom: 0.375rem; }
+        .card-header p { font-size: 0.9375rem; color: #64748B; }
+
+        .card-body { padding: 2rem; }
+
+        .email-display { display: flex; align-items: center; gap: 0.75rem; padding: 1rem; background: #F8FAFC; border-radius: 0.75rem; margin-bottom: 1.5rem; }
+        .email-icon { width: 40px; height: 40px; background: white; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; border: 1px solid #E2E8F0; }
+        .email-icon svg { width: 20px; height: 20px; color: #64748B; }
+        .email-address { font-size: 0.9375rem; font-weight: 500; color: #1E293B; }
+
+        .options-title { font-size: 0.875rem; font-weight: 600; color: #1E293B; margin-bottom: 0.75rem; }
+
+        .option-card { border: 1px solid #E2E8F0; border-radius: 0.75rem; padding: 1rem; margin-bottom: 0.75rem; cursor: pointer; transition: all 0.2s; }
+        .option-card:hover { border-color: #A51C30; background: #FEF2F2; }
+        .option-card.selected { border-color: #A51C30; background: #FEF2F2; }
+        .option-card input { display: none; }
+
+        .option-header { display: flex; align-items: center; gap: 0.75rem; }
+        .option-radio { width: 20px; height: 20px; border: 2px solid #E2E8F0; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
+        .option-card.selected .option-radio { border-color: #A51C30; }
+        .option-card.selected .option-radio::after { content: ''; width: 10px; height: 10px; background: #A51C30; border-radius: 50%; }
+
+        .option-content h4 { font-size: 0.9375rem; font-weight: 600; color: #1E293B; margin-bottom: 0.125rem; }
+        .option-content p { font-size: 0.8125rem; color: #64748B; }
+
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.875rem 1.5rem; border-radius: 0.75rem; font-weight: 600; font-size: 0.9375rem; cursor: pointer; border: none; transition: all 0.2s; margin-top: 1.5rem; }
+        .btn-primary { background: linear-gradient(135deg, #A51C30, #C41E3A); color: white; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(165, 28, 48, 0.3); }
+        .btn svg { width: 20px; height: 20px; }
+
+        .cancel-link { display: block; text-align: center; margin-top: 1rem; color: #64748B; font-size: 0.875rem; text-decoration: none; }
+        .cancel-link:hover { color: #A51C30; }
+
+        /* Success State */
+        .success-state { display: none; text-align: center; padding: 2rem; }
+        .success-state.show { display: block; }
+        .success-icon { width: 80px; height: 80px; margin: 0 auto 1.5rem; background: #D1FAE5; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .success-icon svg { width: 40px; height: 40px; color: #10B981; }
+        .success-state h2 { font-size: 1.25rem; font-weight: 700; color: #1E293B; margin-bottom: 0.5rem; }
+        .success-state p { font-size: 0.9375rem; color: #64748B; margin-bottom: 1.5rem; line-height: 1.6; }
+
+        .resubscribe-box { background: #F8FAFC; border-radius: 0.75rem; padding: 1.25rem; margin-top: 1.5rem; }
+        .resubscribe-box h4 { font-size: 0.875rem; font-weight: 600; color: #1E293B; margin-bottom: 0.5rem; }
+        .resubscribe-box p { font-size: 0.8125rem; color: #64748B; margin-bottom: 0.75rem; }
+        .resubscribe-btn { padding: 0.5rem 1rem; background: white; border: 1px solid #E2E8F0; border-radius: 0.5rem; font-size: 0.8125rem; font-weight: 600; color: #1E293B; cursor: pointer; transition: all 0.2s; }
+        .resubscribe-btn:hover { border-color: #A51C30; color: #A51C30; }
+
+        .footer { padding: 1.5rem 2rem; text-align: center; color: #64748B; font-size: 0.8125rem; }
+        .footer a { color: #A51C30; text-decoration: none; }
+        .footer a:hover { text-decoration: underline; }
+
+        @media (max-width: 768px) {
+            .main-container { padding: 1rem; }
+            .card-header, .card-body { padding: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <svg class="logo-icon" viewBox="0 0 48 48" fill="none">
+                    <rect x="4" y="12" width="40" height="24" rx="4" fill="url(#gradU)"/>
+                    <path d="M4 16C4 13.7909 5.79086 12 8 12H14V36H8C5.79086 36 4 34.2091 4 32V16Z" fill="#1E293B"/>
+                    <circle cx="14" cy="12" r="3" fill="#F8FAFC"/><circle cx="14" cy="36" r="3" fill="#F8FAFC"/>
+                    <defs><linearGradient id="gradU" x1="4" y1="12" x2="44" y2="36"><stop stop-color="#A51C30"/><stop offset="1" stop-color="#C41E3A"/></linearGradient></defs>
+                </svg>
+                <span class="logo-text"><span class="am">Am</span><span class="bilet">Bilet</span></span>
+            </a>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="content-card">
+            <!-- Unsubscribe Form -->
+            <div id="unsubscribe-form">
+                <div class="card-header">
+                    <div class="header-icon">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                    </div>
+                    <h1>Gestionează abonamentul</h1>
+                    <p>Alege preferințele tale de comunicare</p>
+                </div>
+
+                <div class="card-body">
+                    <div class="email-display">
+                        <div class="email-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        </div>
+                        <span class="email-address">andrei.p***@gmail.com</span>
+                    </div>
+
+                    <div class="options-title">Ce preferi să faci?</div>
+
+                    <label class="option-card">
+                        <input type="radio" name="preference" value="less">
+                        <div class="option-header">
+                            <div class="option-radio"></div>
+                            <div class="option-content">
+                                <h4>Primește mai puține emailuri</h4>
+                                <p>Doar anunțuri importante și evenimente exclusive</p>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="option-card">
+                        <input type="radio" name="preference" value="pause">
+                        <div class="option-header">
+                            <div class="option-radio"></div>
+                            <div class="option-content">
+                                <h4>Pauză temporară (30 zile)</h4>
+                                <p>Nu vei primi emailuri în următoarele 30 de zile</p>
+                            </div>
+                        </div>
+                    </label>
+
+                    <label class="option-card selected">
+                        <input type="radio" name="preference" value="unsubscribe" checked>
+                        <div class="option-header">
+                            <div class="option-radio"></div>
+                            <div class="option-content">
+                                <h4>Dezabonare completă</h4>
+                                <p>Nu mai primi niciun email promotional</p>
+                            </div>
+                        </div>
+                    </label>
+
+                    <button class="btn btn-primary" onclick="showSuccess()">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Confirmă alegerea
+                    </button>
+
+                    <a href="/" class="cancel-link">Anulează și păstrează setările actuale</a>
+                </div>
+            </div>
+
+            <!-- Success State -->
+            <div id="success-state" class="success-state">
+                <div class="success-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <h2>Te-ai dezabonat cu succes</h2>
+                <p>Nu vei mai primi emailuri promoționale de la AmBilet. Vei primi în continuare emailuri tranzacționale importante (confirmări bilete, actualizări evenimente, etc.)</p>
+
+                <a href="/" class="btn btn-primary">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                    Înapoi la AmBilet
+                </a>
+
+                <div class="resubscribe-box">
+                    <h4>Te-ai răzgândit?</h4>
+                    <p>Poți oricând să te reabonezi pentru a primi noutăți despre evenimente și oferte exclusive.</p>
+                    <button class="resubscribe-btn">Reabonează-mă</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>Ai întrebări? <a href="/contact">Contactează-ne</a> | <a href="/privacy">Politica de confidențialitate</a></p>
+    </footer>
+
+    <script>
+        // Option card selection
+        document.querySelectorAll('.option-card').forEach(card => {
+            card.addEventListener('click', function() {
+                document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+
+        // Show success state
+        function showSuccess() {
+            document.getElementById('unsubscribe-form').style.display = 'none';
+            document.getElementById('success-state').classList.add('show');
+        }
+    </script>
+</body>
+</html>

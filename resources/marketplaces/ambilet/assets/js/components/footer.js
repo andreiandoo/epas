@@ -67,11 +67,11 @@ const AmbiletFooter = {
                     <div>
                         <h4 class="text-sm font-semibold uppercase tracking-wider mb-4">Evenimente</h4>
                         <ul class="space-y-3">
-                            <li><a href="/category.html?type=concert" class="text-white/70 hover:text-white text-sm transition-colors">Concerte</a></li>
-                            <li><a href="/category.html?type=festival" class="text-white/70 hover:text-white text-sm transition-colors">Festivaluri</a></li>
-                            <li><a href="/category.html?type=theater" class="text-white/70 hover:text-white text-sm transition-colors">Teatru</a></li>
-                            <li><a href="/category.html?type=sport" class="text-white/70 hover:text-white text-sm transition-colors">Sport</a></li>
-                            <li><a href="/category.html?type=comedy" class="text-white/70 hover:text-white text-sm transition-colors">Stand-up Comedy</a></li>
+                            <li><a href="/category.php?type=concert" class="text-white/70 hover:text-white text-sm transition-colors">Concerte</a></li>
+                            <li><a href="/category.php?type=festival" class="text-white/70 hover:text-white text-sm transition-colors">Festivaluri</a></li>
+                            <li><a href="/category.php?type=theater" class="text-white/70 hover:text-white text-sm transition-colors">Teatru</a></li>
+                            <li><a href="/category.php?type=sport" class="text-white/70 hover:text-white text-sm transition-colors">Sport</a></li>
+                            <li><a href="/category.php?type=comedy" class="text-white/70 hover:text-white text-sm transition-colors">Stand-up Comedy</a></li>
                         </ul>
                     </div>
 
@@ -79,11 +79,11 @@ const AmbiletFooter = {
                     <div>
                         <h4 class="text-sm font-semibold uppercase tracking-wider mb-4">Contul meu</h4>
                         <ul class="space-y-3">
-                            <li><a href="/login.html" class="text-white/70 hover:text-white text-sm transition-colors">Autentificare</a></li>
-                            <li><a href="/register.html" class="text-white/70 hover:text-white text-sm transition-colors">Înregistrare</a></li>
-                            <li><a href="/user/tickets.html" class="text-white/70 hover:text-white text-sm transition-colors">Biletele mele</a></li>
-                            <li><a href="/user/orders.html" class="text-white/70 hover:text-white text-sm transition-colors">Comenzile mele</a></li>
-                            <li><a href="/user/rewards.html" class="text-white/70 hover:text-white text-sm transition-colors">Puncte fideltate</a></li>
+                            <li><a href="/login.php" class="text-white/70 hover:text-white text-sm transition-colors">Autentificare</a></li>
+                            <li><a href="/register.php" class="text-white/70 hover:text-white text-sm transition-colors">Înregistrare</a></li>
+                            <li><a href="/user/tickets.php" class="text-white/70 hover:text-white text-sm transition-colors">Biletele mele</a></li>
+                            <li><a href="/user/orders.php" class="text-white/70 hover:text-white text-sm transition-colors">Comenzile mele</a></li>
+                            <li><a href="/user/rewards.php" class="text-white/70 hover:text-white text-sm transition-colors">Puncte fideltate</a></li>
                         </ul>
                     </div>
 
@@ -91,10 +91,10 @@ const AmbiletFooter = {
                     <div>
                         <h4 class="text-sm font-semibold uppercase tracking-wider mb-4">Organizatori</h4>
                         <ul class="space-y-3">
-                            <li><a href="/organizer/landing.html" class="text-white/70 hover:text-white text-sm transition-colors">Vinde bilete</a></li>
-                            <li><a href="/organizer/register.html" class="text-white/70 hover:text-white text-sm transition-colors">Înregistrare organizator</a></li>
-                            <li><a href="/organizer/login.html" class="text-white/70 hover:text-white text-sm transition-colors">Login organizator</a></li>
-                            <li><a href="/organizer/help.html" class="text-white/70 hover:text-white text-sm transition-colors">Ghid organizatori</a></li>
+                            <li><a href="/organizer/landing.php" class="text-white/70 hover:text-white text-sm transition-colors">Vinde bilete</a></li>
+                            <li><a href="/organizer/register.php" class="text-white/70 hover:text-white text-sm transition-colors">Înregistrare organizator</a></li>
+                            <li><a href="/organizer/login.php" class="text-white/70 hover:text-white text-sm transition-colors">Login organizator</a></li>
+                            <li><a href="/organizer/help.php" class="text-white/70 hover:text-white text-sm transition-colors">Ghid organizatori</a></li>
                         </ul>
                     </div>
 
@@ -102,11 +102,11 @@ const AmbiletFooter = {
                     <div>
                         <h4 class="text-sm font-semibold uppercase tracking-wider mb-4">Suport</h4>
                         <ul class="space-y-3">
-                            <li><a href="/user/help.html" class="text-white/70 hover:text-white text-sm transition-colors">Întrebări frecvente</a></li>
-                            <li><a href="/contact.html" class="text-white/70 hover:text-white text-sm transition-colors">Contact</a></li>
-                            <li><a href="/terms.html" class="text-white/70 hover:text-white text-sm transition-colors">Termeni și condiții</a></li>
-                            <li><a href="/privacy.html" class="text-white/70 hover:text-white text-sm transition-colors">Politica de confidențialitate</a></li>
-                            <li><a href="/cookies.html" class="text-white/70 hover:text-white text-sm transition-colors">Politica cookies</a></li>
+                            <li><a href="/user/help.php" class="text-white/70 hover:text-white text-sm transition-colors">Întrebări frecvente</a></li>
+                            <li><a href="/contact.php" class="text-white/70 hover:text-white text-sm transition-colors">Contact</a></li>
+                            <li><a href="/terms.php" class="text-white/70 hover:text-white text-sm transition-colors">Termeni și condiții</a></li>
+                            <li><a href="/privacy.php" class="text-white/70 hover:text-white text-sm transition-colors">Politica de confidențialitate</a></li>
+                            <li><a href="/cookies.php" class="text-white/70 hover:text-white text-sm transition-colors">Politica cookies</a></li>
                         </ul>
                     </div>
                 </div>
@@ -140,7 +140,7 @@ const AmbiletFooter = {
                         </div>
                     </div>
                 </div>
-
+ 
                 <!-- Copyright -->
                 <div class="mt-8 pt-8 border-t border-white/10">
                     <div class="flex flex-col md:flex-row items-center justify-between gap-4">

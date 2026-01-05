@@ -1,20 +1,27 @@
     <!-- Core Scripts -->
     <script>
-        // Pass PHP config to JavaScript
-        window.AMBILET_CONFIG = {
-            API_BASE_URL: '<?= API_BASE_URL ?>',
-            API_KEY: '<?= API_KEY ?>',
-            SITE_NAME: '<?= SITE_NAME ?>',
-            SITE_URL: '<?= SITE_URL ?>'
+        // Public config only - sensitive data kept server-side
+        window.AMBILET = {
+            apiUrl: '/api/proxy.php',
+            siteName: '<?= SITE_NAME ?>',
+            siteUrl: '<?= SITE_URL ?>',
+            locale: '<?= SITE_LOCALE ?>',
+            currency: 'RON',
+            currencySymbol: 'lei',
+            demoMode: <?= DEMO_MODE ? 'true' : 'false' ?>
         };
     </script>
     <script src="<?= asset('assets/js/config.js') ?>"></script>
+    <?php if (DEMO_MODE): ?>
+    <script src="<?= asset('assets/js/demo-data.js') ?>"></script>
+    <?php endif; ?>
     <script src="<?= asset('assets/js/utils.js') ?>"></script>
     <script src="<?= asset('assets/js/api.js') ?>"></script>
     <script src="<?= asset('assets/js/auth.js') ?>"></script>
     <script src="<?= asset('assets/js/cart.js') ?>"></script>
+    <?php if (empty($skipJsComponents)): ?>
     <script src="<?= asset('assets/js/components/header.js') ?>"></script>
-    <script src="<?= asset('assets/js/components/footer.js') ?>"></script>
+    <?php endif; ?>
     <script src="<?= asset('assets/js/components/notifications.js') ?>"></script>
     <script src="<?= asset('assets/js/components/event-card.js') ?>"></script>
 

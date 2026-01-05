@@ -18,7 +18,7 @@ const AmbiletEventCard = {
         } = options;
 
         const imageUrl = event.featured_image || event.image || AMBILET_CONFIG.PLACEHOLDER_EVENT;
-        const eventUrl = `/event.html?slug=${event.slug}`;
+        const eventUrl = `/event/${event.slug}`;
 
         // Format date
         const startDate = new Date(event.start_date);
@@ -129,7 +129,7 @@ const AmbiletEventCard = {
      */
     renderFeatured(event) {
         const imageUrl = event.featured_image || event.image || AMBILET_CONFIG.PLACEHOLDER_EVENT;
-        const eventUrl = `/event.html?slug=${event.slug}`;
+        const eventUrl = `/event/${event.slug}`;
 
         const startDate = new Date(event.start_date);
         const dateFormatted = startDate.toLocaleDateString('ro-RO', {
@@ -216,7 +216,7 @@ const AmbiletEventCard = {
      */
     renderCompact(event) {
         const imageUrl = event.featured_image || event.image || AMBILET_CONFIG.PLACEHOLDER_EVENT;
-        const eventUrl = `/event.html?slug=${event.slug}`;
+        const eventUrl = `/event/${event.slug}`;
 
         const startDate = new Date(event.start_date);
         const day = startDate.getDate();
