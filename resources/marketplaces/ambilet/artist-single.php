@@ -395,31 +395,28 @@ const ArtistPage = {
 
         // Genre tags
         document.getElementById('genreTags').innerHTML = data.genres.map(genre =>
-            `<span class="px-4 py-2 bg-white/20 rounded-full text-[13px] font-medium text-white">${genre}</span>`
+            '<span class="px-4 py-2 bg-white/20 rounded-full text-[13px] font-medium text-white">' + genre + '</span>'
         ).join('');
 
         // Stats
-        document.getElementById('statsContainer').innerHTML = `
-            <div class="text-center flex-1 min-w-[100px]">
-                <div class="text-[28px] font-extrabold text-gray-900">\${data.stats.spotifyListeners}</div>
-                <div class="text-[13px] text-gray-500 mt-1">Ascultători Spotify</div>
-            </div>
-            <div class="hidden w-px h-12 bg-gray-200 lg:block"></div>
-            <div class="text-center flex-1 min-w-[100px]">
-                <div class="text-[28px] font-extrabold text-gray-900">\${data.stats.totalFollowers}</div>
-                <div class="text-[13px] text-gray-500 mt-1">Total Followers</div>
-            </div>
-            <div class="hidden w-px h-12 bg-gray-200 lg:block"></div>
-            <div class="text-center flex-1 min-w-[100px]">
-                <div class="text-[28px] font-extrabold text-gray-900">\${data.stats.spotifyPopularity}</div>
-                <div class="text-[13px] text-gray-500 mt-1">Spotify Popularity</div>
-            </div>
-            <div class="hidden w-px h-12 bg-gray-200 lg:block"></div>
-            <div class="text-center flex-1 min-w-[100px]">
-                <div class="text-[28px] font-extrabold text-gray-900">\${data.stats.upcomingEvents}</div>
-                <div class="text-[13px] text-gray-500 mt-1">Concerte viitoare</div>
-            </div>
-        `;
+        const divider = '<div class="hidden w-px h-12 bg-gray-200 lg:block"></div>';
+        document.getElementById('statsContainer').innerHTML =
+            '<div class="text-center flex-1 min-w-[100px]">' +
+                '<div class="text-[28px] font-extrabold text-gray-900">' + data.stats.spotifyListeners + '</div>' +
+                '<div class="text-[13px] text-gray-500 mt-1">Ascultători Spotify</div>' +
+            '</div>' + divider +
+            '<div class="text-center flex-1 min-w-[100px]">' +
+                '<div class="text-[28px] font-extrabold text-gray-900">' + data.stats.totalFollowers + '</div>' +
+                '<div class="text-[13px] text-gray-500 mt-1">Total Followers</div>' +
+            '</div>' + divider +
+            '<div class="text-center flex-1 min-w-[100px]">' +
+                '<div class="text-[28px] font-extrabold text-gray-900">' + data.stats.spotifyPopularity + '</div>' +
+                '<div class="text-[13px] text-gray-500 mt-1">Spotify Popularity</div>' +
+            '</div>' + divider +
+            '<div class="text-center flex-1 min-w-[100px]">' +
+                '<div class="text-[28px] font-extrabold text-gray-900">' + data.stats.upcomingEvents + '</div>' +
+                '<div class="text-[13px] text-gray-500 mt-1">Concerte viitoare</div>' +
+            '</div>';
 
         // Update social links
         this.updateSocialLinks(data.social);
@@ -429,99 +426,77 @@ const ArtistPage = {
 
         // Events
         if (data.events.length > 0) {
-            document.getElementById('eventsList').innerHTML = data.events.map(event => `
-                <a href="/eveniment/\${event.slug}" class="flex flex-col md:flex-row bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all">
-                    <div class="w-full md:w-[100px] p-5 bg-gradient-to-br from-primary to-primary-light flex md:flex-col items-center justify-center text-white gap-2.5 md:gap-0">
-                        <div class="text-[32px] font-extrabold leading-none">\${event.day}</div>
-                        <div class="text-sm font-semibold uppercase opacity-90">\${event.month}</div>
-                    </div>
-                    <div class="flex flex-col justify-center flex-1 p-5">
-                        <h3 class="mb-2 text-lg font-bold text-gray-900">\${event.title}</h3>
-                        <div class="flex flex-wrap gap-4 text-sm text-gray-500">
-                            <span class="flex items-center gap-1.5">
-                                <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                    <circle cx="12" cy="10" r="3"/>
-                                </svg>
-                                \${event.venue}
-                            </span>
-                            <span class="flex items-center gap-1.5">
-                                <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <polyline points="12 6 12 12 16 14"/>
-                                </svg>
-                                \${event.time}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="flex flex-row items-center justify-between gap-2 p-5 md:flex-col md:justify-center">
-                        \${event.soldOut ? `
-                            <span class="px-5 py-2.5 bg-red-100 rounded-lg text-red-600 text-[13px] font-semibold">SOLD OUT</span>
-                        ` : `
-                            <div class="text-[13px] text-gray-500">de la <strong class="text-xl font-bold text-emerald-500">\${event.price || '-'} \${event.currency}</strong></div>
-                            <button class="px-6 py-3 text-sm font-semibold text-white transition-colors bg-gray-900 rounded-lg hover:bg-gray-800">Cumpără bilete</button>
-                        `}
-                    </div>
-                </a>
-            `).join('');
+            document.getElementById('eventsList').innerHTML = data.events.map(event => {
+                const priceSection = event.soldOut ?
+                    '<span class="px-5 py-2.5 bg-red-100 rounded-lg text-red-600 text-[13px] font-semibold">SOLD OUT</span>' :
+                    '<div class="text-[13px] text-gray-500">de la <strong class="text-xl font-bold text-emerald-500">' + (event.price || '-') + ' ' + event.currency + '</strong></div>' +
+                    '<button class="px-6 py-3 text-sm font-semibold text-white transition-colors bg-gray-900 rounded-lg hover:bg-gray-800">Cumpără bilete</button>';
+
+                return '<a href="/eveniment/' + event.slug + '" class="flex flex-col md:flex-row bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all">' +
+                    '<div class="w-full md:w-[100px] p-5 bg-gradient-to-br from-primary to-primary-light flex md:flex-col items-center justify-center text-white gap-2.5 md:gap-0">' +
+                        '<div class="text-[32px] font-extrabold leading-none">' + event.day + '</div>' +
+                        '<div class="text-sm font-semibold uppercase opacity-90">' + event.month + '</div>' +
+                    '</div>' +
+                    '<div class="flex flex-col justify-center flex-1 p-5">' +
+                        '<h3 class="mb-2 text-lg font-bold text-gray-900">' + event.title + '</h3>' +
+                        '<div class="flex flex-wrap gap-4 text-sm text-gray-500">' +
+                            '<span class="flex items-center gap-1.5">' +
+                                '<svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+                                event.venue +
+                            '</span>' +
+                            '<span class="flex items-center gap-1.5">' +
+                                '<svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
+                                event.time +
+                            '</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="flex flex-row items-center justify-between gap-2 p-5 md:flex-col md:justify-center">' + priceSection + '</div>' +
+                '</a>';
+            }).join('');
         } else {
-            document.getElementById('eventsList').innerHTML = `
-                <div class="py-12 text-center bg-white border border-gray-200 rounded-2xl">
-                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                        <line x1="16" y1="2" x2="16" y2="6"/>
-                        <line x1="8" y1="2" x2="8" y2="6"/>
-                        <line x1="3" y1="10" x2="21" y2="10"/>
-                    </svg>
-                    <h3 class="mb-2 text-lg font-semibold text-gray-700">Niciun concert programat</h3>
-                    <p class="text-sm text-gray-500">Urmărește artistul pentru a fi notificat când apar concerte noi.</p>
-                </div>
-            `;
+            document.getElementById('eventsList').innerHTML = '<div class="py-12 text-center bg-white border border-gray-200 rounded-2xl">' +
+                '<svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' +
+                '<h3 class="mb-2 text-lg font-semibold text-gray-700">Niciun concert programat</h3>' +
+                '<p class="text-sm text-gray-500">Urmărește artistul pentru a fi notificat când apar concerte noi.</p>' +
+            '</div>';
         }
 
         // About
         document.getElementById('aboutCard').innerHTML = data.about.map(text =>
-            \`<p class="text-base leading-[1.8] text-gray-600 mb-4 last:mb-0">\${text}</p>\`
+            '<p class="text-base leading-[1.8] text-gray-600 mb-4 last:mb-0">' + text + '</p>'
         ).join('');
 
         // Facts
-        document.getElementById('factsCard').innerHTML = \`
-            <h3 class="flex items-center gap-2 mb-5 text-base font-bold text-gray-900">⚡ Quick Facts</h3>
-            \${data.facts.map(fact => \`
-                <div class="flex justify-between py-3.5 border-b border-gray-100 last:border-0">
-                    <span class="text-sm text-gray-500">\${fact.label}</span>
-                    <span class="text-sm font-semibold text-gray-900">\${fact.value}</span>
-                </div>
-            \`).join('')}
-        \`;
+        let factsHtml = '<h3 class="flex items-center gap-2 mb-5 text-base font-bold text-gray-900">⚡ Quick Facts</h3>';
+        data.facts.forEach(fact => {
+            factsHtml += '<div class="flex justify-between py-3.5 border-b border-gray-100 last:border-0">' +
+                '<span class="text-sm text-gray-500">' + fact.label + '</span>' +
+                '<span class="text-sm font-semibold text-gray-900">' + fact.value + '</span>' +
+                '</div>';
+        });
+        document.getElementById('factsCard').innerHTML = factsHtml;
 
         // Gallery
-        document.getElementById('galleryGrid').innerHTML = data.gallery.map((item, index) => \`
-            <div class="relative rounded-xl overflow-hidden cursor-pointer group \${index === 0 ? 'col-span-2 row-span-2' : ''} aspect-square">
-                <img src="\${item.url}" alt="Gallery" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105">
-                <div class="absolute inset-0 flex items-center justify-center transition-colors bg-black/0 group-hover:bg-black/30">
-                    \${item.isVideo ? \`
-                        <div class="w-[60px] h-[60px] bg-primary/90 rounded-full flex items-center justify-center opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all">
-                            <svg class="w-6 h-6 ml-1 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                <polygon points="5 3 19 12 5 21 5 3"/>
-                            </svg>
-                        </div>
-                    \` : ''}
-                </div>
-            </div>
-        \`).join('');
+        document.getElementById('galleryGrid').innerHTML = data.gallery.map((item, index) => {
+            const spanClass = index === 0 ? 'col-span-2 row-span-2' : '';
+            const videoIcon = item.isVideo ? '<div class="w-[60px] h-[60px] bg-primary/90 rounded-full flex items-center justify-center opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all"><svg class="w-6 h-6 ml-1 text-white" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>' : '';
+            return '<div class="relative rounded-xl overflow-hidden cursor-pointer group ' + spanClass + ' aspect-square">' +
+                '<img src="' + item.url + '" alt="Gallery" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105">' +
+                '<div class="absolute inset-0 flex items-center justify-center transition-colors bg-black/0 group-hover:bg-black/30">' + videoIcon + '</div>' +
+                '</div>';
+        }).join('');
 
         // Similar Artists
         if (data.similarArtists.length > 0) {
-            document.getElementById('similarArtists').innerHTML = data.similarArtists.map(artist => `
-                <a href="/artist/\${artist.slug}" class="text-center transition-transform group hover:-translate-y-1">
-                    <div class="w-full aspect-square rounded-full overflow-hidden mb-3 border-[3px] border-gray-200 group-hover:border-primary transition-colors">
-                        <img src="\${artist.image}" alt="\${artist.name}" class="object-cover w-full h-full">
-                    </div>
-                    <h3 class="text-[15px] font-bold text-gray-900 mb-0.5">\${artist.name}</h3>
-                    <p class="text-[13px] text-gray-500">\${artist.genre}</p>
-                </a>
-            `).join('');
+            document.getElementById('similarArtists').innerHTML = data.similarArtists.map(artist =>
+                '<a href="/artist/' + artist.slug + '" class="text-center transition-transform group hover:-translate-y-1">' +
+                    '<div class="w-full aspect-square rounded-full overflow-hidden mb-3 border-[3px] border-gray-200 group-hover:border-primary transition-colors">' +
+                        '<img src="' + artist.image + '" alt="' + artist.name + '" class="object-cover w-full h-full">' +
+                    '</div>' +
+                    '<h3 class="text-[15px] font-bold text-gray-900 mb-0.5">' + artist.name + '</h3>' +
+                    '<p class="text-[13px] text-gray-500">' + artist.genre + '</p>' +
+                '</a>'
+            ).join('');
         } else {
             document.getElementById('similarArtists').parentElement.style.display = 'none';
         }
@@ -566,25 +541,14 @@ const ArtistPage = {
         // Update listeners text
         const listenersText = spotifySection.querySelector('p');
         if (listenersText && listeners) {
-            listenersText.textContent = `Descoperă toate albumele, single-urile și colaborările. Peste \${listeners} ascultători lunari!`;
+            listenersText.textContent = 'Descoperă toate albumele, single-urile și colaborările. Peste ' + listeners + ' ascultători lunari!';
         }
 
         // Add Spotify embed player if spotifyId is available
         const embedContainer = spotifySection.querySelector('.bg-gray-50.rounded-xl');
         if (embedContainer) {
             if (spotifyId) {
-                embedContainer.innerHTML = `
-                    <iframe
-                        style="border-radius:12px"
-                        src="https://open.spotify.com/embed/artist/\${spotifyId}?utm_source=generator&theme=0"
-                        width="100%"
-                        height="200"
-                        frameBorder="0"
-                        allowfullscreen=""
-                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                        loading="lazy">
-                    </iframe>
-                `;
+                embedContainer.innerHTML = '<iframe style="border-radius:12px" src="https://open.spotify.com/embed/artist/' + spotifyId + '?utm_source=generator&theme=0" width="100%" height="200" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>';
                 embedContainer.classList.remove('flex', 'items-center', 'justify-center', 'text-gray-400', 'text-sm');
             } else if (!spotifyUrl) {
                 // Hide entire Spotify section if no spotify data
