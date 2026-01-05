@@ -314,9 +314,11 @@ const ArtistsPage = {
         const genre = artist.genres?.[0]?.name || 'Artist';
         const followers = this.formatFollowers(artist.stats?.spotify_listeners || artist.stats?.instagram_followers || 0);
         const eventsCount = artist.upcoming_events_count || 0;
+        // Use portrait > logo > main image fallback
+        const artistImage = artist.portrait || artist.logo || artist.image || '/assets/images/placeholder-artist.jpg';
 
         return '<a href="/artist/' + artist.slug + '" class="relative overflow-hidden group rounded-2xl aspect-[3/4]">' +
-            '<img src="' + (artist.image || '/assets/images/placeholder-artist.jpg') + '" alt="' + artist.name + '" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110" loading="lazy">' +
+            '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110" loading="lazy">' +
             '<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>' +
             '<div class="absolute bottom-0 left-0 right-0 p-6">' +
                 '<span class="inline-block px-3 py-1 mb-3 text-xs font-semibold text-white uppercase rounded-full bg-white/15 backdrop-blur-sm">' + genre + '</span>' +
@@ -342,11 +344,13 @@ const ArtistsPage = {
             '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
 
         const changeText = (artist.change >= 0 ? '+' : '') + (artist.change || 0) + '%';
+        // Use portrait > logo > main image fallback
+        const artistImage = artist.portrait || artist.logo || artist.image || '/assets/images/placeholder-artist.jpg';
 
         return '<a href="/artist/' + artist.slug + '" class="flex items-center gap-4 p-4 transition-colors rounded-2xl bg-surface hover:bg-border/50">' +
             '<div class="flex items-center justify-center flex-shrink-0 w-8 h-8 text-sm font-bold text-white rounded-lg ' + rankClass + '">' + rank + '</div>' +
             '<div class="flex-shrink-0 overflow-hidden w-14 h-14 rounded-xl">' +
-                '<img src="' + (artist.image || '/assets/images/placeholder-artist.jpg') + '" alt="' + artist.name + '" class="object-cover w-full h-full">' +
+                '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full h-full">' +
             '</div>' +
             '<div class="flex-1 min-w-0">' +
                 '<div class="flex items-center text-sm font-bold text-secondary">' + artist.name + verifiedBadge + '</div>' +
@@ -363,6 +367,8 @@ const ArtistsPage = {
         const genre = artist.genres?.[0]?.name || 'Artist';
         const followers = this.formatFollowers(artist.stats?.spotify_listeners || artist.stats?.instagram_followers || 0);
         const eventsCount = artist.upcoming_events_count || 0;
+        // Use portrait > logo > main image fallback
+        const artistImage = artist.portrait || artist.logo || artist.image || '/assets/images/placeholder-artist.jpg';
 
         const eventsInfo = eventsCount > 0 ?
             '<span class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-primary/10 text-primary">' +
@@ -376,7 +382,7 @@ const ArtistsPage = {
 
         return '<a href="/artist/' + artist.slug + '" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary">' +
             '<div class="relative overflow-hidden aspect-square">' +
-                '<img src="' + (artist.image || '/assets/images/placeholder-artist.jpg') + '" alt="' + artist.name + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">' +
+                '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">' +
                 '<span class="absolute px-3 py-1.5 text-xs font-semibold text-white uppercase rounded-full top-3 left-3 bg-black/60 backdrop-blur-sm">' + genre + '</span>' +
                 eventsBadge +
             '</div>' +

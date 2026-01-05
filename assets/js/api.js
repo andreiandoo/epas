@@ -298,6 +298,15 @@ const AmbiletAPI = {
         if (endpoint.match(/\/artists\/[a-z0-9-]+$/i)) return 'artist';
         if (endpoint.includes('/artists')) return 'artists';
 
+        // Locations endpoints
+        if (endpoint.includes('/locations/stats')) return 'locations.stats';
+        if (endpoint.includes('/locations/cities/featured')) return 'locations.cities.featured';
+        if (endpoint.includes('/locations/cities/alphabet')) return 'locations.cities.alphabet';
+        if (endpoint.match(/\/locations\/cities\/[a-z0-9-]+$/i)) return 'locations.city';
+        if (endpoint.includes('/locations/cities')) return 'locations.cities';
+        if (endpoint.match(/\/locations\/regions\/[a-z0-9-]+$/i)) return 'locations.region';
+        if (endpoint.includes('/locations/regions')) return 'locations.regions';
+
         if (endpoint.includes('/cart')) return 'cart';
         if (endpoint.includes('/checkout')) return 'checkout';
         return 'events'; // default
@@ -338,6 +347,18 @@ const AmbiletAPI = {
         const artistMatch = endpoint.match(/\/artists\/([a-z0-9-]+)$/i);
         if (artistMatch) {
             return `slug=${encodeURIComponent(artistMatch[1])}`;
+        }
+
+        // Location city endpoint - extract slug
+        const cityMatch = endpoint.match(/\/locations\/cities\/([a-z0-9-]+)$/i);
+        if (cityMatch) {
+            return `slug=${encodeURIComponent(cityMatch[1])}`;
+        }
+
+        // Location region endpoint - extract slug
+        const regionMatch = endpoint.match(/\/locations\/regions\/([a-z0-9-]+)$/i);
+        if (regionMatch) {
+            return `slug=${encodeURIComponent(regionMatch[1])}`;
         }
 
         // Pass through query params

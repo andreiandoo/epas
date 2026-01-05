@@ -145,17 +145,14 @@ const CityPage = {
 
     async loadCityData() {
         try {
-            // Search for city in the cities list
-            const response = await AmbiletAPI.get('/api/proxy.php?action=locations.cities&search=' + encodeURIComponent(this.city) + '&per_page=1');
+            // Use single city endpoint to get full data including cover_image
+            const response = await AmbiletAPI.get('/locations/cities/' + encodeURIComponent(this.city));
 
-            if (response.success && response.data && response.data.length > 0) {
-                // Find exact match
-                const city = response.data.find(c => c.slug === this.city);
-                if (city) {
-                    this.cityData = city;
-                    this.updatePageWithCityData(city);
-                    return true;
-                }
+            if (response.success && response.data && response.data.city) {
+                const city = response.data.city;
+                this.cityData = city;
+                this.updatePageWithCityData(city);
+                return true;
             }
 
             // City not found in API - use demo mode or show basic info
@@ -173,6 +170,15 @@ const CityPage = {
         // Update page title
         document.title = 'Evenimente in ' + city.name + ' - AmBilet.ro';
 
+        // Update hero image (use cover_image from API)
+        if (city.cover_image) {
+            const heroImg = document.querySelector('section.relative img');
+            if (heroImg) {
+                heroImg.src = city.cover_image;
+                heroImg.alt = city.name;
+            }
+        }
+
         // Update hero section
         const heroTitle = document.querySelector('h1');
         if (heroTitle) {
@@ -181,8 +187,13 @@ const CityPage = {
 
         // Update description if we have region info
         const descEl = document.querySelector('.hero-description, .text-white\\/80');
-        if (descEl && city.region) {
-            descEl.textContent = 'Descopera cele mai bune evenimente din ' + city.name + ', ' + city.region + '.';
+        if (descEl) {
+            const regionName = city.region ? (typeof city.region === 'object' ? city.region.name : city.region) : null;
+            if (regionName) {
+                descEl.textContent = 'Descopera cele mai bune evenimente din ' + city.name + ', ' + regionName + '.';
+            } else if (city.description) {
+                descEl.textContent = city.description;
+            }
         }
 
         // Update events count badge
