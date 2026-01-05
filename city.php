@@ -170,11 +170,13 @@ const CityPage = {
         // Update page title
         document.title = 'Evenimente in ' + city.name + ' - AmBilet.ro';
 
-        // Update hero image (use cover_image from API)
-        if (city.cover_image) {
+        // Update hero image (use cover_image from API, fallback to image)
+        const heroImage = city.cover_image || city.image;
+        console.log('City hero image:', { cover_image: city.cover_image, image: city.image, using: heroImage });
+        if (heroImage) {
             const heroImg = document.querySelector('section.relative img');
             if (heroImg) {
-                heroImg.src = city.cover_image;
+                heroImg.src = heroImage;
                 heroImg.alt = city.name;
             }
         }
