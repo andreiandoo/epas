@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class Artist extends Model
 {
@@ -72,6 +73,56 @@ class Artist extends Model
         'spotify_popularity'       => 'integer',
         'social_stats_updated_at'  => 'datetime',
     ];
+
+    // --- Image URL Accessors ---
+
+    /**
+     * Get the full URL for the main image
+     */
+    public function getMainImageFullUrlAttribute(): ?string
+    {
+        return $this->getImageUrl($this->main_image_url);
+    }
+
+    /**
+     * Get the full URL for the portrait image
+     */
+    public function getPortraitFullUrlAttribute(): ?string
+    {
+        return $this->getImageUrl($this->portrait_url);
+    }
+
+    /**
+     * Get the full URL for the logo image
+     */
+    public function getLogoFullUrlAttribute(): ?string
+    {
+        return $this->getImageUrl($this->logo_url);
+    }
+
+    /**
+     * Convert a stored image path to a full URL
+     */
+    protected function getImageUrl(?string $path): ?string
+    {
+        if (empty($path)) {
+            return null;
+        }
+
+        // If already a full URL, return as-is
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        // If it's a relative path, prepend storage URL
+        // Try to use the public disk URL
+        try {
+            return Storage::disk('public')->url($path);
+        } catch (\Exception $e) {
+            // Fallback: prepend /storage/
+            return '/storage/' . ltrim($path, '/');
+        }
+    }
 
     // --- Relations ---
     public function marketplaceClient(): \Illuminate\Database\Eloquent\Relations\BelongsTo

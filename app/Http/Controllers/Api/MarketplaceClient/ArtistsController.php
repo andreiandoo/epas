@@ -278,21 +278,21 @@ class ArtistsController extends BaseController
             'id' => $artist->id,
             'name' => $artist->name,
             'slug' => $artist->slug,
-            'image' => $artist->main_image_url,
-            'logo' => $artist->logo_url,
-            'portrait' => $artist->portrait_url,
+            'image' => $artist->main_image_full_url,
+            'logo' => $artist->logo_full_url,
+            'portrait' => $artist->portrait_full_url,
             'biography' => $artist->getTranslation('bio_html', $language),
             'city' => $artist->city,
             'country' => $artist->country,
             'is_verified' => $artist->is_featured,
             'genres' => $artist->artistGenres->map(fn ($g) => [
                 'id' => $g->id,
-                'name' => $g->name,
+                'name' => $g->getTranslation('name', $language) ?: ($g->name['en'] ?? $g->name ?? ''),
                 'slug' => $g->slug,
             ]),
             'types' => $artist->artistTypes->map(fn ($t) => [
                 'id' => $t->id,
-                'name' => $t->name,
+                'name' => $t->getTranslation('name', $language) ?: ($t->name['en'] ?? $t->name ?? ''),
                 'slug' => $t->slug,
             ]),
             'stats' => [
@@ -401,9 +401,9 @@ class ArtistsController extends BaseController
             'id' => $artist->id,
             'name' => $artist->name,
             'slug' => $artist->slug,
-            'image' => $artist->main_image_url,
-            'portrait' => $artist->portrait_url,
-            'logo' => $artist->logo_url,
+            'image' => $artist->main_image_full_url,
+            'portrait' => $artist->portrait_full_url,
+            'logo' => $artist->logo_full_url,
             'city' => $artist->city,
             'is_verified' => $artist->is_featured,
         ];
@@ -411,12 +411,12 @@ class ArtistsController extends BaseController
         if (!$minimal) {
             $data['genres'] = $artist->artistGenres->map(fn ($g) => [
                 'id' => $g->id,
-                'name' => $g->name,
+                'name' => $g->getTranslation('name', $language) ?: ($g->name['en'] ?? $g->name ?? ''),
                 'slug' => $g->slug,
             ]);
             $data['types'] = $artist->artistTypes->map(fn ($t) => [
                 'id' => $t->id,
-                'name' => $t->name,
+                'name' => $t->getTranslation('name', $language) ?: ($t->name['en'] ?? $t->name ?? ''),
                 'slug' => $t->slug,
             ]);
             $data['stats'] = [
