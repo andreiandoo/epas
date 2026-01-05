@@ -20,6 +20,34 @@ define('NAV_CACHE_TTL', 6 * 60 * 60); // 6 hours in seconds
 define('NAV_API_URL', '/api/v1/public/navigation/counts');
 
 /**
+ * Check if a slug is valid (no corrupted characters)
+ * Valid slugs contain only: a-z, 0-9, hyphen
+ */
+function isValidSlug(?string $slug): bool {
+    if (empty($slug)) return false;
+    // Check for UTF-8 replacement character (corrupted data)
+    if (strpos($slug, "\xEF\xBF\xBD") !== false) return false;
+    if (strpos($slug, '�') !== false) return false;
+    // Valid slug pattern: lowercase letters, numbers, hyphens only
+    return (bool) preg_match('/^[a-z0-9-]+$/', $slug);
+}
+
+/**
+ * Check if content contains corruption markers
+ */
+function isContentCorrupted(string $content): bool {
+    // Yen symbol indicates Shift-JIS encoding issue
+    if (strpos($content, '¥') !== false) return true;
+    // UTF-8 replacement character (raw bytes)
+    if (strpos($content, "\xEF\xBF\xBD") !== false) return true;
+    // UTF-8 replacement character (as displayed)
+    if (strpos($content, '�') !== false) return true;
+    // Half-width katakana (Shift-JIS corruption)
+    if (preg_match('/[\xEF\xBD\x80-\xEF\xBD\xBF\xEF\xBE\x80-\xEF\xBE\x9F]/u', $content)) return true;
+    return false;
+}
+
+/**
  * Get navigation counts with caching
  *
  * @return array Associative array of counts by type and slug
@@ -57,9 +85,8 @@ function isNavCacheValid(): bool {
 function loadNavCache(): array {
     $content = file_get_contents(NAV_CACHE_FILE);
 
-    // Detect corrupted files (yen symbol indicates Shift-JIS encoding issue)
-    if (strpos($content, '¥') !== false || strpos($content, "\xEF\xBF\xBD") !== false) {
-        // Cache is corrupted, delete and return defaults
+    // Detect corrupted files
+    if (isContentCorrupted($content)) {
         @unlink(NAV_CACHE_FILE);
         return getDefaultCounts();
     }
@@ -244,8 +271,8 @@ function isFeaturedCitiesCacheValid(): bool {
 function loadFeaturedCitiesCache(): array {
     $content = file_get_contents(FEATURED_CITIES_CACHE_FILE);
 
-    // Detect corrupted files (yen symbol indicates Shift-JIS encoding issue)
-    if (strpos($content, '¥') !== false || strpos($content, "\xEF\xBF\xBD") !== false) {
+    // Detect corrupted files
+    if (isContentCorrupted($content)) {
         @unlink(FEATURED_CITIES_CACHE_FILE);
         return getDefaultFeaturedCities();
     }
@@ -255,7 +282,12 @@ function loadFeaturedCitiesCache(): array {
 
     $data = json_decode($content, true);
 
-    return $data ?: getDefaultFeaturedCities();
+    if (!$data) {
+        return getDefaultFeaturedCities();
+    }
+
+    // Filter out items with invalid slugs
+    return array_values(array_filter($data, fn($item) => isValidSlug($item['slug'] ?? null)));
 }
 
 /**
@@ -408,8 +440,8 @@ function isEventCategoriesCacheValid(): bool {
 function loadEventCategoriesCache(): array {
     $content = file_get_contents(EVENT_CATEGORIES_CACHE_FILE);
 
-    // Detect corrupted files (yen symbol indicates Shift-JIS encoding issue)
-    if (strpos($content, '¥') !== false || strpos($content, "\xEF\xBF\xBD") !== false) {
+    // Detect corrupted files
+    if (isContentCorrupted($content)) {
         @unlink(EVENT_CATEGORIES_CACHE_FILE);
         return getDefaultEventCategories();
     }
@@ -419,7 +451,12 @@ function loadEventCategoriesCache(): array {
 
     $data = json_decode($content, true);
 
-    return $data ?: getDefaultEventCategories();
+    if (!$data) {
+        return getDefaultEventCategories();
+    }
+
+    // Filter out items with invalid slugs
+    return array_values(array_filter($data, fn($item) => isValidSlug($item['slug'] ?? null)));
 }
 
 /**
@@ -531,8 +568,8 @@ function isFeaturedVenuesCacheValid(): bool {
 function loadFeaturedVenuesCache(): array {
     $content = file_get_contents(FEATURED_VENUES_CACHE_FILE);
 
-    // Detect corrupted files (yen symbol indicates Shift-JIS encoding issue)
-    if (strpos($content, '¥') !== false || strpos($content, "\xEF\xBF\xBD") !== false) {
+    // Detect corrupted files
+    if (isContentCorrupted($content)) {
         @unlink(FEATURED_VENUES_CACHE_FILE);
         return getDefaultFeaturedVenues();
     }
@@ -542,7 +579,12 @@ function loadFeaturedVenuesCache(): array {
 
     $data = json_decode($content, true);
 
-    return $data ?: getDefaultFeaturedVenues();
+    if (!$data) {
+        return getDefaultFeaturedVenues();
+    }
+
+    // Filter out items with invalid slugs
+    return array_values(array_filter($data, fn($item) => isValidSlug($item['slug'] ?? null)));
 }
 
 /**
@@ -695,8 +737,8 @@ function isVenueCategoriesCacheValid(): bool {
 function loadVenueCategoriesCache(): array {
     $content = file_get_contents(VENUE_CATEGORIES_CACHE_FILE);
 
-    // Detect corrupted files (yen symbol indicates Shift-JIS encoding issue)
-    if (strpos($content, '¥') !== false || strpos($content, "\xEF\xBF\xBD") !== false) {
+    // Detect corrupted files
+    if (isContentCorrupted($content)) {
         @unlink(VENUE_CATEGORIES_CACHE_FILE);
         return getDefaultVenueCategories();
     }
@@ -706,7 +748,12 @@ function loadVenueCategoriesCache(): array {
 
     $data = json_decode($content, true);
 
-    return $data ?: getDefaultVenueCategories();
+    if (!$data) {
+        return getDefaultVenueCategories();
+    }
+
+    // Filter out items with invalid slugs
+    return array_values(array_filter($data, fn($item) => isValidSlug($item['slug'] ?? null)));
 }
 
 /**
