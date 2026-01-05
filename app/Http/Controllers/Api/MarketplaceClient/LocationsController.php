@@ -89,7 +89,7 @@ class LocationsController extends BaseController
                     'id' => $city->id,
                     'name' => $city->name[$lang] ?? $city->name['ro'] ?? array_values((array)$city->name)[0] ?? '',
                     'slug' => $city->slug,
-                    'image' => $city->image_url,
+                    'image' => $city->image_full_url,
                     'region' => $city->region ? ($city->region->name[$lang] ?? $city->region->name['ro'] ?? '') : null,
                     'county' => $city->county ? [
                         'name' => $city->county->name[$lang] ?? $city->county->name['ro'] ?? '',
@@ -150,7 +150,7 @@ class LocationsController extends BaseController
                 'id' => $city->id,
                 'name' => $city->name[$lang] ?? $city->name['ro'] ?? array_values((array)$city->name)[0] ?? $city->slug,
                 'slug' => $city->slug,
-                'image' => $city->image_url,
+                'image' => $city->image_full_url,
                 'region' => $city->region ? ($city->region->name[$lang] ?? $city->region->name['ro'] ?? '') : null,
                 'county' => $city->county ? [
                     'name' => $city->county->name[$lang] ?? $city->county->name['ro'] ?? '',
@@ -299,8 +299,8 @@ class LocationsController extends BaseController
                 'name' => $city->name[$lang] ?? $city->name['ro'] ?? array_values((array)$city->name)[0] ?? '',
                 'slug' => $city->slug,
                 'description' => isset($city->description[$lang]) ? $city->description[$lang] : ($city->description['ro'] ?? null),
-                'image' => $city->image_url,
-                'cover_image' => $city->cover_image_url,
+                'image' => $city->image_full_url,
+                'cover_image' => $city->cover_image_full_url,
                 'region' => $city->region ? [
                     'name' => $city->region->name[$lang] ?? $city->region->name['ro'] ?? '',
                     'slug' => $city->region->slug,
@@ -358,7 +358,7 @@ class LocationsController extends BaseController
                 'id' => $city->id,
                 'name' => $city->name[$lang] ?? $city->name['ro'] ?? array_values((array)$city->name)[0] ?? '',
                 'slug' => $city->slug,
-                'image' => $city->image_url,
+                'image' => $city->image_full_url,
                 'events_count' => $eventCounts[$city->id] ?? 0,
             ];
         })->sortByDesc('events_count')->values();

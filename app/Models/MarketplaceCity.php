@@ -169,4 +169,40 @@ class MarketplaceCity extends Model
 
         return $regionName ? "{$cityName}, {$regionName}" : $cityName;
     }
+
+    /**
+     * Get image as full URL (City Image for listings/cards)
+     */
+    public function getImageFullUrlAttribute(): ?string
+    {
+        if (empty($this->image_url)) {
+            return null;
+        }
+
+        // If already a full URL, return as-is
+        if (str_starts_with($this->image_url, 'http://') || str_starts_with($this->image_url, 'https://')) {
+            return $this->image_url;
+        }
+
+        // Convert storage path to full URL
+        return \Illuminate\Support\Facades\Storage::url($this->image_url);
+    }
+
+    /**
+     * Get cover image as full URL (Cover Image for hero sections)
+     */
+    public function getCoverImageFullUrlAttribute(): ?string
+    {
+        if (empty($this->cover_image_url)) {
+            return null;
+        }
+
+        // If already a full URL, return as-is
+        if (str_starts_with($this->cover_image_url, 'http://') || str_starts_with($this->cover_image_url, 'https://')) {
+            return $this->cover_image_url;
+        }
+
+        // Convert storage path to full URL
+        return \Illuminate\Support\Facades\Storage::url($this->cover_image_url);
+    }
 }
