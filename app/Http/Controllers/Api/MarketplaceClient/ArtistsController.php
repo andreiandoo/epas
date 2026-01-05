@@ -69,7 +69,7 @@ class ArtistsController extends BaseController
         if ($request->boolean('with_events')) {
             $query->whereHas('events', function ($q) {
                 $q->where('event_date', '>=', now()->toDateString())
-                  ->where('is_published', true);
+                  ->where('is_cancelled', false);
             });
         }
 
@@ -146,10 +146,11 @@ class ArtistsController extends BaseController
             ->where('is_active', true)
             ->whereHas('events', function ($q) {
                 $q->where('event_date', '>=', now()->toDateString())
-                  ->where('is_published', true);
+                  ->where('is_cancelled', false);
             })
             ->withCount(['events' => function ($q) {
-                $q->where('event_date', '>=', now()->toDateString());
+                $q->where('event_date', '>=', now()->toDateString())
+                  ->where('is_cancelled', false);
             }])
             ->orderByRaw('COALESCE(spotify_monthly_listeners, 0) + COALESCE(instagram_followers, 0) DESC')
             ->limit($request->input('limit', 8))
@@ -236,7 +237,7 @@ class ArtistsController extends BaseController
         // Get upcoming events
         $upcomingEvents = $artist->events()
             ->where('event_date', '>=', now()->toDateString())
-            ->where('is_published', true)
+            ->where('is_cancelled', false)
             ->orderBy('event_date')
             ->limit(10)
             ->get()
@@ -354,7 +355,7 @@ class ArtistsController extends BaseController
         $language = $client->language ?? 'ro';
 
         $query = $artist->events()
-            ->where('is_published', true);
+            ->where('is_cancelled', false);
 
         // Filter: upcoming or past
         if ($request->input('filter') === 'past') {
@@ -432,7 +433,7 @@ class ArtistsController extends BaseController
             // Upcoming events count
             $data['upcoming_events_count'] = $artist->events()
                 ->where('event_date', '>=', now()->toDateString())
-                ->where('is_published', true)
+                ->where('is_cancelled', false)
                 ->count();
         }
 
