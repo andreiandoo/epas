@@ -254,44 +254,41 @@ const CityPage = {
     renderEventCard(event) {
         const date = new Date(event.start_date || event.date);
         const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const categoryBadge = event.category ? '<span class="absolute px-2 py-1 text-xs font-semibold text-white uppercase rounded-lg top-3 right-3 bg-black/60 backdrop-blur-sm">' + event.category + '</span>' : '';
 
-        return \`
-            <a href="/bilete/\${event.slug}" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary">
-                <div class="relative h-48 overflow-hidden">
-                    <img src="\${event.image || '/assets/images/placeholder-event.jpg'}" alt="\${event.title}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">
-                    <div class="absolute top-3 left-3">
-                        <div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">
-                            <span class="block text-lg font-bold leading-none">\${date.getDate()}</span>
-                            <span class="block text-[10px] uppercase tracking-wide mt-0.5">\${months[date.getMonth()]}</span>
-                        </div>
-                    </div>
-                    \${event.category ? \`<span class="absolute px-2 py-1 text-xs font-semibold text-white uppercase rounded-lg top-3 right-3 bg-black/60 backdrop-blur-sm">\${event.category}</span>\` : ''}
-                </div>
-                <div class="p-5">
-                    <h3 class="mb-2 font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">\${event.title}</h3>
-                    <p class="text-sm text-muted flex items-center gap-1.5 mb-3">
-                        <svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
-                        \${event.venue?.name || event.location || 'Locație TBA'}
-                    </p>
-                    <div class="flex items-center justify-between pt-3 border-t border-border">
-                        <span class="font-bold text-primary">de la \${event.min_price || event.price || 50} lei</span>
-                        <span class="text-xs text-muted">Disponibil</span>
-                    </div>
-                </div>
-            </a>
-        \`;
+        return '<a href="/bilete/' + event.slug + '" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary">' +
+            '<div class="relative h-48 overflow-hidden">' +
+                '<img src="' + (event.image || '/assets/images/placeholder-event.jpg') + '" alt="' + event.title + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">' +
+                '<div class="absolute top-3 left-3">' +
+                    '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
+                        '<span class="block text-lg font-bold leading-none">' + date.getDate() + '</span>' +
+                        '<span class="block text-[10px] uppercase tracking-wide mt-0.5">' + months[date.getMonth()] + '</span>' +
+                    '</div>' +
+                '</div>' +
+                categoryBadge +
+            '</div>' +
+            '<div class="p-5">' +
+                '<h3 class="mb-2 font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">' + event.title + '</h3>' +
+                '<p class="text-sm text-muted flex items-center gap-1.5 mb-3">' +
+                    '<svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
+                    (event.venue?.name || event.location || 'Locatie TBA') +
+                '</p>' +
+                '<div class="flex items-center justify-between pt-3 border-t border-border">' +
+                    '<span class="font-bold text-primary">de la ' + (event.min_price || event.price || 50) + ' lei</span>' +
+                    '<span class="text-xs text-muted">Disponibil</span>' +
+                '</div>' +
+            '</div>' +
+        '</a>';
     },
 
     getEmptyState() {
-        return \`
-            <div class="py-16 text-center col-span-full">
-                <svg class="w-16 h-16 mx-auto mb-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <h3 class="mb-2 text-lg font-semibold text-secondary">Nu am găsit evenimente</h3>
-                <p class="text-muted">Încearcă să modifici filtrele sau verifică mai târziu</p>
-            </div>
-        \`;
+        return '<div class="py-16 text-center col-span-full">' +
+            '<svg class="w-16 h-16 mx-auto mb-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>' +
+            '</svg>' +
+            '<h3 class="mb-2 text-lg font-semibold text-secondary">Nu am gasit evenimente</h3>' +
+            '<p class="text-muted">Incearca sa modifici filtrele sau verifica mai tarziu</p>' +
+        '</div>';
     },
 
     filter() {
@@ -311,13 +308,12 @@ const CityPage = {
             container.innerHTML = '';
             return;
         }
-        // Pagination logic similar to artists.php
         let html = '';
         for (let i = 1; i <= meta.last_page; i++) {
             if (i === meta.current_page) {
-                html += \`<button class="w-10 h-10 font-bold text-white rounded-xl bg-primary">\${i}</button>\`;
+                html += '<button class="w-10 h-10 font-bold text-white rounded-xl bg-primary">' + i + '</button>';
             } else {
-                html += \`<button onclick="CityPage.goToPage(\${i})" class="w-10 h-10 font-medium transition-colors bg-white border rounded-xl border-border hover:bg-surface">\${i}</button>\`;
+                html += '<button onclick="CityPage.goToPage(' + i + ')" class="w-10 h-10 font-medium transition-colors bg-white border rounded-xl border-border hover:bg-surface">' + i + '</button>';
             }
         }
         container.innerHTML = html;
