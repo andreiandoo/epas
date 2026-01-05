@@ -184,8 +184,8 @@ class MarketplaceCity extends Model
             return $this->image_url;
         }
 
-        // Convert storage path to full URL
-        return \Illuminate\Support\Facades\Storage::url($this->image_url);
+        // Convert storage path to absolute URL (prepend APP_URL)
+        return url(\Illuminate\Support\Facades\Storage::url($this->image_url));
     }
 
     /**
@@ -202,7 +202,7 @@ class MarketplaceCity extends Model
             return $this->cover_image_url;
         }
 
-        // Convert storage path to full URL
-        return \Illuminate\Support\Facades\Storage::url($this->cover_image_url);
+        // Convert storage path to absolute URL (prepend APP_URL)
+        return url(\Illuminate\Support\Facades\Storage::url($this->cover_image_url));
     }
 }
