@@ -244,7 +244,7 @@ require_once __DIR__ . '/includes/header.php';
 
     <!-- Spotify Section -->
     <section id="spotifySection" class="mt-10">
-        <div class="grid items-center grid-cols-1 gap-10 p-8 bg-white border border-gray-200 shadow-sm rounded-2xl lg:grid-cols-2">
+        <div class="grid items-center grid-cols-1 gap-10 p-8 bg-white lg:grid-cols-2">
             <div>
                 <h3 class="text-[22px] font-bold text-gray-900 mb-3 flex items-center gap-2.5">
                     <svg class="w-7 h-7 text-[#1DB954]" viewBox="0 0 24 24" fill="currentColor">
@@ -476,7 +476,7 @@ const ArtistPage = {
         document.getElementById('statsContainer').innerHTML =
             '<div class="text-center flex-1 min-w-[100px]">' +
                 '<div class="text-[28px] font-extrabold text-gray-900">' + data.stats.spotifyListeners + '</div>' +
-                '<div class="text-[13px] text-gray-500 mt-1">Ascultători Spotify</div>' +
+                '<div class="text-[13px] text-gray-500 mt-1">Ascultători lunari</div>' +
             '</div>' + divider +
             '<div class="text-center flex-1 min-w-[100px]">' +
                 '<div class="text-[28px] font-extrabold text-gray-900">' + data.stats.totalFollowers + '</div>' +
@@ -569,7 +569,7 @@ const ArtistPage = {
                 }
 
                 if (data.bookingAgency.email) {
-                    agencyHtml += '<a href="mailto:' + data.bookingAgency.email + '" class="flex items-center gap-3 py-3 text-gray-600 transition-colors border-b border-gray-100 hover:text-primary">' +
+                    agencyHtml += '<a href="mailto:' + data.bookingAgency.email + '" class="flex items-center gap-3 py-3 text-gray-600 transition-colors hover:text-primary">' +
                         '<svg class="flex-shrink-0 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                             '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>' +
                         '</svg>' +
@@ -578,7 +578,7 @@ const ArtistPage = {
                 }
 
                 if (data.bookingAgency.phone) {
-                    agencyHtml += '<a href="tel:' + data.bookingAgency.phone + '" class="flex items-center gap-3 py-3 text-gray-600 transition-colors border-b border-gray-100 hover:text-primary">' +
+                    agencyHtml += '<a href="tel:' + data.bookingAgency.phone + '" class="flex items-center gap-3 py-3 text-gray-600 transition-colors hover:text-primary">' +
                         '<svg class="flex-shrink-0 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                             '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>' +
                         '</svg>' +
@@ -689,14 +689,14 @@ const ArtistPage = {
         // Update listeners text
         const listenersText = spotifySection.querySelector('p');
         if (listenersText && listeners) {
-            listenersText.textContent = 'Descoperă toate albumele, single-urile și colaborările. Peste ' + listeners + ' ascultători lunari!';
+            listenersText.innerHTML = 'Descoperă toate albumele, single-urile și colaborările. <br/>Peste ' + listeners + ' ascultători lunari!';
         }
 
         // Add Spotify embed player if spotifyId is available
         const embedContainer = spotifySection.querySelector('.bg-gray-50.rounded-xl');
         if (embedContainer) {
             if (spotifyId) {
-                embedContainer.innerHTML = '<iframe style="border-radius:12px" src="https://open.spotify.com/embed/artist/' + spotifyId + '?utm_source=generator&theme=0" width="100%" height="200" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>';
+                embedContainer.innerHTML = '<iframe style="border-radius:12px" src="https://open.spotify.com/embed/artist/' + spotifyId + '?utm_source=generator&theme=0" width="100%" height="240" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>';
                 embedContainer.classList.remove('flex', 'items-center', 'justify-center', 'text-gray-400', 'text-sm');
             } else if (!spotifyUrl) {
                 // Hide entire Spotify section if no spotify data
