@@ -201,7 +201,7 @@ class ArtistResource extends Resource
                         ->label('Facebook Followers')
                         ->numeric()
                         ->placeholder('300000'),
-                    Forms\Components\TextInput::make('youtube_followers')
+                    Forms\Components\TextInput::make('followers_youtube')
                         ->label('YouTube Subscribers')
                         ->numeric()
                         ->placeholder('200000'),
@@ -368,16 +368,16 @@ class ArtistResource extends Resource
                 Tables\Columns\TextColumn::make('city')
                     ->label('Oraș')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('artistTypes.name')
+                Tables\Columns\TextColumn::make('artistTypes')
                     ->label('Tip')
                     ->badge()
-                    ->separator(',')
+                    ->getStateUsing(fn ($record) => $record->artistTypes->map(fn($t) => $t->getTranslation('name', 'ro') ?: $t->getTranslation('name', 'en'))->filter()->toArray())
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('artistGenres.name')
+                Tables\Columns\TextColumn::make('artistGenres')
                     ->label('Genuri')
                     ->badge()
                     ->color('info')
-                    ->separator(',')
+                    ->getStateUsing(fn ($record) => $record->artistGenres->map(fn($g) => $g->getTranslation('name', 'ro') ?: $g->getTranslation('name', 'en'))->filter()->toArray())
                     ->toggleable(),
                 Tables\Columns\IconColumn::make('is_featured')
                     ->label('Promovat')

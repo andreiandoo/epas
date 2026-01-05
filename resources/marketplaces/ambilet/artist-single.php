@@ -168,7 +168,7 @@ require_once __DIR__ . '/includes/header.php';
             </h2>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
             <!-- About Card -->
             <div id="aboutCard" class="bg-white border border-gray-200 shadow-sm rounded-2xl p-7">
                 <div class="w-full h-4 mb-4 bg-gray-200 rounded animate-pulse"></div>
@@ -189,19 +189,21 @@ require_once __DIR__ . '/includes/header.php';
                     <?php endfor; ?>
                 </div>
             </div>
+        </div>
+    </section>
 
-            <!-- Booking Agency (hidden by default, shown if data exists) -->
-            <div id="bookingAgencyCard" class="hidden p-6 bg-white border border-gray-200 shadow-sm rounded-2xl">
-                <h3 class="flex items-center gap-2 mb-5 text-base font-bold text-gray-900">
-                    <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                    </svg>
-                    Agenție de Booking
-                </h3>
-                <div id="bookingAgencyContent" class="space-y-3">
-                    <!-- Content will be loaded dynamically -->
-                </div>
-            </div>
+    <!-- Booking Agency (hidden by default, shown if data exists) -->
+    <section id="bookingAgencyCard" class="hidden mt-10">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
+                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                </svg>
+                Agenție de Booking
+            </h2>
+        </div>
+        <div id="bookingAgencyContent" class="flex items-center justify-between gap-4">
+            <!-- Content will be loaded dynamically -->
         </div>
     </section>
 
@@ -358,7 +360,8 @@ const ArtistPage = {
         const months = ['IAN', 'FEB', 'MAR', 'APR', 'MAI', 'IUN', 'IUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
         // Calculate total followers (sum of all social platforms)
-        const totalFollowers = (api.stats?.instagram_followers || 0) +
+        const totalFollowers = (api.stats?.spotify_listeners || 0) +
+                                (api.stats?.instagram_followers || 0) +
                               (api.stats?.facebook_followers || 0) +
                               (api.stats?.youtube_subscribers || 0) +
                               (api.stats?.tiktok_followers || 0);
@@ -557,7 +560,7 @@ const ArtistPage = {
                 let agencyHtml = '';
 
                 if (data.bookingAgency.name) {
-                    agencyHtml += '<div class="flex items-start gap-3 py-3 border-b border-gray-100">' +
+                    agencyHtml += '<div class="flex items-start gap-3 py-3">' +
                         '<svg class="w-5 h-5 mt-0.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                             '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>' +
                         '</svg>' +
