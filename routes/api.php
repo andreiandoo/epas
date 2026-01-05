@@ -1897,6 +1897,28 @@ Route::prefix('marketplace-client/event-categories')->middleware(['throttle:120,
         ->name('api.marketplace-client.event-categories.show');
 });
 
+// Venue Categories
+use App\Http\Controllers\Api\MarketplaceClient\VenueCategoriesController as MarketplaceVenueCategoriesController;
+
+Route::prefix('marketplace-client/venue-categories')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+    Route::get('/', [MarketplaceVenueCategoriesController::class, 'index'])
+        ->name('api.marketplace-client.venue-categories');
+    Route::get('/{slug}', [MarketplaceVenueCategoriesController::class, 'show'])
+        ->name('api.marketplace-client.venue-categories.show');
+});
+
+// Venues
+use App\Http\Controllers\Api\MarketplaceClient\VenuesController as MarketplaceVenuesController;
+
+Route::prefix('marketplace-client/venues')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+    Route::get('/', [MarketplaceVenuesController::class, 'index'])
+        ->name('api.marketplace-client.venues');
+    Route::get('/featured', [MarketplaceVenuesController::class, 'featured'])
+        ->name('api.marketplace-client.venues.featured');
+    Route::get('/{slug}', [MarketplaceVenuesController::class, 'show'])
+        ->name('api.marketplace-client.venues.show');
+});
+
 // Artists
 use App\Http\Controllers\Api\MarketplaceClient\ArtistsController as MarketplaceArtistsController;
 
