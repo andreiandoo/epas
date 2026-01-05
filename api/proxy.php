@@ -400,6 +400,296 @@ switch ($action) {
         $endpoint = '/customer/resend-verification';
         break;
 
+    // ==================== CUSTOMER STATS & DASHBOARD ====================
+
+    case 'customer.stats.dashboard':
+        $method = 'GET';
+        $endpoint = '/customer/stats';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.upcoming-events':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 20);
+        $endpoint = '/customer/stats/upcoming-events' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER TICKETS ====================
+
+    case 'customer.tickets.all':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['filter'])) $params['filter'] = $_GET['filter']; // upcoming, past, all
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/tickets/all' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.ticket':
+        $ticketId = $_GET['id'] ?? '';
+        if (!$ticketId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ticket ID']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/customer/tickets/' . urlencode($ticketId);
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER REVIEWS ====================
+
+    case 'customer.reviews':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/reviews' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.reviews.to-write':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/reviews/events-to-review' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.review.store':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/reviews';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.review.show':
+        $reviewId = $_GET['id'] ?? '';
+        if (!$reviewId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing review ID']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/customer/reviews/' . urlencode($reviewId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.review.update':
+        $reviewId = $_GET['id'] ?? '';
+        if (!$reviewId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing review ID']);
+            exit;
+        }
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/reviews/' . urlencode($reviewId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.review.delete':
+        $reviewId = $_GET['id'] ?? '';
+        if (!$reviewId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing review ID']);
+            exit;
+        }
+        $method = 'DELETE';
+        $endpoint = '/customer/reviews/' . urlencode($reviewId);
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER WATCHLIST ====================
+
+    case 'customer.watchlist':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/watchlist' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.watchlist.add':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/watchlist';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.watchlist.update':
+        $watchlistId = $_GET['id'] ?? '';
+        if (!$watchlistId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing watchlist ID']);
+            exit;
+        }
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/watchlist/' . urlencode($watchlistId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.watchlist.remove':
+        $watchlistId = $_GET['id'] ?? '';
+        if (!$watchlistId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing watchlist ID']);
+            exit;
+        }
+        $method = 'DELETE';
+        $endpoint = '/customer/watchlist/' . urlencode($watchlistId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.watchlist.check':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        $endpoint = '/customer/watchlist/check' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER REWARDS & GAMIFICATION ====================
+
+    case 'customer.rewards':
+        $method = 'GET';
+        $endpoint = '/customer/rewards';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.rewards.history':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type']; // earned, spent, all
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/rewards/history' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.badges':
+        $method = 'GET';
+        $endpoint = '/customer/rewards/badges';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.rewards.available':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/rewards/available' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.rewards.redeem':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/rewards/redeem';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.rewards.redemptions':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/rewards/redemptions' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER NOTIFICATIONS ====================
+
+    case 'customer.notifications':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['unread_only'])) $params['unread_only'] = $_GET['unread_only'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/notifications' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notifications.unread-count':
+        $method = 'GET';
+        $endpoint = '/customer/notifications/unread-count';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notifications.read':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/notifications/mark-read';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notification.delete':
+        $notificationId = $_GET['id'] ?? '';
+        if (!$notificationId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing notification ID']);
+            exit;
+        }
+        $method = 'DELETE';
+        $endpoint = '/customer/notifications/' . urlencode($notificationId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notifications.settings':
+        $method = 'GET';
+        $endpoint = '/customer/notifications/settings';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notifications.settings.update':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/notifications/settings';
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER REFERRALS ====================
+
+    case 'customer.referrals':
+        $method = 'GET';
+        $endpoint = '/customer/referrals';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.referrals.regenerate':
+        $method = 'POST';
+        $endpoint = '/customer/referrals/regenerate-code';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.referrals.track-click':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/referrals/track-click';
+        break;
+
+    case 'customer.referrals.leaderboard':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['period'])) $params['period'] = $_GET['period']; // week, month, all
+        if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 100);
+        $endpoint = '/customer/referrals/leaderboard' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'customer.referrals.claim-rewards':
+        $method = 'POST';
+        $endpoint = '/customer/referrals/claim-rewards';
+        $requiresAuth = true;
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Unknown action: ' . $action]);
