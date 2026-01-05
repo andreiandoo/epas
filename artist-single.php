@@ -36,19 +36,18 @@ require_once __DIR__ . '/includes/header.php';
     <img id="heroImage" src="" alt="" class="absolute inset-0 w-full h-full object-cover object-[center_30%] hidden">
     <div class="absolute inset-0 bg-gradient-to-b from-black/20 to-black/70"></div>
     <div class="relative z-10 flex flex-col justify-end h-full px-6 pb-10 mx-auto max-w-7xl">
-        <!-- Verified Badge -->
-        <div class="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-lg px-3.5 py-2 rounded-full mb-4 w-fit">
-            <div class="w-[18px] h-[18px] bg-blue-500 rounded-full flex items-center justify-center">
-                <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+        <!-- Artist Name -->
+        <div class="flex items-center gap-x-4">
+            <!-- Verified Badge -->
+            <div class="w-[34px] h-[34px] bg-blue-500 rounded-full flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                     <path d="M20 6L9 17l-5-5"/>
                 </svg>
             </div>
-            <span class="text-[13px] font-semibold text-white">Artist verificat</span>
+            <h1 id="artistName" class="text-[56px] font-extrabold text-white mb-4 leading-tight">
+                <span class="inline-block rounded h-14 w-96 bg-white/20 animate-pulse"></span>
+            </h1>
         </div>
-        <!-- Artist Name -->
-        <h1 id="artistName" class="text-[56px] font-extrabold text-white mb-4 leading-tight">
-            <span class="inline-block rounded h-14 w-96 bg-white/20 animate-pulse"></span>
-        </h1>
         <!-- Genre Tags -->
         <div id="genreTags" class="flex flex-wrap gap-2">
             <span class="w-16 h-8 rounded-full bg-white/20 animate-pulse"></span>
@@ -696,7 +695,7 @@ const ArtistPage = {
         const embedContainer = spotifySection.querySelector('.bg-gray-50.rounded-xl');
         if (embedContainer) {
             if (spotifyId) {
-                embedContainer.innerHTML = '<iframe style="border-radius:12px" src="https://open.spotify.com/embed/artist/' + spotifyId + '?utm_source=generator&theme=0" width="100%" height="240" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>';
+                embedContainer.innerHTML = '<iframe style="border-radius:12px" src="https://open.spotify.com/embed/artist/' + spotifyId + '?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>';
                 embedContainer.classList.remove('flex', 'items-center', 'justify-center', 'text-gray-400', 'text-sm');
             } else if (!spotifyUrl) {
                 // Hide entire Spotify section if no spotify data
