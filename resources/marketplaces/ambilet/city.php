@@ -172,7 +172,6 @@ const CityPage = {
 
         // Update hero image (use cover_image from API, fallback to image)
         const heroImage = city.cover_image || city.image;
-        console.log('City hero image:', { cover_image: city.cover_image, image: city.image, using: heroImage });
         if (heroImage) {
             const heroImg = document.querySelector('section.relative img');
             if (heroImg) {
@@ -188,7 +187,7 @@ const CityPage = {
         }
 
         // Update description if we have region info
-        const descEl = document.querySelector('.hero-description, .text-white\\/80');
+        const descEl = document.querySelector('section.relative p.text-lg');
         if (descEl) {
             const regionName = city.region ? (typeof city.region === 'object' ? city.region.name : city.region) : null;
             if (regionName) {
