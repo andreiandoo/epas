@@ -21,7 +21,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Section -->
-<section class="relative py-16 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900">
+<section class="relative pt-40 pb-8 overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900">
     <!-- Background Pattern -->
     <div class="absolute inset-0 opacity-20">
         <svg class="absolute right-0 h-full transform translate-x-1/4" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
@@ -39,12 +39,6 @@ require_once __DIR__ . '/includes/header.php';
             <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             <span class="text-red-400" id="breadcrumbRegion">...</span>
         </nav>
-
-        <!-- Badge -->
-        <div class="inline-flex items-center gap-2 px-4 py-2 mb-4 text-sm font-semibold text-red-400 border rounded-full bg-primary/20 border-red-500/30">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            Regiune istorica
-        </div>
 
         <!-- Title -->
         <h1 class="mb-4 text-4xl font-extrabold leading-tight text-white md:text-5xl">
