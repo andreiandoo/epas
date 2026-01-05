@@ -278,6 +278,29 @@ class EventResource extends Resource
                         ->visible(fn (SGet $get) => (bool) $get('is_promoted')),
                 ])->columns(1),
 
+            // FEATURED SETTINGS (Marketplace only)
+            SC\Section::make('Featured Settings')
+                ->description('Control where this event appears as featured on the marketplace website')
+                ->schema([
+                    SC\Grid::make(3)->schema([
+                        Forms\Components\Toggle::make('is_homepage_featured')
+                            ->label('Homepage Featured')
+                            ->helperText('Show on homepage hero/featured section')
+                            ->onIcon('heroicon-m-home')
+                            ->offIcon('heroicon-m-home'),
+                        Forms\Components\Toggle::make('is_general_featured')
+                            ->label('General Featured')
+                            ->helperText('Show in general featured events lists')
+                            ->onIcon('heroicon-m-star')
+                            ->offIcon('heroicon-m-star'),
+                        Forms\Components\Toggle::make('is_category_featured')
+                            ->label('Category Featured')
+                            ->helperText('Show as featured in its category page')
+                            ->onIcon('heroicon-m-tag')
+                            ->offIcon('heroicon-m-tag'),
+                    ]),
+                ])->columns(1),
+
             // SCHEDULE
             SC\Section::make('Schedule')
                 ->schema([

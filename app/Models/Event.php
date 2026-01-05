@@ -36,6 +36,7 @@ class Event extends Model
         'is_sold_out', 'is_cancelled', 'cancel_reason',
         'is_postponed', 'postponed_date', 'postponed_start_time', 'postponed_door_time', 'postponed_end_time', 'postponed_reason',
         'door_sales_only', 'is_promoted', 'promoted_until', 'is_featured',
+        'is_homepage_featured', 'is_general_featured', 'is_category_featured',
 
         // single day
         'event_date', 'start_time', 'door_time', 'end_time',
@@ -82,6 +83,9 @@ class Event extends Model
         'door_sales_only'   => 'bool',
         'is_promoted'       => 'bool',
         'is_featured'       => 'bool',
+        'is_homepage_featured'  => 'bool',
+        'is_general_featured'   => 'bool',
+        'is_category_featured'  => 'bool',
 
         // commission
         'commission_rate'   => 'decimal:2',
