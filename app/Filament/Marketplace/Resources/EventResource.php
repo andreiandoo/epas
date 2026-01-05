@@ -451,7 +451,7 @@ class EventResource extends Resource
                             }
                         })
                         ->suffixAction(
-                            Forms\Components\Actions\Action::make('create_venue')
+                            SC\Actions\Action::make('create_venue')
                                 ->icon('heroicon-o-plus-circle')
                                 ->tooltip('Adaugă locație nouă')
                                 ->url(fn () => VenueResource::getUrl('create'))
@@ -618,7 +618,7 @@ class EventResource extends Resource
                         ->preload()
                         ->searchable()
                         ->suffixAction(
-                            Forms\Components\Actions\Action::make('create_artist')
+                            SC\Actions\Action::make('create_artist')
                                 ->icon('heroicon-o-plus-circle')
                                 ->tooltip('Adaugă artist nou')
                                 ->url(fn () => ArtistResource::getUrl('create'))
