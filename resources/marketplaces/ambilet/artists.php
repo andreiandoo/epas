@@ -166,7 +166,7 @@ require_once __DIR__ . '/includes/head.php';
     <!-- Results Info -->
     <div class="flex flex-col items-start justify-between gap-4 mb-6 md:flex-row md:items-center">
         <span class="text-sm text-muted">Se afiseaza <strong class="text-secondary" id="resultsCount">--</strong> artisti</span>
-        <select id="sortSelect" class="px-4 py-3 pr-10 text-sm font-medium bg-white border rounded-xl border-border text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20" style="background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E\"); background-repeat: no-repeat; background-position: right 12px center;">
+        <select id="sortSelect" class="px-4 py-3 pr-10 text-sm font-medium bg-white border rounded-xl border-border text-secondary focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27%2394A3B8%27 stroke-width=%272%27%3E%3Cpath d=%27M6 9l6 6 6-6%27/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 0.75rem center;">
             <option value="popular" <?= $sortBy === 'popular' ? 'selected' : '' ?>>Cei mai populari</option>
             <option value="events" <?= $sortBy === 'events' ? 'selected' : '' ?>>Dupa evenimente</option>
             <option value="followers" <?= $sortBy === 'followers' ? 'selected' : '' ?>>Dupa urmaritori</option>
@@ -286,18 +286,20 @@ const ArtistsPage = {
 
     async loadGenreCounts() {
         try {
+            // Get total artists count (without genre filter to avoid double-counting)
+            const totalResponse = await AmbiletAPI.get('/artists?per_page=1');
+            const totalArtists = totalResponse.meta?.total || 0;
+            document.getElementById('countAll').textContent = totalArtists || '--';
+
+            // Get genre-specific counts
             const response = await AmbiletAPI.get('/artists/genre-counts');
             const genres = response.data?.genres || [];
 
-            // Calculate total
-            let total = 0;
             const genreMap = {};
             genres.forEach(g => {
                 genreMap[g.slug] = g.count;
-                total += g.count;
             });
 
-            document.getElementById('countAll').textContent = total || '--';
             document.getElementById('countPop').textContent = genreMap['pop'] || '--';
             document.getElementById('countRock').textContent = genreMap['rock'] || '--';
             document.getElementById('countHipHop').textContent = genreMap['hip-hop'] || '--';
@@ -312,7 +314,12 @@ const ArtistsPage = {
     renderFeaturedCard(artist) {
         const verifiedBadge = artist.is_verified ? '<span class="inline-flex items-center justify-center w-5 h-5 ml-1 bg-blue-500 rounded-full"><svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span>' : '';
         const genre = artist.genres?.[0]?.name || 'Artist';
-        const followers = this.formatFollowers(artist.stats?.spotify_listeners || artist.stats?.instagram_followers || 0);
+        const totalFollowers = (artist.stats?.spotify_listeners || 0) +
+                                (artist.stats?.instagram_followers || 0) +
+                              (artist.stats?.facebook_followers || 0) +
+                              (artist.stats?.youtube_subscribers || 0) +
+                              (artist.stats?.tiktok_followers || 0);
+        const followers = this.formatFollowers(totalFollowers);
         const eventsCount = artist.upcoming_events_count || 0;
         // Use portrait > logo > main image fallback
         const artistImage = artist.portrait || artist.logo || artist.image || '/assets/images/placeholder-artist.jpg';
@@ -365,7 +372,12 @@ const ArtistsPage = {
     renderArtistCard(artist) {
         const verifiedBadge = artist.is_verified ? '<span class="inline-flex items-center justify-center w-4 h-4 ml-1 bg-blue-500 rounded-full"><svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span>' : '';
         const genre = artist.genres?.[0]?.name || 'Artist';
-        const followers = this.formatFollowers(artist.stats?.spotify_listeners || artist.stats?.instagram_followers || 0);
+        const totalFollowers = (artist.stats?.spotify_listeners || 0) +
+                                (artist.stats?.instagram_followers || 0) +
+                              (artist.stats?.facebook_followers || 0) +
+                              (artist.stats?.youtube_subscribers || 0) +
+                              (artist.stats?.tiktok_followers || 0);
+        const followers = this.formatFollowers(totalFollowers);
         const eventsCount = artist.upcoming_events_count || 0;
         // Use portrait > logo > main image fallback
         const artistImage = artist.portrait || artist.logo || artist.image || '/assets/images/placeholder-artist.jpg';
