@@ -56,6 +56,17 @@ function isNavCacheValid(): bool {
  */
 function loadNavCache(): array {
     $content = file_get_contents(NAV_CACHE_FILE);
+
+    // Detect corrupted files (yen symbol indicates Shift-JIS encoding issue)
+    if (strpos($content, '¥') !== false || strpos($content, "\xEF\xBF\xBD") !== false) {
+        // Cache is corrupted, delete and return defaults
+        @unlink(NAV_CACHE_FILE);
+        return getDefaultCounts();
+    }
+
+    // Strip UTF-8 BOM if present
+    $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
     $data = json_decode($content, true);
 
     return $data ?: getDefaultCounts();
@@ -71,7 +82,8 @@ function saveNavCache(array $data): void {
         mkdir($cacheDir, 0755, true);
     }
 
-    file_put_contents(NAV_CACHE_FILE, json_encode($data, JSON_PRETTY_PRINT));
+    // Use all JSON flags for proper encoding (avoid backslash issues on some servers)
+    file_put_contents(NAV_CACHE_FILE, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 }
 
 /**
@@ -231,6 +243,16 @@ function isFeaturedCitiesCacheValid(): bool {
  */
 function loadFeaturedCitiesCache(): array {
     $content = file_get_contents(FEATURED_CITIES_CACHE_FILE);
+
+    // Detect corrupted files (yen symbol indicates Shift-JIS encoding issue)
+    if (strpos($content, '¥') !== false || strpos($content, "\xEF\xBF\xBD") !== false) {
+        @unlink(FEATURED_CITIES_CACHE_FILE);
+        return getDefaultFeaturedCities();
+    }
+
+    // Strip UTF-8 BOM if present
+    $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
     $data = json_decode($content, true);
 
     return $data ?: getDefaultFeaturedCities();
@@ -385,6 +407,16 @@ function isEventCategoriesCacheValid(): bool {
  */
 function loadEventCategoriesCache(): array {
     $content = file_get_contents(EVENT_CATEGORIES_CACHE_FILE);
+
+    // Detect corrupted files (yen symbol indicates Shift-JIS encoding issue)
+    if (strpos($content, '¥') !== false || strpos($content, "\xEF\xBF\xBD") !== false) {
+        @unlink(EVENT_CATEGORIES_CACHE_FILE);
+        return getDefaultEventCategories();
+    }
+
+    // Strip UTF-8 BOM if present
+    $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
     $data = json_decode($content, true);
 
     return $data ?: getDefaultEventCategories();
@@ -498,6 +530,16 @@ function isFeaturedVenuesCacheValid(): bool {
  */
 function loadFeaturedVenuesCache(): array {
     $content = file_get_contents(FEATURED_VENUES_CACHE_FILE);
+
+    // Detect corrupted files (yen symbol indicates Shift-JIS encoding issue)
+    if (strpos($content, '¥') !== false || strpos($content, "\xEF\xBF\xBD") !== false) {
+        @unlink(FEATURED_VENUES_CACHE_FILE);
+        return getDefaultFeaturedVenues();
+    }
+
+    // Strip UTF-8 BOM if present
+    $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
     $data = json_decode($content, true);
 
     return $data ?: getDefaultFeaturedVenues();
@@ -652,6 +694,16 @@ function isVenueCategoriesCacheValid(): bool {
  */
 function loadVenueCategoriesCache(): array {
     $content = file_get_contents(VENUE_CATEGORIES_CACHE_FILE);
+
+    // Detect corrupted files (yen symbol indicates Shift-JIS encoding issue)
+    if (strpos($content, '¥') !== false || strpos($content, "\xEF\xBF\xBD") !== false) {
+        @unlink(VENUE_CATEGORIES_CACHE_FILE);
+        return getDefaultVenueCategories();
+    }
+
+    // Strip UTF-8 BOM if present
+    $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
     $data = json_decode($content, true);
 
     return $data ?: getDefaultVenueCategories();
