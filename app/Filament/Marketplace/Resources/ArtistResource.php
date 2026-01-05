@@ -110,14 +110,14 @@ class ArtistResource extends Resource
                     Forms\Components\Select::make('artistTypes')
                         ->label('Tip artist')
                         ->relationship('artistTypes', 'name')
-                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->name)
+                        ->getOptionLabelFromRecordUsing(fn ($record) => is_array($record->name) ? ($record->name['ro'] ?? $record->name['en'] ?? array_values($record->name)[0] ?? '') : $record->name)
                         ->multiple()
                         ->preload()
                         ->searchable(),
                     Forms\Components\Select::make('artistGenres')
                         ->label('Genuri muzicale')
                         ->relationship('artistGenres', 'name')
-                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->name)
+                        ->getOptionLabelFromRecordUsing(fn ($record) => is_array($record->name) ? ($record->name['ro'] ?? $record->name['en'] ?? array_values($record->name)[0] ?? '') : $record->name)
                         ->multiple()
                         ->preload()
                         ->searchable(),
