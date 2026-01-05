@@ -376,7 +376,7 @@ const ArtistPage = {
                 spotifyListeners: this.formatNumber(api.stats?.spotify_listeners || 0),
                 totalFollowers: this.formatNumber(totalFollowers),
                 spotifyPopularity: api.stats?.spotify_popularity || 0,
-                concerts: (api.stats?.upcoming_events || 0) + (api.stats?.past_events || 0),
+                youtubeViews: this.formatNumber(api.stats?.youtube_total_views || 0),
                 upcomingEvents: api.stats?.upcoming_events || 0
             },
             about: api.biography ? [api.biography] : ['Informații despre acest artist vor fi adăugate în curând.'],
@@ -487,8 +487,8 @@ const ArtistPage = {
                 '<div class="text-[13px] text-gray-500 mt-1">Spotify Popularity</div>' +
             '</div>' + divider +
             '<div class="text-center flex-1 min-w-[100px]">' +
-                '<div class="text-[28px] font-extrabold text-gray-900">' + data.stats.upcomingEvents + '</div>' +
-                '<div class="text-[13px] text-gray-500 mt-1">Concerte viitoare</div>' +
+                '<div class="text-[28px] font-extrabold text-gray-900">' + data.stats.youtubeViews + '</div>' +
+                '<div class="text-[13px] text-gray-500 mt-1">YouTube Views</div>' +
             '</div>';
 
         // Update social links
