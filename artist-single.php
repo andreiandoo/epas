@@ -38,15 +38,15 @@ require_once __DIR__ . '/includes/header.php';
     <div class="relative z-10 flex flex-col justify-end h-full px-6 pb-10 mx-auto max-w-7xl">
         <!-- Artist Name -->
         <div class="flex items-center gap-x-4">
+            <h1 id="artistName" class="text-[56px] font-extrabold text-white mb-4 leading-tight">
+                <span class="inline-block rounded h-14 w-96 bg-white/20 animate-pulse"></span>
+            </h1>
             <!-- Verified Badge -->
             <div class="w-[34px] h-[34px] bg-blue-500 rounded-full flex items-center justify-center">
                 <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                     <path d="M20 6L9 17l-5-5"/>
                 </svg>
             </div>
-            <h1 id="artistName" class="text-[56px] font-extrabold text-white mb-4 leading-tight">
-                <span class="inline-block rounded h-14 w-96 bg-white/20 animate-pulse"></span>
-            </h1>
         </div>
         <!-- Genre Tags -->
         <div id="genreTags" class="flex flex-wrap gap-2">
@@ -129,7 +129,6 @@ require_once __DIR__ . '/includes/header.php';
     <section class="mt-10">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
-                <span class="text-2xl">🎤</span>
                 Concerte viitoare
             </h2>
             <a href="#" id="viewAllEventsLink" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
@@ -160,13 +159,6 @@ require_once __DIR__ . '/includes/header.php';
 
     <!-- About Section -->
     <section class="mt-10">
-        <div class="flex items-center justify-between mb-5">
-            <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
-                <span class="text-2xl">📖</span>
-                Despre artist
-            </h2>
-        </div>
-
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
             <!-- About Card -->
             <div id="aboutCard" class="bg-white border border-gray-200 shadow-sm rounded-2xl p-7">
@@ -198,7 +190,7 @@ require_once __DIR__ . '/includes/header.php';
                 <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                 </svg>
-                Agenție de Booking
+                Agenția de Booking
             </h2>
         </div>
         <div id="bookingAgencyContent" class="flex items-center justify-between gap-4">
