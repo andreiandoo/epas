@@ -299,9 +299,10 @@ class ArtistsController extends BaseController
                 'spotify_listeners' => $artist->spotify_monthly_listeners,
                 'spotify_popularity' => $artist->spotify_popularity,
                 'instagram_followers' => $artist->instagram_followers,
-                'youtube_subscribers' => $artist->youtube_followers,
-                'facebook_followers' => $artist->facebook_followers,
-                'tiktok_followers' => $artist->tiktok_followers,
+                'youtube_subscribers' => $artist->followers_youtube,
+                'youtube_total_views' => $artist->youtube_total_views,
+                'facebook_followers' => $artist->followers_facebook,
+                'tiktok_followers' => $artist->followers_tiktok,
                 'upcoming_events' => $upcomingEvents->count(),
                 'past_events' => $pastEventsCount,
             ],
@@ -422,6 +423,9 @@ class ArtistsController extends BaseController
             $data['stats'] = [
                 'spotify_listeners' => $artist->spotify_monthly_listeners,
                 'instagram_followers' => $artist->instagram_followers,
+                'youtube_subscribers' => $artist->followers_youtube,
+                'facebook_followers' => $artist->followers_facebook,
+                'tiktok_followers' => $artist->followers_tiktok,
             ];
             // Upcoming events count
             $data['upcoming_events_count'] = $artist->events()
