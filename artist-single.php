@@ -363,7 +363,7 @@ const ArtistPage = {
         const totalFollowers = (api.stats?.spotify_listeners || 0) +
                                 (api.stats?.instagram_followers || 0) +
                               (api.stats?.facebook_followers || 0) +
-                              (api.stats?.youtube_followers || 0) +
+                              (api.stats?.youtube_subscribers || 0) +
                               (api.stats?.tiktok_followers || 0);
 
         return {
