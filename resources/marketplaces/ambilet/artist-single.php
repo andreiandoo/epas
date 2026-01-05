@@ -281,6 +281,7 @@ const ArtistPage = {
     async loadArtistData() {
         if (!this.artistSlug) {
             console.error('No artist slug provided');
+            this.showNotFound();
             return;
         }
 
@@ -291,14 +292,41 @@ const ArtistPage = {
                 this.renderArtist(this.transformApiData(response.data));
             } else {
                 console.error('Artist not found');
-                // Redirect to artists page
-                window.location.href = '/artisti';
+                this.showNotFound();
             }
         } catch (e) {
             console.error('Failed to load artist:', e);
-            // Show error message or redirect
-            window.location.href = '/artisti';
+            this.showNotFound();
         }
+    },
+
+    showNotFound() {
+        // Hide the hero skeleton and show error state
+        const heroSection = document.getElementById('artistHero');
+        if (heroSection) {
+            heroSection.innerHTML = '<div class="flex flex-col items-center justify-center h-full bg-gradient-to-br from-gray-100 to-gray-200">' +
+                '<svg class="w-24 h-24 mb-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>' +
+                '</svg>' +
+                '<h1 class="mb-3 text-3xl font-bold text-gray-700">Artist negăsit</h1>' +
+                '<p class="mb-8 text-gray-500">Ne pare rău, nu am putut găsi artistul căutat.</p>' +
+                '<a href="/artisti" class="inline-flex items-center gap-2 px-6 py-3 font-semibold text-white transition-all rounded-xl bg-primary hover:bg-primary-dark hover:shadow-lg">' +
+                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>' +
+                    '</svg>' +
+                    'Înapoi la artiști' +
+                '</a>' +
+            '</div>';
+        }
+
+        // Hide other sections
+        const profileSection = document.querySelector('.max-w-7xl.px-6.-mt-20');
+        if (profileSection) {
+            profileSection.style.display = 'none';
+        }
+
+        // Update page title
+        document.title = 'Artist negăsit — Ambilet';
     },
 
     transformApiData(api) {
