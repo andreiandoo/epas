@@ -66,11 +66,13 @@ require_once __DIR__ . '/includes/header.php'; ?>
     <div class="flex flex-wrap items-center gap-3 px-4 mx-auto max-w-7xl">
         <select id="categoryFilter" class="px-4 py-2.5 pr-10 text-sm font-medium bg-surface border-0 rounded-xl focus:ring-2 focus:ring-primary/20" onchange="CityPage.filter()">
             <option value="">Toate categoriile</option>
-            <option value="concerte">Concerte</option>
-            <option value="festivaluri">Festivaluri</option>
-            <option value="teatru">Teatru</option>
-            <option value="stand-up">Stand-up</option>
-            <option value="sport">Sport</option>
+            <?php
+            // Load event categories from cache/API
+            $eventCategories = getEventCategories();
+            foreach ($eventCategories as $category):
+            ?>
+            <option value="<?= htmlspecialchars($category['slug']) ?>"><?= htmlspecialchars($category['name']) ?></option>
+            <?php endforeach; ?>
         </select>
         <select id="dateFilter" class="px-4 py-2.5 pr-10 text-sm font-medium bg-surface border-0 rounded-xl focus:ring-2 focus:ring-primary/20" onchange="CityPage.filter()">
             <option value="">Oricând</option>

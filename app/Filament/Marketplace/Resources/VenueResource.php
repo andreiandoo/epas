@@ -308,6 +308,15 @@ class VenueResource extends Resource
                         ->columnSpanFull(),
                 ]),
 
+            // STATUS FLAGS
+            SC\Section::make('Status')
+                ->schema([
+                    Forms\Components\Toggle::make('is_featured')
+                        ->label('Locație promovată')
+                        ->helperText('Locația va apărea în secțiunea de locații promovate pe website')
+                        ->default(false),
+                ])->columns(1),
+
             // PARTNER NOTES (internal)
             SC\Section::make('Note interne')
                 ->description('Note interne despre această locație (nu sunt vizibile public)')

@@ -3,6 +3,8 @@
 namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\EventResource\Pages;
+use App\Filament\Marketplace\Resources\ArtistResource;
+use App\Filament\Marketplace\Resources\VenueResource;
 use App\Models\Event;
 use App\Models\EventGenre;
 use App\Models\EventType;
@@ -448,6 +450,13 @@ class EventResource extends Resource
                                 }
                             }
                         })
+                        ->suffixAction(
+                            Forms\Components\Actions\Action::make('create_venue')
+                                ->icon('heroicon-o-plus-circle')
+                                ->tooltip('Adaugă locație nouă')
+                                ->url(fn () => VenueResource::getUrl('create'))
+                                ->openUrlInNewTab()
+                        )
                         ->nullable(),
                     Forms\Components\Select::make('marketplace_city_id')
                         ->label('City')
@@ -607,7 +616,14 @@ class EventResource extends Resource
                         ->relationship('artists', 'name')
                         ->multiple()
                         ->preload()
-                        ->searchable(),
+                        ->searchable()
+                        ->suffixAction(
+                            Forms\Components\Actions\Action::make('create_artist')
+                                ->icon('heroicon-o-plus-circle')
+                                ->tooltip('Adaugă artist nou')
+                                ->url(fn () => ArtistResource::getUrl('create'))
+                                ->openUrlInNewTab()
+                        ),
 
                     Forms\Components\Select::make('tags')
                         ->label('Event tags')

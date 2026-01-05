@@ -44,6 +44,8 @@ class Artist extends Model
         'facebook_followers','instagram_followers','tiktok_followers','spotify_followers','youtube_followers',
         'followers_facebook','followers_instagram','followers_tiktok','followers_youtube','spotify_monthly_listeners',
         'youtube_total_views','youtube_total_likes','spotify_popularity','social_stats_updated_at',
+        // Marketplace fields
+        'marketplace_client_id', 'is_partner', 'partner_notes', 'is_featured',
     ];
 
     protected $casts = [
@@ -51,6 +53,8 @@ class Artist extends Model
         'bio_html'                 => 'array',
         'youtube_videos'           => 'array',
         'is_active'                => 'bool',
+        'is_partner'               => 'bool',
+        'is_featured'              => 'bool',
         'facebook_followers'       => 'integer',
         'instagram_followers'      => 'integer',
         'tiktok_followers'         => 'integer',
@@ -68,6 +72,11 @@ class Artist extends Model
     ];
 
     // --- Relations ---
+    public function marketplaceClient(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\MarketplaceClient::class);
+    }
+
     public function artistTypes(): BelongsToMany
     {
         return $this->belongsToMany(\App\Models\ArtistType::class, 'artist_artist_type');
