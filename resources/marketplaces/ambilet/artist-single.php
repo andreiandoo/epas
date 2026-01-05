@@ -217,7 +217,7 @@ require_once __DIR__ . '/includes/header.php';
     </section>
 
     <!-- Spotify Section -->
-    <section class="mt-10">
+    <section id="spotifySection" class="mt-10">
         <div class="grid items-center grid-cols-1 gap-10 p-8 bg-white border border-gray-200 shadow-sm rounded-2xl lg:grid-cols-2">
             <div>
                 <h3 class="text-[22px] font-bold text-gray-900 mb-3 flex items-center gap-2.5">
@@ -557,7 +557,7 @@ const ArtistPage = {
     },
 
     updateSpotifyEmbed(spotifyId, spotifyUrl, listeners) {
-        const spotifySection = document.querySelector('section:has(.text-\\[\\#1DB954\\])');
+        const spotifySection = document.getElementById('spotifySection');
         if (!spotifySection) return;
 
         // Update Spotify link in the section
