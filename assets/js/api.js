@@ -288,8 +288,16 @@ const AmbiletAPI = {
         if (endpoint.includes('/marketplace-events')) return 'events';
         if (endpoint.match(/\/venues\/[a-z0-9-]+$/i)) return 'venue';
         if (endpoint.includes('/venues')) return 'venues';
+
+        // Artists endpoints
+        if (endpoint.includes('/artists/featured')) return 'artists.featured';
+        if (endpoint.includes('/artists/trending')) return 'artists.trending';
+        if (endpoint.includes('/artists/genre-counts')) return 'artists.genre-counts';
+        if (endpoint.includes('/artists/alphabet')) return 'artists.alphabet';
+        if (endpoint.match(/\/artists\/[a-z0-9-]+\/events/i)) return 'artist.events';
         if (endpoint.match(/\/artists\/[a-z0-9-]+$/i)) return 'artist';
         if (endpoint.includes('/artists')) return 'artists';
+
         if (endpoint.includes('/cart')) return 'cart';
         if (endpoint.includes('/checkout')) return 'checkout';
         return 'events'; // default
@@ -314,6 +322,17 @@ const AmbiletAPI = {
         const venueMatch = endpoint.match(/\/venues\/([a-z0-9-]+)$/i);
         if (venueMatch) {
             return `slug=${encodeURIComponent(venueMatch[1])}`;
+        }
+
+        // Artist events endpoint - extract slug before /events
+        const artistEventsMatch = endpoint.match(/\/artists\/([a-z0-9-]+)\/events/i);
+        if (artistEventsMatch) {
+            const slug = artistEventsMatch[1];
+            const queryStart = endpoint.indexOf('?');
+            if (queryStart !== -1) {
+                return `slug=${encodeURIComponent(slug)}&${endpoint.substring(queryStart + 1)}`;
+            }
+            return `slug=${encodeURIComponent(slug)}`;
         }
 
         const artistMatch = endpoint.match(/\/artists\/([a-z0-9-]+)$/i);

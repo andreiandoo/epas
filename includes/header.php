@@ -304,14 +304,17 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                 <a href="/<?= $cat['slug'] ?>" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm transition-all mb-1 group/cat <?= $index === 0 ? 'bg-white text-gray-900 shadow-sm' : '' ?>" title="<?= htmlspecialchars($cat['name']) ?>">
                                     <div class="w-[38px] h-[38px] bg-white rounded-lg flex items-center justify-center shadow-sm text-gray-500 transition-all group-hover/cat:bg-gradient-to-br group-hover/cat:from-primary group-hover/cat:to-primary-light group-hover/cat:text-white <?= $index === 0 ? '!bg-gradient-to-br !from-primary !to-primary-light !text-white' : '' ?>">
                                         <?php
-                                        // Prioritize emoji icon, or use SVG only if it contains actual path data
+                                        // Check icon types: SVG path, heroicon name, or emoji
+                                        $hasSvgPath = !empty($cat['icon']) && (str_contains($cat['icon'], '<path') || str_contains($cat['icon'], '<circle') || str_contains($cat['icon'], '<rect') || str_contains($cat['icon'], '<line') || str_contains($cat['icon'], '<polygon'));
+                                        $heroiconPath = !empty($cat['icon']) && str_starts_with($cat['icon'], 'heroicon-') ? getHeroiconPath($cat['icon']) : null;
                                         $hasEmoji = !empty($cat['icon_emoji']);
-                                        $hasSvgPath = !empty($cat['icon']) && (str_contains($cat['icon'], '<path') || str_contains($cat['icon'], '<circle') || str_contains($cat['icon'], '<rect'));
                                         ?>
-                                        <?php if ($hasEmoji): ?>
-                                        <span class="text-xl"><?= $cat['icon_emoji'] ?></span>
-                                        <?php elseif ($hasSvgPath): ?>
+                                        <?php if ($hasSvgPath): ?>
                                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><?= $cat['icon'] ?></svg>
+                                        <?php elseif ($heroiconPath): ?>
+                                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><?= $heroiconPath ?></svg>
+                                        <?php elseif ($hasEmoji): ?>
+                                        <span class="text-xl"><?= $cat['icon_emoji'] ?></span>
                                         <?php else: ?>
                                         <span class="text-xl">🎫</span>
                                         <?php endif; ?>
