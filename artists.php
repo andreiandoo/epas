@@ -312,7 +312,12 @@ const ArtistsPage = {
     renderFeaturedCard(artist) {
         const verifiedBadge = artist.is_verified ? '<span class="inline-flex items-center justify-center w-5 h-5 ml-1 bg-blue-500 rounded-full"><svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span>' : '';
         const genre = artist.genres?.[0]?.name || 'Artist';
-        const followers = this.formatFollowers(artist.stats?.spotify_listeners || artist.stats?.instagram_followers || 0);
+        const totalFollowers = (api.stats?.spotify_listeners || 0) +
+                                (api.stats?.instagram_followers || 0) +
+                              (api.stats?.facebook_followers || 0) +
+                              (api.stats?.youtube_subscribers || 0) +
+                              (api.stats?.tiktok_followers || 0);
+        const followers = this.formatFollowers(totalFollowers);
         const eventsCount = artist.upcoming_events_count || 0;
         // Use portrait > logo > main image fallback
         const artistImage = artist.portrait || artist.logo || artist.image || '/assets/images/placeholder-artist.jpg';
@@ -365,7 +370,12 @@ const ArtistsPage = {
     renderArtistCard(artist) {
         const verifiedBadge = artist.is_verified ? '<span class="inline-flex items-center justify-center w-4 h-4 ml-1 bg-blue-500 rounded-full"><svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span>' : '';
         const genre = artist.genres?.[0]?.name || 'Artist';
-        const followers = this.formatFollowers(artist.stats?.spotify_listeners || artist.stats?.instagram_followers || 0);
+        const totalFollowers = (api.stats?.spotify_listeners || 0) +
+                                (api.stats?.instagram_followers || 0) +
+                              (api.stats?.facebook_followers || 0) +
+                              (api.stats?.youtube_subscribers || 0) +
+                              (api.stats?.tiktok_followers || 0);
+        const followers = this.formatFollowers(totalFollowers);
         const eventsCount = artist.upcoming_events_count || 0;
         // Use portrait > logo > main image fallback
         const artistImage = artist.portrait || artist.logo || artist.image || '/assets/images/placeholder-artist.jpg';
