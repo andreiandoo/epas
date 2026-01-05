@@ -481,35 +481,35 @@ const ArtistPage = {
 
         // About
         document.getElementById('aboutCard').innerHTML = data.about.map(text =>
-            `<p class="text-base leading-[1.8] text-gray-600 mb-4 last:mb-0">${text}</p>`
+            \`<p class="text-base leading-[1.8] text-gray-600 mb-4 last:mb-0">\${text}</p>\`
         ).join('');
 
         // Facts
-        document.getElementById('factsCard').innerHTML = `
+        document.getElementById('factsCard').innerHTML = \`
             <h3 class="flex items-center gap-2 mb-5 text-base font-bold text-gray-900">⚡ Quick Facts</h3>
-            ${data.facts.map(fact => `
+            \${data.facts.map(fact => \`
                 <div class="flex justify-between py-3.5 border-b border-gray-100 last:border-0">
-                    <span class="text-sm text-gray-500">${fact.label}</span>
-                    <span class="text-sm font-semibold text-gray-900">${fact.value}</span>
+                    <span class="text-sm text-gray-500">\${fact.label}</span>
+                    <span class="text-sm font-semibold text-gray-900">\${fact.value}</span>
                 </div>
-            `).join('')}
-        `;
+            \`).join('')}
+        \`;
 
         // Gallery
-        document.getElementById('galleryGrid').innerHTML = data.gallery.map((item, index) => `
-            <div class="relative rounded-xl overflow-hidden cursor-pointer group ${index === 0 ? 'col-span-2 row-span-2' : ''} aspect-square">
-                <img src="${item.url}" alt="Gallery" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105">
+        document.getElementById('galleryGrid').innerHTML = data.gallery.map((item, index) => \`
+            <div class="relative rounded-xl overflow-hidden cursor-pointer group \${index === 0 ? 'col-span-2 row-span-2' : ''} aspect-square">
+                <img src="\${item.url}" alt="Gallery" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105">
                 <div class="absolute inset-0 flex items-center justify-center transition-colors bg-black/0 group-hover:bg-black/30">
-                    ${item.isVideo ? `
+                    \${item.isVideo ? \`
                         <div class="w-[60px] h-[60px] bg-primary/90 rounded-full flex items-center justify-center opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100 transition-all">
                             <svg class="w-6 h-6 ml-1 text-white" viewBox="0 0 24 24" fill="currentColor">
                                 <polygon points="5 3 19 12 5 21 5 3"/>
                             </svg>
                         </div>
-                    ` : ''}
+                    \` : ''}
                 </div>
             </div>
-        `).join('');
+        \`).join('');
 
         // Similar Artists
         if (data.similarArtists.length > 0) {
