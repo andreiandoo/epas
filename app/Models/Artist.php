@@ -40,6 +40,7 @@ class Artist extends Model
         'city', 'country', 'phone', 'email',
         'manager_first_name','manager_last_name','manager_email','manager_phone','manager_website',
         'agent_first_name','agent_last_name','agent_email','agent_phone','agent_website',
+        'booking_agency',
         'is_active',
         'facebook_followers','instagram_followers','tiktok_followers','spotify_followers','youtube_followers',
         'followers_facebook','followers_instagram','followers_tiktok','followers_youtube','spotify_monthly_listeners',
@@ -52,6 +53,7 @@ class Artist extends Model
         // folosim dot path în form: bio_html.en
         'bio_html'                 => 'array',
         'youtube_videos'           => 'array',
+        'booking_agency'           => 'array',
         'is_active'                => 'bool',
         'is_partner'               => 'bool',
         'is_featured'              => 'bool',

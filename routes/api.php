@@ -1895,6 +1895,26 @@ Route::prefix('marketplace-client/event-categories')->middleware(['throttle:120,
         ->name('api.marketplace-client.event-categories.show');
 });
 
+// Artists
+use App\Http\Controllers\Api\MarketplaceClient\ArtistsController as MarketplaceArtistsController;
+
+Route::prefix('marketplace-client/artists')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
+    Route::get('/', [MarketplaceArtistsController::class, 'index'])
+        ->name('api.marketplace-client.artists');
+    Route::get('/featured', [MarketplaceArtistsController::class, 'featured'])
+        ->name('api.marketplace-client.artists.featured');
+    Route::get('/trending', [MarketplaceArtistsController::class, 'trending'])
+        ->name('api.marketplace-client.artists.trending');
+    Route::get('/genre-counts', [MarketplaceArtistsController::class, 'genreCounts'])
+        ->name('api.marketplace-client.artists.genre-counts');
+    Route::get('/alphabet', [MarketplaceArtistsController::class, 'alphabet'])
+        ->name('api.marketplace-client.artists.alphabet');
+    Route::get('/{slug}', [MarketplaceArtistsController::class, 'show'])
+        ->name('api.marketplace-client.artists.show');
+    Route::get('/{slug}/events', [MarketplaceArtistsController::class, 'events'])
+        ->name('api.marketplace-client.artists.events');
+});
+
 /*
 |--------------------------------------------------------------------------
 | Platform Analytics API Routes

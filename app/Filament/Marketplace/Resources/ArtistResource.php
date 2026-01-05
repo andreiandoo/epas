@@ -110,15 +110,35 @@ class ArtistResource extends Resource
                     Forms\Components\Select::make('artistTypes')
                         ->label('Tip artist')
                         ->relationship('artistTypes', 'name')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->name)
                         ->multiple()
                         ->preload()
                         ->searchable(),
                     Forms\Components\Select::make('artistGenres')
                         ->label('Genuri muzicale')
                         ->relationship('artistGenres', 'name')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->name)
                         ->multiple()
                         ->preload()
                         ->searchable(),
+                ])->columns(2),
+
+            // EXTERNAL IDs
+            SC\Section::make('ID-uri Externe')
+                ->description('ID-urile pentru integrări cu servicii externe (pentru embed-uri și statistici)')
+                ->collapsible()
+                ->collapsed()
+                ->schema([
+                    Forms\Components\TextInput::make('spotify_id')
+                        ->label('Spotify Artist ID')
+                        ->placeholder('e.g. 4gzpq5DPGxSnKTe4SA8HAU')
+                        ->helperText('Se găsește în URL-ul Spotify după /artist/')
+                        ->prefixIcon('heroicon-o-musical-note'),
+                    Forms\Components\TextInput::make('youtube_id')
+                        ->label('YouTube Channel ID')
+                        ->placeholder('e.g. UCq-Fj5jknLsUf-MWSy4_brA')
+                        ->helperText('ID-ul canalului YouTube (nu numele)')
+                        ->prefixIcon('heroicon-o-play'),
                 ])->columns(2),
 
             // SOCIAL & LINKS
@@ -157,6 +177,63 @@ class ArtistResource extends Resource
                         ->placeholder('https://open.spotify.com/artist/...')
                         ->prefixIcon('heroicon-o-musical-note'),
                 ])->columns(2),
+
+            // SOCIAL STATS
+            SC\Section::make('Statistici Social Media')
+                ->description('Numărul de urmăritori pe diferite platforme (actualizate automat sau manual)')
+                ->collapsible()
+                ->collapsed()
+                ->schema([
+                    Forms\Components\TextInput::make('spotify_monthly_listeners')
+                        ->label('Spotify Monthly Listeners')
+                        ->numeric()
+                        ->placeholder('1000000'),
+                    Forms\Components\TextInput::make('spotify_popularity')
+                        ->label('Spotify Popularity (0-100)')
+                        ->numeric()
+                        ->minValue(0)
+                        ->maxValue(100),
+                    Forms\Components\TextInput::make('instagram_followers')
+                        ->label('Instagram Followers')
+                        ->numeric()
+                        ->placeholder('500000'),
+                    Forms\Components\TextInput::make('facebook_followers')
+                        ->label('Facebook Followers')
+                        ->numeric()
+                        ->placeholder('300000'),
+                    Forms\Components\TextInput::make('youtube_followers')
+                        ->label('YouTube Subscribers')
+                        ->numeric()
+                        ->placeholder('200000'),
+                    Forms\Components\TextInput::make('tiktok_followers')
+                        ->label('TikTok Followers')
+                        ->numeric()
+                        ->placeholder('100000'),
+                ])->columns(3),
+
+            // YOUTUBE VIDEOS
+            SC\Section::make('Videoclipuri YouTube')
+                ->description('Lista de videoclipuri YouTube pentru embed (maxim 5)')
+                ->collapsible()
+                ->collapsed()
+                ->schema([
+                    Forms\Components\Repeater::make('youtube_videos')
+                        ->label('')
+                        ->schema([
+                            Forms\Components\TextInput::make('video_id')
+                                ->label('YouTube Video ID')
+                                ->placeholder('e.g. dQw4w9WgXcQ')
+                                ->required(),
+                            Forms\Components\TextInput::make('title')
+                                ->label('Titlu video')
+                                ->placeholder('Numele piesei'),
+                        ])
+                        ->columns(2)
+                        ->maxItems(5)
+                        ->defaultItems(0)
+                        ->addActionLabel('Adaugă videoclip')
+                        ->columnSpanFull(),
+                ]),
 
             // CONTACT
             SC\Section::make('Contact')
@@ -205,6 +282,28 @@ class ArtistResource extends Resource
                         ->email(),
                     Forms\Components\TextInput::make('agent_phone')
                         ->label('Telefon'),
+                ])->columns(4),
+
+            // BOOKING AGENCY
+            SC\Section::make('Agenție de Booking')
+                ->description('Informații despre agenția de booking pentru acest artist')
+                ->collapsible()
+                ->collapsed()
+                ->schema([
+                    Forms\Components\TextInput::make('booking_agency.name')
+                        ->label('Nume Agenție')
+                        ->placeholder('e.g. Universal Music Romania'),
+                    Forms\Components\TextInput::make('booking_agency.email')
+                        ->label('Email')
+                        ->email()
+                        ->placeholder('booking@agency.com'),
+                    Forms\Components\TextInput::make('booking_agency.phone')
+                        ->label('Telefon')
+                        ->placeholder('+40 ...'),
+                    Forms\Components\TextInput::make('booking_agency.website')
+                        ->label('Website')
+                        ->url()
+                        ->placeholder('https://...'),
                 ])->columns(4),
 
             // BIOGRAPHY - EN/RO

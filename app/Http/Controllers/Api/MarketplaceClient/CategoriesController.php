@@ -39,10 +39,11 @@ class CategoriesController extends BaseController
                 'description' => $category->getTranslation('description', $language),
                 'icon' => $category->icon,
                 'icon_emoji' => $category->icon_emoji,
-                'image' => $category->image_url,
+                'image' => $category->image_full_url,
                 'color' => $category->color,
                 'event_count' => $category->event_count ?? 0,
                 'is_featured' => $category->is_featured,
+                'sort_order' => $category->sort_order ?? 0,
                 'children' => $category->children()
                     ->where('is_visible', true)
                     ->orderBy('sort_order')
@@ -56,6 +57,7 @@ class CategoriesController extends BaseController
                             'icon' => $child->icon,
                             'icon_emoji' => $child->icon_emoji,
                             'event_count' => $child->event_count ?? 0,
+                            'sort_order' => $child->sort_order ?? 0,
                         ];
                     }),
             ];
@@ -93,7 +95,7 @@ class CategoriesController extends BaseController
                 'description' => $category->getTranslation('description', $language),
                 'icon' => $category->icon,
                 'icon_emoji' => $category->icon_emoji,
-                'image' => $category->image_url,
+                'image' => $category->image_full_url,
                 'color' => $category->color,
                 'meta_title' => $category->getTranslation('meta_title', $language),
                 'meta_description' => $category->getTranslation('meta_description', $language),

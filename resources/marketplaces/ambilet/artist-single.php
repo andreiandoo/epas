@@ -6,9 +6,19 @@
 
 require_once __DIR__ . '/includes/config.php';
 
-// Page configuration
-$pageTitle = "Carla's Dreams — Artist";
-$pageDescription = "Descoperă concertele și evenimentele lui Carla's Dreams. Cumpără bilete online pe Ambilet.";
+// Get artist slug from URL
+$artistSlug = $_GET['slug'] ?? '';
+if (empty($artistSlug)) {
+    // Try to get from REQUEST_URI
+    $uri = $_SERVER['REQUEST_URI'] ?? '';
+    if (preg_match('#/artist/([a-z0-9-]+)#i', $uri, $matches)) {
+        $artistSlug = $matches[1];
+    }
+}
+
+// Page configuration (will be updated by JS with real data)
+$pageTitle = "Artist — Ambilet";
+$pageDescription = "Descoperă concertele și evenimentele artistului. Cumpără bilete online pe Ambilet.";
 $bodyClass = 'page-artist-single';
 
 // Include head
@@ -96,17 +106,25 @@ require_once __DIR__ . '/includes/header.php';
                     </svg>
                 </button>
             </div>
-            <div class="flex gap-2.5">
-                <a href="#" class="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-[13px] font-medium hover:bg-gray-100 hover:text-gray-900 transition-colors">
-                    <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor"><rect x="2" y="2" width="20" height="20" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            <div id="socialLinksContainer" class="flex flex-wrap gap-2.5">
+                <a href="#" id="socialFacebook" class="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-[13px] font-medium hover:bg-[#1877F2] hover:text-white hover:border-[#1877F2] transition-colors hidden" target="_blank">
+                    <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    Facebook
+                </a>
+                <a href="#" id="socialInstagram" class="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-[13px] font-medium hover:bg-gradient-to-r hover:from-[#F58529] hover:via-[#DD2A7B] hover:to-[#8134AF] hover:text-white hover:border-[#DD2A7B] transition-colors hidden" target="_blank">
+                    <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
                     Instagram
                 </a>
-                <a href="#" class="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-[13px] font-medium hover:bg-gray-100 hover:text-gray-900 transition-colors">
-                    <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" fill="white"/></svg>
+                <a href="#" id="socialYoutube" class="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-[13px] font-medium hover:bg-[#FF0000] hover:text-white hover:border-[#FF0000] transition-colors hidden" target="_blank">
+                    <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
                     YouTube
                 </a>
-                <a href="#" class="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-[13px] font-medium hover:bg-gray-100 hover:text-gray-900 transition-colors">
-                    <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02z"/></svg>
+                <a href="#" id="socialTiktok" class="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-[13px] font-medium hover:bg-black hover:text-white hover:border-black transition-colors hidden" target="_blank">
+                    <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                    TikTok
+                </a>
+                <a href="#" id="socialSpotify" class="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-[13px] font-medium hover:bg-[#1DB954] hover:text-white hover:border-[#1DB954] transition-colors hidden" target="_blank">
+                    <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
                     Spotify
                 </a>
             </div>
@@ -120,7 +138,7 @@ require_once __DIR__ . '/includes/header.php';
                 <span class="text-2xl">🎤</span>
                 Concerte viitoare
             </h2>
-            <a href="/evenimente" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
+            <a href="#" id="viewAllEventsLink" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
                 Vezi toate
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -186,12 +204,6 @@ require_once __DIR__ . '/includes/header.php';
                 <span class="text-2xl">📸</span>
                 Galerie
             </h2>
-            <a href="#" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
-                Vezi toate
-                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-            </a>
         </div>
 
         <div id="galleryGrid" class="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -255,68 +267,120 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/footer.php';
 
 // Page-specific scripts
-$scriptsExtra = <<<'SCRIPTS'
+$artistSlugJS = json_encode($artistSlug);
+$scriptsExtra = <<<SCRIPTS
 <script>
 const ArtistPage = {
+    artistSlug: {$artistSlugJS},
+    artistData: null,
+
     init() {
         this.loadArtistData();
     },
 
     async loadArtistData() {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 800));
-        const data = this.getMockData();
-        this.renderArtist(data);
+        if (!this.artistSlug) {
+            console.error('No artist slug provided');
+            return;
+        }
+
+        try {
+            const response = await AmbiletAPI.get('/artists/' + this.artistSlug);
+            if (response.success && response.data) {
+                this.artistData = response.data;
+                this.renderArtist(this.transformApiData(response.data));
+            } else {
+                console.error('Artist not found');
+                // Redirect to artists page
+                window.location.href = '/artisti';
+            }
+        } catch (e) {
+            console.error('Failed to load artist:', e);
+            // Show error message or redirect
+            window.location.href = '/artisti';
+        }
     },
 
-    getMockData() {
+    transformApiData(api) {
+        // Transform API response to page format
+        const months = ['IAN', 'FEB', 'MAR', 'APR', 'MAI', 'IUN', 'IUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+        // Calculate total followers (sum of all social platforms)
+        const totalFollowers = (api.stats?.instagram_followers || 0) +
+                              (api.stats?.facebook_followers || 0) +
+                              (api.stats?.youtube_subscribers || 0) +
+                              (api.stats?.tiktok_followers || 0);
+
         return {
-            name: "Carla's Dreams",
-            image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1920&h=800&fit=crop",
-            verified: true,
-            genres: ["Pop", "Hip-Hop", "R&B"],
+            name: api.name,
+            slug: api.slug,
+            image: api.image || api.portrait || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1920&h=800&fit=crop',
+            verified: api.is_verified,
+            genres: (api.genres || []).map(g => g.name),
             stats: {
-                listeners: "2.4M",
-                followers: "847K",
-                concerts: 156,
-                awards: 12
+                spotifyListeners: this.formatNumber(api.stats?.spotify_listeners || 0),
+                totalFollowers: this.formatNumber(totalFollowers),
+                spotifyPopularity: api.stats?.spotify_popularity || 0,
+                concerts: (api.stats?.upcoming_events || 0) + (api.stats?.past_events || 0),
+                upcomingEvents: api.stats?.upcoming_events || 0
             },
-            about: [
-                "<span class='font-semibold text-primary'>Carla's Dreams</span> este un proiect muzical misterios din Republica Moldova, lansat în 2012. Cunoscut pentru stilul său unic care îmbină pop-ul cu hip-hop-ul și R&B-ul, artistul și-a construit o bază impresionantă de fani în întreaga Europă de Est.",
-                "Cu hituri precum <span class='font-semibold text-primary'>\"Sub Pielea Mea\"</span>, <span class='font-semibold text-primary'>\"Imperfect\"</span> și <span class='font-semibold text-primary'>\"Antiexemplu\"</span>, Carla's Dreams a acumulat miliarde de vizualizări pe YouTube și a devenit unul dintre cei mai ascultați artiști români pe Spotify.",
-                "Identitatea artistului rămâne un mister, acesta alegând să apară mereu cu fața acoperită, lăsând muzica să vorbească de la sine."
-            ],
+            about: api.biography ? [api.biography] : ['Informații despre acest artist vor fi adăugate în curând.'],
             facts: [
-                { label: "Origine", value: "Chișinău, Moldova" },
-                { label: "Activ din", value: "2012" },
-                { label: "Gen muzical", value: "Pop, Hip-Hop, R&B" },
-                { label: "Casa de discuri", value: "Global Records" },
-                { label: "Albume", value: "4 albume de studio" }
+                { label: "Origine", value: [api.city, api.country].filter(Boolean).join(', ') || '-' },
+                { label: "Gen muzical", value: (api.genres || []).map(g => g.name).join(', ') || '-' },
+                { label: "Tip", value: (api.types || []).map(t => t.name).join(', ') || '-' },
+                { label: "Concerte viitoare", value: (api.stats?.upcoming_events || 0).toString() },
+                { label: "Concerte anterioare", value: (api.stats?.past_events || 0).toString() }
             ],
-            events: [
-                { day: "15", month: "MAR", title: "Carla's Dreams - Turneul Național 2025", venue: "Sala Palatului, București", time: "20:00", price: 149, soldOut: false },
-                { day: "22", month: "MAR", title: "Carla's Dreams - Turneul Național 2025", venue: "BT Arena, Cluj-Napoca", time: "20:00", price: 129, soldOut: false },
-                { day: "29", month: "MAR", title: "Carla's Dreams - Turneul Național 2025", venue: "Sala Capitol, Timișoara", time: "20:00", price: null, soldOut: true }
-            ],
-            gallery: [
-                { url: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&h=600&fit=crop", isVideo: true },
-                { url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=400&fit=crop", isVideo: false },
-                { url: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=400&fit=crop", isVideo: false },
-                { url: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=400&fit=crop", isVideo: false },
-                { url: "https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400&h=400&fit=crop", isVideo: false }
-            ],
-            similarArtists: [
-                { name: "INNA", genre: "Pop, Dance", image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=300&fit=crop" },
-                { name: "The Motans", genre: "Pop, Rock", image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop" },
-                { name: "Irina Rimes", genre: "Pop, R&B", image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop" },
-                { name: "Delia", genre: "Pop, Dance", image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=300&fit=crop" },
-                { name: "Smiley", genre: "Pop, Hip-Hop", image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=300&fit=crop" },
-                { name: "Andra", genre: "Pop, Soul", image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=300&fit=crop" }
-            ]
+            spotifyId: api.external_ids?.spotify_id || null,
+            events: (api.upcoming_events || []).map(event => {
+                const date = new Date(event.event_date);
+                return {
+                    slug: event.slug,
+                    day: date.getDate().toString().padStart(2, '0'),
+                    month: months[date.getMonth()],
+                    title: event.title,
+                    venue: event.venue ? event.venue.name + ', ' + event.venue.city : '-',
+                    time: event.start_time ? event.start_time.substring(0, 5) : '-',
+                    price: event.min_price,
+                    currency: event.currency || 'RON',
+                    soldOut: event.is_sold_out || false,
+                    image: event.image
+                };
+            }),
+            gallery: api.youtube_videos?.length > 0 ?
+                api.youtube_videos.map((v, i) => ({ url: v.thumbnail, isVideo: true })) :
+                [],
+            similarArtists: (api.similar_artists || []).map(a => ({
+                slug: a.slug,
+                name: a.name,
+                genre: a.genres?.map(g => g.name).join(', ') || 'Artist',
+                image: a.image || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop'
+            })),
+            social: api.social || {}
         };
     },
 
+    formatNumber(num) {
+        if (!num || num === 0) return '0';
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1).replace(/\\.0\$/, '') + 'M';
+        }
+        if (num >= 1000) {
+            return (num / 1000).toFixed(1).replace(/\\.0\$/, '') + 'K';
+        }
+        return num.toString();
+    },
+
     renderArtist(data) {
+        // Update page title
+        document.title = data.name + ' — Ambilet';
+
+        // Update "Vezi toate" link to filter by artist
+        const viewAllLink = document.getElementById('viewAllEventsLink');
+        if (viewAllLink) {
+            viewAllLink.href = '/evenimente?artist=' + encodeURIComponent(data.slug || data.name);
+        }
         // Hero image
         const heroImage = document.getElementById('heroImage');
         heroImage.src = data.image;
@@ -337,62 +401,83 @@ const ArtistPage = {
         // Stats
         document.getElementById('statsContainer').innerHTML = `
             <div class="text-center flex-1 min-w-[100px]">
-                <div class="text-[28px] font-extrabold text-gray-900">${data.stats.listeners}</div>
-                <div class="text-[13px] text-gray-500 mt-1">Ascultători lunari</div>
+                <div class="text-[28px] font-extrabold text-gray-900">\${data.stats.spotifyListeners}</div>
+                <div class="text-[13px] text-gray-500 mt-1">Ascultători Spotify</div>
             </div>
             <div class="hidden w-px h-12 bg-gray-200 lg:block"></div>
             <div class="text-center flex-1 min-w-[100px]">
-                <div class="text-[28px] font-extrabold text-gray-900">${data.stats.followers}</div>
-                <div class="text-[13px] text-gray-500 mt-1">Followers</div>
+                <div class="text-[28px] font-extrabold text-gray-900">\${data.stats.totalFollowers}</div>
+                <div class="text-[13px] text-gray-500 mt-1">Total Followers</div>
             </div>
             <div class="hidden w-px h-12 bg-gray-200 lg:block"></div>
             <div class="text-center flex-1 min-w-[100px]">
-                <div class="text-[28px] font-extrabold text-gray-900">${data.stats.concerts}</div>
-                <div class="text-[13px] text-gray-500 mt-1">Concerte</div>
+                <div class="text-[28px] font-extrabold text-gray-900">\${data.stats.spotifyPopularity}</div>
+                <div class="text-[13px] text-gray-500 mt-1">Spotify Popularity</div>
             </div>
             <div class="hidden w-px h-12 bg-gray-200 lg:block"></div>
             <div class="text-center flex-1 min-w-[100px]">
-                <div class="text-[28px] font-extrabold text-gray-900">${data.stats.awards}</div>
-                <div class="text-[13px] text-gray-500 mt-1">Premii</div>
+                <div class="text-[28px] font-extrabold text-gray-900">\${data.stats.upcomingEvents}</div>
+                <div class="text-[13px] text-gray-500 mt-1">Concerte viitoare</div>
             </div>
         `;
 
+        // Update social links
+        this.updateSocialLinks(data.social);
+
+        // Update Spotify embed if spotifyId available
+        this.updateSpotifyEmbed(data.spotifyId, data.social?.spotify, data.stats?.spotifyListeners);
+
         // Events
-        document.getElementById('eventsList').innerHTML = data.events.map(event => `
-            <a href="/event/${AmbiletUtils.slugify(event.title)}" class="flex flex-col md:flex-row bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all">
-                <div class="w-full md:w-[100px] p-5 bg-gradient-to-br from-primary to-primary-light flex md:flex-col items-center justify-center text-white gap-2.5 md:gap-0">
-                    <div class="text-[32px] font-extrabold leading-none">${event.day}</div>
-                    <div class="text-sm font-semibold uppercase opacity-90">${event.month}</div>
-                </div>
-                <div class="flex flex-col justify-center flex-1 p-5">
-                    <h3 class="mb-2 text-lg font-bold text-gray-900">${event.title}</h3>
-                    <div class="flex flex-wrap gap-4 text-sm text-gray-500">
-                        <span class="flex items-center gap-1.5">
-                            <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-                                <circle cx="12" cy="10" r="3"/>
-                            </svg>
-                            ${event.venue}
-                        </span>
-                        <span class="flex items-center gap-1.5">
-                            <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/>
-                                <polyline points="12 6 12 12 16 14"/>
-                            </svg>
-                            ${event.time}
-                        </span>
+        if (data.events.length > 0) {
+            document.getElementById('eventsList').innerHTML = data.events.map(event => `
+                <a href="/eveniment/\${event.slug}" class="flex flex-col md:flex-row bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all">
+                    <div class="w-full md:w-[100px] p-5 bg-gradient-to-br from-primary to-primary-light flex md:flex-col items-center justify-center text-white gap-2.5 md:gap-0">
+                        <div class="text-[32px] font-extrabold leading-none">\${event.day}</div>
+                        <div class="text-sm font-semibold uppercase opacity-90">\${event.month}</div>
                     </div>
+                    <div class="flex flex-col justify-center flex-1 p-5">
+                        <h3 class="mb-2 text-lg font-bold text-gray-900">\${event.title}</h3>
+                        <div class="flex flex-wrap gap-4 text-sm text-gray-500">
+                            <span class="flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                    <circle cx="12" cy="10" r="3"/>
+                                </svg>
+                                \${event.venue}
+                            </span>
+                            <span class="flex items-center gap-1.5">
+                                <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                                \${event.time}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex flex-row items-center justify-between gap-2 p-5 md:flex-col md:justify-center">
+                        \${event.soldOut ? `
+                            <span class="px-5 py-2.5 bg-red-100 rounded-lg text-red-600 text-[13px] font-semibold">SOLD OUT</span>
+                        ` : `
+                            <div class="text-[13px] text-gray-500">de la <strong class="text-xl font-bold text-emerald-500">\${event.price || '-'} \${event.currency}</strong></div>
+                            <button class="px-6 py-3 text-sm font-semibold text-white transition-colors bg-gray-900 rounded-lg hover:bg-gray-800">Cumpără bilete</button>
+                        `}
+                    </div>
+                </a>
+            `).join('');
+        } else {
+            document.getElementById('eventsList').innerHTML = `
+                <div class="py-12 text-center bg-white border border-gray-200 rounded-2xl">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6"/>
+                        <line x1="8" y1="2" x2="8" y2="6"/>
+                        <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <h3 class="mb-2 text-lg font-semibold text-gray-700">Niciun concert programat</h3>
+                    <p class="text-sm text-gray-500">Urmărește artistul pentru a fi notificat când apar concerte noi.</p>
                 </div>
-                <div class="flex flex-row items-center justify-between gap-2 p-5 md:flex-col md:justify-center">
-                    ${event.soldOut ? `
-                        <span class="px-5 py-2.5 bg-red-100 rounded-lg text-red-600 text-[13px] font-semibold">SOLD OUT</span>
-                    ` : `
-                        <div class="text-[13px] text-gray-500">de la <strong class="text-xl font-bold text-emerald-500">${event.price} lei</strong></div>
-                        <button class="px-6 py-3 text-sm font-semibold text-white transition-colors bg-gray-900 rounded-lg hover:bg-gray-800">Cumpără bilete</button>
-                    `}
-                </div>
-            </a>
-        `).join('');
+            `;
+        }
 
         // About
         document.getElementById('aboutCard').innerHTML = data.about.map(text =>
@@ -427,15 +512,85 @@ const ArtistPage = {
         `).join('');
 
         // Similar Artists
-        document.getElementById('similarArtists').innerHTML = data.similarArtists.map(artist => `
-            <a href="/artist/${AmbiletUtils.slugify(artist.name)}" class="text-center transition-transform group hover:-translate-y-1">
-                <div class="w-full aspect-square rounded-full overflow-hidden mb-3 border-[3px] border-gray-200 group-hover:border-primary transition-colors">
-                    <img src="${artist.image}" alt="${artist.name}" class="object-cover w-full h-full">
-                </div>
-                <h3 class="text-[15px] font-bold text-gray-900 mb-0.5">${artist.name}</h3>
-                <p class="text-[13px] text-gray-500">${artist.genre}</p>
-            </a>
-        `).join('');
+        if (data.similarArtists.length > 0) {
+            document.getElementById('similarArtists').innerHTML = data.similarArtists.map(artist => `
+                <a href="/artist/\${artist.slug}" class="text-center transition-transform group hover:-translate-y-1">
+                    <div class="w-full aspect-square rounded-full overflow-hidden mb-3 border-[3px] border-gray-200 group-hover:border-primary transition-colors">
+                        <img src="\${artist.image}" alt="\${artist.name}" class="object-cover w-full h-full">
+                    </div>
+                    <h3 class="text-[15px] font-bold text-gray-900 mb-0.5">\${artist.name}</h3>
+                    <p class="text-[13px] text-gray-500">\${artist.genre}</p>
+                </a>
+            `).join('');
+        } else {
+            document.getElementById('similarArtists').parentElement.style.display = 'none';
+        }
+    },
+
+    updateSocialLinks(social) {
+        // Map social platforms to their element IDs and URLs
+        const socialMap = {
+            facebook: { id: 'socialFacebook', url: social?.facebook },
+            instagram: { id: 'socialInstagram', url: social?.instagram },
+            youtube: { id: 'socialYoutube', url: social?.youtube },
+            tiktok: { id: 'socialTiktok', url: social?.tiktok },
+            spotify: { id: 'socialSpotify', url: social?.spotify }
+        };
+
+        // Update each social link
+        Object.values(socialMap).forEach(({ id, url }) => {
+            const link = document.getElementById(id);
+            if (link) {
+                if (url) {
+                    link.href = url;
+                    link.classList.remove('hidden');
+                    link.classList.add('flex');
+                } else {
+                    link.classList.add('hidden');
+                    link.classList.remove('flex');
+                }
+            }
+        });
+    },
+
+    updateSpotifyEmbed(spotifyId, spotifyUrl, listeners) {
+        const spotifySection = document.querySelector('section:has(.text-\\[\\#1DB954\\])');
+        if (!spotifySection) return;
+
+        // Update Spotify link in the section
+        const spotifyLink = spotifySection.querySelector('a[target="_blank"]');
+        if (spotifyLink && spotifyUrl) {
+            spotifyLink.href = spotifyUrl;
+        }
+
+        // Update listeners text
+        const listenersText = spotifySection.querySelector('p');
+        if (listenersText && listeners) {
+            listenersText.textContent = `Descoperă toate albumele, single-urile și colaborările. Peste \${listeners} ascultători lunari!`;
+        }
+
+        // Add Spotify embed player if spotifyId is available
+        const embedContainer = spotifySection.querySelector('.bg-gray-50.rounded-xl');
+        if (embedContainer) {
+            if (spotifyId) {
+                embedContainer.innerHTML = `
+                    <iframe
+                        style="border-radius:12px"
+                        src="https://open.spotify.com/embed/artist/\${spotifyId}?utm_source=generator&theme=0"
+                        width="100%"
+                        height="200"
+                        frameBorder="0"
+                        allowfullscreen=""
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        loading="lazy">
+                    </iframe>
+                `;
+                embedContainer.classList.remove('flex', 'items-center', 'justify-center', 'text-gray-400', 'text-sm');
+            } else if (!spotifyUrl) {
+                // Hide entire Spotify section if no spotify data
+                spotifySection.style.display = 'none';
+            }
+        }
     }
 };
 

@@ -224,9 +224,10 @@ const ArtistsPage = {
     async loadFeaturedArtists() {
         const container = document.getElementById('featuredGrid');
         try {
-            const response = await AmbiletAPI.get('/artists?featured=1&limit=4');
-            if (response.data && response.data.length > 0) {
-                container.innerHTML = response.data.map(artist => this.renderFeaturedCard(artist)).join('');
+            const response = await AmbiletAPI.get('/artists/featured?limit=4');
+            const artists = response.data?.artists || response.data || [];
+            if (artists.length > 0) {
+                container.innerHTML = artists.map(artist => this.renderFeaturedCard(artist)).join('');
             }
         } catch (e) {
             console.warn('Failed to load featured artists:', e);
@@ -237,9 +238,10 @@ const ArtistsPage = {
     async loadTrendingArtists() {
         const container = document.getElementById('trendingList');
         try {
-            const response = await AmbiletAPI.get('/artists?trending=1&limit=4');
-            if (response.data && response.data.length > 0) {
-                container.innerHTML = response.data.map((artist, index) => this.renderTrendingItem(artist, index + 1)).join('');
+            const response = await AmbiletAPI.get('/artists/trending?limit=4');
+            const artists = response.data?.artists || response.data || [];
+            if (artists.length > 0) {
+                container.innerHTML = artists.map((artist, index) => this.renderTrendingItem(artist, index + 1)).join('');
             }
         } catch (e) {
             console.warn('Failed to load trending artists:', e);
@@ -258,7 +260,7 @@ const ArtistsPage = {
 
             if (this.filters.genre) params.append('genre', this.filters.genre);
             if (this.filters.letter) params.append('letter', this.filters.letter);
-            if (this.filters.search) params.append('q', this.filters.search);
+            if (this.filters.search) params.append('search', this.filters.search);
 
             const response = await AmbiletAPI.get('/artists?' + params.toString());
             if (response.data) {
@@ -284,16 +286,24 @@ const ArtistsPage = {
 
     async loadGenreCounts() {
         try {
-            const response = await AmbiletAPI.get('/artists/counts');
-            if (response.data) {
-                if (response.data.total) document.getElementById('countAll').textContent = response.data.total;
-                if (response.data.pop) document.getElementById('countPop').textContent = response.data.pop;
-                if (response.data.rock) document.getElementById('countRock').textContent = response.data.rock;
-                if (response.data['hip-hop']) document.getElementById('countHipHop').textContent = response.data['hip-hop'];
-                if (response.data.electronic) document.getElementById('countElectronic').textContent = response.data.electronic;
-                if (response.data['stand-up']) document.getElementById('countStandup').textContent = response.data['stand-up'];
-                if (response.data.dj) document.getElementById('countDJ').textContent = response.data.dj;
-            }
+            const response = await AmbiletAPI.get('/artists/genre-counts');
+            const genres = response.data?.genres || [];
+
+            // Calculate total
+            let total = 0;
+            const genreMap = {};
+            genres.forEach(g => {
+                genreMap[g.slug] = g.count;
+                total += g.count;
+            });
+
+            document.getElementById('countAll').textContent = total || '--';
+            document.getElementById('countPop').textContent = genreMap['pop'] || '--';
+            document.getElementById('countRock').textContent = genreMap['rock'] || '--';
+            document.getElementById('countHipHop').textContent = genreMap['hip-hop'] || '--';
+            document.getElementById('countElectronic').textContent = genreMap['electronic'] || '--';
+            document.getElementById('countStandup').textContent = genreMap['stand-up'] || '--';
+            document.getElementById('countDJ').textContent = genreMap['dj'] || '--';
         } catch (e) {
             console.warn('Failed to load genre counts:', e);
         }
@@ -301,22 +311,25 @@ const ArtistsPage = {
 
     renderFeaturedCard(artist) {
         const verifiedBadge = artist.is_verified ? '<span class="inline-flex items-center justify-center w-5 h-5 ml-1 bg-blue-500 rounded-full"><svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span>' : '';
+        const genre = artist.genres?.[0]?.name || 'Artist';
+        const followers = this.formatFollowers(artist.stats?.spotify_listeners || artist.stats?.instagram_followers || 0);
+        const eventsCount = artist.upcoming_events_count || 0;
 
         return \`
             <a href="/artist/\${artist.slug}" class="relative overflow-hidden group rounded-2xl aspect-[3/4]">
                 <img src="\${artist.image || '/assets/images/placeholder-artist.jpg'}" alt="\${artist.name}" class="object-cover w-full h-full transition-transform duration-500 group-hover:scale-110" loading="lazy">
                 <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
                 <div class="absolute bottom-0 left-0 right-0 p-6">
-                    <span class="inline-block px-3 py-1 mb-3 text-xs font-semibold text-white uppercase rounded-full bg-white/15 backdrop-blur-sm">\${artist.genre || 'Artist'}</span>
+                    <span class="inline-block px-3 py-1 mb-3 text-xs font-semibold text-white uppercase rounded-full bg-white/15 backdrop-blur-sm">\${genre}</span>
                     <h3 class="mb-2 text-xl font-extrabold leading-tight text-white">\${artist.name}\${verifiedBadge}</h3>
                     <div class="flex items-center gap-4 text-sm text-white/80">
                         <span class="flex items-center gap-1.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            \${artist.events_count || 0} evenimente
+                            \${eventsCount} evenimente
                         </span>
                         <span class="flex items-center gap-1.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-                            \${artist.followers_formatted || '0'}
+                            \${followers}
                         </span>
                     </div>
                 </div>
@@ -356,11 +369,14 @@ const ArtistsPage = {
 
     renderArtistCard(artist) {
         const verifiedBadge = artist.is_verified ? '<span class="inline-flex items-center justify-center w-4 h-4 ml-1 bg-blue-500 rounded-full"><svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></span>' : '';
+        const genre = artist.genres?.[0]?.name || 'Artist';
+        const followers = this.formatFollowers(artist.stats?.spotify_listeners || artist.stats?.instagram_followers || 0);
+        const eventsCount = artist.upcoming_events_count || 0;
 
-        const nextEventDate = artist.next_event_date ?
+        const eventsInfo = eventsCount > 0 ?
             \`<span class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-primary/10 text-primary">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                \${artist.next_event_date}
+                \${eventsCount} evenimente viitoare
             </span>\` :
             '<span class="text-xs text-muted">Fara evenimente programate</span>';
 
@@ -368,13 +384,13 @@ const ArtistsPage = {
             <a href="/artist/\${artist.slug}" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary">
                 <div class="relative overflow-hidden aspect-square">
                     <img src="\${artist.image || '/assets/images/placeholder-artist.jpg'}" alt="\${artist.name}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">
-                    <span class="absolute px-3 py-1.5 text-xs font-semibold text-white uppercase rounded-full top-3 left-3 bg-black/60 backdrop-blur-sm">\${artist.genre || 'Artist'}</span>
-                    \${artist.events_count > 0 ? \`<span class="absolute px-3 py-1.5 text-xs font-semibold text-white rounded-lg bottom-3 right-3 bg-primary">\${artist.events_count} evenimente</span>\` : ''}
+                    <span class="absolute px-3 py-1.5 text-xs font-semibold text-white uppercase rounded-full top-3 left-3 bg-black/60 backdrop-blur-sm">\${genre}</span>
+                    \${eventsCount > 0 ? \`<span class="absolute px-3 py-1.5 text-xs font-semibold text-white rounded-lg bottom-3 right-3 bg-primary">\${eventsCount} evenimente</span>\` : ''}
                 </div>
                 <div class="p-5 text-center">
                     <h3 class="flex items-center justify-center mb-1 text-base font-bold text-secondary">\${artist.name}\${verifiedBadge}</h3>
-                    <p class="mb-3 text-sm text-muted">\${artist.followers_formatted || '0'} urmaritori</p>
-                    \${nextEventDate}
+                    <p class="mb-3 text-sm text-muted">\${followers} urmaritori</p>
+                    \${eventsInfo}
                 </div>
             </a>
         \`;
@@ -491,6 +507,17 @@ const ArtistsPage = {
                 this.loadArtists();
             });
         });
+    },
+
+    formatFollowers(count) {
+        if (!count || count === 0) return '0';
+        if (count >= 1000000) {
+            return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+        }
+        if (count >= 1000) {
+            return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+        }
+        return count.toString();
     }
 };
 

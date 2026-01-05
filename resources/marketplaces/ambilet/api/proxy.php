@@ -128,11 +128,42 @@ switch ($action) {
         $endpoint = '/venues/' . urlencode($slug);
         break;
 
+    // ==================== ARTISTS ====================
+
     case 'artists':
         $params = [];
         if (isset($_GET['genre'])) $params['genre'] = $_GET['genre'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['city'])) $params['city'] = $_GET['city'];
+        if (isset($_GET['letter'])) $params['letter'] = $_GET['letter'];
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['featured'])) $params['featured'] = $_GET['featured'];
+        if (isset($_GET['with_events'])) $params['with_events'] = $_GET['with_events'];
+        if (isset($_GET['sort'])) $params['sort'] = $_GET['sort'];
+        if (isset($_GET['order'])) $params['order'] = $_GET['order'];
         if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
-        $endpoint = '/artists?' . http_build_query($params);
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/artists' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'artists.featured':
+        $params = [];
+        if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 20);
+        $endpoint = '/artists/featured' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'artists.trending':
+        $params = [];
+        if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 20);
+        $endpoint = '/artists/trending' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'artists.genre-counts':
+        $endpoint = '/artists/genre-counts';
+        break;
+
+    case 'artists.alphabet':
+        $endpoint = '/artists/alphabet';
         break;
 
     case 'artist':
@@ -143,6 +174,20 @@ switch ($action) {
             exit;
         }
         $endpoint = '/artists/' . urlencode($slug);
+        break;
+
+    case 'artist.events':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing artist slug']);
+            exit;
+        }
+        $params = [];
+        if (isset($_GET['filter'])) $params['filter'] = $_GET['filter']; // 'upcoming' or 'past'
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/artists/' . urlencode($slug) . '/events' . ($params ? '?' . http_build_query($params) : '');
         break;
 
     case 'categories':
@@ -844,6 +889,261 @@ function getMockData($action, $params) {
                         ]
                     ]
                 ]
+            ];
+
+        // ==================== ARTISTS (Demo Mode) ====================
+
+        case 'artists':
+        case 'artists.featured':
+        case 'artists.trending':
+            $demoArtists = [
+                [
+                    'id' => 1,
+                    'name' => 'Subcarpați',
+                    'slug' => 'subcarpati',
+                    'image' => 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop',
+                    'city' => 'București',
+                    'is_verified' => true,
+                    'genres' => [['id' => 1, 'name' => 'Hip-Hop', 'slug' => 'hip-hop'], ['id' => 2, 'name' => 'Folk', 'slug' => 'folk']],
+                    'types' => [['id' => 1, 'name' => 'Band', 'slug' => 'band']],
+                    'stats' => ['spotify_listeners' => 850000, 'instagram_followers' => 320000],
+                    'upcoming_events_count' => 5
+                ],
+                [
+                    'id' => 2,
+                    'name' => 'Irina Rimes',
+                    'slug' => 'irina-rimes',
+                    'image' => 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=400&fit=crop',
+                    'city' => 'Chișinău',
+                    'is_verified' => true,
+                    'genres' => [['id' => 3, 'name' => 'Pop', 'slug' => 'pop']],
+                    'types' => [['id' => 2, 'name' => 'Solo Artist', 'slug' => 'solo-artist']],
+                    'stats' => ['spotify_listeners' => 1200000, 'instagram_followers' => 890000],
+                    'upcoming_events_count' => 3
+                ],
+                [
+                    'id' => 3,
+                    'name' => 'Carla\'s Dreams',
+                    'slug' => 'carlas-dreams',
+                    'image' => 'https://images.unsplash.com/photo-1571609860108-e29b80ced4ef?w=400&h=400&fit=crop',
+                    'city' => 'Chișinău',
+                    'is_verified' => true,
+                    'genres' => [['id' => 3, 'name' => 'Pop', 'slug' => 'pop'], ['id' => 4, 'name' => 'Electronic', 'slug' => 'electronic']],
+                    'types' => [['id' => 1, 'name' => 'Band', 'slug' => 'band']],
+                    'stats' => ['spotify_listeners' => 2500000, 'instagram_followers' => 1100000],
+                    'upcoming_events_count' => 4
+                ],
+                [
+                    'id' => 4,
+                    'name' => 'The Motans',
+                    'slug' => 'the-motans',
+                    'image' => 'https://images.unsplash.com/photo-1598387993441-a364f854c3e1?w=400&h=400&fit=crop',
+                    'city' => 'Chișinău',
+                    'is_verified' => true,
+                    'genres' => [['id' => 3, 'name' => 'Pop', 'slug' => 'pop']],
+                    'types' => [['id' => 1, 'name' => 'Band', 'slug' => 'band']],
+                    'stats' => ['spotify_listeners' => 980000, 'instagram_followers' => 540000],
+                    'upcoming_events_count' => 2
+                ],
+                [
+                    'id' => 5,
+                    'name' => 'Grasu XXL',
+                    'slug' => 'grasu-xxl',
+                    'image' => 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&h=400&fit=crop',
+                    'city' => 'București',
+                    'is_verified' => true,
+                    'genres' => [['id' => 1, 'name' => 'Hip-Hop', 'slug' => 'hip-hop']],
+                    'types' => [['id' => 2, 'name' => 'Solo Artist', 'slug' => 'solo-artist']],
+                    'stats' => ['spotify_listeners' => 650000, 'instagram_followers' => 280000],
+                    'upcoming_events_count' => 3
+                ],
+                [
+                    'id' => 6,
+                    'name' => 'Smiley',
+                    'slug' => 'smiley',
+                    'image' => 'https://images.unsplash.com/photo-1619229666372-3c26c399a4cb?w=400&h=400&fit=crop',
+                    'city' => 'București',
+                    'is_verified' => true,
+                    'genres' => [['id' => 3, 'name' => 'Pop', 'slug' => 'pop']],
+                    'types' => [['id' => 2, 'name' => 'Solo Artist', 'slug' => 'solo-artist']],
+                    'stats' => ['spotify_listeners' => 1800000, 'instagram_followers' => 1500000],
+                    'upcoming_events_count' => 6
+                ],
+            ];
+
+            if ($action === 'artists.featured' || $action === 'artists.trending') {
+                $limit = (int)($params['limit'] ?? 6);
+                return [
+                    'success' => true,
+                    'data' => ['artists' => array_slice($demoArtists, 0, $limit)]
+                ];
+            }
+
+            // Filter by genre if specified
+            $genre = $params['genre'] ?? null;
+            if ($genre) {
+                $demoArtists = array_filter($demoArtists, function($a) use ($genre) {
+                    foreach ($a['genres'] as $g) {
+                        if ($g['slug'] === $genre) return true;
+                    }
+                    return false;
+                });
+            }
+
+            // Filter by letter if specified
+            $letter = $params['letter'] ?? null;
+            if ($letter) {
+                $demoArtists = array_filter($demoArtists, fn($a) => strtoupper(substr($a['name'], 0, 1)) === strtoupper($letter));
+            }
+
+            $page = (int)($params['page'] ?? 1);
+            $perPage = (int)($params['per_page'] ?? 12);
+            $total = count($demoArtists);
+            $artists = array_slice(array_values($demoArtists), ($page - 1) * $perPage, $perPage);
+
+            return [
+                'success' => true,
+                'data' => $artists,
+                'meta' => [
+                    'current_page' => $page,
+                    'last_page' => (int)ceil($total / $perPage),
+                    'per_page' => $perPage,
+                    'total' => $total,
+                ]
+            ];
+
+        case 'artists.genre-counts':
+            return [
+                'success' => true,
+                'data' => [
+                    'genres' => [
+                        ['id' => 1, 'name' => 'Hip-Hop', 'slug' => 'hip-hop', 'count' => 45],
+                        ['id' => 2, 'name' => 'Folk', 'slug' => 'folk', 'count' => 28],
+                        ['id' => 3, 'name' => 'Pop', 'slug' => 'pop', 'count' => 89],
+                        ['id' => 4, 'name' => 'Electronic', 'slug' => 'electronic', 'count' => 52],
+                        ['id' => 5, 'name' => 'Rock', 'slug' => 'rock', 'count' => 67],
+                        ['id' => 6, 'name' => 'Jazz', 'slug' => 'jazz', 'count' => 23],
+                        ['id' => 7, 'name' => 'Classical', 'slug' => 'classical', 'count' => 18],
+                    ]
+                ]
+            ];
+
+        case 'artists.alphabet':
+            return [
+                'success' => true,
+                'data' => ['letters' => ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'I', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'V', 'Z']]
+            ];
+
+        case 'artist':
+            $slug = $params['slug'] ?? 'subcarpati';
+            return [
+                'success' => true,
+                'data' => [
+                    'id' => 1,
+                    'name' => 'Subcarpați',
+                    'slug' => 'subcarpati',
+                    'image' => 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=800&fit=crop',
+                    'logo' => null,
+                    'portrait' => 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=600&fit=crop',
+                    'biography' => '<p>Subcarpați este una dintre cele mai apreciate formații de hip-hop și folk din România, înființată în 2006 la București. Trupa combină elemente de muzică tradițională românească cu hip-hop modern, creând un stil unic și recognoscibil.</p><p>Cu zeci de concerte sold-out și milioane de vizualizări pe YouTube, Subcarpați a devenit un fenomen cultural, reunind generații în jurul muzicii lor autentice.</p>',
+                    'city' => 'București',
+                    'country' => 'România',
+                    'is_verified' => true,
+                    'genres' => [
+                        ['id' => 1, 'name' => 'Hip-Hop', 'slug' => 'hip-hop'],
+                        ['id' => 2, 'name' => 'Folk', 'slug' => 'folk'],
+                        ['id' => 8, 'name' => 'World Music', 'slug' => 'world-music']
+                    ],
+                    'types' => [['id' => 1, 'name' => 'Band', 'slug' => 'band']],
+                    'stats' => [
+                        'spotify_listeners' => 850000,
+                        'instagram_followers' => 320000,
+                        'youtube_subscribers' => 450000,
+                        'facebook_followers' => 280000,
+                        'tiktok_followers' => 95000,
+                        'upcoming_events' => 5,
+                        'past_events' => 248
+                    ],
+                    'social' => [
+                        'instagram' => 'https://instagram.com/subcarpati',
+                        'youtube' => 'https://youtube.com/subcarpati',
+                        'spotify' => 'https://open.spotify.com/artist/subcarpati',
+                        'facebook' => 'https://facebook.com/subcarpati',
+                        'tiktok' => null,
+                        'website' => 'https://subcarpati.ro'
+                    ],
+                    'youtube_videos' => [
+                        ['id' => 'video1', 'title' => 'Până Când Nu Te Iubeam', 'thumbnail' => 'https://img.youtube.com/vi/video1/mqdefault.jpg'],
+                        ['id' => 'video2', 'title' => 'Pielea', 'thumbnail' => 'https://img.youtube.com/vi/video2/mqdefault.jpg'],
+                    ],
+                    'upcoming_events' => [
+                        [
+                            'id' => 1,
+                            'title' => 'Subcarpați - Concert Aniversar',
+                            'slug' => 'subcarpati-concert-aniversar',
+                            'event_date' => '2025-03-15',
+                            'start_time' => '20:00',
+                            'venue' => ['name' => 'Arenele Romane', 'city' => 'București'],
+                            'min_price' => 150,
+                            'currency' => 'RON',
+                            'image' => 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400&h=300&fit=crop',
+                            'is_sold_out' => false
+                        ],
+                        [
+                            'id' => 2,
+                            'title' => 'Subcarpați Live',
+                            'slug' => 'subcarpati-live-cluj',
+                            'event_date' => '2025-04-20',
+                            'start_time' => '21:00',
+                            'venue' => ['name' => 'BT Arena', 'city' => 'Cluj-Napoca'],
+                            'min_price' => 120,
+                            'currency' => 'RON',
+                            'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=300&fit=crop',
+                            'is_sold_out' => false
+                        ],
+                    ],
+                    'similar_artists' => [
+                        ['id' => 5, 'name' => 'Grasu XXL', 'slug' => 'grasu-xxl', 'image' => 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=200&h=200&fit=crop', 'city' => 'București', 'is_verified' => true],
+                        ['id' => 7, 'name' => 'Parazitii', 'slug' => 'parazitii', 'image' => 'https://images.unsplash.com/photo-1571609860108-e29b80ced4ef?w=200&h=200&fit=crop', 'city' => 'București', 'is_verified' => true],
+                        ['id' => 8, 'name' => 'CTC', 'slug' => 'ctc', 'image' => 'https://images.unsplash.com/photo-1619229666372-3c26c399a4cb?w=200&h=200&fit=crop', 'city' => 'București', 'is_verified' => false],
+                    ]
+                ]
+            ];
+
+        case 'artist.events':
+            $filter = $params['filter'] ?? 'upcoming';
+            $events = [
+                [
+                    'id' => 1,
+                    'title' => 'Subcarpați - Concert Aniversar',
+                    'slug' => 'subcarpati-concert-aniversar',
+                    'event_date' => '2025-03-15',
+                    'start_time' => '20:00',
+                    'end_time' => '23:00',
+                    'venue' => ['name' => 'Arenele Romane', 'city' => 'București', 'slug' => 'arenele-romane'],
+                    'min_price' => 150,
+                    'currency' => 'RON',
+                    'image' => 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400&h=300&fit=crop',
+                    'is_sold_out' => false
+                ],
+                [
+                    'id' => 2,
+                    'title' => 'Subcarpați Live',
+                    'slug' => 'subcarpati-live-cluj',
+                    'event_date' => '2025-04-20',
+                    'start_time' => '21:00',
+                    'end_time' => '00:00',
+                    'venue' => ['name' => 'BT Arena', 'city' => 'Cluj-Napoca', 'slug' => 'bt-arena'],
+                    'min_price' => 120,
+                    'currency' => 'RON',
+                    'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=300&fit=crop',
+                    'is_sold_out' => false
+                ],
+            ];
+            return [
+                'success' => true,
+                'data' => $events,
+                'meta' => ['current_page' => 1, 'last_page' => 1, 'per_page' => 10, 'total' => 2]
             ];
 
         // ==================== CUSTOMER AUTH (Demo Mode) ====================

@@ -177,4 +177,22 @@ class MarketplaceEventCategory extends Model
         $path[] = $this->getLocalizedName();
         return implode(' > ', $path);
     }
+
+    /**
+     * Get full image URL from stored path
+     */
+    public function getImageFullUrlAttribute(): ?string
+    {
+        if (empty($this->image_url)) {
+            return null;
+        }
+
+        // If already a full URL, return as-is
+        if (str_starts_with($this->image_url, 'http://') || str_starts_with($this->image_url, 'https://')) {
+            return $this->image_url;
+        }
+
+        // Convert relative path to full URL using Storage
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->image_url);
+    }
 }
