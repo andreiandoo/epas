@@ -342,7 +342,7 @@ const ArtistPage = {
         return {
             name: api.name,
             slug: api.slug,
-            image: api.image || api.portrait || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1920&h=800&fit=crop',
+            image: api.image || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1920&h=800&fit=crop',
             verified: api.is_verified,
             genres: (api.genres || []).map(g => g.name),
             stats: {
