@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers\Api\MarketplaceClient;
 
-use App\Models\MarketplaceEvent;
+use App\Models\Event;
+use App\Models\MarketplaceEventCategory;
 use App\Models\MarketplaceOrganizer;
-use App\Models\MarketplaceTicketType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
- * Public API for browsing marketplace events (organizer-created events)
+ * Public API for browsing marketplace events (stored in events table)
  */
 class MarketplaceEventsController extends BaseController
 {
@@ -19,22 +20,20 @@ class MarketplaceEventsController extends BaseController
     public function index(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
+        $language = $client->language ?? 'ro';
 
-        $query = MarketplaceEvent::where('marketplace_client_id', $client->id)
-            ->where('status', 'published')
-            ->where('is_public', true)
+        $query = Event::where('marketplace_client_id', $client->id)
+            ->whereNull('is_cancelled')
+            ->orWhere('is_cancelled', false)
             ->with([
-                'organizer:id,name,slug,logo,verified_at',
-                'ticketTypes' => function ($q) {
-                    $q->where('is_visible', true)
-                        ->where('status', 'on_sale')
-                        ->select(['id', 'marketplace_event_id', 'name', 'price', 'quantity', 'quantity_sold', 'quantity_reserved']);
-                },
+                'marketplaceOrganizer:id,name,slug,logo,verified_at',
+                'marketplaceEventCategory',
+                'venue:id,name,city,address',
             ]);
 
         // Filter upcoming only by default
         if (!$request->has('include_past')) {
-            $query->where('starts_at', '>=', now());
+            $query->where('event_date', '>=', now()->toDateString());
         }
 
         // Filters
@@ -51,109 +50,81 @@ class MarketplaceEventsController extends BaseController
             }
         }
 
+        // Filter by category (slug or name)
         if ($request->has('category')) {
-            $query->where('category', $request->category);
+            $categorySlug = $request->category;
+            $query->whereHas('marketplaceEventCategory', function ($q) use ($categorySlug) {
+                $q->where('slug', $categorySlug)
+                    ->orWhere('name->ro', 'like', "%{$categorySlug}%")
+                    ->orWhere('name->en', 'like', "%{$categorySlug}%");
+            });
         }
 
         if ($request->has('city')) {
-            $query->where('venue_city', 'like', '%' . $request->city . '%');
+            $city = $request->city;
+            $query->where(function ($q) use ($city) {
+                $q->whereHas('marketplaceCity', function ($mq) use ($city) {
+                    $mq->where('name->ro', 'like', "%{$city}%")
+                        ->orWhere('name->en', 'like', "%{$city}%");
+                })->orWhereHas('venue', function ($vq) use ($city) {
+                    $vq->where('city', 'like', "%{$city}%");
+                });
+            });
         }
 
         if ($request->has('from_date')) {
-            $query->where('starts_at', '>=', $request->from_date);
+            $query->where('event_date', '>=', $request->from_date);
         }
 
         if ($request->has('to_date')) {
-            $query->where('starts_at', '<=', $request->to_date);
+            $query->where('event_date', '<=', $request->to_date);
         }
 
         if ($request->has('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhere('venue_name', 'like', "%{$search}%")
-                    ->orWhere('venue_city', 'like', "%{$search}%")
-                    ->orWhereHas('organizer', function ($oq) use ($search) {
+            $query->where(function ($q) use ($search, $language) {
+                $q->where("title->{$language}", 'like', "%{$search}%")
+                    ->orWhere("description->{$language}", 'like', "%{$search}%")
+                    ->orWhereHas('venue', function ($vq) use ($search) {
+                        $vq->where('name->ro', 'like', "%{$search}%")
+                            ->orWhere('city', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('marketplaceOrganizer', function ($oq) use ($search) {
                         $oq->where('name', 'like', "%{$search}%");
                     });
             });
         }
 
-        // Price range
-        if ($request->has('min_price') || $request->has('max_price')) {
-            $query->whereHas('ticketTypes', function ($q) use ($request) {
-                $q->where('is_visible', true)->where('status', 'on_sale');
-                if ($request->has('min_price')) {
-                    $q->where('price', '>=', $request->min_price);
-                }
-                if ($request->has('max_price')) {
-                    $q->where('price', '<=', $request->max_price);
-                }
-            });
-        }
-
         // Featured only
-        if ($request->boolean('featured_only')) {
-            $query->where('is_featured', true);
-        }
-
-        // Has available tickets
-        if ($request->boolean('available_only')) {
-            $query->whereHas('ticketTypes', function ($q) {
-                $q->where('is_visible', true)
-                    ->where('status', 'on_sale')
-                    ->whereRaw('(quantity IS NULL OR quantity - quantity_sold - quantity_reserved > 0)');
-            });
+        if ($request->boolean('featured_only') || $request->boolean('featured')) {
+            $query->where('is_homepage_featured', true)
+                ->orWhere('is_general_featured', true);
         }
 
         // Sorting
-        $sortField = $request->get('sort', 'starts_at');
-        $allowedSorts = ['starts_at', 'name', 'created_at', 'tickets_sold', 'views'];
-        if (!in_array($sortField, $allowedSorts)) {
-            $sortField = 'starts_at';
+        $sort = $request->get('sort', 'date_asc');
+        switch ($sort) {
+            case 'date_desc':
+                $query->orderBy('event_date', 'desc')->orderBy('start_time', 'desc');
+                break;
+            case 'name_asc':
+                $query->orderBy("title->{$language}", 'asc');
+                break;
+            case 'name_desc':
+                $query->orderBy("title->{$language}", 'desc');
+                break;
+            case 'date_asc':
+            default:
+                $query->orderBy('event_date', 'asc')->orderBy('start_time', 'asc');
+                break;
         }
-        $sortDir = $request->get('order', 'asc') === 'desc' ? 'desc' : 'asc';
-        $query->orderBy($sortField, $sortDir);
 
         // Pagination
         $perPage = min((int) $request->get('per_page', 20), 100);
         $events = $query->paginate($perPage);
 
-        return $this->paginated($events, function ($event) {
-            $minPrice = $event->ticketTypes->min('price');
-            $maxPrice = $event->ticketTypes->max('price');
-            $totalAvailable = $event->ticketTypes->sum(function ($tt) {
-                if ($tt->quantity === null) {
-                    return 999;
-                }
-                return max(0, $tt->quantity - $tt->quantity_sold - $tt->quantity_reserved);
-            });
-
-            return [
-                'id' => $event->id,
-                'name' => $event->name,
-                'slug' => $event->slug,
-                'short_description' => $event->short_description,
-                'image' => $event->image,
-                'category' => $event->category,
-                'tags' => $event->tags,
-                'starts_at' => $event->starts_at->toIso8601String(),
-                'ends_at' => $event->ends_at?->toIso8601String(),
-                'venue_name' => $event->venue_name,
-                'venue_city' => $event->venue_city,
-                'is_featured' => $event->is_featured,
-                'organizer' => $event->organizer ? [
-                    'id' => $event->organizer->id,
-                    'name' => $event->organizer->name,
-                    'slug' => $event->organizer->slug,
-                    'logo' => $event->organizer->logo,
-                    'verified' => $event->organizer->verified_at !== null,
-                ] : null,
-                'price_from' => $minPrice,
-                'price_to' => $maxPrice !== $minPrice ? $maxPrice : null,
-                'has_availability' => $totalAvailable > 0,
-            ];
+        return $this->paginated($events, function ($event) use ($language) {
+            return $this->formatEvent($event, $language);
         });
     }
 
@@ -163,28 +134,23 @@ class MarketplaceEventsController extends BaseController
     public function featured(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
+        $language = $client->language ?? 'ro';
 
-        $events = MarketplaceEvent::where('marketplace_client_id', $client->id)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->where('is_featured', true)
-            ->where('starts_at', '>=', now())
-            ->with('organizer:id,name,slug,logo')
-            ->orderBy('starts_at')
+        $events = Event::where('marketplace_client_id', $client->id)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->where(function ($q) {
+                $q->where('is_homepage_featured', true)
+                    ->orWhere('is_general_featured', true);
+            })
+            ->where('event_date', '>=', now()->toDateString())
+            ->with(['marketplaceOrganizer:id,name,slug,logo', 'venue:id,name,city', 'marketplaceEventCategory'])
+            ->orderBy('event_date')
+            ->orderBy('start_time')
             ->limit(min((int) $request->get('limit', 10), 50))
             ->get()
-            ->map(function ($event) {
-                return [
-                    'id' => $event->id,
-                    'name' => $event->name,
-                    'slug' => $event->slug,
-                    'image' => $event->image,
-                    'starts_at' => $event->starts_at->toIso8601String(),
-                    'venue_name' => $event->venue_name,
-                    'venue_city' => $event->venue_city,
-                    'organizer' => $event->organizer?->name,
-                ];
-            });
+            ->map(fn ($event) => $this->formatEvent($event, $language));
 
         return $this->success(['events' => $events]);
     }
@@ -195,11 +161,9 @@ class MarketplaceEventsController extends BaseController
     public function show(Request $request, $identifier): JsonResponse
     {
         $client = $this->requireClient($request);
+        $language = $client->language ?? 'ro';
 
-        // Find by ID or slug
-        $query = MarketplaceEvent::where('marketplace_client_id', $client->id)
-            ->where('status', 'published')
-            ->where('is_public', true);
+        $query = Event::where('marketplace_client_id', $client->id);
 
         if (is_numeric($identifier)) {
             $query->where('id', $identifier);
@@ -208,73 +172,60 @@ class MarketplaceEventsController extends BaseController
         }
 
         $event = $query->with([
-            'organizer:id,name,slug,logo,description,website,social_links,verified_at',
-            'ticketTypes' => function ($q) {
-                $q->where('is_visible', true)
-                    ->orderBy('sort_order')
-                    ->orderBy('price');
-            },
+            'marketplaceOrganizer',
+            'venue',
+            'marketplaceEventCategory',
+            'ticketTypes',
         ])->first();
 
         if (!$event) {
             return $this->error('Event not found', 404);
         }
 
-        // Increment views
-        $event->increment('views');
+        $venue = $event->venue;
+        $organizer = $event->marketplaceOrganizer;
 
         return $this->success([
             'event' => [
                 'id' => $event->id,
-                'name' => $event->name,
+                'name' => $event->getTranslation('title', $language),
                 'slug' => $event->slug,
-                'description' => $event->description,
-                'short_description' => $event->short_description,
-                'image' => $event->image,
-                'cover_image' => $event->cover_image,
-                'gallery' => $event->gallery,
-                'category' => $event->category,
-                'tags' => $event->tags,
-                'starts_at' => $event->starts_at->toIso8601String(),
-                'ends_at' => $event->ends_at?->toIso8601String(),
-                'doors_open_at' => $event->doors_open_at?->toIso8601String(),
-                'venue_name' => $event->venue_name,
-                'venue_address' => $event->venue_address,
-                'venue_city' => $event->venue_city,
-                'capacity' => $event->capacity,
-                'max_tickets_per_order' => $event->max_tickets_per_order,
-                'sales_start_at' => $event->sales_start_at?->toIso8601String(),
-                'sales_end_at' => $event->sales_end_at?->toIso8601String(),
-                'is_featured' => $event->is_featured,
+                'description' => $event->getTranslation('description', $language),
+                'short_description' => $event->getTranslation('short_description', $language),
+                'image' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
+                'cover_image' => $event->hero_image_url ? Storage::disk('public')->url($event->hero_image_url) : null,
+                'category' => $event->marketplaceEventCategory?->getTranslation('name', $language),
+                'starts_at' => $event->event_date?->format('Y-m-d') . 'T' . ($event->start_time ?? '00:00:00'),
+                'ends_at' => $event->end_time ? $event->event_date?->format('Y-m-d') . 'T' . $event->end_time : null,
+                'doors_open_at' => $event->door_time ? $event->event_date?->format('Y-m-d') . 'T' . $event->door_time : null,
+                'venue_name' => $venue?->getTranslation('name', $language),
+                'venue_address' => $venue?->address ?? $event->address,
+                'venue_city' => $venue?->city,
+                'capacity' => $venue?->capacity,
+                'is_featured' => $event->is_homepage_featured || $event->is_general_featured,
             ],
-            'organizer' => $event->organizer ? [
-                'id' => $event->organizer->id,
-                'name' => $event->organizer->name,
-                'slug' => $event->organizer->slug,
-                'logo' => $event->organizer->logo,
-                'description' => $event->organizer->description,
-                'website' => $event->organizer->website,
-                'social_links' => $event->organizer->social_links,
-                'verified' => $event->organizer->verified_at !== null,
+            'organizer' => $organizer ? [
+                'id' => $organizer->id,
+                'name' => $organizer->name,
+                'slug' => $organizer->slug,
+                'logo' => $organizer->logo ? Storage::disk('public')->url($organizer->logo) : null,
+                'description' => $organizer->description,
+                'website' => $organizer->website,
+                'social_links' => $organizer->social_links,
+                'verified' => $organizer->verified_at !== null,
             ] : null,
-            'ticket_types' => $event->ticketTypes->map(function ($tt) {
-                $available = $tt->quantity === null
-                    ? null
-                    : max(0, $tt->quantity - $tt->quantity_sold - $tt->quantity_reserved);
-
+            'ticket_types' => $event->ticketTypes->map(function ($tt) use ($language) {
                 return [
                     'id' => $tt->id,
-                    'name' => $tt->name,
-                    'description' => $tt->description,
-                    'price' => (float) $tt->price,
-                    'currency' => $tt->currency,
-                    'available' => $available,
-                    'min_per_order' => $tt->min_per_order,
-                    'max_per_order' => $tt->max_per_order,
-                    'status' => $tt->status,
-                    'sale_starts_at' => $tt->sale_starts_at?->toIso8601String(),
-                    'sale_ends_at' => $tt->sale_ends_at?->toIso8601String(),
-                    'is_sold_out' => $available !== null && $available <= 0,
+                    'name' => $tt->getTranslation('name', $language) ?? $tt->name,
+                    'description' => $tt->getTranslation('description', $language) ?? $tt->description,
+                    'price' => (float) ($tt->price ?? $tt->price_cents / 100),
+                    'currency' => $tt->currency ?? 'RON',
+                    'available' => $tt->quantity_available ?? null,
+                    'min_per_order' => $tt->min_per_order ?? 1,
+                    'max_per_order' => $tt->max_per_order ?? 10,
+                    'status' => $tt->status ?? 'on_sale',
+                    'is_sold_out' => ($tt->quantity_available ?? 999) <= 0,
                 ];
             }),
         ]);
@@ -287,31 +238,23 @@ class MarketplaceEventsController extends BaseController
     {
         $client = $this->requireClient($request);
 
-        $event = MarketplaceEvent::where('marketplace_client_id', $client->id)
+        $event = Event::where('marketplace_client_id', $client->id)
             ->where('id', $eventId)
-            ->where('status', 'published')
             ->first();
 
         if (!$event) {
             return $this->error('Event not found', 404);
         }
 
-        $ticketTypes = MarketplaceTicketType::where('marketplace_event_id', $eventId)
-            ->where('is_visible', true)
-            ->where('status', 'on_sale')
-            ->orderBy('sort_order')
+        $ticketTypes = $event->ticketTypes()
             ->get()
             ->map(function ($tt) {
-                $available = $tt->quantity === null
-                    ? null
-                    : max(0, $tt->quantity - $tt->quantity_sold - $tt->quantity_reserved);
-
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
-                    'price' => (float) $tt->price,
-                    'available' => $available,
-                    'status' => $available === 0 ? 'sold_out' : 'available',
+                    'price' => (float) ($tt->price ?? $tt->price_cents / 100),
+                    'available' => $tt->quantity_available ?? null,
+                    'status' => ($tt->quantity_available ?? 999) <= 0 ? 'sold_out' : 'available',
                 ];
             });
 
@@ -328,20 +271,29 @@ class MarketplaceEventsController extends BaseController
     public function categories(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
+        $language = $client->language ?? 'ro';
 
-        $categories = MarketplaceEvent::where('marketplace_client_id', $client->id)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->where('starts_at', '>=', now())
-            ->whereNotNull('category')
-            ->selectRaw('category, COUNT(*) as event_count')
-            ->groupBy('category')
-            ->orderByDesc('event_count')
+        // Get categories that have events
+        $categoryIds = Event::where('marketplace_client_id', $client->id)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->where('event_date', '>=', now()->toDateString())
+            ->whereNotNull('marketplace_event_category_id')
+            ->selectRaw('marketplace_event_category_id, COUNT(*) as event_count')
+            ->groupBy('marketplace_event_category_id')
+            ->pluck('event_count', 'marketplace_event_category_id');
+
+        $categories = MarketplaceEventCategory::whereIn('id', $categoryIds->keys())
+            ->where('is_active', true)
+            ->orderBy('sort_order')
             ->get()
-            ->map(fn($item) => [
-                'name' => $item->category,
-                'slug' => \Illuminate\Support\Str::slug($item->category),
-                'event_count' => $item->event_count,
+            ->map(fn ($cat) => [
+                'id' => $cat->id,
+                'name' => $cat->getTranslation('name', $language),
+                'slug' => $cat->slug,
+                'icon' => $cat->icon,
+                'event_count' => $categoryIds[$cat->id] ?? 0,
             ]);
 
         return $this->success(['categories' => $categories]);
@@ -353,133 +305,54 @@ class MarketplaceEventsController extends BaseController
     public function cities(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
+        $language = $client->language ?? 'ro';
 
-        $cities = MarketplaceEvent::where('marketplace_client_id', $client->id)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->where('starts_at', '>=', now())
-            ->whereNotNull('venue_city')
-            ->selectRaw('venue_city, COUNT(*) as event_count')
-            ->groupBy('venue_city')
-            ->orderByDesc('event_count')
+        // Get cities from venues of events
+        $cities = Event::where('marketplace_client_id', $client->id)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->where('event_date', '>=', now()->toDateString())
+            ->with('venue:id,city')
             ->get()
-            ->map(fn($item) => [
-                'name' => $item->venue_city,
-                'event_count' => $item->event_count,
-            ]);
+            ->filter(fn ($e) => $e->venue?->city)
+            ->groupBy(fn ($e) => $e->venue->city)
+            ->map(fn ($group, $city) => [
+                'name' => $city,
+                'event_count' => $group->count(),
+            ])
+            ->sortByDesc('event_count')
+            ->values();
 
         return $this->success(['cities' => $cities]);
     }
 
     /**
-     * Get organizer profile with their events
+     * Format event for API response
      */
-    public function organizer(Request $request, $identifier): JsonResponse
+    protected function formatEvent(Event $event, string $language): array
     {
-        $client = $this->requireClient($request);
+        $venue = $event->venue;
+        $category = $event->marketplaceEventCategory;
 
-        $query = MarketplaceOrganizer::where('marketplace_client_id', $client->id)
-            ->where('status', 'active');
-
-        if (is_numeric($identifier)) {
-            $query->where('id', $identifier);
-        } else {
-            $query->where('slug', $identifier);
-        }
-
-        $organizer = $query->first();
-
-        if (!$organizer) {
-            return $this->error('Organizer not found', 404);
-        }
-
-        // Get upcoming events
-        $upcomingEvents = $organizer->events()
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->where('starts_at', '>=', now())
-            ->orderBy('starts_at')
-            ->limit(20)
-            ->get()
-            ->map(fn($e) => [
-                'id' => $e->id,
-                'name' => $e->name,
-                'slug' => $e->slug,
-                'image' => $e->image,
-                'starts_at' => $e->starts_at->toIso8601String(),
-                'venue_name' => $e->venue_name,
-                'venue_city' => $e->venue_city,
-            ]);
-
-        // Get past events count
-        $pastEventsCount = $organizer->events()
-            ->where('status', 'published')
-            ->where('starts_at', '<', now())
-            ->count();
-
-        return $this->success([
-            'organizer' => [
-                'id' => $organizer->id,
-                'name' => $organizer->name,
-                'slug' => $organizer->slug,
-                'logo' => $organizer->logo,
-                'description' => $organizer->description,
-                'website' => $organizer->website,
-                'social_links' => $organizer->social_links,
-                'verified' => $organizer->verified_at !== null,
-                'total_events' => $organizer->total_events,
-            ],
-            'upcoming_events' => $upcomingEvents,
-            'past_events_count' => $pastEventsCount,
-        ]);
-    }
-
-    /**
-     * List all organizers
-     */
-    public function organizers(Request $request): JsonResponse
-    {
-        $client = $this->requireClient($request);
-
-        $query = MarketplaceOrganizer::where('marketplace_client_id', $client->id)
-            ->where('status', 'active')
-            ->withCount(['events' => function ($q) {
-                $q->where('status', 'published')
-                    ->where('is_public', true)
-                    ->where('starts_at', '>=', now());
-            }]);
-
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->boolean('verified_only')) {
-            $query->whereNotNull('verified_at');
-        }
-
-        if ($request->boolean('has_events')) {
-            $query->having('events_count', '>', 0);
-        }
-
-        $sortField = $request->get('sort', 'name');
-        $query->orderBy($sortField === 'events' ? 'total_events' : $sortField);
-
-        $perPage = min((int) $request->get('per_page', 20), 100);
-        $organizers = $query->paginate($perPage);
-
-        return $this->paginated($organizers, fn($org) => [
-            'id' => $org->id,
-            'name' => $org->name,
-            'slug' => $org->slug,
-            'logo' => $org->logo,
-            'description' => $org->description ? \Illuminate\Support\Str::limit($org->description, 200) : null,
-            'verified' => $org->verified_at !== null,
-            'upcoming_events_count' => $org->events_count,
-            'total_events' => $org->total_events,
-        ]);
+        return [
+            'id' => $event->id,
+            'name' => $event->getTranslation('title', $language),
+            'slug' => $event->slug,
+            'short_description' => $event->getTranslation('short_description', $language),
+            'image' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
+            'category' => $category?->getTranslation('name', $language),
+            'starts_at' => $event->event_date?->format('Y-m-d') . 'T' . ($event->start_time ?? '00:00:00'),
+            'venue_name' => $venue?->getTranslation('name', $language),
+            'venue_city' => $venue?->city,
+            'is_featured' => $event->is_homepage_featured || $event->is_general_featured,
+            'organizer' => $event->marketplaceOrganizer ? [
+                'id' => $event->marketplaceOrganizer->id,
+                'name' => $event->marketplaceOrganizer->name,
+                'slug' => $event->marketplaceOrganizer->slug,
+                'logo' => $event->marketplaceOrganizer->logo,
+                'verified' => $event->marketplaceOrganizer->verified_at !== null,
+            ] : null,
+        ];
     }
 }

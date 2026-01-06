@@ -534,6 +534,27 @@ const AmbiletAPI = {
     },
 
     /**
+     * Get single venue details
+     */
+    async getVenue(slug) {
+        return this.get(`/venues/${slug}`);
+    },
+
+    /**
+     * Get list of venues
+     */
+    async getVenues(params = {}) {
+        return this.get('/venues', params);
+    },
+
+    /**
+     * Get featured venues
+     */
+    async getFeaturedVenues(limit = 6) {
+        return this.get('/venues/featured', { limit });
+    },
+
+    /**
      * Validate promo code
      */
     async validatePromoCode(code, eventId, cartTotal, ticketCount, customerEmail = null) {
