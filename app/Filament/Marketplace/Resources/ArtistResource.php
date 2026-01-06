@@ -65,8 +65,34 @@ class ArtistResource extends Resource
                         ->unique(ignoreRecord: true)
                         ->rule('alpha_dash')
                         ->placeholder('auto-generated-from-name'),
-                ])->columns(2),
 
+                    Forms\Components\Toggle::make('is_active')
+                        ->label('Activ')
+                        ->default(true),
+                    Forms\Components\Toggle::make('is_featured')
+                        ->label('Promovat'),
+                ])->columns(4),
+
+            // BIOGRAPHY - EN/RO
+            SC\Section::make('Biografie')
+                ->schema([
+                    SC\Tabs::make('Bio Translations')
+                        ->tabs([
+                            SC\Tabs\Tab::make('Română')
+                                ->schema([
+                                    Forms\Components\RichEditor::make('bio_html.ro')
+                                        ->label('Biografie (RO)')
+                                        ->columnSpanFull(),
+                                ]),
+                            SC\Tabs\Tab::make('English')
+                                ->schema([
+                                    Forms\Components\RichEditor::make('bio_html.en')
+                                        ->label('Biography (EN)')
+                                        ->columnSpanFull(),
+                                ]),
+                        ])->columnSpanFull(),
+                ]),
+            
             // IMAGES
             SC\Section::make('Media')
                 ->schema([
@@ -175,24 +201,6 @@ class ArtistResource extends Resource
                         ->searchable(),
                 ])->columns(2),
 
-            // EXTERNAL IDs
-            SC\Section::make('ID-uri Externe')
-                ->description('ID-urile pentru integrări cu servicii externe (pentru embed-uri și statistici)')
-                ->collapsible()
-                ->collapsed()
-                ->schema([
-                    Forms\Components\TextInput::make('spotify_id')
-                        ->label('Spotify Artist ID')
-                        ->placeholder('e.g. 4gzpq5DPGxSnKTe4SA8HAU')
-                        ->helperText('Se găsește în URL-ul Spotify după /artist/')
-                        ->prefixIcon('heroicon-o-musical-note'),
-                    Forms\Components\TextInput::make('youtube_id')
-                        ->label('YouTube Channel ID')
-                        ->placeholder('e.g. UCq-Fj5jknLsUf-MWSy4_brA')
-                        ->helperText('ID-ul canalului YouTube (nu numele)')
-                        ->prefixIcon('heroicon-o-play'),
-                ])->columns(2),
-
             // SOCIAL & LINKS
             SC\Section::make('Social Media & Link-uri')
                 ->collapsible()
@@ -228,6 +236,16 @@ class ArtistResource extends Resource
                         ->url()
                         ->placeholder('https://open.spotify.com/artist/...')
                         ->prefixIcon('heroicon-o-musical-note'),
+                    Forms\Components\TextInput::make('spotify_id')
+                        ->label('Spotify Artist ID')
+                        ->placeholder('e.g. 4gzpq5DPGxSnKTe4SA8HAU')
+                        ->helperText('Se găsește în URL-ul Spotify după /artist/')
+                        ->prefixIcon('heroicon-o-musical-note'),
+                    Forms\Components\TextInput::make('youtube_id')
+                        ->label('YouTube Channel ID')
+                        ->placeholder('e.g. UCq-Fj5jknLsUf-MWSy4_brA')
+                        ->helperText('ID-ul canalului YouTube (nu numele)')
+                        ->prefixIcon('heroicon-o-play'),
                 ])->columns(2),
 
             // SOCIAL STATS
@@ -359,37 +377,6 @@ class ArtistResource extends Resource
                         ->placeholder('https://...'),
                 ])->columns(4),
 
-            // BIOGRAPHY - EN/RO
-            SC\Section::make('Biografie')
-                ->schema([
-                    SC\Tabs::make('Bio Translations')
-                        ->tabs([
-                            SC\Tabs\Tab::make('Română')
-                                ->schema([
-                                    Forms\Components\RichEditor::make('bio_html.ro')
-                                        ->label('Biografie (RO)')
-                                        ->columnSpanFull(),
-                                ]),
-                            SC\Tabs\Tab::make('English')
-                                ->schema([
-                                    Forms\Components\RichEditor::make('bio_html.en')
-                                        ->label('Biography (EN)')
-                                        ->columnSpanFull(),
-                                ]),
-                        ])->columnSpanFull(),
-                ]),
-
-            // STATUS FLAGS
-            SC\Section::make('Status')
-                ->schema([
-                    Forms\Components\Toggle::make('is_active')
-                        ->label('Activ')
-                        ->default(true),
-                    Forms\Components\Toggle::make('is_featured')
-                        ->label('Promovat')
-                        ->helperText('Artistul va apărea în secțiunea de artiști promovați'),
-                ])->columns(2),
-
             // PARTNER NOTES (internal)
             SC\Section::make('Note interne')
                 ->description('Note interne despre acest artist (nu sunt vizibile public)')
@@ -402,7 +389,7 @@ class ArtistResource extends Resource
                         ->rows(4)
                         ->columnSpanFull(),
                 ]),
-        ]);
+        ]) ->columns(1);
     }
 
     public static function table(Table $table): Table

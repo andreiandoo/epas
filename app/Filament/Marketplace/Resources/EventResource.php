@@ -129,7 +129,8 @@ class EventResource extends Resource
                                 }
                             }
                         })
-                        ->helperText('The selected organizer will receive payouts for this event'),
+                        ->helperText('The selected organizer will receive payouts for this event')
+                        ->prefixIcon('heroicon-m-building-office-2'),
 
                     Forms\Components\Placeholder::make('organizer_info')
                         ->label('Organizer Details')
@@ -155,7 +156,7 @@ class EventResource extends Resource
                             $commissionRate = $organizer->commission_rate ?? $marketplace?->commission_rate ?? 5;
 
                             return new HtmlString("
-                                <div class='text-sm space-y-1'>
+                                <div class='space-y-1 text-sm'>
                                     <div><strong>Email:</strong> {$organizer->email}</div>
                                     <div><strong>Status:</strong> {$status} | {$verified}</div>
                                     <div><strong>Default Commission:</strong> {$commissionRate}%</div>
@@ -686,23 +687,23 @@ class EventResource extends Resource
                                 ->unique('id');
 
                             if ($allTaxes->isEmpty()) {
-                                return new HtmlString('<div class="text-sm text-gray-500 italic">Nu există taxe configurate pentru tipul de eveniment selectat.</div>');
+                                return new HtmlString('<div class="text-sm italic text-gray-500">Nu există taxe configurate pentru tipul de eveniment selectat.</div>');
                             }
 
                             $html = '<div class="space-y-2">';
 
                             // VAT payer status and tax display mode
                             $vatBadge = $isVatPayer
-                                ? '<span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">Plătitor TVA</span>'
-                                : '<span class="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">Neplătitor TVA</span>';
+                                ? '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full dark:bg-green-900 dark:text-green-200">Plătitor TVA</span>'
+                                : '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full dark:bg-gray-700 dark:text-gray-300">Neplătitor TVA</span>';
 
                             $modeBadge = $taxDisplayMode === 'added'
-                                ? '<span class="ml-2 inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">Taxe adăugate la preț</span>'
-                                : '<span class="ml-2 inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">Taxe incluse în preț</span>';
+                                ? '<span class="inline-flex items-center px-2 py-1 ml-2 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">Taxe adăugate la preț</span>'
+                                : '<span class="inline-flex items-center px-2 py-1 ml-2 text-xs font-medium text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-200">Taxe incluse în preț</span>';
 
-                            $html .= '<div class="mb-3 flex flex-wrap items-center gap-2">' . $vatBadge . $modeBadge . '</div>';
+                            $html .= '<div class="flex flex-wrap items-center gap-2 mb-3">' . $vatBadge . $modeBadge . '</div>';
 
-                            $html .= '<div class="grid grid-cols-1 md:grid-cols-2 gap-2">';
+                            $html .= '<div class="grid grid-cols-1 gap-2 md:grid-cols-2">';
 
                             foreach ($allTaxes as $tax) {
                                 $isVatTax = str_contains(strtolower($tax->name ?? ''), 'tva') ||
@@ -728,10 +729,10 @@ class EventResource extends Resource
                                 // Custom SVG icon
                                 $iconHtml = $tax->icon_svg ? '<span class="inline-flex items-center mr-1">' . $tax->icon_svg . '</span>' : '';
 
-                                $html .= '<div class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">';
+                                $html .= '<div class="flex items-center justify-between p-2 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-700">';
                                 $html .= '<div class="flex items-center gap-2">';
                                 $html .= $iconHtml;
-                                $html .= '<span class="font-medium text-sm text-gray-900 dark:text-white">' . e($tax->name) . '</span>';
+                                $html .= '<span class="text-sm font-medium text-gray-900 dark:text-white">' . e($tax->name) . '</span>';
                                 $html .= $vatBadgeSmall;
                                 $html .= '</div>';
                                 $html .= '<div class="text-right">';
