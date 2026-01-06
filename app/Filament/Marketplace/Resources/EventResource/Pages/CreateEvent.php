@@ -30,4 +30,10 @@ class CreateEvent extends CreateRecord
 
         return $data;
     }
+
+    protected function getRedirectUrl(): string
+    {
+        // Redirect to edit page instead of view after creation
+        return static::getResource()::getUrl('edit', ['record' => $this->record]);
+    }
 }

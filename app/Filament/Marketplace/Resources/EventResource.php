@@ -1341,7 +1341,10 @@ class EventResource extends Resource
                 ]),
             ])
             ->checkIfRecordIsSelectableUsing(fn (Event $record) => $record->tenant_id === $marketplace?->id)
-            ->defaultSort('created_at', 'desc');
+            ->defaultSort('created_at', 'desc')
+            ->recordUrl(fn (Event $record) => $record->marketplace_client_id === $marketplace?->id
+                ? static::getUrl('edit', ['record' => $record])
+                : static::getUrl('view-guest', ['record' => $record]));
     }
 
     public static function getRelations(): array

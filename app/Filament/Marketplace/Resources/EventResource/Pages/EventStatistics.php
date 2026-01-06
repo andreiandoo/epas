@@ -3,6 +3,7 @@
 namespace App\Filament\Marketplace\Resources\EventResource\Pages;
 
 use App\Filament\Marketplace\Resources\EventResource;
+use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\Ticket;
@@ -19,6 +20,7 @@ use Illuminate\Support\Carbon;
 class EventStatistics extends Page
 {
     use InteractsWithRecord;
+    use HasMarketplaceContext;
 
     protected static string $resource = EventResource::class;
     protected static ?string $title = 'Event Statistics';
