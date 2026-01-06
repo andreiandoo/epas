@@ -87,6 +87,10 @@ class ManagePaymentConfig extends ManageRecords
                             'netopia' => 'Netopia Payments (mobilPay)',
                             'euplatesc' => 'EuPlatesc',
                             'payu' => 'PayU',
+                            'revolut' => 'Revolut',
+                            'paypal' => 'PayPal',
+                            'klarna' => 'Klarna (Buy Now Pay Later)',
+                            'sms' => 'SMS Payment',
                         ])
                         ->required()
                         ->live()
@@ -223,6 +227,172 @@ class ManagePaymentConfig extends ManageRecords
                 ->visible(fn (Forms\Get $get) => $tenant->payment_processor === 'payu')
                 ->columns(1),
 
+            // Revolut Configuration
+            SC\Section::make('Revolut Configuration')
+                ->description('Enter your Revolut Merchant API credentials')
+                ->schema([
+                    Forms\Components\TextInput::make('revolut_api_key')
+                        ->label('API Key (Secret Key)')
+                        ->password()
+                        ->revealable()
+                        ->placeholder('sk_...')
+                        ->helperText('Secret key from Revolut Business API')
+                        ->maxLength(255),
+
+                    Forms\Components\TextInput::make('revolut_merchant_id')
+                        ->label('Merchant ID (Public Key)')
+                        ->placeholder('pk_...')
+                        ->helperText('Public key for frontend widget (optional)')
+                        ->maxLength(255),
+
+                    Forms\Components\TextInput::make('revolut_webhook_secret')
+                        ->label('Webhook Secret')
+                        ->password()
+                        ->revealable()
+                        ->placeholder('Your webhook signing secret')
+                        ->helperText('For webhook signature verification (optional)')
+                        ->maxLength(255),
+
+                    Forms\Components\Placeholder::make('revolut_callback_url')
+                        ->label('Webhook URL')
+                        ->content(fn () => route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'revolut']))
+                        ->helperText('Add this URL to your Revolut Business webhook settings'),
+                ])
+                ->visible(fn (Forms\Get $get) => $tenant->payment_processor === 'revolut')
+                ->columns(1),
+
+            // PayPal Configuration
+            SC\Section::make('PayPal Configuration')
+                ->description('Enter your PayPal REST API credentials')
+                ->schema([
+                    Forms\Components\TextInput::make('paypal_client_id')
+                        ->label('Client ID')
+                        ->placeholder('Your PayPal client ID')
+                        ->helperText('Client ID from PayPal Developer Dashboard')
+                        ->maxLength(255),
+
+                    Forms\Components\TextInput::make('paypal_client_secret')
+                        ->label('Client Secret')
+                        ->password()
+                        ->revealable()
+                        ->placeholder('Your PayPal client secret')
+                        ->helperText('Client secret for API authentication')
+                        ->maxLength(255),
+
+                    Forms\Components\TextInput::make('paypal_webhook_id')
+                        ->label('Webhook ID (Optional)')
+                        ->placeholder('Your PayPal webhook ID')
+                        ->helperText('For webhook signature verification')
+                        ->maxLength(255),
+
+                    Forms\Components\Placeholder::make('paypal_callback_url')
+                        ->label('Webhook URL')
+                        ->content(fn () => route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'paypal']))
+                        ->helperText('Add this URL to your PayPal Developer webhook settings'),
+                ])
+                ->visible(fn (Forms\Get $get) => $tenant->payment_processor === 'paypal')
+                ->columns(1),
+
+            // Klarna Configuration
+            SC\Section::make('Klarna Configuration')
+                ->description('Enter your Klarna Payments API credentials')
+                ->schema([
+                    Forms\Components\TextInput::make('klarna_api_username')
+                        ->label('API Username (UID)')
+                        ->placeholder('K12345_abcdef123456...')
+                        ->helperText('Username from Klarna Merchant Portal')
+                        ->maxLength(255),
+
+                    Forms\Components\TextInput::make('klarna_api_password')
+                        ->label('API Password')
+                        ->password()
+                        ->revealable()
+                        ->placeholder('Your Klarna API password')
+                        ->helperText('Password for API authentication')
+                        ->maxLength(255),
+
+                    Forms\Components\Select::make('klarna_region')
+                        ->label('Region')
+                        ->options([
+                            'eu' => 'Europe (EU)',
+                            'na' => 'North America (NA)',
+                            'oc' => 'Oceania (OC)',
+                        ])
+                        ->default('eu')
+                        ->helperText('Select the Klarna region for your account'),
+
+                    Forms\Components\Placeholder::make('klarna_callback_url')
+                        ->label('Webhook URL')
+                        ->content(fn () => route('webhooks.tenant-payment', ['tenant' => $tenant->id, 'processor' => 'klarna']))
+                        ->helperText('Add this URL to your Klarna Merchant Portal'),
+
+                    Forms\Components\Placeholder::make('klarna_payment_methods')
+                        ->label('Supported Payment Methods')
+                        ->content(new \Illuminate\Support\HtmlString('
+                            <ul class="list-disc pl-4 text-sm">
+                                <li><strong>Pay Later</strong> - Pay in 30 days</li>
+                                <li><strong>Pay in 3</strong> - Split into 3 interest-free payments</li>
+                                <li><strong>Financing</strong> - Monthly installments</li>
+                            </ul>
+                        ')),
+                ])
+                ->visible(fn (Forms\Get $get) => $tenant->payment_processor === 'klarna')
+                ->columns(1),
+
+            // SMS Payment Configuration
+            SC\Section::make('SMS Payment Configuration')
+                ->description('Configure SMS-based payment collection using Twilio')
+                ->schema([
+                    Forms\Components\TextInput::make('sms_twilio_sid')
+                        ->label('Twilio Account SID')
+                        ->placeholder('AC...')
+                        ->helperText('Account SID from Twilio Console')
+                        ->maxLength(255),
+
+                    Forms\Components\TextInput::make('sms_twilio_auth_token')
+                        ->label('Twilio Auth Token')
+                        ->password()
+                        ->revealable()
+                        ->placeholder('Your Twilio auth token')
+                        ->helperText('Auth token for API authentication')
+                        ->maxLength(255),
+
+                    Forms\Components\TextInput::make('sms_twilio_phone_number')
+                        ->label('Twilio Phone Number')
+                        ->placeholder('+1234567890')
+                        ->helperText('Your Twilio phone number in E.164 format')
+                        ->maxLength(20),
+
+                    Forms\Components\Select::make('sms_fallback_processor')
+                        ->label('Fallback Payment Processor')
+                        ->options([
+                            'stripe' => 'Stripe',
+                            'paypal' => 'PayPal',
+                            'revolut' => 'Revolut',
+                            'klarna' => 'Klarna',
+                        ])
+                        ->default('stripe')
+                        ->helperText('The processor that will handle the actual payment after SMS link click'),
+
+                    Forms\Components\Placeholder::make('sms_how_it_works')
+                        ->label('How SMS Payment Works')
+                        ->content(new \Illuminate\Support\HtmlString('
+                            <ol class="list-decimal pl-4 text-sm space-y-1">
+                                <li>Customer receives SMS with payment link</li>
+                                <li>Customer clicks link to open secure payment page</li>
+                                <li>Payment is processed via the fallback processor</li>
+                                <li>Customer receives SMS confirmation on success</li>
+                            </ol>
+                        ')),
+
+                    Forms\Components\Placeholder::make('sms_status_webhook_url')
+                        ->label('Twilio Status Webhook URL')
+                        ->content(fn () => url('/webhooks/twilio-sms-status/' . $tenant->slug))
+                        ->helperText('Optional: Add this URL in Twilio for delivery status updates'),
+                ])
+                ->visible(fn (Forms\Get $get) => $tenant->payment_processor === 'sms')
+                ->columns(1),
+
             SC\Section::make('Important Notes')
                 ->description('Security and best practices')
                 ->schema([
@@ -274,6 +444,31 @@ class ManagePaymentConfig extends ManageRecords
                     $data['payu_merchant_id'] = $config->payu_merchant_id;
                     $data['payu_secret_key'] = $config->payu_secret_key;
                     break;
+
+                case 'revolut':
+                    $data['revolut_api_key'] = $config->revolut_api_key;
+                    $data['revolut_merchant_id'] = $config->revolut_merchant_id;
+                    $data['revolut_webhook_secret'] = $config->revolut_webhook_secret;
+                    break;
+
+                case 'paypal':
+                    $data['paypal_client_id'] = $config->paypal_client_id;
+                    $data['paypal_client_secret'] = $config->paypal_client_secret;
+                    $data['paypal_webhook_id'] = $config->paypal_webhook_id;
+                    break;
+
+                case 'klarna':
+                    $data['klarna_api_username'] = $config->klarna_api_username;
+                    $data['klarna_api_password'] = $config->klarna_api_password;
+                    $data['klarna_region'] = $config->klarna_region ?? 'eu';
+                    break;
+
+                case 'sms':
+                    $data['sms_twilio_sid'] = $config->sms_twilio_sid;
+                    $data['sms_twilio_auth_token'] = $config->sms_twilio_auth_token;
+                    $data['sms_twilio_phone_number'] = $config->sms_twilio_phone_number;
+                    $data['sms_fallback_processor'] = $config->sms_fallback_processor ?? 'stripe';
+                    break;
             }
         }
 
@@ -320,6 +515,31 @@ class ManagePaymentConfig extends ManageRecords
             case 'payu':
                 $configData['payu_merchant_id'] = $data['payu_merchant_id'] ?? null;
                 $configData['payu_secret_key'] = $data['payu_secret_key'] ?? null;
+                break;
+
+            case 'revolut':
+                $configData['revolut_api_key'] = $data['revolut_api_key'] ?? null;
+                $configData['revolut_merchant_id'] = $data['revolut_merchant_id'] ?? null;
+                $configData['revolut_webhook_secret'] = $data['revolut_webhook_secret'] ?? null;
+                break;
+
+            case 'paypal':
+                $configData['paypal_client_id'] = $data['paypal_client_id'] ?? null;
+                $configData['paypal_client_secret'] = $data['paypal_client_secret'] ?? null;
+                $configData['paypal_webhook_id'] = $data['paypal_webhook_id'] ?? null;
+                break;
+
+            case 'klarna':
+                $configData['klarna_api_username'] = $data['klarna_api_username'] ?? null;
+                $configData['klarna_api_password'] = $data['klarna_api_password'] ?? null;
+                $configData['klarna_region'] = $data['klarna_region'] ?? 'eu';
+                break;
+
+            case 'sms':
+                $configData['sms_twilio_sid'] = $data['sms_twilio_sid'] ?? null;
+                $configData['sms_twilio_auth_token'] = $data['sms_twilio_auth_token'] ?? null;
+                $configData['sms_twilio_phone_number'] = $data['sms_twilio_phone_number'] ?? null;
+                $configData['sms_fallback_processor'] = $data['sms_fallback_processor'] ?? 'stripe';
                 break;
         }
 

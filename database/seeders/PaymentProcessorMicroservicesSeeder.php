@@ -78,6 +78,74 @@ class PaymentProcessorMicroservicesSeeder extends Seeder
                 'is_active' => true,
                 'sort_order' => 4,
             ],
+            [
+                'name' => ['en' => 'Revolut Integration', 'ro' => 'Integrare Revolut'],
+                'slug' => 'payment-revolut',
+                'short_description' => [
+                    'en' => 'Accept payments via Revolut Business - modern fintech solution',
+                    'ro' => 'Acceptă plăți prin Revolut Business - soluție fintech modernă'
+                ],
+                'description' => [
+                    'en' => 'Integrate Revolut Business as your payment processor. Modern fintech solution with competitive rates and fast settlements. Supports cards and Revolut Pay. You need an active Revolut Business account with Merchant API access. Configure your API keys in Settings after activation.',
+                    'ro' => 'Integrează Revolut Business ca procesator de plăți. Soluție fintech modernă cu rate competitive și decontări rapide. Suportă carduri și Revolut Pay. Ai nevoie de un cont Revolut Business activ cu acces la Merchant API. Configurează cheile API în Setări după activare.'
+                ],
+                'pricing_model' => 'one_time',
+                'price' => 0,
+                'category' => 'payment_processor',
+                'is_active' => true,
+                'sort_order' => 5,
+            ],
+            [
+                'name' => ['en' => 'PayPal Integration', 'ro' => 'Integrare PayPal'],
+                'slug' => 'payment-paypal',
+                'short_description' => [
+                    'en' => 'Accept payments via PayPal - trusted worldwide',
+                    'ro' => 'Acceptă plăți prin PayPal - de încredere în întreaga lume'
+                ],
+                'description' => [
+                    'en' => 'Integrate PayPal as your payment processor. Globally trusted payment platform supporting PayPal balance, cards, and Pay Later options. You need an active PayPal Business account. Configure your API credentials in Settings after activation.',
+                    'ro' => 'Integrează PayPal ca procesator de plăți. Platformă de plată de încredere la nivel global care suportă sold PayPal, carduri și opțiuni Pay Later. Ai nevoie de un cont PayPal Business activ. Configurează credențialele API în Setări după activare.'
+                ],
+                'pricing_model' => 'one_time',
+                'price' => 0,
+                'category' => 'payment_processor',
+                'is_active' => true,
+                'sort_order' => 6,
+            ],
+            [
+                'name' => ['en' => 'Klarna Integration', 'ro' => 'Integrare Klarna'],
+                'slug' => 'payment-klarna',
+                'short_description' => [
+                    'en' => 'Accept payments via Klarna - buy now, pay later',
+                    'ro' => 'Acceptă plăți prin Klarna - cumpără acum, plătește mai târziu'
+                ],
+                'description' => [
+                    'en' => 'Integrate Klarna as your payment processor. Offer flexible payment options including Pay Later, Pay Now, and installment plans. Popular in Europe. You need an active Klarna merchant account. Configure your credentials in Settings after activation.',
+                    'ro' => 'Integrează Klarna ca procesator de plăți. Oferă opțiuni de plată flexibile inclusiv Plătește Mai Târziu, Plătește Acum și planuri de rate. Popular în Europa. Ai nevoie de un cont de comerciant Klarna activ. Configurează credențialele în Setări după activare.'
+                ],
+                'pricing_model' => 'one_time',
+                'price' => 0,
+                'category' => 'payment_processor',
+                'is_active' => true,
+                'sort_order' => 7,
+            ],
+            [
+                'name' => ['en' => 'SMS Payments', 'ro' => 'Plăți prin SMS'],
+                'slug' => 'payment-sms',
+                'short_description' => [
+                    'en' => 'Send payment links via SMS to customers',
+                    'ro' => 'Trimite linkuri de plată prin SMS către clienți'
+                ],
+                'description' => [
+                    'en' => 'Send payment requests and reminders via SMS. Customers receive a secure payment link on their phone and can complete payment using any configured payment processor. Includes delivery tracking, scheduled reminders, and payment confirmations. Requires Twilio account for SMS delivery. Configure your Twilio credentials and fallback payment processor in Settings after activation.',
+                    'ro' => 'Trimite cereri de plată și memento-uri prin SMS. Clienții primesc un link de plată securizat pe telefon și pot finaliza plata folosind orice procesator de plată configurat. Include urmărirea livrării, memento-uri programate și confirmări de plată. Necesită cont Twilio pentru livrarea SMS. Configurează credențialele Twilio și procesatorul de plată de rezervă în Setări după activare.'
+                ],
+                'pricing_model' => 'one_time',
+                'price' => 0,
+                'category' => 'payment_processor',
+                'is_active' => true,
+                'sort_order' => 8,
+            ],
         ];
 
         foreach ($processors as $processor) {
@@ -87,6 +155,6 @@ class PaymentProcessorMicroservicesSeeder extends Seeder
             );
         }
 
-        $this->command->info('Created 4 payment processor microservices');
+        $this->command->info('Created 8 payment processor microservices');
     }
 }
