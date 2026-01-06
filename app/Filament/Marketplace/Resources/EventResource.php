@@ -1111,14 +1111,12 @@ class EventResource extends Resource
                                 }
                             }
 
-                            // Get tenant's primary domain for absolute URLs
-                            $primaryDomain = $marketplace?->domains()
-                                ->where('is_primary', true)
-                                ->where('is_active', true)
-                                ->first();
-                            $baseUrl = $primaryDomain
-                                ? 'https://' . $primaryDomain->domain
-                                : ($marketplace?->website ?? '');
+                            // Get marketplace's website URL (MarketplaceClient doesn't have domains like Tenant)
+                            $baseUrl = $marketplace?->website ?? '';
+                            // Ensure it has https:// prefix
+                            if ($baseUrl && ! str_starts_with($baseUrl, 'http://') && ! str_starts_with($baseUrl, 'https://')) {
+                                $baseUrl = 'https://' . $baseUrl;
+                            }
 
                             // Build absolute event URL
                             $eventUrl = $baseUrl && $slug ? "{$baseUrl}/event/{$slug}" : '';
