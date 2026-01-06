@@ -109,15 +109,67 @@ class ArtistResource extends Resource
                 ->schema([
                     Forms\Components\Select::make('artistTypes')
                         ->label('Tip artist')
-                        ->relationship(name: 'artistTypes', titleAttribute: 'id')
+                        ->relationship(
+                            name: 'artistTypes',
+                            titleAttribute: 'id',
+                            modifyQueryUsing: fn (Builder $query) => $query->orderByRaw("JSON_EXTRACT(name, '$.ro') ASC")
+                        )
                         ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en') ?: ($record->name['ro'] ?? $record->name['en'] ?? 'N/A'))
+                        ->getSearchResultsUsing(function (string $search): array {
+                            return \App\Models\ArtistType::query()
+                                ->where(function ($query) use ($search) {
+                                    $query->whereRaw("LOWER(JSON_EXTRACT(name, '$.ro')) LIKE ?", ['%' . strtolower($search) . '%'])
+                                        ->orWhereRaw("LOWER(JSON_EXTRACT(name, '$.en')) LIKE ?", ['%' . strtolower($search) . '%']);
+                                })
+                                ->orderByRaw("JSON_EXTRACT(name, '$.ro') ASC")
+                                ->limit(50)
+                                ->get()
+                                ->mapWithKeys(fn ($type) => [$type->id => $type->getTranslation('name', 'ro') ?: $type->getTranslation('name', 'en')])
+                                ->toArray();
+                        })
                         ->multiple()
                         ->preload()
                         ->searchable(),
                     Forms\Components\Select::make('artistGenres')
                         ->label('Genuri muzicale')
-                        ->relationship(name: 'artistGenres', titleAttribute: 'id')
+                        ->relationship(
+                            name: 'artistGenres',
+                            titleAttribute: 'id',
+                            modifyQueryUsing: fn (Builder $query) => $query->orderByRaw("JSON_EXTRACT(name, '$.ro') ASC")
+                        )
                         ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en') ?: ($record->name['ro'] ?? $record->name['en'] ?? 'N/A'))
+                        ->getSearchResultsUsing(function (string $search): array {
+                            return \App\Models\ArtistGenre::query()
+                                ->where(function ($query) use ($search) {
+                                    $query->whereRaw("LOWER(JSON_EXTRACT(name, '$.ro')) LIKE ?", ['%' . strtolower($search) . '%'])
+                                        ->orWhereRaw("LOWER(JSON_EXTRACT(name, '$.en')) LIKE ?", ['%' . strtolower($search) . '%']);
+                                })
+                                ->orderByRaw("JSON_EXTRACT(name, '$.ro') ASC")
+                                ->limit(50)
+                                ->get()
+                                ->mapWithKeys(fn ($genre) => [$genre->id => $genre->getTranslation('name', 'ro') ?: $genre->getTranslation('name', 'en')])
+                                ->toArray();
+                        })
+                        ->createOptionForm([
+                            Forms\Components\TextInput::make('name.ro')
+                                ->label('Nume (RO)')
+                                ->required(),
+                            Forms\Components\TextInput::make('name.en')
+                                ->label('Nume (EN)'),
+                            Forms\Components\TextInput::make('slug')
+                                ->label('Slug')
+                                ->helperText('Se generează automat dacă e gol'),
+                        ])
+                        ->createOptionUsing(function (array $data): int {
+                            $slug = $data['slug'] ?? Str::slug($data['name']['ro'] ?? $data['name']['en'] ?? 'genre');
+                            return \App\Models\ArtistGenre::create([
+                                'name' => array_filter([
+                                    'ro' => $data['name']['ro'] ?? null,
+                                    'en' => $data['name']['en'] ?? null,
+                                ]),
+                                'slug' => $slug,
+                            ])->id;
+                        })
                         ->multiple()
                         ->preload()
                         ->searchable(),

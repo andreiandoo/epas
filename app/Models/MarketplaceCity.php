@@ -184,8 +184,9 @@ class MarketplaceCity extends Model
             return $this->image_url;
         }
 
-        // Convert storage path to absolute URL (prepend APP_URL)
-        return url(\Illuminate\Support\Facades\Storage::url($this->image_url));
+        // Use url() helper to always return absolute URL with APP_URL
+        // This ensures images are served from core.tixello.com, not the frontend domain
+        return url('storage/' . ltrim($this->image_url, '/'));
     }
 
     /**
@@ -202,7 +203,7 @@ class MarketplaceCity extends Model
             return $this->cover_image_url;
         }
 
-        // Convert storage path to absolute URL (prepend APP_URL)
-        return url(\Illuminate\Support\Facades\Storage::url($this->cover_image_url));
+        // Use url() helper to always return absolute URL with APP_URL
+        return url('storage/' . ltrim($this->cover_image_url, '/'));
     }
 }

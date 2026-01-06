@@ -35,24 +35,23 @@ require_once __DIR__ . '/includes/header.php';
     <!-- Hero Image (loaded via JS) -->
     <img id="heroImage" src="" alt="" class="absolute inset-0 w-full h-full object-cover object-[center_30%] hidden">
     <div class="absolute inset-0 bg-gradient-to-b from-black/20 to-black/70"></div>
-    <div class="relative z-10 flex flex-col justify-end h-full px-6 pb-10 mx-auto max-w-7xl">
-        <!-- Verified Badge -->
-        <div class="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-lg px-3.5 py-2 rounded-full mb-4 w-fit">
-            <div class="w-[18px] h-[18px] bg-blue-500 rounded-full flex items-center justify-center">
-                <svg class="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+    <div class="relative z-10 flex flex-col justify-end h-full px-6 pb-20 mx-auto max-w-7xl">
+        <!-- Genre Tags -->
+        <div id="genreTags" class="flex flex-wrap gap-2 mb-4">
+            <span class="inline-block w-20 h-8 rounded-full bg-white/20 animate-pulse"></span>
+            <span class="inline-block w-24 h-8 rounded-full bg-white/20 animate-pulse"></span>
+        </div>
+        <!-- Artist Name -->
+        <div class="flex items-center gap-x-4">
+            <h1 id="artistName" class="text-[56px] font-extrabold text-white mb-4 leading-tight">
+                <span class="inline-block rounded h-14 w-96 bg-white/20 animate-pulse"></span>
+            </h1>
+            <!-- Verified Badge -->
+            <div class="w-[34px] h-[34px] bg-blue-500 rounded-full flex items-center justify-center">
+                <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
                     <path d="M20 6L9 17l-5-5"/>
                 </svg>
             </div>
-            <span class="text-[13px] font-semibold text-white">Artist verificat</span>
-        </div>
-        <!-- Artist Name -->
-        <h1 id="artistName" class="text-[56px] font-extrabold text-white mb-4 leading-tight">
-            <span class="inline-block rounded h-14 w-96 bg-white/20 animate-pulse"></span>
-        </h1>
-        <!-- Genre Tags -->
-        <div id="genreTags" class="flex flex-wrap gap-2">
-            <span class="w-16 h-8 rounded-full bg-white/20 animate-pulse"></span>
-            <span class="w-20 h-8 rounded-full bg-white/20 animate-pulse"></span>
         </div>
     </div>
 </section>
@@ -110,7 +109,7 @@ require_once __DIR__ . '/includes/header.php';
                 <a href="#" id="socialFacebook" class="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-[13px] font-medium hover:bg-[#1877F2] hover:text-white hover:border-[#1877F2] transition-colors hidden" target="_blank">
                     <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                 </a>
-                <a href="#" id="socialInstagram" class="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-[13px] font-medium hover:bg-gradient-to-r hover:from-[#F58529] hover:via-[#DD2A7B] hover:to-[#8134AF] hover:text-white hover:border-[#DD2A7B] transition-colors hidden" target="_blank">
+                <a href="#" id="socialInstagram" class="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-[13px] font-medium hover:bg-gradient-to-r hover:from-[#F58529] hover:via-[#DD2A7B] hover:to-[#8134AF] hover:text-white hover:border-transparent transition-colors hidden" target="_blank">
                     <svg class="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
                 </a>
                 <a href="#" id="socialYoutube" class="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-500 text-[13px] font-medium hover:bg-[#FF0000] hover:text-white hover:border-[#FF0000] transition-colors hidden" target="_blank">
@@ -130,7 +129,6 @@ require_once __DIR__ . '/includes/header.php';
     <section class="mt-10">
         <div class="flex items-center justify-between mb-5">
             <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
-                <span class="text-2xl">🎤</span>
                 Concerte viitoare
             </h2>
             <a href="#" id="viewAllEventsLink" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
@@ -161,13 +159,6 @@ require_once __DIR__ . '/includes/header.php';
 
     <!-- About Section -->
     <section class="mt-10">
-        <div class="flex items-center justify-between mb-5">
-            <h2 class="text-[22px] font-bold text-gray-900 flex items-center gap-2.5">
-                <span class="text-2xl">📖</span>
-                Despre artist
-            </h2>
-        </div>
-
         <div class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
             <!-- About Card -->
             <div id="aboutCard" class="bg-white border border-gray-200 shadow-sm rounded-2xl p-7">
@@ -199,7 +190,7 @@ require_once __DIR__ . '/includes/header.php';
                 <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                 </svg>
-                Agenție de Booking
+                Agenția de Booking
             </h2>
         </div>
         <div id="bookingAgencyContent" class="flex items-center justify-between gap-4">
@@ -244,7 +235,7 @@ require_once __DIR__ . '/includes/header.php';
 
     <!-- Spotify Section -->
     <section id="spotifySection" class="mt-10">
-        <div class="grid items-center grid-cols-1 gap-10 p-8 bg-white border border-gray-200 shadow-sm rounded-2xl lg:grid-cols-2">
+        <div class="grid items-center grid-cols-1 gap-10 p-8 bg-white lg:grid-cols-2">
             <div>
                 <h3 class="text-[22px] font-bold text-gray-900 mb-3 flex items-center gap-2.5">
                     <svg class="w-7 h-7 text-[#1DB954]" viewBox="0 0 24 24" fill="currentColor">
@@ -476,7 +467,7 @@ const ArtistPage = {
         document.getElementById('statsContainer').innerHTML =
             '<div class="text-center flex-1 min-w-[100px]">' +
                 '<div class="text-[28px] font-extrabold text-gray-900">' + data.stats.spotifyListeners + '</div>' +
-                '<div class="text-[13px] text-gray-500 mt-1">Ascultători Spotify</div>' +
+                '<div class="text-[13px] text-gray-500 mt-1">Ascultători lunari</div>' +
             '</div>' + divider +
             '<div class="text-center flex-1 min-w-[100px]">' +
                 '<div class="text-[28px] font-extrabold text-gray-900">' + data.stats.totalFollowers + '</div>' +
@@ -569,7 +560,7 @@ const ArtistPage = {
                 }
 
                 if (data.bookingAgency.email) {
-                    agencyHtml += '<a href="mailto:' + data.bookingAgency.email + '" class="flex items-center gap-3 py-3 text-gray-600 transition-colors border-b border-gray-100 hover:text-primary">' +
+                    agencyHtml += '<a href="mailto:' + data.bookingAgency.email + '" class="flex items-center gap-3 py-3 text-gray-600 transition-colors hover:text-primary">' +
                         '<svg class="flex-shrink-0 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                             '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>' +
                         '</svg>' +
@@ -578,7 +569,7 @@ const ArtistPage = {
                 }
 
                 if (data.bookingAgency.phone) {
-                    agencyHtml += '<a href="tel:' + data.bookingAgency.phone + '" class="flex items-center gap-3 py-3 text-gray-600 transition-colors border-b border-gray-100 hover:text-primary">' +
+                    agencyHtml += '<a href="tel:' + data.bookingAgency.phone + '" class="flex items-center gap-3 py-3 text-gray-600 transition-colors hover:text-primary">' +
                         '<svg class="flex-shrink-0 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                             '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>' +
                         '</svg>' +
@@ -689,14 +680,14 @@ const ArtistPage = {
         // Update listeners text
         const listenersText = spotifySection.querySelector('p');
         if (listenersText && listeners) {
-            listenersText.textContent = 'Descoperă toate albumele, single-urile și colaborările. Peste ' + listeners + ' ascultători lunari!';
+            listenersText.innerHTML = 'Descoperă toate albumele, single-urile și colaborările. <br/>Peste ' + listeners + ' ascultători lunari!';
         }
 
         // Add Spotify embed player if spotifyId is available
         const embedContainer = spotifySection.querySelector('.bg-gray-50.rounded-xl');
         if (embedContainer) {
             if (spotifyId) {
-                embedContainer.innerHTML = '<iframe style="border-radius:12px" src="https://open.spotify.com/embed/artist/' + spotifyId + '?utm_source=generator&theme=0" width="100%" height="200" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>';
+                embedContainer.innerHTML = '<iframe style="border-radius:12px" src="https://open.spotify.com/embed/artist/' + spotifyId + '?utm_source=generator&theme=0" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>';
                 embedContainer.classList.remove('flex', 'items-center', 'justify-center', 'text-gray-400', 'text-sm');
             } else if (!spotifyUrl) {
                 // Hide entire Spotify section if no spotify data

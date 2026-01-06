@@ -70,6 +70,19 @@ class OrganizerResource extends Resource
                             ->required()
                             ->maxLength(255),
 
+                        Forms\Components\TextInput::make('password')
+                            ->label('Parolă')
+                            ->password()
+                            ->required(fn (string $context): bool => $context === 'create')
+                            ->dehydrated(fn ($state) => filled($state))
+                            ->dehydrateStateUsing(fn ($state) => \Illuminate\Support\Facades\Hash::make($state))
+                            ->helperText(fn (string $context): string =>
+                                $context === 'create'
+                                    ? 'Parola pentru contul organizatorului'
+                                    : 'Lasă gol pentru a păstra parola existentă')
+                            ->revealable()
+                            ->columnSpanFull(),
+
                         Forms\Components\TextInput::make('contact_name')
                             ->maxLength(255),
 

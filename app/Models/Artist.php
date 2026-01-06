@@ -114,14 +114,9 @@ class Artist extends Model
             return $path;
         }
 
-        // If it's a relative path, prepend storage URL
-        // Try to use the public disk URL
-        try {
-            return Storage::disk('public')->url($path);
-        } catch (\Exception $e) {
-            // Fallback: prepend /storage/
-            return '/storage/' . ltrim($path, '/');
-        }
+        // Use url() helper to always return absolute URL with APP_URL
+        // This ensures images are served from core.tixello.com, not the frontend domain
+        return url('storage/' . ltrim($path, '/'));
     }
 
     // --- Relations ---
