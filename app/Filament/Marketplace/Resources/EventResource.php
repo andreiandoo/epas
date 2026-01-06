@@ -113,14 +113,19 @@ class EventResource extends Resource
                         ->searchable()
                         ->preload()
                         ->live()
-                        ->afterStateUpdated(function ($state, SSet $set) use ($marketplace) {
-                            // When organizer changes, update commission info
+                        ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
+                            // When organizer changes, update commission info and ticket terms
                             if ($state) {
                                 $organizer = MarketplaceOrganizer::find($state);
                                 if ($organizer) {
                                     // Pre-fill custom commission with organizer's rate if set
                                     $rate = $organizer->commission_rate ?? $marketplace?->commission_rate;
                                     $set('commission_rate', $rate);
+
+                                    // Pre-fill ticket terms from organizer if available
+                                    if ($organizer->ticket_terms) {
+                                        $set("ticket_terms.{$marketplaceLanguage}", $organizer->ticket_terms);
+                                    }
                                 }
                             }
                         })
@@ -462,6 +467,7 @@ class EventResource extends Resource
                                 ->get()
                                 ->mapWithKeys(fn ($venue) => [
                                     $venue->id => $venue->getTranslation('name', app()->getLocale())
+                                        . ($venue->city ? ' (' . $venue->city . ')' : '')
                                 ]);
                         })
                         ->afterStateUpdated(function ($state, SSet $set) {

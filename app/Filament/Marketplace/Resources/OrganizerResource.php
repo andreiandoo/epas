@@ -131,6 +131,19 @@ class OrganizerResource extends Resource
                     ->columns(2)
                     ->collapsed(),
 
+                Section::make('Termeni și Condiții Bilete')
+                    ->description('Acești termeni vor fi preluați automat în câmpul "Termeni bilete" când creați un eveniment nou pentru acest organizator')
+                    ->schema([
+                        Forms\Components\RichEditor::make('ticket_terms')
+                            ->label('Termeni și condiții standard')
+                            ->helperText('Textul de aici va fi copiat automat în secțiunea Ticket Terms la crearea unui eveniment')
+                            ->columnSpanFull()
+                            ->fileAttachmentsDisk('public')
+                            ->fileAttachmentsDirectory('organizer-terms')
+                            ->fileAttachmentsVisibility('public'),
+                    ])
+                    ->collapsed(),
+
                 Section::make('Status & Commission')
                     ->schema([
                         Forms\Components\Select::make('status')
