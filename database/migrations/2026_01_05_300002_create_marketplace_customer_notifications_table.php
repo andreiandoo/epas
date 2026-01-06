@@ -10,8 +10,14 @@ return new class extends Migration
     {
         Schema::create('marketplace_customer_notifications', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('marketplace_client_id')->constrained()->onDelete('cascade');
-            $table->foreignId('marketplace_customer_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('marketplace_client_id');
+            $table->unsignedBigInteger('marketplace_customer_id');
+
+            // Use short FK names to stay under MySQL's 64 char limit
+            $table->foreign('marketplace_client_id', 'mcn_client_fk')
+                ->references('id')->on('marketplace_clients')->onDelete('cascade');
+            $table->foreign('marketplace_customer_id', 'mcn_customer_fk')
+                ->references('id')->on('marketplace_customers')->onDelete('cascade');
 
             $table->string('type', 50); // order_confirmed, ticket_ready, event_reminder, reward_earned, etc.
             $table->string('title');
