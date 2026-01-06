@@ -135,47 +135,16 @@ class ArtistResource extends Resource
                 ->schema([
                     Forms\Components\Select::make('artistTypes')
                         ->label('Tip artist')
-                        ->relationship(
-                            name: 'artistTypes',
-                            titleAttribute: 'id',
-                            modifyQueryUsing: fn (Builder $query) => $query->orderByRaw("JSON_EXTRACT(name, '$.ro') ASC")
-                        )
-                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en') ?: ($record->name['ro'] ?? $record->name['en'] ?? 'N/A'))
-                        ->getSearchResultsUsing(function (string $search): array {
-                            return \App\Models\ArtistType::query()
-                                ->where(function ($query) use ($search) {
-                                    $query->whereRaw("LOWER(JSON_EXTRACT(name, '$.ro')) LIKE ?", ['%' . strtolower($search) . '%'])
-                                        ->orWhereRaw("LOWER(JSON_EXTRACT(name, '$.en')) LIKE ?", ['%' . strtolower($search) . '%']);
-                                })
-                                ->orderByRaw("JSON_EXTRACT(name, '$.ro') ASC")
-                                ->limit(50)
-                                ->get()
-                                ->mapWithKeys(fn ($type) => [$type->id => $type->getTranslation('name', 'ro') ?: $type->getTranslation('name', 'en')])
-                                ->toArray();
-                        })
+                        ->relationship('artistTypes', 'slug')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en'))
                         ->multiple()
                         ->preload()
                         ->searchable(),
+
                     Forms\Components\Select::make('artistGenres')
                         ->label('Genuri muzicale')
-                        ->relationship(
-                            name: 'artistGenres',
-                            titleAttribute: 'id',
-                            modifyQueryUsing: fn (Builder $query) => $query->orderByRaw("JSON_EXTRACT(name, '$.ro') ASC")
-                        )
-                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en') ?: ($record->name['ro'] ?? $record->name['en'] ?? 'N/A'))
-                        ->getSearchResultsUsing(function (string $search): array {
-                            return \App\Models\ArtistGenre::query()
-                                ->where(function ($query) use ($search) {
-                                    $query->whereRaw("LOWER(JSON_EXTRACT(name, '$.ro')) LIKE ?", ['%' . strtolower($search) . '%'])
-                                        ->orWhereRaw("LOWER(JSON_EXTRACT(name, '$.en')) LIKE ?", ['%' . strtolower($search) . '%']);
-                                })
-                                ->orderByRaw("JSON_EXTRACT(name, '$.ro') ASC")
-                                ->limit(50)
-                                ->get()
-                                ->mapWithKeys(fn ($genre) => [$genre->id => $genre->getTranslation('name', 'ro') ?: $genre->getTranslation('name', 'en')])
-                                ->toArray();
-                        })
+                        ->relationship('artistGenres', 'slug')
+                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', 'ro') ?: $record->getTranslation('name', 'en'))
                         ->createOptionForm([
                             Forms\Components\TextInput::make('name.ro')
                                 ->label('Nume (RO)')
