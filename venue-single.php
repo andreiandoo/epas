@@ -194,12 +194,6 @@ include __DIR__ . '/includes/header.php';
                         </svg>
                         Galerie foto
                     </h2>
-                    <a href="#" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
-                        Vezi toate
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
-                    </a>
                 </div>
 
                 <div id="venueGallery" class="grid grid-cols-3 gap-3">
@@ -281,14 +275,6 @@ include __DIR__ . '/includes/header.php';
                         <polyline points="22,6 12,13 2,6"/>
                     </svg>
                     Contactează locația
-                </button>
-                <button class="flex items-center justify-center gap-2 w-full py-3.5 bg-white/10 border border-white/20 hover:bg-white/20 rounded-xl text-white text-sm font-semibold transition-all">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                        <polyline points="16 6 12 2 8 6"/>
-                        <line x1="12" y1="2" x2="12" y2="15"/>
-                    </svg>
-                    Descarcă kit-ul media
                 </button>
             </div>
         </aside>
@@ -509,7 +495,7 @@ const VenuePage = {
         document.getElementById('venueYear').textContent = venue.yearBuilt;
 
         // About
-        var descriptionHtml = venue.description ? '<p class="text-base leading-relaxed text-gray-600 whitespace-pre-line">' + this.escapeHtml(venue.description) + '</p>' : '<p class="text-gray-500 italic">Informații despre această locație vor fi disponibile în curând.</p>';
+        var descriptionHtml = venue.description ? '<p class="text-base leading-relaxed text-gray-600 whitespace-pre-line">' + this.escapeHtml(venue.description) + '</p>' : '<p class="italic text-gray-500">Informații despre această locație vor fi disponibile în curând.</p>';
         document.getElementById('venueAbout').innerHTML = descriptionHtml;
 
         // Quick Info
@@ -565,7 +551,7 @@ const VenuePage = {
         }
 
         if (!quickInfoHtml) {
-            quickInfoHtml = '<p class="py-3 text-sm text-gray-500 italic">Informații de contact indisponibile</p>';
+            quickInfoHtml = '<p class="py-3 text-sm italic text-gray-500">Informații de contact indisponibile</p>';
         }
 
         document.getElementById('quickInfo').innerHTML = quickInfoHtml;
@@ -574,7 +560,7 @@ const VenuePage = {
     renderAmenities(amenities) {
         var container = document.getElementById('venueAmenities');
         if (!amenities || amenities.length === 0) {
-            container.innerHTML = '<p class="col-span-2 text-sm text-gray-500 italic">Nu sunt specificate facilități</p>';
+            container.innerHTML = '<p class="col-span-2 text-sm italic text-gray-500">Nu sunt specificate facilități</p>';
             return;
         }
 
