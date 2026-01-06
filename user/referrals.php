@@ -179,13 +179,17 @@ const ReferralsPage = {
 
     async loadReferralData() {
         try {
-            const response = await AmbiletAPI.get('/customer/referrals');
-            if (response.success) {
-                this.referralLink = response.referral_link || 'ambilet.ro/r/' + (AmbiletAuth.getUser()?.referral_code || 'CODE');
+            const response = await AmbiletAPI.customer.getReferrals();
+            if (response.success && response.data) {
+                const data = response.data;
+                this.referralLink = data.referral_link || data.code?.url || 'ambilet.ro/r/' + (data.code?.code || AmbiletAuth.getUser()?.referral_code || 'CODE');
                 document.getElementById('referral-link').value = this.referralLink;
-                this.updateStats(response.stats || {});
-                this.renderReferrals(response.referrals || []);
-                this.renderHistory(response.history || []);
+                this.updateStats(data.stats || {});
+                this.renderReferrals(data.referrals || []);
+                this.renderHistory(data.history || []);
+            } else {
+                const user = AmbiletAuth.getUser();
+                document.getElementById('referral-link').value = 'ambilet.ro/r/' + (user?.referral_code || 'CODE');
             }
         } catch (error) {
             console.error('Error loading referral data:', error);

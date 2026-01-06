@@ -36,6 +36,11 @@ require_once __DIR__ . '/includes/header.php';
     <img id="heroImage" src="" alt="" class="absolute inset-0 w-full h-full object-cover object-[center_30%] hidden">
     <div class="absolute inset-0 bg-gradient-to-b from-black/20 to-black/70"></div>
     <div class="relative z-10 flex flex-col justify-end h-full px-6 pb-20 mx-auto max-w-7xl">
+        <!-- Genre Tags -->
+        <div id="genreTags" class="flex flex-wrap gap-2 mb-4">
+            <span class="inline-block w-20 h-8 rounded-full bg-white/20 animate-pulse"></span>
+            <span class="inline-block w-24 h-8 rounded-full bg-white/20 animate-pulse"></span>
+        </div>
         <!-- Artist Name -->
         <div class="flex items-center gap-x-4">
             <h1 id="artistName" class="text-[56px] font-extrabold text-white mb-4 leading-tight">

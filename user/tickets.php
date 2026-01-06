@@ -102,14 +102,17 @@ const UserTickets = {
 
     async loadTickets() {
         try {
-            const response = await AmbiletAPI.get('/customer/tickets');
-            if (response.success) {
+            const response = await AmbiletAPI.customer.getTickets();
+            if (response.success && response.data) {
                 const now = new Date();
-                this.tickets.upcoming = response.data.filter(t => new Date(t.event?.date) >= now);
-                this.tickets.past = response.data.filter(t => new Date(t.event?.date) < now);
+                const tickets = response.data.tickets || response.data || [];
+                this.tickets.upcoming = tickets.filter(t => new Date(t.event?.date) >= now);
+                this.tickets.past = tickets.filter(t => new Date(t.event?.date) < now);
+            } else {
+                this.loadDemoData();
             }
         } catch (error) {
-            console.log('Using demo data');
+            console.log('Using demo data:', error);
             this.loadDemoData();
         }
 

@@ -116,9 +116,14 @@ const NotificationsPage = {
 
     async loadNotifications() {
         try {
-            const response = await AmbiletAPI.get('/customer/notifications');
-            if (response.success && response.data?.length > 0) {
-                this.notifications = response.data;
+            const response = await AmbiletAPI.customer.getNotifications();
+            if (response.success && response.data) {
+                const notifications = response.data.notifications || response.data || [];
+                if (notifications.length > 0) {
+                    this.notifications = notifications;
+                } else {
+                    this.loadDemoNotifications();
+                }
             } else {
                 this.loadDemoNotifications();
             }
@@ -372,7 +377,7 @@ const NotificationsPage = {
             this.render();
 
             // API call
-            AmbiletAPI.put(`/customer/notifications/${id}/read`).catch(console.error);
+            AmbiletAPI.customer.markNotificationsRead([id]).catch(console.error);
         }
     },
 
@@ -381,8 +386,8 @@ const NotificationsPage = {
         this.render();
         AmbiletNotifications.success('Toate notificarile au fost marcate ca citite');
 
-        // API call
-        AmbiletAPI.put('/customer/notifications/read-all').catch(console.error);
+        // API call - null marks all as read
+        AmbiletAPI.customer.markNotificationsRead(null).catch(console.error);
     }
 };
 

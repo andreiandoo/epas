@@ -112,19 +112,30 @@ const UserOrders = {
 
     async loadOrders() {
         try {
-            const response = await AmbiletAPI.get('/customer/orders');
-            if (response.success) {
-                this.orders = response.data;
+            const response = await AmbiletAPI.customer.getOrders();
+            if (response.success && response.data) {
+                this.orders = response.data.orders || response.data || [];
+            } else {
+                this.loadDemoData();
+                return; // loadDemoData handles rendering
             }
         } catch (error) {
-            console.log('Using demo data');
-            // Load from centralized DEMO_DATA
-            if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.customerOrders) {
-                this.orders = DEMO_DATA.customerOrders;
-            } else {
-                console.warn('DEMO_DATA.customerOrders not found');
-                this.orders = [];
-            }
+            console.log('Using demo data:', error);
+            this.loadDemoData();
+            return; // loadDemoData handles rendering
+        }
+
+        this.updateStats();
+        this.renderOrders();
+    },
+
+    loadDemoData() {
+        // Load from centralized DEMO_DATA
+        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.customerOrders) {
+            this.orders = DEMO_DATA.customerOrders;
+        } else {
+            console.warn('DEMO_DATA.customerOrders not found');
+            this.orders = [];
         }
 
         this.updateStats();
