@@ -137,12 +137,22 @@ class OrganizerResource extends Resource
                         Forms\Components\RichEditor::make('ticket_terms')
                             ->label('Termeni și condiții standard')
                             ->helperText('Textul de aici va fi copiat automat în secțiunea Ticket Terms la crearea unui eveniment')
-                            ->columnSpanFull()
-                            ->fileAttachmentsDisk('public')
-                            ->fileAttachmentsDirectory('organizer-terms')
-                            ->fileAttachmentsVisibility('public'),
-                    ])
-                    ->collapsed(),
+                            ->toolbarButtons([
+                                'bold',
+                                'italic',
+                                'underline',
+                                'strike',
+                                'link',
+                                'orderedList',
+                                'bulletList',
+                                'h2',
+                                'h3',
+                                'blockquote',
+                                'redo',
+                                'undo',
+                            ])
+                            ->columnSpanFull(),
+                    ]),
 
                 Section::make('Status & Commission')
                     ->schema([
