@@ -112,6 +112,7 @@ class PaymentConfig extends Page
             'paypal' => 'PayPal',
             'klarna' => 'Klarna (Buy Now Pay Later)',
             'sms' => 'SMS Payment',
+            'noda' => 'Noda Open Banking (Pay by Bank)',
             default => ucfirst($this->activeProcessor),
         };
 
@@ -184,6 +185,13 @@ class PaymentConfig extends Page
                     $formData['sms_twilio_auth_token'] = $config->sms_twilio_auth_token;
                     $formData['sms_twilio_phone_number'] = $config->sms_twilio_phone_number;
                     $formData['sms_fallback_processor'] = $config->sms_fallback_processor ?? 'stripe';
+                    break;
+
+                case 'noda':
+                    $formData['noda_api_key'] = $config->noda_api_key;
+                    $formData['noda_shop_id'] = $config->noda_shop_id;
+                    $formData['noda_signature_key'] = $config->noda_signature_key;
+                    $formData['noda_sandbox'] = $additionalConfig['sandbox'] ?? true;
                     break;
             }
         }
@@ -653,6 +661,74 @@ class PaymentConfig extends Page
                     ->visible(fn () => $processor === 'sms')
                     ->columns(1),
 
+                // Noda Open Banking Configuration
+                SC\Section::make('Noda Open Banking Configuration')
+                    ->description('Configure Pay by Bank - instant account-to-account payments')
+                    ->schema([
+                        Forms\Components\TextInput::make('noda_api_key')
+                            ->label('API Key')
+                            ->password()
+                            ->revealable()
+                            ->placeholder('Your Noda API key')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Get your API key from ui.noda.live/hub after registration')
+                            ->maxLength(255)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
+
+                        Forms\Components\TextInput::make('noda_shop_id')
+                            ->label('Shop ID')
+                            ->placeholder('Your Noda shop/merchant ID')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Shop identifier for your merchant account')
+                            ->maxLength(255)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
+
+                        Forms\Components\TextInput::make('noda_signature_key')
+                            ->label('Webhook Signature Key')
+                            ->password()
+                            ->revealable()
+                            ->placeholder('Webhook signature key')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Used to verify webhook authenticity (optional but recommended)')
+                            ->maxLength(255)
+                            ->extraInputAttributes(['autocomplete' => 'off', 'data-1p-ignore' => 'true', 'data-lpignore' => 'true']),
+
+                        Forms\Components\Toggle::make('noda_sandbox')
+                            ->label('Sandbox Mode')
+                            ->default(true)
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Use test environment for development. Disable for production.'),
+
+                        Forms\Components\Placeholder::make('noda_supported_currencies')
+                            ->label('Supported Currencies & Payment Rails')
+                            ->content(new HtmlString('
+                                <div class="text-sm space-y-1">
+                                    <p><strong>🇷🇴 RON</strong> - Romania (Plăți Instant) - <span class="text-green-600">Instant</span></p>
+                                    <p><strong>🇪🇺 EUR</strong> - SEPA countries - <span class="text-green-600">Instant</span></p>
+                                    <p><strong>🇬🇧 GBP</strong> - UK (Faster Payments) - <span class="text-green-600">Instant</span></p>
+                                    <p class="text-gray-500 text-xs">Also: PLN, CZK, BGN, HUF, SEK, DKK, NOK, CHF</p>
+                                </div>
+                            ')),
+
+                        Forms\Components\Placeholder::make('noda_benefits')
+                            ->label('Benefits')
+                            ->content(new HtmlString('
+                                <ul class="list-disc pl-4 text-sm space-y-1">
+                                    <li><strong>Ultra-low fees:</strong> From 0.1% (vs 1.5-2.5% cards)</li>
+                                    <li><strong>Instant:</strong> Funds in ~10 seconds</li>
+                                    <li><strong>No chargebacks:</strong> Bank payments are final</li>
+                                    <li><strong>2,000+ banks:</strong> 28 European countries</li>
+                                </ul>
+                            ')),
+
+                        Forms\Components\Placeholder::make('noda_webhook_url')
+                            ->label('Webhook URL')
+                            ->content(fn () => new HtmlString(
+                                '<code class="px-2 py-1 text-sm bg-gray-100 rounded select-all dark:bg-gray-800">' .
+                                url('/payment/webhook/noda') .
+                                '</code>'
+                            ))
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Configure this URL in your Noda dashboard'),
+                    ])
+                    ->visible(fn () => $processor === 'noda')
+                    ->columns(1),
+
                 SC\Section::make('Security Notes')
                     ->schema([
                         Forms\Components\Placeholder::make('security_notes')
@@ -759,6 +835,15 @@ class PaymentConfig extends Page
                 $configData['sms_twilio_auth_token'] = $data['sms_twilio_auth_token'] ?? null;
                 $configData['sms_twilio_phone_number'] = $data['sms_twilio_phone_number'] ?? null;
                 $configData['sms_fallback_processor'] = $data['sms_fallback_processor'] ?? 'stripe';
+                break;
+
+            case 'noda':
+                $configData['noda_api_key'] = $data['noda_api_key'] ?? null;
+                $configData['noda_shop_id'] = $data['noda_shop_id'] ?? null;
+                $configData['noda_signature_key'] = $data['noda_signature_key'] ?? null;
+                $configData['additional_config'] = [
+                    'sandbox' => $data['noda_sandbox'] ?? true,
+                ];
                 break;
         }
 

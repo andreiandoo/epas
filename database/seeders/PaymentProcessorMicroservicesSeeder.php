@@ -146,6 +146,23 @@ class PaymentProcessorMicroservicesSeeder extends Seeder
                 'is_active' => true,
                 'sort_order' => 8,
             ],
+            [
+                'name' => ['en' => 'Noda Open Banking', 'ro' => 'Noda Open Banking'],
+                'slug' => 'payment-noda',
+                'short_description' => [
+                    'en' => 'Pay by bank - instant account-to-account payments with ultra-low fees',
+                    'ro' => 'Plătește prin bancă - plăți instant cont-la-cont cu comisioane ultra-mici'
+                ],
+                'description' => [
+                    'en' => 'Accept instant bank payments via Open Banking. Supports SEPA Instant (EUR), Plăți Instant Romania (RON), UK Faster Payments (GBP), and more. Ultra-low fees from 0.1% (vs 1.5-2.5% for cards). No chargebacks - bank payments are final. Instant settlement in ~10 seconds. 2,000+ banks across 28 European countries. PSD2 compliant with Strong Customer Authentication built-in. You need a Noda merchant account from noda.live. Configure your API credentials in Settings after activation.',
+                    'ro' => 'Acceptă plăți bancare instant prin Open Banking. Suportă SEPA Instant (EUR), Plăți Instant România (RON), UK Faster Payments (GBP) și altele. Comisioane ultra-mici de la 0.1% (vs 1.5-2.5% pentru carduri). Fără chargebacks - plățile bancare sunt finale. Decontare instantanee în ~10 secunde. Peste 2.000 de bănci în 28 de țări europene. Conform PSD2 cu Autentificare Puternică a Clientului inclusă. Ai nevoie de un cont de comerciant Noda de la noda.live. Configurează credențialele API în Setări după activare.'
+                ],
+                'pricing_model' => 'one_time',
+                'price' => 0,
+                'category' => 'payment_processor',
+                'is_active' => true,
+                'sort_order' => 9,
+            ],
         ];
 
         foreach ($processors as $processor) {
@@ -155,6 +172,6 @@ class PaymentProcessorMicroservicesSeeder extends Seeder
             );
         }
 
-        $this->command->info('Created 8 payment processor microservices');
+        $this->command->info('Created 9 payment processor microservices');
     }
 }

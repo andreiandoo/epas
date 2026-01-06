@@ -42,6 +42,10 @@ class TenantPaymentConfig extends Model
         'sms_twilio_auth_token',
         'sms_twilio_phone_number',
         'sms_fallback_processor',
+        // Noda Open Banking
+        'noda_api_key',
+        'noda_shop_id',
+        'noda_signature_key',
         // Settings
         'is_active',
         'additional_config',
@@ -67,6 +71,9 @@ class TenantPaymentConfig extends Model
         'klarna_api_password' => 'encrypted',
         // SMS Payment (Twilio)
         'sms_twilio_auth_token' => 'encrypted',
+        // Noda Open Banking
+        'noda_api_key' => 'encrypted',
+        'noda_signature_key' => 'encrypted',
     ];
 
     public function tenant(): BelongsTo
@@ -177,6 +184,14 @@ class TenantPaymentConfig extends Model
                     'twilio_auth_token' => $this->sms_twilio_auth_token,
                     'twilio_phone_number' => $this->sms_twilio_phone_number,
                     'fallback_processor' => $this->sms_fallback_processor ?? 'stripe',
+                ];
+                break;
+
+            case 'noda':
+                $keys = [
+                    'api_key' => $this->noda_api_key,
+                    'shop_id' => $this->noda_shop_id,
+                    'signature_key' => $this->noda_signature_key,
                 ];
                 break;
         }

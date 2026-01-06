@@ -369,4 +369,65 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Noda Open Banking Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for Noda Open Banking payment processor.
+    | Supports SEPA Instant (EUR), Plăți Instant Romania (RON), UK Faster Payments (GBP).
+    | https://noda.live
+    |
+    */
+    'noda' => [
+        'enabled' => env('NODA_ENABLED', true),
+
+        // API configuration
+        'api' => [
+            'sandbox_url' => env('NODA_SANDBOX_URL', 'https://api.sandbox.noda.live/api/v1'),
+            'production_url' => env('NODA_PRODUCTION_URL', 'https://api.noda.live/api/v1'),
+            'sandbox_api_key' => env('NODA_SANDBOX_API_KEY', '24d0034-5a83-47d5-afa0-cca47298c516'),
+        ],
+
+        // Supported currencies and their payment rails
+        'supported_currencies' => [
+            'EUR' => 'SEPA Instant',
+            'RON' => 'Plăți Instant (Romania)',
+            'GBP' => 'Faster Payments (UK)',
+            'PLN' => 'Express Elixir (Poland)',
+            'CZK' => 'Instant Payments (Czech)',
+            'BGN' => 'BISERA (Bulgaria)',
+            'HUF' => 'Instant Payments (Hungary)',
+            'SEK' => 'Swish/Instant (Sweden)',
+            'DKK' => 'Instant Payments (Denmark)',
+            'NOK' => 'Instant Payments (Norway)',
+            'CHF' => 'SIC (Switzerland)',
+        ],
+
+        // Romanian banks with Plăți Instant support
+        'romanian_banks' => [
+            'Banca Transilvania',
+            'BCR',
+            'BRD',
+            'ING Bank',
+            'Raiffeisen',
+            'OTP Bank',
+            'Unicredit',
+            'Revolut',
+        ],
+
+        // Webhook configuration
+        'webhook' => [
+            'url' => env('NODA_WEBHOOK_URL', '/payment/webhook/noda'),
+            'signature_header' => 'X-Noda-Signature',
+        ],
+
+        // Fees (approximate, for display purposes only)
+        'fees' => [
+            'percentage' => 0.1, // 0.1% starting rate
+            'fixed' => 0, // No fixed fee
+            'description' => 'From 0.1% per transaction',
+        ],
+    ],
+
 ];

@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Log;
  * - Revolut
  * - PayPal
  * - Klarna
+ * - Noda Open Banking
  * - SMS Payment (Twilio delivery status)
  */
 class PaymentWebhookController extends Controller
@@ -57,6 +58,97 @@ class PaymentWebhookController extends Controller
     public function handleKlarna(Request $request, string $tenantSlug): Response
     {
         return $this->processWebhook($request, $tenantSlug, 'klarna');
+    }
+
+    /**
+     * Handle Noda Open Banking webhook
+     *
+     * This webhook doesn't require tenant slug in URL - it extracts tenant_id from payload metadata.
+     * This allows using a single webhook URL in Noda dashboard.
+     *
+     * @param Request $request
+     * @return Response
+     */
+    public function handleNoda(Request $request): Response
+    {
+        try {
+            $payload = $request->all();
+            $headers = [
+                'x-noda-signature' => $request->header('X-Noda-Signature'),
+                'x-signature' => $request->header('X-Signature'),
+            ];
+
+            // Extract tenant_id from metadata
+            $tenantId = $payload['metadata']['tenant_id']
+                ?? $payload['metadata']['tenantId']
+                ?? null;
+
+            if (!$tenantId) {
+                // Try to find tenant by external_id pattern (order reference)
+                $externalId = $payload['externalId'] ?? $payload['merchantOrderId'] ?? null;
+                if ($externalId && preg_match('/^(\d+)_/', $externalId, $matches)) {
+                    $tenantId = $matches[1];
+                }
+            }
+
+            if (!$tenantId) {
+                Log::warning('Noda webhook: Could not determine tenant', [
+                    'payload' => $payload,
+                ]);
+                return response('Tenant not found in payload', 400);
+            }
+
+            $tenant = Tenant::find($tenantId);
+            if (!$tenant) {
+                Log::warning('Noda webhook: Tenant not found', ['tenant_id' => $tenantId]);
+                return response('Tenant not found', 404);
+            }
+
+            // Get Noda payment config
+            $config = TenantPaymentConfig::where('tenant_id', $tenant->id)
+                ->where('processor', 'noda')
+                ->where('is_active', true)
+                ->first();
+
+            if (!$config) {
+                Log::warning('Noda webhook: Config not found', ['tenant_id' => $tenant->id]);
+                return response('Noda config not found', 404);
+            }
+
+            // Create processor instance
+            $processor = PaymentProcessorFactory::makeFromConfig($config);
+
+            // Verify signature (if signature key is configured)
+            if (!$processor->verifySignature($payload, $headers)) {
+                Log::warning('Noda webhook: Invalid signature', ['tenant_id' => $tenant->id]);
+                return response('Invalid signature', 401);
+            }
+
+            // Process callback
+            $result = $processor->processCallback($payload, $headers);
+
+            Log::info('Noda webhook processed', [
+                'tenant_id' => $tenant->id,
+                'status' => $result['status'],
+                'order_id' => $result['order_id'],
+                'payment_id' => $result['payment_id'],
+                'amount' => $result['amount'],
+                'currency' => $result['currency'],
+            ]);
+
+            // Update order if found
+            if (!empty($result['order_id'])) {
+                $this->updateOrder($tenant->id, $result, 'noda');
+            }
+
+            return response('OK', 200);
+        } catch (\Exception $e) {
+            Log::error('Noda webhook error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response('Error: ' . $e->getMessage(), 200);
+        }
     }
 
     /**
@@ -208,6 +300,13 @@ class PaymentWebhookController extends Controller
                 // Klarna uses basic auth, typically validated at route level
                 $headers = [
                     'authorization' => $request->header('Authorization'),
+                ];
+                break;
+
+            case 'noda':
+                $headers = [
+                    'x-noda-signature' => $request->header('X-Noda-Signature'),
+                    'x-signature' => $request->header('X-Signature'),
                 ];
                 break;
         }

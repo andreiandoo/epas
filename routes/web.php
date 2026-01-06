@@ -120,6 +120,11 @@ Route::post('/webhooks/twilio-sms-status/{tenant}', [\App\Http\Controllers\Webho
     ->name('webhooks.twilio-sms-status')
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
+// Noda Open Banking Webhook (extracts tenant from payload metadata)
+Route::post('/payment/webhook/noda', [\App\Http\Controllers\Webhooks\PaymentWebhookController::class, 'handleNoda'])
+    ->name('webhooks.noda')
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
 // Microservices Store Routes
 Route::prefix('store')->middleware(['web'])->group(function () {
     // Public pages

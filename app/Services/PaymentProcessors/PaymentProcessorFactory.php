@@ -47,6 +47,7 @@ class PaymentProcessorFactory
             'paypal' => new PayPalProcessor($config),
             'klarna' => new KlarnaProcessor($config),
             'sms' => new SmsPaymentProcessor($config),
+            'noda' => new NodaProcessor($config),
             default => throw new \Exception("Unsupported payment processor: {$config->processor}"),
         };
     }
@@ -114,6 +115,13 @@ class PaymentProcessorFactory
                 'logo' => '/images/processors/sms.svg',
                 'supported_currencies' => ['All currencies supported by fallback processor'],
                 'fees' => 'SMS costs + fallback processor fees',
+            ],
+            'noda' => [
+                'name' => 'Noda Open Banking',
+                'description' => 'Pay by bank - instant account-to-account payments via SEPA Instant (EUR) and Plăți Instant (RON)',
+                'logo' => '/images/processors/noda.svg',
+                'supported_currencies' => ['EUR', 'RON', 'GBP', 'PLN', 'CZK', 'BGN', 'HUF', 'SEK', 'DKK', 'NOK', 'CHF'],
+                'fees' => 'From 0.1% per transaction - no chargebacks',
             ],
         ];
     }
@@ -292,6 +300,26 @@ class PaymentProcessorFactory
                     'required' => true,
                 ],
             ],
+            'noda' => [
+                'noda_api_key' => [
+                    'label' => 'API Key',
+                    'type' => 'password',
+                    'placeholder' => 'Your Noda API key from noda.live/hub',
+                    'required' => true,
+                ],
+                'noda_shop_id' => [
+                    'label' => 'Shop ID',
+                    'type' => 'text',
+                    'placeholder' => 'Your Noda shop/merchant ID',
+                    'required' => false,
+                ],
+                'noda_signature_key' => [
+                    'label' => 'Webhook Signature Key (Optional)',
+                    'type' => 'password',
+                    'placeholder' => 'Key for verifying webhook signatures',
+                    'required' => false,
+                ],
+            ],
             default => [],
         };
     }
@@ -368,10 +396,17 @@ class PaymentProcessorFactory
                     }
                 }
                 if (!empty($data['sms_fallback_processor'])) {
-                    $validProcessors = ['stripe', 'paypal', 'revolut', 'klarna', 'netopia', 'euplatesc', 'payu'];
+                    $validProcessors = ['stripe', 'paypal', 'revolut', 'klarna', 'netopia', 'euplatesc', 'payu', 'noda'];
                     if (!in_array($data['sms_fallback_processor'], $validProcessors)) {
                         $errors['sms_fallback_processor'] = 'Invalid fallback processor selected.';
                     }
+                }
+                break;
+
+            case 'noda':
+                // Noda API keys are typically UUID format or alphanumeric strings
+                if (!empty($data['noda_api_key']) && strlen($data['noda_api_key']) < 10) {
+                    $errors['noda_api_key'] = 'Invalid Noda API key format.';
                 }
                 break;
         }

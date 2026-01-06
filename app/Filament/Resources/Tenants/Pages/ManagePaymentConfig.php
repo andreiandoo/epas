@@ -91,6 +91,7 @@ class ManagePaymentConfig extends ManageRecords
                             'paypal' => 'PayPal',
                             'klarna' => 'Klarna (Buy Now Pay Later)',
                             'sms' => 'SMS Payment',
+                            'noda' => 'Noda Open Banking (Pay by Bank)',
                         ])
                         ->required()
                         ->live()
@@ -393,6 +394,70 @@ class ManagePaymentConfig extends ManageRecords
                 ->visible(fn (Forms\Get $get) => $tenant->payment_processor === 'sms')
                 ->columns(1),
 
+            // Noda Open Banking Configuration
+            SC\Section::make('Noda Open Banking Configuration')
+                ->description('Configure Pay by Bank - instant account-to-account payments via SEPA Instant (EUR) and Plăți Instant (RON)')
+                ->schema([
+                    Forms\Components\TextInput::make('noda_api_key')
+                        ->label('API Key')
+                        ->password()
+                        ->revealable()
+                        ->placeholder('Your Noda API key')
+                        ->helperText('Get your API key from ui.noda.live/hub after registration')
+                        ->maxLength(255),
+
+                    Forms\Components\TextInput::make('noda_shop_id')
+                        ->label('Shop ID')
+                        ->placeholder('Your Noda shop/merchant ID')
+                        ->helperText('Shop identifier for your merchant account')
+                        ->maxLength(255),
+
+                    Forms\Components\TextInput::make('noda_signature_key')
+                        ->label('Webhook Signature Key')
+                        ->password()
+                        ->revealable()
+                        ->placeholder('Webhook signature key')
+                        ->helperText('Used to verify webhook authenticity (optional but recommended)')
+                        ->maxLength(255),
+
+                    Forms\Components\Toggle::make('noda_sandbox')
+                        ->label('Sandbox Mode')
+                        ->default(true)
+                        ->helperText('Use test environment for development. Disable for production.')
+                        ->live(),
+
+                    Forms\Components\Placeholder::make('noda_supported_currencies')
+                        ->label('Supported Currencies & Payment Rails')
+                        ->content(new \Illuminate\Support\HtmlString('
+                            <div class="text-sm space-y-2">
+                                <p><strong>🇷🇴 RON</strong> - Romania (Plăți Instant via TRANSFOND) - <span class="text-green-600">Instant settlement</span></p>
+                                <p><strong>🇪🇺 EUR</strong> - SEPA countries (SEPA Instant) - <span class="text-green-600">Instant settlement</span></p>
+                                <p><strong>🇬🇧 GBP</strong> - UK (Faster Payments) - <span class="text-green-600">Instant settlement</span></p>
+                                <p><strong>🇵🇱 PLN</strong> - Poland (Express Elixir) - <span class="text-green-600">Instant settlement</span></p>
+                                <p class="text-gray-500">Also supports: CZK, BGN, HUF, SEK, DKK, NOK, CHF</p>
+                            </div>
+                        ')),
+
+                    Forms\Components\Placeholder::make('noda_benefits')
+                        ->label('Benefits')
+                        ->content(new \Illuminate\Support\HtmlString('
+                            <ul class="list-disc pl-4 text-sm space-y-1">
+                                <li><strong>Ultra-low fees:</strong> From 0.1% vs 1.5-2.5% for cards</li>
+                                <li><strong>Instant settlement:</strong> Funds arrive in ~10 seconds</li>
+                                <li><strong>No chargebacks:</strong> Bank-to-bank payments cannot be disputed</li>
+                                <li><strong>PSD2 compliant:</strong> Strong Customer Authentication (SCA) built-in</li>
+                                <li><strong>2,000+ banks:</strong> Coverage across 28 European countries</li>
+                            </ul>
+                        ')),
+
+                    Forms\Components\Placeholder::make('noda_webhook_url')
+                        ->label('Webhook URL')
+                        ->content(fn () => url('/payment/webhook/noda'))
+                        ->helperText('Configure this URL in your Noda dashboard for payment notifications'),
+                ])
+                ->visible(fn (Forms\Get $get) => $tenant->payment_processor === 'noda')
+                ->columns(1),
+
             SC\Section::make('Important Notes')
                 ->description('Security and best practices')
                 ->schema([
@@ -469,6 +534,13 @@ class ManagePaymentConfig extends ManageRecords
                     $data['sms_twilio_phone_number'] = $config->sms_twilio_phone_number;
                     $data['sms_fallback_processor'] = $config->sms_fallback_processor ?? 'stripe';
                     break;
+
+                case 'noda':
+                    $data['noda_api_key'] = $config->noda_api_key;
+                    $data['noda_shop_id'] = $config->noda_shop_id;
+                    $data['noda_signature_key'] = $config->noda_signature_key;
+                    $data['noda_sandbox'] = $config->additional_config['sandbox'] ?? true;
+                    break;
             }
         }
 
@@ -540,6 +612,15 @@ class ManagePaymentConfig extends ManageRecords
                 $configData['sms_twilio_auth_token'] = $data['sms_twilio_auth_token'] ?? null;
                 $configData['sms_twilio_phone_number'] = $data['sms_twilio_phone_number'] ?? null;
                 $configData['sms_fallback_processor'] = $data['sms_fallback_processor'] ?? 'stripe';
+                break;
+
+            case 'noda':
+                $configData['noda_api_key'] = $data['noda_api_key'] ?? null;
+                $configData['noda_shop_id'] = $data['noda_shop_id'] ?? null;
+                $configData['noda_signature_key'] = $data['noda_signature_key'] ?? null;
+                $configData['additional_config'] = [
+                    'sandbox' => $data['noda_sandbox'] ?? true,
+                ];
                 break;
         }
 
