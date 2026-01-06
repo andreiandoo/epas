@@ -115,6 +115,11 @@ Route::post('/webhooks/whatsapp-cloud', [\App\Http\Controllers\Webhooks\WhatsApp
     ->name('webhooks.whatsapp-cloud.handle')
     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
+// Twilio SMS Status Webhook (for SMS Payment microservice)
+Route::post('/webhooks/twilio-sms-status/{tenant}', [\App\Http\Controllers\Webhooks\PaymentWebhookController::class, 'handleTwilioStatus'])
+    ->name('webhooks.twilio-sms-status')
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
 // Microservices Store Routes
 Route::prefix('store')->middleware(['web'])->group(function () {
     // Public pages

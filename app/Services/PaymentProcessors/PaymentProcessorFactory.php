@@ -43,6 +43,10 @@ class PaymentProcessorFactory
             'netopia' => new NetopiaProcessor($config),
             'euplatesc' => new EuplatescProcessor($config),
             'payu' => new PayUProcessor($config),
+            'revolut' => new RevolutProcessor($config),
+            'paypal' => new PayPalProcessor($config),
+            'klarna' => new KlarnaProcessor($config),
+            'sms' => new SmsPaymentProcessor($config),
             default => throw new \Exception("Unsupported payment processor: {$config->processor}"),
         };
     }
@@ -82,6 +86,34 @@ class PaymentProcessorFactory
                 'logo' => '/images/processors/payu.svg',
                 'supported_currencies' => ['RON', 'EUR', 'USD', 'PLN', 'HUF'],
                 'fees' => '2.99% + RON 0.39 per transaction',
+            ],
+            'revolut' => [
+                'name' => 'Revolut',
+                'description' => 'Modern payment processing with Revolut Pay, cards, Apple Pay & Google Pay',
+                'logo' => '/images/processors/revolut.svg',
+                'supported_currencies' => ['EUR', 'GBP', 'USD', 'RON', 'PLN', 'CHF', 'and 25+ more'],
+                'fees' => '1% + €0.20 per transaction (Revolut Pay), 2.8% + €0.20 (cards)',
+            ],
+            'paypal' => [
+                'name' => 'PayPal',
+                'description' => 'Global payment platform with PayPal, credit cards, and Pay Later options',
+                'logo' => '/images/processors/paypal.svg',
+                'supported_currencies' => ['EUR', 'USD', 'GBP', 'CAD', 'AUD', 'and 25+ more'],
+                'fees' => '2.9% + €0.35 per transaction',
+            ],
+            'klarna' => [
+                'name' => 'Klarna',
+                'description' => 'Buy Now Pay Later solutions - Pay in 3, Pay in 30 days, financing',
+                'logo' => '/images/processors/klarna.svg',
+                'supported_currencies' => ['EUR', 'SEK', 'NOK', 'DKK', 'GBP', 'USD', 'CHF', 'PLN'],
+                'fees' => 'Contact Klarna for pricing',
+            ],
+            'sms' => [
+                'name' => 'SMS Payment',
+                'description' => 'Send payment links via SMS - works with any configured payment processor',
+                'logo' => '/images/processors/sms.svg',
+                'supported_currencies' => ['All currencies supported by fallback processor'],
+                'fees' => 'SMS costs + fallback processor fees',
             ],
         ];
     }
@@ -163,6 +195,103 @@ class PaymentProcessorFactory
                     'required' => true,
                 ],
             ],
+            'revolut' => [
+                'revolut_api_key' => [
+                    'label' => 'API Key (Secret Key)',
+                    'type' => 'password',
+                    'placeholder' => 'sk_...',
+                    'required' => true,
+                ],
+                'revolut_merchant_id' => [
+                    'label' => 'Merchant ID (Public Key)',
+                    'type' => 'text',
+                    'placeholder' => 'pk_...',
+                    'required' => false,
+                ],
+                'revolut_webhook_secret' => [
+                    'label' => 'Webhook Secret (Optional)',
+                    'type' => 'password',
+                    'placeholder' => 'Your Revolut webhook signing secret',
+                    'required' => false,
+                ],
+            ],
+            'paypal' => [
+                'paypal_client_id' => [
+                    'label' => 'Client ID',
+                    'type' => 'text',
+                    'placeholder' => 'Your PayPal client ID',
+                    'required' => true,
+                ],
+                'paypal_client_secret' => [
+                    'label' => 'Client Secret',
+                    'type' => 'password',
+                    'placeholder' => 'Your PayPal client secret',
+                    'required' => true,
+                ],
+                'paypal_webhook_id' => [
+                    'label' => 'Webhook ID (Optional)',
+                    'type' => 'text',
+                    'placeholder' => 'Your PayPal webhook ID for signature verification',
+                    'required' => false,
+                ],
+            ],
+            'klarna' => [
+                'klarna_api_username' => [
+                    'label' => 'API Username (UID)',
+                    'type' => 'text',
+                    'placeholder' => 'K12345_abcdef123456...',
+                    'required' => true,
+                ],
+                'klarna_api_password' => [
+                    'label' => 'API Password',
+                    'type' => 'password',
+                    'placeholder' => 'Your Klarna API password',
+                    'required' => true,
+                ],
+                'klarna_region' => [
+                    'label' => 'Region',
+                    'type' => 'select',
+                    'options' => [
+                        'eu' => 'Europe (EU)',
+                        'na' => 'North America (NA)',
+                        'oc' => 'Oceania (OC)',
+                    ],
+                    'placeholder' => 'Select your Klarna region',
+                    'required' => true,
+                ],
+            ],
+            'sms' => [
+                'sms_twilio_sid' => [
+                    'label' => 'Twilio Account SID',
+                    'type' => 'text',
+                    'placeholder' => 'AC...',
+                    'required' => true,
+                ],
+                'sms_twilio_auth_token' => [
+                    'label' => 'Twilio Auth Token',
+                    'type' => 'password',
+                    'placeholder' => 'Your Twilio auth token',
+                    'required' => true,
+                ],
+                'sms_twilio_phone_number' => [
+                    'label' => 'Twilio Phone Number',
+                    'type' => 'text',
+                    'placeholder' => '+1234567890',
+                    'required' => true,
+                ],
+                'sms_fallback_processor' => [
+                    'label' => 'Fallback Payment Processor',
+                    'type' => 'select',
+                    'options' => [
+                        'stripe' => 'Stripe',
+                        'paypal' => 'PayPal',
+                        'revolut' => 'Revolut',
+                        'klarna' => 'Klarna',
+                    ],
+                    'placeholder' => 'Select the processor for actual payments',
+                    'required' => true,
+                ],
+            ],
             default => [],
         };
     }
@@ -205,6 +334,44 @@ class PaymentProcessorFactory
                 }
                 if (!empty($data['netopia_public_key']) && !str_contains($data['netopia_public_key'], 'BEGIN CERTIFICATE')) {
                     $errors['netopia_public_key'] = 'Public certificate must be in PEM format.';
+                }
+                break;
+
+            case 'revolut':
+                if (!empty($data['revolut_api_key']) && !str_starts_with($data['revolut_api_key'], 'sk_')) {
+                    $errors['revolut_api_key'] = 'Invalid Revolut API key format (should start with sk_).';
+                }
+                break;
+
+            case 'paypal':
+                // PayPal client IDs are typically alphanumeric strings
+                if (!empty($data['paypal_client_id']) && strlen($data['paypal_client_id']) < 20) {
+                    $errors['paypal_client_id'] = 'Invalid PayPal client ID format.';
+                }
+                break;
+
+            case 'klarna':
+                if (!empty($data['klarna_region']) && !in_array($data['klarna_region'], ['eu', 'na', 'oc'])) {
+                    $errors['klarna_region'] = 'Invalid Klarna region. Must be eu, na, or oc.';
+                }
+                break;
+
+            case 'sms':
+                if (!empty($data['sms_twilio_sid']) && !str_starts_with($data['sms_twilio_sid'], 'AC')) {
+                    $errors['sms_twilio_sid'] = 'Invalid Twilio Account SID format (should start with AC).';
+                }
+                if (!empty($data['sms_twilio_phone_number'])) {
+                    // Basic phone number validation
+                    $phone = preg_replace('/[^0-9+]/', '', $data['sms_twilio_phone_number']);
+                    if (!str_starts_with($phone, '+') || strlen($phone) < 10) {
+                        $errors['sms_twilio_phone_number'] = 'Phone number must be in E.164 format (e.g., +1234567890).';
+                    }
+                }
+                if (!empty($data['sms_fallback_processor'])) {
+                    $validProcessors = ['stripe', 'paypal', 'revolut', 'klarna', 'netopia', 'euplatesc', 'payu'];
+                    if (!in_array($data['sms_fallback_processor'], $validProcessors)) {
+                        $errors['sms_fallback_processor'] = 'Invalid fallback processor selected.';
+                    }
                 }
                 break;
         }

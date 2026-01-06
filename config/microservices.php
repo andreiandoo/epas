@@ -278,4 +278,95 @@ return [
         'cleanup_expired_after_days' => env('PROMO_CODES_CLEANUP_DAYS', 365),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Payment Processors - Revolut Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'revolut' => [
+        'enabled' => env('REVOLUT_ENABLED', true),
+        'sandbox' => env('REVOLUT_SANDBOX', true),
+        'api_version' => env('REVOLUT_API_VERSION', '1.0'),
+        'rate_limit' => env('REVOLUT_RATE_LIMIT', 100), // requests per minute
+        'webhook_tolerance' => env('REVOLUT_WEBHOOK_TOLERANCE', 300), // seconds
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Payment Processors - PayPal Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'paypal' => [
+        'enabled' => env('PAYPAL_ENABLED', true),
+        'sandbox' => env('PAYPAL_SANDBOX', true),
+        'api_version' => env('PAYPAL_API_VERSION', 'v2'),
+        'rate_limit' => env('PAYPAL_RATE_LIMIT', 100), // requests per minute
+        'token_cache_ttl' => env('PAYPAL_TOKEN_CACHE_TTL', 3500), // seconds (tokens expire in ~1hr)
+        'capture_on_checkout' => env('PAYPAL_CAPTURE_ON_CHECKOUT', true),
+        'pay_later_enabled' => env('PAYPAL_PAY_LATER_ENABLED', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Payment Processors - Klarna Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'klarna' => [
+        'enabled' => env('KLARNA_ENABLED', true),
+        'sandbox' => env('KLARNA_SANDBOX', true),
+        'default_region' => env('KLARNA_DEFAULT_REGION', 'eu'), // eu, na, oc
+        'rate_limit' => env('KLARNA_RATE_LIMIT', 100), // requests per minute
+        'auto_capture' => env('KLARNA_AUTO_CAPTURE', true),
+        'payment_methods' => [
+            'pay_later' => env('KLARNA_PAY_LATER_ENABLED', true),
+            'pay_now' => env('KLARNA_PAY_NOW_ENABLED', true),
+            'slice_it' => env('KLARNA_SLICE_IT_ENABLED', true),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | SMS Payment Microservice Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'sms_payment' => [
+        'enabled' => env('SMS_PAYMENT_ENABLED', true),
+
+        // Twilio configuration for SMS delivery
+        'twilio' => [
+            'enabled' => env('SMS_TWILIO_ENABLED', true),
+            'account_sid' => env('SMS_TWILIO_ACCOUNT_SID'),
+            'auth_token' => env('SMS_TWILIO_AUTH_TOKEN'),
+            'from_number' => env('SMS_TWILIO_FROM_NUMBER'),
+        ],
+
+        // SMS settings
+        'rate_limit' => env('SMS_PAYMENT_RATE_LIMIT', 30), // SMS per minute
+        'retry_attempts' => env('SMS_PAYMENT_RETRY_ATTEMPTS', 3),
+        'retry_delay' => env('SMS_PAYMENT_RETRY_DELAY', 60), // seconds
+
+        // Default fallback processor for actual payment processing
+        'default_fallback_processor' => env('SMS_PAYMENT_DEFAULT_PROCESSOR', 'stripe'),
+
+        // Message templates
+        'templates' => [
+            'payment_request' => env('SMS_TEMPLATE_PAYMENT_REQUEST',
+                'Payment request: {amount} for {description}. Pay securely here: {link}'),
+            'payment_reminder' => env('SMS_TEMPLATE_PAYMENT_REMINDER',
+                'Reminder: Your payment of {amount} (Order: {order_id}) is pending. Complete payment: {link}'),
+            'payment_confirmation' => env('SMS_TEMPLATE_PAYMENT_CONFIRMATION',
+                'Payment confirmed! {amount} received for Order {order_id}. Thank you!'),
+        ],
+
+        // Queue configuration
+        'queue' => [
+            'connection' => env('SMS_PAYMENT_QUEUE_CONNECTION', 'database'),
+            'queue' => env('SMS_PAYMENT_QUEUE', 'sms-payments'),
+        ],
+    ],
+
 ];

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
 use App\Models\Tenant;
 use App\Models\TenantPaymentConfig;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
+use App\Services\SmsPayment\SmsPaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -71,21 +73,10 @@ class TenantPaymentWebhookController extends Controller
                 'amount' => $result['amount'] ?? null,
             ]);
 
-            // TODO: Process the payment result
-            // This is where you would update orders, create transactions, etc.
-            // For now, we just log it
-
-            // Example:
-            // if ($result['status'] === 'success') {
-            //     $order = Order::where('reference', $result['order_id'])->first();
-            //     if ($order) {
-            //         $order->update([
-            //             'status' => 'paid',
-            //             'paid_at' => $result['paid_at'],
-            //             'payment_transaction_id' => $result['transaction_id'],
-            //         ]);
-            //     }
-            // }
+            // Process the payment result - update orders
+            if (!empty($result['order_id'])) {
+                $this->updateOrder($tenant->id, $result, $processor);
+            }
 
             return response()->json(['success' => true, 'status' => $result['status']]);
 
@@ -98,6 +89,105 @@ class TenantPaymentWebhookController extends Controller
             ]);
 
             return response()->json(['error' => 'Internal server error'], 500);
+        }
+    }
+
+    /**
+     * Update order based on webhook result
+     *
+     * @param int $tenantId
+     * @param array $result
+     * @param string $processor
+     */
+    protected function updateOrder(int $tenantId, array $result, string $processor): void
+    {
+        // Try to find order by various references
+        $order = Order::where('tenant_id', $tenantId)
+            ->where(function ($query) use ($result) {
+                $query->where('id', $result['order_id'])
+                    ->orWhere('order_number', $result['order_id'])
+                    ->orWhere('uuid', $result['order_id'])
+                    ->orWhere('payment_reference', $result['payment_id'] ?? null);
+            })
+            ->first();
+
+        if (!$order) {
+            Log::warning("Order not found for webhook update", [
+                'tenant_id' => $tenantId,
+                'order_id' => $result['order_id'],
+                'payment_id' => $result['payment_id'] ?? null,
+            ]);
+            return;
+        }
+
+        switch ($result['status']) {
+            case 'success':
+                $order->update([
+                    'payment_status' => 'paid',
+                    'payment_reference' => $result['payment_id'] ?? $order->payment_reference,
+                    'payment_processor' => $processor,
+                    'paid_at' => $result['paid_at'] ?? now(),
+                    'metadata' => array_merge($order->metadata ?? [], [
+                        'transaction_id' => $result['transaction_id'] ?? null,
+                        'webhook_received_at' => now()->toIso8601String(),
+                    ]),
+                ]);
+
+                // Send SMS confirmation if SMS payment was used
+                if (!empty($result['metadata']['sms_payment'])) {
+                    $this->sendSmsConfirmation($order);
+                }
+
+                Log::info("Order marked as paid via {$processor}", [
+                    'order_id' => $order->id,
+                    'payment_id' => $result['payment_id'] ?? null,
+                ]);
+                break;
+
+            case 'failed':
+                $order->update([
+                    'payment_status' => 'failed',
+                    'payment_error' => $result['error_message'] ?? 'Payment failed',
+                    'payment_processor' => $processor,
+                ]);
+
+                Log::info("Order payment failed via {$processor}", [
+                    'order_id' => $order->id,
+                ]);
+                break;
+
+            case 'cancelled':
+                $order->update([
+                    'payment_status' => 'cancelled',
+                    'cancelled_at' => now(),
+                    'payment_processor' => $processor,
+                ]);
+
+                Log::info("Order cancelled via {$processor}", [
+                    'order_id' => $order->id,
+                ]);
+                break;
+        }
+    }
+
+    /**
+     * Send SMS payment confirmation
+     *
+     * @param Order $order
+     */
+    protected function sendSmsConfirmation(Order $order): void
+    {
+        try {
+            $smsService = new SmsPaymentService($order->tenant);
+
+            if ($smsService->isAvailable()) {
+                $smsService->sendPaymentConfirmation($order);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send SMS confirmation', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }
