@@ -275,10 +275,52 @@ const AmbiletAPI = {
         if (endpoint === '/customer/reset-password') return 'customer.reset-password';
         if (endpoint === '/customer/verify-email') return 'customer.verify-email';
         if (endpoint === '/customer/resend-verification') return 'customer.resend-verification';
-        if (endpoint.includes('/customer/orders/')) return 'customer.order';
+
+        // Customer orders
+        if (endpoint.match(/\/customer\/orders\/\d+$/)) return 'customer.order';
         if (endpoint.includes('/customer/orders')) return 'customer.orders';
+
+        // Customer tickets
+        if (endpoint.includes('/customer/tickets/all')) return 'customer.tickets.all';
+        if (endpoint.match(/\/customer\/tickets\/\d+$/)) return 'customer.ticket';
         if (endpoint.includes('/customer/tickets')) return 'customer.tickets';
-        if (endpoint.includes('/customer/stats')) return 'customer.stats';
+
+        // Customer stats & dashboard
+        if (endpoint.includes('/customer/stats/upcoming-events')) return 'customer.upcoming-events';
+        if (endpoint.includes('/customer/stats')) return 'customer.stats.dashboard';
+
+        // Customer reviews
+        if (endpoint.includes('/customer/reviews/events-to-review')) return 'customer.reviews.to-write';
+        if (endpoint.match(/\/customer\/reviews\/\d+$/) && endpoint.includes('DELETE')) return 'customer.review.delete';
+        if (endpoint.match(/\/customer\/reviews\/\d+$/)) return 'customer.review.show';
+        if (endpoint === '/customer/reviews' || endpoint.includes('/customer/reviews?')) return 'customer.reviews';
+
+        // Customer watchlist
+        if (endpoint.includes('/customer/watchlist/check')) return 'customer.watchlist.check';
+        if (endpoint.match(/\/customer\/watchlist\/\d+$/)) return 'customer.watchlist.remove';
+        if (endpoint === '/customer/watchlist' || endpoint.includes('/customer/watchlist?')) return 'customer.watchlist';
+
+        // Customer rewards
+        if (endpoint.includes('/customer/rewards/history')) return 'customer.rewards.history';
+        if (endpoint.includes('/customer/rewards/badges')) return 'customer.badges';
+        if (endpoint.includes('/customer/rewards/available')) return 'customer.rewards.available';
+        if (endpoint.includes('/customer/rewards/redeem')) return 'customer.rewards.redeem';
+        if (endpoint.includes('/customer/rewards/redemptions')) return 'customer.rewards.redemptions';
+        if (endpoint === '/customer/rewards' || endpoint.includes('/customer/rewards?')) return 'customer.rewards';
+
+        // Customer notifications
+        if (endpoint.includes('/customer/notifications/unread-count')) return 'customer.notifications.unread-count';
+        if (endpoint.includes('/customer/notifications/mark-read')) return 'customer.notifications.read';
+        if (endpoint.includes('/customer/notifications/settings')) return 'customer.notifications.settings';
+        if (endpoint.match(/\/customer\/notifications\/\d+$/)) return 'customer.notification.delete';
+        if (endpoint === '/customer/notifications' || endpoint.includes('/customer/notifications?')) return 'customer.notifications';
+
+        // Customer referrals
+        if (endpoint.includes('/customer/referrals/regenerate-code')) return 'customer.referrals.regenerate';
+        if (endpoint.includes('/customer/referrals/track-click')) return 'customer.referrals.track-click';
+        if (endpoint.includes('/customer/referrals/leaderboard')) return 'customer.referrals.leaderboard';
+        if (endpoint.includes('/customer/referrals/claim-rewards')) return 'customer.referrals.claim-rewards';
+        if (endpoint === '/customer/referrals' || endpoint.includes('/customer/referrals?')) return 'customer.referrals';
 
         // Public endpoints
         if (endpoint.includes('/search')) return 'search';
@@ -320,6 +362,30 @@ const AmbiletAPI = {
         const orderMatch = endpoint.match(/\/customer\/orders\/(\d+)/);
         if (orderMatch) {
             return `id=${encodeURIComponent(orderMatch[1])}`;
+        }
+
+        // Extract ticket ID from /customer/tickets/{id}
+        const ticketMatch = endpoint.match(/\/customer\/tickets\/(\d+)/);
+        if (ticketMatch) {
+            return `id=${encodeURIComponent(ticketMatch[1])}`;
+        }
+
+        // Extract review ID from /customer/reviews/{id}
+        const reviewMatch = endpoint.match(/\/customer\/reviews\/(\d+)/);
+        if (reviewMatch) {
+            return `id=${encodeURIComponent(reviewMatch[1])}`;
+        }
+
+        // Extract watchlist ID from /customer/watchlist/{id}
+        const watchlistMatch = endpoint.match(/\/customer\/watchlist\/(\d+)/);
+        if (watchlistMatch) {
+            return `id=${encodeURIComponent(watchlistMatch[1])}`;
+        }
+
+        // Extract notification ID from /customer/notifications/{id}
+        const notificationMatch = endpoint.match(/\/customer\/notifications\/(\d+)/);
+        if (notificationMatch) {
+            return `id=${encodeURIComponent(notificationMatch[1])}`;
         }
 
         // Extract slug from endpoints like /marketplace-events/event-slug
@@ -577,10 +643,245 @@ const AmbiletAPI = {
         },
 
         /**
-         * Get single ticket
+         * Get all tickets with filter (upcoming, past, all)
+         */
+        async getAllTickets(filter = 'all', params = {}) {
+            return AmbiletAPI.get('/customer/tickets/all', { filter, ...params });
+        },
+
+        /**
+         * Get single ticket with QR data
          */
         async getTicket(ticketId) {
             return AmbiletAPI.get(`/customer/tickets/${ticketId}`);
+        },
+
+        // ==================== DASHBOARD & STATS ====================
+
+        /**
+         * Get dashboard stats (orders, tickets, events, rewards)
+         */
+        async getDashboardStats() {
+            return AmbiletAPI.get('/customer/stats');
+        },
+
+        /**
+         * Get upcoming events for dashboard
+         */
+        async getUpcomingEvents(limit = 5) {
+            return AmbiletAPI.get('/customer/stats/upcoming-events', { limit });
+        },
+
+        // ==================== REVIEWS ====================
+
+        /**
+         * Get customer reviews
+         */
+        async getReviews(params = {}) {
+            return AmbiletAPI.get('/customer/reviews', params);
+        },
+
+        /**
+         * Get events available to review
+         */
+        async getEventsToReview(params = {}) {
+            return AmbiletAPI.get('/customer/reviews/events-to-review', params);
+        },
+
+        /**
+         * Submit a review
+         */
+        async submitReview(data) {
+            return AmbiletAPI.post('/customer/reviews', data);
+        },
+
+        /**
+         * Get single review
+         */
+        async getReview(reviewId) {
+            return AmbiletAPI.get(`/customer/reviews/${reviewId}`);
+        },
+
+        /**
+         * Update a review
+         */
+        async updateReview(reviewId, data) {
+            return AmbiletAPI.put(`/customer/reviews/${reviewId}`, data);
+        },
+
+        /**
+         * Delete a review
+         */
+        async deleteReview(reviewId) {
+            return AmbiletAPI.delete(`/customer/reviews/${reviewId}`);
+        },
+
+        // ==================== WATCHLIST ====================
+
+        /**
+         * Get watchlist
+         */
+        async getWatchlist(params = {}) {
+            return AmbiletAPI.get('/customer/watchlist', params);
+        },
+
+        /**
+         * Add event to watchlist
+         */
+        async addToWatchlist(eventId, options = {}) {
+            return AmbiletAPI.post('/customer/watchlist', {
+                event_id: eventId,
+                notify_on_sale: options.notifyOnSale !== false,
+                notify_on_changes: options.notifyOnChanges !== false
+            });
+        },
+
+        /**
+         * Update watchlist item preferences
+         */
+        async updateWatchlistItem(watchlistId, data) {
+            return AmbiletAPI.put(`/customer/watchlist/${watchlistId}`, data);
+        },
+
+        /**
+         * Remove from watchlist
+         */
+        async removeFromWatchlist(watchlistId) {
+            return AmbiletAPI.delete(`/customer/watchlist/${watchlistId}`);
+        },
+
+        /**
+         * Check if event is in watchlist
+         */
+        async checkWatchlist(eventId) {
+            return AmbiletAPI.get('/customer/watchlist/check', { event_id: eventId });
+        },
+
+        // ==================== REWARDS & GAMIFICATION ====================
+
+        /**
+         * Get rewards overview (points, XP, badges count)
+         */
+        async getRewardsOverview() {
+            return AmbiletAPI.get('/customer/rewards');
+        },
+
+        /**
+         * Get points history
+         */
+        async getPointsHistory(params = {}) {
+            return AmbiletAPI.get('/customer/rewards/history', params);
+        },
+
+        /**
+         * Get badges (earned and available)
+         */
+        async getBadges() {
+            return AmbiletAPI.get('/customer/rewards/badges');
+        },
+
+        /**
+         * Get available rewards to redeem
+         */
+        async getAvailableRewards(params = {}) {
+            return AmbiletAPI.get('/customer/rewards/available', params);
+        },
+
+        /**
+         * Redeem a reward
+         */
+        async redeemReward(rewardId) {
+            return AmbiletAPI.post('/customer/rewards/redeem', { reward_id: rewardId });
+        },
+
+        /**
+         * Get redemption history
+         */
+        async getRedemptions(params = {}) {
+            return AmbiletAPI.get('/customer/rewards/redemptions', params);
+        },
+
+        // ==================== NOTIFICATIONS ====================
+
+        /**
+         * Get notifications
+         */
+        async getNotifications(params = {}) {
+            return AmbiletAPI.get('/customer/notifications', params);
+        },
+
+        /**
+         * Get unread notifications count
+         */
+        async getUnreadNotificationsCount() {
+            return AmbiletAPI.get('/customer/notifications/unread-count');
+        },
+
+        /**
+         * Mark notifications as read
+         */
+        async markNotificationsRead(notificationIds = null) {
+            return AmbiletAPI.post('/customer/notifications/mark-read', {
+                notification_ids: notificationIds // null = mark all
+            });
+        },
+
+        /**
+         * Delete notification
+         */
+        async deleteNotification(notificationId) {
+            return AmbiletAPI.delete(`/customer/notifications/${notificationId}`);
+        },
+
+        /**
+         * Get notification settings
+         */
+        async getNotificationSettings() {
+            return AmbiletAPI.get('/customer/notifications/settings');
+        },
+
+        /**
+         * Update notification settings
+         */
+        async updateNotificationSettings(settings) {
+            return AmbiletAPI.put('/customer/notifications/settings', settings);
+        },
+
+        // ==================== REFERRALS ====================
+
+        /**
+         * Get referral program info and stats
+         */
+        async getReferrals() {
+            return AmbiletAPI.get('/customer/referrals');
+        },
+
+        /**
+         * Regenerate referral code
+         */
+        async regenerateReferralCode() {
+            return AmbiletAPI.post('/customer/referrals/regenerate-code');
+        },
+
+        /**
+         * Track referral link click
+         */
+        async trackReferralClick(code, source = null) {
+            return AmbiletAPI.post('/customer/referrals/track-click', { code, source });
+        },
+
+        /**
+         * Get referral leaderboard
+         */
+        async getReferralLeaderboard(period = 'month', limit = 10) {
+            return AmbiletAPI.get('/customer/referrals/leaderboard', { period, limit });
+        },
+
+        /**
+         * Claim pending referral rewards
+         */
+        async claimReferralRewards() {
+            return AmbiletAPI.post('/customer/referrals/claim-rewards');
         },
 
         /**

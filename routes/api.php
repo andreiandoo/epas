@@ -1571,6 +1571,12 @@ use App\Http\Controllers\Api\MarketplaceClient\Customer\AccountController as Cus
 use App\Http\Controllers\Api\MarketplaceClient\Customer\TicketTransferController as CustomerTicketTransferController;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\RefundController as CustomerRefundController;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\GiftCardController as CustomerGiftCardController;
+use App\Http\Controllers\Api\MarketplaceClient\Customer\StatsController as CustomerStatsController;
+use App\Http\Controllers\Api\MarketplaceClient\Customer\ReviewsController as CustomerReviewsController;
+use App\Http\Controllers\Api\MarketplaceClient\Customer\WatchlistController as CustomerWatchlistController;
+use App\Http\Controllers\Api\MarketplaceClient\Customer\RewardsController as CustomerRewardsController;
+use App\Http\Controllers\Api\MarketplaceClient\Customer\NotificationsController as CustomerNotificationsController;
+use App\Http\Controllers\Api\MarketplaceClient\Customer\ReferralsController as CustomerReferralsController;
 
 Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no customer auth)
@@ -1610,10 +1616,84 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
             ->name('api.marketplace-client.customer.orders.show');
         Route::get('/tickets', [CustomerAccountController::class, 'upcomingTickets'])
             ->name('api.marketplace-client.customer.tickets');
+        Route::get('/tickets/all', [CustomerAccountController::class, 'allTickets'])
+            ->name('api.marketplace-client.customer.tickets.all');
+        Route::get('/tickets/{ticket}', [CustomerAccountController::class, 'ticketDetail'])
+            ->name('api.marketplace-client.customer.tickets.show');
         Route::get('/past-events', [CustomerAccountController::class, 'pastEvents'])
             ->name('api.marketplace-client.customer.past-events');
         Route::delete('/account', [CustomerAccountController::class, 'deleteAccount'])
             ->name('api.marketplace-client.customer.account.delete');
+
+        // Dashboard Stats
+        Route::get('/stats', [CustomerStatsController::class, 'index'])
+            ->name('api.marketplace-client.customer.stats');
+        Route::get('/stats/upcoming-events', [CustomerStatsController::class, 'upcomingEvents'])
+            ->name('api.marketplace-client.customer.stats.upcoming-events');
+
+        // Reviews
+        Route::get('/reviews', [CustomerReviewsController::class, 'index'])
+            ->name('api.marketplace-client.customer.reviews');
+        Route::post('/reviews', [CustomerReviewsController::class, 'store'])
+            ->name('api.marketplace-client.customer.reviews.store');
+        Route::get('/reviews/events-to-review', [CustomerReviewsController::class, 'eventsToReview'])
+            ->name('api.marketplace-client.customer.reviews.events-to-review');
+        Route::get('/reviews/{review}', [CustomerReviewsController::class, 'show'])
+            ->name('api.marketplace-client.customer.reviews.show');
+        Route::put('/reviews/{review}', [CustomerReviewsController::class, 'update'])
+            ->name('api.marketplace-client.customer.reviews.update');
+        Route::delete('/reviews/{review}', [CustomerReviewsController::class, 'destroy'])
+            ->name('api.marketplace-client.customer.reviews.destroy');
+
+        // Watchlist
+        Route::get('/watchlist', [CustomerWatchlistController::class, 'index'])
+            ->name('api.marketplace-client.customer.watchlist');
+        Route::post('/watchlist', [CustomerWatchlistController::class, 'store'])
+            ->name('api.marketplace-client.customer.watchlist.store');
+        Route::put('/watchlist/{event}', [CustomerWatchlistController::class, 'update'])
+            ->name('api.marketplace-client.customer.watchlist.update');
+        Route::delete('/watchlist/{event}', [CustomerWatchlistController::class, 'destroy'])
+            ->name('api.marketplace-client.customer.watchlist.destroy');
+        Route::get('/watchlist/check/{event}', [CustomerWatchlistController::class, 'check'])
+            ->name('api.marketplace-client.customer.watchlist.check');
+
+        // Rewards & Points
+        Route::get('/rewards', [CustomerRewardsController::class, 'index'])
+            ->name('api.marketplace-client.customer.rewards');
+        Route::get('/rewards/history', [CustomerRewardsController::class, 'history'])
+            ->name('api.marketplace-client.customer.rewards.history');
+        Route::get('/rewards/badges', [CustomerRewardsController::class, 'badges'])
+            ->name('api.marketplace-client.customer.rewards.badges');
+        Route::get('/rewards/available', [CustomerRewardsController::class, 'availableRewards'])
+            ->name('api.marketplace-client.customer.rewards.available');
+        Route::post('/rewards/redeem', [CustomerRewardsController::class, 'redeem'])
+            ->name('api.marketplace-client.customer.rewards.redeem');
+        Route::get('/rewards/redemptions', [CustomerRewardsController::class, 'redemptions'])
+            ->name('api.marketplace-client.customer.rewards.redemptions');
+
+        // Notifications
+        Route::get('/notifications', [CustomerNotificationsController::class, 'index'])
+            ->name('api.marketplace-client.customer.notifications');
+        Route::get('/notifications/unread-count', [CustomerNotificationsController::class, 'unreadCount'])
+            ->name('api.marketplace-client.customer.notifications.unread-count');
+        Route::post('/notifications/mark-read', [CustomerNotificationsController::class, 'markRead'])
+            ->name('api.marketplace-client.customer.notifications.mark-read');
+        Route::delete('/notifications/{notification}', [CustomerNotificationsController::class, 'destroy'])
+            ->name('api.marketplace-client.customer.notifications.destroy');
+        Route::get('/notifications/settings', [CustomerNotificationsController::class, 'settings'])
+            ->name('api.marketplace-client.customer.notifications.settings');
+        Route::put('/notifications/settings', [CustomerNotificationsController::class, 'updateSettings'])
+            ->name('api.marketplace-client.customer.notifications.settings.update');
+
+        // Referrals
+        Route::get('/referrals', [CustomerReferralsController::class, 'index'])
+            ->name('api.marketplace-client.customer.referrals');
+        Route::post('/referrals/regenerate', [CustomerReferralsController::class, 'regenerateCode'])
+            ->name('api.marketplace-client.customer.referrals.regenerate');
+        Route::get('/referrals/leaderboard', [CustomerReferralsController::class, 'leaderboard'])
+            ->name('api.marketplace-client.customer.referrals.leaderboard');
+        Route::post('/referrals/claim', [CustomerReferralsController::class, 'claimRewards'])
+            ->name('api.marketplace-client.customer.referrals.claim');
 
         // Ticket Transfers
         Route::post('/transfers', [CustomerTicketTransferController::class, 'initiate'])
@@ -1655,6 +1735,10 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
     // Public transfer acceptance (by token, no auth required)
     Route::post('/transfers/accept-by-token', [CustomerTicketTransferController::class, 'acceptByToken'])
         ->name('api.marketplace-client.customer.transfers.accept-by-token');
+
+    // Public referral tracking (no auth required)
+    Route::post('/referrals/track-click', [CustomerReferralsController::class, 'trackClick'])
+        ->name('api.marketplace-client.customer.referrals.track-click');
 
     // Cart (public, session-based)
     Route::get('/cart', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'index'])

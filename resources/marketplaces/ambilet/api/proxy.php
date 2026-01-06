@@ -400,6 +400,296 @@ switch ($action) {
         $endpoint = '/customer/resend-verification';
         break;
 
+    // ==================== CUSTOMER STATS & DASHBOARD ====================
+
+    case 'customer.stats.dashboard':
+        $method = 'GET';
+        $endpoint = '/customer/stats';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.upcoming-events':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 20);
+        $endpoint = '/customer/stats/upcoming-events' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER TICKETS ====================
+
+    case 'customer.tickets.all':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['filter'])) $params['filter'] = $_GET['filter']; // upcoming, past, all
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/tickets/all' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.ticket':
+        $ticketId = $_GET['id'] ?? '';
+        if (!$ticketId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing ticket ID']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/customer/tickets/' . urlencode($ticketId);
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER REVIEWS ====================
+
+    case 'customer.reviews':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/reviews' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.reviews.to-write':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/reviews/events-to-review' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.review.store':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/reviews';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.review.show':
+        $reviewId = $_GET['id'] ?? '';
+        if (!$reviewId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing review ID']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/customer/reviews/' . urlencode($reviewId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.review.update':
+        $reviewId = $_GET['id'] ?? '';
+        if (!$reviewId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing review ID']);
+            exit;
+        }
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/reviews/' . urlencode($reviewId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.review.delete':
+        $reviewId = $_GET['id'] ?? '';
+        if (!$reviewId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing review ID']);
+            exit;
+        }
+        $method = 'DELETE';
+        $endpoint = '/customer/reviews/' . urlencode($reviewId);
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER WATCHLIST ====================
+
+    case 'customer.watchlist':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/watchlist' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.watchlist.add':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/watchlist';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.watchlist.update':
+        $watchlistId = $_GET['id'] ?? '';
+        if (!$watchlistId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing watchlist ID']);
+            exit;
+        }
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/watchlist/' . urlencode($watchlistId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.watchlist.remove':
+        $watchlistId = $_GET['id'] ?? '';
+        if (!$watchlistId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing watchlist ID']);
+            exit;
+        }
+        $method = 'DELETE';
+        $endpoint = '/customer/watchlist/' . urlencode($watchlistId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.watchlist.check':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        $endpoint = '/customer/watchlist/check' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER REWARDS & GAMIFICATION ====================
+
+    case 'customer.rewards':
+        $method = 'GET';
+        $endpoint = '/customer/rewards';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.rewards.history':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type']; // earned, spent, all
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/rewards/history' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.badges':
+        $method = 'GET';
+        $endpoint = '/customer/rewards/badges';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.rewards.available':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/rewards/available' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.rewards.redeem':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/rewards/redeem';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.rewards.redemptions':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/rewards/redemptions' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER NOTIFICATIONS ====================
+
+    case 'customer.notifications':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['unread_only'])) $params['unread_only'] = $_GET['unread_only'];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/customer/notifications' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notifications.unread-count':
+        $method = 'GET';
+        $endpoint = '/customer/notifications/unread-count';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notifications.read':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/notifications/mark-read';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notification.delete':
+        $notificationId = $_GET['id'] ?? '';
+        if (!$notificationId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing notification ID']);
+            exit;
+        }
+        $method = 'DELETE';
+        $endpoint = '/customer/notifications/' . urlencode($notificationId);
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notifications.settings':
+        $method = 'GET';
+        $endpoint = '/customer/notifications/settings';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.notifications.settings.update':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/notifications/settings';
+        $requiresAuth = true;
+        break;
+
+    // ==================== CUSTOMER REFERRALS ====================
+
+    case 'customer.referrals':
+        $method = 'GET';
+        $endpoint = '/customer/referrals';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.referrals.regenerate':
+        $method = 'POST';
+        $endpoint = '/customer/referrals/regenerate-code';
+        $requiresAuth = true;
+        break;
+
+    case 'customer.referrals.track-click':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/referrals/track-click';
+        break;
+
+    case 'customer.referrals.leaderboard':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['period'])) $params['period'] = $_GET['period']; // week, month, all
+        if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 100);
+        $endpoint = '/customer/referrals/leaderboard' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'customer.referrals.claim-rewards':
+        $method = 'POST';
+        $endpoint = '/customer/referrals/claim-rewards';
+        $requiresAuth = true;
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Unknown action: ' . $action]);
@@ -1333,6 +1623,837 @@ function getMockData($action, $params) {
                 'success' => true,
                 'message' => 'Demo mode - action simulated',
                 'data' => null
+            ];
+
+        // ==================== CUSTOMER STATS & DASHBOARD (Demo Mode) ====================
+
+        case 'customer.stats.dashboard':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    'orders' => ['total' => 5, 'completed' => 4],
+                    'tickets' => ['total' => 12, 'active' => 4],
+                    'events' => ['upcoming' => 3, 'past' => 8],
+                    'rewards' => [
+                        'points' => 1250,
+                        'level' => 3,
+                        'level_name' => 'Gold',
+                        'xp' => 3450,
+                        'xp_to_next_level' => 550,
+                    ],
+                    'reviews_count' => 6,
+                    'watchlist_count' => 4,
+                    'total_spent' => 2450.00,
+                    'credit_balance' => 50.00,
+                    'currency' => 'RON',
+                ]
+            ];
+
+        case 'customer.upcoming-events':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    'upcoming_events' => [
+                        [
+                            'order_id' => 1,
+                            'order_number' => 'AMB-2025-0001',
+                            'tickets_count' => 2,
+                            'event' => [
+                                'id' => 1,
+                                'name' => 'Concert Subcarpați',
+                                'slug' => 'concert-subcarpati',
+                                'date' => '2025-02-15T19:00:00+00:00',
+                                'date_formatted' => '15 Feb 2025',
+                                'time' => '19:00',
+                                'venue' => 'Arenele Romane',
+                                'city' => 'București',
+                                'image' => 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400&h=300&fit=crop',
+                                'days_until' => 41,
+                            ]
+                        ],
+                        [
+                            'order_id' => 2,
+                            'order_number' => 'AMB-2025-0002',
+                            'tickets_count' => 1,
+                            'event' => [
+                                'id' => 2,
+                                'name' => 'Festival UNTOLD',
+                                'slug' => 'festival-untold-2025',
+                                'date' => '2025-08-07T16:00:00+00:00',
+                                'date_formatted' => '07 Aug 2025',
+                                'time' => '16:00',
+                                'venue' => 'Cluj Arena',
+                                'city' => 'Cluj-Napoca',
+                                'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=300&fit=crop',
+                                'days_until' => 214,
+                            ]
+                        ],
+                    ]
+                ]
+            ];
+
+        // ==================== CUSTOMER TICKETS (Demo Mode) ====================
+
+        case 'customer.tickets.all':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            $filter = $params['filter'] ?? 'all';
+            $tickets = [
+                [
+                    'id' => 1,
+                    'barcode' => 'AMB-TKT-001234',
+                    'type_name' => 'VIP',
+                    'price' => 250.00,
+                    'status' => 'valid',
+                    'seat_info' => 'Sector VIP, Rând A, Loc 15',
+                    'order' => ['id' => 1, 'order_number' => 'AMB-2025-0001'],
+                    'event' => [
+                        'id' => 1,
+                        'name' => 'Concert Subcarpați',
+                        'slug' => 'concert-subcarpati',
+                        'date' => '2025-02-15T19:00:00+00:00',
+                        'venue' => 'Arenele Romane',
+                        'city' => 'București',
+                        'image' => 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400&h=300&fit=crop',
+                        'is_upcoming' => true,
+                    ]
+                ],
+                [
+                    'id' => 2,
+                    'barcode' => 'AMB-TKT-001235',
+                    'type_name' => 'General Access',
+                    'price' => 150.00,
+                    'status' => 'valid',
+                    'seat_info' => null,
+                    'order' => ['id' => 1, 'order_number' => 'AMB-2025-0001'],
+                    'event' => [
+                        'id' => 1,
+                        'name' => 'Concert Subcarpați',
+                        'slug' => 'concert-subcarpati',
+                        'date' => '2025-02-15T19:00:00+00:00',
+                        'venue' => 'Arenele Romane',
+                        'city' => 'București',
+                        'image' => 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=400&h=300&fit=crop',
+                        'is_upcoming' => true,
+                    ]
+                ],
+                [
+                    'id' => 3,
+                    'barcode' => 'AMB-TKT-000987',
+                    'type_name' => 'Standard',
+                    'price' => 120.00,
+                    'status' => 'used',
+                    'seat_info' => 'Sector B, Rând 5, Loc 22',
+                    'order' => ['id' => 3, 'order_number' => 'AMB-2024-0005'],
+                    'event' => [
+                        'id' => 5,
+                        'name' => 'Concert Smiley',
+                        'slug' => 'concert-smiley',
+                        'date' => '2024-12-20T20:00:00+00:00',
+                        'venue' => 'Sala Palatului',
+                        'city' => 'București',
+                        'image' => 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop',
+                        'is_upcoming' => false,
+                    ]
+                ],
+            ];
+
+            if ($filter === 'upcoming') {
+                $tickets = array_filter($tickets, fn($t) => $t['event']['is_upcoming']);
+            } elseif ($filter === 'past') {
+                $tickets = array_filter($tickets, fn($t) => !$t['event']['is_upcoming']);
+            }
+
+            return [
+                'success' => true,
+                'data' => array_values($tickets),
+                'meta' => ['current_page' => 1, 'last_page' => 1, 'per_page' => 20, 'total' => count($tickets)]
+            ];
+
+        case 'customer.ticket':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            $ticketId = $params['id'] ?? '1';
+            return [
+                'success' => true,
+                'data' => [
+                    'id' => (int)$ticketId,
+                    'barcode' => 'AMB-TKT-001234',
+                    'type_name' => 'VIP',
+                    'price' => 250.00,
+                    'status' => 'valid',
+                    'seat_info' => 'Sector VIP, Rând A, Loc 15',
+                    'holder_name' => 'Demo User',
+                    'holder_email' => 'demo@ambilet.ro',
+                    'qr_data' => 'AMB-TKT-001234|VIP|2025-02-15|19:00|VALID',
+                    'order' => [
+                        'id' => 1,
+                        'order_number' => 'AMB-2025-0001',
+                        'status' => 'completed',
+                        'created_at' => '2025-01-03T10:30:00+00:00',
+                    ],
+                    'event' => [
+                        'id' => 1,
+                        'name' => 'Concert Subcarpați',
+                        'slug' => 'concert-subcarpati',
+                        'date' => '2025-02-15T19:00:00+00:00',
+                        'date_formatted' => '15 Feb 2025',
+                        'time' => '19:00',
+                        'venue' => 'Arenele Romane',
+                        'city' => 'București',
+                        'address' => 'Str. Cutitul de Argint 1, București',
+                        'image' => 'https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800&h=600&fit=crop',
+                    ],
+                    'created_at' => '2025-01-03T10:30:00+00:00',
+                ]
+            ];
+
+        // ==================== CUSTOMER REVIEWS (Demo Mode) ====================
+
+        case 'customer.reviews':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    [
+                        'id' => 1,
+                        'rating' => 5,
+                        'title' => 'Concert extraordinar!',
+                        'content' => 'Cel mai bun concert la care am fost. Atmosfera incredibilă și sunetul impecabil.',
+                        'photos' => ['https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&h=200&fit=crop'],
+                        'is_verified_purchase' => true,
+                        'helpful_count' => 12,
+                        'event' => [
+                            'id' => 5,
+                            'name' => 'Concert Smiley',
+                            'slug' => 'concert-smiley',
+                            'image' => 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=200&h=200&fit=crop',
+                        ],
+                        'created_at' => '2024-12-21T10:30:00+00:00',
+                    ],
+                    [
+                        'id' => 2,
+                        'rating' => 4,
+                        'title' => 'Festival reușit',
+                        'content' => 'Line-up foarte bun, organizare ok. Singura problemă a fost aglomerația la bar.',
+                        'photos' => [],
+                        'is_verified_purchase' => true,
+                        'helpful_count' => 5,
+                        'event' => [
+                            'id' => 3,
+                            'name' => 'Electric Castle 2024',
+                            'slug' => 'electric-castle-2024',
+                            'image' => 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200&h=200&fit=crop',
+                        ],
+                        'created_at' => '2024-07-25T15:20:00+00:00',
+                    ],
+                ],
+                'meta' => ['current_page' => 1, 'last_page' => 1, 'per_page' => 20, 'total' => 2]
+            ];
+
+        case 'customer.reviews.to-write':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    [
+                        'event_id' => 4,
+                        'order_id' => 4,
+                        'event' => [
+                            'id' => 4,
+                            'name' => 'Stand-up Comedy Night',
+                            'slug' => 'stand-up-comedy-night',
+                            'date' => '2024-11-15T20:00:00+00:00',
+                            'venue' => 'The Pub',
+                            'city' => 'București',
+                            'image' => 'https://images.unsplash.com/photo-1527224538127-2104bb71c51b?w=300&h=200&fit=crop',
+                        ],
+                        'attended_at' => '2024-11-15T23:00:00+00:00',
+                    ],
+                ],
+                'meta' => ['current_page' => 1, 'last_page' => 1, 'per_page' => 20, 'total' => 1]
+            ];
+
+        case 'customer.review.store':
+        case 'customer.review.update':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            $body = json_decode(file_get_contents('php://input'), true) ?: [];
+            return [
+                'success' => true,
+                'message' => 'Review saved successfully',
+                'data' => [
+                    'id' => 3,
+                    'rating' => $body['rating'] ?? 5,
+                    'title' => $body['title'] ?? '',
+                    'content' => $body['content'] ?? '',
+                    'is_verified_purchase' => true,
+                    'created_at' => date('c'),
+                ]
+            ];
+
+        case 'customer.review.show':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    'id' => (int)($params['id'] ?? 1),
+                    'rating' => 5,
+                    'title' => 'Concert extraordinar!',
+                    'content' => 'Cel mai bun concert la care am fost. Atmosfera incredibilă și sunetul impecabil.',
+                    'photos' => [],
+                    'is_verified_purchase' => true,
+                    'event' => [
+                        'id' => 5,
+                        'name' => 'Concert Smiley',
+                        'slug' => 'concert-smiley',
+                    ],
+                    'created_at' => '2024-12-21T10:30:00+00:00',
+                ]
+            ];
+
+        case 'customer.review.delete':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return ['success' => true, 'message' => 'Review deleted'];
+
+        // ==================== CUSTOMER WATCHLIST (Demo Mode) ====================
+
+        case 'customer.watchlist':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    [
+                        'id' => 1,
+                        'notify_on_sale' => true,
+                        'notify_on_changes' => true,
+                        'event' => [
+                            'id' => 10,
+                            'name' => 'Coldplay - Music of the Spheres',
+                            'slug' => 'coldplay-bucuresti-2025',
+                            'date' => '2025-06-15T20:00:00+00:00',
+                            'venue' => 'Arena Națională',
+                            'city' => 'București',
+                            'min_price' => 350,
+                            'currency' => 'RON',
+                            'is_sold_out' => false,
+                            'image' => 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=300&h=200&fit=crop',
+                        ],
+                        'added_at' => '2025-01-02T14:30:00+00:00',
+                    ],
+                    [
+                        'id' => 2,
+                        'notify_on_sale' => true,
+                        'notify_on_changes' => false,
+                        'event' => [
+                            'id' => 11,
+                            'name' => 'NEVERSEA 2025',
+                            'slug' => 'neversea-2025',
+                            'date' => '2025-07-10T14:00:00+00:00',
+                            'venue' => 'Plaja Modern',
+                            'city' => 'Constanța',
+                            'min_price' => 499,
+                            'currency' => 'RON',
+                            'is_sold_out' => false,
+                            'image' => 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&h=200&fit=crop',
+                        ],
+                        'added_at' => '2025-01-01T09:15:00+00:00',
+                    ],
+                ],
+                'meta' => ['current_page' => 1, 'last_page' => 1, 'per_page' => 20, 'total' => 2]
+            ];
+
+        case 'customer.watchlist.add':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            $body = json_decode(file_get_contents('php://input'), true) ?: [];
+            return [
+                'success' => true,
+                'message' => 'Event added to watchlist',
+                'data' => [
+                    'id' => 3,
+                    'event_id' => $body['event_id'] ?? 1,
+                    'notify_on_sale' => $body['notify_on_sale'] ?? true,
+                    'notify_on_changes' => $body['notify_on_changes'] ?? true,
+                    'added_at' => date('c'),
+                ]
+            ];
+
+        case 'customer.watchlist.update':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return ['success' => true, 'message' => 'Watchlist item updated'];
+
+        case 'customer.watchlist.remove':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return ['success' => true, 'message' => 'Event removed from watchlist'];
+
+        case 'customer.watchlist.check':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => ['is_in_watchlist' => false, 'watchlist_id' => null]
+            ];
+
+        // ==================== CUSTOMER REWARDS (Demo Mode) ====================
+
+        case 'customer.rewards':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    'points' => [
+                        'balance' => 1250,
+                        'lifetime_earned' => 3500,
+                        'lifetime_spent' => 2250,
+                        'expiring_soon' => 200,
+                        'expiring_date' => '2025-03-31',
+                    ],
+                    'experience' => [
+                        'total_xp' => 3450,
+                        'current_level' => 3,
+                        'level_name' => 'Gold',
+                        'level_group' => 'Gold',
+                        'xp_in_level' => 450,
+                        'xp_to_next_level' => 550,
+                        'progress_percentage' => 45,
+                    ],
+                    'badges_earned' => 8,
+                    'rewards_redeemed' => 3,
+                ]
+            ];
+
+        case 'customer.rewards.history':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    [
+                        'id' => 1,
+                        'type' => 'earned',
+                        'points' => 250,
+                        'description' => 'Achiziție bilete Concert Subcarpați',
+                        'reference_type' => 'order',
+                        'reference_id' => 1,
+                        'created_at' => '2025-01-03T10:30:00+00:00',
+                    ],
+                    [
+                        'id' => 2,
+                        'type' => 'earned',
+                        'points' => 50,
+                        'description' => 'Bonus review eveniment',
+                        'reference_type' => 'review',
+                        'reference_id' => 1,
+                        'created_at' => '2024-12-21T10:35:00+00:00',
+                    ],
+                    [
+                        'id' => 3,
+                        'type' => 'spent',
+                        'points' => -500,
+                        'description' => 'Răscumpărat: 10% discount next order',
+                        'reference_type' => 'redemption',
+                        'reference_id' => 1,
+                        'created_at' => '2024-12-01T15:20:00+00:00',
+                    ],
+                ],
+                'meta' => ['current_page' => 1, 'last_page' => 1, 'per_page' => 20, 'total' => 3]
+            ];
+
+        case 'customer.badges':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    'earned' => [
+                        [
+                            'id' => 1,
+                            'name' => 'First Timer',
+                            'description' => 'Ai cumpărat primul tău bilet!',
+                            'icon_url' => '/badges/first-timer.svg',
+                            'color' => '#10B981',
+                            'category' => 'milestone',
+                            'xp_reward' => 50,
+                            'earned_at' => '2024-06-15T10:30:00+00:00',
+                        ],
+                        [
+                            'id' => 2,
+                            'name' => 'Festival Fan',
+                            'description' => 'Ai participat la 3 festivaluri',
+                            'icon_url' => '/badges/festival-fan.svg',
+                            'color' => '#8B5CF6',
+                            'category' => 'activity',
+                            'xp_reward' => 150,
+                            'earned_at' => '2024-08-20T18:00:00+00:00',
+                        ],
+                        [
+                            'id' => 3,
+                            'name' => 'Reviewer',
+                            'description' => 'Ai scris 5 review-uri',
+                            'icon_url' => '/badges/reviewer.svg',
+                            'color' => '#F59E0B',
+                            'category' => 'social',
+                            'xp_reward' => 100,
+                            'earned_at' => '2024-12-21T10:35:00+00:00',
+                        ],
+                    ],
+                    'available' => [
+                        [
+                            'id' => 4,
+                            'name' => 'VIP Status',
+                            'description' => 'Cumpără 10 bilete VIP',
+                            'icon_url' => '/badges/vip.svg',
+                            'color' => '#EC4899',
+                            'category' => 'milestone',
+                            'xp_reward' => 300,
+                            'progress' => ['current' => 3, 'target' => 10],
+                            'is_secret' => false,
+                        ],
+                        [
+                            'id' => 5,
+                            'name' => 'Social Butterfly',
+                            'description' => 'Invită 5 prieteni care cumpără bilete',
+                            'icon_url' => '/badges/social.svg',
+                            'color' => '#3B82F6',
+                            'category' => 'social',
+                            'xp_reward' => 200,
+                            'progress' => ['current' => 2, 'target' => 5],
+                            'is_secret' => false,
+                        ],
+                    ],
+                ]
+            ];
+
+        case 'customer.rewards.available':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    [
+                        'id' => 1,
+                        'name' => '10% Discount',
+                        'description' => '10% reducere la următoarea comandă',
+                        'type' => 'percentage_discount',
+                        'points_cost' => 500,
+                        'value' => 10,
+                        'image_url' => '/rewards/discount-10.svg',
+                        'is_featured' => true,
+                        'valid_until' => '2025-12-31',
+                        'can_redeem' => true,
+                    ],
+                    [
+                        'id' => 2,
+                        'name' => '50 RON Credit',
+                        'description' => '50 RON credit în cont',
+                        'type' => 'fixed_discount',
+                        'points_cost' => 1000,
+                        'value' => 50,
+                        'image_url' => '/rewards/credit-50.svg',
+                        'is_featured' => true,
+                        'valid_until' => '2025-12-31',
+                        'can_redeem' => true,
+                    ],
+                    [
+                        'id' => 3,
+                        'name' => 'Meet & Greet Access',
+                        'description' => 'Acces meet & greet la un concert selectat',
+                        'type' => 'special',
+                        'points_cost' => 5000,
+                        'value' => null,
+                        'image_url' => '/rewards/meet-greet.svg',
+                        'is_featured' => false,
+                        'valid_until' => '2025-12-31',
+                        'can_redeem' => false,
+                        'min_level_required' => 5,
+                    ],
+                ],
+                'meta' => ['current_page' => 1, 'last_page' => 1, 'per_page' => 20, 'total' => 3]
+            ];
+
+        case 'customer.rewards.redeem':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            $body = json_decode(file_get_contents('php://input'), true) ?: [];
+            return [
+                'success' => true,
+                'message' => 'Reward redeemed successfully!',
+                'data' => [
+                    'redemption_id' => 4,
+                    'voucher_code' => 'AMB-' . strtoupper(substr(md5(time()), 0, 8)),
+                    'expires_at' => '2025-02-05T23:59:59+00:00',
+                    'points_spent' => $body['reward_id'] == 1 ? 500 : 1000,
+                    'new_balance' => 750,
+                ]
+            ];
+
+        case 'customer.rewards.redemptions':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    [
+                        'id' => 1,
+                        'reward_name' => '10% Discount',
+                        'voucher_code' => 'AMB-ABC12345',
+                        'status' => 'used',
+                        'points_spent' => 500,
+                        'discount_applied' => 45.00,
+                        'used_at' => '2024-12-15T16:30:00+00:00',
+                        'created_at' => '2024-12-01T15:20:00+00:00',
+                    ],
+                    [
+                        'id' => 2,
+                        'reward_name' => '50 RON Credit',
+                        'voucher_code' => 'AMB-XYZ98765',
+                        'status' => 'active',
+                        'points_spent' => 1000,
+                        'expires_at' => '2025-02-01T23:59:59+00:00',
+                        'created_at' => '2025-01-01T10:00:00+00:00',
+                    ],
+                ],
+                'meta' => ['current_page' => 1, 'last_page' => 1, 'per_page' => 20, 'total' => 2]
+            ];
+
+        // ==================== CUSTOMER NOTIFICATIONS (Demo Mode) ====================
+
+        case 'customer.notifications':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    [
+                        'id' => 1,
+                        'type' => 'order_confirmed',
+                        'title' => 'Comandă confirmată',
+                        'message' => 'Comanda ta #AMB-2025-0001 a fost confirmată. Biletele sunt disponibile în contul tău.',
+                        'icon' => '✅',
+                        'action_url' => '/user/orders/1',
+                        'action_text' => 'Vezi comanda',
+                        'read_at' => null,
+                        'created_at' => '2025-01-03T10:31:00+00:00',
+                    ],
+                    [
+                        'id' => 2,
+                        'type' => 'event_reminder',
+                        'title' => 'Eveniment în curând!',
+                        'message' => 'Concert Subcarpați este peste 7 zile. Nu uita să descarci biletele!',
+                        'icon' => '🎫',
+                        'action_url' => '/user/tickets',
+                        'action_text' => 'Vezi biletele',
+                        'read_at' => '2025-01-04T09:00:00+00:00',
+                        'created_at' => '2025-01-04T08:00:00+00:00',
+                    ],
+                    [
+                        'id' => 3,
+                        'type' => 'reward_earned',
+                        'title' => 'Ai câștigat puncte!',
+                        'message' => 'Ai primit 250 puncte pentru achiziția recentă. Verifică recompensele disponibile!',
+                        'icon' => '🎁',
+                        'action_url' => '/user/rewards',
+                        'action_text' => 'Vezi recompense',
+                        'read_at' => '2025-01-03T11:00:00+00:00',
+                        'created_at' => '2025-01-03T10:32:00+00:00',
+                    ],
+                ],
+                'meta' => ['current_page' => 1, 'last_page' => 1, 'per_page' => 20, 'total' => 3]
+            ];
+
+        case 'customer.notifications.unread-count':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return ['success' => true, 'data' => ['unread_count' => 1]];
+
+        case 'customer.notifications.read':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return ['success' => true, 'message' => 'Notifications marked as read'];
+
+        case 'customer.notification.delete':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return ['success' => true, 'message' => 'Notification deleted'];
+
+        case 'customer.notifications.settings':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    'email_order_confirmation' => true,
+                    'email_event_reminders' => true,
+                    'email_price_alerts' => true,
+                    'email_marketing' => false,
+                    'push_enabled' => true,
+                    'push_order_updates' => true,
+                    'push_event_reminders' => true,
+                ]
+            ];
+
+        case 'customer.notifications.settings.update':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return ['success' => true, 'message' => 'Notification settings updated'];
+
+        // ==================== CUSTOMER REFERRALS (Demo Mode) ====================
+
+        case 'customer.referrals':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    'code' => 'REF-DEMO123',
+                    'referral_url' => 'https://bilete.online/ref/REF-DEMO123',
+                    'stats' => [
+                        'clicks' => 45,
+                        'signups' => 8,
+                        'conversions' => 3,
+                        'total_value' => 850.00,
+                        'points_earned' => 450,
+                        'pending_points' => 100,
+                    ],
+                    'rewards' => [
+                        'points_per_signup' => 50,
+                        'points_per_conversion' => 100,
+                        'bonus_tiers' => [
+                            ['conversions' => 5, 'bonus' => 200],
+                            ['conversions' => 10, 'bonus' => 500],
+                            ['conversions' => 25, 'bonus' => 1500],
+                        ],
+                    ],
+                    'recent_referrals' => [
+                        [
+                            'id' => 1,
+                            'referred_name' => 'Maria P.',
+                            'status' => 'converted',
+                            'order_value' => 350.00,
+                            'points_awarded' => 150,
+                            'converted_at' => '2024-12-20T15:30:00+00:00',
+                        ],
+                        [
+                            'id' => 2,
+                            'referred_name' => 'Andrei M.',
+                            'status' => 'registered',
+                            'points_awarded' => 50,
+                            'registered_at' => '2025-01-02T10:15:00+00:00',
+                        ],
+                    ],
+                ]
+            ];
+
+        case 'customer.referrals.regenerate':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            $newCode = 'REF-' . strtoupper(substr(md5(time()), 0, 6));
+            return [
+                'success' => true,
+                'message' => 'Referral code regenerated',
+                'data' => [
+                    'code' => $newCode,
+                    'referral_url' => 'https://bilete.online/ref/' . $newCode,
+                ]
+            ];
+
+        case 'customer.referrals.track-click':
+            return ['success' => true, 'message' => 'Click tracked'];
+
+        case 'customer.referrals.leaderboard':
+            return [
+                'success' => true,
+                'data' => [
+                    'period' => $params['period'] ?? 'month',
+                    'leaderboard' => [
+                        ['rank' => 1, 'name' => 'Alexandru T.', 'conversions' => 15, 'points' => 2250],
+                        ['rank' => 2, 'name' => 'Elena R.', 'conversions' => 12, 'points' => 1800],
+                        ['rank' => 3, 'name' => 'Mihai D.', 'conversions' => 9, 'points' => 1350],
+                        ['rank' => 4, 'name' => 'Demo User', 'conversions' => 3, 'points' => 450, 'is_current_user' => true],
+                        ['rank' => 5, 'name' => 'Ana M.', 'conversions' => 2, 'points' => 300],
+                    ],
+                    'current_user_rank' => 4,
+                ]
+            ];
+
+        case 'customer.referrals.claim-rewards':
+            if (empty($_SESSION['demo_customer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'message' => 'Rewards claimed successfully',
+                'data' => ['points_claimed' => 100, 'new_balance' => 1350]
             ];
 
         default:

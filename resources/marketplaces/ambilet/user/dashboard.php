@@ -230,33 +230,34 @@ const UserDashboard = {
 
     async loadDashboard() {
         try {
-            const response = await AmbiletAPI.get('/customer/stats');
+            const response = await AmbiletAPI.customer.getDashboardStats();
             if (response.success && response.data) {
-                this.stats = response.data;
+                // Map API response to dashboard format
+                const d = response.data;
+                this.stats = {
+                    events_attended: d.events?.past || 0,
+                    points: d.rewards?.points || 0,
+                    badges: d.badges_earned || 0,
+                    favorites: d.watchlist_count || 0,
+                    level: d.rewards?.level || 1,
+                    level_title: d.rewards?.level_name || 'Bronze',
+                    xp: d.rewards?.xp || 0,
+                    xp_next: (d.rewards?.xp || 0) + (d.rewards?.xp_to_next_level || 100),
+                    badge_title: d.rewards?.level_name || 'MEMBER',
+                    active_tickets: d.tickets?.active || 0,
+                    upcoming_events: d.events?.upcoming || 0,
+                    total_spent: d.total_spent || 0,
+                    credit_balance: d.credit_balance || 0
+                };
                 this.renderStats();
             }
         } catch (error) {
-            // Use demo data from DEMO_DATA if available
-            if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.customer) {
-                const c = DEMO_DATA.customer;
-                this.stats = {
-                    events_attended: c.stats?.events || 23,
-                    points: c.points || 2450,
-                    badges: DEMO_DATA.badges?.unlocked?.length || 7,
-                    favorites: DEMO_DATA.watchlistEvents?.length || 12,
-                    level: c.level || 12,
-                    level_title: c.level_name || 'Rock Star',
-                    xp: c.points || 2450,
-                    xp_next: c.next_level_xp || 3000,
-                    badge_title: c.type || 'ROCK ENTHUSIAST'
-                };
-            } else {
-                this.stats = {
-                    events_attended: 23, points: 2450, badges: 7, favorites: 12,
-                    level: 12, level_title: 'Rock Star', xp: 2450, xp_next: 3000,
-                    badge_title: 'ROCK ENTHUSIAST'
-                };
-            }
+            console.warn('Failed to load stats from API, using fallback:', error.message);
+            this.stats = {
+                events_attended: 0, points: 0, badges: 0, favorites: 0,
+                level: 1, level_title: 'Bronze', xp: 0, xp_next: 100,
+                badge_title: 'MEMBER'
+            };
             this.renderStats();
         }
 
@@ -300,51 +301,44 @@ const UserDashboard = {
 
     async loadUpcomingEvents() {
         try {
-            const response = await AmbiletAPI.get('/customer/tickets', { upcoming: true, limit: 2 });
-            if (response.success && response.data?.length) {
-                this.renderUpcomingEvents(response.data);
+            const response = await AmbiletAPI.customer.getUpcomingEvents(3);
+            if (response.success && response.data?.upcoming_events?.length) {
+                this.renderUpcomingEvents(response.data.upcoming_events);
                 return;
             }
-        } catch (e) {}
-
-        // Use demo data
-        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.customerTickets?.upcoming) {
-            this.renderUpcomingEvents(DEMO_DATA.customerTickets.upcoming.slice(0, 2).map(t => ({
-                event: { title: t.event.title, image: t.event.image, start_date: t.event.date, start_time: t.event.time, venue: { name: t.event.venue } },
-                ticket_type: t.ticket_type, quantity: t.quantity, days_until: t.days_until
-            })));
-        } else {
-            this.renderUpcomingEvents([]);
+        } catch (e) {
+            console.warn('Failed to load upcoming events:', e.message);
         }
+        this.renderUpcomingEvents([]);
     },
 
-    renderUpcomingEvents(tickets) {
+    renderUpcomingEvents(events) {
         const container = document.getElementById('upcoming-events');
-        if (!tickets.length) {
-            container.innerHTML = '<p class="py-8 text-center text-muted">Nu ai evenimente programate</p>';
+        if (!events.length) {
+            container.innerHTML = '<div class="py-8 text-center"><p class="text-muted">Nu ai evenimente programate</p><a href="/" class="inline-block px-4 py-2 mt-3 text-sm font-medium text-white bg-primary rounded-lg hover:bg-primary-dark">Descopera evenimente</a></div>';
             return;
         }
 
-        container.innerHTML = tickets.map(t => {
-            const event = t.event;
-            const daysClass = t.days_until <= 7 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning';
-            const typeClass = t.ticket_type.toLowerCase().includes('vip') ? 'bg-primary/10 text-primary' : 'bg-surface text-secondary border border-border';
+        container.innerHTML = events.map(item => {
+            const e = item.event;
+            const daysUntil = e.days_until || 0;
+            const daysClass = daysUntil <= 7 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning';
+            const daysText = daysUntil === 0 ? 'Azi' : daysUntil === 1 ? 'Maine' : 'In ' + daysUntil + ' zile';
 
-            return `
-                <a href="/bilete/${event.slug || ''}" class="flex gap-4 p-3 card-hover bg-surface rounded-xl">
-                    <div class="flex-shrink-0 w-20 h-20 overflow-hidden rounded-xl">
-                        <img src="${event.image || '/assets/images/placeholder-event.jpg'}" class="object-cover w-full h-full" alt="">
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <span class="px-2 py-0.5 ${daysClass} text-xs font-semibold rounded">In ${t.days_until} zile</span>
-                        <h3 class="mt-1 font-semibold text-secondary">${event.title}</h3>
-                        <p class="mt-1 text-sm text-muted">${this.formatDate(event.start_date)}, ${event.start_time || '20:00'}</p>
-                        <div class="flex items-center gap-2 mt-2">
-                            <span class="px-2 py-0.5 ${typeClass} text-xs font-semibold rounded">${t.quantity}x ${t.ticket_type}</span>
-                        </div>
-                    </div>
-                </a>
-            `;
+            return '<a href="/bilete/' + (e.slug || '') + '" class="flex gap-4 p-3 card-hover bg-surface rounded-xl">' +
+                '<div class="flex-shrink-0 w-20 h-20 overflow-hidden rounded-xl">' +
+                '<img src="' + (e.image || '/assets/images/placeholder-event.jpg') + '" class="object-cover w-full h-full" alt="">' +
+                '</div>' +
+                '<div class="flex-1 min-w-0">' +
+                '<span class="px-2 py-0.5 ' + daysClass + ' text-xs font-semibold rounded">' + daysText + '</span>' +
+                '<h3 class="mt-1 font-semibold text-secondary">' + e.name + '</h3>' +
+                '<p class="mt-1 text-sm text-muted">' + (e.date_formatted || this.formatDate(e.date)) + ', ' + (e.time || '20:00') + '</p>' +
+                '<p class="mt-1 text-xs text-muted">' + (e.venue || '') + ', ' + (e.city || '') + '</p>' +
+                '<div class="flex items-center gap-2 mt-2">' +
+                '<span class="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded">' + item.tickets_count + ' bilete</span>' +
+                '</div>' +
+                '</div>' +
+                '</a>';
         }).join('');
     },
 
