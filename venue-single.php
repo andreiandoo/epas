@@ -329,10 +329,13 @@ include __DIR__ . '/includes/header.php';
 <?php
 include __DIR__ . '/includes/footer.php';
 
+// Pass slug to JavaScript (htaccess rewrites URL, so query params not visible in browser)
+echo '<script>window.VENUE_SLUG = ' . json_encode($venueSlug) . ';</script>';
+
 $scriptsExtra = <<<'SCRIPTS'
 <script>
 const VenuePage = {
-    venueSlug: new URLSearchParams(window.location.search).get('slug') || '',
+    venueSlug: window.VENUE_SLUG || '',
 
     monthNames: ['IAN', 'FEB', 'MAR', 'APR', 'MAI', 'IUN', 'IUL', 'AUG', 'SEP', 'OCT', 'NOI', 'DEC'],
 
