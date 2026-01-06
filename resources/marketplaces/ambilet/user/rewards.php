@@ -188,221 +188,399 @@ require_once dirname(__DIR__) . '/includes/header.php';
 <?php
 $scriptsExtra = <<<'JS'
 <script>
-// Render rewards page from centralized demo data
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof DEMO_DATA === 'undefined') {
-        console.error('DEMO_DATA not loaded');
-        return;
+const RewardsPage = {
+    points: 0,
+    xp: 0,
+    level: 1,
+    levelName: 'Newbie',
+    nextLevelXP: 1000,
+    rewards: [],
+    badges: { earned: [], available: [] },
+    pointsHistory: [],
+    levels: [],
+
+    async init() {
+        if (!AmbiletAuth.isAuthenticated()) {
+            window.location.href = '/autentificare?redirect=/cont/puncte';
+            return;
+        }
+
+        // Load all data in parallel
+        await Promise.all([
+            this.loadPoints(),
+            this.loadXP(),
+            this.loadBadges(),
+            this.loadRewards(),
+            this.loadHistory()
+        ]);
+
+        this.render();
+    },
+
+    async loadPoints() {
+        try {
+            const response = await AmbiletAPI.customer.getPoints();
+            if (response.success && response.data) {
+                this.points = response.data.balance || 0;
+                if (response.data.history) {
+                    this.pointsHistory = response.data.history;
+                }
+            }
+        } catch (error) {
+            console.log('Points API error:', error);
+            this.loadDemoPoints();
+        }
+    },
+
+    async loadXP() {
+        try {
+            const response = await AmbiletAPI.customer.getXP();
+            if (response.success && response.data) {
+                this.xp = response.data.total_xp || 0;
+                this.level = response.data.level || 1;
+                this.levelName = response.data.level_name || 'Newbie';
+                this.nextLevelXP = response.data.next_level_xp || 1000;
+                if (response.data.levels) {
+                    this.levels = response.data.levels;
+                }
+            }
+        } catch (error) {
+            console.log('XP API error:', error);
+            this.loadDemoXP();
+        }
+    },
+
+    async loadBadges() {
+        try {
+            const response = await AmbiletAPI.customer.getBadges();
+            if (response.success && response.data) {
+                this.badges = {
+                    earned: response.data.earned || [],
+                    available: response.data.available || []
+                };
+            }
+        } catch (error) {
+            console.log('Badges API error:', error);
+            this.loadDemoBadges();
+        }
+    },
+
+    async loadRewards() {
+        try {
+            const response = await AmbiletAPI.customer.getRewards();
+            if (response.success && response.data) {
+                this.rewards = response.data.rewards || response.data || [];
+            }
+        } catch (error) {
+            console.log('Rewards API error:', error);
+            this.loadDemoRewards();
+        }
+    },
+
+    async loadHistory() {
+        try {
+            const response = await AmbiletAPI.customer.getPointsHistory();
+            if (response.success && response.data) {
+                this.pointsHistory = response.data.history || response.data || [];
+            }
+        } catch (error) {
+            console.log('History API error:', error);
+        }
+    },
+
+    loadDemoPoints() {
+        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.customer) {
+            this.points = DEMO_DATA.customer.points || 0;
+        }
+        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.pointsHistory) {
+            this.pointsHistory = DEMO_DATA.pointsHistory;
+        }
+    },
+
+    loadDemoXP() {
+        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.customer) {
+            this.xp = DEMO_DATA.customer.xp || DEMO_DATA.customer.points || 0;
+            this.level = DEMO_DATA.customer.level || 1;
+            this.levelName = DEMO_DATA.customer.level_name || 'Newbie';
+            this.nextLevelXP = DEMO_DATA.customer.next_level_xp || 1000;
+        }
+        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.levels) {
+            this.levels = DEMO_DATA.levels;
+        }
+    },
+
+    loadDemoBadges() {
+        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.badges) {
+            this.badges = {
+                earned: DEMO_DATA.badges.unlocked || [],
+                available: DEMO_DATA.badges.locked || []
+            };
+        }
+    },
+
+    loadDemoRewards() {
+        if (typeof DEMO_DATA !== 'undefined' && DEMO_DATA.rewards) {
+            this.rewards = DEMO_DATA.rewards;
+        }
+    },
+
+    render() {
+        // Update hero section with points
+        document.getElementById('user-points').textContent = this.points.toLocaleString();
+        document.getElementById('points-value').textContent = '≈ ' + (this.points / 100).toFixed(2) + ' lei reducere';
+
+        // Update XP/Level info
+        document.getElementById('level-info').textContent = 'Nivel ' + this.level + ' - ' + this.levelName;
+        const xpRemaining = Math.max(0, this.nextLevelXP - this.xp);
+        document.getElementById('level-remaining').textContent = xpRemaining.toLocaleString() + ' XP pana la nivelul urmator';
+        document.getElementById('xp-progress').textContent = this.xp.toLocaleString() + ' / ' + this.nextLevelXP.toLocaleString();
+        const progressPercent = Math.min(100, Math.round((this.xp / this.nextLevelXP) * 100));
+        document.getElementById('level-bar').style.width = progressPercent + '%';
+        document.getElementById('level-current').textContent = 'Nivel ' + this.level;
+        document.getElementById('level-next').textContent = 'Nivel ' + (this.level + 1);
+
+        // Update badges count
+        const earnedCount = this.badges.earned?.length || 0;
+        const availableCount = this.badges.available?.length || 0;
+        const totalBadges = earnedCount + availableCount;
+        document.getElementById('badges-count').textContent = earnedCount + '/' + totalBadges;
+        document.getElementById('badges-desc').textContent = 'Ai obtinut ' + earnedCount + ' din ' + totalBadges + ' badge-uri disponibile. Continua sa participi la evenimente!';
+
+        // Render all sections
+        this.renderRewards();
+        this.renderBadges();
+        this.renderHistory();
+        this.renderLevels();
+    },
+
+    renderRewards() {
+        const container = document.getElementById('rewards-container');
+        if (!this.rewards || this.rewards.length === 0) {
+            container.innerHTML = '<p class="col-span-full text-center py-8 text-muted">Nu sunt recompense disponibile momentan.</p>';
+            return;
+        }
+
+        container.innerHTML = this.rewards.map(reward => {
+            const isLocked = reward.status === 'locked';
+            const isInsufficient = reward.status === 'insufficient' || (reward.points_cost > this.points);
+            const isExclusive = reward.status === 'exclusive';
+            const canRedeem = !isLocked && !isInsufficient && !isExclusive;
+
+            let cardClass = (isLocked || isInsufficient) ? 'opacity-60' : '';
+            if (isExclusive) {
+                cardClass = 'shine bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-accent/30';
+            } else {
+                cardClass += ' bg-white border border-border';
+            }
+
+            let statusBadge = '';
+            if (canRedeem) {
+                statusBadge = '<span class="px-3 py-1 text-xs font-bold rounded-full bg-success/10 text-success">DISPONIBIL</span>';
+            } else if (isLocked) {
+                statusBadge = '<span class="px-3 py-1 text-xs font-bold rounded-full bg-muted/20 text-muted">' + (reward.lock_reason || 'BLOCAT') + '</span>';
+            } else if (isInsufficient) {
+                const missing = (reward.points_cost || 0) - this.points;
+                statusBadge = '<span class="px-3 py-1 text-xs font-bold rounded-full bg-warning/10 text-warning">' + missing.toLocaleString() + ' LIPSA</span>';
+            } else if (isExclusive) {
+                statusBadge = '<span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-accent">EXCLUSIV</span>';
+            }
+
+            let actionBtn = '';
+            if (canRedeem) {
+                actionBtn = '<button onclick="RewardsPage.redeemReward(' + reward.id + ')" class="px-4 py-2 text-sm font-semibold text-white rounded-lg btn-primary">Revendica</button>';
+            } else {
+                actionBtn = '<button class="px-4 py-2 text-sm font-semibold rounded-lg cursor-not-allowed bg-surface text-muted" disabled>Indisponibil</button>';
+            }
+
+            const iconColor = (isLocked || isInsufficient || isExclusive) ? 'text-muted' : 'text-accent';
+            const pointsColor = (isLocked || isInsufficient || isExclusive) ? 'text-muted' : 'text-secondary';
+            const pointsCost = reward.points_cost || reward.points || 0;
+            const gradient = reward.gradient || 'from-primary/20 to-accent/20';
+            const emoji = reward.emoji || reward.icon || '🎁';
+
+            return '<div class="reward-card rounded-xl lg:rounded-2xl p-5 ' + cardClass + '">' +
+                '<div class="flex items-center justify-between mb-4">' +
+                    '<div class="w-14 h-14 bg-gradient-to-br ' + gradient + ' rounded-xl flex items-center justify-center">' +
+                        '<span class="text-3xl">' + emoji + '</span>' +
+                    '</div>' +
+                    statusBadge +
+                '</div>' +
+                '<h3 class="mb-1 font-bold text-secondary">' + (reward.name || reward.title) + '</h3>' +
+                '<p class="mb-4 text-sm text-muted">' + (reward.description || reward.desc || '') + '</p>' +
+                '<div class="flex items-center justify-between">' +
+                    '<div class="flex items-center gap-1">' +
+                        '<svg class="w-5 h-5 ' + iconColor + '" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>' +
+                        '<span class="font-bold ' + pointsColor + '">' + pointsCost.toLocaleString() + '</span>' +
+                    '</div>' +
+                    actionBtn +
+                '</div>' +
+            '</div>';
+        }).join('');
+    },
+
+    async redeemReward(rewardId) {
+        try {
+            const response = await AmbiletAPI.customer.redeemReward(rewardId);
+            if (response.success) {
+                AmbiletNotifications.success('Recompensa a fost revendicata cu succes!');
+                await this.loadPoints();
+                await this.loadRewards();
+                this.render();
+            } else {
+                AmbiletNotifications.error(response.message || 'Nu s-a putut revendica recompensa.');
+            }
+        } catch (error) {
+            AmbiletNotifications.error('Eroare la revendicarea recompensei.');
+        }
+    },
+
+    renderBadges() {
+        const container = document.getElementById('badges-container');
+        const badges = this.badges;
+
+        // Combine earned and available badges for display
+        const earnedHtml = (badges.earned || []).map(badge => {
+            const gradient = badge.gradient || badge.color || 'from-yellow-400 to-orange-500';
+            const emoji = badge.emoji || badge.icon || '🏆';
+            const xpReward = badge.xp_reward || badge.xp || 0;
+            return '<div class="p-4 text-center bg-white border badge-card rounded-xl border-border">' +
+                '<div class="w-16 h-16 mx-auto mb-3 bg-gradient-to-br ' + gradient + ' rounded-2xl flex items-center justify-center text-3xl">' +
+                    emoji +
+                '</div>' +
+                '<h4 class="text-sm font-bold text-secondary">' + (badge.name || badge.title) + '</h4>' +
+                '<p class="mt-1 text-xs text-muted">' + (badge.description || badge.desc || '') + '</p>' +
+                '<span class="inline-block mt-2 px-2 py-0.5 bg-success/10 text-success text-xs font-semibold rounded">+' + xpReward + ' XP</span>' +
+            '</div>';
+        }).join('');
+
+        const availableHtml = (badges.available || []).map(badge => {
+            const emoji = badge.emoji || badge.icon || '🔒';
+            const progress = badge.progress || badge.missing || 'Blocat';
+            return '<div class="p-4 text-center bg-white border badge-card badge-locked rounded-xl border-border">' +
+                '<div class="flex items-center justify-center w-16 h-16 mx-auto mb-3 text-3xl bg-gradient-to-br from-gray-300 to-gray-400 rounded-2xl">' +
+                    emoji +
+                '</div>' +
+                '<h4 class="text-sm font-bold text-secondary">' + (badge.name || badge.title) + '</h4>' +
+                '<p class="mt-1 text-xs text-muted">' + (badge.description || badge.desc || '') + '</p>' +
+                '<span class="inline-block mt-2 px-2 py-0.5 bg-muted/20 text-muted text-xs font-semibold rounded">' + progress + '</span>' +
+            '</div>';
+        }).join('');
+
+        container.innerHTML = earnedHtml + availableHtml;
+    },
+
+    renderHistory() {
+        const container = document.getElementById('history-container');
+        if (!this.pointsHistory || this.pointsHistory.length === 0) {
+            container.innerHTML = '<p class="p-8 text-center text-muted">Nu ai tranzactii in istoric.</p>';
+            return;
+        }
+
+        container.innerHTML = this.pointsHistory.map(item => {
+            const points = item.points || item.amount || 0;
+            const iconBg = points > 0 ? 'bg-success/10' : 'bg-primary/10';
+            const iconColor = points > 0 ? 'text-success' : 'text-primary';
+            const pointsColor = points > 0 ? 'text-success' : 'text-primary';
+            const pointsPrefix = points > 0 ? '+' : '';
+
+            let iconSvg = '';
+            const iconType = item.icon || (points > 0 ? 'plus' : 'minus');
+            if (iconType === 'plus' || points > 0) {
+                iconSvg = '<svg class="w-5 h-5 ' + iconColor + '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>';
+            } else if (iconType === 'minus' || points < 0) {
+                iconSvg = '<svg class="w-5 h-5 ' + iconColor + '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>';
+            } else if (iconType === 'badge') {
+                iconSvg = '<svg class="w-5 h-5 ' + iconColor + '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>';
+            } else {
+                iconSvg = '<svg class="w-5 h-5 ' + iconColor + '" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+            }
+
+            const description = item.description || item.desc || item.reason || '';
+            const date = item.date || item.created_at || '';
+
+            return '<div class="flex items-center justify-between p-4 lg:p-5">' +
+                '<div class="flex items-center gap-4">' +
+                    '<div class="w-10 h-10 ' + iconBg + ' rounded-lg flex items-center justify-center">' +
+                        iconSvg +
+                    '</div>' +
+                    '<div>' +
+                        '<p class="font-medium text-secondary">' + description + '</p>' +
+                        '<p class="text-sm text-muted">' + date + '</p>' +
+                    '</div>' +
+                '</div>' +
+                '<span class="text-lg font-bold ' + pointsColor + '">' + pointsPrefix + points + '</span>' +
+            '</div>';
+        }).join('');
+    },
+
+    renderLevels() {
+        const container = document.getElementById('levels-container');
+        if (!this.levels || this.levels.length === 0) {
+            // Use default levels if none from API
+            this.levels = [
+                { range: '1-5', name: 'Newbie', emoji: '🎵', gradient: 'from-gray-400 to-gray-500', xp: '0 - 500', status: this.level <= 5 ? 'current' : 'completed' },
+                { range: '6-10', name: 'Fan', emoji: '🎸', gradient: 'from-blue-400 to-blue-500', xp: '500 - 2,000', status: this.level > 5 && this.level <= 10 ? 'current' : (this.level > 10 ? 'completed' : 'locked') },
+                { range: '11-15', name: 'Enthusiast', emoji: '🎤', gradient: 'from-purple-400 to-purple-500', xp: '2,000 - 5,000', status: this.level > 10 && this.level <= 15 ? 'current' : (this.level > 15 ? 'completed' : 'locked') },
+                { range: '16+', name: 'Legend', emoji: '👑', gradient: 'from-yellow-400 to-orange-500', xp: '5,000+', status: this.level > 15 ? 'current' : 'locked' }
+            ];
+        }
+
+        container.innerHTML = this.levels.map(level => {
+            const isCompleted = level.status === 'completed';
+            const isCurrent = level.status === 'current';
+            const isLocked = level.status === 'locked';
+
+            let cardClass = isCompleted ? 'opacity-50' : '';
+            if (isCurrent) {
+                cardClass = 'bg-gradient-to-r from-primary/5 to-accent/5 border-2 border-primary';
+            } else {
+                cardClass += ' bg-white border border-border';
+            }
+
+            let statusText = '';
+            if (isCompleted) {
+                statusText = '<span class="text-sm font-medium text-success">✓ Completat</span>';
+            } else if (isCurrent) {
+                statusText = '<span class="px-2 py-0.5 bg-primary text-white text-xs font-bold rounded">ACTUAL</span>';
+            } else {
+                statusText = '<span class="text-sm text-muted">Blocat</span>';
+            }
+
+            const gradient = level.gradient || 'from-gray-400 to-gray-500';
+            const emoji = level.emoji || '⭐';
+            const xpRange = level.xp || '';
+            const rewards = level.rewards || '';
+            const levelRange = level.range || '';
+            const levelName = level.name || '';
+
+            const currentProgress = isCurrent ?
+                '<div class="h-2 mt-2 overflow-hidden rounded-full bg-border">' +
+                    '<div class="h-full rounded-full bg-primary" style="width: ' + Math.min(100, Math.round((this.xp / this.nextLevelXP) * 100)) + '%"></div>' +
+                '</div>' +
+                '<p class="mt-1 text-xs text-muted">' + this.xp.toLocaleString() + ' / ' + this.nextLevelXP.toLocaleString() + ' XP (Nivel ' + this.level + ')</p>'
+                : '';
+
+            return '<div class="rounded-xl p-4 lg:p-5 ' + cardClass + '">' +
+                '<div class="flex items-center gap-4">' +
+                    '<div class="w-14 h-14 bg-gradient-to-br ' + gradient + ' rounded-xl flex items-center justify-center ' + (isLocked ? 'opacity-50' : '') + '">' +
+                        '<span class="text-2xl">' + emoji + '</span>' +
+                    '</div>' +
+                    '<div class="flex-1">' +
+                        '<div class="flex items-center justify-between mb-1">' +
+                            '<h3 class="font-bold text-secondary">Niveluri ' + levelRange + ': ' + levelName + '</h3>' +
+                            statusText +
+                        '</div>' +
+                        '<p class="text-sm text-muted">' + xpRange + ' XP' + (rewards ? ' • Deblocheaza: ' + rewards : '') + '</p>' +
+                        currentProgress +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
     }
+};
 
-    const customer = DEMO_DATA.customer || {};
-    const rewards = DEMO_DATA.rewards || [];
-    const badges = DEMO_DATA.badges || { unlocked: [], locked: [] };
-    const pointsHistory = DEMO_DATA.pointsHistory || [];
-    const levels = DEMO_DATA.levels || [];
-
-    const userPoints = customer.points || 0;
-    const userLevel = customer.level || 1;
-    const levelName = customer.level_name || 'Newbie';
-    const nextLevelXP = customer.next_level_xp || 1000;
-
-    // Update hero section
-    document.getElementById('user-points').textContent = userPoints.toLocaleString();
-    document.getElementById('points-value').textContent = `≈ ${(userPoints / 100).toFixed(2)} lei reducere`;
-    document.getElementById('level-info').textContent = `Nivel ${userLevel} - ${levelName}`;
-    document.getElementById('level-remaining').textContent = `${nextLevelXP - userPoints} XP pana la nivelul urmator`;
-    document.getElementById('xp-progress').textContent = `${userPoints.toLocaleString()} / ${nextLevelXP.toLocaleString()}`;
-    document.getElementById('level-bar').style.width = `${Math.round((userPoints / nextLevelXP) * 100)}%`;
-    document.getElementById('level-current').textContent = `Nivel ${userLevel}`;
-    document.getElementById('level-next').textContent = `Nivel ${userLevel + 1} - Legend`;
-
-    // Update badges count
-    const unlockedCount = badges.unlocked?.length || 0;
-    const lockedCount = badges.locked?.length || 0;
-    document.getElementById('badges-count').textContent = `${unlockedCount}/${unlockedCount + lockedCount}`;
-    document.getElementById('badges-desc').textContent = `Ai obtinut ${unlockedCount} din ${unlockedCount + lockedCount} badge-uri disponibile. Continua sa participi la evenimente!`;
-
-    // Render all sections
-    renderRewards(rewards);
-    renderBadges(badges);
-    renderHistory(pointsHistory);
-    renderLevels(levels, userLevel, userPoints);
-});
-
-function renderRewards(rewards) {
-    const container = document.getElementById('rewards-container');
-    container.innerHTML = rewards.map(reward => {
-        const isLocked = reward.status === 'locked';
-        const isInsufficient = reward.status === 'insufficient';
-        const isExclusive = reward.status === 'exclusive';
-
-        let cardClass = (isLocked || isInsufficient) ? 'opacity-60' : '';
-        if (isExclusive) {
-            cardClass = 'shine bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-accent/30';
-        } else {
-            cardClass += ' bg-white border border-border';
-        }
-
-        let statusBadge = '';
-        if (reward.status === 'available') {
-            statusBadge = '<span class="px-3 py-1 text-xs font-bold rounded-full bg-success/10 text-success">DISPONIBIL</span>';
-        } else if (isLocked) {
-            statusBadge = `<span class="px-3 py-1 text-xs font-bold rounded-full bg-muted/20 text-muted">${reward.lock_reason}</span>`;
-        } else if (isInsufficient) {
-            statusBadge = `<span class="px-3 py-1 text-xs font-bold rounded-full bg-warning/10 text-warning">${(reward.missing || 0).toLocaleString()} LIPSA</span>`;
-        } else if (isExclusive) {
-            statusBadge = '<span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-accent">EXCLUSIV</span>';
-        }
-
-        let actionBtn = '';
-        if (reward.status === 'available') {
-            actionBtn = '<button class="px-4 py-2 text-sm font-semibold text-white rounded-lg btn-primary">Revendica</button>';
-        } else if (isLocked) {
-            actionBtn = '<button class="px-4 py-2 text-sm font-semibold rounded-lg cursor-not-allowed bg-surface text-muted">Blocat</button>';
-        } else if (isInsufficient) {
-            actionBtn = '<button class="px-4 py-2 text-sm font-semibold rounded-lg cursor-not-allowed bg-surface text-muted">Insuficient</button>';
-        } else if (isExclusive) {
-            actionBtn = `<button class="px-4 py-2 text-sm font-semibold rounded-lg cursor-not-allowed bg-surface text-muted">${(reward.missing || 0).toLocaleString()} lipsa</button>`;
-        }
-
-        const iconColor = (isLocked || isInsufficient || isExclusive) ? 'text-muted' : 'text-accent';
-        const pointsColor = (isLocked || isInsufficient || isExclusive) ? 'text-muted' : 'text-secondary';
-
-        return `
-            <div class="reward-card rounded-xl lg:rounded-2xl p-5 ${cardClass}">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-14 h-14 bg-gradient-to-br ${reward.gradient} rounded-xl flex items-center justify-center">
-                        <span class="text-3xl">${reward.emoji}</span>
-                    </div>
-                    ${statusBadge}
-                </div>
-                <h3 class="mb-1 font-bold text-secondary">${reward.title}</h3>
-                <p class="mb-4 text-sm text-muted">${reward.desc}</p>
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-1">
-                        <svg class="w-5 h-5 ${iconColor}" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
-                        <span class="font-bold ${pointsColor}">${(reward.points || 0).toLocaleString()}</span>
-                    </div>
-                    ${actionBtn}
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function renderBadges(badges) {
-    const container = document.getElementById('badges-container');
-
-    const unlockedHtml = (badges.unlocked || []).map(badge => `
-        <div class="p-4 text-center bg-white border badge-card rounded-xl border-border">
-            <div class="w-16 h-16 mx-auto mb-3 bg-gradient-to-br ${badge.gradient} rounded-2xl flex items-center justify-center text-3xl">
-                ${badge.emoji}
-            </div>
-            <h4 class="text-sm font-bold text-secondary">${badge.name}</h4>
-            <p class="mt-1 text-xs text-muted">${badge.desc}</p>
-            <span class="inline-block mt-2 px-2 py-0.5 bg-success/10 text-success text-xs font-semibold rounded">+${badge.xp} XP</span>
-        </div>
-    `).join('');
-
-    const lockedHtml = (badges.locked || []).map(badge => `
-        <div class="p-4 text-center bg-white border badge-card badge-locked rounded-xl border-border">
-            <div class="flex items-center justify-center w-16 h-16 mx-auto mb-3 text-3xl bg-gradient-to-br from-gray-300 to-gray-400 rounded-2xl">
-                ${badge.emoji}
-            </div>
-            <h4 class="text-sm font-bold text-secondary">${badge.name}</h4>
-            <p class="mt-1 text-xs text-muted">${badge.desc}</p>
-            <span class="inline-block mt-2 px-2 py-0.5 bg-muted/20 text-muted text-xs font-semibold rounded">${badge.missing}</span>
-        </div>
-    `).join('');
-
-    container.innerHTML = unlockedHtml + lockedHtml;
-}
-
-function renderHistory(history) {
-    const container = document.getElementById('history-container');
-    container.innerHTML = history.map(item => {
-        const iconBg = item.points > 0 ? 'bg-success/10' : 'bg-primary/10';
-        const iconColor = item.points > 0 ? 'text-success' : 'text-primary';
-        const pointsColor = item.points > 0 ? 'text-success' : 'text-primary';
-        const pointsPrefix = item.points > 0 ? '+' : '';
-
-        let iconSvg = '';
-        if (item.icon === 'plus') {
-            iconSvg = `<svg class="w-5 h-5 ${iconColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>`;
-        } else if (item.icon === 'minus') {
-            iconSvg = `<svg class="w-5 h-5 ${iconColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>`;
-        } else if (item.icon === 'badge') {
-            iconSvg = `<svg class="w-5 h-5 ${iconColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>`;
-        } else if (item.icon === 'check') {
-            iconSvg = `<svg class="w-5 h-5 ${iconColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
-        }
-
-        return `
-            <div class="flex items-center justify-between p-4 lg:p-5">
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center">
-                        ${iconSvg}
-                    </div>
-                    <div>
-                        <p class="font-medium text-secondary">${item.desc}</p>
-                        <p class="text-sm text-muted">${item.date}</p>
-                    </div>
-                </div>
-                <span class="text-lg font-bold ${pointsColor}">${pointsPrefix}${item.points}</span>
-            </div>
-        `;
-    }).join('');
-}
-
-function renderLevels(levels, userLevel, userPoints) {
-    const container = document.getElementById('levels-container');
-    container.innerHTML = levels.map(level => {
-        const isCompleted = level.status === 'completed';
-        const isCurrent = level.status === 'current';
-        const isLocked = level.status === 'locked';
-
-        let cardClass = isCompleted ? 'opacity-50' : '';
-        if (isCurrent) {
-            cardClass = 'bg-gradient-to-r from-primary/5 to-accent/5 border-2 border-primary';
-        } else {
-            cardClass += ' bg-white border border-border';
-        }
-
-        let statusText = '';
-        if (isCompleted) {
-            statusText = '<span class="text-sm font-medium text-success">✓ Completat</span>';
-        } else if (isCurrent) {
-            statusText = '<span class="px-2 py-0.5 bg-primary text-white text-xs font-bold rounded">ACTUAL</span>';
-        } else {
-            statusText = '<span class="text-sm text-muted">Blocat</span>';
-        }
-
-        const currentProgress = isCurrent ? `
-            <div class="h-2 mt-2 overflow-hidden rounded-full bg-border">
-                <div class="h-full rounded-full bg-primary" style="width: 38%"></div>
-            </div>
-            <p class="mt-1 text-xs text-muted">${userPoints.toLocaleString()} / 4,000 XP (Nivel ${userLevel})</p>
-        ` : '';
-
-        return `
-            <div class="rounded-xl p-4 lg:p-5 ${cardClass}">
-                <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 bg-gradient-to-br ${level.gradient} rounded-xl flex items-center justify-center ${isLocked ? 'opacity-50' : ''}">
-                        <span class="text-2xl">${level.emoji}</span>
-                    </div>
-                    <div class="flex-1">
-                        <div class="flex items-center justify-between mb-1">
-                            <h3 class="font-bold text-secondary">Niveluri ${level.range}: ${level.name}</h3>
-                            ${statusText}
-                        </div>
-                        <p class="text-sm text-muted">${level.xp} XP${level.rewards ? ' • Deblocheaza: ' + level.rewards : ''}</p>
-                        ${currentProgress}
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
+// Initialize page
+document.addEventListener('DOMContentLoaded', () => RewardsPage.init());
 
 function showTab(tabName) {
     // Hide all tabs

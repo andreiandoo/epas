@@ -93,126 +93,195 @@ require_once dirname(__DIR__) . '/includes/header.php';
 <?php
 $scriptsExtra = <<<'JS'
 <script>
-// Render watchlist from centralized demo data
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof DEMO_DATA === 'undefined') {
-        console.error('DEMO_DATA not loaded');
-        return;
+const WatchlistPage = {
+    events: [],
+    artists: [],
+    venues: [],
+
+    async init() {
+        if (!AmbiletAuth.isAuthenticated()) {
+            window.location.href = '/autentificare?redirect=/cont/favorite';
+            return;
+        }
+
+        await this.loadWatchlist();
+    },
+
+    async loadWatchlist() {
+        try {
+            const response = await AmbiletAPI.customer.getWatchlist();
+            if (response.success && response.data) {
+                this.events = response.data.events || [];
+                this.artists = response.data.artists || [];
+                this.venues = response.data.venues || [];
+            } else {
+                this.loadDemoData();
+            }
+        } catch (error) {
+            console.log('Watchlist API error:', error);
+            this.loadDemoData();
+        }
+
+        this.render();
+    },
+
+    loadDemoData() {
+        if (typeof DEMO_DATA !== 'undefined') {
+            this.events = DEMO_DATA.watchlistEvents || [];
+            this.artists = DEMO_DATA.watchlistArtists || [];
+            this.venues = DEMO_DATA.watchlistVenues || [];
+        }
+    },
+
+    render() {
+        // Update counts
+        document.getElementById('events-count').textContent = this.events.length;
+        document.getElementById('artists-count').textContent = this.artists.length;
+        document.getElementById('venues-count').textContent = this.venues.length;
+        document.getElementById('notification-count').textContent = this.events.length + 2;
+
+        // Render all sections
+        this.renderEvents();
+        this.renderArtists();
+        this.renderVenues();
+    },
+
+    async removeFromWatchlist(type, id) {
+        try {
+            const response = await AmbiletAPI.customer.removeFromWatchlist(type, id);
+            if (response.success) {
+                AmbiletNotifications.success('Eliminat din favorite!');
+                // Remove from local array
+                if (type === 'event') {
+                    this.events = this.events.filter(e => e.id !== id);
+                } else if (type === 'artist') {
+                    this.artists = this.artists.filter(a => a.id !== id);
+                } else if (type === 'venue') {
+                    this.venues = this.venues.filter(v => v.id !== id);
+                }
+                this.render();
+            } else {
+                AmbiletNotifications.error(response.message || 'Eroare la eliminare.');
+            }
+        } catch (error) {
+            AmbiletNotifications.error('Eroare la eliminarea din favorite.');
+        }
+    },
+
+    renderEvents() {
+        const grid = document.getElementById('events-grid');
+        if (this.events.length === 0) {
+            grid.innerHTML = '<p class="col-span-full text-center py-8 text-muted">Nu ai evenimente in favorite.</p>';
+            return;
+        }
+
+        grid.innerHTML = this.events.map(event => {
+            const isSoldOut = event.sold_out === true;
+            const eventId = event.id || 0;
+            return '<div class="event-card bg-white rounded-xl lg:rounded-2xl border border-border overflow-hidden ' + (isSoldOut ? 'opacity-75' : '') + '">' +
+                '<div class="relative">' +
+                    '<img src="' + (event.image || '/assets/images/default-event.jpg') + '" class="w-full h-40 object-cover ' + (isSoldOut ? 'grayscale' : '') + '" alt="' + (event.title || '') + '">' +
+                    (isSoldOut ?
+                        '<div class="absolute inset-0 flex items-center justify-center bg-black/50">' +
+                            '<span class="px-4 py-2 text-sm font-bold text-white rounded-lg bg-error">SOLD OUT</span>' +
+                        '</div>'
+                    : (event.badge ?
+                        '<div class="absolute top-3 left-3">' +
+                            '<span class="notification-badge px-2 py-1 ' + (event.badge_color || 'bg-primary') + ' text-white text-xs font-bold rounded-lg">' + event.badge + '</span>' +
+                        '</div>'
+                    : '')) +
+                    '<button onclick="WatchlistPage.removeFromWatchlist(\'event\', ' + eventId + ')" class="absolute flex items-center justify-center rounded-full shadow-lg heart-btn active top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur">' +
+                        '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
+                    '</button>' +
+                '</div>' +
+                '<div class="p-4">' +
+                    '<div class="flex items-center gap-2 mb-2">' +
+                        '<span class="px-2 py-0.5 ' + (isSoldOut ? 'bg-muted/20 text-muted' : 'bg-primary/10 text-primary') + ' text-xs font-semibold rounded">' + (event.genre || event.category || '') + '</span>' +
+                        '<span class="text-xs text-muted">' + (event.date || '') + '</span>' +
+                    '</div>' +
+                    '<h3 class="mb-1 font-bold text-secondary">' + (event.title || '') + '</h3>' +
+                    '<p class="mb-3 text-sm text-muted">' + (event.venue || '') + '</p>' +
+                    '<div class="flex items-center justify-between">' +
+                        (isSoldOut ?
+                            '<div><span class="text-sm line-through text-muted">' + (event.price || 0) + ' lei</span></div>' +
+                            '<button class="flex items-center gap-1 px-4 py-2 text-sm font-semibold rounded-lg bg-surface text-muted">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>' +
+                                'Alerta resale' +
+                            '</button>'
+                        : (event.price ?
+                            '<div>' +
+                                '<span class="text-lg font-bold text-primary">' + event.price + ' lei</span>' +
+                                '<span class="ml-1 text-xs text-muted">de la</span>' +
+                            '</div>' +
+                            '<a href="/eveniment/' + (event.slug || event.id) + '" class="px-4 py-2 text-sm font-semibold text-white rounded-lg btn-primary">Cumpara</a>'
+                        :
+                            '<div><span class="text-sm text-muted">Bilete in curand</span></div>' +
+                            '<button class="flex items-center gap-1 px-4 py-2 text-sm font-semibold rounded-lg bg-surface text-secondary">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>' +
+                                'Notifica-ma' +
+                            '</button>'
+                        )) +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    },
+
+    renderArtists() {
+        const grid = document.getElementById('artists-grid');
+        if (this.artists.length === 0) {
+            grid.innerHTML = '<p class="col-span-full text-center py-8 text-muted">Nu ai artisti in favorite.</p>';
+            return;
+        }
+
+        grid.innerHTML = this.artists.map(artist => {
+            const artistId = artist.id || 0;
+            return '<div class="p-5 text-center bg-white border event-card rounded-xl lg:rounded-2xl border-border">' +
+                '<div class="relative inline-block mb-4">' +
+                    '<div class="w-24 h-24 mx-auto overflow-hidden rounded-full">' +
+                        '<img src="' + (artist.image || '/assets/images/default-artist.jpg') + '" class="object-cover w-full h-full" alt="' + (artist.name || '') + '">' +
+                    '</div>' +
+                    '<button onclick="WatchlistPage.removeFromWatchlist(\'artist\', ' + artistId + ')" class="absolute flex items-center justify-center w-8 h-8 bg-white border rounded-full shadow-lg heart-btn active -bottom-1 -right-1 border-border">' +
+                        '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
+                    '</button>' +
+                '</div>' +
+                '<h3 class="mb-1 font-bold text-secondary">' + (artist.name || '') + '</h3>' +
+                '<p class="mb-3 text-sm text-muted">' + (artist.genre || '') + '</p>' +
+                '<div class="flex items-center justify-center gap-2 text-sm">' +
+                    '<span class="px-2 py-1 font-medium rounded-lg bg-success/10 text-success">' + (artist.events || 0) + ' eveniment' + ((artist.events || 0) > 1 ? 'e' : '') + '</span>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    },
+
+    renderVenues() {
+        const grid = document.getElementById('venues-grid');
+        if (this.venues.length === 0) {
+            grid.innerHTML = '<p class="col-span-full text-center py-8 text-muted">Nu ai locatii in favorite.</p>';
+            return;
+        }
+
+        grid.innerHTML = this.venues.map(venue => {
+            const venueId = venue.id || 0;
+            return '<div class="overflow-hidden bg-white border event-card rounded-xl lg:rounded-2xl border-border">' +
+                '<div class="relative h-32">' +
+                    '<img src="' + (venue.image || '/assets/images/default-venue.jpg') + '" class="object-cover w-full h-full" alt="' + (venue.name || '') + '">' +
+                    '<button onclick="WatchlistPage.removeFromWatchlist(\'venue\', ' + venueId + ')" class="absolute flex items-center justify-center w-8 h-8 rounded-full shadow-lg heart-btn active top-3 right-3 bg-white/90 backdrop-blur">' +
+                        '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
+                    '</button>' +
+                '</div>' +
+                '<div class="p-4">' +
+                    '<h3 class="mb-1 font-bold text-secondary">' + (venue.name || '') + '</h3>' +
+                    '<p class="mb-2 text-sm text-muted">' + (venue.city || '') + '</p>' +
+                    '<span class="px-2 py-1 text-xs font-medium rounded-lg bg-primary/10 text-primary">' + (venue.events || 0) + ' evenimente</span>' +
+                '</div>' +
+            '</div>';
+        }).join('');
     }
+};
 
-    const events = DEMO_DATA.watchlistEvents || [];
-    const artists = DEMO_DATA.watchlistArtists || [];
-    const venues = DEMO_DATA.watchlistVenues || [];
-
-    // Update counts
-    document.getElementById('events-count').textContent = events.length;
-    document.getElementById('artists-count').textContent = artists.length;
-    document.getElementById('venues-count').textContent = venues.length;
-    document.getElementById('notification-count').textContent = events.length + 2;
-
-    // Render events
-    renderEvents(events);
-    renderArtists(artists);
-    renderVenues(venues);
-});
-
-function renderEvents(events) {
-    const grid = document.getElementById('events-grid');
-    grid.innerHTML = events.map(event => {
-        const isSoldOut = event.sold_out === true;
-        return `
-            <div class="event-card bg-white rounded-xl lg:rounded-2xl border border-border overflow-hidden ${isSoldOut ? 'opacity-75' : ''}">
-                <div class="relative">
-                    <img src="${event.image}" class="w-full h-40 object-cover ${isSoldOut ? 'grayscale' : ''}" alt="${event.title}">
-                    ${isSoldOut ? `
-                        <div class="absolute inset-0 flex items-center justify-center bg-black/50">
-                            <span class="px-4 py-2 text-sm font-bold text-white rounded-lg bg-error">SOLD OUT</span>
-                        </div>
-                    ` : event.badge ? `
-                        <div class="absolute top-3 left-3">
-                            <span class="notification-badge px-2 py-1 ${event.badge_color || 'bg-primary'} text-white text-xs font-bold rounded-lg flex items-center gap-1">
-                                ${event.badge === '85% Sold' ? '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>' : ''}
-                                ${event.badge}
-                            </span>
-                        </div>
-                    ` : ''}
-                    <button class="absolute flex items-center justify-center rounded-full shadow-lg heart-btn active top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                    </button>
-                </div>
-                <div class="p-4">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="px-2 py-0.5 ${isSoldOut ? 'bg-muted/20 text-muted' : 'bg-primary/10 text-primary'} text-xs font-semibold rounded">${event.genre}</span>
-                        <span class="text-xs text-muted">${event.date}</span>
-                    </div>
-                    <h3 class="mb-1 font-bold text-secondary">${event.title}</h3>
-                    <p class="mb-3 text-sm text-muted">${event.venue}</p>
-                    <div class="flex items-center justify-between">
-                        ${isSoldOut ? `
-                            <div><span class="text-sm line-through text-muted">${event.price} lei</span></div>
-                            <button class="flex items-center gap-1 px-4 py-2 text-sm font-semibold rounded-lg bg-surface text-muted">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                                Alerta resale
-                            </button>
-                        ` : event.price ? `
-                            <div>
-                                <span class="text-lg font-bold text-primary">${event.price} lei</span>
-                                <span class="ml-1 text-xs text-muted">de la</span>
-                            </div>
-                            <a href="/event" class="px-4 py-2 text-sm font-semibold text-white rounded-lg btn-primary">Cumpara</a>
-                        ` : `
-                            <div><span class="text-sm text-muted">Bilete in curand</span></div>
-                            <button class="flex items-center gap-1 px-4 py-2 text-sm font-semibold rounded-lg bg-surface text-secondary">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                                Notifica-ma
-                            </button>
-                        `}
-                    </div>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function renderArtists(artists) {
-    const grid = document.getElementById('artists-grid');
-    grid.innerHTML = artists.map(artist => `
-        <div class="p-5 text-center bg-white border event-card rounded-xl lg:rounded-2xl border-border">
-            <div class="relative inline-block mb-4">
-                <div class="w-24 h-24 mx-auto overflow-hidden rounded-full">
-                    <img src="${artist.image}" class="object-cover w-full h-full" alt="${artist.name}">
-                </div>
-                <button class="absolute flex items-center justify-center w-8 h-8 bg-white border rounded-full shadow-lg heart-btn active -bottom-1 -right-1 border-border">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                </button>
-            </div>
-            <h3 class="mb-1 font-bold text-secondary">${artist.name}</h3>
-            <p class="mb-3 text-sm text-muted">${artist.genre}</p>
-            <div class="flex items-center justify-center gap-2 text-sm">
-                <span class="px-2 py-1 font-medium rounded-lg bg-success/10 text-success">${artist.events} eveniment${artist.events > 1 ? 'e' : ''}</span>
-            </div>
-        </div>
-    `).join('');
-}
-
-function renderVenues(venues) {
-    const grid = document.getElementById('venues-grid');
-    grid.innerHTML = venues.map(venue => `
-        <div class="overflow-hidden bg-white border event-card rounded-xl lg:rounded-2xl border-border">
-            <div class="relative h-32">
-                <img src="${venue.image}" class="object-cover w-full h-full" alt="${venue.name}">
-                <button class="absolute flex items-center justify-center w-8 h-8 rounded-full shadow-lg heart-btn active top-3 right-3 bg-white/90 backdrop-blur">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                </button>
-            </div>
-            <div class="p-4">
-                <h3 class="mb-1 font-bold text-secondary">${venue.name}</h3>
-                <p class="mb-2 text-sm text-muted">${venue.city}</p>
-                <span class="px-2 py-1 text-xs font-medium rounded-lg bg-primary/10 text-primary">${venue.events} evenimente</span>
-            </div>
-        </div>
-    `).join('');
-}
+// Initialize page
+document.addEventListener('DOMContentLoaded', () => WatchlistPage.init());
 
 function showTab(tabName) {
     // Hide all tabs

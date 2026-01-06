@@ -140,18 +140,21 @@ const ReviewsPage = {
 
     async loadReviews() {
         try {
-            const response = await AmbiletAPI.get('/customer/reviews');
-            if (response.success) {
-                this.reviews = response.reviews || [];
-                this.updateStats(response.stats || {});
+            const response = await AmbiletAPI.customer.getReviews();
+            if (response.success && response.data) {
+                this.reviews = response.data.reviews || response.data || [];
+                this.updateStats(response.data.stats || response.stats || {});
                 this.updateCounts();
                 this.renderReviews();
 
-                if (response.pending_events && response.pending_events > 0) {
-                    document.getElementById('pending-count').textContent = response.pending_events;
+                const pendingEvents = response.data.pending_events || response.pending_events || 0;
+                if (pendingEvents > 0) {
+                    document.getElementById('pending-count').textContent = pendingEvents;
                     document.getElementById('pending-events-alert').classList.remove('hidden');
                     document.getElementById('pending-events-alert').classList.add('flex');
                 }
+            } else {
+                document.getElementById('empty-reviews').classList.remove('hidden');
             }
         } catch (error) {
             console.error('Error loading reviews:', error);
@@ -290,7 +293,7 @@ const ReviewsPage = {
         if (!confirm('Esti sigur ca vrei sa stergi aceasta recenzie?')) return;
 
         try {
-            const response = await AmbiletAPI.delete('/customer/reviews/' + id);
+            const response = await AmbiletAPI.customer.deleteReview(id);
             if (response.success) {
                 AmbiletNotifications.success('Recenzia a fost stearsa.');
                 this.loadReviews();
