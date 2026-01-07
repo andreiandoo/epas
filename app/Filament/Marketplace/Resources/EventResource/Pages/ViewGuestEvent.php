@@ -26,17 +26,10 @@ class ViewGuestEvent extends Page
     {
         $this->record = $this->resolveRecord($record);
 
-        // Verify this is a guest event (happening at venue owned by current tenant)
+        // Verify this event belongs to the current marketplace
         $marketplace = static::getMarketplaceClient();
-        $ownedVenueIds = $marketplace?->venues()->pluck('id')->toArray() ?? [];
 
-        // Must be at an owned venue AND not owned by current tenant
-        if (!in_array($this->record->venue_id, $ownedVenueIds) || $this->record->tenant_id === $marketplace?->id) {
-            // If it's their own event, redirect to edit
-            if ($this->record->tenant_id === $marketplace?->id) {
-                redirect(EventResource::getUrl('edit', ['record' => $this->record]));
-                return;
-            }
+        if ($this->record->marketplace_client_id !== $marketplace?->id) {
             abort(403, 'Unauthorized access to this event');
         }
     }
@@ -53,7 +46,7 @@ class ViewGuestEvent extends Page
 
     public function getSubheading(): string
     {
-        return 'Hosted event by ' . ($this->record->tenant?->public_name ?? $this->record->tenant?->name ?? 'Unknown');
+        return 'Organized by ' . ($this->record->marketplaceOrganizer?->name ?? 'Unknown');
     }
 
     /**
@@ -99,18 +92,18 @@ class ViewGuestEvent extends Page
     }
 
     /**
-     * Get organizer (tenant) info
+     * Get organizer info
      */
     public function getOrganizerData(): array
     {
-        $marketplace = $this->record->tenant;
+        $organizer = $this->record->marketplaceOrganizer;
 
         return [
-            'name' => $marketplace?->public_name ?? $marketplace?->name ?? 'Unknown',
-            'company_name' => $marketplace?->company_name,
-            'website' => $marketplace?->website,
-            'contact_email' => $marketplace?->contact_email,
-            'contact_phone' => $marketplace?->contact_phone,
+            'name' => $organizer?->name ?? 'Unknown',
+            'company_name' => $organizer?->company_name,
+            'website' => $organizer?->website,
+            'contact_email' => $organizer?->email,
+            'contact_phone' => $organizer?->phone,
         ];
     }
 

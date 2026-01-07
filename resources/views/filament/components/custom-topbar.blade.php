@@ -55,6 +55,20 @@
     if ($isSuperAdminInMarketplace) {
         $marketplaceClients = \App\Models\MarketplaceClient::where('status', 'active')->orderBy('name')->get();
         $currentMarketplaceClient = \App\Models\MarketplaceClient::find(session('super_admin_marketplace_client_id'));
+    } elseif ($isMarketplacePanel && $marketplaceClientId) {
+        // Get marketplace client for regular marketplace admins
+        $currentMarketplaceClient = \App\Models\MarketplaceClient::find($marketplaceClientId);
+    }
+
+    // Determine Public Site URL based on panel
+    $publicSiteUrl = url('/' . $currentLocale);
+    if ($isMarketplacePanel && $currentMarketplaceClient?->website) {
+        $website = $currentMarketplaceClient->website;
+        // Ensure it has https:// prefix
+        if (!str_starts_with($website, 'http://') && !str_starts_with($website, 'https://')) {
+            $website = 'https://' . $website;
+        }
+        $publicSiteUrl = $website;
     }
 @endphp
 <div class="sticky top-0 z-20 px-4 fi-custom-topbar">
@@ -187,7 +201,7 @@
 
             {{-- Public Site Link --}}
             <a
-                href="{{ url('/' . $currentLocale) }}"
+                href="{{ $publicSiteUrl }}"
                 target="_blank"
                 class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 transition rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                 title="View Public Site"

@@ -1269,24 +1269,7 @@ class EventResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('title')
                     ->searchable()
-                    ->sortable()
-                    ->description(function (Event $record) use ($marketplace) {
-                        if ($record->tenant_id !== $marketplace?->id) {
-                            return 'Hosted event by ' . ($record->tenant?->public_name ?? $record->tenant?->name ?? 'Unknown');
-                        }
-                        return null;
-                    }),
-                Tables\Columns\TextColumn::make('ownership')
-                    ->label('Type')
-                    ->badge()
-                    ->getStateUsing(function (Event $record) use ($marketplace) {
-                        return $record->tenant_id === $marketplace?->id ? 'Your Event' : 'Hosted';
-                    })
-                    ->color(fn (string $state): string => match ($state) {
-                        'Your Event' => 'success',
-                        'Hosted' => 'info',
-                        default => 'gray',
-                    }),
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('marketplaceOrganizer.name')
                     ->label('Organizer')
                     ->searchable()
@@ -1314,37 +1297,21 @@ class EventResource extends Resource
                     ->label('Organizer')
                     ->relationship('marketplaceOrganizer', 'name'),
             ])
-            ->recordActions([])
-            ->toolbarActions([])
             ->recordActions([
                 Action::make('statistics')
                     ->label('Statistics')
                     ->icon('heroicon-o-chart-bar')
                     ->color('info')
                     ->url(fn (Event $record) => static::getUrl('statistics', ['record' => $record])),
-                EditAction::make()
-                    ->visible(fn (Event $record) => $record->tenant_id === $marketplace?->id),
-                Action::make('view-guest')
-                    ->label('View Details')
-                    ->icon('heroicon-o-eye')
-                    ->color('gray')
-                    ->url(fn (Event $record) => static::getUrl('view-guest', ['record' => $record]))
-                    ->visible(fn (Event $record) => $record->tenant_id !== $marketplace?->id),
+                EditAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make()
-                        ->before(function ($records) use ($marketplace) {
-                            // Filter out hosted events - can only delete own events
-                            return $records->filter(fn ($record) => $record->tenant_id === $marketplace?->id);
-                        }),
+                    DeleteBulkAction::make(),
                 ]),
             ])
-            ->checkIfRecordIsSelectableUsing(fn (Event $record) => $record->tenant_id === $marketplace?->id)
             ->defaultSort('created_at', 'desc')
-            ->recordUrl(fn (Event $record) => $record->marketplace_client_id === $marketplace?->id
-                ? static::getUrl('edit', ['record' => $record])
-                : static::getUrl('view-guest', ['record' => $record]));
+            ->recordUrl(fn (Event $record) => static::getUrl('edit', ['record' => $record]));
     }
 
     public static function getRelations(): array
