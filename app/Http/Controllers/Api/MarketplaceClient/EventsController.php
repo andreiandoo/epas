@@ -109,13 +109,13 @@ class EventsController extends BaseController
     }
 
     /**
-     * Get single event details
+     * Get single event details (supports both ID and slug)
      */
-    public function show(Request $request, int $eventId): JsonResponse
+    public function show(Request $request, string|int $identifier): JsonResponse
     {
         $client = $this->requireClient($request);
 
-        $event = Event::with([
+        $query = Event::with([
             'venue',
             'ticketTypes' => function ($q) {
                 $q->where('is_visible', true)
@@ -124,9 +124,16 @@ class EventsController extends BaseController
             },
             'artists',
             'images',
-        ])
-            ->where('id', $eventId)
-            ->where('status', 'published')
+        ]);
+
+        // Support both ID and slug lookup
+        if (is_numeric($identifier)) {
+            $query->where('id', (int) $identifier);
+        } else {
+            $query->where('slug', $identifier);
+        }
+
+        $event = $query->where('status', 'published')
             ->where('is_public', true)
             ->first();
 
@@ -314,13 +321,18 @@ class EventsController extends BaseController
     }
 
     /**
-     * Get ticket availability for an event
+     * Get ticket availability for an event (supports both ID and slug)
      */
-    public function availability(Request $request, int $eventId): JsonResponse
+    public function availability(Request $request, string|int $identifier): JsonResponse
     {
         $client = $this->requireClient($request);
 
-        $event = Event::find($eventId);
+        // Support both ID and slug lookup
+        if (is_numeric($identifier)) {
+            $event = Event::find((int) $identifier);
+        } else {
+            $event = Event::where('slug', $identifier)->first();
+        }
 
         if (!$event) {
             return $this->error('Event not found', 404);
@@ -330,7 +342,7 @@ class EventsController extends BaseController
             return $this->error('Not authorized', 403);
         }
 
-        $ticketTypes = TicketType::where('event_id', $eventId)
+        $ticketTypes = TicketType::where('event_id', $event->id)
             ->where('is_visible', true)
             ->where('status', 'on_sale')
             ->get()
@@ -345,7 +357,7 @@ class EventsController extends BaseController
             });
 
         return $this->success([
-            'event_id' => $eventId,
+            'event_id' => $event->id,
             'ticket_types' => $ticketTypes,
             'last_updated' => now()->toIso8601String(),
         ]);

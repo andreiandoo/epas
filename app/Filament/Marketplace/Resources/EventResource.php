@@ -982,10 +982,10 @@ class EventResource extends Resource
                             SC\Grid::make(3)->schema([
                                 Forms\Components\TextInput::make('capacity')
                                     ->label('Capacity')
-                                    ->placeholder('e.g. 250')
+                                    ->placeholder('Leave empty for unlimited')
                                     ->numeric()
                                     ->minValue(0)
-                                    ->required(),
+                                    ->nullable(),
                                 Forms\Components\DateTimePicker::make('sales_start_at')
                                     ->label('Sale starts')
                                     ->native(false)
@@ -1003,6 +1003,7 @@ class EventResource extends Resource
                             Forms\Components\Repeater::make('bulk_discounts')
                                 ->label('Bulk discounts')
                                 ->collapsed()
+                                ->default([])
                                 ->addActionLabel('Add bulk rule')
                                 ->itemLabel(fn (array $state) => $state['rule_type'] ?? 'Rule')
                                 ->columns(12)

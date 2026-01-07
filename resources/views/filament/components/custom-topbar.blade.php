@@ -62,13 +62,13 @@
 
     // Determine Public Site URL based on panel
     $publicSiteUrl = url('/' . $currentLocale);
-    if ($isMarketplacePanel && $currentMarketplaceClient?->website) {
-        $website = $currentMarketplaceClient->website;
+    if ($isMarketplacePanel && $currentMarketplaceClient?->domain) {
+        $domain = $currentMarketplaceClient->domain;
         // Ensure it has https:// prefix
-        if (!str_starts_with($website, 'http://') && !str_starts_with($website, 'https://')) {
-            $website = 'https://' . $website;
+        if (!str_starts_with($domain, 'http://') && !str_starts_with($domain, 'https://')) {
+            $domain = 'https://' . $domain;
         }
-        $publicSiteUrl = $website;
+        $publicSiteUrl = $domain;
     }
 @endphp
 <div class="sticky top-0 z-20 px-4 fi-custom-topbar">
