@@ -308,9 +308,10 @@ const EventPage = {
     },
 
     transformApiData(apiData) {
-        // API returns { event: {...}, organizer: {...}, ticket_types: [...] }
+        // API returns { event: {...}, venue: {...}, ticket_types: [...], artists: [...] }
         var eventData = apiData.event || apiData;
-        var organizerData = apiData.organizer;
+        var venueData = apiData.venue || null;
+        var artistsData = apiData.artists || [];
         var ticketTypesData = apiData.ticket_types || [];
 
         // Parse starts_at to get date and time
@@ -323,6 +324,10 @@ const EventPage = {
             return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
         }
 
+        // Get main image from API response - use image_url or cover_image_url
+        var mainImage = eventData.image_url || eventData.cover_image_url || null;
+        var coverImage = eventData.cover_image_url || eventData.image_url || null;
+
         return {
             id: eventData.id,
             title: eventData.name,
@@ -330,8 +335,8 @@ const EventPage = {
             description: eventData.description,
             content: eventData.description,
             short_description: eventData.short_description,
-            image: eventData.cover_image || eventData.image,
-            images: eventData.gallery || (eventData.image ? [eventData.image] : []),
+            image: coverImage || mainImage,
+            images: [coverImage, mainImage].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i),
             category: eventData.category,
             tags: eventData.tags,
             start_date: eventData.starts_at,
@@ -343,35 +348,36 @@ const EventPage = {
             is_featured: eventData.is_featured,
             interested: Math.floor(Math.random() * 500) + 100,
             views: (Math.random() * 3 + 0.5).toFixed(1) + 'k',
-            venue: {
-                name: eventData.venue_name,
-                address: eventData.venue_address,
-                city: eventData.venue_city,
-                capacity: eventData.capacity
-            },
-            location: eventData.venue_city ? eventData.venue_name + ', ' + eventData.venue_city : eventData.venue_name,
-            artist: organizerData ? {
-                name: organizerData.name,
-                image: organizerData.logo,
-                description: organizerData.description,
-                verified: organizerData.verified,
-                facebook: organizerData.social_links?.facebook,
-                instagram: organizerData.social_links?.instagram,
-                website: organizerData.website
+            venue: venueData ? {
+                name: venueData.name,
+                address: venueData.address,
+                city: venueData.city,
+                state: venueData.state,
+                country: venueData.country,
+                latitude: venueData.latitude,
+                longitude: venueData.longitude
             } : null,
-            organizer: organizerData,
+            location: venueData ? (venueData.city ? venueData.name + ', ' + venueData.city : venueData.name) : 'Locatie TBA',
+            artist: artistsData.length ? {
+                name: artistsData[0].name,
+                image: artistsData[0].image_url,
+                slug: artistsData[0].slug
+            } : null,
+            artists: artistsData,
             ticket_types: ticketTypesData.map(function(tt) {
+                // API returns available_quantity, not available
+                var available = tt.available_quantity !== undefined ? tt.available_quantity : (tt.available !== undefined ? tt.available : 999);
                 return {
                     id: tt.id,
                     name: tt.name,
                     description: tt.description,
                     price: tt.price,
                     currency: tt.currency || 'RON',
-                    available: tt.available !== null ? tt.available : 999,
+                    available: available,
                     min_per_order: tt.min_per_order || 1,
                     max_per_order: tt.max_per_order || 10,
                     status: tt.status,
-                    is_sold_out: tt.is_sold_out
+                    is_sold_out: available <= 0
                 };
             }),
             max_tickets_per_order: eventData.max_tickets_per_order || 10
@@ -576,54 +582,52 @@ const EventPage = {
             this.quantities[tt.id] = 0;
             const hasDiscount = tt.original_price && tt.original_price > tt.price;
             const discountPercent = hasDiscount ? Math.round((1 - tt.price / tt.original_price) * 100) : 0;
-            const availabilityClass = tt.available <= 5 ? 'text-primary' : tt.available <= 20 ? 'text-accent' : 'text-success';
-            const availabilityIcon = tt.available <= 5 ? '🔥' : tt.available <= 20 ? '⚡' : '✓';
 
-            return `
-                <div class="relative z-10 p-4 border-2 cursor-pointer ticket-card border-border rounded-2xl hover:z-20" data-ticket="${tt.id}" data-price="${tt.price}">
-                    ${hasDiscount ? `<div class="absolute top-0 right-0"><div class="discount-badge text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">-${discountPercent}%</div></div>` : ''}
-                    <div class="flex items-start justify-between mb-3">
-                        <div class="relative tooltip-trigger">
-                            <h3 class="font-bold border-b border-dashed text-secondary cursor-help border-muted">${tt.name}</h3>
-                            <!-- Price Breakdown Tooltip -->
-                            <div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">
-                                <p class="mb-2 text-sm font-semibold">Detalii pret bilet:</p>
-                                <div class="space-y-1 text-xs">
-                                    <div class="flex justify-between">
-                                        <span class="text-white/70">Pret bilet:</span>
-                                        <span>${(tt.price / 1.05).toFixed(2)} lei</span>
-                                    </div>
-                                    <div class="flex justify-between">
-                                        <span class="text-white/70">Comision platforma (5%):</span>
-                                        <span>${(tt.price - tt.price / 1.05).toFixed(2)} lei</span>
-                                    </div>
-                                    <div class="flex justify-between pt-1 mt-1 border-t border-white/20">
-                                        <span class="font-semibold">Total:</span>
-                                        <span class="font-semibold">${tt.price.toFixed(2)} lei</span>
-                                    </div>
-                                    <div class="flex justify-between text-white/50 text-[10px] mt-2">
-                                        <span>Taxa Crucea Rosie (1%):</span>
-                                        <span>+${(tt.price * 0.01).toFixed(2)} lei</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            ${hasDiscount ? `<span class="text-sm line-through text-muted">${tt.original_price} lei</span>` : ''}
-                            <span class="block text-xl font-bold text-primary">${tt.price} lei</span>
-                        </div>
-                    </div>
-                    <p class="mb-3 text-sm text-muted">${tt.description || ''}</p>
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs ${availabilityClass} font-semibold">${availabilityIcon} ${tt.available <= 20 ? `Doar ${tt.available} disponibile` : `${tt.available} disponibile`}</span>
-                        <div class="flex items-center gap-2">
-                            <button onclick="EventPage.updateQuantity('${tt.id}', -1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">-</button>
-                            <span id="qty-${tt.id}" class="w-8 font-bold text-center">0</span>
-                            <button onclick="EventPage.updateQuantity('${tt.id}', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">+</button>
-                        </div>
-                    </div>
-                </div>
-            `;
+            // Only show availability count if < 40 tickets remaining
+            let availabilityHtml = '';
+            if (tt.is_sold_out || tt.available <= 0) {
+                availabilityHtml = '<span class="text-xs font-semibold text-primary">❌ Sold Out</span>';
+            } else if (tt.available <= 5) {
+                availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Doar ' + tt.available + ' disponibile</span>';
+            } else if (tt.available <= 20) {
+                availabilityHtml = '<span class="text-xs font-semibold text-accent">⚡ Doar ' + tt.available + ' disponibile</span>';
+            } else if (tt.available < 40) {
+                availabilityHtml = '<span class="text-xs font-semibold text-success">✓ ' + tt.available + ' disponibile</span>';
+            } else {
+                // Don't show count for >= 40 tickets
+                availabilityHtml = '<span class="text-xs font-semibold text-success">✓ Disponibil</span>';
+            }
+
+            return '<div class="relative z-10 p-4 border-2 cursor-pointer ticket-card border-border rounded-2xl hover:z-20" data-ticket="' + tt.id + '" data-price="' + tt.price + '">' +
+                (hasDiscount ? '<div class="absolute top-0 right-0"><div class="discount-badge text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">-' + discountPercent + '%</div></div>' : '') +
+                '<div class="flex items-start justify-between mb-3">' +
+                    '<div class="relative tooltip-trigger">' +
+                        '<h3 class="font-bold border-b border-dashed text-secondary cursor-help border-muted">' + tt.name + '</h3>' +
+                        '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' +
+                            '<p class="mb-2 text-sm font-semibold">Detalii pret bilet:</p>' +
+                            '<div class="space-y-1 text-xs">' +
+                                '<div class="flex justify-between"><span class="text-white/70">Pret bilet:</span><span>' + (tt.price / 1.05).toFixed(2) + ' lei</span></div>' +
+                                '<div class="flex justify-between"><span class="text-white/70">Comision platforma (5%):</span><span>' + (tt.price - tt.price / 1.05).toFixed(2) + ' lei</span></div>' +
+                                '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total:</span><span class="font-semibold">' + tt.price.toFixed(2) + ' lei</span></div>' +
+                                '<div class="flex justify-between text-white/50 text-[10px] mt-2"><span>Taxa Crucea Rosie (1%):</span><span>+' + (tt.price * 0.01).toFixed(2) + ' lei</span></div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="text-right">' +
+                        (hasDiscount ? '<span class="text-sm line-through text-muted">' + tt.original_price + ' lei</span>' : '') +
+                        '<span class="block text-xl font-bold text-primary">' + tt.price + ' lei</span>' +
+                    '</div>' +
+                '</div>' +
+                '<p class="mb-3 text-sm text-muted">' + (tt.description || '') + '</p>' +
+                '<div class="flex items-center justify-between">' +
+                    availabilityHtml +
+                    '<div class="flex items-center gap-2">' +
+                        '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', -1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">-</button>' +
+                        '<span id="qty-' + tt.id + '" class="w-8 font-bold text-center">0</span>' +
+                        '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">+</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
         }).join('');
     },
 
@@ -710,52 +714,62 @@ const EventPage = {
 
     async loadRelatedEvents() {
         try {
-            const response = await AmbiletAPI.get('/events', { limit: 4, exclude: this.event.id });
+            const response = await AmbiletAPI.get('/events', { limit: 8 });
             if (response.success && response.data?.length) {
-                this.renderRelatedEvents(response.data);
+                // Filter out current event by ID and slug, then take first 4
+                const currentId = this.event.id;
+                const currentSlug = this.event.slug;
+                const filtered = response.data.filter(function(e) {
+                    return e.id !== currentId && e.slug !== currentSlug;
+                }).slice(0, 4);
+
+                if (filtered.length > 0) {
+                    this.renderRelatedEvents(filtered);
+                }
             }
         } catch (e) {
-            // Show demo related events
-            this.renderRelatedEvents([
-                { slug: 'concert-1', title: 'Concert Cargo @Club Flex', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600', start_date: '2025-01-26', location: 'Club Flex, Arad', price: 60 },
-                { slug: 'concert-2', title: 'Dirty Shirt – Dirtylicious Tour', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600', start_date: '2025-02-12', location: 'Lokal, Oradea', price: 70 },
-                { slug: 'concert-3', title: 'Trooper – Strigat In Noapte', image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600', start_date: '2025-03-08', location: 'Arenele Romane, Bucuresti', price: 85 },
-                { slug: 'festival-1', title: 'Bikers For Humanity Rock Fest', image: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=600', start_date: '2025-06-18', location: 'Summer Camp, Brezoi', price: 100 }
-            ]);
+            console.error('Failed to load related events:', e);
+            // Don't show demo events if API fails - just hide the section
         }
     },
 
     renderRelatedEvents(events) {
         document.getElementById('related-events-section').style.display = 'block';
-        document.getElementById('related-category-text').textContent = `Evenimente similare din categoria ${this.event.category || 'Rock'}`;
+        document.getElementById('related-category-text').textContent = 'Evenimente similare din categoria ' + (this.event.category || 'Rock');
 
         const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-        document.getElementById('related-events').innerHTML = events.map(e => {
-            const date = new Date(e.start_date || e.date);
-            return `
-                <a href="/bilete/${e.slug}" class="overflow-hidden bg-white border event-card rounded-2xl border-border group">
-                    <div class="relative overflow-hidden h-44">
-                        <img src="${e.image || '/assets/images/placeholder-event.jpg'}" alt="${e.title}" class="object-cover w-full h-full event-image">
-                        <div class="absolute top-3 left-3">
-                            <div class="px-3 py-2 text-center text-white shadow-lg date-badge rounded-xl">
-                                <span class="block text-lg font-bold leading-none">${date.getDate()}</span>
-                                <span class="block text-[10px] uppercase tracking-wide mt-0.5">${months[date.getMonth()]}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="p-4">
-                        <h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">${e.title}</h3>
-                        <p class="text-sm text-muted mt-2 flex items-center gap-1.5">
-                            <svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
-                            ${e.venue?.name || e.location || 'Locatie TBA'}
-                        </p>
-                        <div class="flex items-center justify-between pt-3 mt-3 border-t border-border">
-                            <span class="font-bold text-primary">de la ${e.price || e.min_price || 50} lei</span>
-                        </div>
-                    </div>
-                </a>
-            `;
+        document.getElementById('related-events').innerHTML = events.map(function(e) {
+            // API returns: name, image_url, starts_at/event_date, venue (string), city, price_from
+            const eventDate = e.starts_at || e.event_date || e.start_date || e.date;
+            const date = eventDate ? new Date(eventDate) : new Date();
+            const title = e.name || e.title || 'Eveniment';
+            const image = e.image_url || e.image || '/assets/images/placeholder-event.jpg';
+            const venue = e.venue || e.location || 'Locatie TBA';
+            const city = e.city ? ', ' + e.city : '';
+            const price = e.price_from || e.price || e.min_price || 50;
+
+            return '<a href="/bilete/' + e.slug + '" class="overflow-hidden bg-white border event-card rounded-2xl border-border group">' +
+                '<div class="relative overflow-hidden h-44">' +
+                    '<img src="' + image + '" alt="' + title + '" class="object-cover w-full h-full event-image">' +
+                    '<div class="absolute top-3 left-3">' +
+                        '<div class="px-3 py-2 text-center text-white shadow-lg date-badge rounded-xl">' +
+                            '<span class="block text-lg font-bold leading-none">' + date.getDate() + '</span>' +
+                            '<span class="block text-[10px] uppercase tracking-wide mt-0.5">' + months[date.getMonth()] + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="p-4">' +
+                    '<h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">' + title + '</h3>' +
+                    '<p class="text-sm text-muted mt-2 flex items-center gap-1.5">' +
+                        '<svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
+                        venue + city +
+                    '</p>' +
+                    '<div class="flex items-center justify-between pt-3 mt-3 border-t border-border">' +
+                        '<span class="font-bold text-primary">de la ' + price + ' lei</span>' +
+                    '</div>' +
+                '</div>' +
+            '</a>';
         }).join('');
     },
 

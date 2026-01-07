@@ -246,13 +246,46 @@ const EventsPage = {
                 ...Object.fromEntries(Object.entries(this.filters).filter(([_, v]) => v))
             });
 
-            const response = await fetch(`/api/proxy.php?action=events&${params}`);
+            const response = await fetch('/api/proxy.php?action=events&' + params);
             const data = await response.json();
 
-            if (data.success && data.data.events) {
-                this.events = data.data.events;
-                this.totalPages = data.data.meta?.last_page || 1;
-                document.getElementById('resultsCount').textContent = data.data.meta?.total || this.events.length;
+            // API returns data directly as array or in data.events
+            let eventsData = null;
+            let meta = null;
+
+            if (data.success) {
+                if (Array.isArray(data.data)) {
+                    // API returns events array directly in data
+                    eventsData = data.data;
+                    meta = data.meta;
+                } else if (data.data && data.data.events) {
+                    // Or nested in data.events
+                    eventsData = data.data.events;
+                    meta = data.data.meta;
+                } else if (data.data) {
+                    // Single object case - wrap in array
+                    eventsData = [data.data];
+                }
+            }
+
+            if (eventsData && eventsData.length > 0) {
+                // Transform API response to expected format
+                this.events = eventsData.map(function(e) {
+                    return {
+                        id: e.id,
+                        title: e.name || e.title || 'Eveniment',
+                        slug: e.slug,
+                        date: e.starts_at || e.event_date || e.date,
+                        time: e.start_time || '20:00',
+                        venue: e.venue || 'Locatie TBA',
+                        city: e.city || '',
+                        category: e.category || 'Evenimente',
+                        price_from: e.price_from || e.min_price || 0,
+                        image: e.image_url || e.image || '/assets/images/placeholder-event.jpg'
+                    };
+                });
+                this.totalPages = meta?.last_page || 1;
+                document.getElementById('resultsCount').textContent = meta?.total || this.events.length;
                 this.renderEvents();
                 this.renderPagination();
             } else {
@@ -384,46 +417,45 @@ const EventsPage = {
 
     renderEventCard(event) {
         const date = new Date(event.date);
-        const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
         const formattedDay = date.toLocaleDateString('ro-RO', { weekday: 'short' });
+        const formattedMonth = date.toLocaleDateString('ro-RO', { month: 'short' });
+        const venueCity = event.city ? event.venue + ', ' + event.city : event.venue;
 
-        return `
-            <a href="/eveniment/${event.slug}" class="overflow-hidden transition-all bg-white border border-gray-200 group rounded-2xl hover:shadow-xl hover:-translate-y-1">
-                <div class="relative aspect-[16/10] overflow-hidden">
-                    <img src="${event.image}" alt="${event.title}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105">
-                    <div class="absolute top-3 left-3">
-                        <span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-primary">${event.category}</span>
-                    </div>
-                    <div class="absolute flex flex-col items-center justify-center text-center bg-white shadow-lg w-14 h-14 rounded-xl top-3 right-3">
-                        <span class="text-xs font-medium text-gray-500 uppercase">${formattedDay}</span>
-                        <span class="text-lg font-bold text-gray-900">${date.getDate()}</span>
-                        <span class="text-[10px] font-medium text-gray-500 uppercase">${date.toLocaleDateString('ro-RO', { month: 'short' })}</span>
-                    </div>
-                </div>
-                <div class="p-4">
-                    <h3 class="mb-2 text-lg font-bold text-gray-900 transition-colors line-clamp-2 group-hover:text-primary">${event.title}</h3>
-                    <div class="flex items-center gap-2 mb-3 text-sm text-gray-500">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        ${event.venue}, ${event.city}
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-1 text-sm text-gray-500">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            ${event.time}
-                        </div>
-                        <div class="text-right">
-                            <span class="text-xs text-gray-500">de la</span>
-                            <span class="ml-1 text-lg font-bold text-primary">${event.price_from} lei</span>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        `;
+        return '<a href="/bilete/' + event.slug + '" class="overflow-hidden transition-all bg-white border border-gray-200 group rounded-2xl hover:shadow-xl hover:-translate-y-1">' +
+            '<div class="relative aspect-[16/10] overflow-hidden">' +
+                '<img src="' + event.image + '" alt="' + event.title + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105">' +
+                '<div class="absolute top-3 left-3">' +
+                    '<span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-primary">' + event.category + '</span>' +
+                '</div>' +
+                '<div class="absolute flex flex-col items-center justify-center text-center bg-white shadow-lg w-14 h-14 rounded-xl top-3 right-3">' +
+                    '<span class="text-xs font-medium text-gray-500 uppercase">' + formattedDay + '</span>' +
+                    '<span class="text-lg font-bold text-gray-900">' + date.getDate() + '</span>' +
+                    '<span class="text-[10px] font-medium text-gray-500 uppercase">' + formattedMonth + '</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="p-4">' +
+                '<h3 class="mb-2 text-lg font-bold text-gray-900 transition-colors line-clamp-2 group-hover:text-primary">' + event.title + '</h3>' +
+                '<div class="flex items-center gap-2 mb-3 text-sm text-gray-500">' +
+                    '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>' +
+                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>' +
+                    '</svg>' +
+                    venueCity +
+                '</div>' +
+                '<div class="flex items-center justify-between">' +
+                    '<div class="flex items-center gap-1 text-sm text-gray-500">' +
+                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>' +
+                        '</svg>' +
+                        event.time +
+                    '</div>' +
+                    '<div class="text-right">' +
+                        '<span class="text-xs text-gray-500">de la</span>' +
+                        '<span class="ml-1 text-lg font-bold text-primary">' + event.price_from + ' lei</span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</a>';
     },
 
     showEmpty() {
