@@ -1,10 +1,11 @@
 @php
+    // Using inline SVG flags for consistent rendering across all browsers/systems
     $localeFlags = [
-        'en' => '🇬🇧',
-        'ro' => '🇷🇴',
-        'de' => '🇩🇪',
-        'fr' => '🇫🇷',
-        'es' => '🇪🇸'
+        'en' => '<svg class="w-5 h-5 rounded-sm shadow-sm" viewBox="0 0 60 30" xmlns="http://www.w3.org/2000/svg"><clipPath id="s"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="t"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clip-path="url(#s)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#t)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>',
+        'ro' => '<svg class="w-5 h-5 rounded-sm shadow-sm" viewBox="0 0 3 2" xmlns="http://www.w3.org/2000/svg"><rect width="1" height="2" x="0" fill="#002B7F"/><rect width="1" height="2" x="1" fill="#FCD116"/><rect width="1" height="2" x="2" fill="#CE1126"/></svg>',
+        'de' => '<svg class="w-5 h-5 rounded-sm shadow-sm" viewBox="0 0 5 3" xmlns="http://www.w3.org/2000/svg"><rect width="5" height="3" y="0" fill="#000"/><rect width="5" height="2" y="1" fill="#D00"/><rect width="5" height="1" y="2" fill="#FFCE00"/></svg>',
+        'fr' => '<svg class="w-5 h-5 rounded-sm shadow-sm" viewBox="0 0 3 2" xmlns="http://www.w3.org/2000/svg"><rect width="1" height="2" fill="#002395"/><rect width="1" height="2" x="1" fill="#FFF"/><rect width="1" height="2" x="2" fill="#ED2939"/></svg>',
+        'es' => '<svg class="w-5 h-5 rounded-sm shadow-sm" viewBox="0 0 3 2" xmlns="http://www.w3.org/2000/svg"><rect width="3" height="2" fill="#AA151B"/><rect width="3" height="1" y="0.5" fill="#F1BF00"/></svg>'
     ];
     $localeNames = [
         'en' => 'English',
@@ -166,7 +167,7 @@
                     type="button"
                     class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 transition rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
-                    <span class="text-lg">{{ $localeFlags[$currentLocale] ?? '🌐' }}</span>
+                    <span class="flex-shrink-0">{!! $localeFlags[$currentLocale] ?? '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' !!}</span>
                     <span class="font-medium uppercase">{{ $currentLocale }}</span>
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -184,7 +185,7 @@
                             href="{{ url()->current() }}?locale={{ $locale }}"
                             class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 {{ $currentLocale === $locale ? 'bg-gray-50 dark:bg-gray-700/50 font-semibold' : '' }}"
                         >
-                            <span class="text-lg">{{ $localeFlags[$locale] }}</span>
+                            <span class="flex-shrink-0">{!! $localeFlags[$locale] !!}</span>
                             <div class="flex-1">
                                 <div class="font-medium">{{ $name }}</div>
                                 <div class="text-xs text-gray-500 uppercase">{{ $locale }}</div>

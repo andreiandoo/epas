@@ -103,6 +103,11 @@ class MarketplacePanelProvider extends PanelProvider
             // Custom brand
             ->brandLogo(fn () => view('filament.components.marketplace-brand'))
             ->brandLogoHeight('2rem')
+
+            // Disable default topbar elements (we have custom-topbar)
+            ->globalSearch(false)
+            ->userMenu(false)
+
             ->renderHook('panels::topbar.end', fn (): string => view('filament.components.custom-topbar')->render())
             ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.marketplace-support-card')->render());
     }

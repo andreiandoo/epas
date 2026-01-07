@@ -1305,13 +1305,17 @@ class EventResource extends Resource
                     ->icon('heroicon-o-chart-bar')
                     ->color('info')
                     ->url(fn (Event $record) => static::getUrl('statistics', ['record' => $record])),
-                Tables\Actions\EditAction::make(),
+                Action::make('edit')
+                    ->label('Edit')
+                    ->icon('heroicon-o-pencil')
+                    ->url(fn (Event $record) => static::getUrl('edit', ['record' => $record])),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
+            ->recordUrl(fn (Event $record) => static::getUrl('edit', ['record' => $record]))
             ->defaultSort('created_at', 'desc');
     }
 
