@@ -69,6 +69,27 @@ Route::middleware(['web', 'auth:marketplace_admin'])->group(function () {
     Route::get('/api/search/marketplace/{marketplace}', [GlobalSearchController::class, 'searchMarketplace'])->name('marketplace.api.global-search');
 });
 
+// Marketplace Client Switcher (for super-admins)
+Route::middleware(['web'])->get('/marketplace/switch-client/{clientId}', function ($clientId) {
+    // Only allow if user is super-admin from core
+    if (!auth('web')->check() || !auth('web')->user()->isSuperAdmin()) {
+        abort(403, 'Unauthorized');
+    }
+
+    // Validate client exists
+    $client = \App\Models\MarketplaceClient::where('status', 'active')->find($clientId);
+    if (!$client) {
+        abort(404, 'Marketplace client not found');
+    }
+
+    // Update session and logout from current marketplace admin
+    auth('marketplace_admin')->logout();
+    session(['super_admin_marketplace_client_id' => $clientId]);
+    session()->forget('marketplace_is_super_admin'); // Force re-login
+
+    return redirect('/marketplace');
+})->name('marketplace.switch-client');
+
 // DEBUG: Test session and cookies
 Route::middleware(['web'])->get('/test-session', function() {
     session(['test_key' => 'test_value_' . time()]);

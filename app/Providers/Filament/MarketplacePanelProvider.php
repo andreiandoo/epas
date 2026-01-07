@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
+use App\Http\Middleware\AuthenticateMarketplaceOrSuperAdmin;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\NavigationGroup;
@@ -86,6 +87,7 @@ class MarketplacePanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                AuthenticateMarketplaceOrSuperAdmin::class, // Allow super-admins from core
             ])
             ->authMiddleware([
                 Authenticate::class,

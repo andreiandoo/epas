@@ -47,6 +47,15 @@
             $marketplaceClientId = $mpUser->marketplace_client_id;
         }
     }
+
+    // Check if current user is super-admin from core (for marketplace switcher)
+    $isSuperAdminInMarketplace = $isMarketplacePanel && session('marketplace_is_super_admin');
+    $marketplaceClients = [];
+    $currentMarketplaceClient = null;
+    if ($isSuperAdminInMarketplace) {
+        $marketplaceClients = \App\Models\MarketplaceClient::where('status', 'active')->orderBy('name')->get();
+        $currentMarketplaceClient = \App\Models\MarketplaceClient::find(session('super_admin_marketplace_client_id'));
+    }
 @endphp
 <div class="sticky top-0 z-20 px-4 fi-custom-topbar">
     <div class="flex items-center justify-between max-w-full gap-4">
@@ -72,8 +81,70 @@
             </div>
         </div>
 
-        {{-- Right: Language Selector, Public Site Link & User Menu --}}
+        {{-- Right: Marketplace Switcher (for super-admins), Language Selector, Public Site Link & User Menu --}}
         <div class="flex items-center gap-3">
+            {{-- Marketplace Switcher (only for super-admins in marketplace panel) --}}
+            @if($isSuperAdminInMarketplace && count($marketplaceClients) > 0)
+                <div x-data="{ open: false }" class="relative">
+                    <button
+                        @click="open = !open"
+                        type="button"
+                        class="flex items-center gap-2 px-3 py-2 text-sm text-amber-700 transition bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
+                    >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                        <span class="font-medium">{{ $currentMarketplaceClient?->name ?? 'Select Marketplace' }}</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+
+                    <div
+                        x-show="open"
+                        @click.away="open = false"
+                        x-cloak
+                        class="absolute right-0 z-50 py-1 mt-2 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg w-72 max-h-96 dark:bg-gray-800 dark:border-gray-700"
+                    >
+                        <div class="px-4 py-2 text-xs font-semibold tracking-wider text-gray-500 uppercase border-b border-gray-200 dark:border-gray-700 dark:text-gray-400">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                                </svg>
+                                Super Admin Mode
+                            </div>
+                        </div>
+                        @foreach($marketplaceClients as $client)
+                            <a
+                                href="{{ url('/marketplace/switch-client/' . $client->id) }}"
+                                class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 {{ $currentMarketplaceClient?->id === $client->id ? 'bg-amber-50 dark:bg-amber-900/30 font-semibold' : '' }}"
+                            >
+                                <div class="flex items-center justify-center flex-shrink-0 w-8 h-8 text-xs font-semibold rounded-full bg-primary-100 text-primary-700">
+                                    {{ strtoupper(substr($client->name, 0, 2)) }}
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="font-medium truncate">{{ $client->name }}</div>
+                                    <div class="text-xs text-gray-500 truncate">{{ $client->website }}</div>
+                                </div>
+                                @if($currentMarketplaceClient?->id === $client->id)
+                                    <svg class="flex-shrink-0 w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                                    </svg>
+                                @endif
+                            </a>
+                        @endforeach
+                        <div class="px-4 py-2 border-t border-gray-200 dark:border-gray-700">
+                            <a href="{{ url('/admin') }}" class="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
+                                </svg>
+                                Back to Admin Panel
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             {{-- Language Selector with Flags --}}
             <div x-data="{ open: false }" class="relative">
                 <button
