@@ -16,8 +16,10 @@ class EventsController extends BaseController
     {
         $client = $this->requireClient($request);
 
+        $language = $client->language ?? 'ro';
+
         $query = Event::query()
-            ->with(['venue:id,name,city,state,country', 'ticketTypes' => function ($q) {
+            ->with(['venue:id,name,city,state,country', 'marketplaceEventCategory', 'ticketTypes' => function ($q) {
                 $q->where('status', 'active')
                     ->select(['id', 'event_id', 'name', 'price_cents', 'sale_price_cents', 'quota_total', 'quota_sold', 'currency']);
             }])
@@ -57,7 +59,14 @@ class EventsController extends BaseController
         }
 
         if ($request->has('category')) {
-            $query->where('category', $request->category);
+            $categorySlug = $request->category;
+            // Marketplace events use marketplace_event_category_id relationship
+            // Tenant events use category string column
+            $query->where(function ($q) use ($categorySlug) {
+                $q->whereHas('marketplaceEventCategory', function ($cq) use ($categorySlug) {
+                    $cq->where('slug', $categorySlug);
+                })->orWhere('category', $categorySlug);
+            });
         }
 
         if ($request->has('city')) {
@@ -67,17 +76,29 @@ class EventsController extends BaseController
         }
 
         if ($request->has('from_date')) {
-            $query->where('starts_at', '>=', $request->from_date);
+            $fromDate = $request->from_date;
+            $query->where(function ($q) use ($fromDate) {
+                $q->where('event_date', '>=', $fromDate)
+                  ->orWhere('starts_at', '>=', $fromDate);
+            });
         }
 
         if ($request->has('to_date')) {
-            $query->where('starts_at', '<=', $request->to_date);
+            $toDate = $request->to_date;
+            $query->where(function ($q) use ($toDate) {
+                $q->where('event_date', '<=', $toDate)
+                  ->orWhere('starts_at', '<=', $toDate);
+            });
         }
 
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
+                // Tenant events: search in name column
                 $q->where('name', 'like', "%{$search}%")
+                    // Marketplace events: search in JSON title field (ro and en)
+                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.ro')) LIKE ?", ["%{$search}%"])
+                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(title, '$.en')) LIKE ?", ["%{$search}%"])
                     ->orWhere('description', 'like', "%{$search}%")
                     ->orWhereHas('venue', function ($vq) use ($search) {
                         $vq->where('name', 'like', "%{$search}%")
@@ -118,16 +139,80 @@ class EventsController extends BaseController
             });
         }
 
-        // Sorting
-        $sortField = $request->get('sort', 'starts_at');
-        $sortDir = $request->get('order', 'asc');
-        $query->orderBy($sortField, $sortDir);
+        // Sorting - use COALESCE to handle both event_date (marketplace) and starts_at (tenant)
+        $sortField = $request->get('sort', 'date');
+        $sortDir = strtoupper($request->get('order', 'asc')) === 'DESC' ? 'DESC' : 'ASC';
+
+        if ($sortField === 'date' || $sortField === 'starts_at' || $sortField === 'event_date') {
+            $query->orderByRaw("COALESCE(event_date, DATE(starts_at)) {$sortDir}");
+        } else {
+            $query->orderBy($sortField, $sortDir);
+        }
 
         // Pagination
         $perPage = min((int) $request->get('per_page', 20), 100);
-        $events = $query->paginate($perPage);
+        $paginator = $query->paginate($perPage);
 
-        return $this->paginated($events);
+        // Format events for response (handle both marketplace and tenant events)
+        $formattedEvents = collect($paginator->items())->map(function ($event) use ($language) {
+            $isMarketplaceEvent = !empty($event->marketplace_client_id);
+
+            // Get title
+            $title = $isMarketplaceEvent
+                ? ($event->getTranslation('title', $language) ?? $event->name)
+                : $event->name;
+
+            // Get dates
+            $startsAt = $isMarketplaceEvent
+                ? ($event->event_date ? $event->event_date->format('Y-m-d') . ' ' . ($event->start_time ?? '00:00') : null)
+                : $event->starts_at;
+
+            // Get image
+            $imageUrl = $isMarketplaceEvent
+                ? ($event->poster_url ?? $event->hero_image_url ?? $event->image_url)
+                : $event->image_url;
+
+            // Get category
+            $category = $isMarketplaceEvent
+                ? ($event->marketplaceEventCategory?->getTranslation('name', $language) ?? $event->category)
+                : $event->category;
+
+            // Calculate min price from ticket types
+            $minPrice = $event->ticketTypes->map(function ($tt) {
+                return ($tt->sale_price_cents ?? $tt->price_cents) / 100;
+            })->min();
+
+            // Calculate total available tickets
+            $totalAvailable = $event->ticketTypes->sum(function ($tt) {
+                return max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
+            });
+
+            return [
+                'id' => $event->id,
+                'name' => $title,
+                'slug' => $event->slug,
+                'event_date' => $event->event_date?->format('Y-m-d'),
+                'start_time' => $event->start_time,
+                'starts_at' => $startsAt,
+                'image_url' => $imageUrl,
+                'category' => $category,
+                'venue' => $event->venue?->name,
+                'city' => $event->venue?->city,
+                'price_from' => $minPrice,
+                'has_availability' => $totalAvailable > 0,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $formattedEvents,
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+        ]);
     }
 
     /**
@@ -139,6 +224,7 @@ class EventsController extends BaseController
 
         $query = Event::with([
             'venue',
+            'marketplaceEventCategory',
             'ticketTypes' => function ($q) {
                 $q->where('status', 'active')
                     ->orderBy('id');
@@ -178,23 +264,76 @@ class EventsController extends BaseController
             $commission = $client->getCommissionForTenant($event->tenant_id);
         }
 
+        // Get language from client
+        $language = $client->language ?? 'ro';
+
+        // Handle both marketplace events (translatable fields) and tenant events (simple fields)
+        $isMarketplaceEvent = !empty($event->marketplace_client_id);
+
+        // Get title: marketplace events use translatable title, tenant events use name
+        $title = $isMarketplaceEvent
+            ? ($event->getTranslation('title', $language) ?? $event->name)
+            : $event->name;
+
+        // Get description: marketplace events use translatable description (JSON), tenant events use simple string
+        $description = $isMarketplaceEvent
+            ? ($event->getTranslation('description', $language) ?? '')
+            : ($event->description ?? '');
+
+        // Make sure description is a string
+        if (is_array($description)) {
+            $description = $description[$language] ?? $description['ro'] ?? $description['en'] ?? '';
+        }
+
+        // Get dates: marketplace events use event_date + start_time, tenant events use starts_at
+        $startsAt = $isMarketplaceEvent
+            ? ($event->event_date ? $event->event_date->format('Y-m-d') . ' ' . ($event->start_time ?? '00:00') : null)
+            : $event->starts_at;
+
+        $endsAt = $isMarketplaceEvent
+            ? ($event->event_date ? $event->event_date->format('Y-m-d') . ' ' . ($event->end_time ?? '23:59') : null)
+            : $event->ends_at;
+
+        $doorsOpenAt = $isMarketplaceEvent
+            ? ($event->event_date ? $event->event_date->format('Y-m-d') . ' ' . ($event->door_time ?? $event->start_time ?? '00:00') : null)
+            : $event->doors_open_at;
+
+        // Get images: marketplace events use poster_url/hero_image_url, tenant events use image_url/cover_image_url
+        $imageUrl = $isMarketplaceEvent
+            ? ($event->poster_url ?? $event->hero_image_url ?? $event->image_url)
+            : $event->image_url;
+
+        $coverImageUrl = $isMarketplaceEvent
+            ? ($event->hero_image_url ?? $event->poster_url ?? $event->cover_image_url)
+            : $event->cover_image_url;
+
+        // Get category
+        $category = $isMarketplaceEvent
+            ? ($event->marketplaceEventCategory?->getTranslation('name', $language) ?? $event->category)
+            : $event->category;
+
         return $this->success([
             'event' => [
                 'id' => $event->id,
-                'name' => $event->name,
+                'name' => $title,
                 'slug' => $event->slug,
-                'description' => $event->description,
-                'starts_at' => $event->starts_at,
-                'ends_at' => $event->ends_at,
-                'doors_open_at' => $event->doors_open_at,
-                'category' => $event->category,
-                'image_url' => $event->image_url,
-                'cover_image_url' => $event->cover_image_url,
+                'description' => $description,
+                'starts_at' => $startsAt,
+                'ends_at' => $endsAt,
+                'doors_open_at' => $doorsOpenAt,
+                'event_date' => $event->event_date?->format('Y-m-d'),
+                'start_time' => $event->start_time,
+                'end_time' => $event->end_time,
+                'door_time' => $event->door_time,
+                'category' => $category,
+                'image_url' => $imageUrl,
+                'cover_image_url' => $coverImageUrl,
                 'tenant_id' => $event->tenant_id,
+                'marketplace_client_id' => $event->marketplace_client_id,
             ],
             'venue' => $event->venue ? [
                 'id' => $event->venue->id,
-                'name' => $event->venue->name,
+                'name' => $event->venue->getTranslation('name', $language) ?? $event->venue->name,
                 'address' => $event->venue->address,
                 'city' => $event->venue->city,
                 'state' => $event->venue->state,
@@ -202,17 +341,19 @@ class EventsController extends BaseController
                 'latitude' => $event->venue->latitude,
                 'longitude' => $event->venue->longitude,
             ] : null,
-            'ticket_types' => $event->ticketTypes->map(function ($tt) {
+            'ticket_types' => $event->ticketTypes->map(function ($tt) use ($language) {
                 $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
+                $ttName = is_array($tt->name) ? ($tt->name[$language] ?? $tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name;
+                $ttDesc = is_array($tt->description) ? ($tt->description[$language] ?? $tt->description['ro'] ?? $tt->description['en'] ?? '') : ($tt->description ?? '');
                 return [
                     'id' => $tt->id,
-                    'name' => $tt->name,
-                    'description' => $tt->description,
+                    'name' => $ttName,
+                    'description' => $ttDesc,
                     'price' => $displayPrice,
                     'price_formatted' => number_format($displayPrice, 2) . ' ' . ($tt->currency ?? 'RON'),
                     'available_quantity' => max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0)),
-                    'max_per_order' => 10, // Default max per order
-                    'min_per_order' => 1,
+                    'max_per_order' => $tt->max_per_order ?? 10,
+                    'min_per_order' => $tt->min_per_order ?? 1,
                     'sale_starts_at' => $tt->sales_start_at,
                     'sale_ends_at' => $tt->sales_end_at,
                 ];
@@ -221,7 +362,8 @@ class EventsController extends BaseController
                 return [
                     'id' => $artist->id,
                     'name' => $artist->name,
-                    'image_url' => $artist->image_url,
+                    'slug' => $artist->slug,
+                    'image_url' => $artist->main_image_full_url ?? $artist->image_url,
                 ];
             }),
             'commission_rate' => $commission,
@@ -234,9 +376,10 @@ class EventsController extends BaseController
     public function featured(Request $request): JsonResponse
     {
         $client = $this->requireClient($request);
+        $language = $client->language ?? 'ro';
 
         $query = Event::query()
-            ->with(['venue:id,name,city', 'ticketTypes' => function ($q) {
+            ->with(['venue:id,name,city', 'marketplaceEventCategory', 'ticketTypes' => function ($q) {
                 $q->where('status', 'active')
                     ->select(['id', 'event_id', 'name', 'price_cents', 'sale_price_cents', 'quota_total', 'quota_sold']);
             }])
@@ -276,7 +419,24 @@ class EventsController extends BaseController
         $events = $query->orderByRaw('COALESCE(event_date, DATE(starts_at)) ASC')->limit($limit)->get();
 
         return $this->success([
-            'events' => $events->map(function ($event) {
+            'events' => $events->map(function ($event) use ($language) {
+                $isMarketplaceEvent = !empty($event->marketplace_client_id);
+
+                // Get title
+                $title = $isMarketplaceEvent
+                    ? ($event->getTranslation('title', $language) ?? $event->name)
+                    : $event->name;
+
+                // Get dates
+                $startsAt = $isMarketplaceEvent
+                    ? ($event->event_date ? $event->event_date->format('Y-m-d') . ' ' . ($event->start_time ?? '00:00') : null)
+                    : $event->starts_at;
+
+                // Get image
+                $imageUrl = $isMarketplaceEvent
+                    ? ($event->poster_url ?? $event->hero_image_url ?? $event->image_url)
+                    : $event->image_url;
+
                 // Calculate min price from active ticket types
                 $minPrice = $event->ticketTypes->map(function ($tt) {
                     return ($tt->sale_price_cents ?? $tt->price_cents) / 100;
@@ -289,10 +449,12 @@ class EventsController extends BaseController
 
                 return [
                     'id' => $event->id,
-                    'name' => $event->name,
+                    'name' => $title,
                     'slug' => $event->slug,
-                    'image_url' => $event->image_url,
-                    'starts_at' => $event->starts_at,
+                    'event_date' => $event->event_date?->format('Y-m-d'),
+                    'start_time' => $event->start_time,
+                    'starts_at' => $startsAt,
+                    'image_url' => $imageUrl,
                     'venue' => $event->venue?->name,
                     'city' => $event->venue?->city,
                     'price_from' => $minPrice,
