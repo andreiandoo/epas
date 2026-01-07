@@ -226,14 +226,25 @@ class ArtistsController extends BaseController
 
         $language = $client->language ?? 'ro';
 
-        // Get upcoming events
+        // Get upcoming events with ticket types for price calculation
         $upcomingEvents = $artist->events()
+            ->with(['ticketTypes' => function ($q) {
+                $q->where('status', 'active');
+            }, 'venue'])
             ->where('event_date', '>=', now()->toDateString())
             ->where('is_cancelled', false)
             ->orderBy('event_date')
             ->limit(10)
             ->get()
             ->map(function ($event) use ($language) {
+                // Calculate min price from ticket types
+                $minPriceCents = $event->ticketTypes
+                    ->map(fn ($tt) => $tt->sale_price_cents ?? $tt->price_cents)
+                    ->filter()
+                    ->min();
+                $minPrice = $minPriceCents ? $minPriceCents / 100 : null;
+                $currency = $event->ticketTypes->first()?->currency ?? 'RON';
+
                 return [
                     'id' => $event->id,
                     'title' => $event->getTranslation('title', $language),
@@ -244,10 +255,10 @@ class ArtistsController extends BaseController
                         'name' => $event->venue->getTranslation('name', $language) ?? $event->venue->name,
                         'city' => $event->venue->city,
                     ] : null,
-                    'min_price' => $event->min_price_minor ? ($event->min_price_minor / 100) : null,
-                    'currency' => $event->currency ?? 'RON',
-                    'image' => $event->main_image_url,
-                    'is_sold_out' => $event->is_sold_out ?? false,
+                    'min_price' => $minPrice,
+                    'currency' => $currency,
+                    'image' => $event->main_image_url ?? $event->poster_url,
+                    'is_sold_out' => $event->ticketTypes->every(fn ($tt) => ($tt->quota_total ?? 0) <= ($tt->quota_sold ?? 0)),
                 ];
             });
 
@@ -347,6 +358,9 @@ class ArtistsController extends BaseController
         $language = $client->language ?? 'ro';
 
         $query = $artist->events()
+            ->with(['ticketTypes' => function ($q) {
+                $q->where('status', 'active');
+            }, 'venue'])
             ->where('is_cancelled', false);
 
         // Filter: upcoming or past
@@ -362,6 +376,14 @@ class ArtistsController extends BaseController
         $paginator = $query->paginate($perPage);
 
         $events = collect($paginator->items())->map(function ($event) use ($language) {
+            // Calculate min price from ticket types
+            $minPriceCents = $event->ticketTypes
+                ->map(fn ($tt) => $tt->sale_price_cents ?? $tt->price_cents)
+                ->filter()
+                ->min();
+            $minPrice = $minPriceCents ? $minPriceCents / 100 : null;
+            $currency = $event->ticketTypes->first()?->currency ?? 'RON';
+
             return [
                 'id' => $event->id,
                 'title' => $event->getTranslation('title', $language),
@@ -374,10 +396,10 @@ class ArtistsController extends BaseController
                     'city' => $event->venue->city,
                     'slug' => $event->venue->slug,
                 ] : null,
-                'min_price' => $event->min_price_minor ? ($event->min_price_minor / 100) : null,
-                'currency' => $event->currency ?? 'RON',
-                'image' => $event->main_image_url,
-                'is_sold_out' => $event->is_sold_out ?? false,
+                'min_price' => $minPrice,
+                'currency' => $currency,
+                'image' => $event->main_image_url ?? $event->poster_url,
+                'is_sold_out' => $event->ticketTypes->every(fn ($tt) => ($tt->quota_total ?? 0) <= ($tt->quota_sold ?? 0)),
             ];
         });
 

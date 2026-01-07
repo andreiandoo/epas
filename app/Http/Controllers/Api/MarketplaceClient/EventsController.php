@@ -22,14 +22,30 @@ class EventsController extends BaseController
                     ->select(['id', 'event_id', 'name', 'price_cents', 'sale_price_cents', 'quota_total', 'quota_sold', 'currency']);
             }])
             ->where('status', 'published')
-            ->where('is_public', true)
-            ->where('starts_at', '>=', now());
+            ->where(function ($q) {
+                $q->where('is_public', true)->orWhereNull('is_public');
+            })
+            // Filter upcoming: marketplace events use event_date, tenant events use starts_at
+            ->where(function ($q) {
+                $q->where('event_date', '>=', now()->toDateString())
+                  ->orWhere('starts_at', '>=', now());
+            })
+            // Exclude cancelled events
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            });
 
-        // Filter by allowed tenants
-        $allowedTenants = $client->allowed_tenants;
-        if (!is_null($allowedTenants)) {
-            $query->whereIn('tenant_id', $allowedTenants);
-        }
+        // Include both marketplace events AND tenant events (if allowed)
+        $query->where(function ($q) use ($client) {
+            // Marketplace events belonging to this client
+            $q->where('marketplace_client_id', $client->id);
+
+            // OR tenant events from allowed tenants
+            $allowedTenants = $client->allowed_tenants;
+            if (!is_null($allowedTenants) && count($allowedTenants) > 0) {
+                $q->orWhereIn('tenant_id', $allowedTenants);
+            }
+        });
 
         // Additional filters
         if ($request->has('tenant_id')) {
@@ -138,18 +154,29 @@ class EventsController extends BaseController
         }
 
         $event = $query->where('status', 'published')
-            ->where('is_public', true)
+            ->where(function ($q) {
+                $q->where('is_public', true)->orWhereNull('is_public');
+            })
             ->first();
 
         if (!$event) {
             return $this->error('Event not found', 404);
         }
 
-        if (!$client->canSellForTenant($event->tenant_id)) {
-            return $this->error('Not authorized to sell tickets for this event', 403);
+        // Check authorization: either marketplace event belonging to this client, or tenant event with permission
+        if ($event->marketplace_client_id) {
+            // Marketplace event - check if it belongs to this marketplace client
+            if ($event->marketplace_client_id !== $client->id) {
+                return $this->error('Not authorized to sell tickets for this event', 403);
+            }
+            $commission = $client->default_commission_rate ?? 0;
+        } else {
+            // Tenant event - check if client can sell for this tenant
+            if (!$event->tenant_id || !$client->canSellForTenant($event->tenant_id)) {
+                return $this->error('Not authorized to sell tickets for this event', 403);
+            }
+            $commission = $client->getCommissionForTenant($event->tenant_id);
         }
-
-        $commission = $client->getCommissionForTenant($event->tenant_id);
 
         return $this->success([
             'event' => [
@@ -214,18 +241,39 @@ class EventsController extends BaseController
                     ->select(['id', 'event_id', 'name', 'price_cents', 'sale_price_cents', 'quota_total', 'quota_sold']);
             }])
             ->where('status', 'published')
-            ->where('is_public', true)
-            ->where('is_featured', true)
-            ->where('starts_at', '>=', now());
+            ->where(function ($q) {
+                $q->where('is_public', true)->orWhereNull('is_public');
+            })
+            // Featured: check is_featured OR marketplace featured flags
+            ->where(function ($q) {
+                $q->where('is_featured', true)
+                  ->orWhere('is_homepage_featured', true)
+                  ->orWhere('is_general_featured', true);
+            })
+            // Filter upcoming: marketplace events use event_date, tenant events use starts_at
+            ->where(function ($q) {
+                $q->where('event_date', '>=', now()->toDateString())
+                  ->orWhere('starts_at', '>=', now());
+            })
+            // Exclude cancelled events
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            });
 
-        // Filter by allowed tenants
-        $allowedTenants = $client->allowed_tenants;
-        if (!is_null($allowedTenants)) {
-            $query->whereIn('tenant_id', $allowedTenants);
-        }
+        // Include both marketplace events AND tenant events (if allowed)
+        $query->where(function ($q) use ($client) {
+            // Marketplace featured events belonging to this client
+            $q->where('marketplace_client_id', $client->id);
+
+            // OR tenant events from allowed tenants
+            $allowedTenants = $client->allowed_tenants;
+            if (!is_null($allowedTenants) && count($allowedTenants) > 0) {
+                $q->orWhereIn('tenant_id', $allowedTenants);
+            }
+        });
 
         $limit = min((int) $request->get('limit', 10), 50);
-        $events = $query->orderBy('starts_at')->limit($limit)->get();
+        $events = $query->orderByRaw('COALESCE(event_date, DATE(starts_at)) ASC')->limit($limit)->get();
 
         return $this->success([
             'events' => $events->map(function ($event) {
@@ -267,11 +315,14 @@ class EventsController extends BaseController
             ->where('starts_at', '>=', now())
             ->whereNotNull('category');
 
-        // Filter by allowed tenants
-        $allowedTenants = $client->allowed_tenants;
-        if (!is_null($allowedTenants)) {
-            $query->whereIn('tenant_id', $allowedTenants);
-        }
+        // Include both marketplace events AND tenant events (if allowed)
+        $query->where(function ($q) use ($client) {
+            $q->where('marketplace_client_id', $client->id);
+            $allowedTenants = $client->allowed_tenants;
+            if (!is_null($allowedTenants) && count($allowedTenants) > 0) {
+                $q->orWhereIn('tenant_id', $allowedTenants);
+            }
+        });
 
         $categories = $query->selectRaw('category, COUNT(*) as event_count')
             ->groupBy('category')
@@ -304,11 +355,14 @@ class EventsController extends BaseController
             ->where('events.starts_at', '>=', now())
             ->whereNotNull('venues.city');
 
-        // Filter by allowed tenants
-        $allowedTenants = $client->allowed_tenants;
-        if (!is_null($allowedTenants)) {
-            $query->whereIn('events.tenant_id', $allowedTenants);
-        }
+        // Include both marketplace events AND tenant events (if allowed)
+        $query->where(function ($q) use ($client) {
+            $q->where('events.marketplace_client_id', $client->id);
+            $allowedTenants = $client->allowed_tenants;
+            if (!is_null($allowedTenants) && count($allowedTenants) > 0) {
+                $q->orWhereIn('events.tenant_id', $allowedTenants);
+            }
+        });
 
         $cities = $query->selectRaw('venues.city, venues.country, COUNT(*) as event_count')
             ->groupBy('venues.city', 'venues.country')
@@ -345,8 +399,15 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
-        if (!$client->canSellForTenant($event->tenant_id)) {
-            return $this->error('Not authorized', 403);
+        // Check authorization: either marketplace event belonging to this client, or tenant event with permission
+        if ($event->marketplace_client_id) {
+            if ($event->marketplace_client_id !== $client->id) {
+                return $this->error('Not authorized', 403);
+            }
+        } else {
+            if (!$event->tenant_id || !$client->canSellForTenant($event->tenant_id)) {
+                return $this->error('Not authorized', 403);
+            }
         }
 
         $ticketTypes = TicketType::where('event_id', $event->id)
