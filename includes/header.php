@@ -91,12 +91,12 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 <!-- Search Container -->
 <div class="fixed top-0 left-0 right-0 bg-white z-[2001] -translate-y-full transition-transform duration-300 shadow-xl" id="searchContainer">
     <div class="max-w-[800px] mx-auto p-6">
-        <div class="flex items-center gap-4 px-5 pr-1 transition-colors border-2 border-gray-200 bg-gray-50 rounded-2xl focus-within:border-primary">
+        <div class="flex items-center gap-4 px-5 pr-1 transition-colors border-2 border-gray-200 bg-gray-50 rounded-2xl focus-within:border-primary mobile:px-2">
             <svg class="flex-shrink-0 w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"/>
                 <path d="M21 21l-4.35-4.35"/>
             </svg>
-            <input type="text" class="flex-1 py-4 text-lg text-gray-900 bg-transparent border-none outline-none placeholder:text-gray-400" placeholder="Caută evenimente, artiști, locații..." id="searchInput" autocomplete="off">
+            <input type="text" class="flex-1 py-4 text-lg text-gray-900 bg-transparent border-none outline-none placeholder:text-gray-400 mobile:placeholder:text-sm" placeholder="Caută evenimente, artiști, locații..." id="searchInput" autocomplete="off">
             <button class="flex items-center justify-center flex-shrink-0 w-12 h-12 text-white transition-colors bg-gray-900 rounded-xl hover:bg-gray-800" id="searchCloseBtn">
                 <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18 6L6 18M6 6l12 12"/>
