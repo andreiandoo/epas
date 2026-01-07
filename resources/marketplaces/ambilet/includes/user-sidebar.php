@@ -25,37 +25,38 @@ $currentPage = $currentPage ?? 'dashboard';
 ?>
 
 <!-- Mobile Menu Toggle -->
-<button id="mobile-sidebar-toggle" class="lg:hidden fixed bottom-4 right-4 z-40 w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center">
+<button id="mobile-sidebar-toggle" class="fixed z-40 justify-center text-white rounded-full flex items-center gap-x-2 shadow-lg lg:hidden bottom-4 right-0 left-0 mx-auto w-[90%] h-14 bg-primary">
     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    <span class="">Meniul meu</span>
 </button>
 
 <!-- Mobile Sidebar Overlay -->
-<div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
+<div id="sidebar-overlay" class="fixed inset-0 z-40 hidden bg-black/50 lg:hidden"></div>
 
 <!-- Sidebar -->
-<aside id="user-sidebar" class="fixed lg:static inset-y-0 left-0 z-50 w-72 lg:w-64 bg-white lg:bg-transparent transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out flex-shrink-0 overflow-y-auto">
-    <div class="bg-white lg:rounded-2xl lg:border lg:border-border p-4 lg:sticky lg:top-24 min-h-screen lg:min-h-0">
+<aside id="user-sidebar" class="mobile:z-[1000] fixed lg:static inset-y-0 left-0 z-50 w-72 lg:w-64 bg-white lg:bg-transparent transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out flex-shrink-0 overflow-y-auto">
+    <div class="min-h-screen p-4 bg-white lg:rounded-2xl lg:border lg:border-border lg:sticky lg:top-24 lg:min-h-0 mobile:p-0">
         <!-- Mobile Close Button -->
-        <button id="close-sidebar" class="lg:hidden absolute top-4 right-4 p-2 text-muted hover:text-secondary">
+        <button id="close-sidebar" class="absolute p-2 lg:hidden top-4 right-4 text-muted hover:text-secondary">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
 
         <!-- User Info -->
-        <div class="flex items-center gap-3 pb-4 border-b border-border mb-4 mt-8 lg:mt-0">
-            <div id="sidebar-user-avatar" class="w-12 h-12 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center">
+        <div class="flex items-center gap-3 pb-4 mt-8 mb-4 border-b border-border lg:mt-0 mobile:px-4 mobile:mt-4 mobile:mb-0">
+            <div id="sidebar-user-avatar" class="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent">
                 <span class="text-lg font-bold text-white" id="sidebar-user-initials">--</span>
             </div>
             <div class="flex-1 min-w-0">
-                <p class="font-semibold text-secondary truncate" id="sidebar-user-name">Utilizator</p>
-                <p class="text-sm text-muted truncate" id="sidebar-user-email">email@example.com</p>
+                <p class="font-semibold truncate text-secondary" id="sidebar-user-name">Utilizator</p>
+                <p class="text-sm text-muted truncate mobile:max-w-[70%]" id="sidebar-user-email">email@example.com</p>
             </div>
         </div>
 
         <!-- Points Badge -->
-        <div class="mb-4 p-3 bg-gradient-to-r from-primary/10 to-accent/10 rounded-xl">
+        <div class="p-3 mb-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-xl mobile:rounded-none">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 bg-accent rounded-lg flex items-center justify-center">
+                    <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-accent">
                         <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
                     </div>
                     <div>
@@ -63,18 +64,18 @@ $currentPage = $currentPage ?? 'dashboard';
                         <p class="font-bold text-secondary" id="sidebar-user-points">0</p>
                     </div>
                 </div>
-                <a href="/cont/puncte" class="text-xs text-primary font-medium hover:underline">Vezi</a>
+                <a href="/cont/puncte" class="text-xs font-medium text-primary hover:underline">Vezi</a>
             </div>
         </div>
 
         <!-- Navigation -->
-        <nav class="space-y-1">
+        <nav class="space-y-1 mobile:px-4">
             <?php foreach ($userMenuItems as $item):
                 $isActive = $currentPage === $item['page'];
                 $activeClass = $isActive ? 'bg-primary/10 text-primary font-medium' : 'text-muted hover:bg-surface hover:text-secondary';
             ?>
             <a href="<?= $item['url'] ?>" class="flex items-center gap-3 px-3 py-2.5 rounded-xl <?= $activeClass ?> transition-colors">
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="flex-shrink-0 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="<?= $item['icon'] ?>"/>
                 </svg>
                 <span class="truncate"><?= $item['label'] ?></span>
@@ -83,9 +84,9 @@ $currentPage = $currentPage ?? 'dashboard';
         </nav>
 
         <!-- Logout -->
-        <div class="mt-4 pt-4 border-t border-border">
+        <div class="pt-4 mt-4 border-t border-border mobile:px-4">
             <button onclick="AmbiletAuth.logout(); window.location.href='/';" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-error hover:bg-error/10 transition-colors w-full">
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="flex-shrink-0 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                 </svg>
                 <span>Deconectare</span>

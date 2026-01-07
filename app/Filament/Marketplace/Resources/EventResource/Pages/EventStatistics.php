@@ -31,26 +31,22 @@ class EventStatistics extends Page
     {
         $this->record = $this->resolveRecord($record);
 
-        // Verify tenant access - allow for own events OR events at owned venues
+        // Verify this event belongs to the current marketplace
         $marketplace = static::getMarketplaceClient();
-        $ownedVenueIds = $marketplace?->venues()->pluck('id')->toArray() ?? [];
 
-        // Must be either owned by tenant OR happening at tenant's venue
-        $isOwnEvent = $this->record->tenant_id === $marketplace?->id;
-        $isAtOwnedVenue = in_array($this->record->venue_id, $ownedVenueIds);
-
-        if (!$isOwnEvent && !$isAtOwnedVenue) {
+        if ($this->record->marketplace_client_id !== $marketplace?->id) {
             abort(403, 'Unauthorized access to this event');
         }
     }
 
     /**
-     * Check if this is a guest event (not owned but at owned venue)
+     * Check if this is a guest event (not owned by current organizer)
      */
     public function isGuestEvent(): bool
     {
-        $marketplace = static::getMarketplaceClient();
-        return $this->record->tenant_id !== $marketplace?->id;
+        // For marketplace, events are typically all "own" events if they belong to this marketplace
+        // This method is kept for compatibility but may need adjustment based on business logic
+        return false;
     }
 
     public function getBreadcrumb(): string

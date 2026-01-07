@@ -214,20 +214,22 @@ class MarketplaceEventsController extends BaseController
                 'social_links' => $organizer->social_links,
                 'verified' => $organizer->verified_at !== null,
             ] : null,
-            'ticket_types' => $event->ticketTypes->map(function ($tt) use ($language) {
+            'ticket_types' => $event->ticketTypes->filter(fn ($tt) => $tt->status === 'active')->map(function ($tt) use ($language) {
+                $available = max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
+                $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
                 return [
                     'id' => $tt->id,
-                    'name' => $tt->getTranslation('name', $language) ?? $tt->name,
-                    'description' => $tt->getTranslation('description', $language) ?? $tt->description,
-                    'price' => (float) ($tt->price ?? $tt->price_cents / 100),
+                    'name' => $tt->name,
+                    'description' => $tt->description,
+                    'price' => (float) $displayPrice,
                     'currency' => $tt->currency ?? 'RON',
-                    'available' => $tt->quantity_available ?? null,
-                    'min_per_order' => $tt->min_per_order ?? 1,
-                    'max_per_order' => $tt->max_per_order ?? 10,
-                    'status' => $tt->status ?? 'on_sale',
-                    'is_sold_out' => ($tt->quantity_available ?? 999) <= 0,
+                    'available' => $available,
+                    'min_per_order' => 1,
+                    'max_per_order' => 10,
+                    'status' => $tt->status,
+                    'is_sold_out' => $available <= 0,
                 ];
-            }),
+            })->values(),
         ]);
     }
 
@@ -247,14 +249,17 @@ class MarketplaceEventsController extends BaseController
         }
 
         $ticketTypes = $event->ticketTypes()
+            ->where('status', 'active')
             ->get()
             ->map(function ($tt) {
+                $available = max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
+                $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
-                    'price' => (float) ($tt->price ?? $tt->price_cents / 100),
-                    'available' => $tt->quantity_available ?? null,
-                    'status' => ($tt->quantity_available ?? 999) <= 0 ? 'sold_out' : 'available',
+                    'price' => (float) $displayPrice,
+                    'available' => $available,
+                    'status' => $available <= 0 ? 'sold_out' : 'available',
                 ];
             });
 

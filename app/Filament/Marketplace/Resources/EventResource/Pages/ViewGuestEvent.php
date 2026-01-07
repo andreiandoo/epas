@@ -176,8 +176,8 @@ class ViewGuestEvent extends Page
             ->distinct('customer_id')
             ->count('customer_id');
 
-        // Total capacity
-        $totalCapacity = $this->record->ticketTypes()->sum('capacity') ?: $this->record->ticketTypes()->sum('quota_total') ?: 0;
+        // Total capacity (quota_total is the actual database column)
+        $totalCapacity = $this->record->ticketTypes()->sum('quota_total') ?: 0;
 
         // Occupancy
         $occupancy = $totalCapacity > 0 ? round(($ticketsSold / $totalCapacity) * 100, 1) : 0;

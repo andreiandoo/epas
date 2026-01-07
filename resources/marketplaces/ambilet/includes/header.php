@@ -91,12 +91,12 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 <!-- Search Container -->
 <div class="fixed top-0 left-0 right-0 bg-white z-[2001] -translate-y-full transition-transform duration-300 shadow-xl" id="searchContainer">
     <div class="max-w-[800px] mx-auto p-6">
-        <div class="flex items-center gap-4 px-5 pr-1 transition-colors border-2 border-gray-200 bg-gray-50 rounded-2xl focus-within:border-primary">
+        <div class="flex items-center gap-4 px-5 pr-1 transition-colors border-2 border-gray-200 bg-gray-50 rounded-2xl focus-within:border-primary mobile:px-2">
             <svg class="flex-shrink-0 w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="11" cy="11" r="8"/>
                 <path d="M21 21l-4.35-4.35"/>
             </svg>
-            <input type="text" class="flex-1 py-4 text-lg text-gray-900 bg-transparent border-none outline-none placeholder:text-gray-400" placeholder="Caută evenimente, artiști, locații..." id="searchInput" autocomplete="off">
+            <input type="text" class="flex-1 py-4 text-lg text-gray-900 bg-transparent border-none outline-none placeholder:text-gray-400 mobile:placeholder:text-sm" placeholder="Caută evenimente, artiști, locații..." id="searchInput" autocomplete="off">
             <button class="flex items-center justify-center flex-shrink-0 w-12 h-12 text-white transition-colors bg-gray-900 rounded-xl hover:bg-gray-800" id="searchCloseBtn">
                 <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M18 6L6 18M6 6l12 12"/>
@@ -299,7 +299,6 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                         <div class="w-[820px] bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden flex">
                             <!-- Categories -->
                             <div class="w-[250px] px-3 py-2 bg-gray-50 border-r border-gray-200">
-                                <div class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 px-3">Categorii</div>
                                 <?php foreach ($navCategories as $index => $cat): ?>
                                 <a href="/<?= $cat['slug'] ?>" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-white hover:text-gray-900 hover:shadow-sm transition-all mb-1 group/cat <?= $index === 0 ? 'bg-white text-gray-900 shadow-sm' : '' ?>" title="<?= htmlspecialchars($cat['name']) ?>">
                                     <div class="w-[38px] h-[38px] bg-white rounded-lg flex items-center justify-center shadow-sm text-gray-500 transition-all group-hover/cat:bg-gradient-to-br group-hover/cat:from-primary group-hover/cat:to-primary-light group-hover/cat:text-white <?= $index === 0 ? '!bg-gradient-to-br !from-primary !to-primary-light !text-white' : '' ?>">
@@ -521,9 +520,9 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 </header>
 
 <!-- Mobile Menu -->
-<div class="hidden fixed top-[72px] left-0 right-0 bottom-0 bg-white z-[999] overflow-y-auto p-4 lg:hidden" id="mobileMenu">
+<div class="hidden fixed top-[72px] left-0 right-0 bottom-0 bg-white z-[999] overflow-y-auto lg:hidden" id="mobileMenu">
     <!-- Cities -->
-    <div class="border-b border-gray-200" data-dropdown>
+    <div class="px-4 border-b border-gray-200" data-dropdown>
         <div class="flex items-center justify-between py-4 text-base font-semibold text-gray-900 cursor-pointer mobile-nav-link">
             Orașe
             <svg class="w-5 h-5 text-gray-400 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -551,7 +550,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     </div>
 
     <!-- Events -->
-    <div class="border-b border-gray-200" data-dropdown>
+    <div class="px-4 border-b border-gray-200" data-dropdown>
         <div class="flex items-center justify-between py-4 text-base font-semibold text-gray-900 cursor-pointer mobile-nav-link">
             Evenimente
             <svg class="w-5 h-5 text-gray-400 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -572,12 +571,12 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     </div>
 
     <!-- Artists -->
-    <div class="border-b border-gray-200">
+    <div class="px-4 border-b border-gray-200">
         <a href="/artisti" class="block py-4 text-base font-semibold text-gray-900">Artiști</a>
     </div>
 
     <!-- Locations -->
-    <div class="border-b border-gray-200" data-dropdown>
+    <div class="px-4 border-b border-gray-200" data-dropdown>
         <div class="flex items-center justify-between py-4 text-base font-semibold text-gray-900 cursor-pointer mobile-nav-link">
             Locații
             <svg class="w-5 h-5 text-gray-400 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -598,7 +597,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     </div>
 
     <!-- Mobile Actions -->
-    <div class="flex flex-col gap-3 pt-6 mt-6 border-t border-gray-200">
+    <div class="flex flex-col gap-3 px-4 pt-6 mt-6 border-t border-gray-200">
         <a href="/autentificare" class="w-full py-3.5 text-center border border-gray-200 rounded-lg text-gray-900 text-[15px] font-semibold hover:bg-gray-50 transition-all">Autentificare</a>
         <a href="/inregistrare" class="w-full py-3.5 text-center bg-gradient-to-br from-primary to-primary-light rounded-lg text-white text-[15px] font-semibold">Înregistrare</a>
     </div>

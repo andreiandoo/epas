@@ -18,9 +18,8 @@ class EventsController extends BaseController
 
         $query = Event::query()
             ->with(['venue:id,name,city,state,country', 'ticketTypes' => function ($q) {
-                $q->where('is_visible', true)
-                    ->where('status', 'on_sale')
-                    ->select(['id', 'event_id', 'name', 'price', 'available_quantity', 'max_per_order']);
+                $q->where('status', 'active')
+                    ->select(['id', 'event_id', 'name', 'price_cents', 'sale_price_cents', 'quota_total', 'quota_sold', 'currency']);
             }])
             ->where('status', 'published')
             ->where('is_public', true)
@@ -74,25 +73,32 @@ class EventsController extends BaseController
             });
         }
 
-        // Price range filter
+        // Price range filter (prices stored in cents)
         if ($request->has('min_price') || $request->has('max_price')) {
             $query->whereHas('ticketTypes', function ($q) use ($request) {
-                $q->where('is_visible', true)->where('status', 'on_sale');
+                $q->where('status', 'active');
                 if ($request->has('min_price')) {
-                    $q->where('price', '>=', $request->min_price);
+                    $minCents = (int) ($request->min_price * 100);
+                    $q->where(function ($sq) use ($minCents) {
+                        $sq->where('sale_price_cents', '>=', $minCents)
+                            ->orWhere(fn ($q2) => $q2->whereNull('sale_price_cents')->where('price_cents', '>=', $minCents));
+                    });
                 }
                 if ($request->has('max_price')) {
-                    $q->where('price', '<=', $request->max_price);
+                    $maxCents = (int) ($request->max_price * 100);
+                    $q->where(function ($sq) use ($maxCents) {
+                        $sq->where('sale_price_cents', '<=', $maxCents)
+                            ->orWhere(fn ($q2) => $q2->whereNull('sale_price_cents')->where('price_cents', '<=', $maxCents));
+                    });
                 }
             });
         }
 
-        // Has available tickets
+        // Has available tickets (available = quota_total - quota_sold)
         if ($request->boolean('available_only', false)) {
             $query->whereHas('ticketTypes', function ($q) {
-                $q->where('is_visible', true)
-                    ->where('status', 'on_sale')
-                    ->where('available_quantity', '>', 0);
+                $q->where('status', 'active')
+                    ->whereRaw('(quota_total - COALESCE(quota_sold, 0)) > 0');
             });
         }
 
@@ -118,9 +124,8 @@ class EventsController extends BaseController
         $query = Event::with([
             'venue',
             'ticketTypes' => function ($q) {
-                $q->where('is_visible', true)
-                    ->where('status', 'on_sale')
-                    ->orderBy('sort_order');
+                $q->where('status', 'active')
+                    ->orderBy('id');
             },
             'artists',
             'images',
@@ -172,17 +177,18 @@ class EventsController extends BaseController
                 'longitude' => $event->venue->longitude,
             ] : null,
             'ticket_types' => $event->ticketTypes->map(function ($tt) {
+                $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
                     'description' => $tt->description,
-                    'price' => $tt->price,
-                    'price_formatted' => number_format($tt->price, 2) . ' RON',
-                    'available_quantity' => $tt->available_quantity,
-                    'max_per_order' => $tt->max_per_order,
-                    'min_per_order' => $tt->min_per_order ?? 1,
-                    'sale_starts_at' => $tt->sale_starts_at,
-                    'sale_ends_at' => $tt->sale_ends_at,
+                    'price' => $displayPrice,
+                    'price_formatted' => number_format($displayPrice, 2) . ' ' . ($tt->currency ?? 'RON'),
+                    'available_quantity' => max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0)),
+                    'max_per_order' => 10, // Default max per order
+                    'min_per_order' => 1,
+                    'sale_starts_at' => $tt->sales_start_at,
+                    'sale_ends_at' => $tt->sales_end_at,
                 ];
             }),
             'artists' => $event->artists->map(function ($artist) {
@@ -212,9 +218,8 @@ class EventsController extends BaseController
 
         $query = Event::query()
             ->with(['venue:id,name,city', 'ticketTypes' => function ($q) {
-                $q->where('is_visible', true)
-                    ->where('status', 'on_sale')
-                    ->select(['id', 'event_id', 'name', 'price', 'available_quantity']);
+                $q->where('status', 'active')
+                    ->select(['id', 'event_id', 'name', 'price_cents', 'sale_price_cents', 'quota_total', 'quota_sold']);
             }])
             ->where('status', 'published')
             ->where('is_public', true)
@@ -232,6 +237,16 @@ class EventsController extends BaseController
 
         return $this->success([
             'events' => $events->map(function ($event) {
+                // Calculate min price from active ticket types
+                $minPrice = $event->ticketTypes->map(function ($tt) {
+                    return ($tt->sale_price_cents ?? $tt->price_cents) / 100;
+                })->min();
+
+                // Calculate total available tickets
+                $totalAvailable = $event->ticketTypes->sum(function ($tt) {
+                    return max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
+                });
+
                 return [
                     'id' => $event->id,
                     'name' => $event->name,
@@ -240,8 +255,8 @@ class EventsController extends BaseController
                     'starts_at' => $event->starts_at,
                     'venue' => $event->venue?->name,
                     'city' => $event->venue?->city,
-                    'price_from' => $event->ticketTypes->min('price'),
-                    'has_availability' => $event->ticketTypes->sum('available_quantity') > 0,
+                    'price_from' => $minPrice,
+                    'has_availability' => $totalAvailable > 0,
                 ];
             }),
         ]);
@@ -343,16 +358,17 @@ class EventsController extends BaseController
         }
 
         $ticketTypes = TicketType::where('event_id', $event->id)
-            ->where('is_visible', true)
-            ->where('status', 'on_sale')
+            ->where('status', 'active')
             ->get()
             ->map(function ($tt) {
+                $available = max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
+                $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
-                    'price' => $tt->price,
-                    'available' => $tt->available_quantity,
-                    'status' => $tt->available_quantity > 0 ? 'available' : 'sold_out',
+                    'price' => $displayPrice,
+                    'available' => $available,
+                    'status' => $available > 0 ? 'available' : 'sold_out',
                 ];
             });
 

@@ -53,7 +53,7 @@ require_once __DIR__ . '/includes/head.php';
 <?php require_once __DIR__ . '/includes/header.php'; ?>
 
     <!-- Breadcrumb -->
-    <div class="bg-white border-b border-border mt-28">
+    <div class="bg-white border-b border-border mt-28 mobile:mt-22">
         <div class="px-4 py-3 mx-auto max-w-7xl">
             <nav class="flex items-center gap-2 text-sm" id="breadcrumb">
                 <a href="/" class="transition-colors text-muted hover:text-primary">Acasa</a>
