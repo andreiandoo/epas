@@ -13,6 +13,21 @@ class EditMarketplaceClient extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('login_to_marketplace')
+                ->label('Login to Marketplace')
+                ->icon('heroicon-o-arrow-right-on-rectangle')
+                ->color('success')
+                ->visible(fn () => $this->record->status === 'active' && auth()->user()?->isSuperAdmin())
+                ->action(function () {
+                    // Set session for the target marketplace client
+                    session(['super_admin_marketplace_client_id' => $this->record->id]);
+                    // Clear any existing marketplace admin session to force re-login
+                    auth('marketplace_admin')->logout();
+                    session()->forget('marketplace_is_super_admin');
+
+                    // Redirect to marketplace panel
+                    return redirect('/marketplace');
+                }),
             Actions\ViewAction::make(),
             Actions\DeleteAction::make(),
             Actions\Action::make('regenerate_api_key')

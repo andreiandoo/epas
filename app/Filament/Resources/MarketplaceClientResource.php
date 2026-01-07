@@ -381,7 +381,25 @@ class MarketplaceClientResource extends Resource
                         'suspended' => 'Suspended',
                     ]),
             ])
-            ->actions([])
+            ->actions([
+                Tables\Actions\Action::make('login_to_marketplace')
+                    ->label('Login')
+                    ->icon('heroicon-o-arrow-right-on-rectangle')
+                    ->color('success')
+                    ->visible(fn ($record) => $record->status === 'active' && auth()->user()?->isSuperAdmin())
+                    ->action(function ($record) {
+                        // Set session for the target marketplace client
+                        session(['super_admin_marketplace_client_id' => $record->id]);
+                        // Clear any existing marketplace admin session to force re-login
+                        auth('marketplace_admin')->logout();
+                        session()->forget('marketplace_is_super_admin');
+
+                        // Redirect to marketplace panel
+                        return redirect('/marketplace');
+                    }),
+                ViewAction::make(),
+                EditAction::make(),
+            ])
             ->bulkActions([])
             ->toolbarActions([
                 BulkActionGroup::make([
