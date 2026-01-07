@@ -1125,10 +1125,16 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     function getCart() {
         try {
             const cart = localStorage.getItem(CART_STORAGE_KEY);
-            return cart ? JSON.parse(cart) : [];
+            if (!cart) return { items: [] };
+            const parsed = JSON.parse(cart);
+            // Handle both old format (plain array) and new format ({ items: [] })
+            if (Array.isArray(parsed)) {
+                return { items: parsed };
+            }
+            return parsed && parsed.items ? parsed : { items: [] };
         } catch (e) {
             console.error('Error reading cart:', e);
-            return [];
+            return { items: [] };
         }
     }
 
@@ -1160,8 +1166,13 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 
     function updateCartUI() {
         const cart = getCart();
-        const itemCount = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
-        const subtotal = cart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
+        const items = cart.items || [];
+        const itemCount = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        const subtotal = items.reduce((sum, item) => {
+            // Handle both formats: item.ticketType.price or item.price
+            const price = item.ticketType?.price || item.price || 0;
+            return sum + price * (item.quantity || 1);
+        }, 0);
 
         // Update badge
         if (itemCount > 0) {
@@ -1182,10 +1193,10 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         }
 
         // Update subtotal
-        cartSubtotal.textContent = `${subtotal.toLocaleString('ro-RO')} lei`;
+        cartSubtotal.textContent = subtotal.toLocaleString('ro-RO') + ' lei';
 
         // Show/hide empty state vs items
-        if (cart.length === 0) {
+        if (items.length === 0) {
             cartEmpty.classList.remove('hidden');
             cartItems.classList.add('hidden');
             cartFooter.classList.add('hidden');
@@ -1193,47 +1204,56 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             cartEmpty.classList.add('hidden');
             cartItems.classList.remove('hidden');
             cartFooter.classList.remove('hidden');
-            renderCartItems(cart);
+            renderCartItems(items);
         }
     }
 
-    function renderCartItems(cart) {
-        cartItems.innerHTML = cart.map((item, index) => `
-            <div class="p-3 bg-white border border-gray-200 rounded-xl" data-cart-item="${index}">
-                <div class="flex gap-3">
-                    <div class="flex-shrink-0 w-16 h-16 overflow-hidden bg-gray-100 rounded-lg">
-                        ${item.image ? `<img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" class="object-cover w-full h-full">` : `
-                        <div class="flex items-center justify-center w-full h-full text-gray-400">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
-                            </svg>
-                        </div>`}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <h4 class="text-sm font-bold text-gray-900 truncate">${escapeHtml(item.name)}</h4>
-                        <p class="text-xs text-gray-500 truncate">${escapeHtml(item.event || item.venue || '')}</p>
-                        ${item.date ? `<p class="text-xs text-gray-400">${escapeHtml(item.date)}</p>` : ''}
-                        <div class="flex items-center justify-between mt-2">
-                            <div class="flex items-center gap-2">
-                                <button type="button" class="flex items-center justify-center w-6 h-6 transition-colors bg-gray-100 rounded hover:bg-gray-200 cart-qty-btn" data-action="decrease" data-index="${index}">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
-                                </button>
-                                <span class="w-6 text-sm font-semibold text-center">${item.quantity || 1}</span>
-                                <button type="button" class="flex items-center justify-center w-6 h-6 transition-colors bg-gray-100 rounded hover:bg-gray-200 cart-qty-btn" data-action="increase" data-index="${index}">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                                </button>
-                            </div>
-                            <span class="font-bold text-primary">${((item.price || 0) * (item.quantity || 1)).toLocaleString('ro-RO')} lei</span>
-                        </div>
-                    </div>
-                    <button type="button" class="self-start p-1 text-gray-400 transition-colors hover:text-red-500 cart-remove-btn" data-index="${index}" aria-label="Șterge">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-        `).join('');
+    function renderCartItems(items) {
+        cartItems.innerHTML = items.map((item, index) => {
+            // Handle both AmbiletCart format and legacy format
+            const image = item.event?.image || item.image || '';
+            const ticketName = item.ticketType?.name || item.name || 'Bilet';
+            const eventName = item.event?.title || item.event?.name || item.eventName || '';
+            const eventDate = item.event?.date || item.event?.time || item.date || '';
+            const price = item.ticketType?.price || item.price || 0;
+            const quantity = item.quantity || 1;
+            const itemKey = item.key || index;
+
+            return '<div class="p-3 bg-white border border-gray-200 rounded-xl" data-cart-item="' + index + '" data-item-key="' + escapeHtml(String(itemKey)) + '">' +
+                '<div class="flex gap-3">' +
+                    '<div class="flex-shrink-0 w-16 h-16 overflow-hidden bg-gray-100 rounded-lg">' +
+                        (image ? '<img src="' + escapeHtml(image) + '" alt="' + escapeHtml(ticketName) + '" class="object-cover w-full h-full">' :
+                        '<div class="flex items-center justify-center w-full h-full text-gray-400">' +
+                            '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>' +
+                            '</svg>' +
+                        '</div>') +
+                    '</div>' +
+                    '<div class="flex-1 min-w-0">' +
+                        '<h4 class="text-sm font-bold text-gray-900 truncate">' + escapeHtml(ticketName) + '</h4>' +
+                        '<p class="text-xs text-gray-500 truncate">' + escapeHtml(eventName) + '</p>' +
+                        (eventDate ? '<p class="text-xs text-gray-400">' + escapeHtml(eventDate) + '</p>' : '') +
+                        '<div class="flex items-center justify-between mt-2">' +
+                            '<div class="flex items-center gap-2">' +
+                                '<button type="button" class="flex items-center justify-center w-6 h-6 transition-colors bg-gray-100 rounded hover:bg-gray-200 cart-qty-btn" data-action="decrease" data-index="' + index + '">' +
+                                    '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>' +
+                                '</button>' +
+                                '<span class="w-6 text-sm font-semibold text-center">' + quantity + '</span>' +
+                                '<button type="button" class="flex items-center justify-center w-6 h-6 transition-colors bg-gray-100 rounded hover:bg-gray-200 cart-qty-btn" data-action="increase" data-index="' + index + '">' +
+                                    '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
+                                '</button>' +
+                            '</div>' +
+                            '<span class="font-bold text-primary">' + (price * quantity).toLocaleString('ro-RO') + ' lei</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<button type="button" class="self-start p-1 text-gray-400 transition-colors hover:text-red-500 cart-remove-btn" data-index="' + index + '" aria-label="Șterge">' +
+                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>' +
+                        '</svg>' +
+                    '</button>' +
+                '</div>' +
+            '</div>';
+        }).join('');
 
         // Add event listeners for quantity buttons
         cartItems.querySelectorAll('.cart-qty-btn').forEach(btn => {
@@ -1255,24 +1275,30 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 
     function updateItemQuantity(index, action) {
         const cart = getCart();
-        if (index < 0 || index >= cart.length) return;
+        const items = cart.items || [];
+        if (index < 0 || index >= items.length) return;
 
         if (action === 'increase') {
-            cart[index].quantity = (cart[index].quantity || 1) + 1;
+            items[index].quantity = (items[index].quantity || 1) + 1;
         } else if (action === 'decrease') {
-            cart[index].quantity = (cart[index].quantity || 1) - 1;
-            if (cart[index].quantity <= 0) {
-                cart.splice(index, 1);
+            items[index].quantity = (items[index].quantity || 1) - 1;
+            if (items[index].quantity <= 0) {
+                items.splice(index, 1);
             }
         }
 
+        cart.items = items;
+        cart.updatedAt = new Date().toISOString();
         saveCart(cart);
     }
 
     function removeCartItem(index) {
         const cart = getCart();
-        if (index < 0 || index >= cart.length) return;
-        cart.splice(index, 1);
+        const items = cart.items || [];
+        if (index < 0 || index >= items.length) return;
+        items.splice(index, 1);
+        cart.items = items;
+        cart.updatedAt = new Date().toISOString();
         saveCart(cart);
     }
 
@@ -1291,43 +1317,29 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     // Initialize cart UI on page load
     updateCartUI();
 
-    // Expose cart functions globally for other scripts to use
-    window.AmbiletCart = {
-        get: getCart,
-        add: function(item) {
-            const cart = getCart();
-            // Check if item already exists (by id or unique identifier)
-            const existingIndex = cart.findIndex(i => i.id === item.id);
-            if (existingIndex >= 0) {
-                cart[existingIndex].quantity = (cart[existingIndex].quantity || 1) + (item.quantity || 1);
-            } else {
-                cart.push({ ...item, quantity: item.quantity || 1 });
-            }
-            saveCart(cart);
-            return cart;
-        },
-        remove: function(itemId) {
-            const cart = getCart();
-            const index = cart.findIndex(i => i.id === itemId);
-            if (index >= 0) {
-                cart.splice(index, 1);
-                saveCart(cart);
-            }
-            return cart;
-        },
-        clear: function() {
-            saveCart([]);
-            return [];
-        },
-        update: updateCartUI,
-        open: openCartDrawer,
-        close: closeCartDrawer,
-        getCount: function() {
-            return getCart().reduce((sum, item) => sum + (item.quantity || 1), 0);
-        },
-        getTotal: function() {
-            return getCart().reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
-        }
-    };
+    // Listen for cart updates from AmbiletCart (cart.js)
+    window.addEventListener('ambilet:cart:update', function() {
+        updateCartUI();
+    });
+
+    // Extend existing AmbiletCart with drawer methods (don't overwrite cart.js)
+    if (window.AmbiletCart) {
+        // Cart.js already defines AmbiletCart - just add drawer methods
+        window.AmbiletCart.openDrawer = openCartDrawer;
+        window.AmbiletCart.closeDrawer = closeCartDrawer;
+        window.AmbiletCart.updateUI = updateCartUI;
+    } else {
+        // Fallback if cart.js hasn't loaded yet
+        window.AmbiletCart = {
+            openDrawer: openCartDrawer,
+            closeDrawer: closeCartDrawer,
+            updateUI: updateCartUI,
+            getCart: getCart
+        };
+    }
+
+    // Expose openCartDrawer globally for event.php
+    window.openCartDrawer = openCartDrawer;
+    window.closeCartDrawer = closeCartDrawer;
 })();
 </script>

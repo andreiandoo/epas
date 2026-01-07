@@ -748,9 +748,17 @@ const EventPage = {
         }
 
         if (addedAny) {
+            // Open cart drawer instead of redirecting
             setTimeout(function() {
-                window.location.href = '/cart';
-            }, 1000);
+                if (typeof window.openCartDrawer === 'function') {
+                    window.openCartDrawer();
+                } else if (typeof AmbiletCart !== 'undefined' && AmbiletCart.openDrawer) {
+                    AmbiletCart.openDrawer();
+                } else {
+                    // Fallback: redirect to cart page if drawer not available
+                    window.location.href = '/cos';
+                }
+            }, 300);
         }
     },
 

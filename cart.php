@@ -316,93 +316,104 @@ const CartPage = {
     },
 
     renderCartItem(item, index) {
-        const hasDiscount = item.original_price && item.original_price > item.price;
-        const discountPercent = hasDiscount ? Math.round((1 - item.price / item.original_price) * 100) : 0;
-        const eventDate = item.event_date ? AmbiletUtils.formatDate(item.event_date) : '';
-        const categoryBadge = item.category_name ? `<span class="px-2 py-0.5 bg-accent/10 text-accent text-xs font-semibold rounded">${item.category_name}</span>` : '';
-        const discountBadge = hasDiscount ? `<span class="discount-badge px-2 py-0.5 text-white text-xs font-bold rounded">-${discountPercent}%</span>` : '';
+        // Handle both AmbiletCart format and legacy format
+        const eventImage = item.event?.image || item.event_image || '/assets/images/placeholder-event.jpg';
+        const eventTitle = item.event?.title || item.event_title || 'Eveniment';
+        const eventDate = item.event?.date || item.event_date || '';
+        const venueName = item.event?.venue || item.venue_name || '';
+        const ticketTypeName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
+        const ticketTypeDesc = item.ticketType?.description || item.ticket_type_description || '';
+        const price = item.ticketType?.price || item.price || 0;
+        const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
+        const quantity = item.quantity || 1;
+        const maxQuantity = item.max_quantity || 10;
+        const categoryName = item.category_name || '';
 
-        return `
-            <div class="cart-item bg-white rounded-2xl border-2 border-border p-5" data-index="${index}">
-                <div class="flex flex-col md:flex-row gap-4">
-                    <!-- Event Image -->
-                    <div class="md:w-32 h-24 md:h-auto flex-shrink-0">
-                        <img src="${item.event_image || '/assets/images/placeholder-event.jpg'}" alt="${item.event_title || 'Eveniment'}" class="w-full h-full object-cover rounded-xl">
-                    </div>
+        const hasDiscount = originalPrice && originalPrice > price;
+        const discountPercent = hasDiscount ? Math.round((1 - price / originalPrice) * 100) : 0;
+        const formattedDate = eventDate ? AmbiletUtils.formatDate(eventDate) : '';
+        const categoryBadge = categoryName ? '<span class="px-2 py-0.5 bg-accent/10 text-accent text-xs font-semibold rounded">' + categoryName + '</span>' : '';
+        const discountBadge = hasDiscount ? '<span class="discount-badge px-2 py-0.5 text-white text-xs font-bold rounded">-' + discountPercent + '%</span>' : '';
 
-                    <!-- Event Details -->
-                    <div class="flex-1">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    ${categoryBadge}
-                                    ${discountBadge}
-                                </div>
-                                <h3 class="font-bold text-secondary text-lg">${item.event_title || 'Eveniment'}</h3>
-                                <p class="text-sm text-muted mt-1">${eventDate}${item.venue_name ? ' • ' + item.venue_name : ''}</p>
-                            </div>
-                            <button onclick="CartPage.removeItem(${index})" class="remove-btn p-2 rounded-lg transition-colors" title="Șterge">
-                                <svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                            </button>
-                        </div>
+        return '<div class="cart-item bg-white rounded-2xl border-2 border-border p-5" data-index="' + index + '">' +
+            '<div class="flex flex-col md:flex-row gap-4">' +
+                '<!-- Event Image -->' +
+                '<div class="md:w-32 h-24 md:h-auto flex-shrink-0">' +
+                    '<img src="' + eventImage + '" alt="' + eventTitle + '" class="w-full h-full object-cover rounded-xl">' +
+                '</div>' +
 
-                        <!-- Ticket Type -->
-                        <div class="mt-4 p-3 bg-surface rounded-xl">
-                            <div class="flex items-center justify-between flex-wrap gap-3">
-                                <div class="tooltip-trigger relative">
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-semibold text-secondary">${item.ticket_type_name || 'Bilet'}</span>
-                                        <svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                    </div>
-                                    ${item.ticket_type_description ? `<p class="text-xs text-muted mt-0.5">${item.ticket_type_description}</p>` : ''}
+                '<!-- Event Details -->' +
+                '<div class="flex-1">' +
+                    '<div class="flex items-start justify-between gap-4">' +
+                        '<div>' +
+                            '<div class="flex items-center gap-2 mb-1">' +
+                                categoryBadge +
+                                discountBadge +
+                            '</div>' +
+                            '<h3 class="font-bold text-secondary text-lg">' + eventTitle + '</h3>' +
+                            '<p class="text-sm text-muted mt-1">' + formattedDate + (venueName ? ' • ' + venueName : '') + '</p>' +
+                        '</div>' +
+                        '<button onclick="CartPage.removeItem(' + index + ')" class="remove-btn p-2 rounded-lg transition-colors" title="Șterge">' +
+                            '<svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
+                        '</button>' +
+                    '</div>' +
 
-                                    <!-- Price Breakdown Tooltip -->
-                                    <div class="tooltip absolute left-0 top-full mt-2 w-72 bg-secondary text-white p-4 rounded-xl shadow-xl z-10">
-                                        <p class="font-semibold mb-3 text-sm border-b border-white/20 pb-2">Detalii preț bilet</p>
-                                        <div class="space-y-2 text-xs">
-                                            <div class="flex justify-between">
-                                                <span class="text-white/70">Preț bilet (net):</span>
-                                                <span>${AmbiletUtils.formatCurrency(item.price * 0.95)}</span>
-                                            </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-white/70">Comision platformă (5%):</span>
-                                                <span>${AmbiletUtils.formatCurrency(item.price * 0.05)}</span>
-                                            </div>
-                                            <div class="flex justify-between border-t border-white/20 pt-2 mt-2">
-                                                <span class="font-semibold">Preț bilet:</span>
-                                                <span class="font-semibold">${AmbiletUtils.formatCurrency(item.price)}</span>
-                                            </div>
-                                            <div class="mt-3 pt-2 border-t border-white/10">
-                                                <p class="text-white/50 text-[10px] mb-1">Taxe suplimentare (adăugate la total):</p>
-                                                <div class="flex justify-between text-white/60">
-                                                    <span>Taxa Crucea Roșie (1%):</span>
-                                                    <span>+${AmbiletUtils.formatCurrency(item.price * 0.01)}/bilet</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                    '<!-- Ticket Type -->' +
+                    '<div class="mt-4 p-3 bg-surface rounded-xl">' +
+                        '<div class="flex items-center justify-between flex-wrap gap-3">' +
+                            '<div class="tooltip-trigger relative">' +
+                                '<div class="flex items-center gap-2">' +
+                                    '<span class="font-semibold text-secondary">' + ticketTypeName + '</span>' +
+                                    '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+                                '</div>' +
+                                (ticketTypeDesc ? '<p class="text-xs text-muted mt-0.5">' + ticketTypeDesc + '</p>' : '') +
 
-                                <div class="flex items-center gap-4">
-                                    <!-- Quantity Controls -->
-                                    <div class="flex items-center gap-2">
-                                        <button onclick="CartPage.updateQuantity(${index}, -1)" class="w-8 h-8 rounded-lg bg-white border border-border hover:border-primary hover:text-primary transition-colors flex items-center justify-center font-bold">-</button>
-                                        <span class="w-8 text-center font-bold">${item.quantity}</span>
-                                        <button onclick="CartPage.updateQuantity(${index}, 1)" class="w-8 h-8 rounded-lg bg-white border border-border hover:border-primary hover:text-primary transition-colors flex items-center justify-center font-bold">+</button>
-                                    </div>
+                                '<!-- Price Breakdown Tooltip -->' +
+                                '<div class="tooltip absolute left-0 top-full mt-2 w-72 bg-secondary text-white p-4 rounded-xl shadow-xl z-10">' +
+                                    '<p class="font-semibold mb-3 text-sm border-b border-white/20 pb-2">Detalii preț bilet</p>' +
+                                    '<div class="space-y-2 text-xs">' +
+                                        '<div class="flex justify-between">' +
+                                            '<span class="text-white/70">Preț bilet (net):</span>' +
+                                            '<span>' + AmbiletUtils.formatCurrency(price * 0.95) + '</span>' +
+                                        '</div>' +
+                                        '<div class="flex justify-between">' +
+                                            '<span class="text-white/70">Comision platformă (5%):</span>' +
+                                            '<span>' + AmbiletUtils.formatCurrency(price * 0.05) + '</span>' +
+                                        '</div>' +
+                                        '<div class="flex justify-between border-t border-white/20 pt-2 mt-2">' +
+                                            '<span class="font-semibold">Preț bilet:</span>' +
+                                            '<span class="font-semibold">' + AmbiletUtils.formatCurrency(price) + '</span>' +
+                                        '</div>' +
+                                        '<div class="mt-3 pt-2 border-t border-white/10">' +
+                                            '<p class="text-white/50 text-[10px] mb-1">Taxe suplimentare (adăugate la total):</p>' +
+                                            '<div class="flex justify-between text-white/60">' +
+                                                '<span>Taxa Crucea Roșie (1%):</span>' +
+                                                '<span>+' + AmbiletUtils.formatCurrency(price * 0.01) + '/bilet</span>' +
+                                            '</div>' +
+                                        '</div>' +
+                                    '</div>' +
+                                '</div>' +
+                            '</div>' +
 
-                                    <!-- Price -->
-                                    <div class="text-right min-w-[80px]">
-                                        ${hasDiscount ? `<span class="text-sm text-muted line-through block">${AmbiletUtils.formatCurrency(item.original_price * item.quantity)}</span>` : ''}
-                                        <span class="text-lg font-bold text-primary">${AmbiletUtils.formatCurrency(item.price * item.quantity)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+                            '<div class="flex items-center gap-4">' +
+                                '<!-- Quantity Controls -->' +
+                                '<div class="flex items-center gap-2">' +
+                                    '<button onclick="CartPage.updateQuantity(' + index + ', -1)" class="w-8 h-8 rounded-lg bg-white border border-border hover:border-primary hover:text-primary transition-colors flex items-center justify-center font-bold">-</button>' +
+                                    '<span class="w-8 text-center font-bold">' + quantity + '</span>' +
+                                    '<button onclick="CartPage.updateQuantity(' + index + ', 1)" class="w-8 h-8 rounded-lg bg-white border border-border hover:border-primary hover:text-primary transition-colors flex items-center justify-center font-bold">+</button>' +
+                                '</div>' +
+
+                                '<!-- Price -->' +
+                                '<div class="text-right min-w-[80px]">' +
+                                    (hasDiscount ? '<span class="text-sm text-muted line-through block">' + AmbiletUtils.formatCurrency(originalPrice * quantity) + '</span>' : '') +
+                                    '<span class="text-lg font-bold text-primary">' + AmbiletUtils.formatCurrency(price * quantity) + '</span>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
     },
 
     updateQuantity(index, delta) {
@@ -454,12 +465,17 @@ const CartPage = {
         let savings = 0;
 
         items.forEach(item => {
-            subtotal += item.price * item.quantity;
-            totalItems += item.quantity;
+            // Handle both AmbiletCart format and legacy format
+            const price = item.ticketType?.price || item.price || 0;
+            const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
+            const quantity = item.quantity || 1;
+
+            subtotal += price * quantity;
+            totalItems += quantity;
 
             // Calculate savings for discounted items
-            if (item.original_price && item.original_price > item.price) {
-                savings += (item.original_price - item.price) * item.quantity;
+            if (originalPrice && originalPrice > price) {
+                savings += (originalPrice - price) * quantity;
             }
         });
 

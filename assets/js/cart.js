@@ -429,6 +429,33 @@ const AmbiletCart = {
             // Optionally clear cart or show warning
             console.log('Cart reservation expired');
         }
+    },
+
+    /**
+     * Get cart items array (alias for CartPage compatibility)
+     */
+    getItems() {
+        return this.getCart().items || [];
+    },
+
+    /**
+     * Save items array (alias for CartPage compatibility)
+     */
+    save(items) {
+        const cart = { items: items, updatedAt: new Date().toISOString() };
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
+
+        // Dispatch cart update event
+        window.dispatchEvent(new CustomEvent('ambilet:cart:update', {
+            detail: { cart, itemCount: items.reduce((sum, item) => sum + (item.quantity || 1), 0) }
+        }));
+    },
+
+    /**
+     * Alias for clearCart (CartPage compatibility)
+     */
+    clear() {
+        return this.clearCart();
     }
 };
 
