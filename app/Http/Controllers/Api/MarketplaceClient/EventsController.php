@@ -61,11 +61,17 @@ class EventsController extends BaseController
         if ($request->has('category')) {
             $categorySlug = $request->category;
             // Marketplace events use marketplace_event_category_id relationship
-            // Tenant events use category string column
+            // Tenant events use category string column (only when tenant_id is set)
             $query->where(function ($q) use ($categorySlug) {
+                // Marketplace events: filter by category relationship
                 $q->whereHas('marketplaceEventCategory', function ($cq) use ($categorySlug) {
                     $cq->where('slug', $categorySlug);
-                })->orWhere('category', $categorySlug);
+                })
+                // Tenant events: filter by category column (only for events with tenant_id)
+                ->orWhere(function ($tq) use ($categorySlug) {
+                    $tq->whereNotNull('tenant_id')
+                       ->where('category', $categorySlug);
+                });
             });
         }
 
@@ -167,15 +173,23 @@ class EventsController extends BaseController
                 ? ($event->event_date ? $event->event_date->format('Y-m-d') . ' ' . ($event->start_time ?? '00:00') : null)
                 : $event->starts_at;
 
-            // Get image
-            $imageUrl = $isMarketplaceEvent
+            // Get image (convert to absolute URL)
+            $imageRelative = $isMarketplaceEvent
                 ? ($event->poster_url ?? $event->hero_image_url ?? $event->image_url)
                 : $event->image_url;
+            $imageUrl = $imageRelative ? url('storage/' . ltrim($imageRelative, '/')) : null;
 
             // Get category
             $category = $isMarketplaceEvent
                 ? ($event->marketplaceEventCategory?->getTranslation('name', $language) ?? $event->category)
                 : $event->category;
+
+            // Get venue name (handle translatable JSON field)
+            $venueName = null;
+            if ($event->venue) {
+                $venueName = $event->venue->getTranslation('name', $language)
+                    ?? (is_array($event->venue->name) ? ($event->venue->name[$language] ?? $event->venue->name['ro'] ?? $event->venue->name['en'] ?? null) : $event->venue->name);
+            }
 
             // Calculate min price from ticket types
             $minPrice = $event->ticketTypes->map(function ($tt) {
@@ -196,7 +210,7 @@ class EventsController extends BaseController
                 'starts_at' => $startsAt,
                 'image_url' => $imageUrl,
                 'category' => $category,
-                'venue' => $event->venue?->name,
+                'venue' => $venueName,
                 'city' => $event->venue?->city,
                 'price_from' => $minPrice,
                 'has_availability' => $totalAvailable > 0,
@@ -299,13 +313,16 @@ class EventsController extends BaseController
             : $event->doors_open_at;
 
         // Get images: marketplace events use poster_url/hero_image_url, tenant events use image_url/cover_image_url
-        $imageUrl = $isMarketplaceEvent
+        // Convert relative paths to absolute URLs
+        $imageRelative = $isMarketplaceEvent
             ? ($event->poster_url ?? $event->hero_image_url ?? $event->image_url)
             : $event->image_url;
+        $imageUrl = $imageRelative ? url('storage/' . ltrim($imageRelative, '/')) : null;
 
-        $coverImageUrl = $isMarketplaceEvent
+        $coverImageRelative = $isMarketplaceEvent
             ? ($event->hero_image_url ?? $event->poster_url ?? $event->cover_image_url)
             : $event->cover_image_url;
+        $coverImageUrl = $coverImageRelative ? url('storage/' . ltrim($coverImageRelative, '/')) : null;
 
         // Get category
         $category = $isMarketplaceEvent
@@ -333,7 +350,8 @@ class EventsController extends BaseController
             ],
             'venue' => $event->venue ? [
                 'id' => $event->venue->id,
-                'name' => $event->venue->getTranslation('name', $language) ?? $event->venue->name,
+                'name' => $event->venue->getTranslation('name', $language)
+                    ?? (is_array($event->venue->name) ? ($event->venue->name[$language] ?? $event->venue->name['ro'] ?? $event->venue->name['en'] ?? null) : $event->venue->name),
                 'address' => $event->venue->address,
                 'city' => $event->venue->city,
                 'state' => $event->venue->state,
@@ -432,10 +450,11 @@ class EventsController extends BaseController
                     ? ($event->event_date ? $event->event_date->format('Y-m-d') . ' ' . ($event->start_time ?? '00:00') : null)
                     : $event->starts_at;
 
-                // Get image
-                $imageUrl = $isMarketplaceEvent
+                // Get image (convert to absolute URL)
+                $imageRelative = $isMarketplaceEvent
                     ? ($event->poster_url ?? $event->hero_image_url ?? $event->image_url)
                     : $event->image_url;
+                $imageUrl = $imageRelative ? url('storage/' . ltrim($imageRelative, '/')) : null;
 
                 // Calculate min price from active ticket types
                 $minPrice = $event->ticketTypes->map(function ($tt) {
@@ -447,6 +466,13 @@ class EventsController extends BaseController
                     return max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
                 });
 
+                // Get venue name (handle translatable JSON field)
+                $venueName = null;
+                if ($event->venue) {
+                    $venueName = $event->venue->getTranslation('name', $language)
+                        ?? (is_array($event->venue->name) ? ($event->venue->name[$language] ?? $event->venue->name['ro'] ?? $event->venue->name['en'] ?? null) : $event->venue->name);
+                }
+
                 return [
                     'id' => $event->id,
                     'name' => $title,
@@ -455,7 +481,7 @@ class EventsController extends BaseController
                     'start_time' => $event->start_time,
                     'starts_at' => $startsAt,
                     'image_url' => $imageUrl,
-                    'venue' => $event->venue?->name,
+                    'venue' => $venueName,
                     'city' => $event->venue?->city,
                     'price_from' => $minPrice,
                     'has_availability' => $totalAvailable > 0,
