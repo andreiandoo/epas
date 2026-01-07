@@ -60,18 +60,9 @@ class EventsController extends BaseController
 
         if ($request->has('category')) {
             $categorySlug = $request->category;
-            // Marketplace events use marketplace_event_category_id relationship
-            // Tenant events use category string column (only when tenant_id is set)
-            $query->where(function ($q) use ($categorySlug) {
-                // Marketplace events: filter by category relationship
-                $q->whereHas('marketplaceEventCategory', function ($cq) use ($categorySlug) {
-                    $cq->where('slug', $categorySlug);
-                })
-                // Tenant events: filter by category column (only for events with tenant_id)
-                ->orWhere(function ($tq) use ($categorySlug) {
-                    $tq->whereNotNull('tenant_id')
-                       ->where('category', $categorySlug);
-                });
+            // Filter by marketplace_event_category relationship (events table has no 'category' column)
+            $query->whereHas('marketplaceEventCategory', function ($cq) use ($categorySlug) {
+                $cq->where('slug', $categorySlug);
             });
         }
 

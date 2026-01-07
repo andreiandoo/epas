@@ -163,9 +163,9 @@ require_once __DIR__ . '/includes/head.php';
                     <div id="event-description" class="prose prose-slate max-w-none"></div>
                 </div>
 
-                <!-- Artist/Organizer Section -->
+                <!-- Artist Section -->
                 <div class="p-6 mb-8 bg-white border rounded-3xl border-border md:p-8" id="artist-section" style="display:none;">
-                    <h2 class="mb-6 text-xl font-bold text-secondary">Despre organizator</h2>
+                    <h2 id="artist-section-title" class="mb-6 text-xl font-bold text-secondary">Despre artist</h2>
                     <div id="artist-content"></div>
                 </div>
 
@@ -500,71 +500,96 @@ const EventPage = {
     renderArtist(artist) {
         if (!artist) return;
         document.getElementById('artist-section').style.display = 'block';
-        document.getElementById('artist-content').innerHTML = `
-            <div class="flex flex-col gap-6 md:flex-row">
-                <div class="md:w-1/3">
-                    <img src="${artist.image || '/assets/images/placeholder-artist.jpg'}" alt="${artist.name}" class="object-cover w-full aspect-square rounded-2xl">
-                </div>
-                <div class="md:w-2/3">
-                    <div class="flex items-center gap-3 mb-4">
-                        <h3 class="text-2xl font-bold text-secondary">${artist.name}</h3>
-                        ${artist.verified ? '<span class="px-3 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary">Verified</span>' : ''}
-                    </div>
-                    <p class="mb-4 leading-relaxed text-muted">${artist.description || artist.bio || ''}</p>
-                    ${artist.stats ? `
-                    <div class="flex flex-wrap gap-4 mt-4">
-                        ${artist.stats.years ? `<div class="text-center"><p class="text-2xl font-bold text-secondary">${artist.stats.years}</p><p class="text-xs text-muted">Ani de activitate</p></div>` : ''}
-                        ${artist.stats.albums ? `<div class="text-center"><p class="text-2xl font-bold text-secondary">${artist.stats.albums}</p><p class="text-xs text-muted">Albume</p></div>` : ''}
-                        ${artist.stats.concerts ? `<div class="text-center"><p class="text-2xl font-bold text-secondary">${artist.stats.concerts}</p><p class="text-xs text-muted">Concerte</p></div>` : ''}
-                    </div>
-                    ` : ''}
-                    <div class="flex gap-3 mt-6">
-                        ${artist.facebook ? `<a href="${artist.facebook}" target="_blank" class="flex items-center justify-center w-10 h-10 transition-colors bg-surface rounded-xl hover:bg-primary hover:text-white"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>` : ''}
-                        ${artist.instagram ? `<a href="${artist.instagram}" target="_blank" class="flex items-center justify-center w-10 h-10 transition-colors bg-surface rounded-xl hover:bg-primary hover:text-white"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg></a>` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
+
+        // Update section title based on whether we have multiple artists
+        var hasMultiple = this.event.artists && this.event.artists.length > 1;
+        document.getElementById('artist-section-title').textContent = hasMultiple ? 'Despre artisti' : 'Despre artist';
+
+        // Artist image with link to artist page
+        var artistImage = artist.image_url || artist.image || '/assets/images/placeholder-artist.jpg';
+        var artistLink = artist.slug ? '/artist/' + artist.slug : '#';
+        var artistDescription = artist.description || artist.bio || '';
+
+        var html = '<div class="flex flex-col gap-6 md:flex-row">' +
+            '<div class="md:w-1/3">' +
+                '<a href="' + artistLink + '">' +
+                    '<img src="' + artistImage + '" alt="' + artist.name + '" class="object-cover w-full transition-transform aspect-square rounded-2xl hover:scale-105">' +
+                '</a>' +
+            '</div>' +
+            '<div class="md:w-2/3">' +
+                '<div class="flex items-center gap-3 mb-4">' +
+                    '<a href="' + artistLink + '" class="text-2xl font-bold text-secondary hover:text-primary">' + artist.name + '</a>' +
+                    (artist.verified ? '<span class="px-3 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary">Verified</span>' : '') +
+                '</div>' +
+                (artistDescription ? '<p class="mb-4 leading-relaxed text-muted">' + artistDescription + '</p>' : '<p class="mb-4 leading-relaxed text-muted">Detalii despre artist vor fi disponibile in curand.</p>') +
+                '<a href="' + artistLink + '" class="inline-flex items-center gap-2 font-semibold text-primary hover:underline">' +
+                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>' +
+                    'Vezi profilul artistului' +
+                '</a>' +
+            '</div>' +
+        '</div>';
+
+        document.getElementById('artist-content').innerHTML = html;
     },
 
     renderVenue(venue) {
-        document.getElementById('venue-content').innerHTML = `
-            <div class="flex flex-col gap-6 md:flex-row">
-                <div class="md:w-1/2">
-                    <img src="${venue.image || '/assets/images/placeholder-venue.jpg'}" alt="${venue.name}" class="object-cover w-full h-64 mb-4 rounded-2xl">
-                    ${venue.map_url ? `
-                    <div class="p-4 bg-surface rounded-xl">
-                        <iframe src="${venue.map_url}" width="100%" height="200" style="border:0; border-radius: 12px;" allowfullscreen="" loading="lazy"></iframe>
-                    </div>
-                    ` : ''}
-                </div>
-                <div class="md:w-1/2">
-                    <h3 class="mb-2 text-xl font-bold text-secondary">${venue.name}</h3>
-                    <p class="mb-4 text-muted">${venue.address || ''}</p>
-                    <p class="mb-4 leading-relaxed text-muted">${venue.description || ''}</p>
+        // Generate Google Maps URL from latitude/longitude if available
+        var googleMapsUrl = venue.google_maps_url || null;
+        if (!googleMapsUrl && venue.latitude && venue.longitude) {
+            googleMapsUrl = 'https://www.google.com/maps/search/?api=1&query=' + venue.latitude + ',' + venue.longitude;
+        }
 
-                    ${venue.amenities?.length ? `
-                    <div class="mb-6 space-y-3">
-                        ${venue.amenities.map(a => `
-                            <div class="flex items-center gap-3">
-                                <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-success/10">
-                                    <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                </div>
-                                <span class="text-sm text-secondary">${a}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    ` : ''}
+        // Build venue address for display
+        var venueAddress = venue.address || '';
+        if (venue.city) {
+            venueAddress = venueAddress ? venueAddress + ', ' + venue.city : venue.city;
+        }
+        if (venue.state && venue.state !== venue.city) {
+            venueAddress = venueAddress ? venueAddress + ', ' + venue.state : venue.state;
+        }
 
-                    ${venue.google_maps_url ? `
-                    <a href="${venue.google_maps_url}" target="_blank" class="inline-flex items-center gap-2 font-semibold text-primary hover:underline">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
-                        Deschide in Google Maps
-                    </a>
-                    ` : ''}
-                </div>
-            </div>
-        `;
+        // Build Google Maps embed URL if coordinates available
+        var embedMapHtml = '';
+        if (venue.latitude && venue.longitude) {
+            var embedUrl = 'https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=' + venue.latitude + ',' + venue.longitude + '&zoom=15';
+            embedMapHtml = '<div class="p-4 bg-surface rounded-xl"><iframe src="' + embedUrl + '" width="100%" height="200" style="border:0; border-radius: 12px;" allowfullscreen="" loading="lazy"></iframe></div>';
+        }
+
+        var html = '<div class="flex flex-col gap-6 md:flex-row">' +
+            '<div class="md:w-1/2">' +
+                '<img src="' + (venue.image || '/assets/images/placeholder-venue.jpg') + '" alt="' + venue.name + '" class="object-cover w-full h-64 mb-4 rounded-2xl">' +
+                embedMapHtml +
+            '</div>' +
+            '<div class="md:w-1/2">' +
+                '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +
+                '<p class="mb-4 text-muted">' + venueAddress + '</p>' +
+                '<p class="mb-4 leading-relaxed text-muted">' + (venue.description || '') + '</p>';
+
+        // Amenities
+        if (venue.amenities && venue.amenities.length) {
+            html += '<div class="mb-6 space-y-3">';
+            venue.amenities.forEach(function(a) {
+                html += '<div class="flex items-center gap-3">' +
+                    '<div class="flex items-center justify-center w-10 h-10 rounded-lg bg-success/10">' +
+                        '<svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>' +
+                    '</div>' +
+                    '<span class="text-sm text-secondary">' + a + '</span>' +
+                '</div>';
+            });
+            html += '</div>';
+        }
+
+        // Google Maps link
+        if (googleMapsUrl) {
+            html += '<a href="' + googleMapsUrl + '" target="_blank" class="inline-flex items-center gap-2 font-semibold text-primary hover:underline">' +
+                '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
+                'Deschide in Google Maps' +
+            '</a>';
+        }
+
+        html += '</div></div>';
+
+        document.getElementById('venue-content').innerHTML = html;
     },
 
     getDefaultTicketTypes() {
@@ -689,27 +714,52 @@ const EventPage = {
     },
 
     addToCart() {
-        for (const [ticketId, qty] of Object.entries(this.quantities)) {
+        var addedAny = false;
+        var self = this;
+
+        for (var ticketId in this.quantities) {
+            var qty = this.quantities[ticketId];
             if (qty > 0) {
-                const tt = this.ticketTypes.find(t => String(t.id) === String(ticketId));
+                var tt = this.ticketTypes.find(function(t) {
+                    return String(t.id) === String(ticketId);
+                });
                 if (tt) {
-                    AmbiletCart.addItem({
-                        event_id: this.event.id,
-                        event_title: this.event.title,
-                        event_date: this.event.start_date || this.event.date,
-                        event_image: this.event.image,
-                        ticket_type_id: tt.id,
-                        ticket_type_name: tt.name,
+                    // Cart expects: addItem(eventId, eventData, ticketTypeId, ticketTypeData, quantity)
+                    var eventData = {
+                        id: self.event.id,
+                        title: self.event.title,
+                        slug: self.event.slug,
+                        start_date: self.event.start_date || self.event.date,
+                        start_time: self.event.start_time,
+                        image: self.event.image,
+                        venue: self.event.venue
+                    };
+                    var ticketTypeData = {
+                        id: tt.id,
+                        name: tt.name,
                         price: tt.price,
-                        quantity: qty
-                    });
+                        original_price: tt.original_price,
+                        description: tt.description
+                    };
+                    AmbiletCart.addItem(self.event.id, eventData, tt.id, ticketTypeData, qty);
+                    addedAny = true;
                 }
             }
         }
-        if (typeof AmbiletNotifications !== 'undefined') {
-            AmbiletNotifications.success('Biletele au fost adaugate in cos!');
+
+        if (addedAny) {
+            // Open cart drawer instead of redirecting
+            setTimeout(function() {
+                if (typeof window.openCartDrawer === 'function') {
+                    window.openCartDrawer();
+                } else if (typeof AmbiletCart !== 'undefined' && AmbiletCart.openDrawer) {
+                    AmbiletCart.openDrawer();
+                } else {
+                    // Fallback: redirect to cart page if drawer not available
+                    window.location.href = '/cos';
+                }
+            }, 300);
         }
-        setTimeout(() => window.location.href = '/cart', 1000);
     },
 
     async loadRelatedEvents() {
@@ -750,7 +800,7 @@ const EventPage = {
             const price = e.price_from || e.price || e.min_price || 50;
 
             return '<a href="/bilete/' + e.slug + '" class="overflow-hidden bg-white border event-card rounded-2xl border-border group">' +
-                '<div class="relative overflow-hidden h-44">' +
+                '<div class="relative overflow-hidden h-80">' +
                     '<img src="' + image + '" alt="' + title + '" class="object-cover w-full h-full event-image">' +
                     '<div class="absolute top-3 left-3">' +
                         '<div class="px-3 py-2 text-center text-white shadow-lg date-badge rounded-xl">' +

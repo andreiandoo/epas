@@ -349,16 +349,19 @@ const GenrePage = {
     renderFeaturedEvent(event) {
         const section = document.getElementById('featuredEventSection');
         const container = document.getElementById('featuredEvent');
-        const date = new Date(event.start_date);
+        const eventDate = event.starts_at || event.event_date || event.start_date || '';
+        const date = eventDate ? new Date(eventDate) : new Date();
         const day = date.getDate();
         const month = date.toLocaleDateString('ro-RO', { month: 'long' });
         const dayName = date.toLocaleDateString('ro-RO', { weekday: 'long' });
+        const eventImage = event.image_url || event.image || '/assets/images/placeholder-event.jpg';
+        const eventTitle = event.name || event.title || 'Eveniment';
 
-        container.href = '/eveniment/' + event.slug;
+        container.href = '/bilete/' + event.slug;
         container.innerHTML = \`
             <div class="flex flex-col lg:flex-row">
                 <div class="relative h-64 overflow-hidden lg:w-2/5 lg:h-auto">
-                    <img src="\${event.image || '/assets/images/placeholder-event.jpg'}" alt="\${event.title}" class="object-cover w-full h-full">
+                    <img src="\${eventImage}" alt="\${eventTitle}" class="object-cover w-full h-full">
                     <div class="absolute top-4 left-4">
                         <span class="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg uppercase">Recomandat</span>
                     </div>
@@ -374,7 +377,7 @@ const GenrePage = {
                             <p class="text-sm text-muted">\${event.start_time || '20:00'}</p>
                         </div>
                     </div>
-                    <h2 class="mb-3 text-2xl font-bold transition-colors lg:text-3xl text-secondary hover:text-primary">\${event.title}</h2>
+                    <h2 class="mb-3 text-2xl font-bold transition-colors lg:text-3xl text-secondary hover:text-primary">\${eventTitle}</h2>
                     <p class="mb-4 text-muted line-clamp-2">\${event.description || ''}</p>
                     <div class="flex items-center gap-4 mb-6">
                         <span class="flex items-center gap-1.5 text-sm text-muted">
@@ -399,25 +402,31 @@ const GenrePage = {
     },
 
     renderEventCard(event) {
-        const date = new Date(event.start_date);
+        // Handle both API formats
+        const eventDate = event.starts_at || event.event_date || event.start_date || '';
+        const date = eventDate ? new Date(eventDate) : new Date();
         const day = date.getDate();
         const month = date.toLocaleDateString('ro-RO', { month: 'short' }).replace('.', '');
+        const eventTitle = event.name || event.title || 'Eveniment';
+        const eventImage = event.image_url || event.image || '/assets/images/placeholder-event.jpg';
+        const venueName = (typeof event.venue === 'string' ? event.venue : event.venue?.name) || event.city || 'Romania';
+        const minPrice = event.min_price || '--';
 
-        let priceDisplay = '<span class="font-bold text-primary">de la ' + (event.min_price || '--') + ' lei</span><span class="text-xs text-muted">Disponibil</span>';
+        let priceDisplay = '<span class="font-bold text-primary">de la ' + minPrice + ' lei</span><span class="text-xs text-muted">Disponibil</span>';
         if (event.is_sold_out) {
-            priceDisplay = '<span class="font-bold line-through text-muted">' + (event.min_price || '--') + ' lei</span><span class="text-xs font-semibold text-primary">Epuizat</span>';
+            priceDisplay = '<span class="font-bold line-through text-muted">' + minPrice + ' lei</span><span class="text-xs font-semibold text-primary">Epuizat</span>';
         } else if (event.is_low_stock) {
-            priceDisplay = '<span class="font-bold text-primary">de la ' + (event.min_price || '--') + ' lei</span><span class="text-xs font-semibold text-accent">Ultimele locuri</span>';
+            priceDisplay = '<span class="font-bold text-primary">de la ' + minPrice + ' lei</span><span class="text-xs font-semibold text-accent">Ultimele locuri</span>';
         }
 
-        return '<a href="/eveniment/' + event.slug + '" class="overflow-hidden bg-white border event-card rounded-2xl border-border group">' +
+        return '<a href="/bilete/' + event.slug + '" class="overflow-hidden bg-white border event-card rounded-2xl border-border group">' +
             '<div class="relative h-48 overflow-hidden">' +
-                '<img src="' + (event.image || '/assets/images/placeholder-event.jpg') + '" alt="' + event.title + '" class="object-cover w-full h-full event-image" loading="lazy">' +
+                '<img src="' + eventImage + '" alt="' + eventTitle + '" class="object-cover w-full h-full event-image" loading="lazy">' +
                 '<div class="absolute top-3 left-3"><div class="px-3 py-2 text-center text-white shadow-lg date-badge rounded-xl"><span class="block text-xl font-bold leading-none">' + day + '</span><span class="block text-[10px] uppercase tracking-wide mt-0.5">' + month + '</span></div></div>' +
             '</div>' +
             '<div class="p-4">' +
-                '<h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">' + event.title + '</h3>' +
-                '<p class="text-sm text-muted mt-2 flex items-center gap-1.5"><svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + (event.venue?.name || event.city?.name || 'Romania') + '</p>' +
+                '<h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">' + eventTitle + '</h3>' +
+                '<p class="text-sm text-muted mt-2 flex items-center gap-1.5"><svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + venueName + '</p>' +
                 '<div class="flex items-center justify-between pt-3 mt-3 border-t border-border">' + priceDisplay + '</div>' +
             '</div>' +
         '</a>';
