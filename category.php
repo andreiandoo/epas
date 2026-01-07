@@ -293,7 +293,9 @@ const CategoryPage = {
     },
 
     renderEventCard(event) {
-        const date = new Date(event.start_date);
+        // API returns starts_at, event_date, or start_date
+        const eventDate = event.starts_at || event.event_date || event.start_date || event.date;
+        const date = new Date(eventDate);
         const day = date.getDate();
         const month = date.toLocaleDateString('ro-RO', { month: 'short' }).replace('.', '');
 
@@ -324,16 +326,22 @@ const CategoryPage = {
             priceDisplay = '<span class="font-bold text-primary">de la ' + (event.min_price || '--') + ' lei</span><span class="text-xs text-muted">Disponibil</span>';
         }
 
-        return '<a href="/eveniment/' + event.slug + '" class="overflow-hidden bg-white border event-card rounded-2xl border-border group">' +
+        // API returns name or title, image_url or image, venue as string or object
+        var eventTitle = event.name || event.title || 'Eveniment';
+        var eventImage = event.image_url || event.image || '/assets/images/placeholder-event.jpg';
+        var eventVenue = (typeof event.venue === 'string' ? event.venue : event.venue?.name) || event.city || 'Romania';
+        var eventPrice = event.price_from || event.min_price || '--';
+
+        return '<a href="/bilete/' + event.slug + '" class="overflow-hidden bg-white border event-card rounded-2xl border-border group">' +
             '<div class="relative h-48 overflow-hidden">' +
                 (event.is_sold_out ? '<div class="absolute inset-0 bg-black/30"></div>' : '') +
-                '<img src="' + (event.image || '/assets/images/placeholder-event.jpg') + '" alt="' + event.title + '" class="object-cover w-full h-full event-image" loading="lazy">' +
+                '<img src="' + eventImage + '" alt="' + eventTitle + '" class="object-cover w-full h-full event-image" loading="lazy">' +
                 '<div class="absolute top-3 left-3"><div class="px-3 py-2 text-center text-white shadow-lg date-badge rounded-xl"><span class="block text-xl font-bold leading-none">' + day + '</span><span class="block text-[10px] uppercase tracking-wide mt-0.5">' + month + '</span></div></div>' +
                 (statusBadge ? '<div class="absolute top-3 right-3">' + statusBadge + '</div>' : '') +
             '</div>' +
             '<div class="p-4">' +
-                '<h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">' + event.title + '</h3>' +
-                '<p class="text-sm text-muted mt-2 flex items-center gap-1.5"><svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + (event.venue?.name || event.city?.name || 'Romania') + '</p>' +
+                '<h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">' + eventTitle + '</h3>' +
+                '<p class="text-sm text-muted mt-2 flex items-center gap-1.5"><svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + eventVenue + '</p>' +
                 '<div class="flex items-center justify-between pt-3 mt-3 border-t border-border">' + priceDisplay + '</div>' +
             '</div>' +
         '</a>';

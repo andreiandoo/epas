@@ -251,13 +251,19 @@ const CityPage = {
     },
 
     renderEventCard(event) {
-        const date = new Date(event.start_date || event.date);
-        const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const categoryBadge = event.category ? '<span class="absolute px-2 py-1 text-xs font-semibold text-white uppercase rounded-lg top-3 right-3 bg-black/60 backdrop-blur-sm">' + event.category + '</span>' : '';
+        // API returns: starts_at, event_date, or start_date; name or title; image_url or image; venue (string or object); price_from or min_price
+        var eventDate = event.starts_at || event.event_date || event.start_date || event.date;
+        var date = new Date(eventDate);
+        var months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var eventTitle = event.name || event.title || 'Eveniment';
+        var eventImage = event.image_url || event.image || '/assets/images/placeholder-event.jpg';
+        var eventVenue = (typeof event.venue === 'string' ? event.venue : event.venue?.name) || event.location || 'Locatie TBA';
+        var eventPrice = event.price_from || event.min_price || event.price || 50;
+        var categoryBadge = event.category ? '<span class="absolute px-2 py-1 text-xs font-semibold text-white uppercase rounded-lg top-3 right-3 bg-black/60 backdrop-blur-sm">' + event.category + '</span>' : '';
 
         return '<a href="/bilete/' + event.slug + '" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary">' +
             '<div class="relative h-48 overflow-hidden">' +
-                '<img src="' + (event.image || '/assets/images/placeholder-event.jpg') + '" alt="' + event.title + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">' +
+                '<img src="' + eventImage + '" alt="' + eventTitle + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">' +
                 '<div class="absolute top-3 left-3">' +
                     '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
                         '<span class="block text-lg font-bold leading-none">' + date.getDate() + '</span>' +
@@ -267,13 +273,13 @@ const CityPage = {
                 categoryBadge +
             '</div>' +
             '<div class="p-5">' +
-                '<h3 class="mb-2 font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">' + event.title + '</h3>' +
+                '<h3 class="mb-2 font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">' + eventTitle + '</h3>' +
                 '<p class="text-sm text-muted flex items-center gap-1.5 mb-3">' +
                     '<svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
-                    (event.venue?.name || event.location || 'Locatie TBA') +
+                    eventVenue +
                 '</p>' +
                 '<div class="flex items-center justify-between pt-3 border-t border-border">' +
-                    '<span class="font-bold text-primary">de la ' + (event.min_price || event.price || 50) + ' lei</span>' +
+                    '<span class="font-bold text-primary">de la ' + eventPrice + ' lei</span>' +
                     '<span class="text-xs text-muted">Disponibil</span>' +
                 '</div>' +
             '</div>' +

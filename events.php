@@ -271,12 +271,17 @@ const EventsPage = {
             if (eventsData && eventsData.length > 0) {
                 // Transform API response to expected format
                 this.events = eventsData.map(function(e) {
+                    // Format time to HH:MM (remove seconds if present)
+                    var time = e.start_time || '20:00';
+                    if (time && time.length > 5) {
+                        time = time.substring(0, 5); // "20:00:00" -> "20:00"
+                    }
                     return {
                         id: e.id,
                         title: e.name || e.title || 'Eveniment',
                         slug: e.slug,
                         date: e.starts_at || e.event_date || e.date,
-                        time: e.start_time || '20:00',
+                        time: time,
                         venue: e.venue || 'Locatie TBA',
                         city: e.city || '',
                         category: e.category || 'Evenimente',
