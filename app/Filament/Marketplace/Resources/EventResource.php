@@ -968,13 +968,14 @@ class EventResource extends Resource
 
                                     $commission = round($price * ($rate / 100), 2);
                                     $currency = $get('currency') ?: 'RON';
+                                    $marketplaceName = $marketplace->name ?? 'Marketplace';
 
                                     if ($mode === 'included') {
                                         $revenue = round($price - $commission, 2);
-                                        return "Customer pays: **{$price} {$currency}** → Organizer receives: **{$revenue} {$currency}** (Tixello: {$commission} {$currency} @ {$rate}%)";
+                                        return "Customer pays: **{$price} {$currency}** → Organizer receives: **{$revenue} {$currency}** → {$marketplaceName} receives: **{$commission} {$currency}** @ {$rate}%";
                                     } else {
                                         $total = round($price + $commission, 2);
-                                        return "Customer pays: **{$total} {$currency}** → Organizer receives: **{$price} {$currency}** (Tixello: {$commission} {$currency} @ {$rate}%)";
+                                        return "Customer pays: **{$total} {$currency}** → Organizer receives: **{$price} {$currency}** → {$marketplaceName} receives: **{$commission} {$currency}** @ {$rate}%";
                                     }
                                 })
                                 ->columnSpan(12),
@@ -1298,21 +1299,20 @@ class EventResource extends Resource
                     ->label('Organizer')
                     ->relationship('marketplaceOrganizer', 'name'),
             ])
-            ->recordActions([
+            ->actions([
                 Action::make('statistics')
                     ->label('Statistics')
                     ->icon('heroicon-o-chart-bar')
                     ->color('info')
                     ->url(fn (Event $record) => static::getUrl('statistics', ['record' => $record])),
-                EditAction::make(),
+                Tables\Actions\EditAction::make(),
             ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort('created_at', 'desc')
-            ->recordUrl(fn (Event $record) => static::getUrl('edit', ['record' => $record]));
+            ->defaultSort('created_at', 'desc');
     }
 
     public static function getRelations(): array

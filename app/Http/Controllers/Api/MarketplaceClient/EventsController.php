@@ -128,7 +128,6 @@ class EventsController extends BaseController
                     ->orderBy('id');
             },
             'artists',
-            'images',
         ]);
 
         // Support both ID and slug lookup
@@ -196,13 +195,6 @@ class EventsController extends BaseController
                     'id' => $artist->id,
                     'name' => $artist->name,
                     'image_url' => $artist->image_url,
-                ];
-            }),
-            'images' => $event->images->map(function ($image) {
-                return [
-                    'id' => $image->id,
-                    'url' => $image->url,
-                    'type' => $image->type,
                 ];
             }),
             'commission_rate' => $commission,
