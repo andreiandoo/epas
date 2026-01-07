@@ -16,9 +16,12 @@ if (empty($artistSlug)) {
     }
 }
 
+$artistName = $_GET['name'] ?? 'artistului'; // Fallback name
+
+
 // Page configuration (will be updated by JS with real data)
-$pageTitle = "Artist — Ambilet";
-$pageDescription = "Descoperă concertele și evenimentele artistului. Cumpără bilete online pe Ambilet.";
+$pageTitle = "{$artistName} — {$siteName}";
+$pageDescription = "Descoperă concertele și evenimentele {$artistName}. Cumpără bilete online pe {$siteName}.";
 $bodyClass = 'page-artist-single';
 
 // Include head
@@ -496,7 +499,7 @@ const ArtistPage = {
                     '<div class="text-[13px] text-gray-500">de la <strong class="text-xl font-bold text-emerald-500">' + (event.price || '-') + ' ' + event.currency + '</strong></div>' +
                     '<button class="px-6 py-3 text-sm font-semibold text-white transition-colors bg-gray-900 rounded-lg hover:bg-gray-800">Cumpără bilete</button>';
 
-                return '<a href="/eveniment/' + event.slug + '" class="flex flex-col md:flex-row bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all">' +
+                return '<a href="/bilete/' + event.slug + '" class="flex flex-col md:flex-row bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all">' +
                     '<div class="w-full md:w-[100px] p-5 bg-gradient-to-br from-primary to-primary-light flex md:flex-col items-center justify-center text-white gap-2.5 md:gap-0">' +
                         '<div class="text-[32px] font-extrabold leading-none">' + event.day + '</div>' +
                         '<div class="text-sm font-semibold uppercase opacity-90">' + event.month + '</div>' +

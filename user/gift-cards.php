@@ -6,110 +6,104 @@ require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
-<!-- Main Container with Sidebar -->
-<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
-    <div class="flex flex-col gap-6 lg:flex-row">
-        <!-- Sidebar -->
-        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
+<?php require_once dirname(__DIR__) . '/includes/user-wrap.php'; ?>
 
-        <!-- Main Content -->
-        <main class="flex-1 min-w-0 lg:pt-24">
-            <!-- Page Header -->
-            <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
-                <h1 class="text-2xl font-bold text-secondary">Carduri Cadou</h1>
-                <a href="/card-cadou" class="inline-flex items-center gap-2 btn btn-primary">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-                    Cumpara card cadou
-                </a>
-            </div>
-
-            <!-- Stats Grid -->
-            <div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
-                <div class="p-4 bg-white border rounded-xl border-border">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-lg">
-                            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2" stroke-width="2"/><path stroke-width="2" d="M12 8v12"/></svg>
-                        </div>
-                    </div>
-                    <div class="text-2xl font-bold text-secondary" id="stat-purchased">0</div>
-                    <div class="text-xs text-muted">Carduri cumparate</div>
-                </div>
-                <div class="p-4 bg-white border rounded-xl border-border">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center justify-center w-10 h-10 bg-green-100 rounded-lg">
-                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                        </div>
-                    </div>
-                    <div class="text-2xl font-bold text-secondary" id="stat-received">0</div>
-                    <div class="text-xs text-muted">Carduri primite</div>
-                </div>
-                <div class="p-4 bg-white border rounded-xl border-border">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                        </div>
-                    </div>
-                    <div class="text-2xl font-bold text-secondary" id="stat-balance">0 RON</div>
-                    <div class="text-xs text-muted">Balanta disponibila</div>
-                </div>
-                <div class="p-4 bg-white border rounded-xl border-border">
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center justify-center w-10 h-10 bg-orange-100 rounded-lg">
-                            <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                        </div>
-                    </div>
-                    <div class="text-2xl font-bold text-secondary" id="stat-gifted">0 RON</div>
-                    <div class="text-xs text-muted">Total oferit cadou</div>
-                </div>
-            </div>
-
-            <!-- Tabs -->
-            <div class="flex gap-2 p-1.5 mb-6 bg-white border rounded-xl border-border w-fit">
-                <button class="px-4 py-2 text-sm font-semibold transition-colors rounded-lg tab-btn active" data-tab="purchased">
-                    Cumparate <span class="inline-flex items-center justify-center px-1.5 ml-1 text-xs rounded-full bg-primary/10 text-primary" id="tab-purchased-count">0</span>
-                </button>
-                <button class="px-4 py-2 text-sm font-semibold transition-colors rounded-lg tab-btn text-muted hover:text-secondary" data-tab="received">
-                    Primite <span class="inline-flex items-center justify-center px-1.5 ml-1 text-xs rounded-full bg-surface text-muted" id="tab-received-count">0</span>
-                </button>
-            </div>
-
-            <!-- Purchased Cards Tab -->
-            <div class="tab-content active" id="tab-purchased">
-                <div class="grid gap-6 md:grid-cols-2" id="purchased-cards">
-                    <!-- Cards will be loaded here -->
-                </div>
-
-                <!-- Empty State -->
-                <div class="hidden p-12 text-center bg-white border rounded-2xl border-border" id="empty-purchased">
-                    <div class="flex items-center justify-center w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10">
-                        <svg class="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2" stroke-width="2"/><path stroke-width="2" d="M12 8v12M19 12H5M12 8c-2-2-4-2.5-4-4a2 2 0 114 4M12 8c2-2 4-2.5 4-4a2 2 0 10-4 4"/></svg>
-                    </div>
-                    <h3 class="mb-2 text-lg font-bold text-secondary">Nu ai cumparat inca carduri cadou</h3>
-                    <p class="mb-6 text-muted">Ofera un card cadou prietenilor sau familiei tale pentru a le face o surpriza placuta.</p>
-                    <a href="/card-cadou" class="btn btn-primary">Cumpara primul card cadou</a>
-                </div>
-            </div>
-
-            <!-- Received Cards Tab -->
-            <div class="hidden tab-content" id="tab-received">
-                <div class="grid gap-6 md:grid-cols-2" id="received-cards">
-                    <!-- Cards will be loaded here -->
-                </div>
-
-                <!-- Empty State -->
-                <div class="hidden p-12 text-center bg-white border rounded-2xl border-border" id="empty-received">
-                    <div class="flex items-center justify-center w-20 h-20 mx-auto mb-6 bg-green-100 rounded-full">
-                        <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
-                    </div>
-                    <h3 class="mb-2 text-lg font-bold text-secondary">Nu ai primit inca carduri cadou</h3>
-                    <p class="mb-6 text-muted">Cand cineva iti trimite un card cadou, acesta va aparea aici.</p>
-                </div>
-            </div>
-        </main>
+    <!-- Page Header -->
+    <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
+        <h1 class="text-2xl font-bold text-secondary">Carduri Cadou</h1>
+        <a href="/card-cadou" class="inline-flex items-center gap-2 btn btn-primary">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+            Cumpara card cadou
+        </a>
     </div>
-</div>
 
-<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-2 gap-4 mb-6 lg:grid-cols-4">
+        <div class="p-4 bg-white border rounded-xl border-border">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-lg">
+                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2" stroke-width="2"/><path stroke-width="2" d="M12 8v12"/></svg>
+                </div>
+            </div>
+            <div class="text-2xl font-bold text-secondary" id="stat-purchased">0</div>
+            <div class="text-xs text-muted">Carduri cumparate</div>
+        </div>
+        <div class="p-4 bg-white border rounded-xl border-border">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center justify-center w-10 h-10 bg-green-100 rounded-lg">
+                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+            </div>
+            <div class="text-2xl font-bold text-secondary" id="stat-received">0</div>
+            <div class="text-xs text-muted">Carduri primite</div>
+        </div>
+        <div class="p-4 bg-white border rounded-xl border-border">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg">
+                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                </div>
+            </div>
+            <div class="text-2xl font-bold text-secondary" id="stat-balance">0 RON</div>
+            <div class="text-xs text-muted">Balanta disponibila</div>
+        </div>
+        <div class="p-4 bg-white border rounded-xl border-border">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center justify-center w-10 h-10 bg-orange-100 rounded-lg">
+                    <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
+            </div>
+            <div class="text-2xl font-bold text-secondary" id="stat-gifted">0 RON</div>
+            <div class="text-xs text-muted">Total oferit cadou</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 p-1.5 mb-6 bg-white border rounded-xl border-border w-fit">
+        <button class="px-4 py-2 text-sm font-semibold transition-colors rounded-lg tab-btn active" data-tab="purchased">
+            Cumparate <span class="inline-flex items-center justify-center px-1.5 ml-1 text-xs rounded-full bg-primary/10 text-primary" id="tab-purchased-count">0</span>
+        </button>
+        <button class="px-4 py-2 text-sm font-semibold transition-colors rounded-lg tab-btn text-muted hover:text-secondary" data-tab="received">
+            Primite <span class="inline-flex items-center justify-center px-1.5 ml-1 text-xs rounded-full bg-surface text-muted" id="tab-received-count">0</span>
+        </button>
+    </div>
+
+    <!-- Purchased Cards Tab -->
+    <div class="tab-content active" id="tab-purchased">
+        <div class="grid gap-6 md:grid-cols-2" id="purchased-cards">
+            <!-- Cards will be loaded here -->
+        </div>
+
+        <!-- Empty State -->
+        <div class="hidden p-12 text-center bg-white border rounded-2xl border-border" id="empty-purchased">
+            <div class="flex items-center justify-center w-20 h-20 mx-auto mb-6 rounded-full bg-primary/10">
+                <svg class="w-10 h-10 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2" stroke-width="2"/><path stroke-width="2" d="M12 8v12M19 12H5M12 8c-2-2-4-2.5-4-4a2 2 0 114 4M12 8c2-2 4-2.5 4-4a2 2 0 10-4 4"/></svg>
+            </div>
+            <h3 class="mb-2 text-lg font-bold text-secondary">Nu ai cumparat inca carduri cadou</h3>
+            <p class="mb-6 text-muted">Ofera un card cadou prietenilor sau familiei tale pentru a le face o surpriza placuta.</p>
+            <a href="/card-cadou" class="btn btn-primary">Cumpara primul card cadou</a>
+        </div>
+    </div>
+
+    <!-- Received Cards Tab -->
+    <div class="hidden tab-content" id="tab-received">
+        <div class="grid gap-6 md:grid-cols-2" id="received-cards">
+            <!-- Cards will be loaded here -->
+        </div>
+
+        <!-- Empty State -->
+        <div class="hidden p-12 text-center bg-white border rounded-2xl border-border" id="empty-received">
+            <div class="flex items-center justify-center w-20 h-20 mx-auto mb-6 bg-green-100 rounded-full">
+                <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
+            </div>
+            <h3 class="mb-2 text-lg font-bold text-secondary">Nu ai primit inca carduri cadou</h3>
+            <p class="mb-6 text-muted">Cand cineva iti trimite un card cadou, acesta va aparea aici.</p>
+        </div>
+    </div>
+    
+<?php 
+require_once dirname(__DIR__) . '/includes/user-wrap-end.php';
+require_once dirname(__DIR__) . '/includes/user-footer.php'; 
+?>
 
 <?php
 $scriptsExtra = <<<'JS'

@@ -18,10 +18,12 @@ define('API_KEY', 'mpc_4qkv4pcuogusFM9234dwihfTrrkBNT2PzpHflnLLmKfSXgkef9BvefCIS
 define('DEMO_MODE', false);
 
 // Site Configuration
-define('SITE_NAME', 'Ambilet');
+define('SITE_NAME', 'AmBilet');
 define('SITE_TAGLINE', 'Bilete Evenimente Romania');
 define('SITE_URL', 'https://bilete.online'); // Change to ambilet.ro in production
 define('SITE_LOCALE', 'ro');
+
+$siteName = SITE_NAME;
 
 // Support Contact
 define('SUPPORT_EMAIL', 'suport@bilete.online'); // Change to suport@ambilet.ro in production
