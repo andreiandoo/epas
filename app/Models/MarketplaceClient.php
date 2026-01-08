@@ -25,6 +25,7 @@ class MarketplaceClient extends Model
         'company_name',
         'status',
         'commission_rate',
+        'commission_mode',
         'allowed_tenants',
         'settings',
         'notes',

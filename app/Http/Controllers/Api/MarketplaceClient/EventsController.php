@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Models\Event;
 use App\Models\TicketType;
+use App\Models\Tax\GeneralTax;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -260,13 +261,15 @@ class EventsController extends BaseController
             if ($event->marketplace_client_id !== $client->id) {
                 return $this->error('Not authorized to sell tickets for this event', 403);
             }
-            $commission = $client->default_commission_rate ?? 0;
+            $commission = $event->commission_rate ?? $client->commission_rate ?? 5;
+            $commissionMode = $event->commission_mode ?? $client->commission_mode ?? 'included';
         } else {
             // Tenant event - check if client can sell for this tenant
             if (!$event->tenant_id || !$client->canSellForTenant($event->tenant_id)) {
                 return $this->error('Not authorized to sell tickets for this event', 403);
             }
             $commission = $client->getCommissionForTenant($event->tenant_id);
+            $commissionMode = $event->commission_mode ?? $event->tenant?->commission_mode ?? 'included';
         }
 
         // Get language from client
@@ -343,12 +346,17 @@ class EventsController extends BaseController
                 'id' => $event->venue->id,
                 'name' => $event->venue->getTranslation('name', $language)
                     ?? (is_array($event->venue->name) ? ($event->venue->name[$language] ?? $event->venue->name['ro'] ?? $event->venue->name['en'] ?? null) : $event->venue->name),
+                'description' => $event->venue->getTranslation('description', $language)
+                    ?? (is_array($event->venue->description) ? ($event->venue->description[$language] ?? $event->venue->description['ro'] ?? $event->venue->description['en'] ?? null) : $event->venue->description),
                 'address' => $event->venue->address,
                 'city' => $event->venue->city,
                 'state' => $event->venue->state,
                 'country' => $event->venue->country,
-                'latitude' => $event->venue->latitude,
-                'longitude' => $event->venue->longitude,
+                'latitude' => $event->venue->lat,
+                'longitude' => $event->venue->lng,
+                'google_maps_url' => $event->venue->google_maps_url,
+                'image' => $event->venue->image_url ? url('storage/' . $event->venue->image_url) : null,
+                'capacity' => $event->venue->capacity,
             ] : null,
             'ticket_types' => $event->ticketTypes->map(function ($tt) use ($language) {
                 $priceCents = $tt->price_cents ?? 0;
@@ -383,6 +391,32 @@ class EventsController extends BaseController
                 ];
             }),
             'commission_rate' => $commission,
+            'commission_mode' => $commissionMode,
+            // Get applicable taxes (global taxes visible on checkout)
+            'taxes' => GeneralTax::query()
+                ->whereNull('tenant_id') // Global taxes only (applicable to all)
+                ->where('is_active', true)
+                ->where('visible_on_checkout', true)
+                ->where(function ($q) {
+                    $q->whereNull('valid_from')->orWhere('valid_from', '<=', now());
+                })
+                ->where(function ($q) {
+                    $q->whereNull('valid_until')->orWhere('valid_until', '>=', now());
+                })
+                ->orderByDesc('priority')
+                ->get()
+                ->map(function ($tax) {
+                    return [
+                        'id' => $tax->id,
+                        'name' => $tax->name,
+                        'value' => (float) $tax->value,
+                        'value_type' => $tax->value_type, // 'percent' or 'fixed'
+                        'currency' => $tax->currency,
+                        'is_added_to_price' => (bool) $tax->is_added_to_price,
+                        'explanation' => strip_tags($tax->explanation ?? ''),
+                        'icon_svg' => $tax->icon_svg,
+                    ];
+                }),
         ]);
     }
 

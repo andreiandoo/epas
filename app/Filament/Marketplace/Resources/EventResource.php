@@ -927,6 +927,19 @@ class EventResource extends Resource
                                     ->minValue(0)
                                     ->maxValue(100)
                                     ->live(debounce: 300)
+                                    ->formatStateUsing(function ($state, SGet $get) {
+                                        // Calculate discount % on form load based on price_max and price
+                                        if ($state !== null && $state !== '') {
+                                            return $state;
+                                        }
+                                        $priceMax = (float) ($get('price_max') ?: 0);
+                                        $salePrice = $get('price');
+                                        if ($priceMax > 0 && $salePrice !== null && $salePrice !== '') {
+                                            $sale = (float) $salePrice;
+                                            return round((1 - ($sale / $priceMax)) * 100, 2);
+                                        }
+                                        return null;
+                                    })
                                     ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
                                         $price = (float) ($get('price_max') ?: 0);
                                         if ($price <= 0) return;
