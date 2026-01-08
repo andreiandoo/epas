@@ -221,6 +221,11 @@ const AmbiletAPI = {
         const action = this.getProxyAction(endpoint);
         const params = this.getProxyParams(endpoint);
 
+        // Handle unknown endpoints
+        if (!action) {
+            throw new APIError(`Unknown endpoint: ${endpoint}`, 400);
+        }
+
         let url = `${baseUrl}?action=${action}`;
         if (params) {
             url += '&' + params;
@@ -351,7 +356,21 @@ const AmbiletAPI = {
 
         if (endpoint.includes('/cart')) return 'cart';
         if (endpoint.includes('/checkout')) return 'checkout';
-        return 'events'; // default
+
+        // Events endpoints (match /events but not /marketplace-events which is handled above)
+        if (endpoint.match(/^\/events\/[a-z0-9-]+$/i)) return 'event';
+        if (endpoint.startsWith('/events')) return 'events';
+
+        // Event categories endpoint
+        if (endpoint.includes('event-categories')) return 'event-categories';
+
+        // Genres - not implemented, will return error
+        if (endpoint.includes('/genres')) return 'genres';
+
+        // Cities endpoint
+        if (endpoint.startsWith('/cities')) return 'cities';
+
+        return null; // unknown endpoint - will cause error
     },
 
     /**
