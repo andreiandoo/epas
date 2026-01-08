@@ -7,23 +7,23 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
     <!-- Progress Steps -->
-    <div class="bg-white border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 py-4">
+    <div class="bg-white border-b border-gray-200 mt-28 mobile:mt-20">
+        <div class="px-4 py-4 mx-auto max-w-7xl">
             <div class="flex items-center justify-center gap-4">
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center">
+                    <div class="flex items-center justify-center w-8 h-8 text-white bg-green-500 rounded-full">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     </div>
                     <span class="text-sm font-medium text-green-600">Coș</span>
                 </div>
                 <div class="w-12 h-px bg-green-500"></div>
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold">2</div>
+                    <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-full bg-primary">2</div>
                     <span class="text-sm font-semibold text-primary">Checkout</span>
                 </div>
                 <div class="w-12 h-px bg-gray-300"></div>
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-sm font-bold border border-gray-200">3</div>
+                    <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-400 bg-gray-100 border border-gray-200 rounded-full">3</div>
                     <span class="text-sm text-gray-400">Confirmare</span>
                 </div>
             </div>
@@ -31,62 +31,62 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 py-8">
-        <div class="flex flex-col lg:flex-row gap-8">
+    <main class="px-4 py-8 mx-auto max-w-7xl">
+        <div class="flex flex-col gap-8 lg:flex-row">
             <!-- Left Column - Checkout Form -->
             <div class="lg:w-2/3">
-                <h1 class="text-2xl md:text-3xl font-bold text-secondary mb-6">Finalizare comandă</h1>
+                <h1 class="mb-6 text-2xl font-bold md:text-3xl text-secondary">Finalizare comandă</h1>
 
                 <!-- Loading State -->
                 <div id="checkout-loading" class="space-y-6">
-                    <div class="skeleton h-48 rounded-2xl"></div>
-                    <div class="skeleton h-64 rounded-2xl"></div>
-                    <div class="skeleton h-48 rounded-2xl"></div>
+                    <div class="h-48 skeleton rounded-2xl"></div>
+                    <div class="h-64 skeleton rounded-2xl"></div>
+                    <div class="h-48 skeleton rounded-2xl"></div>
                 </div>
 
                 <!-- Checkout Form -->
                 <div id="checkout-form" class="hidden">
                     <!-- Buyer Information -->
-                    <div class="bg-white rounded-2xl border border-border p-6 mb-6">
-                        <h2 class="text-lg font-bold text-secondary mb-4 flex items-center gap-2">
-                            <span class="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary font-bold text-sm">1</span>
+                    <div class="p-6 mb-6 bg-white border rounded-2xl border-border">
+                        <h2 class="flex items-center gap-2 mb-4 text-lg font-bold text-secondary">
+                            <span class="flex items-center justify-center w-8 h-8 text-sm font-bold rounded-lg bg-primary/10 text-primary">1</span>
                             Datele tale
                         </h2>
 
-                        <div class="grid md:grid-cols-2 gap-4">
+                        <div class="grid gap-4 md:grid-cols-2">
                             <div>
-                                <label class="block text-sm font-medium text-secondary mb-2">Nume complet *</label>
-                                <input type="text" id="buyer-name" class="input-field w-full px-4 py-3 border-2 border-border rounded-xl focus:outline-none" required>
+                                <label class="block mb-2 text-sm font-medium text-secondary">Nume complet *</label>
+                                <input type="text" id="buyer-name" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-secondary mb-2">Email *</label>
-                                <input type="email" id="buyer-email" class="input-field w-full px-4 py-3 border-2 border-border rounded-xl focus:outline-none" required>
+                                <label class="block mb-2 text-sm font-medium text-secondary">Email *</label>
+                                <input type="email" id="buyer-email" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-secondary mb-2">Telefon *</label>
-                                <input type="tel" id="buyer-phone" class="input-field w-full px-4 py-3 border-2 border-border rounded-xl focus:outline-none" required>
+                                <label class="block mb-2 text-sm font-medium text-secondary">Telefon *</label>
+                                <input type="tel" id="buyer-phone" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-secondary mb-2">CNP (opțional)</label>
-                                <input type="text" id="buyer-cnp" placeholder="Pentru facturare" class="input-field w-full px-4 py-3 border-2 border-border rounded-xl focus:outline-none">
+                                <label class="block mb-2 text-sm font-medium text-secondary">CNP (opțional)</label>
+                                <input type="text" id="buyer-cnp" placeholder="Pentru facturare" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none">
                             </div>
                         </div>
                     </div>
 
                     <!-- Beneficiaries Section -->
-                    <div class="bg-white rounded-2xl border border-border p-6 mb-6">
+                    <div class="p-6 mb-6 bg-white border rounded-2xl border-border">
                         <div class="flex items-center justify-between mb-4">
-                            <h2 class="text-lg font-bold text-secondary flex items-center gap-2">
-                                <span class="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary font-bold text-sm">2</span>
+                            <h2 class="flex items-center gap-2 text-lg font-bold text-secondary">
+                                <span class="flex items-center justify-center w-8 h-8 text-sm font-bold rounded-lg bg-primary/10 text-primary">2</span>
                                 Beneficiari bilete
                             </h2>
                             <span id="beneficiaries-count" class="text-sm text-muted">0 bilete</span>
                         </div>
 
-                        <div class="p-4 bg-surface rounded-xl mb-4 flex items-start gap-3">
+                        <div class="flex items-start gap-3 p-4 mb-4 bg-surface rounded-xl">
                             <svg class="w-5 h-5 text-accent flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             <div class="text-sm text-muted">
-                                <p class="font-medium text-secondary mb-1">Poți adăuga beneficiari diferiți pentru fiecare bilet</p>
+                                <p class="mb-1 font-medium text-secondary">Poți adăuga beneficiari diferiți pentru fiecare bilet</p>
                                 <p>Fiecare beneficiar va primi biletul pe email. Dacă nu adaugi beneficiari, toate biletele vor fi trimise pe emailul tău.</p>
                             </div>
                         </div>
@@ -102,19 +102,19 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
 
                     <!-- Payment Method -->
-                    <div class="bg-white rounded-2xl border border-border p-6 mb-6">
-                        <h2 class="text-lg font-bold text-secondary mb-4 flex items-center gap-2">
-                            <span class="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary font-bold text-sm">3</span>
+                    <div class="p-6 mb-6 bg-white border rounded-2xl border-border">
+                        <h2 class="flex items-center gap-2 mb-4 text-lg font-bold text-secondary">
+                            <span class="flex items-center justify-center w-8 h-8 text-sm font-bold rounded-lg bg-primary/10 text-primary">3</span>
                             Metodă de plată
                         </h2>
 
                         <div class="space-y-3">
                             <!-- Credit Card - Netopia -->
-                            <label class="payment-option selected flex items-center gap-4 p-4 border-2 border-border rounded-xl cursor-pointer">
+                            <label class="flex items-center gap-4 p-4 border-2 cursor-pointer payment-option selected border-border rounded-xl">
                                 <div class="payment-radio"></div>
-                                <div class="flex-1 flex items-center justify-between">
+                                <div class="flex items-center justify-between flex-1">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-12 h-8 bg-gradient-to-r from-blue-600 to-blue-800 rounded flex items-center justify-center">
+                                        <div class="flex items-center justify-center w-12 h-8 rounded bg-gradient-to-r from-blue-600 to-blue-800">
                                             <span class="text-white text-[10px] font-bold">NETOPIA</span>
                                         </div>
                                         <div>
@@ -131,11 +131,11 @@ require_once __DIR__ . '/includes/header.php';
                             </label>
 
                             <!-- Google Pay -->
-                            <label class="payment-option flex items-center gap-4 p-4 border-2 border-border rounded-xl cursor-pointer">
+                            <label class="flex items-center gap-4 p-4 border-2 cursor-pointer payment-option border-border rounded-xl">
                                 <div class="payment-radio"></div>
-                                <div class="flex-1 flex items-center justify-between">
+                                <div class="flex items-center justify-between flex-1">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-12 h-8 bg-white border border-border rounded flex items-center justify-center">
+                                        <div class="flex items-center justify-center w-12 h-8 bg-white border rounded border-border">
                                             <svg class="h-5" viewBox="0 0 24 24" fill="none">
                                                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                                                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -153,11 +153,11 @@ require_once __DIR__ . '/includes/header.php';
                             </label>
 
                             <!-- Apple Pay -->
-                            <label class="payment-option flex items-center gap-4 p-4 border-2 border-border rounded-xl cursor-pointer">
+                            <label class="flex items-center gap-4 p-4 border-2 cursor-pointer payment-option border-border rounded-xl">
                                 <div class="payment-radio"></div>
-                                <div class="flex-1 flex items-center justify-between">
+                                <div class="flex items-center justify-between flex-1">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-12 h-8 bg-black rounded flex items-center justify-center">
+                                        <div class="flex items-center justify-center w-12 h-8 bg-black rounded">
                                             <svg class="h-4" viewBox="0 0 24 24" fill="white">
                                                 <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
                                             </svg>
@@ -174,8 +174,8 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
 
                         <!-- Card Form Info -->
-                        <div id="cardForm" class="mt-6 p-4 bg-surface rounded-xl">
-                            <p class="text-sm text-muted mb-4">Vei fi redirecționat către procesatorul de plăți pentru a introduce datele cardului în siguranță.</p>
+                        <div id="cardForm" class="p-4 mt-6 bg-surface rounded-xl">
+                            <p class="mb-4 text-sm text-muted">Vei fi redirecționat către procesatorul de plăți pentru a introduce datele cardului în siguranță.</p>
                             <div class="flex items-center gap-2 text-xs text-muted">
                                 <svg class="w-4 h-4 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                                 Plățile sunt procesate securizat
@@ -184,7 +184,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
 
                     <!-- Terms -->
-                    <div class="bg-white rounded-2xl border border-border p-6">
+                    <div class="p-6 bg-white border rounded-2xl border-border">
                         <label class="flex items-start gap-3 cursor-pointer">
                             <input type="checkbox" id="termsCheckbox" class="checkbox-custom mt-0.5" required>
                             <span class="text-sm text-muted">
@@ -194,7 +194,7 @@ require_once __DIR__ . '/includes/header.php';
                             </span>
                         </label>
 
-                        <label class="flex items-start gap-3 cursor-pointer mt-4">
+                        <label class="flex items-start gap-3 mt-4 cursor-pointer">
                             <input type="checkbox" id="newsletterCheckbox" class="checkbox-custom mt-0.5">
                             <span class="text-sm text-muted">
                                 Doresc să primesc newsletter-ul <?= SITE_NAME ?> cu noutăți și oferte speciale.
@@ -204,13 +204,13 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
 
                 <!-- Empty Cart State -->
-                <div id="empty-cart" class="hidden bg-white rounded-2xl border border-border p-12 text-center">
-                    <div class="w-24 h-24 bg-surface rounded-full flex items-center justify-center mx-auto mb-6">
+                <div id="empty-cart" class="hidden p-12 text-center bg-white border rounded-2xl border-border">
+                    <div class="flex items-center justify-center w-24 h-24 mx-auto mb-6 rounded-full bg-surface">
                         <svg class="w-12 h-12 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                     </div>
-                    <h3 class="text-xl font-bold text-secondary mb-2">Coșul tău este gol</h3>
-                    <p class="text-muted mb-6">Adaugă bilete în coș pentru a continua.</p>
-                    <a href="/" class="btn-primary inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white">
+                    <h3 class="mb-2 text-xl font-bold text-secondary">Coșul tău este gol</h3>
+                    <p class="mb-6 text-muted">Adaugă bilete în coș pentru a continua.</p>
+                    <a href="/" class="inline-flex items-center gap-2 px-6 py-3 font-bold text-white btn-primary rounded-xl">
                         Descoperă evenimente
                     </a>
                 </div>
@@ -218,28 +218,28 @@ require_once __DIR__ . '/includes/header.php';
 
             <!-- Right Column - Order Summary -->
             <div class="lg:w-1/3">
-                <div id="summary-section" class="hidden sticky top-24">
-                    <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                <div id="summary-section" class="sticky hidden top-24">
+                    <div class="overflow-hidden bg-white border rounded-2xl border-border">
                         <div class="p-6 border-b border-border">
                             <h2 class="text-xl font-bold text-secondary">Sumar comandă</h2>
                         </div>
 
                         <div class="p-6">
                             <!-- Event Info -->
-                            <div id="event-info" class="flex gap-4 mb-6 pb-6 border-b border-border"></div>
+                            <div id="event-info" class="flex gap-4 pb-6 mb-6 border-b border-border"></div>
 
                             <!-- Items Summary -->
-                            <div id="items-summary" class="space-y-3 mb-6"></div>
+                            <div id="items-summary" class="mb-6 space-y-3"></div>
 
-                            <div class="border-t border-border pt-4 space-y-3">
+                            <div class="pt-4 space-y-3 border-t border-border">
                                 <div class="flex justify-between text-sm">
                                     <span class="text-muted">Subtotal (<span id="summary-items">0</span> bilete)</span>
                                     <span id="summary-subtotal" class="font-medium">0.00 lei</span>
                                 </div>
 
                                 <!-- Discount Row -->
-                                <div id="discount-row" class="hidden flex justify-between text-sm p-2 bg-success/5 rounded-lg -mx-2">
-                                    <span class="text-success flex items-center gap-1">
+                                <div id="discount-row" class="flex justify-between hidden p-2 -mx-2 text-sm rounded-lg bg-success/5">
+                                    <span class="flex items-center gap-1 text-success">
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
                                         <span id="discount-label">Reducere</span>
                                     </span>
@@ -252,19 +252,19 @@ require_once __DIR__ . '/includes/header.php';
                                 </div>
                             </div>
 
-                            <div class="border-t border-border mt-4 pt-4">
-                                <div class="flex justify-between items-center">
+                            <div class="pt-4 mt-4 border-t border-border">
+                                <div class="flex items-center justify-between">
                                     <span class="text-lg font-bold text-secondary">Total de plată</span>
                                     <span id="summary-total" class="text-2xl font-bold text-primary">0.00 lei</span>
                                 </div>
-                                <p id="savings-text" class="hidden text-sm text-success mt-1 text-right flex items-center justify-end gap-1">
+                                <p id="savings-text" class="flex items-center justify-end hidden gap-1 mt-1 text-sm text-right text-success">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                     <span id="savings-amount">Economisești 0 lei!</span>
                                 </p>
                             </div>
 
                             <!-- Points to Earn -->
-                            <div class="mt-4 p-3 bg-surface rounded-xl flex items-center justify-between">
+                            <div class="flex items-center justify-between p-3 mt-4 bg-surface rounded-xl">
                                 <div class="flex items-center gap-2">
                                     <span class="text-lg">🎁</span>
                                     <span class="text-sm font-medium text-secondary">Vei câștiga:</span>
@@ -272,19 +272,19 @@ require_once __DIR__ . '/includes/header.php';
                                 <span id="points-earned" class="font-bold text-accent">0 puncte</span>
                             </div>
 
-                            <button onclick="CheckoutPage.submit()" id="payBtn" class="btn-primary mt-6 w-full py-4 rounded-xl font-bold text-white text-lg flex items-center justify-center gap-2" disabled>
+                            <button onclick="CheckoutPage.submit()" id="payBtn" class="flex items-center justify-center w-full gap-2 py-4 mt-6 text-lg font-bold text-white btn-primary rounded-xl" disabled>
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                 <span id="pay-btn-text">Plătește 0.00 lei</span>
                             </button>
 
-                            <p class="text-xs text-muted text-center mt-3">
+                            <p class="mt-3 text-xs text-center text-muted">
                                 Prin plasarea comenzii, confirmi că ai citit și ești de acord cu termenii și condițiile.
                             </p>
                         </div>
                     </div>
 
                     <!-- Security Badges -->
-                    <div class="mt-4 p-4 bg-white rounded-2xl border border-border">
+                    <div class="p-4 mt-4 bg-white border rounded-2xl border-border">
                         <div class="flex items-center justify-center gap-6">
                             <div class="flex items-center gap-2 text-xs text-muted">
                                 <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
@@ -395,31 +395,37 @@ const CheckoutPage = {
         let ticketNum = 0;
 
         this.items.forEach((item, itemIndex) => {
-            for (let i = 0; i < item.quantity; i++) {
+            const qty = item.quantity || 1;
+            for (let i = 0; i < qty; i++) {
                 ticketNum++;
-                const hasDiscount = item.original_price && item.original_price > item.price;
-                const discountPercent = hasDiscount ? Math.round((1 - item.price / item.original_price) * 100) : 0;
+                // Handle both AmbiletCart format and legacy format
+                const price = item.ticketType?.price || item.price || 0;
+                const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
+                const ticketTypeName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
+                const eventTitle = item.event?.title || item.event_title || 'Eveniment';
+                const hasDiscount = originalPrice && originalPrice > price;
+                const discountPercent = hasDiscount ? Math.round((1 - price / originalPrice) * 100) : 0;
 
                 html += `
-                    <div class="beneficiary-card border-2 border-border rounded-xl p-4">
+                    <div class="p-4 border-2 beneficiary-card border-border rounded-xl">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center gap-3">
-                                <div class="date-badge text-white w-10 h-10 rounded-lg flex items-center justify-center font-bold">${ticketNum}</div>
+                                <div class="flex items-center justify-center w-10 h-10 font-bold text-white rounded-lg date-badge">${ticketNum}</div>
                                 <div>
-                                    <p class="font-semibold text-secondary">${item.ticket_type_name || 'Bilet'}</p>
-                                    <p class="text-xs text-muted">${item.event_title || 'Eveniment'}</p>
+                                    <p class="font-semibold text-secondary">${ticketTypeName}</p>
+                                    <p class="text-xs text-muted">${eventTitle}</p>
                                 </div>
                             </div>
-                            ${hasDiscount ? `<span class="px-2 py-1 bg-success/10 text-success text-xs font-semibold rounded">-${discountPercent}%</span>` : ''}
+                            ${hasDiscount ? `<span class="px-2 py-1 text-xs font-semibold rounded bg-success/10 text-success">-${discountPercent}%</span>` : ''}
                         </div>
-                        <div class="grid md:grid-cols-2 gap-4">
+                        <div class="grid gap-4 md:grid-cols-2">
                             <div>
-                                <label class="block text-sm font-medium text-secondary mb-2">Nume beneficiar *</label>
-                                <input type="text" placeholder="Nume complet" class="beneficiary-input beneficiary-name input-field w-full px-4 py-3 border-2 border-border rounded-xl focus:outline-none" data-item="${itemIndex}" data-index="${i}">
+                                <label class="block mb-2 text-sm font-medium text-secondary">Nume beneficiar *</label>
+                                <input type="text" placeholder="Nume complet" class="w-full px-4 py-3 border-2 beneficiary-input beneficiary-name input-field border-border rounded-xl focus:outline-none" data-item="${itemIndex}" data-index="${i}">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-secondary mb-2">Email beneficiar *</label>
-                                <input type="email" placeholder="email@exemplu.com" class="beneficiary-input beneficiary-email input-field w-full px-4 py-3 border-2 border-border rounded-xl focus:outline-none" data-item="${itemIndex}" data-index="${i}">
+                                <label class="block mb-2 text-sm font-medium text-secondary">Email beneficiar *</label>
+                                <input type="email" placeholder="email@exemplu.com" class="w-full px-4 py-3 border-2 beneficiary-input beneficiary-email input-field border-border rounded-xl focus:outline-none" data-item="${itemIndex}" data-index="${i}">
                             </div>
                         </div>
                     </div>
@@ -467,14 +473,20 @@ const CheckoutPage = {
         // Get first item for event info
         const firstItem = this.items[0];
 
+        // Handle both AmbiletCart format and legacy format
+        const eventImage = firstItem.event?.image || firstItem.event_image || '/assets/images/placeholder-event.jpg';
+        const eventTitle = firstItem.event?.title || firstItem.event_title || 'Eveniment';
+        const eventDate = firstItem.event?.date || firstItem.event_date || '';
+        const venueName = firstItem.event?.venue || firstItem.venue_name || '';
+
         // Event info
         const eventInfo = document.getElementById('event-info');
         eventInfo.innerHTML = `
-            <img src="${firstItem.event_image || '/assets/images/placeholder-event.jpg'}" alt="Event" class="w-20 h-20 rounded-xl object-cover">
+            <img src="${eventImage}" alt="Event" class="object-cover w-20 h-20 rounded-xl">
             <div>
-                <h3 class="font-bold text-secondary">${firstItem.event_title || 'Eveniment'}</h3>
-                <p class="text-sm text-muted">${firstItem.event_date ? AmbiletUtils.formatDate(firstItem.event_date) : ''}</p>
-                <p class="text-sm text-muted">${firstItem.venue_name || ''}</p>
+                <h3 class="font-bold text-secondary">${eventTitle}</h3>
+                <p class="text-sm text-muted">${eventDate ? AmbiletUtils.formatDate(eventDate) : ''}</p>
+                <p class="text-sm text-muted">${venueName}</p>
             </div>
         `;
 
@@ -486,20 +498,26 @@ const CheckoutPage = {
         let totalQty = 0;
 
         this.items.forEach(item => {
-            const itemTotal = item.price * item.quantity;
-            subtotal += itemTotal;
-            totalQty += item.quantity;
+            // Handle both AmbiletCart format and legacy format
+            const price = item.ticketType?.price || item.price || 0;
+            const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
+            const ticketTypeName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
+            const qty = item.quantity || 1;
 
-            const hasDiscount = item.original_price && item.original_price > item.price;
+            const itemTotal = price * qty;
+            subtotal += itemTotal;
+            totalQty += qty;
+
+            const hasDiscount = originalPrice && originalPrice > price;
             if (hasDiscount) {
-                savings += (item.original_price - item.price) * item.quantity;
+                savings += (originalPrice - price) * qty;
             }
 
             itemsHtml += `
                 <div class="flex justify-between text-sm">
-                    <span class="text-muted">${item.quantity}x ${item.ticket_type_name || 'Bilet'}</span>
+                    <span class="text-muted">${qty}x ${ticketTypeName}</span>
                     <div class="text-right">
-                        ${hasDiscount ? `<span class="text-muted line-through text-xs mr-2">${AmbiletUtils.formatCurrency(item.original_price * item.quantity)}</span>` : ''}
+                        ${hasDiscount ? `<span class="mr-2 text-xs line-through text-muted">${AmbiletUtils.formatCurrency(originalPrice * qty)}</span>` : ''}
                         <span class="font-medium">${AmbiletUtils.formatCurrency(itemTotal)}</span>
                     </div>
                 </div>
@@ -581,7 +599,7 @@ const CheckoutPage = {
 
         payBtn.disabled = true;
         payBtnText.innerHTML = `
-            <svg class="w-5 h-5 animate-spin inline mr-2" fill="none" viewBox="0 0 24 24">
+            <svg class="inline w-5 h-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>

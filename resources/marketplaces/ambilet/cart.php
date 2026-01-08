@@ -7,7 +7,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
     <!-- Progress Steps -->
-    <div class="bg-white border-b border-gray-200">
+    <div class="bg-white border-b border-gray-200 mt-28 mobile:mt-20">
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex items-center justify-center gap-4">
                 <div class="flex items-center gap-2">
@@ -535,7 +535,11 @@ const CartPage = {
 
         if (validCodes[code]) {
             const items = AmbiletCart.getItems();
-            const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const subtotal = items.reduce((sum, item) => {
+                const price = item.ticketType?.price || item.price || 0;
+                const qty = item.quantity || 1;
+                return sum + (price * qty);
+            }, 0);
             this.discount = subtotal * validCodes[code];
             this.appliedPromo = code;
 
