@@ -140,19 +140,42 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
 
                         <!-- Social Stats -->
-                        <div class="flex flex-wrap gap-4">
-                            <span class="flex items-center gap-2 text-sm text-muted">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                        <div class="flex flex-wrap items-center gap-4">
+                            <!-- Interested Button -->
+                            <button id="interest-btn" onclick="EventPage.toggleInterest()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-all rounded-full border border-border hover:border-primary hover:text-primary">
+                                <svg id="interest-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
                                 <span id="event-interested">0 interesati</span>
-                            </span>
+                            </button>
+                            <!-- Views -->
                             <span class="flex items-center gap-2 text-sm text-muted">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 <span id="event-views">0 vizualizari</span>
                             </span>
-                            <button class="flex items-center gap-2 text-sm transition-colors text-muted hover:text-primary">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
-                                <span>Distribuie</span>
-                            </button>
+                            <!-- Share Dropdown -->
+                            <div class="relative" id="share-dropdown">
+                                <button onclick="EventPage.toggleShareMenu()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-colors rounded-full border border-border hover:border-primary hover:text-primary">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                                    <span>Distribuie</span>
+                                </button>
+                                <div id="share-menu" class="absolute right-0 z-50 hidden w-48 py-2 mt-2 bg-white border shadow-lg rounded-xl border-border">
+                                    <a href="#" onclick="EventPage.shareOn('facebook'); return false;" class="flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-surface">
+                                        <svg class="w-5 h-5 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24"><path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/></svg>
+                                        Facebook
+                                    </a>
+                                    <a href="#" onclick="EventPage.shareOn('whatsapp'); return false;" class="flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-surface">
+                                        <svg class="w-5 h-5 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                                        WhatsApp
+                                    </a>
+                                    <a href="#" onclick="EventPage.shareOn('email'); return false;" class="flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-surface">
+                                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                        Email
+                                    </a>
+                                    <a href="#" onclick="EventPage.copyLink(); return false;" class="flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-surface">
+                                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                                        Copiaza link
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -257,7 +280,7 @@ require_once __DIR__ . '/includes/head.php';
                     <h2 class="text-2xl font-bold text-secondary">Alte evenimente care ti-ar putea placea</h2>
                     <p class="mt-1 text-muted" id="related-category-text">Evenimente similare</p>
                 </div>
-                <a href="/genre/rock" class="items-center hidden gap-2 font-semibold md:flex text-primary hover:underline">
+                <a href="/evenimente" id="see-all-link" class="items-center hidden gap-2 font-semibold md:flex text-primary hover:underline">
                     Vezi toate
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 </a>
@@ -277,6 +300,8 @@ const EventPage = {
     quantities: {},
     ticketTypes: [],
     galleryImages: [],
+    isInterested: false,
+    shareMenuOpen: false,
 
     async init() {
         if (!this.slug) {
@@ -285,6 +310,128 @@ const EventPage = {
         }
         await this.loadEvent();
         this.updateHeaderCart();
+        this.trackView();
+        this.loadInterestStatus();
+        this.setupClickOutside();
+    },
+
+    async trackView() {
+        try {
+            await AmbiletAPI.trackEventView(this.slug);
+        } catch (e) {
+            console.log('View tracking failed:', e);
+        }
+    },
+
+    async loadInterestStatus() {
+        try {
+            var response = await AmbiletAPI.checkEventInterest(this.slug);
+            if (response.success && response.data) {
+                this.isInterested = response.data.is_interested;
+                this.updateInterestButton();
+                if (response.data.interested_count) {
+                    document.getElementById('event-interested').textContent = this.formatCount(response.data.interested_count) + ' interesati';
+                }
+                if (response.data.views_count) {
+                    document.getElementById('event-views').textContent = this.formatCount(response.data.views_count) + ' vizualizari';
+                }
+            }
+        } catch (e) {
+            console.log('Interest check failed:', e);
+        }
+    },
+
+    async toggleInterest() {
+        try {
+            var response = await AmbiletAPI.toggleEventInterest(this.slug);
+            if (response.success && response.data) {
+                this.isInterested = response.data.is_interested;
+                this.updateInterestButton();
+                document.getElementById('event-interested').textContent = this.formatCount(response.data.interested_count) + ' interesati';
+            }
+        } catch (e) {
+            console.error('Toggle interest failed:', e);
+        }
+    },
+
+    updateInterestButton() {
+        var btn = document.getElementById('interest-btn');
+        var icon = document.getElementById('interest-icon');
+        if (this.isInterested) {
+            btn.classList.add('border-primary', 'text-primary', 'bg-primary/5');
+            icon.setAttribute('fill', 'currentColor');
+        } else {
+            btn.classList.remove('border-primary', 'text-primary', 'bg-primary/5');
+            icon.setAttribute('fill', 'none');
+        }
+    },
+
+    formatCount(num) {
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+        }
+        if (num >= 1000) {
+            return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+        }
+        return String(num);
+    },
+
+    toggleShareMenu() {
+        var menu = document.getElementById('share-menu');
+        this.shareMenuOpen = !this.shareMenuOpen;
+        menu.classList.toggle('hidden', !this.shareMenuOpen);
+    },
+
+    setupClickOutside() {
+        var self = this;
+        document.addEventListener('click', function(e) {
+            var dropdown = document.getElementById('share-dropdown');
+            if (dropdown && !dropdown.contains(e.target) && self.shareMenuOpen) {
+                self.shareMenuOpen = false;
+                document.getElementById('share-menu').classList.add('hidden');
+            }
+        });
+    },
+
+    shareOn(platform) {
+        var url = window.location.href;
+        var title = this.event ? this.event.title : document.title;
+        var shareUrl = '';
+
+        switch (platform) {
+            case 'facebook':
+                shareUrl = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
+                break;
+            case 'whatsapp':
+                shareUrl = 'https://wa.me/?text=' + encodeURIComponent(title + ' - ' + url);
+                break;
+            case 'email':
+                shareUrl = 'mailto:?subject=' + encodeURIComponent(title) + '&body=' + encodeURIComponent('Uita-te la acest eveniment: ' + url);
+                window.location.href = shareUrl;
+                this.toggleShareMenu();
+                return;
+        }
+
+        if (shareUrl) {
+            window.open(shareUrl, '_blank', 'width=600,height=400');
+        }
+        this.toggleShareMenu();
+    },
+
+    async copyLink() {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            // Show brief success message
+            var btn = document.querySelector('[onclick*="copyLink"]');
+            var originalText = btn.innerHTML;
+            btn.innerHTML = '<svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Copiat!';
+            setTimeout(function() {
+                btn.innerHTML = originalText;
+            }, 2000);
+        } catch (e) {
+            console.error('Copy failed:', e);
+        }
+        this.toggleShareMenu();
     },
 
     async loadEvent() {
@@ -338,6 +485,7 @@ const EventPage = {
             image: coverImage || mainImage,
             images: [coverImage, mainImage].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i),
             category: eventData.category,
+            category_slug: eventData.category_slug || (eventData.category ? eventData.category.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : null),
             tags: eventData.tags,
             start_date: eventData.starts_at,
             date: eventData.starts_at,
@@ -372,6 +520,8 @@ const EventPage = {
                     name: tt.name,
                     description: tt.description,
                     price: tt.price,
+                    original_price: tt.original_price || null,
+                    discount_percent: tt.discount_percent || null,
                     currency: tt.currency || 'RON',
                     available: available,
                     min_per_order: tt.min_per_order || 1,
@@ -470,11 +620,27 @@ const EventPage = {
     },
 
     formatDescription(desc) {
-        // Convert plain text to paragraphs if needed
-        if (!desc.includes('<p>') && !desc.includes('<div>')) {
-            return desc.split('\n\n').map(p => `<p class="mb-4 leading-relaxed text-muted">${p}</p>`).join('');
+        if (!desc) return '<p class="text-muted">Descriere indisponibila</p>';
+
+        // Check if it's already HTML (contains common HTML tags)
+        var hasHtml = /<[a-z][\s\S]*>/i.test(desc);
+
+        if (hasHtml) {
+            // Wrap in a styled container that handles HTML properly
+            return '<div class="prose prose-slate prose-p:text-muted prose-p:leading-relaxed prose-headings:text-secondary prose-strong:text-secondary prose-a:text-primary prose-li:text-muted max-w-none">' + desc + '</div>';
         }
-        return desc;
+
+        // Convert plain text to paragraphs
+        // Handle both double newlines and single newlines
+        var paragraphs = desc.split(/\n\n+/).filter(function(p) { return p.trim(); });
+        if (paragraphs.length === 1) {
+            // Try splitting by single newlines if no double newlines
+            paragraphs = desc.split(/\n/).filter(function(p) { return p.trim(); });
+        }
+
+        return paragraphs.map(function(p) {
+            return '<p class="mb-4 leading-relaxed text-muted">' + p.trim() + '</p>';
+        }).join('');
     },
 
     renderGallery() {
@@ -785,7 +951,24 @@ const EventPage = {
 
     renderRelatedEvents(events) {
         document.getElementById('related-events-section').style.display = 'block';
-        document.getElementById('related-category-text').textContent = 'Evenimente similare din categoria ' + (this.event.category || 'Rock');
+
+        // Set category text and dynamic link
+        var category = this.event.category;
+        var categorySlug = this.event.category_slug;
+        var seeAllLink = document.getElementById('see-all-link');
+
+        if (category && categorySlug) {
+            document.getElementById('related-category-text').textContent = 'Evenimente similare din categoria ' + category;
+            seeAllLink.href = '/evenimente?category=' + encodeURIComponent(categorySlug);
+        } else if (category) {
+            document.getElementById('related-category-text').textContent = 'Evenimente similare din categoria ' + category;
+            // Slugify the category name for the URL
+            var slug = category.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-');
+            seeAllLink.href = '/evenimente?category=' + encodeURIComponent(slug);
+        } else {
+            document.getElementById('related-category-text').textContent = 'Evenimente similare';
+            seeAllLink.href = '/evenimente';
+        }
 
         const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 

@@ -110,6 +110,38 @@ switch ($action) {
         $endpoint = '/events/' . urlencode($slug);
         break;
 
+    case 'event.track-view':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event slug']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/events/' . urlencode($slug) . '/track-view';
+        break;
+
+    case 'event.toggle-interest':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event slug']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/events/' . urlencode($slug) . '/toggle-interest';
+        break;
+
+    case 'event.check-interest':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event slug']);
+            exit;
+        }
+        $endpoint = '/events/' . urlencode($slug) . '/check-interest';
+        break;
+
     case 'venues':
         $params = [];
         if (isset($_GET['city'])) $params['city'] = $_GET['city'];
@@ -802,6 +834,39 @@ function getMockData($action, $params) {
                     ['id' => 2, 'name' => 'Festival Demo', 'slug' => 'festival-demo', 'date' => '2025-02-20', 'venue' => 'Cluj-Napoca', 'price' => 299]
                 ],
                 'meta' => ['total' => 2, 'page' => 1, 'per_page' => 12]
+            ];
+
+        case 'event.track-view':
+            // In demo mode, just return a successful mock response
+            return [
+                'success' => true,
+                'data' => ['views_count' => rand(100, 5000)]
+            ];
+
+        case 'event.toggle-interest':
+            // In demo mode, toggle interest state in session
+            $slug = $params['slug'] ?? '';
+            $key = 'demo_interest_' . $slug;
+            $isInterested = !($_SESSION[$key] ?? false);
+            $_SESSION[$key] = $isInterested;
+            return [
+                'success' => true,
+                'data' => [
+                    'is_interested' => $isInterested,
+                    'interested_count' => rand(50, 500)
+                ]
+            ];
+
+        case 'event.check-interest':
+            $slug = $params['slug'] ?? '';
+            $key = 'demo_interest_' . $slug;
+            return [
+                'success' => true,
+                'data' => [
+                    'is_interested' => $_SESSION[$key] ?? false,
+                    'interested_count' => rand(50, 500),
+                    'views_count' => rand(100, 5000)
+                ]
             ];
 
         case 'categories':

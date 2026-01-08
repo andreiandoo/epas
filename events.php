@@ -74,15 +74,15 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Category Quick Filters -->
 <section class="py-6 bg-white border-b border-gray-200">
     <div class="px-4 mx-auto max-w-7xl">
-        <div class="flex items-center gap-3 overflow-x-auto scrollbar-hide">
-            <a href="/evenimente" class="flex-shrink-0 px-5 py-2.5 text-sm font-semibold rounded-full transition-all <?= !$filterCategory ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>">
+        <div id="categoryFilters" class="flex items-center gap-3 overflow-x-auto scrollbar-hide">
+            <button onclick="EventsPage.setCategory('')" data-category="" class="category-btn flex-shrink-0 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer <?= !$filterCategory ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>">
                 Toate
-            </a>
+            </button>
             <?php foreach ($eventCategories as $category): ?>
-            <a href="/evenimente?categorie=<?= urlencode($category['slug']) ?>" class="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all <?= $filterCategory === $category['slug'] ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>">
+            <button onclick="EventsPage.setCategory('<?= addslashes($category['slug']) ?>')" data-category="<?= htmlspecialchars($category['slug']) ?>" class="category-btn flex-shrink-0 flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer <?= $filterCategory === $category['slug'] ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>">
                 <span class="text-base"><?= $category['icon_emoji'] ?? '🎫' ?></span>
                 <?= htmlspecialchars($category['name']) ?>
-            </a>
+            </button>
             <?php endforeach; ?>
         </div>
     </div>
@@ -521,6 +521,30 @@ const EventsPage = {
         this.loadEvents();
     },
 
+    setCategory(categorySlug) {
+        // Update the filter value
+        this.filters.category = categorySlug;
+
+        // Update visual state of category buttons
+        const buttons = document.querySelectorAll('#categoryFilters .category-btn');
+        buttons.forEach(btn => {
+            const btnCategory = btn.getAttribute('data-category') || '';
+            if (btnCategory === categorySlug) {
+                btn.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+                btn.classList.add('bg-primary', 'text-white');
+            } else {
+                btn.classList.remove('bg-primary', 'text-white');
+                btn.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+            }
+        });
+
+        // Reset to page 1 and reload
+        this.page = 1;
+        this.updateURL();
+        this.updateActiveFilters();
+        this.loadEvents();
+    },
+
     search() {
         this.filters.search = document.getElementById('searchInput').value;
         this.page = 1;
@@ -541,12 +565,29 @@ const EventsPage = {
             search: ''
         };
 
+        // Reset category buttons visual state
+        const buttons = document.querySelectorAll('#categoryFilters .category-btn');
+        buttons.forEach(btn => {
+            const btnCategory = btn.getAttribute('data-category') || '';
+            if (btnCategory === '') {
+                // "Toate" button - make it active
+                btn.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+                btn.classList.add('bg-primary', 'text-white');
+            } else {
+                // Other buttons - make them inactive
+                btn.classList.remove('bg-primary', 'text-white');
+                btn.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
+            }
+        });
+
+        // Reset dropdown filters
         document.getElementById('cityFilter').value = '';
         document.getElementById('genreFilter').value = '';
         document.getElementById('dateFilter').value = '';
         document.getElementById('priceFilter').value = '';
         document.getElementById('sortFilter').value = 'date';
-        document.getElementById('searchInput').value = '';
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) searchInput.value = '';
 
         this.page = 1;
         this.updateURL();
@@ -573,6 +614,12 @@ const EventsPage = {
         const tagsContainer = document.getElementById('activeFilterTags');
         const activeFilters = [];
 
+        if (this.filters.category) {
+            // Get category name from the button text
+            const categoryBtn = document.querySelector('#categoryFilters .category-btn[data-category="' + this.filters.category + '"]');
+            const categoryName = categoryBtn ? categoryBtn.textContent.trim() : this.filters.category;
+            activeFilters.push({ key: 'category', label: 'Categorie: ' + categoryName });
+        }
         if (this.filters.city) activeFilters.push({ key: 'city', label: 'Oraș: ' + this.filters.city });
         if (this.filters.genre) activeFilters.push({ key: 'genre', label: 'Gen: ' + this.filters.genre });
         if (this.filters.date) activeFilters.push({ key: 'date', label: 'Data: ' + this.filters.date });
@@ -599,6 +646,13 @@ const EventsPage = {
 
     removeFilter(key) {
         this.filters[key] = '';
+
+        if (key === 'category') {
+            // Reset category button visual state
+            this.setCategory('');
+            return; // setCategory already handles the rest
+        }
+
         const elementId = {
             city: 'cityFilter',
             genre: 'genreFilter',
