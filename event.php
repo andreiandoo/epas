@@ -177,9 +177,9 @@ require_once __DIR__ . '/includes/head.php';
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div id="event-description" class="prose prose-slate max-w-none"></div>
+                        <div id="event-description" class="prose prose-slate max-w-none"></div>
+                    </div>
                 </div>
 
                 <!-- Artist Section -->
@@ -667,8 +667,8 @@ const EventPage = {
         document.getElementById('artist-section').style.display = 'block';
 
         // Update section title based on whether we have multiple artists
-        var hasMultiple = this.event.artists && this.event.artists.length > 1;
-        document.getElementById('artist-section-title').textContent = hasMultiple ? 'Despre artisti' : 'Despre artist';
+        // var hasMultiple = this.event.artists && this.event.artists.length > 1;
+        // document.getElementById('artist-section-title').textContent = hasMultiple ? 'Despre artisti' : 'Despre artist';
 
         // Artist image with link to artist page
         var artistImage = artist.image_url || artist.image || '/assets/images/placeholder-artist.jpg';
