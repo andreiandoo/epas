@@ -69,7 +69,7 @@ require_once __DIR__ . '/includes/head.php';
         <div id="loading-state" class="flex flex-col gap-8 lg:flex-row">
             <div class="lg:w-2/3">
                 <div class="mb-8 overflow-hidden bg-white border rounded-3xl border-border">
-                    <div class="bg-gray-200 animate-pulse h-72 md:h-96"></div>
+                    <div class="bg-gray-200 animate-pulse h-72 md:h-[29rem]"></div>
                     <div class="p-6 md:p-8">
                         <div class="w-3/4 h-10 mb-4 bg-gray-200 rounded animate-pulse"></div>
                         <div class="grid gap-4 mb-6 sm:grid-cols-2">
@@ -178,23 +178,17 @@ require_once __DIR__ . '/includes/head.php';
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Event Description -->
-                <div class="p-6 mb-8 bg-white border rounded-3xl border-border md:p-8">
-                    <h2 class="mb-4 text-xl font-bold text-secondary">Despre eveniment</h2>
                     <div id="event-description" class="prose prose-slate max-w-none"></div>
                 </div>
 
                 <!-- Artist Section -->
-                <div class="p-6 mb-8 bg-white border rounded-3xl border-border md:p-8" id="artist-section" style="display:none;">
-                    <h2 id="artist-section-title" class="mb-6 text-xl font-bold text-secondary">Despre artist</h2>
+                <div class="mb-8" id="artist-section" style="display:none;">
                     <div id="artist-content"></div>
                 </div>
 
                 <!-- Venue Section -->
-                <div class="p-6 mb-8 bg-white border rounded-3xl border-border md:p-8" id="venue">
-                    <h2 class="mb-6 text-xl font-bold text-secondary">Despre locatie</h2>
+                <div class="mb-8" id="venue">
                     <div id="venue-content"></div>
                 </div>
             </div>
@@ -719,19 +713,11 @@ const EventPage = {
             venueAddress = venueAddress ? venueAddress + ', ' + venue.state : venue.state;
         }
 
-        // Build Google Maps embed URL if coordinates available
-        var embedMapHtml = '';
-        if (venue.latitude && venue.longitude) {
-            var embedUrl = 'https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=' + venue.latitude + ',' + venue.longitude + '&zoom=15';
-            embedMapHtml = '<div class="p-4 bg-surface rounded-xl"><iframe src="' + embedUrl + '" width="100%" height="200" style="border:0; border-radius: 12px;" allowfullscreen="" loading="lazy"></iframe></div>';
-        }
-
         var html = '<div class="flex flex-col gap-6 md:flex-row">' +
-            '<div class="md:w-1/2">' +
+            '<div class="md:w-1/3">' +
                 '<img src="' + (venue.image || '/assets/images/placeholder-venue.jpg') + '" alt="' + venue.name + '" class="object-cover w-full h-64 mb-4 rounded-2xl">' +
-                embedMapHtml +
             '</div>' +
-            '<div class="md:w-1/2">' +
+            '<div class="md:w-2/3">' +
                 '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +
                 '<p class="mb-4 text-muted">' + venueAddress + '</p>' +
                 '<p class="mb-4 leading-relaxed text-muted">' + (venue.description || '') + '</p>';
@@ -830,7 +816,7 @@ const EventPage = {
             return '<div class="relative z-10 p-4 border-2 cursor-pointer ticket-card border-border rounded-2xl hover:z-20" data-ticket="' + tt.id + '" data-price="' + displayPrice + '">' +
                 '<div class="flex items-start justify-between">' +
                     '<div class="relative tooltip-trigger">' +
-                        '<h3 class="font-bold border-b border-dashed text-secondary cursor-help border-muted">' + tt.name + (hasDiscount ? '<span class="discount-badge text-white text-[10px] font-bold px-3 py-1 rounded-lg">-' + discountPercent + '%</span> ' : '') + '</h3>' + 
+                        '<h3 class="flex items-center font-bold gap-x-2 text-secondary cursor-help border-muted">' + tt.name + (hasDiscount ? '<span class="discount-badge text-white text-[10px] font-bold py-1 px-2 rounded-full">-' + discountPercent + '%</span> ' : '') + '</h3>' + 
                         '<p class="text-sm text-muted">' + (tt.description || '') + '</p>' +
                         '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' +
                             tooltipHtml +
@@ -838,7 +824,7 @@ const EventPage = {
                     '</div>' +
                     '<div class="text-right">' +
                         (hasDiscount ? '<span class="text-sm line-through text-muted">' + (commissionMode === 'add_on_top' ? (tt.original_price + tt.original_price * commissionRate / 100).toFixed(0) : tt.original_price) + ' lei</span>' : '') +
-                        '<span class="block text-xl font-bold text-primary">' + displayPrice.toFixed(0) + ' lei</span>' +
+                        '<span class="block text-xl font-bold text-primary">' + displayPrice.toFixed(2) + ' lei</span>' +
                     '</div>' +
                 '</div>' +
                 '<div class="flex items-center justify-between">' +
