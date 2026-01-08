@@ -69,7 +69,7 @@ require_once __DIR__ . '/includes/head.php';
         <div id="loading-state" class="flex flex-col gap-8 lg:flex-row">
             <div class="lg:w-2/3">
                 <div class="mb-8 overflow-hidden bg-white border rounded-3xl border-border">
-                    <div class="bg-gray-200 animate-pulse h-72 md:h-96"></div>
+                    <div class="bg-gray-200 animate-pulse h-72 md:h-[29rem]"></div>
                     <div class="p-6 md:p-8">
                         <div class="w-3/4 h-10 mb-4 bg-gray-200 rounded animate-pulse"></div>
                         <div class="grid gap-4 mb-6 sm:grid-cols-2">
@@ -89,9 +89,9 @@ require_once __DIR__ . '/includes/head.php';
             <!-- Left Column - Event Details -->
             <div class="lg:w-2/3">
                 <!-- Event Header -->
-                <div class="mb-8 overflow-hidden bg-white border rounded-3xl border-border">
+                <div class="mb-8 bg-white border rounded-3xl border-border">
                     <!-- Main Image -->
-                    <div class="relative overflow-hidden h-72 md:h-96">
+                    <div class="relative overflow-hidden rounded-t-3xl h-72 md:h-96">
                         <img id="mainImage" src="" alt="" class="object-cover w-full h-full">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                         <div class="absolute flex gap-2 top-4 left-4" id="event-badges"></div>
@@ -136,11 +136,11 @@ require_once __DIR__ . '/includes/head.php';
                                 <p id="venue-name" class="font-semibold text-secondary"></p>
                                 <p id="venue-address" class="text-sm text-muted"></p>
                             </div>
-                            <a href="#venue" class="text-sm font-semibold text-primary hover:underline">Vezi locatia &rarr;</a>
+                            <a id="venue-link" href="#venue" class="text-sm font-semibold text-primary hover:underline">Vezi locatia &rarr;</a>
                         </div>
 
                         <!-- Social Stats -->
-                        <div class="flex flex-wrap items-center gap-4">
+                        <div class="flex flex-wrap items-center gap-4 mb-8">
                             <!-- Interested Button -->
                             <button id="interest-btn" onclick="EventPage.toggleInterest()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-all rounded-full border border-border hover:border-primary hover:text-primary">
                                 <svg id="interest-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
@@ -177,24 +177,18 @@ require_once __DIR__ . '/includes/head.php';
                                 </div>
                             </div>
                         </div>
+
+                        <div id="event-description" class="prose prose-slate max-w-none"></div>
                     </div>
                 </div>
 
-                <!-- Event Description -->
-                <div class="p-6 mb-8 bg-white border rounded-3xl border-border md:p-8">
-                    <h2 class="mb-4 text-xl font-bold text-secondary">Despre eveniment</h2>
-                    <div id="event-description" class="prose prose-slate max-w-none"></div>
-                </div>
-
                 <!-- Artist Section -->
-                <div class="p-6 mb-8 bg-white border rounded-3xl border-border md:p-8" id="artist-section" style="display:none;">
-                    <h2 id="artist-section-title" class="mb-6 text-xl font-bold text-secondary">Despre artist</h2>
+                <div class="mb-8" id="artist-section" style="display:none;">
                     <div id="artist-content"></div>
                 </div>
 
                 <!-- Venue Section -->
-                <div class="p-6 mb-8 bg-white border rounded-3xl border-border md:p-8" id="venue">
-                    <h2 class="mb-6 text-xl font-bold text-secondary">Despre locatie</h2>
+                <div class="mb-8" id="venue">
                     <div id="venue-content"></div>
                 </div>
             </div>
@@ -218,7 +212,7 @@ require_once __DIR__ . '/includes/head.php';
                                 <div class="flex items-center justify-between p-3 mb-4 bg-accent/10 rounded-xl">
                                     <div class="flex items-center gap-2">
                                         <span class="text-xl">🎁</span>
-                                        <span class="text-sm font-medium text-secondary">Puncte castigate:</span>
+                                        <span class="text-sm font-medium text-secondary">Puncte castigate</span>
                                     </div>
                                     <span id="pointsEarned" class="text-lg font-bold text-accent points-counter">0</span>
                                 </div>
@@ -490,10 +484,11 @@ const EventPage = {
             doors_time: formatTime(doorsAt),
             is_popular: eventData.is_featured,
             is_featured: eventData.is_featured,
-            interested: Math.floor(Math.random() * 500) + 100,
-            views: (Math.random() * 3 + 0.5).toFixed(1) + 'k',
+            interested_count: eventData.interested_count || 0,
+            views_count: eventData.views_count || 0,
             venue: venueData ? {
                 name: venueData.name,
+                slug: venueData.slug,
                 description: venueData.description,
                 address: venueData.address,
                 city: venueData.city,
@@ -600,10 +595,15 @@ const EventPage = {
         // Venue
         document.getElementById('venue-name').textContent = e.venue?.name || e.location || 'Locatie TBA';
         document.getElementById('venue-address').textContent = e.venue?.address || '';
+        // Update venue link to point to venue page if slug available
+        var venueLink = document.getElementById('venue-link');
+        if (venueLink && e.venue?.slug) {
+            venueLink.href = '/locatie/' + e.venue.slug;
+        }
 
-        // Stats
-        document.getElementById('event-interested').textContent = `${e.interested || Math.floor(Math.random() * 500) + 100} interesati`;
-        document.getElementById('event-views').textContent = `${e.views || (Math.random() * 3 + 0.5).toFixed(1)}k vizualizari`;
+        // Stats - use real values from API (loadInterestStatus will update with latest)
+        document.getElementById('event-interested').textContent = this.formatCount(e.interested_count || 0) + ' interesati';
+        document.getElementById('event-views').textContent = this.formatCount(e.views_count || 0) + ' vizualizari';
 
         // Description
         document.getElementById('event-description').innerHTML = this.formatDescription(e.description || e.content || 'Descriere indisponibila');
@@ -673,8 +673,8 @@ const EventPage = {
         document.getElementById('artist-section').style.display = 'block';
 
         // Update section title based on whether we have multiple artists
-        var hasMultiple = this.event.artists && this.event.artists.length > 1;
-        document.getElementById('artist-section-title').textContent = hasMultiple ? 'Despre artisti' : 'Despre artist';
+        // var hasMultiple = this.event.artists && this.event.artists.length > 1;
+        // document.getElementById('artist-section-title').textContent = hasMultiple ? 'Despre artisti' : 'Despre artist';
 
         // Artist image with link to artist page
         var artistImage = artist.image_url || artist.image || '/assets/images/placeholder-artist.jpg';
@@ -719,19 +719,11 @@ const EventPage = {
             venueAddress = venueAddress ? venueAddress + ', ' + venue.state : venue.state;
         }
 
-        // Build Google Maps embed URL if coordinates available
-        var embedMapHtml = '';
-        if (venue.latitude && venue.longitude) {
-            var embedUrl = 'https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=' + venue.latitude + ',' + venue.longitude + '&zoom=15';
-            embedMapHtml = '<div class="p-4 bg-surface rounded-xl"><iframe src="' + embedUrl + '" width="100%" height="200" style="border:0; border-radius: 12px;" allowfullscreen="" loading="lazy"></iframe></div>';
-        }
-
         var html = '<div class="flex flex-col gap-6 md:flex-row">' +
-            '<div class="md:w-1/2">' +
+            '<div class="md:w-1/3">' +
                 '<img src="' + (venue.image || '/assets/images/placeholder-venue.jpg') + '" alt="' + venue.name + '" class="object-cover w-full h-64 mb-4 rounded-2xl">' +
-                embedMapHtml +
             '</div>' +
-            '<div class="md:w-1/2">' +
+            '<div class="md:w-2/3">' +
                 '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +
                 '<p class="mb-4 text-muted">' + venueAddress + '</p>' +
                 '<p class="mb-4 leading-relaxed text-muted">' + (venue.description || '') + '</p>';
@@ -783,10 +775,13 @@ const EventPage = {
             const hasDiscount = tt.original_price && tt.original_price > tt.price;
             const discountPercent = hasDiscount ? Math.round((1 - tt.price / tt.original_price) * 100) : 0;
 
+            // Check if sold out
+            const isSoldOut = tt.is_sold_out || tt.available <= 0;
+
             // Only show availability count if < 40 tickets remaining
             let availabilityHtml = '';
-            if (tt.is_sold_out || tt.available <= 0) {
-                availabilityHtml = '<span class="text-xs font-semibold text-primary">❌ Sold Out</span>';
+            if (isSoldOut) {
+                availabilityHtml = '<span class="text-xs font-semibold text-gray-400">❌ Indisponibil</span>';
             } else if (tt.available <= 5) {
                 availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Doar ' + tt.available + ' disponibile</span>';
             } else if (tt.available <= 20) {
@@ -827,27 +822,43 @@ const EventPage = {
             }
             tooltipHtml += '</div>';
 
-            return '<div class="relative z-10 p-4 border-2 cursor-pointer ticket-card border-border rounded-2xl hover:z-20" data-ticket="' + tt.id + '" data-price="' + displayPrice + '">' +
+            // Card classes - gray background and no pointer for sold out
+            var cardClasses = isSoldOut
+                ? 'relative z-10 p-4 border-2 ticket-card border-gray-200 rounded-2xl bg-gray-100 cursor-default'
+                : 'relative z-10 p-4 border-2 cursor-pointer ticket-card border-border rounded-2xl hover:z-20';
+
+            // Text classes - muted for sold out
+            var titleClasses = isSoldOut ? 'text-gray-400' : 'text-secondary';
+            var priceClasses = isSoldOut ? 'text-gray-400 line-through' : 'text-primary';
+            var descClasses = isSoldOut ? 'text-gray-400' : 'text-muted';
+
+            // Build quantity controls or sold out message
+            var controlsHtml = '';
+            if (isSoldOut) {
+                controlsHtml = '<span class="text-sm font-medium text-gray-400">Epuizat</span>';
+            } else {
+                controlsHtml = '<div class="flex items-center gap-2">' +
+                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', -1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">-</button>' +
+                    '<span id="qty-' + tt.id + '" class="w-8 font-bold text-center">0</span>' +
+                    '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">+</button>' +
+                '</div>';
+            }
+
+            return '<div class="' + cardClasses + '" data-ticket="' + tt.id + '" data-price="' + displayPrice + '">' +
                 '<div class="flex items-start justify-between">' +
                     '<div class="relative tooltip-trigger">' +
-                        '<h3 class="font-bold border-b border-dashed text-secondary cursor-help border-muted">' + tt.name + (hasDiscount ? '<span class="discount-badge text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">-' + discountPercent + '%</span> ' : '') + '</h3>' + 
-                        '<p class="text-sm text-muted">' + (tt.description || '') + '</p>' +
-                        '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' +
-                            tooltipHtml +
-                        '</div>' +
+                        '<h3 class="flex items-center font-bold gap-x-2 ' + titleClasses + ' cursor-help border-muted">' + tt.name + (hasDiscount && !isSoldOut ? '<span class="discount-badge text-white text-[10px] font-bold py-1 px-2 rounded-full">-' + discountPercent + '%</span> ' : '') + '</h3>' +
+                        '<p class="text-sm ' + descClasses + '">' + (tt.description || '') + '</p>' +
+                        (isSoldOut ? '' : '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' + tooltipHtml + '</div>') +
                     '</div>' +
                     '<div class="text-right">' +
-                        (hasDiscount ? '<span class="text-sm line-through text-muted">' + (commissionMode === 'add_on_top' ? (tt.original_price + tt.original_price * commissionRate / 100).toFixed(0) : tt.original_price) + ' lei</span>' : '') +
-                        '<span class="block text-xl font-bold text-primary">' + displayPrice.toFixed(0) + ' lei</span>' +
+                        (hasDiscount && !isSoldOut ? '<span class="text-sm line-through text-muted">' + (commissionMode === 'add_on_top' ? (tt.original_price + tt.original_price * commissionRate / 100).toFixed(0) : tt.original_price) + ' lei</span>' : '') +
+                        '<span class="block text-xl font-bold ' + priceClasses + '">' + displayPrice.toFixed(2) + ' lei</span>' +
                     '</div>' +
                 '</div>' +
                 '<div class="flex items-center justify-between">' +
                     availabilityHtml +
-                    '<div class="flex items-center gap-2">' +
-                        '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', -1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">-</button>' +
-                        '<span id="qty-' + tt.id + '" class="w-8 font-bold text-center">0</span>' +
-                        '<button onclick="EventPage.updateQuantity(\'' + tt.id + '\', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors rounded-lg bg-surface hover:bg-primary hover:text-white">+</button>' +
-                    '</div>' +
+                    controlsHtml +
                 '</div>' +
             '</div>';
         }).join('');

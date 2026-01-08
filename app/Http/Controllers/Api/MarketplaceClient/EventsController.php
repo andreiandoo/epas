@@ -341,9 +341,12 @@ class EventsController extends BaseController
                 'cover_image_url' => $coverImageUrl,
                 'tenant_id' => $event->tenant_id,
                 'marketplace_client_id' => $event->marketplace_client_id,
+                'views_count' => $event->views_count ?? 0,
+                'interested_count' => $event->interested_count ?? 0,
             ],
             'venue' => $event->venue ? [
                 'id' => $event->venue->id,
+                'slug' => $event->venue->slug,
                 'name' => $event->venue->getTranslation('name', $language)
                     ?? (is_array($event->venue->name) ? ($event->venue->name[$language] ?? $event->venue->name['ro'] ?? $event->venue->name['en'] ?? null) : $event->venue->name),
                 'description' => $event->venue->getTranslation('description', $language)
