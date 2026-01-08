@@ -209,16 +209,16 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
 
                         <!-- Ticket Types -->
-                        <div class="p-6 space-y-4" id="ticket-types"></div>
+                        <div class="p-4 space-y-2" id="ticket-types"></div>
 
                         <!-- Cart Summary -->
                         <div id="cartSummary" class="hidden border-t border-border">
-                            <div class="p-6 bg-surface/50">
+                            <div class="p-4 bg-surface/50">
                                 <!-- Points Earned -->
                                 <div class="flex items-center justify-between p-3 mb-4 bg-accent/10 rounded-xl">
                                     <div class="flex items-center gap-2">
                                         <span class="text-xl">🎁</span>
-                                        <span class="text-sm font-medium text-secondary">Puncte castigate:</span>
+                                        <span class="text-sm font-medium text-secondary">Puncte castigate</span>
                                     </div>
                                     <span id="pointsEarned" class="text-lg font-bold text-accent points-counter">0</span>
                                 </div>
@@ -229,9 +229,9 @@ require_once __DIR__ . '/includes/head.php';
                                         <span class="text-muted">Subtotal:</span>
                                         <span id="subtotal" class="font-medium">0 lei</span>
                                     </div>
-                                    <div class="flex justify-between text-sm">
-                                        <span class="text-muted">Taxa Crucea Rosie (1%):</span>
-                                        <span id="taxRedCross" class="font-medium">0 lei</span>
+                                    <!-- Dynamic taxes container -->
+                                    <div id="taxesContainer" class="space-y-1">
+                                        <!-- Taxes will be rendered here dynamically -->
                                     </div>
                                     <div class="flex justify-between pt-2 text-lg font-bold border-t border-border">
                                         <span>Total:</span>
@@ -243,15 +243,11 @@ require_once __DIR__ . '/includes/head.php';
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                                     Cumpara bilete
                                 </button>
-
-                                <p class="mt-3 text-xs text-center text-muted">
-                                    Plata securizata prin card sau transfer bancar
-                                </p>
                             </div>
                         </div>
 
                         <!-- Empty State -->
-                        <div id="emptyCart" class="p-6 text-center border-t border-border">
+                        <div id="emptyCart" class="p-4 text-center border-t border-border">
                             <p class="text-sm text-muted">Selecteaza cel putin un bilet pentru a continua</p>
                         </div>
                     </div>
@@ -498,12 +494,16 @@ const EventPage = {
             views: (Math.random() * 3 + 0.5).toFixed(1) + 'k',
             venue: venueData ? {
                 name: venueData.name,
+                description: venueData.description,
                 address: venueData.address,
                 city: venueData.city,
                 state: venueData.state,
                 country: venueData.country,
                 latitude: venueData.latitude,
-                longitude: venueData.longitude
+                longitude: venueData.longitude,
+                google_maps_url: venueData.google_maps_url,
+                image: venueData.image,
+                capacity: venueData.capacity
             } : null,
             location: venueData ? (venueData.city ? venueData.name + ', ' + venueData.city : venueData.name) : 'Locatie TBA',
             artist: artistsData.length ? {
@@ -530,7 +530,12 @@ const EventPage = {
                     is_sold_out: available <= 0
                 };
             }),
-            max_tickets_per_order: eventData.max_tickets_per_order || 10
+            max_tickets_per_order: eventData.max_tickets_per_order || 10,
+            // Commission settings from API
+            commission_rate: apiData.commission_rate || 5,
+            commission_mode: apiData.commission_mode || 'included',
+            // Taxes from API (e.g., Red Cross stamp)
+            taxes: apiData.taxes || []
         };
     },
 
@@ -627,7 +632,7 @@ const EventPage = {
 
         if (hasHtml) {
             // Wrap in a styled container that handles HTML properly
-            return '<div class="prose prose-slate prose-p:text-muted prose-p:leading-relaxed prose-headings:text-secondary prose-strong:text-secondary prose-a:text-primary prose-li:text-muted max-w-none">' + desc + '</div>';
+            return '<div class="space-y-2 prose prose-slate prose-p:text-muted prose-p:leading-relaxed prose-headings:text-secondary prose-strong:text-secondary prose-a:text-primary prose-li:text-muted max-w-none">' + desc + '</div>';
         }
 
         // Convert plain text to paragraphs
@@ -769,8 +774,12 @@ const EventPage = {
 
     renderTicketTypes() {
         const container = document.getElementById('ticket-types');
+        var self = this;
+        var commissionRate = this.event.commission_rate || 5;
+        var commissionMode = this.event.commission_mode || 'included';
+
         container.innerHTML = this.ticketTypes.map(tt => {
-            this.quantities[tt.id] = 0;
+            self.quantities[tt.id] = 0;
             const hasDiscount = tt.original_price && tt.original_price > tt.price;
             const discountPercent = hasDiscount ? Math.round((1 - tt.price / tt.original_price) * 100) : 0;
 
@@ -789,27 +798,49 @@ const EventPage = {
                 availabilityHtml = '<span class="text-xs font-semibold text-success">✓ Disponibil</span>';
             }
 
-            return '<div class="relative z-10 p-4 border-2 cursor-pointer ticket-card border-border rounded-2xl hover:z-20" data-ticket="' + tt.id + '" data-price="' + tt.price + '">' +
-                (hasDiscount ? '<div class="absolute top-0 right-0"><div class="discount-badge text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg">-' + discountPercent + '%</div></div>' : '') +
-                '<div class="flex items-start justify-between mb-3">' +
+            // Calculate commission based on mode
+            var displayPrice = tt.price;
+            var basePrice, commissionAmount;
+            if (commissionMode === 'included') {
+                // Commission is included in the price - customer pays tt.price
+                basePrice = tt.price / (1 + commissionRate / 100);
+                commissionAmount = tt.price - basePrice;
+            } else {
+                // Commission is added on top - calculate what customer will pay
+                basePrice = tt.price;
+                commissionAmount = tt.price * (commissionRate / 100);
+                displayPrice = tt.price + commissionAmount;
+            }
+
+            // Build tooltip content dynamically
+            var tooltipHtml = '<p class="mb-2 text-sm font-semibold">Detalii pret bilet:</p>' +
+                '<div class="space-y-1 text-xs">';
+
+            if (commissionMode === 'included') {
+                tooltipHtml += '<div class="flex justify-between"><span class="text-white/70">Pret bilet:</span><span>' + basePrice.toFixed(2) + ' lei</span></div>' +
+                    '<div class="flex justify-between"><span class="text-white/70">Comision platforma (' + commissionRate + '%):</span><span>' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                    '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total:</span><span class="font-semibold">' + tt.price.toFixed(2) + ' lei</span></div>';
+            } else {
+                tooltipHtml += '<div class="flex justify-between"><span class="text-white/70">Pret bilet:</span><span>' + tt.price.toFixed(2) + ' lei</span></div>' +
+                    '<div class="flex justify-between"><span class="text-white/70">Comision platforma (' + commissionRate + '%):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                    '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total:</span><span class="font-semibold">' + displayPrice.toFixed(2) + ' lei</span></div>';
+            }
+            tooltipHtml += '</div>';
+
+            return '<div class="relative z-10 p-4 border-2 cursor-pointer ticket-card border-border rounded-2xl hover:z-20" data-ticket="' + tt.id + '" data-price="' + displayPrice + '">' +
+                '<div class="flex items-start justify-between">' +
                     '<div class="relative tooltip-trigger">' +
-                        '<h3 class="font-bold border-b border-dashed text-secondary cursor-help border-muted">' + tt.name + '</h3>' +
+                        '<h3 class="font-bold border-b border-dashed text-secondary cursor-help border-muted">' + tt.name + (hasDiscount ? '<span class="discount-badge text-white text-[10px] font-bold px-3 py-1 rounded-lg">-' + discountPercent + '%</span> ' : '') + '</h3>' + 
+                        '<p class="text-sm text-muted">' + (tt.description || '') + '</p>' +
                         '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' +
-                            '<p class="mb-2 text-sm font-semibold">Detalii pret bilet:</p>' +
-                            '<div class="space-y-1 text-xs">' +
-                                '<div class="flex justify-between"><span class="text-white/70">Pret bilet:</span><span>' + (tt.price / 1.05).toFixed(2) + ' lei</span></div>' +
-                                '<div class="flex justify-between"><span class="text-white/70">Comision platforma (5%):</span><span>' + (tt.price - tt.price / 1.05).toFixed(2) + ' lei</span></div>' +
-                                '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total:</span><span class="font-semibold">' + tt.price.toFixed(2) + ' lei</span></div>' +
-                                '<div class="flex justify-between text-white/50 text-[10px] mt-2"><span>Taxa Crucea Rosie (1%):</span><span>+' + (tt.price * 0.01).toFixed(2) + ' lei</span></div>' +
-                            '</div>' +
+                            tooltipHtml +
                         '</div>' +
                     '</div>' +
                     '<div class="text-right">' +
-                        (hasDiscount ? '<span class="text-sm line-through text-muted">' + tt.original_price + ' lei</span>' : '') +
-                        '<span class="block text-xl font-bold text-primary">' + tt.price + ' lei</span>' +
+                        (hasDiscount ? '<span class="text-sm line-through text-muted">' + (commissionMode === 'add_on_top' ? (tt.original_price + tt.original_price * commissionRate / 100).toFixed(0) : tt.original_price) + ' lei</span>' : '') +
+                        '<span class="block text-xl font-bold text-primary">' + displayPrice.toFixed(0) + ' lei</span>' +
                     '</div>' +
                 '</div>' +
-                '<p class="mb-3 text-sm text-muted">' + (tt.description || '') + '</p>' +
                 '<div class="flex items-center justify-between">' +
                     availabilityHtml +
                     '<div class="flex items-center gap-2">' +
@@ -843,14 +874,40 @@ const EventPage = {
     updateCart() {
         const totalTickets = Object.values(this.quantities).reduce((a, b) => a + b, 0);
         let subtotal = 0;
+        var commissionRate = this.event.commission_rate || 5;
+        var commissionMode = this.event.commission_mode || 'included';
 
         for (const [ticketId, qty] of Object.entries(this.quantities)) {
             const tt = this.ticketTypes.find(t => String(t.id) === String(ticketId));
-            if (tt) subtotal += qty * tt.price;
+            if (tt) {
+                // If commission is add_on_top, the price displayed already includes commission
+                // so we use it directly. If included, tt.price is already the final price.
+                var ticketPrice = tt.price;
+                if (commissionMode === 'add_on_top') {
+                    ticketPrice = tt.price + (tt.price * commissionRate / 100);
+                }
+                subtotal += qty * ticketPrice;
+            }
         }
 
-        const taxRedCross = subtotal * 0.01;
-        const total = subtotal + taxRedCross;
+        // Calculate taxes from API
+        var self = this;
+        var totalTaxes = 0;
+        var taxBreakdown = [];
+        var taxes = this.event.taxes || [];
+
+        taxes.forEach(function(tax) {
+            var taxAmount = 0;
+            if (tax.value_type === 'percent') {
+                taxAmount = subtotal * (tax.value / 100);
+            } else if (tax.value_type === 'fixed') {
+                taxAmount = tax.value;
+            }
+            totalTaxes += taxAmount;
+            taxBreakdown.push({ name: tax.name, amount: taxAmount, value: tax.value, value_type: tax.value_type });
+        });
+
+        const total = subtotal + totalTaxes;
         const points = Math.floor(subtotal / 10);
 
         // Update header cart count
@@ -864,9 +921,20 @@ const EventPage = {
             cartSummary.classList.remove('hidden');
             emptyCart.classList.add('hidden');
 
-            document.getElementById('subtotal').textContent = `${subtotal.toFixed(2)} lei`;
-            document.getElementById('taxRedCross').textContent = `${taxRedCross.toFixed(2)} lei`;
-            document.getElementById('totalPrice').textContent = `${total.toFixed(2)} lei`;
+            document.getElementById('subtotal').textContent = subtotal.toFixed(2) + ' lei';
+
+            // Render dynamic taxes
+            var taxesContainer = document.getElementById('taxesContainer');
+            if (taxesContainer) {
+                var taxesHtml = '';
+                taxBreakdown.forEach(function(tax) {
+                    var rateLabel = tax.value_type === 'percent' ? '(' + tax.value + '%)' : '';
+                    taxesHtml += '<div class="flex justify-between text-sm"><span class="text-muted">' + tax.name + ' ' + rateLabel + ':</span><span class="font-medium">' + tax.amount.toFixed(2) + ' lei</span></div>';
+                });
+                taxesContainer.innerHTML = taxesHtml;
+            }
+
+            document.getElementById('totalPrice').textContent = total.toFixed(2) + ' lei';
 
             const pointsEl = document.getElementById('pointsEarned');
             pointsEl.textContent = points;
