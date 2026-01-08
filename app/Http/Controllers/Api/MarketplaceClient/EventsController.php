@@ -351,7 +351,12 @@ class EventsController extends BaseController
                 'longitude' => $event->venue->longitude,
             ] : null,
             'ticket_types' => $event->ticketTypes->map(function ($tt) use ($language) {
-                $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
+                $priceCents = $tt->price_cents ?? 0;
+                $salePriceCents = $tt->sale_price_cents;
+                $hasDiscount = $salePriceCents !== null && $salePriceCents < $priceCents;
+                $displayPrice = $hasDiscount ? $salePriceCents / 100 : $priceCents / 100;
+                $originalPrice = $hasDiscount ? $priceCents / 100 : null;
+
                 $ttName = is_array($tt->name) ? ($tt->name[$language] ?? $tt->name['ro'] ?? $tt->name['en'] ?? '') : $tt->name;
                 $ttDesc = is_array($tt->description) ? ($tt->description[$language] ?? $tt->description['ro'] ?? $tt->description['en'] ?? '') : ($tt->description ?? '');
                 return [
@@ -359,6 +364,8 @@ class EventsController extends BaseController
                     'name' => $ttName,
                     'description' => $ttDesc,
                     'price' => $displayPrice,
+                    'original_price' => $originalPrice,
+                    'discount_percent' => $hasDiscount ? round((1 - $salePriceCents / $priceCents) * 100) : null,
                     'price_formatted' => number_format($displayPrice, 2) . ' ' . ($tt->currency ?? 'RON'),
                     'available_quantity' => max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0)),
                     'max_per_order' => $tt->max_per_order ?? 10,
@@ -608,6 +615,139 @@ class EventsController extends BaseController
             'event_id' => $event->id,
             'ticket_types' => $ticketTypes,
             'last_updated' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Track a page view for an event
+     */
+    public function trackView(Request $request, $identifier): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        // Find event by ID or slug
+        $event = is_numeric($identifier)
+            ? Event::find($identifier)
+            : Event::where('slug', $identifier)->first();
+
+        if (! $event) {
+            return $this->error('Event not found', 404);
+        }
+
+        // Verify event belongs to this marketplace or allowed tenant
+        if ($event->marketplace_client_id) {
+            if ($event->marketplace_client_id !== $client->id) {
+                return $this->error('Event not found', 404);
+            }
+        } elseif ($event->tenant_id && ! $client->canSellForTenant($event->tenant_id)) {
+            return $this->error('Event not found', 404);
+        }
+
+        // Increment view count
+        $event->increment('views_count');
+
+        return $this->success([
+            'views_count' => $event->views_count,
+        ]);
+    }
+
+    /**
+     * Toggle interest for an event
+     */
+    public function toggleInterest(Request $request, $identifier): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        // Find event by ID or slug
+        $event = is_numeric($identifier)
+            ? Event::find($identifier)
+            : Event::where('slug', $identifier)->first();
+
+        if (! $event) {
+            return $this->error('Event not found', 404);
+        }
+
+        // Verify event belongs to this marketplace or allowed tenant
+        if ($event->marketplace_client_id) {
+            if ($event->marketplace_client_id !== $client->id) {
+                return $this->error('Event not found', 404);
+            }
+        } elseif ($event->tenant_id && ! $client->canSellForTenant($event->tenant_id)) {
+            return $this->error('Event not found', 404);
+        }
+
+        // Get customer ID or session ID
+        $customerId = auth('marketplace_customer')->id();
+        $sessionId = $customerId ? null : session()->getId();
+
+        // Check if already interested
+        $existingInterest = \App\Models\EventInterest::where('event_id', $event->id)
+            ->where(function ($q) use ($customerId, $sessionId) {
+                if ($customerId) {
+                    $q->where('marketplace_customer_id', $customerId);
+                } else {
+                    $q->where('session_id', $sessionId);
+                }
+            })
+            ->first();
+
+        if ($existingInterest) {
+            // Remove interest
+            $existingInterest->delete();
+            $event->decrement('interested_count');
+            $isInterested = false;
+        } else {
+            // Add interest
+            \App\Models\EventInterest::create([
+                'event_id' => $event->id,
+                'marketplace_customer_id' => $customerId,
+                'session_id' => $sessionId,
+                'ip_address' => $request->ip(),
+            ]);
+            $event->increment('interested_count');
+            $isInterested = true;
+        }
+
+        return $this->success([
+            'is_interested' => $isInterested,
+            'interested_count' => $event->refresh()->interested_count,
+        ]);
+    }
+
+    /**
+     * Check if current user is interested in an event
+     */
+    public function checkInterest(Request $request, $identifier): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        // Find event by ID or slug
+        $event = is_numeric($identifier)
+            ? Event::find($identifier)
+            : Event::where('slug', $identifier)->first();
+
+        if (! $event) {
+            return $this->error('Event not found', 404);
+        }
+
+        // Get customer ID or session ID
+        $customerId = auth('marketplace_customer')->id();
+        $sessionId = $customerId ? null : session()->getId();
+
+        $isInterested = \App\Models\EventInterest::where('event_id', $event->id)
+            ->where(function ($q) use ($customerId, $sessionId) {
+                if ($customerId) {
+                    $q->where('marketplace_customer_id', $customerId);
+                } else {
+                    $q->where('session_id', $sessionId);
+                }
+            })
+            ->exists();
+
+        return $this->success([
+            'is_interested' => $isInterested,
+            'interested_count' => $event->interested_count,
+            'views_count' => $event->views_count,
         ]);
     }
 }

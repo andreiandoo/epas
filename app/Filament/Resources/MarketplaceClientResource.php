@@ -382,7 +382,7 @@ class MarketplaceClientResource extends Resource
                     ]),
             ])
             ->actions([
-                Tables\Actions\Action::make('login_to_marketplace')
+                Actions\Action::make('login_to_marketplace')
                     ->label('Login')
                     ->icon('heroicon-o-arrow-right-on-rectangle')
                     ->color('success')

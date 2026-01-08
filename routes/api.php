@@ -1325,6 +1325,12 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.events.show');
     Route::get('/events/{event}/availability', [MarketplaceEventsController::class, 'availability'])
         ->name('api.marketplace-client.events.availability');
+    Route::post('/events/{event}/track-view', [MarketplaceEventsController::class, 'trackView'])
+        ->name('api.marketplace-client.events.track-view');
+    Route::post('/events/{event}/toggle-interest', [MarketplaceEventsController::class, 'toggleInterest'])
+        ->name('api.marketplace-client.events.toggle-interest');
+    Route::get('/events/{event}/check-interest', [MarketplaceEventsController::class, 'checkInterest'])
+        ->name('api.marketplace-client.events.check-interest');
 
     // Orders
     Route::get('/orders', [MarketplaceOrdersController::class, 'index'])

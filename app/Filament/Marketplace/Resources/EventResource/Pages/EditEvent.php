@@ -18,8 +18,9 @@ class EditEvent extends EditRecord
         parent::mount($record);
 
         // Redirect hosted events to view-guest page (can't edit events you don't own)
+        // Marketplace events use marketplace_client_id, not tenant_id
         $marketplace = static::getMarketplaceClient();
-        if ($this->record->tenant_id !== $marketplace?->id) {
+        if ($this->record->marketplace_client_id !== $marketplace?->id) {
             redirect(EventResource::getUrl('view-guest', ['record' => $this->record]));
         }
     }

@@ -553,6 +553,27 @@ const AmbiletAPI = {
     },
 
     /**
+     * Track event page view
+     */
+    async trackEventView(slug) {
+        return this.post(`/events/${slug}/track-view`);
+    },
+
+    /**
+     * Toggle interest for an event
+     */
+    async toggleEventInterest(slug) {
+        return this.post(`/events/${slug}/toggle-interest`);
+    },
+
+    /**
+     * Check if user is interested in an event
+     */
+    async checkEventInterest(slug) {
+        return this.get(`/events/${slug}/check-interest`);
+    },
+
+    /**
      * Get single venue details
      */
     async getVenue(slug) {
