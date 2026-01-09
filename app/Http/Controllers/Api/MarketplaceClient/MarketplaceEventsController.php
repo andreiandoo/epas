@@ -192,26 +192,26 @@ class MarketplaceEventsController extends BaseController
         // Get target_price for discount display
         $targetPrice = $event->target_price ? (float) $event->target_price : null;
 
-        // Get applicable taxes
-        $taxes = [];
-        if ($client->tenant_id) {
-            $eventTypeIds = $event->eventTypes()->pluck('event_types.id')->toArray();
-            $applicableTaxes = \App\Models\Tax\GeneralTax::query()
-                ->forTenant($client->tenant_id)
-                ->active()
-                ->forEventTypes($eventTypeIds)
-                ->visibleOnCheckout()
-                ->validOn()
-                ->byPriority()
-                ->get();
+        // Get applicable taxes (global taxes that apply to event types)
+        $eventTypeIds = $event->eventTypes()->pluck('event_types.id')->toArray();
 
-            $taxes = $applicableTaxes->map(fn ($tax) => [
-                'name' => $tax->name,
-                'value' => (float) $tax->value,
-                'value_type' => $tax->value_type,
-                'is_added_to_price' => $tax->is_added_to_price,
-            ])->values()->toArray();
-        }
+        // Query global taxes (tenant_id is NULL) - same as Filament resources
+        $applicableTaxes = \App\Models\Tax\GeneralTax::query()
+            ->whereNull('tenant_id') // Global taxes only
+            ->active()
+            ->forEventTypes($eventTypeIds)
+            ->validOn()
+            ->byPriority()
+            ->get()
+            ->unique('id');
+
+        $taxes = $applicableTaxes->map(fn ($tax) => [
+            'name' => $tax->name,
+            'value' => (float) $tax->value,
+            'value_type' => $tax->value_type,
+            'is_added_to_price' => $tax->is_added_to_price,
+            'is_active' => $tax->is_active,
+        ])->values()->toArray();
 
         return $this->success([
             'event' => [

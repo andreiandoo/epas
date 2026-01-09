@@ -413,10 +413,20 @@ const ThankYouPage = {
                         <span>-${AmbiletUtils.formatCurrency(order.totals.discount)}</span>
                     </div>
                     ` : ''}
-                    <div class="flex justify-between">
-                        <span class="text-muted">Taxa Crucea Roșie</span>
-                        <span>${AmbiletUtils.formatCurrency(order.totals.tax)}</span>
-                    </div>
+                    ${(order.totals.taxes && order.totals.taxes.length > 0) ?
+                        order.totals.taxes.map(tax => `
+                            <div class="flex justify-between">
+                                <span class="text-muted">${tax.name}${tax.value_type === 'percent' ? ' (' + tax.value + '%)' : ''}</span>
+                                <span>${AmbiletUtils.formatCurrency(tax.amount)}</span>
+                            </div>
+                        `).join('') :
+                        (order.totals.tax ? `
+                            <div class="flex justify-between">
+                                <span class="text-muted">Taxe</span>
+                                <span>${AmbiletUtils.formatCurrency(order.totals.tax)}</span>
+                            </div>
+                        ` : '')
+                    }
                     <div class="flex justify-between pt-2 border-t border-border font-bold text-lg">
                         <span>Total plătit</span>
                         <span class="text-primary">${AmbiletUtils.formatCurrency(order.totals.total)}</span>

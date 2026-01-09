@@ -246,9 +246,9 @@ require_once __DIR__ . '/includes/header.php';
                                     <span id="discount-amount" class="font-medium text-success">-0.00 lei</span>
                                 </div>
 
-                                <div class="flex justify-between text-sm">
-                                    <span class="text-muted">Taxa Crucea Roșie (1%)</span>
-                                    <span id="summary-tax" class="font-medium">0.00 lei</span>
+                                <!-- Dynamic taxes container -->
+                                <div id="taxes-container" class="space-y-2">
+                                    <!-- Taxes will be rendered dynamically by JS -->
                                 </div>
                             </div>
 
@@ -335,10 +335,12 @@ $scriptsExtra = <<<'SCRIPTS'
 <script>
 const CheckoutPage = {
     items: [],
+    taxes: [],
     totals: { subtotal: 0, tax: 0, discount: 0, total: 0, savings: 0 },
 
     init() {
         this.items = AmbiletCart.getItems();
+        this.loadTaxes();
 
         if (this.items.length === 0) {
             document.getElementById('checkout-loading').classList.add('hidden');
@@ -378,6 +380,15 @@ const CheckoutPage = {
         document.getElementById('termsCheckbox').addEventListener('change', function() {
             document.getElementById('payBtn').disabled = !this.checked;
         });
+    },
+
+    loadTaxes() {
+        // Load ALL taxes from cart items (both included in price and added on top)
+        if (this.items.length > 0 && this.items[0].event?.taxes?.length > 0) {
+            this.taxes = this.items[0].event.taxes.filter(t => t.is_active !== false);
+        } else {
+            this.taxes = [];
+        }
     },
 
     prefillBuyerInfo() {
@@ -526,17 +537,45 @@ const CheckoutPage = {
 
         itemsSummary.innerHTML = itemsHtml;
 
-        // Calculate totals
-        const tax = subtotal * 0.01;
-        const total = subtotal + tax;
+        // Calculate taxes dynamically
+        let totalTax = 0;
+        const taxBreakdown = [];
+        this.taxes.forEach(tax => {
+            let taxAmount = 0;
+            if (tax.value_type === 'percent') {
+                taxAmount = subtotal * (tax.value / 100);
+            } else if (tax.value_type === 'fixed') {
+                taxAmount = tax.value * totalQty;
+            }
+            totalTax += taxAmount;
+            taxBreakdown.push({ name: tax.name, amount: taxAmount, value: tax.value, value_type: tax.value_type });
+        });
+
+        const total = subtotal + totalTax;
         const points = Math.floor(total / 10);
 
-        this.totals = { subtotal, tax, discount: 0, total, savings };
+        this.totals = { subtotal, tax: totalTax, discount: 0, total, savings };
 
         // Update DOM
         document.getElementById('summary-items').textContent = totalQty;
         document.getElementById('summary-subtotal').textContent = AmbiletUtils.formatCurrency(subtotal);
-        document.getElementById('summary-tax').textContent = AmbiletUtils.formatCurrency(tax);
+
+        // Render taxes dynamically
+        const taxesContainer = document.getElementById('taxes-container');
+        if (taxesContainer) {
+            if (taxBreakdown.length > 0) {
+                taxesContainer.innerHTML = taxBreakdown.map(function(tax) {
+                    const rateLabel = tax.value_type === 'percent' ? '(' + tax.value + '%)' : '';
+                    return '<div class="flex justify-between text-sm">' +
+                        '<span class="text-muted">' + tax.name + ' ' + rateLabel + '</span>' +
+                        '<span class="font-medium">' + AmbiletUtils.formatCurrency(tax.amount) + '</span>' +
+                    '</div>';
+                }).join('');
+            } else {
+                taxesContainer.innerHTML = '';
+            }
+        }
+
         document.getElementById('summary-total').textContent = AmbiletUtils.formatCurrency(total);
         document.getElementById('pay-btn-text').textContent = `Plătește ${AmbiletUtils.formatCurrency(total)}`;
         document.getElementById('points-earned').textContent = `${points} puncte`;
