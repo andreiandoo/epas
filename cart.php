@@ -256,22 +256,8 @@ const CartPage = {
             console.log('Using default taxes from config');
         }
 
-        // Fallback to config or empty if not available
-        if (typeof AMBILET_CONFIG !== 'undefined' && AMBILET_CONFIG.TAXES) {
-            // Transform config taxes to array format
-            this.taxes = [];
-            if (AMBILET_CONFIG.TAXES.RED_CROSS) {
-                this.taxes.push({
-                    name: 'Taxa Crucea Roșie',
-                    value: AMBILET_CONFIG.TAXES.RED_CROSS * 100,
-                    value_type: 'percent',
-                    is_active: true
-                });
-            }
-        } else {
-            // Default empty - no extra taxes
-            this.taxes = [];
-        }
+        // Fallback - no hardcoded taxes, they come from DB via cart items
+        this.taxes = [];
     },
 
     setupTimer() {

@@ -185,21 +185,13 @@ const AmbiletCart = {
     },
 
     /**
-     * Get configured taxes
-     * Returns taxes from config or empty array if not configured
+     * Get taxes from cart items (stored when adding to cart from event page)
+     * Returns taxes from first cart item or empty array if not available
      */
     getTaxes() {
-        if (typeof AMBILET_CONFIG !== 'undefined' && AMBILET_CONFIG.TAXES) {
-            const taxes = [];
-            if (AMBILET_CONFIG.TAXES.RED_CROSS) {
-                taxes.push({
-                    name: 'Taxa Crucea Roșie',
-                    value: AMBILET_CONFIG.TAXES.RED_CROSS * 100, // Convert to percent (0.01 -> 1)
-                    value_type: 'percent',
-                    is_active: true
-                });
-            }
-            return taxes;
+        const items = this.getItems();
+        if (items.length > 0 && items[0].event?.taxes?.length > 0) {
+            return items[0].event.taxes.filter(t => t.is_added_to_price !== false);
         }
         return [];
     },
