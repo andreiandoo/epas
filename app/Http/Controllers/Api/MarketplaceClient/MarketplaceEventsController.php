@@ -192,18 +192,20 @@ class MarketplaceEventsController extends BaseController
         // Get target_price for discount display
         $targetPrice = $event->target_price ? (float) $event->target_price : null;
 
-        // Get applicable taxes (global taxes that apply to event types)
-        $eventTypeIds = $event->eventTypes()->pluck('event_types.id')->toArray();
-
-        // Query global taxes (tenant_id is NULL) - same as Filament resources
+        // Get ALL global active taxes (tenant_id is NULL)
+        // We fetch all global taxes, not filtered by eventTypes, because:
+        // 1. Event might not have eventTypes assigned
+        // 2. Taxes like "Timbru Muzical" and "UCMR-ADA" should apply to all music events
         $applicableTaxes = \App\Models\Tax\GeneralTax::query()
             ->whereNull('tenant_id') // Global taxes only
             ->active()
-            ->forEventTypes($eventTypeIds)
             ->validOn()
             ->byPriority()
-            ->get()
-            ->unique('id');
+            ->get();
+
+        // Debug logging
+        \Log::info('[MarketplaceEventsController] Event ID: ' . $event->id . ', target_price: ' . ($targetPrice ?? 'null'));
+        \Log::info('[MarketplaceEventsController] Found ' . $applicableTaxes->count() . ' global taxes');
 
         $taxes = $applicableTaxes->map(fn ($tax) => [
             'name' => $tax->name,
