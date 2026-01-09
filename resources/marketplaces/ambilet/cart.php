@@ -57,7 +57,7 @@ require_once __DIR__ . '/includes/header.php';
                 </div>
 
                 <!-- Cart Items Container -->
-                <div id="cartItems" class="hidden space-y-4"></div>
+                <div id="cartPageItems" class="hidden space-y-4"></div>
 
                 <!-- Empty Cart State -->
                 <div id="emptyCart" class="hidden p-12 text-center bg-white border rounded-2xl border-border">
@@ -316,7 +316,7 @@ const CartPage = {
         console.log('[CartPage] CartPage.taxes:', this.taxes);
 
         const loading = document.getElementById('cart-loading');
-        const container = document.getElementById('cartItems');
+        const container = document.getElementById('cartPageItems');
         const emptyState = document.getElementById('emptyCart');
         const summarySection = document.getElementById('summary-section');
         const promoSection = document.getElementById('promo-section');
