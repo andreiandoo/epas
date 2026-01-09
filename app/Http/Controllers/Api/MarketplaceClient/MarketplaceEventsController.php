@@ -190,7 +190,13 @@ class MarketplaceEventsController extends BaseController
         $commissionRate = $event->commission_rate ?? $organizer?->commission_rate ?? $client->commission_rate ?? 5.0;
 
         // Get target_price for discount display
+        // Debug: Log raw value from database
+        \Log::info('[MarketplaceEventsController] Event ID: ' . $event->id);
+        \Log::info('[MarketplaceEventsController] Raw target_price from DB: ' . var_export($event->getAttributes()['target_price'] ?? 'NOT_SET', true));
+        \Log::info('[MarketplaceEventsController] Accessor target_price: ' . var_export($event->target_price, true));
+
         $targetPrice = $event->target_price ? (float) $event->target_price : null;
+        \Log::info('[MarketplaceEventsController] Final targetPrice: ' . var_export($targetPrice, true));
 
         // Get ALL global active taxes (tenant_id is NULL)
         // We fetch all global taxes, not filtered by eventTypes, because:
@@ -203,8 +209,7 @@ class MarketplaceEventsController extends BaseController
             ->byPriority()
             ->get();
 
-        // Debug logging
-        \Log::info('[MarketplaceEventsController] Event ID: ' . $event->id . ', target_price: ' . ($targetPrice ?? 'null'));
+        // Debug: Log tax count
         \Log::info('[MarketplaceEventsController] Found ' . $applicableTaxes->count() . ' global taxes');
 
         $taxes = $applicableTaxes->map(fn ($tax) => [
