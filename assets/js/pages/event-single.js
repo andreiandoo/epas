@@ -96,6 +96,12 @@ const EventPage = {
      * Load interest status for current user
      */
     async loadInterestStatus() {
+        // Skip if user is not logged in - we'll use the counts from the event data
+        if (typeof AmbiletAuth !== 'undefined' && !AmbiletAuth.isLoggedIn()) {
+            console.log('[EventPage] User not logged in, skipping interest check');
+            return;
+        }
+
         try {
             var response = await AmbiletAPI.checkEventInterest(this.slug);
             console.log('[EventPage] Interest check response:', response);
@@ -113,6 +119,11 @@ const EventPage = {
                 }
             }
         } catch (e) {
+            // Silently ignore auth errors - user just isn't logged in
+            if (e.status === 401 || e.status === 500 || (e.message && e.message.includes('Auth'))) {
+                console.log('[EventPage] Interest check skipped - user not authenticated');
+                return;
+            }
             console.error('[EventPage] Interest check failed:', e);
         }
     },
@@ -121,6 +132,12 @@ const EventPage = {
      * Toggle interest for event
      */
     async toggleInterest() {
+        // Check if user is logged in
+        if (typeof AmbiletAuth !== 'undefined' && !AmbiletAuth.isLoggedIn()) {
+            this.showLoginPrompt();
+            return;
+        }
+
         try {
             var response = await AmbiletAPI.toggleEventInterest(this.slug);
             console.log('[EventPage] Toggle interest response:', response);
@@ -133,6 +150,69 @@ const EventPage = {
             }
         } catch (e) {
             console.error('[EventPage] Toggle interest failed:', e);
+            // Check if it's an auth error
+            if (e.status === 401 || e.status === 500 || (e.message && e.message.includes('Auth'))) {
+                this.showLoginPrompt();
+            }
+        }
+    },
+
+    /**
+     * Show login prompt modal
+     */
+    showLoginPrompt() {
+        // Check if modal already exists
+        var existingModal = document.getElementById('login-prompt-modal');
+        if (existingModal) {
+            existingModal.classList.remove('hidden');
+            return;
+        }
+
+        // Create modal
+        var modal = document.createElement('div');
+        modal.id = 'login-prompt-modal';
+        modal.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm';
+        modal.innerHTML =
+            '<div class="w-full max-w-md p-6 bg-white shadow-2xl rounded-2xl">' +
+                '<div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10">' +
+                    '<svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>' +
+                    '</svg>' +
+                '</div>' +
+                '<h3 class="mb-2 text-xl font-bold text-center text-secondary">Conecteaza-te pentru a salva</h3>' +
+                '<p class="mb-6 text-center text-muted">Pentru a marca acest eveniment ca fiind de interes, trebuie sa fii conectat in contul tau.</p>' +
+                '<div class="flex flex-col gap-3">' +
+                    '<a href="/cont/autentificare" class="flex items-center justify-center w-full gap-2 px-6 py-3 font-semibold text-white transition-colors bg-primary rounded-xl hover:bg-primary-dark">' +
+                        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>' +
+                        'Conecteaza-te' +
+                    '</a>' +
+                    '<a href="/cont/inregistrare" class="flex items-center justify-center w-full gap-2 px-6 py-3 font-semibold transition-colors border-2 text-secondary rounded-xl border-border hover:border-primary hover:text-primary">' +
+                        '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>' +
+                        'Creeaza cont nou' +
+                    '</a>' +
+                    '<button onclick="EventPage.closeLoginPrompt()" class="w-full px-6 py-3 font-medium transition-colors text-muted hover:text-secondary">' +
+                        'Inchide' +
+                    '</button>' +
+                '</div>' +
+            '</div>';
+
+        // Close on backdrop click
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                EventPage.closeLoginPrompt();
+            }
+        });
+
+        document.body.appendChild(modal);
+    },
+
+    /**
+     * Close login prompt modal
+     */
+    closeLoginPrompt() {
+        var modal = document.getElementById('login-prompt-modal');
+        if (modal) {
+            modal.classList.add('hidden');
         }
     },
 
