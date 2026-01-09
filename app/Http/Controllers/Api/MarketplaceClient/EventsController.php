@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api\MarketplaceClient;
 
 use App\Models\Event;
+use App\Models\MarketplaceCustomer;
 use App\Models\TicketType;
 use App\Models\Tax\GeneralTax;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class EventsController extends BaseController
 {
@@ -704,17 +706,29 @@ class EventsController extends BaseController
             ->where('session_id', $sessionId)
             ->first();
 
+        // Check if user is authenticated
+        $customer = $request->user();
+        $isAuthenticated = $customer instanceof MarketplaceCustomer;
+
         if ($existingInterest) {
             // Remove interest
-            \DB::table('event_interests')
+            DB::table('event_interests')
                 ->where('event_id', $event->id)
                 ->where('session_id', $sessionId)
                 ->delete();
             $event->decrement('interested_count');
             $isInterested = false;
+
+            // Also remove from watchlist if authenticated
+            if ($isAuthenticated) {
+                DB::table('marketplace_customer_watchlist')
+                    ->where('marketplace_customer_id', $customer->id)
+                    ->where('event_id', $event->id)
+                    ->delete();
+            }
         } else {
             // Add interest
-            \DB::table('event_interests')->insert([
+            DB::table('event_interests')->insert([
                 'event_id' => $event->id,
                 'session_id' => $sessionId,
                 'ip_address' => $request->ip(),
@@ -723,11 +737,34 @@ class EventsController extends BaseController
             ]);
             $event->increment('interested_count');
             $isInterested = true;
+
+            // Also add to watchlist if authenticated
+            if ($isAuthenticated) {
+                // Check if not already in watchlist
+                $existingWatchlist = DB::table('marketplace_customer_watchlist')
+                    ->where('marketplace_customer_id', $customer->id)
+                    ->where('event_id', $event->id)
+                    ->exists();
+
+                if (!$existingWatchlist) {
+                    DB::table('marketplace_customer_watchlist')->insert([
+                        'marketplace_client_id' => $client->id,
+                        'marketplace_customer_id' => $customer->id,
+                        'event_id' => $event->id,
+                        'marketplace_event_id' => null, // Not from marketplace_events table
+                        'notify_on_sale' => true,
+                        'notify_on_price_drop' => false,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
         }
 
         return $this->success([
             'is_interested' => $isInterested,
             'interested_count' => max(0, $event->refresh()->interested_count),
+            'in_watchlist' => $isAuthenticated && $isInterested,
         ]);
     }
 

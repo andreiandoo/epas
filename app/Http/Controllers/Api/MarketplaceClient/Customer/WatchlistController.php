@@ -26,20 +26,77 @@ class WatchlistController extends BaseController
         $perPage = min((int) $request->get('per_page', 12), 50);
         $watchlist = $query->paginate($perPage);
 
-        // Get event details
-        $eventIds = collect($watchlist->items())->pluck('marketplace_event_id')->unique();
-        $events = DB::table('marketplace_events')
-            ->whereIn('id', $eventIds)
-            ->get()
-            ->keyBy('id');
+        // Get event details from BOTH tables
+        // Events from main events table (event_id)
+        $eventIds = collect($watchlist->items())
+            ->pluck('event_id')
+            ->filter()
+            ->unique();
+        $eventsFromMain = $eventIds->isNotEmpty()
+            ? DB::table('events')
+                ->whereIn('id', $eventIds)
+                ->get()
+                ->keyBy('id')
+            : collect();
 
-        $formattedItems = collect($watchlist->items())->map(function ($item) use ($events) {
-            $event = $events->get($item->marketplace_event_id);
+        // Events from marketplace_events table (marketplace_event_id)
+        $marketplaceEventIds = collect($watchlist->items())
+            ->pluck('marketplace_event_id')
+            ->filter()
+            ->unique();
+        $eventsFromMarketplace = $marketplaceEventIds->isNotEmpty()
+            ? DB::table('marketplace_events')
+                ->whereIn('id', $marketplaceEventIds)
+                ->get()
+                ->keyBy('id')
+            : collect();
+
+        $formattedItems = collect($watchlist->items())->map(function ($item) use ($eventsFromMain, $eventsFromMarketplace) {
+            // Try to get event from main events table first, then marketplace_events
+            $event = null;
+            $eventSource = null;
+
+            if ($item->event_id && $eventsFromMain->has($item->event_id)) {
+                $event = $eventsFromMain->get($item->event_id);
+                $eventSource = 'events';
+            } elseif ($item->marketplace_event_id && $eventsFromMarketplace->has($item->marketplace_event_id)) {
+                $event = $eventsFromMarketplace->get($item->marketplace_event_id);
+                $eventSource = 'marketplace_events';
+            }
+
             if (!$event) {
                 return null;
             }
 
-            $startsAt = \Carbon\Carbon::parse($event->starts_at);
+            // Handle date parsing based on event source
+            if ($eventSource === 'events') {
+                // Main events table uses event_date + start_time
+                $eventDate = $event->event_date ?? null;
+                $startTime = $event->start_time ?? '00:00:00';
+                $startsAt = $eventDate ? \Carbon\Carbon::parse($eventDate . ' ' . $startTime) : now();
+                $eventName = is_string($event->title) ? json_decode($event->title, true) : $event->title;
+                $eventName = is_array($eventName) ? ($eventName['ro'] ?? $eventName['en'] ?? reset($eventName)) : ($event->title ?? 'Untitled');
+                $venueName = null;
+                $venueCity = null;
+                // Get venue info if venue_id exists
+                if ($event->venue_id) {
+                    $venue = DB::table('venues')->where('id', $event->venue_id)->first(['name', 'city']);
+                    if ($venue) {
+                        $venueNameData = is_string($venue->name) ? json_decode($venue->name, true) : $venue->name;
+                        $venueName = is_array($venueNameData) ? ($venueNameData['ro'] ?? $venueNameData['en'] ?? reset($venueNameData)) : $venue->name;
+                        $venueCity = $venue->city;
+                    }
+                }
+                $image = $event->poster_url ?? $event->hero_image_url ?? null;
+            } else {
+                // Marketplace events table uses starts_at
+                $startsAt = \Carbon\Carbon::parse($event->starts_at ?? now());
+                $eventName = $event->name;
+                $venueName = $event->venue_name ?? null;
+                $venueCity = $event->venue_city ?? null;
+                $image = $event->image ?? null;
+            }
+
             $isUpcoming = $startsAt >= now();
             $daysUntil = $isUpcoming ? now()->diffInDays($startsAt, false) : null;
 
@@ -50,15 +107,15 @@ class WatchlistController extends BaseController
                 'notify_on_price_drop' => (bool) ($item->notify_on_price_drop ?? false),
                 'event' => [
                     'id' => $event->id,
-                    'name' => $event->name,
+                    'name' => $eventName,
                     'slug' => $event->slug,
-                    'date' => $event->starts_at,
+                    'date' => $startsAt->toDateTimeString(),
                     'date_formatted' => $startsAt->format('d M Y'),
                     'time' => $startsAt->format('H:i'),
-                    'venue' => $event->venue_name,
-                    'city' => $event->venue_city,
-                    'image' => $event->image,
-                    'min_price' => $event->min_price,
+                    'venue' => $venueName,
+                    'city' => $venueCity,
+                    'image' => $image,
+                    'min_price' => $event->min_price ?? null,
                     'currency' => $event->currency ?? 'RON',
                     'is_upcoming' => $isUpcoming,
                     'days_until' => $daysUntil,
@@ -94,20 +151,44 @@ class WatchlistController extends BaseController
             'notify_on_price_drop' => 'boolean',
         ]);
 
-        // Check if event exists
-        $event = DB::table('marketplace_events')
-            ->where('id', $validated['event_id'])
+        // Check if event exists in either table
+        $eventId = $validated['event_id'];
+        $marketplaceEventId = null;
+        $mainEventId = null;
+
+        // First check main events table
+        $mainEvent = DB::table('events')
+            ->where('id', $eventId)
             ->where('marketplace_client_id', $client->id)
             ->first();
 
-        if (!$event) {
-            return $this->error('Event not found', 404);
+        if ($mainEvent) {
+            $mainEventId = $mainEvent->id;
+        } else {
+            // Fall back to marketplace_events table
+            $marketplaceEvent = DB::table('marketplace_events')
+                ->where('id', $eventId)
+                ->where('marketplace_client_id', $client->id)
+                ->first();
+
+            if ($marketplaceEvent) {
+                $marketplaceEventId = $marketplaceEvent->id;
+            } else {
+                return $this->error('Event not found', 404);
+            }
         }
 
-        // Check if already in watchlist
+        // Check if already in watchlist (check both columns)
         $existing = DB::table('marketplace_customer_watchlist')
             ->where('marketplace_customer_id', $customer->id)
-            ->where('marketplace_event_id', $validated['event_id'])
+            ->where(function ($q) use ($mainEventId, $marketplaceEventId, $eventId) {
+                if ($mainEventId) {
+                    $q->where('event_id', $mainEventId);
+                }
+                if ($marketplaceEventId) {
+                    $q->orWhere('marketplace_event_id', $marketplaceEventId);
+                }
+            })
             ->first();
 
         if ($existing) {
@@ -118,7 +199,8 @@ class WatchlistController extends BaseController
         $id = DB::table('marketplace_customer_watchlist')->insertGetId([
             'marketplace_client_id' => $client->id,
             'marketplace_customer_id' => $customer->id,
-            'marketplace_event_id' => $validated['event_id'],
+            'event_id' => $mainEventId,
+            'marketplace_event_id' => $marketplaceEventId,
             'notify_on_sale' => $validated['notify_on_sale'] ?? true,
             'notify_on_price_drop' => $validated['notify_on_price_drop'] ?? false,
             'created_at' => now(),
@@ -142,9 +224,13 @@ class WatchlistController extends BaseController
             'notify_on_price_drop' => 'boolean',
         ]);
 
+        // Try to update by either event_id or marketplace_event_id
         $updated = DB::table('marketplace_customer_watchlist')
             ->where('marketplace_customer_id', $customer->id)
-            ->where('marketplace_event_id', $eventId)
+            ->where(function ($q) use ($eventId) {
+                $q->where('event_id', $eventId)
+                  ->orWhere('marketplace_event_id', $eventId);
+            })
             ->update([
                 'notify_on_sale' => $validated['notify_on_sale'] ?? true,
                 'notify_on_price_drop' => $validated['notify_on_price_drop'] ?? false,
@@ -165,9 +251,13 @@ class WatchlistController extends BaseController
     {
         $customer = $this->requireCustomer($request);
 
+        // Try to delete by either event_id or marketplace_event_id
         $deleted = DB::table('marketplace_customer_watchlist')
             ->where('marketplace_customer_id', $customer->id)
-            ->where('marketplace_event_id', $eventId)
+            ->where(function ($q) use ($eventId) {
+                $q->where('event_id', $eventId)
+                  ->orWhere('marketplace_event_id', $eventId);
+            })
             ->delete();
 
         if (!$deleted) {
@@ -184,9 +274,13 @@ class WatchlistController extends BaseController
     {
         $customer = $this->requireCustomer($request);
 
+        // Check by either event_id or marketplace_event_id
         $exists = DB::table('marketplace_customer_watchlist')
             ->where('marketplace_customer_id', $customer->id)
-            ->where('marketplace_event_id', $eventId)
+            ->where(function ($q) use ($eventId) {
+                $q->where('event_id', $eventId)
+                  ->orWhere('marketplace_event_id', $eventId);
+            })
             ->exists();
 
         return $this->success([
