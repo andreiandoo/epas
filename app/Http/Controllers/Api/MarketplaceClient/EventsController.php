@@ -343,6 +343,7 @@ class EventsController extends BaseController
                 'marketplace_client_id' => $event->marketplace_client_id,
                 'views_count' => $event->views_count ?? 0,
                 'interested_count' => $event->interested_count ?? 0,
+                'target_price' => $event->target_price ?? $client->target_price ?? null,
             ],
             'venue' => $event->venue ? [
                 'id' => $event->venue->id,
@@ -713,33 +714,34 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
-        // Get customer ID or session ID
-        $customerId = auth('marketplace_customer')->id();
-        $sessionId = $customerId ? null : session()->getId();
+        // Get session ID for anonymous users
+        // Use header, cookie, or generate based on IP+User-Agent
+        $sessionId = $request->header('X-Session-ID')
+            ?? $request->cookie('ambilet_session')
+            ?? md5($request->ip() . $request->userAgent());
 
         // Check if already interested
-        $existingInterest = \App\Models\EventInterest::where('event_id', $event->id)
-            ->where(function ($q) use ($customerId, $sessionId) {
-                if ($customerId) {
-                    $q->where('marketplace_customer_id', $customerId);
-                } else {
-                    $q->where('session_id', $sessionId);
-                }
-            })
+        $existingInterest = \DB::table('event_interests')
+            ->where('event_id', $event->id)
+            ->where('session_id', $sessionId)
             ->first();
 
         if ($existingInterest) {
             // Remove interest
-            $existingInterest->delete();
+            \DB::table('event_interests')
+                ->where('event_id', $event->id)
+                ->where('session_id', $sessionId)
+                ->delete();
             $event->decrement('interested_count');
             $isInterested = false;
         } else {
             // Add interest
-            \App\Models\EventInterest::create([
+            \DB::table('event_interests')->insert([
                 'event_id' => $event->id,
-                'marketplace_customer_id' => $customerId,
                 'session_id' => $sessionId,
                 'ip_address' => $request->ip(),
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
             $event->increment('interested_count');
             $isInterested = true;
@@ -747,7 +749,7 @@ class EventsController extends BaseController
 
         return $this->success([
             'is_interested' => $isInterested,
-            'interested_count' => $event->refresh()->interested_count,
+            'interested_count' => max(0, $event->refresh()->interested_count),
         ]);
     }
 
@@ -767,18 +769,15 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
-        // Get customer ID or session ID
-        $customerId = auth('marketplace_customer')->id();
-        $sessionId = $customerId ? null : session()->getId();
+        // Get session ID for anonymous users
+        // Use header, cookie, or generate based on IP+User-Agent
+        $sessionId = $request->header('X-Session-ID')
+            ?? $request->cookie('ambilet_session')
+            ?? md5($request->ip() . $request->userAgent());
 
-        $isInterested = \App\Models\EventInterest::where('event_id', $event->id)
-            ->where(function ($q) use ($customerId, $sessionId) {
-                if ($customerId) {
-                    $q->where('marketplace_customer_id', $customerId);
-                } else {
-                    $q->where('session_id', $sessionId);
-                }
-            })
+        $isInterested = \DB::table('event_interests')
+            ->where('event_id', $event->id)
+            ->where('session_id', $sessionId)
             ->exists();
 
         return $this->success([
