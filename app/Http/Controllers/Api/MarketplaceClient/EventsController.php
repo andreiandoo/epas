@@ -9,6 +9,7 @@ use App\Models\Tax\GeneralTax;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class EventsController extends BaseController
 {
@@ -706,8 +707,8 @@ class EventsController extends BaseController
             ->where('session_id', $sessionId)
             ->first();
 
-        // Check if user is authenticated
-        $customer = $request->user();
+        // Check if user is authenticated (manually check sanctum guard since this route doesn't have auth:sanctum middleware)
+        $customer = Auth::guard('sanctum')->user();
         $isAuthenticated = $customer instanceof MarketplaceCustomer;
 
         if ($existingInterest) {
