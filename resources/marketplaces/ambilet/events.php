@@ -71,23 +71,6 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </section>
 
-<!-- Category Quick Filters -->
-<section class="py-6 bg-white border-b border-gray-200">
-    <div class="px-4 mx-auto max-w-7xl">
-        <div id="categoryFilters" class="flex items-center gap-3 overflow-x-auto scrollbar-hide">
-            <button onclick="EventsPage.setCategory('')" data-category="" class="category-btn flex-shrink-0 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer <?= !$filterCategory ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>">
-                Toate
-            </button>
-            <?php foreach ($eventCategories as $category): ?>
-            <button onclick="EventsPage.setCategory('<?= addslashes($category['slug']) ?>')" data-category="<?= htmlspecialchars($category['slug']) ?>" class="category-btn flex-shrink-0 flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer <?= $filterCategory === $category['slug'] ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>">
-                <span class="text-base"><?= $category['icon_emoji'] ?? '🎫' ?></span>
-                <?= htmlspecialchars($category['name']) ?>
-            </button>
-            <?php endforeach; ?>
-        </div>
-    </div>
-</section>
-
 <!-- Filters Bar -->
 <section class="sticky top-[72px] z-20 py-4 bg-white border-b border-gray-200 shadow-sm">
     <div class="px-4 mx-auto max-w-7xl">
