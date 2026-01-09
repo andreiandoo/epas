@@ -710,13 +710,48 @@ const EventPage = {
         var self = this;
         var commissionRate = this.event.commission_rate || 5;
         var commissionMode = this.event.commission_mode || 'included';
+        var targetPrice = this.event.target_price ? parseFloat(this.event.target_price) : null;
 
         container.innerHTML = this.ticketTypes.map(function(tt) {
             self.quantities[tt.id] = 0;
-            const hasDiscount = tt.original_price && tt.original_price > tt.price;
-            const discountPercent = hasDiscount ? Math.round((1 - tt.price / tt.original_price) * 100) : 0;
             const isSoldOut = tt.is_sold_out || tt.available <= 0;
-            console.log('[EventPage] Rendering ticket:', tt.name, 'hasDiscount:', hasDiscount, 'original_price:', tt.original_price, 'price:', tt.price, 'discountPercent:', discountPercent);
+
+            // Calculate display price based on commission mode
+            var displayPrice = tt.price;
+            if (commissionMode === 'added_on_top') {
+                displayPrice = tt.price + (tt.price * commissionRate / 100);
+            }
+
+            // Determine discount: use target_price if available and greater than displayPrice
+            // Otherwise fall back to original_price from ticket type
+            var hasTargetDiscount = targetPrice && displayPrice < targetPrice;
+            var hasTicketDiscount = tt.original_price && tt.original_price > tt.price;
+
+            var hasDiscount = false;
+            var discountPercent = 0;
+            var crossedOutPrice = null;
+
+            if (hasTargetDiscount) {
+                // Use target_price as the reference price
+                hasDiscount = true;
+                crossedOutPrice = targetPrice;
+                discountPercent = Math.round((1 - displayPrice / targetPrice) * 100);
+            } else if (hasTicketDiscount) {
+                // Fall back to original_price from ticket type
+                hasDiscount = true;
+                crossedOutPrice = commissionMode === 'added_on_top'
+                    ? tt.original_price + (tt.original_price * commissionRate / 100)
+                    : tt.original_price;
+                discountPercent = Math.round((1 - displayPrice / crossedOutPrice) * 100);
+            }
+
+            console.log('[EventPage] Rendering ticket:', tt.name,
+                'displayPrice:', displayPrice.toFixed(2),
+                'targetPrice:', targetPrice,
+                'hasTargetDiscount:', hasTargetDiscount,
+                'hasTicketDiscount:', hasTicketDiscount,
+                'crossedOutPrice:', crossedOutPrice,
+                'discountPercent:', discountPercent + '%');
 
             // Availability display
             let availabilityHtml = '';
@@ -732,8 +767,7 @@ const EventPage = {
                 availabilityHtml = '<span class="text-xs font-semibold text-success">✓ Disponibil</span>';
             }
 
-            // Calculate display price based on commission mode
-            var displayPrice = tt.price;
+            // Calculate commission for tooltip (displayPrice already calculated above)
             var basePrice, commissionAmount;
             if (commissionMode === 'included') {
                 basePrice = tt.price / (1 + commissionRate / 100);
@@ -741,7 +775,6 @@ const EventPage = {
             } else {
                 basePrice = tt.price;
                 commissionAmount = tt.price * (commissionRate / 100);
-                displayPrice = tt.price + commissionAmount;
             }
 
             // Tooltip HTML
@@ -787,7 +820,7 @@ const EventPage = {
                         (isSoldOut ? '' : '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' + tooltipHtml + '</div>') +
                     '</div>' +
                     '<div class="text-right">' +
-                        (hasDiscount && !isSoldOut ? '<span class="text-sm line-through text-muted">' + (commissionMode === 'added_on_top' ? (tt.original_price + tt.original_price * commissionRate / 100).toFixed(0) : tt.original_price) + ' lei</span>' : '') +
+                        (hasDiscount && !isSoldOut ? '<span class="text-sm line-through text-muted">' + crossedOutPrice.toFixed(0) + ' lei</span>' : '') +
                         '<span class="block text-xl font-bold ' + priceClasses + '">' + displayPrice.toFixed(2) + ' lei</span>' +
                     '</div>' +
                 '</div>' +
