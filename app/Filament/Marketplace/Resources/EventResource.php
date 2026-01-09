@@ -485,9 +485,15 @@ class EventResource extends Resource
                                         $matchedCity = MarketplaceCity::where('marketplace_client_id', $marketplace?->id)
                                             ->where('is_visible', true)
                                             ->get()
-                                            ->first(function ($city) use ($cityName, $marketplaceLanguage) {
-                                                $localizedName = strtolower($city->name[$marketplaceLanguage] ?? $city->name['ro'] ?? '');
-                                                return $localizedName === $cityName;
+                                            ->first(function ($city) use ($cityName) {
+                                                // Check all language variants of the city name
+                                                $nameVariants = is_array($city->name) ? $city->name : [];
+                                                foreach ($nameVariants as $lang => $name) {
+                                                    if (strtolower(trim($name)) === $cityName) {
+                                                        return true;
+                                                    }
+                                                }
+                                                return false;
                                             });
 
                                         if ($matchedCity) {
@@ -704,8 +710,9 @@ class EventResource extends Resource
                                 ->maxLength(100)
                                 ->rule('alpha_dash'),
                         ])
-                        ->createOptionUsing(function (array $data): int {
+                        ->createOptionUsing(function (array $data) use ($marketplace): int {
                             $tag = EventTag::create([
+                                'marketplace_client_id' => $marketplace?->id,
                                 'name' => $data['name'],
                                 'slug' => $data['slug'] ?: Str::slug($data['name']),
                             ]);
@@ -797,13 +804,6 @@ class EventResource extends Resource
                             return new HtmlString($html);
                         }),
                 ])->columns(3),
-
-            // TARGET PRICE (Marketplace Admin only)
-            SC\Section::make('Target Price')
-                ->description('Set a target price reference for this event (internal use only)')
-                ->schema([
-                    
-                ])->columns(2),
 
             // TICKETS
             SC\Section::make('Tickets')
@@ -1020,13 +1020,9 @@ class EventResource extends Resource
 
                             // Commission calculation for this ticket
                             Forms\Components\Placeholder::make('ticket_commission_calc')
-                                ->label('💰 Price with Commission')
                                 ->live()
                                 ->content(function (SGet $get) use ($marketplace) {
                                     $price = (float) ($get('price') ?: $get('price_max') ?: 0);
-                                    if ($price <= 0) {
-                                        return 'Enter a price to see commission calculation.';
-                                    }
 
                                     $eventMode = $get('../../commission_mode');
                                     $mode = $eventMode ?: ($marketplace->commission_mode ?? 'included');
@@ -1098,6 +1094,29 @@ class EventResource extends Resource
                                     ->displayFormat('Y-m-d H:i'),
                             ])->columnSpan(12),
 
+                            Forms\Components\Toggle::make('is_active')
+                                ->label('Active?')
+                                ->default(true)
+                                ->live()
+                                ->columnSpan(4),
+
+                            // Scheduling fields - shown when ticket is NOT active
+                            Forms\Components\DateTimePicker::make('scheduled_at')
+                                ->label('Schedule Activation')
+                                ->hintIcon('heroicon-o-information-circle', tooltip: 'When this ticket type should automatically become active')
+                                ->native(false)
+                                ->seconds(false)
+                                ->displayFormat('Y-m-d H:i')
+                                ->minDate(now())
+                                ->visible(fn (SGet $get) => !$get('is_active'))
+                                ->columnSpan(4),
+
+                            Forms\Components\Toggle::make('autostart_when_previous_sold_out')
+                                ->label('Autostart when previous sold out')
+                                ->hintIcon('heroicon-o-information-circle', tooltip: 'Activate automatically when previous ticket types reach 0 capacity')
+                                ->visible(fn (SGet $get) => !$get('is_active'))
+                                ->columnSpan(4),
+
                             // Bulk discounts
                             Forms\Components\Repeater::make('bulk_discounts')
                                 ->label('Bulk discounts')
@@ -1150,29 +1169,6 @@ class EventResource extends Resource
                                         ->columnSpan(3),
                                 ])
                                 ->columnSpan(12),
-
-                            Forms\Components\Toggle::make('is_active')
-                                ->label('Active?')
-                                ->default(true)
-                                ->live()
-                                ->columnSpan(4),
-
-                            // Scheduling fields - shown when ticket is NOT active
-                            Forms\Components\DateTimePicker::make('scheduled_at')
-                                ->label('Schedule Activation')
-                                ->hintIcon('heroicon-o-information-circle', tooltip: 'When this ticket type should automatically become active')
-                                ->native(false)
-                                ->seconds(false)
-                                ->displayFormat('Y-m-d H:i')
-                                ->minDate(now())
-                                ->visible(fn (SGet $get) => !$get('is_active'))
-                                ->columnSpan(4),
-
-                            Forms\Components\Toggle::make('autostart_when_previous_sold_out')
-                                ->label('Autostart when previous sold out')
-                                ->hintIcon('heroicon-o-information-circle', tooltip: 'Activate automatically when previous ticket types reach 0 capacity')
-                                ->visible(fn (SGet $get) => !$get('is_active'))
-                                ->columnSpan(4),
                         ]),
                 ])->collapsible(),
 
