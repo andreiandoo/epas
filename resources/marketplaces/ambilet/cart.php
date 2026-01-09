@@ -341,13 +341,20 @@ const CartPage = {
 
         try {
             console.log('[CartPage] About to render items, count:', items.length);
+            console.log('[CartPage] Container element:', container);
+            console.log('[CartPage] Container classList before:', container.className);
+
             const html = items.map((item, index) => {
                 console.log('[CartPage] Rendering item', index, ':', item);
                 return this.renderCartItem(item, index);
             }).join('');
             console.log('[CartPage] Generated HTML length:', html.length);
+            console.log('[CartPage] First 500 chars of HTML:', html.substring(0, 500));
             container.innerHTML = html;
             console.log('[CartPage] Items rendered to container');
+            console.log('[CartPage] Container classList after:', container.className);
+            console.log('[CartPage] Container children count:', container.children.length);
+            console.log('[CartPage] Container display style:', window.getComputedStyle(container).display);
             this.updateSummary();
         } catch (error) {
             console.error('[CartPage] Error rendering items:', error);
