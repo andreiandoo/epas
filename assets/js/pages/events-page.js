@@ -355,9 +355,9 @@ const EventsPage = {
             const btnCategory = btn.getAttribute('data-category') || '';
             if (btnCategory === categorySlug) {
                 btn.classList.remove('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
-                btn.classList.add('bg-primary', 'text-white');
+                btn.classList.add('bg-primary', 'text-white', 'hover:bg-primary');
             } else {
-                btn.classList.remove('bg-primary', 'text-white');
+                btn.classList.remove('bg-primary', 'text-white', 'hover:bg-primary');
                 btn.classList.add('bg-gray-100', 'text-gray-700', 'hover:bg-gray-200');
             }
         });

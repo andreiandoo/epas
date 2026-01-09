@@ -197,7 +197,7 @@ require_once __DIR__ . '/includes/head.php';
             <!-- Right Column - Ticket Selection -->
             <div class="lg:w-1/3">
                 <div class="sticky-cart">
-                    <div class="overflow-hidden bg-white border rounded-3xl border-border">
+                    <div class="bg-white border rounded-3xl border-border">
                         <div class="p-6 border-b border-border">
                             <h2 class="mb-2 text-xl font-bold text-secondary">Selecteaza bilete</h2>
                             <p class="text-sm text-muted">Alege tipul de bilet si cantitatea</p>
@@ -213,7 +213,7 @@ require_once __DIR__ . '/includes/head.php';
                                 <div class="flex items-center justify-between p-3 mb-4 bg-accent/10 rounded-xl">
                                     <div class="flex items-center gap-2">
                                         <span class="text-xl">🎁</span>
-                                        <span class="text-sm font-medium text-secondary">Puncte castigate</span>
+                                        <span class="text-sm font-medium text-secondary">Vei câștiga</span>
                                     </div>
                                     <span id="pointsEarned" class="text-lg font-bold text-accent points-counter">0</span>
                                 </div>

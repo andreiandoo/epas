@@ -236,12 +236,17 @@ const EventPage = {
         try {
             const response = await AmbiletAPI.getEvent(this.slug);
             console.log('[EventPage] API Response:', response);
+            console.log('[EventPage] === EVENT DATA ===');
+            console.log('[EventPage] Event object:', response.data?.event);
+            console.log('[EventPage] TARGET_PRICE:', response.data?.event?.target_price);
+            console.log('[EventPage] === TAXES ===');
             console.log('[EventPage] Taxes from API:', response.data?.taxes);
-            console.log('[EventPage] Target price from API:', response.data?.event?.target_price);
+            console.log('[EventPage] === TICKET TYPES ===');
             console.log('[EventPage] Ticket types from API:', response.data?.ticket_types);
             if (response.success && response.data) {
                 this.event = this.transformApiData(response.data);
                 console.log('[EventPage] Transformed event:', this.event);
+                console.log('[EventPage] Transformed target_price:', this.event.target_price);
                 console.log('[EventPage] Event taxes:', this.event.taxes);
                 console.log('[EventPage] Event ticket_types:', this.ticketTypes);
                 this.render();
@@ -340,6 +345,7 @@ const EventPage = {
                 };
             }),
             max_tickets_per_order: eventData.max_tickets_per_order || 10,
+            target_price: eventData.target_price || null,
             commission_rate: apiData.commission_rate || 5,
             commission_mode: apiData.commission_mode || 'included',
             taxes: apiData.taxes || []
@@ -626,13 +632,13 @@ const EventPage = {
             if (isSoldOut) {
                 availabilityHtml = '<span class="text-xs font-semibold text-gray-400">Indisponibil</span>';
             } else if (tt.available <= 5) {
-                availabilityHtml = '<span class="text-xs font-semibold text-primary">Doar ' + tt.available + ' disponibile</span>';
+                availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Ultimele ' + tt.available + ' disponibile</span>';
             } else if (tt.available <= 20) {
-                availabilityHtml = '<span class="text-xs font-semibold text-accent">Doar ' + tt.available + ' disponibile</span>';
+                availabilityHtml = '<span class="text-xs font-semibold text-accent">🔥 Doar ' + tt.available + ' disponibile</span>';
             } else if (tt.available < 40) {
-                availabilityHtml = '<span class="text-xs font-semibold text-success">' + tt.available + ' disponibile</span>';
+                availabilityHtml = '<span class="text-xs font-semibold text-success">⚡ ' + tt.available + ' disponibile</span>';
             } else {
-                availabilityHtml = '<span class="text-xs font-semibold text-success">Disponibil</span>';
+                availabilityHtml = '<span class="text-xs font-semibold text-success">✓ Disponibil</span>';
             }
 
             // Calculate display price based on commission mode
@@ -787,7 +793,8 @@ const EventPage = {
             document.getElementById(this.elements.totalPrice).textContent = total.toFixed(2) + ' lei';
 
             const pointsEl = document.getElementById(this.elements.pointsEarned);
-            pointsEl.textContent = points;
+            pointsEl.innerHTML = points + ' puncte';
+            //pointsEl.textContent = points;
             pointsEl.classList.remove('points-counter');
             void pointsEl.offsetWidth;
             pointsEl.classList.add('points-counter');
