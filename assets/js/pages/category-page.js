@@ -1,0 +1,358 @@
+/**
+ * Ambilet.ro - Category Page Controller
+ * Handles category/event type listing page with genre filtering
+ *
+ * Dependencies: AmbiletAPI, AmbiletEventCard, AmbiletPagination, AmbiletEmptyState, AmbiletDataTransformer
+ */
+
+const CategoryPage = {
+    // Configuration
+    category: '',
+    currentPage: 1,
+    perPage: 12,
+    totalEvents: 0,
+    filters: {},
+
+    // DOM element IDs
+    elements: {
+        grid: 'eventsGrid',
+        pagination: 'pagination',
+        eventsCount: 'eventsCount',
+        citiesCount: 'citiesCount',
+        pageTitle: 'pageTitle',
+        pageDescription: 'pageDescription',
+        breadcrumbTitle: 'breadcrumbTitle',
+        categoryBanner: 'categoryBanner',
+        genresSection: 'genresSection',
+        genresPills: 'genresPills',
+        filterCity: 'filterCity',
+        filterDate: 'filterDate',
+        filterPrice: 'filterPrice',
+        sortEvents: 'sortEvents'
+    },
+
+    /**
+     * Initialize the page
+     * @param {string} categorySlug - Category slug from URL
+     */
+    async init(categorySlug) {
+        this.category = categorySlug || '';
+
+        // Set initial category filter
+        if (this.category) {
+            this.filters.category = this.category;
+        }
+
+        // Load data in parallel
+        await Promise.all([
+            this.loadCategoryInfo(),
+            this.loadGenres(),
+            this.loadCities(),
+            this.loadEvents()
+        ]);
+
+        this.bindEvents();
+    },
+
+    /**
+     * Load category info from API
+     */
+    async loadCategoryInfo() {
+        if (!this.category) return;
+
+        try {
+            const response = await AmbiletAPI.get('event-categories');
+            if (response.data?.categories) {
+                const cat = response.data.categories.find(c => c.slug === this.category);
+                if (cat) {
+                    const titleEl = document.getElementById(this.elements.pageTitle);
+                    const breadcrumbEl = document.getElementById(this.elements.breadcrumbTitle);
+                    const descEl = document.getElementById(this.elements.pageDescription);
+                    const bannerEl = document.getElementById(this.elements.categoryBanner);
+
+                    if (titleEl) titleEl.innerHTML = (cat.icon_emoji || '🎫') + ' ' + cat.name;
+                    if (breadcrumbEl) breadcrumbEl.textContent = cat.name;
+                    if (descEl && cat.description) descEl.textContent = cat.description;
+                    if (bannerEl && cat.image) bannerEl.src = cat.image;
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to load category info:', e);
+        }
+    },
+
+    /**
+     * Load genres for this category
+     */
+    async loadGenres() {
+        const section = document.getElementById(this.elements.genresSection);
+        if (!this.category || !section) {
+            if (section) section.style.display = 'none';
+            return;
+        }
+
+        try {
+            const response = await AmbiletAPI.get('/genres?category=' + this.category);
+            if (response.data && response.data.length > 0) {
+                const container = document.getElementById(this.elements.genresPills);
+                if (container) {
+                    container.innerHTML = '<button class="genre-pill active px-5 py-2.5 bg-white border border-border rounded-full font-medium text-sm transition-all" data-genre="">Toate</button>';
+
+                    response.data.forEach(genre => {
+                        container.innerHTML += '<a href="/gen/' + genre.slug + '" class="genre-pill px-5 py-2.5 bg-white border border-border rounded-full font-medium text-sm transition-all hover:border-primary">' + genre.name + '</a>';
+                    });
+                }
+            } else {
+                section.style.display = 'none';
+            }
+        } catch (e) {
+            section.style.display = 'none';
+        }
+    },
+
+    /**
+     * Load cities for filter dropdown
+     */
+    async loadCities() {
+        try {
+            const params = this.category ? '?category=' + this.category : '';
+            const response = await AmbiletAPI.get('/cities' + params);
+            if (response.data) {
+                const select = document.getElementById(this.elements.filterCity);
+                if (select) {
+                    select.innerHTML = '<option value="">Toate orasele</option>';
+                    response.data.forEach(city => {
+                        select.innerHTML += '<option value="' + city.slug + '">' + city.name + ' (' + (city.events_count || 0) + ')</option>';
+                    });
+                }
+
+                // Update cities count
+                const citiesCountEl = document.getElementById(this.elements.citiesCount);
+                if (citiesCountEl) {
+                    citiesCountEl.textContent = response.data.length + ' orase';
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to load cities:', e);
+        }
+    },
+
+    /**
+     * Load events from API
+     */
+    async loadEvents() {
+        const container = document.getElementById(this.elements.grid);
+        if (!container) return;
+
+        // Show loading skeletons
+        container.innerHTML = AmbiletEventCard.renderSkeletons(8);
+
+        try {
+            const sortEl = document.getElementById(this.elements.sortEvents);
+            const params = new URLSearchParams({
+                page: this.currentPage,
+                per_page: this.perPage,
+                sort: sortEl?.value || 'date_asc'
+            });
+
+            // Add filters
+            Object.keys(this.filters).forEach(key => {
+                if (this.filters[key]) params.append(key, this.filters[key]);
+            });
+
+            const response = await AmbiletAPI.get('/events?' + params.toString());
+            if (response.data) {
+                const events = response.data;
+                const meta = response.meta || {};
+                this.totalEvents = meta.total || events.length;
+
+                // Update events count
+                const eventsCountEl = document.getElementById(this.elements.eventsCount);
+                if (eventsCountEl) {
+                    eventsCountEl.textContent = this.totalEvents + ' evenimente';
+                }
+
+                if (events.length > 0) {
+                    // Render events - use custom rendering for category-specific badges
+                    container.innerHTML = events.map(e => this.renderEventCard(e)).join('');
+                } else {
+                    container.innerHTML = AmbiletEmptyState.noEvents({
+                        onButtonClick: () => this.clearFilters()
+                    });
+                }
+
+                // Render pagination
+                const pagination = AmbiletPagination.normalize(meta);
+                AmbiletPagination.render({
+                    containerId: this.elements.pagination,
+                    currentPage: pagination.currentPage,
+                    totalPages: pagination.totalPages,
+                    mode: 'smart',
+                    onPageChange: (page) => this.goToPage(page)
+                });
+            }
+        } catch (e) {
+            console.error('Failed to load events:', e);
+            container.innerHTML = AmbiletEmptyState.error({
+                onButtonClick: () => this.loadEvents()
+            });
+        }
+    },
+
+    /**
+     * Custom event card rendering with category-specific badges
+     * Uses base AmbiletEventCard but adds genre colors and stock status
+     */
+    renderEventCard(event) {
+        // Normalize event data
+        const normalized = AmbiletDataTransformer.normalizeEvent(event);
+        if (!normalized) return '';
+
+        // Genre color mapping
+        const genreColors = {
+            'rock': 'bg-accent',
+            'pop': 'bg-blue-600',
+            'jazz': 'bg-yellow-600',
+            'electronic': 'bg-purple-600',
+            'folk': 'bg-emerald-600',
+            'metal': 'bg-red-800',
+            'alternative': 'bg-purple-600'
+        };
+
+        // Build custom status badge
+        let statusBadge = '';
+        if (normalized.isSoldOut) {
+            statusBadge = '<span class="bg-secondary text-white text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase animate-pulse">Sold Out</span>';
+        } else if (event.genre?.name) {
+            const genreBg = genreColors[event.genre?.slug] || 'bg-accent';
+            statusBadge = '<span class="' + genreBg + ' text-white text-[10px] font-bold px-2.5 py-1 rounded-lg uppercase">' + AmbiletEventCard.escapeHtml(event.genre.name) + '</span>';
+        }
+
+        // Build price display with stock status
+        let priceDisplay = '';
+        if (normalized.isSoldOut) {
+            priceDisplay = '<span class="font-bold line-through text-muted">' + normalized.priceFormatted + '</span><span class="text-xs font-semibold text-primary">Epuizat</span>';
+        } else if (event.is_low_stock) {
+            priceDisplay = '<span class="font-bold text-primary">' + normalized.priceFormatted + '</span><span class="text-xs font-semibold text-accent">Ultimele locuri</span>';
+        } else {
+            priceDisplay = '<span class="font-bold text-primary">' + normalized.priceFormatted + '</span><span class="text-xs text-muted">Disponibil</span>';
+        }
+
+        return '<a href="/bilete/' + normalized.slug + '" class="overflow-hidden bg-white border event-card rounded-2xl border-border group hover:-translate-y-1 hover:shadow-xl hover:border-primary transition-all">' +
+            '<div class="relative h-48 overflow-hidden">' +
+                (normalized.isSoldOut ? '<div class="absolute inset-0 z-10 bg-black/30"></div>' : '') +
+                '<img src="' + (normalized.image || AmbiletEventCard.PLACEHOLDER) + '" alt="' + AmbiletEventCard.escapeHtml(normalized.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy" onerror="this.src=\'' + AmbiletEventCard.PLACEHOLDER + '\'">' +
+                '<div class="absolute top-3 left-3">' +
+                    '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
+                        '<span class="block text-xl font-bold leading-none">' + normalized.day + '</span>' +
+                        '<span class="block text-[10px] uppercase tracking-wide mt-0.5">' + normalized.month + '</span>' +
+                    '</div>' +
+                '</div>' +
+                (statusBadge ? '<div class="absolute top-3 right-3 z-20">' + statusBadge + '</div>' : '') +
+            '</div>' +
+            '<div class="p-4">' +
+                '<h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">' + AmbiletEventCard.escapeHtml(normalized.title) + '</h3>' +
+                '<p class="text-sm text-muted mt-2 flex items-center gap-1.5">' +
+                    '<svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
+                    AmbiletEventCard.escapeHtml(normalized.location || 'Romania') +
+                '</p>' +
+                '<div class="flex items-center justify-between pt-3 mt-3 border-t border-border">' + priceDisplay + '</div>' +
+            '</div>' +
+        '</a>';
+    },
+
+    /**
+     * Navigate to specific page
+     */
+    goToPage(page) {
+        this.currentPage = page;
+        this.loadEvents();
+        AmbiletPagination.scrollTo(300);
+    },
+
+    /**
+     * Bind event listeners
+     */
+    bindEvents() {
+        // Genre pills
+        document.querySelectorAll('.genre-pill').forEach(pill => {
+            pill.addEventListener('click', (e) => {
+                if (e.target.tagName === 'A') return; // Let links work normally
+                e.preventDefault();
+                document.querySelectorAll('.genre-pill').forEach(p => p.classList.remove('active'));
+                e.target.classList.add('active');
+                this.filters.genre = e.target.dataset.genre || '';
+                this.currentPage = 1;
+                this.loadEvents();
+            });
+        });
+
+        // Filter changes
+        const cityEl = document.getElementById(this.elements.filterCity);
+        const dateEl = document.getElementById(this.elements.filterDate);
+        const priceEl = document.getElementById(this.elements.filterPrice);
+        const sortEl = document.getElementById(this.elements.sortEvents);
+
+        if (cityEl) cityEl.addEventListener('change', () => this.applyFilters());
+        if (dateEl) dateEl.addEventListener('change', () => this.applyFilters());
+        if (priceEl) priceEl.addEventListener('change', () => this.applyFilters());
+        if (sortEl) sortEl.addEventListener('change', () => this.loadEvents());
+    },
+
+    /**
+     * Apply filters and reload
+     */
+    applyFilters() {
+        const city = document.getElementById(this.elements.filterCity)?.value;
+        const dateFilter = document.getElementById(this.elements.filterDate)?.value;
+        const priceRange = document.getElementById(this.elements.filterPrice)?.value;
+
+        if (city) this.filters.city = city;
+        else delete this.filters.city;
+
+        if (dateFilter) this.filters.date_filter = dateFilter;
+        else delete this.filters.date_filter;
+
+        if (priceRange) {
+            const [min, max] = priceRange.split('-');
+            if (min) this.filters.min_price = min;
+            else delete this.filters.min_price;
+            if (max) this.filters.max_price = max;
+            else delete this.filters.max_price;
+        } else {
+            delete this.filters.min_price;
+            delete this.filters.max_price;
+        }
+
+        this.currentPage = 1;
+        this.loadEvents();
+    },
+
+    /**
+     * Clear all filters
+     */
+    clearFilters() {
+        const cityEl = document.getElementById(this.elements.filterCity);
+        const dateEl = document.getElementById(this.elements.filterDate);
+        const priceEl = document.getElementById(this.elements.filterPrice);
+        const sortEl = document.getElementById(this.elements.sortEvents);
+
+        if (cityEl) cityEl.value = '';
+        if (dateEl) dateEl.value = '';
+        if (priceEl) priceEl.value = '';
+        if (sortEl) sortEl.value = 'date_asc';
+
+        // Reset genre filter
+        document.querySelectorAll('.genre-pill').forEach(p => p.classList.remove('active'));
+        const allGenrePill = document.querySelector('.genre-pill[data-genre=""]');
+        if (allGenrePill) allGenrePill.classList.add('active');
+
+        // Keep category filter
+        this.filters = this.category ? { category: this.category } : {};
+        this.currentPage = 1;
+        this.loadEvents();
+    }
+};
+
+// Make available globally
+window.CategoryPage = CategoryPage;

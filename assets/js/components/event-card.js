@@ -1,239 +1,353 @@
 /**
  * Ambilet.ro - Event Card Component
- * Reusable event card for listings
+ * Unified event card rendering for all pages
+ *
+ * Variants:
+ * - render() - Grid card for listings (city, category, genre, events, related)
+ * - renderHorizontal() - Horizontal card for venue/artist pages
+ * - renderFeatured() - Large hero card for homepage
+ * - renderCompact() - Sidebar/small list card
  */
 
 const AmbiletEventCard = {
+    // Default placeholder image
+    PLACEHOLDER: '/assets/images/placeholder-event.jpg',
+
+    // Romanian month abbreviations
+    MONTHS: ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+
     /**
-     * Render event card HTML
-     * @param {Object} event - Event data
+     * Render grid event card (main variant for listings)
+     * Used on: city.php, category.php, genre.php, events.php, event.php (related)
+     *
+     * @param {Object} eventData - Raw API event data or normalized event
      * @param {Object} options - Display options
+     * @returns {string} HTML string
      */
-    render(event, options = {}) {
+    render(eventData, options = {}) {
+        // Normalize if needed (check if already normalized by looking for _raw)
+        const event = eventData._raw ? eventData : this.normalizeEvent(eventData);
+        if (!event) return '';
+
         const {
+            showCategory = true,
             showPrice = true,
-            showDate = true,
-            showLocation = true,
-            size = 'default' // 'default', 'small', 'large'
+            showVenue = true,
+            urlPrefix = '/bilete/',
+            linkClass = ''
         } = options;
 
-        const imageUrl = event.featured_image || event.image || AMBILET_CONFIG.PLACEHOLDER_EVENT;
-        const eventUrl = `/event/${event.slug}`;
+        const eventUrl = urlPrefix + event.slug;
+        const categoryBadge = (showCategory && event.categoryName)
+            ? '<span class="absolute px-2 py-1 text-xs font-semibold text-white uppercase rounded-lg top-3 right-3 bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>'
+            : '';
 
-        // Format date
-        const startDate = new Date(event.start_date);
-        const day = startDate.getDate();
-        const month = startDate.toLocaleDateString('ro-RO', { month: 'short' }).toUpperCase();
-
-        // Price range
-        const minPrice = event.min_price || event.ticket_types?.[0]?.price || 0;
-        const priceDisplay = minPrice > 0 ? `de la ${AmbiletUtils.formatCurrency(minPrice)}` : 'Gratuit';
-
-        // Location
-        const location = event.venue?.city || event.city || '';
-
-        return `
-        <article class="event-card group bg-white rounded-2xl border border-border overflow-hidden cursor-pointer" onclick="window.location.href='${eventUrl}'">
-            <!-- Image -->
-            <div class="relative aspect-[16/10] overflow-hidden">
-                <img
-                    src="${imageUrl}"
-                    alt="${event.title}"
-                    class="event-image w-full h-full object-cover"
-                    loading="lazy"
-                    onerror="this.src='${AMBILET_CONFIG.PLACEHOLDER_EVENT}'"
-                >
-
-                <!-- Date Badge -->
-                ${showDate ? `
-                <div class="absolute top-3 left-3 date-badge">
-                    <div class="date-badge-day">${day}</div>
-                    <div class="date-badge-month">${month}</div>
-                </div>
-                ` : ''}
-
-                <!-- Category Badge -->
-                ${event.category ? `
-                <div class="absolute top-3 right-3 px-3 py-1 bg-white/90 backdrop-blur rounded-full text-xs font-semibold text-secondary">
-                    ${event.category.name || event.category}
-                </div>
-                ` : ''}
-
-                <!-- Hover overlay -->
-                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
-                    <div class="p-4 w-full">
-                        <span class="inline-flex items-center gap-1 text-white text-sm font-medium">
-                            <span>Vezi detalii</span>
-                            <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-                            </svg>
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Content -->
-            <div class="p-4">
-                <h3 class="text-lg font-bold text-secondary mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                    ${event.title}
-                </h3>
-
-                ${showLocation && location ? `
-                <div class="flex items-center gap-1.5 text-sm text-muted mb-3">
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
-                    <span class="truncate">${location}</span>
-                </div>
-                ` : ''}
-
-                ${showPrice ? `
-                <div class="flex items-center justify-between">
-                    <span class="text-primary font-bold">${priceDisplay}</span>
-                    <span class="text-xs text-muted">
-                        ${event.tickets_sold || 0} bilete vândute
-                    </span>
-                </div>
-                ` : ''}
-            </div>
-        </article>
-        `;
+        return '<a href="' + eventUrl + '" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary ' + linkClass + '">' +
+            '<div class="relative h-48 overflow-hidden">' +
+                '<img src="' + (event.image || this.PLACEHOLDER) + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
+                '<div class="absolute top-3 left-3">' +
+                    '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
+                        '<span class="block text-lg font-bold leading-none">' + event.day + '</span>' +
+                        '<span class="block text-[10px] uppercase tracking-wide mt-0.5">' + event.month + '</span>' +
+                    '</div>' +
+                '</div>' +
+                categoryBadge +
+            '</div>' +
+            '<div class="p-5">' +
+                '<h3 class="mb-2 font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">' + this.escapeHtml(event.title) + '</h3>' +
+                (showVenue && event.location ?
+                    '<p class="text-sm text-muted flex items-center gap-1.5 mb-3">' +
+                        '<svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
+                        this.escapeHtml(event.location) +
+                    '</p>' : '') +
+                (showPrice ?
+                    '<div class="flex items-center justify-between pt-3 border-t border-border">' +
+                        '<span class="font-bold text-primary">' + event.priceFormatted + '</span>' +
+                        '<span class="text-xs text-muted">' + (event.isSoldOut ? 'Sold Out' : 'Disponibil') + '</span>' +
+                    '</div>' : '') +
+            '</div>' +
+        '</a>';
     },
 
     /**
-     * Render skeleton loading card
+     * Render multiple grid cards
+     * @param {Array} events - Array of event data
+     * @param {Object} options - Options passed to render()
+     * @returns {string} HTML string
+     */
+    renderMany(events, options = {}) {
+        if (!Array.isArray(events) || events.length === 0) return '';
+        return events.map(e => this.render(e, options)).join('');
+    },
+
+    /**
+     * Render horizontal event card (for venue/artist detail pages)
+     * Used on: venue-single.php, artist-single.php
+     *
+     * @param {Object} eventData - Raw API event data or normalized event
+     * @param {Object} options - Display options
+     * @returns {string} HTML string
+     */
+    renderHorizontal(eventData, options = {}) {
+        const event = eventData._raw ? eventData : this.normalizeEvent(eventData);
+        if (!event) return '';
+
+        const {
+            urlPrefix = '/bilete/',
+            showBuyButton = true
+        } = options;
+
+        const eventUrl = urlPrefix + event.slug;
+
+        // Price display
+        let priceHtml, buttonHtml;
+        if (event.isSoldOut) {
+            priceHtml = '<span class="text-sm font-bold text-red-500">SOLD OUT</span>';
+            buttonHtml = showBuyButton ? '<button class="py-2.5 px-5 bg-gray-400 rounded-lg text-white text-sm font-semibold cursor-not-allowed" disabled>Indisponibil</button>' : '';
+        } else {
+            priceHtml = '<div class="text-xs text-muted">de la <strong class="text-lg font-bold text-success">' + event.priceFormatted + '</strong></div>';
+            buttonHtml = showBuyButton ? '<button class="py-2.5 px-5 bg-secondary hover:bg-secondary/90 rounded-lg text-white text-sm font-semibold transition-all">Cumpără bilete</button>' : '';
+        }
+
+        return '<a href="' + eventUrl + '" class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all">' +
+            '<div class="flex flex-col items-center justify-center flex-shrink-0 w-24 py-5 text-center bg-gradient-to-br from-primary to-primary-light">' +
+                '<div class="text-3xl font-extrabold leading-none text-white">' + event.day + '</div>' +
+                '<div class="mt-1 text-sm font-semibold uppercase text-white/90">' + event.month + '</div>' +
+            '</div>' +
+            '<div class="flex flex-col justify-center flex-1 px-5 py-4">' +
+                (event.categoryName ? '<div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">' + this.escapeHtml(event.categoryName) + '</div>' : '') +
+                '<h3 class="mb-2 text-base font-bold leading-tight text-secondary">' + this.escapeHtml(event.title) + '</h3>' +
+                '<div class="flex gap-4 text-sm text-muted">' +
+                    '<span class="flex items-center gap-1">' +
+                        '<svg class="w-3.5 h-3.5 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
+                        event.time +
+                    '</span>' +
+                    (event.venueName ? '<span class="flex items-center gap-1"><svg class="w-3.5 h-3.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + this.escapeHtml(event.venueName) + '</span>' : '') +
+                '</div>' +
+            '</div>' +
+            '<div class="py-4 px-5 flex flex-col items-end justify-center gap-1.5">' +
+                priceHtml +
+                buttonHtml +
+            '</div>' +
+        '</a>';
+    },
+
+    /**
+     * Render multiple horizontal cards
+     * @param {Array} events - Array of event data
+     * @param {Object} options - Options passed to renderHorizontal()
+     * @returns {string} HTML string
+     */
+    renderManyHorizontal(events, options = {}) {
+        if (!Array.isArray(events) || events.length === 0) return '';
+        return events.map(e => this.renderHorizontal(e, options)).join('');
+    },
+
+    /**
+     * Render featured/hero event card (for homepage)
+     * Large card with horizontal layout
+     *
+     * @param {Object} eventData - Raw API event data or normalized event
+     * @returns {string} HTML string
+     */
+    renderFeatured(eventData) {
+        const event = eventData._raw ? eventData : this.normalizeEvent(eventData);
+        if (!event) return '';
+
+        const eventUrl = '/bilete/' + event.slug;
+
+        // Full date format
+        const dateFormatted = event.date ? event.date.toLocaleDateString('ro-RO', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long'
+        }) : '';
+
+        return '<article class="event-card group relative bg-white rounded-3xl overflow-hidden cursor-pointer shadow-lg" onclick="window.location.href=\'' + eventUrl + '\'">' +
+            '<div class="flex flex-col lg:flex-row">' +
+                '<div class="relative lg:w-2/3 aspect-video lg:aspect-auto overflow-hidden">' +
+                    '<img src="' + (event.image || this.PLACEHOLDER) + '" alt="' + this.escapeHtml(event.title) + '" class="event-image w-full h-full object-cover" loading="lazy">' +
+                    '<div class="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black/60 to-transparent"></div>' +
+                    '<div class="absolute top-4 left-4">' +
+                        '<span class="inline-flex items-center gap-1 px-3 py-1.5 bg-primary text-white text-xs font-semibold rounded-full">' +
+                            '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' +
+                            'Recomandat' +
+                        '</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="lg:w-1/3 p-6 lg:p-8 flex flex-col justify-center">' +
+                    (event.categoryName ? '<span class="text-sm font-semibold text-primary mb-2">' + this.escapeHtml(event.categoryName) + '</span>' : '') +
+                    '<h3 class="text-2xl lg:text-3xl font-bold text-secondary mb-3 group-hover:text-primary transition-colors">' + this.escapeHtml(event.title) + '</h3>' +
+                    '<div class="space-y-2 mb-6">' +
+                        '<div class="flex items-center gap-2 text-muted">' +
+                            '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>' +
+                            '<span>' + dateFormatted + '</span>' +
+                        '</div>' +
+                        (event.location ? '<div class="flex items-center gap-2 text-muted"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg><span>' + this.escapeHtml(event.location) + '</span></div>' : '') +
+                    '</div>' +
+                    '<div class="flex items-center justify-between">' +
+                        '<div>' +
+                            '<span class="text-sm text-muted">de la</span>' +
+                            '<span class="text-2xl font-bold text-primary ml-1">' + event.priceFormatted + '</span>' +
+                        '</div>' +
+                        '<button class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl transition-colors">' +
+                            'Cumpără bilete' +
+                            '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>' +
+                        '</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</article>';
+    },
+
+    /**
+     * Render compact event card (for sidebars, small lists)
+     *
+     * @param {Object} eventData - Raw API event data or normalized event
+     * @returns {string} HTML string
+     */
+    renderCompact(eventData) {
+        const event = eventData._raw ? eventData : this.normalizeEvent(eventData);
+        if (!event) return '';
+
+        const eventUrl = '/bilete/' + event.slug;
+
+        return '<a href="' + eventUrl + '" class="flex gap-4 p-3 rounded-xl hover:bg-surface transition-colors group">' +
+            '<div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">' +
+                '<img src="' + (event.image || this.PLACEHOLDER) + '" alt="' + this.escapeHtml(event.title) + '" class="w-full h-full object-cover" loading="lazy">' +
+            '</div>' +
+            '<div class="flex-1 min-w-0">' +
+                '<h4 class="font-semibold text-secondary truncate group-hover:text-primary transition-colors">' + this.escapeHtml(event.title) + '</h4>' +
+                '<p class="text-sm text-muted">' + event.day + ' ' + event.month + '</p>' +
+                (event.venueCity ? '<p class="text-sm text-muted truncate">' + this.escapeHtml(event.venueCity) + '</p>' : '') +
+            '</div>' +
+        '</a>';
+    },
+
+    // ==================== SKELETON LOADERS ====================
+
+    /**
+     * Render grid skeleton loading card
      */
     renderSkeleton() {
-        return `
-        <div class="bg-white rounded-2xl border border-border overflow-hidden">
-            <div class="skeleton skeleton-image aspect-[16/10]"></div>
-            <div class="p-4">
-                <div class="skeleton skeleton-title"></div>
-                <div class="skeleton skeleton-text w-3/4"></div>
-                <div class="skeleton skeleton-text w-1/2 mt-4"></div>
-            </div>
-        </div>
-        `;
+        return '<div class="overflow-hidden bg-white border rounded-2xl border-border">' +
+            '<div class="h-48 skeleton"></div>' +
+            '<div class="p-5">' +
+                '<div class="w-3/4 mb-2 skeleton skeleton-title"></div>' +
+                '<div class="w-1/2 mb-3 skeleton skeleton-text"></div>' +
+                '<div class="w-1/3 h-6 skeleton"></div>' +
+            '</div>' +
+        '</div>';
     },
 
     /**
-     * Render multiple skeleton cards
+     * Render multiple grid skeletons
+     * @param {number} count - Number of skeletons
+     * @returns {string} HTML string
      */
-    renderSkeletons(count = 6) {
+    renderSkeletons(count = 8) {
         return Array(count).fill(this.renderSkeleton()).join('');
     },
 
     /**
-     * Render featured event card (larger, horizontal)
+     * Render horizontal skeleton loading card
      */
-    renderFeatured(event) {
-        const imageUrl = event.featured_image || event.image || AMBILET_CONFIG.PLACEHOLDER_EVENT;
-        const eventUrl = `/event/${event.slug}`;
-
-        const startDate = new Date(event.start_date);
-        const dateFormatted = startDate.toLocaleDateString('ro-RO', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long'
-        });
-
-        const minPrice = event.min_price || event.ticket_types?.[0]?.price || 0;
-
-        return `
-        <article class="event-card group relative bg-white rounded-3xl overflow-hidden cursor-pointer shadow-lg" onclick="window.location.href='${eventUrl}'">
-            <div class="flex flex-col lg:flex-row">
-                <!-- Image -->
-                <div class="relative lg:w-2/3 aspect-video lg:aspect-auto overflow-hidden">
-                    <img
-                        src="${imageUrl}"
-                        alt="${event.title}"
-                        class="event-image w-full h-full object-cover"
-                        loading="lazy"
-                    >
-                    <div class="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black/60 to-transparent"></div>
-
-                    <!-- Featured badge -->
-                    <div class="absolute top-4 left-4">
-                        <span class="badge badge-exclusive">
-                            <svg class="w-3.5 h-3.5 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                            </svg>
-                            Recomandat
-                        </span>
-                    </div>
-                </div>
-
-                <!-- Content -->
-                <div class="lg:w-1/3 p-6 lg:p-8 flex flex-col justify-center">
-                    ${event.category ? `
-                    <span class="text-sm font-semibold text-primary mb-2">
-                        ${event.category.name || event.category}
-                    </span>
-                    ` : ''}
-
-                    <h3 class="text-2xl lg:text-3xl font-bold text-secondary mb-3 group-hover:text-primary transition-colors">
-                        ${event.title}
-                    </h3>
-
-                    <div class="space-y-2 mb-6">
-                        <div class="flex items-center gap-2 text-muted">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                            <span>${dateFormatted}</span>
-                        </div>
-                        ${event.venue ? `
-                        <div class="flex items-center gap-2 text-muted">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                            </svg>
-                            <span>${event.venue.name}, ${event.venue.city}</span>
-                        </div>
-                        ` : ''}
-                    </div>
-
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <span class="text-sm text-muted">de la</span>
-                            <span class="text-2xl font-bold text-primary ml-1">${AmbiletUtils.formatCurrency(minPrice)}</span>
-                        </div>
-                        <button class="btn btn-primary">
-                            Cumpără bilete
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </article>
-        `;
+    renderSkeletonHorizontal() {
+        return '<div class="overflow-hidden bg-white border rounded-2xl border-border animate-pulse">' +
+            '<div class="flex">' +
+                '<div class="w-24 h-32 bg-gray-200"></div>' +
+                '<div class="flex-1 p-5">' +
+                    '<div class="w-16 h-3 mb-2 bg-gray-200 rounded"></div>' +
+                    '<div class="w-3/4 h-5 mb-3 bg-gray-200 rounded"></div>' +
+                    '<div class="w-24 h-4 bg-gray-200 rounded"></div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
     },
 
     /**
-     * Render compact event card (for sidebars, lists)
+     * Render multiple horizontal skeletons
+     * @param {number} count - Number of skeletons
+     * @returns {string} HTML string
      */
-    renderCompact(event) {
-        const imageUrl = event.featured_image || event.image || AMBILET_CONFIG.PLACEHOLDER_EVENT;
-        const eventUrl = `/event/${event.slug}`;
+    renderSkeletonsHorizontal(count = 3) {
+        return Array(count).fill(this.renderSkeletonHorizontal()).join('');
+    },
 
-        const startDate = new Date(event.start_date);
-        const day = startDate.getDate();
-        const month = startDate.toLocaleDateString('ro-RO', { month: 'short' });
+    // ==================== HELPER METHODS ====================
 
-        return `
-        <a href="${eventUrl}" class="flex gap-4 p-3 rounded-xl hover:bg-surface transition-colors group">
-            <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                <img src="${imageUrl}" alt="${event.title}" class="w-full h-full object-cover" loading="lazy">
-            </div>
-            <div class="flex-1 min-w-0">
-                <h4 class="font-semibold text-secondary truncate group-hover:text-primary transition-colors">${event.title}</h4>
-                <p class="text-sm text-muted">${day} ${month}</p>
-                ${event.venue ? `<p class="text-sm text-muted truncate">${event.venue.city}</p>` : ''}
-            </div>
-        </a>
-        `;
+    /**
+     * Normalize event data from various API formats
+     * Uses AmbiletDataTransformer if available, otherwise basic normalization
+     *
+     * @param {Object} apiEvent - Raw event data from API
+     * @returns {Object} Normalized event object
+     */
+    normalizeEvent(apiEvent) {
+        if (!apiEvent) return null;
+
+        // Use data transformer if available
+        if (typeof AmbiletDataTransformer !== 'undefined') {
+            return AmbiletDataTransformer.normalizeEvent(apiEvent);
+        }
+
+        // Fallback: basic normalization
+        const rawDate = apiEvent.starts_at || apiEvent.event_date || apiEvent.start_date || apiEvent.date;
+        const date = rawDate ? new Date(rawDate) : null;
+
+        // Extract venue
+        let venueName = '', venueCity = '';
+        if (typeof apiEvent.venue === 'string') {
+            venueName = apiEvent.venue;
+        } else if (apiEvent.venue && typeof apiEvent.venue === 'object') {
+            venueName = apiEvent.venue.name || '';
+            venueCity = apiEvent.venue.city || '';
+        }
+        if (!venueCity && apiEvent.city) {
+            venueCity = apiEvent.city;
+        }
+
+        // Extract price
+        const minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
+
+        // Extract category
+        let categoryName = '';
+        if (typeof apiEvent.category === 'string') {
+            categoryName = apiEvent.category;
+        } else if (apiEvent.category && typeof apiEvent.category === 'object') {
+            categoryName = apiEvent.category.name || '';
+        }
+
+        return {
+            id: apiEvent.id,
+            slug: apiEvent.slug || '',
+            title: apiEvent.name || apiEvent.title || 'Eveniment',
+            image: apiEvent.image_url || apiEvent.featured_image || apiEvent.image || null,
+            date: date,
+            day: date ? date.getDate() : '',
+            month: date ? this.MONTHS[date.getMonth()] : '',
+            time: apiEvent.start_time || (date ? String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0') : '20:00'),
+            venueName: venueName,
+            venueCity: venueCity,
+            location: venueCity ? (venueName + ', ' + venueCity) : venueName,
+            minPrice: minPrice,
+            priceFormatted: minPrice > 0 ? 'de la ' + minPrice + ' lei' : 'Gratuit',
+            categoryName: categoryName,
+            isSoldOut: apiEvent.is_sold_out || false,
+            _raw: apiEvent
+        };
+    },
+
+    /**
+     * Escape HTML to prevent XSS
+     * @param {string} text - Text to escape
+     * @returns {string} Escaped text
+     */
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 };
 
