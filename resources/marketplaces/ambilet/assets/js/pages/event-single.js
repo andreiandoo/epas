@@ -794,6 +794,8 @@ const EventPage = {
     addToCart() {
         var addedAny = false;
         var self = this;
+        var commissionRate = this.event.commission_rate || 5;
+        var commissionMode = this.event.commission_mode || 'included';
 
         for (var ticketId in this.quantities) {
             var qty = this.quantities[ticketId];
@@ -809,11 +811,22 @@ const EventPage = {
                         image: self.event.image,
                         venue: self.event.venue
                     };
+
+                    // Calculate final price including commission when add_on_top
+                    var finalPrice = tt.price;
+                    var finalOriginalPrice = tt.original_price;
+                    if (commissionMode === 'add_on_top') {
+                        finalPrice = tt.price + (tt.price * commissionRate / 100);
+                        if (tt.original_price) {
+                            finalOriginalPrice = tt.original_price + (tt.original_price * commissionRate / 100);
+                        }
+                    }
+
                     var ticketTypeData = {
                         id: tt.id,
                         name: tt.name,
-                        price: tt.price,
-                        original_price: tt.original_price,
+                        price: finalPrice,
+                        original_price: finalOriginalPrice,
                         description: tt.description
                     };
                     AmbiletCart.addItem(self.event.id, eventData, tt.id, ticketTypeData, qty);

@@ -185,6 +185,34 @@ class MarketplaceEventsController extends BaseController
         $venue = $event->venue;
         $organizer = $event->marketplaceOrganizer;
 
+        // Get commission settings (event > organizer > marketplace default)
+        $commissionMode = $event->commission_mode ?? $organizer?->commission_mode ?? $client->commission_mode ?? 'included';
+        $commissionRate = $event->commission_rate ?? $organizer?->commission_rate ?? $client->commission_rate ?? 5.0;
+
+        // Get target_price for discount display
+        $targetPrice = $event->target_price ? (float) $event->target_price : null;
+
+        // Get applicable taxes
+        $taxes = [];
+        if ($client->tenant_id) {
+            $eventTypeIds = $event->eventTypes()->pluck('event_types.id')->toArray();
+            $applicableTaxes = \App\Models\Tax\GeneralTax::query()
+                ->forTenant($client->tenant_id)
+                ->active()
+                ->forEventTypes($eventTypeIds)
+                ->visibleOnCheckout()
+                ->validOn()
+                ->byPriority()
+                ->get();
+
+            $taxes = $applicableTaxes->map(fn ($tax) => [
+                'name' => $tax->name,
+                'value' => (float) $tax->value,
+                'value_type' => $tax->value_type,
+                'is_added_to_price' => $tax->is_added_to_price,
+            ])->values()->toArray();
+        }
+
         return $this->success([
             'event' => [
                 'id' => $event->id,
@@ -203,6 +231,7 @@ class MarketplaceEventsController extends BaseController
                 'venue_city' => $venue?->city,
                 'capacity' => $venue?->capacity,
                 'is_featured' => $event->is_homepage_featured || $event->is_general_featured,
+                'target_price' => $targetPrice,
             ],
             'organizer' => $organizer ? [
                 'id' => $organizer->id,
@@ -214,22 +243,37 @@ class MarketplaceEventsController extends BaseController
                 'social_links' => $organizer->social_links,
                 'verified' => $organizer->verified_at !== null,
             ] : null,
-            'ticket_types' => $event->ticketTypes->filter(fn ($tt) => $tt->status === 'active')->map(function ($tt) use ($language) {
+            'ticket_types' => $event->ticketTypes->filter(fn ($tt) => $tt->status === 'active')->map(function ($tt) use ($language, $targetPrice, $commissionMode, $commissionRate) {
                 $available = max(0, ($tt->quota_total ?? 0) - ($tt->quota_sold ?? 0));
-                $displayPrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
+                $basePrice = ($tt->sale_price_cents ?? $tt->price_cents) / 100;
+
+                // Calculate original_price:
+                // 1. If ticket has its own original_price, use that
+                // 2. If event has target_price and no ticket original_price, use target_price
+                $originalPrice = null;
+                if ($tt->original_price_cents && $tt->original_price_cents > ($tt->sale_price_cents ?? $tt->price_cents)) {
+                    $originalPrice = $tt->original_price_cents / 100;
+                } elseif ($targetPrice && $targetPrice > $basePrice) {
+                    $originalPrice = $targetPrice;
+                }
+
                 return [
                     'id' => $tt->id,
                     'name' => $tt->name,
                     'description' => $tt->description,
-                    'price' => (float) $displayPrice,
+                    'price' => (float) $basePrice,
+                    'original_price' => $originalPrice ? (float) $originalPrice : null,
                     'currency' => $tt->currency ?? 'RON',
                     'available' => $available,
-                    'min_per_order' => 1,
-                    'max_per_order' => 10,
+                    'min_per_order' => $tt->min_per_order ?? 1,
+                    'max_per_order' => $tt->max_per_order ?? 10,
                     'status' => $tt->status,
                     'is_sold_out' => $available <= 0,
                 ];
             })->values(),
+            'commission_mode' => $commissionMode,
+            'commission_rate' => (float) $commissionRate,
+            'taxes' => $taxes,
         ]);
     }
 
