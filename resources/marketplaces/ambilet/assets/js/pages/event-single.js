@@ -410,8 +410,14 @@ const EventPage = {
         document.getElementById(this.elements.venueAddress).textContent = e.venue?.address || '';
 
         var venueLink = document.getElementById(this.elements.venueLink);
-        if (venueLink && e.venue?.slug) {
-            venueLink.href = '/locatie/' + e.venue.slug;
+        if (venueLink) {
+            if (e.venue?.slug) {
+                venueLink.href = '/locatie/' + e.venue.slug;
+                venueLink.style.display = '';
+            } else {
+                // Hide venue link if venue doesn't exist in marketplace (no slug)
+                venueLink.style.display = 'none';
+            }
         }
 
         // Stats
@@ -632,13 +638,13 @@ const EventPage = {
             if (isSoldOut) {
                 availabilityHtml = '<span class="text-xs font-semibold text-gray-400">Indisponibil</span>';
             } else if (tt.available <= 5) {
-                availabilityHtml = '<span class="text-xs font-semibold text-primary">Ultimele ' + tt.available + ' disponibile</span>';
+                availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Ultimele ' + tt.available + ' disponibile</span>';
             } else if (tt.available <= 20) {
-                availabilityHtml = '<span class="text-xs font-semibold text-accent">Doar ' + tt.available + ' disponibile</span>';
+                availabilityHtml = '<span class="text-xs font-semibold text-accent">🔥 Doar ' + tt.available + ' disponibile</span>';
             } else if (tt.available < 40) {
-                availabilityHtml = '<span class="text-xs font-semibold text-success">' + tt.available + ' disponibile</span>';
+                availabilityHtml = '<span class="text-xs font-semibold text-success">⚡ ' + tt.available + ' disponibile</span>';
             } else {
-                availabilityHtml = '<span class="text-xs font-semibold text-success">Disponibil</span>';
+                availabilityHtml = '<span class="text-xs font-semibold text-success">✓ Disponibil</span>';
             }
 
             // Calculate display price based on commission mode

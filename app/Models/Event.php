@@ -59,6 +59,11 @@ class Event extends Model
 
         // seo json
         'seo',
+
+        // marketplace pricing & tracking
+        'target_price',
+        'views_count',
+        'interested_count',
     ];
 
     protected $casts = [
@@ -93,6 +98,11 @@ class Event extends Model
         // json
         'multi_slots'       => 'array',
         'seo'               => 'array',
+
+        // marketplace pricing & tracking
+        'target_price'      => 'decimal:2',
+        'views_count'       => 'integer',
+        'interested_count'  => 'integer',
     ];
 
     /* Core Relations */

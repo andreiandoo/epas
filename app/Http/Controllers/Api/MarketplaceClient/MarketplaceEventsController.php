@@ -379,6 +379,134 @@ class MarketplaceEventsController extends BaseController
     }
 
     /**
+     * Track a view for an event
+     */
+    public function trackView(Request $request, $identifier): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $query = Event::where('marketplace_client_id', $client->id);
+
+        if (is_numeric($identifier)) {
+            $query->where('id', $identifier);
+        } else {
+            $query->where('slug', $identifier);
+        }
+
+        $event = $query->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        // Increment views count
+        $event->increment('views_count');
+
+        return $this->success([
+            'views_count' => $event->views_count,
+        ]);
+    }
+
+    /**
+     * Toggle interest for an event
+     */
+    public function toggleInterest(Request $request, $identifier): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $query = Event::where('marketplace_client_id', $client->id);
+
+        if (is_numeric($identifier)) {
+            $query->where('id', $identifier);
+        } else {
+            $query->where('slug', $identifier);
+        }
+
+        $event = $query->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        // Get session ID for anonymous users
+        $sessionId = $request->header('X-Session-ID') ?? session()->getId();
+
+        // Check if already interested
+        $existing = \DB::table('event_interests')
+            ->where('event_id', $event->id)
+            ->where('session_id', $sessionId)
+            ->first();
+
+        if ($existing) {
+            // Remove interest
+            \DB::table('event_interests')
+                ->where('event_id', $event->id)
+                ->where('session_id', $sessionId)
+                ->delete();
+
+            $event->decrement('interested_count');
+
+            return $this->success([
+                'is_interested' => false,
+                'interested_count' => max(0, $event->interested_count),
+            ]);
+        }
+
+        // Add interest
+        \DB::table('event_interests')->insert([
+            'event_id' => $event->id,
+            'session_id' => $sessionId,
+            'ip_address' => $request->ip(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $event->increment('interested_count');
+
+        return $this->success([
+            'is_interested' => true,
+            'interested_count' => $event->interested_count,
+        ]);
+    }
+
+    /**
+     * Check if user is interested in an event
+     */
+    public function checkInterest(Request $request, $identifier): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $query = Event::where('marketplace_client_id', $client->id);
+
+        if (is_numeric($identifier)) {
+            $query->where('id', $identifier);
+        } else {
+            $query->where('slug', $identifier);
+        }
+
+        $event = $query->first();
+
+        if (!$event) {
+            return $this->error('Event not found', 404);
+        }
+
+        // Get session ID for anonymous users
+        $sessionId = $request->header('X-Session-ID') ?? session()->getId();
+
+        // Check if interested
+        $isInterested = \DB::table('event_interests')
+            ->where('event_id', $event->id)
+            ->where('session_id', $sessionId)
+            ->exists();
+
+        return $this->success([
+            'is_interested' => $isInterested,
+            'interested_count' => $event->interested_count ?? 0,
+            'views_count' => $event->views_count ?? 0,
+        ]);
+    }
+
+    /**
      * Format event for API response
      */
     protected function formatEvent(Event $event, string $language): array
