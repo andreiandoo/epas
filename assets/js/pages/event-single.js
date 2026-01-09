@@ -410,8 +410,14 @@ const EventPage = {
         document.getElementById(this.elements.venueAddress).textContent = e.venue?.address || '';
 
         var venueLink = document.getElementById(this.elements.venueLink);
-        if (venueLink && e.venue?.slug) {
-            venueLink.href = '/locatie/' + e.venue.slug;
+        if (venueLink) {
+            if (e.venue?.slug) {
+                venueLink.href = '/locatie/' + e.venue.slug;
+                venueLink.style.display = '';
+            } else {
+                // Hide venue link if venue doesn't exist in marketplace (no slug)
+                venueLink.style.display = 'none';
+            }
         }
 
         // Stats
