@@ -367,14 +367,64 @@ const CartPage = {
         const eventImage = item.event?.image || item.event_image || (typeof AMBILET_CONFIG !== 'undefined' ? AMBILET_CONFIG.PLACEHOLDER_EVENT : '/assets/images/placeholder-event.jpg');
         const eventTitle = item.event?.title || item.event_title || 'Eveniment';
         const eventDate = item.event?.date || item.event_date || '';
-        const venueName = item.event?.venue || item.venue_name || '';
+        const venueName = item.event?.venue?.name || item.event?.venue || item.venue_name || '';
         const ticketTypeName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
+        const ticketDescription = item.ticketType?.description || '';
         const price = item.ticketType?.price || item.price || 0;
         const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
         const quantity = item.quantity || 1;
 
+        // Get commission info from event data
+        const commissionRate = item.event?.commission_rate || 5;
+        const commissionMode = item.event?.commission_mode || 'included';
+        const taxes = item.event?.taxes || [];
+
         const hasDiscount = originalPrice && originalPrice > price;
+        const discountPercent = hasDiscount ? Math.round((1 - price / originalPrice) * 100) : 0;
         const formattedDate = eventDate ? AmbiletUtils.formatDate(eventDate, 'medium') : '';
+
+        // Calculate price breakdown for tooltip
+        let basePrice, commissionAmount;
+        if (commissionMode === 'included') {
+            basePrice = price / (1 + commissionRate / 100);
+            commissionAmount = price - basePrice;
+        } else {
+            basePrice = price / (1 + commissionRate / 100);
+            commissionAmount = price - basePrice;
+        }
+
+        // Build tooltip HTML with price breakdown
+        let tooltipHtml = '<p class="font-semibold mb-3 text-sm border-b border-white/20 pb-2">Detalii preț bilet ' + ticketTypeName + '</p>' +
+            '<div class="space-y-2 text-xs">' +
+                '<div class="flex justify-between"><span class="text-white/70">Preț bilet (net):</span><span>' + basePrice.toFixed(2) + ' lei</span></div>' +
+                '<div class="flex justify-between"><span class="text-white/70">Comision platformă (' + commissionRate + '%):</span><span>' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                '<div class="flex justify-between border-t border-white/20 pt-2 mt-2"><span class="font-semibold">Preț bilet:</span><span class="font-semibold">' + price.toFixed(2) + ' lei</span></div>';
+
+        // Add taxes breakdown
+        const taxesAddedOnTop = taxes.filter(t => t.is_added_to_price);
+        const taxesIncluded = taxes.filter(t => !t.is_added_to_price);
+
+        if (taxesAddedOnTop.length > 0) {
+            tooltipHtml += '<div class="mt-3 pt-2 border-t border-white/10"><p class="text-white/50 text-[10px] mb-1">Taxe suplimentare (adăugate la total):</p>';
+            taxesAddedOnTop.forEach(function(tax) {
+                const taxLabel = tax.value_type === 'percent' ? '(' + tax.value + '%)' : '';
+                const taxAmount = tax.value_type === 'percent' ? price * tax.value / 100 : tax.value;
+                tooltipHtml += '<div class="flex justify-between text-white/60"><span>' + tax.name + ' ' + taxLabel + ':</span><span>+' + taxAmount.toFixed(2) + ' lei/bilet</span></div>';
+            });
+            tooltipHtml += '</div>';
+        }
+
+        if (taxesIncluded.length > 0) {
+            tooltipHtml += '<div class="mt-2 pt-2 border-t border-white/10"><p class="text-white/50 text-[10px] mb-1">Taxe incluse în preț:</p>';
+            taxesIncluded.forEach(function(tax) {
+                const taxLabel = tax.value_type === 'percent' ? '(' + tax.value + '% din net)' : '';
+                const taxAmount = tax.value_type === 'percent' ? basePrice * tax.value / 100 : tax.value;
+                tooltipHtml += '<div class="flex justify-between text-white/60"><span>' + tax.name + ' ' + taxLabel + ':</span><span>' + taxAmount.toFixed(2) + ' lei</span></div>';
+            });
+            tooltipHtml += '</div>';
+        }
+
+        tooltipHtml += '</div>';
 
         return '<div class="bg-white border-2 cart-item rounded-2xl border-border" data-item-key="' + itemKey + '" data-index="' + index + '">' +
             '<div class="flex gap-4 p-6">' +
@@ -388,9 +438,16 @@ const CartPage = {
                         (venueName ? ' • ' + venueName : '') +
                     '</p>' +
                     '<div class="mt-2">' +
-                        '<span class="inline-flex items-center px-2 py-1 text-sm font-medium rounded bg-surface">' +
-                            ticketTypeName +
-                        '</span>' +
+                        '<div class="tooltip-trigger relative inline-block">' +
+                            '<div class="flex items-center gap-2">' +
+                                '<span class="inline-flex items-center px-2 py-1 text-sm font-semibold rounded bg-surface text-secondary">' + ticketTypeName +
+                                    (hasDiscount ? ' <span class="discount-badge text-white text-[10px] font-bold py-0.5 px-1.5 rounded-full ml-1">-' + discountPercent + '%</span>' : '') +
+                                '</span>' +
+                                '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+                            '</div>' +
+                            (ticketDescription ? '<p class="text-xs text-muted mt-0.5">' + ticketDescription + '</p>' : '') +
+                            '<div class="tooltip absolute left-0 top-full mt-2 w-72 bg-secondary text-white p-4 rounded-xl shadow-xl z-10">' + tooltipHtml + '</div>' +
+                        '</div>' +
                     '</div>' +
                     '<div class="flex items-center justify-between mt-3">' +
                         '<div class="flex items-center gap-2">' +
@@ -407,8 +464,8 @@ const CartPage = {
                             '</button>' +
                         '</div>' +
                         '<div class="text-right">' +
-                            '<div class="font-bold text-primary">' + AmbiletUtils.formatCurrency(price * quantity) + '</div>' +
                             (hasDiscount ? '<div class="text-sm line-through text-muted">' + AmbiletUtils.formatCurrency(originalPrice * quantity) + '</div>' : '') +
+                            '<div class="font-bold text-primary">' + AmbiletUtils.formatCurrency(price * quantity) + '</div>' +
                         '</div>' +
                     '</div>' +
                 '</div>' +

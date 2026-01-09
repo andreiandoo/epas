@@ -55,9 +55,12 @@ const AmbiletCart = {
                     date: eventData.start_date,
                     time: eventData.start_time,
                     image: eventData.image || eventData.featured_image,
-                    venue: eventData.venue?.name,
+                    venue: eventData.venue,
                     city: eventData.venue?.city,
-                    taxes: eventData.taxes || []
+                    taxes: eventData.taxes || [],
+                    target_price: eventData.target_price || null,
+                    commission_rate: eventData.commission_rate || 5,
+                    commission_mode: eventData.commission_mode || 'included'
                 },
                 ticketTypeId,
                 ticketType: {

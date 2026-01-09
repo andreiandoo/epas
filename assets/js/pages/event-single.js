@@ -945,6 +945,8 @@ const EventPage = {
             if (qty > 0) {
                 var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketId); });
                 if (tt) {
+                    var targetPrice = self.event.target_price ? parseFloat(self.event.target_price) : null;
+
                     var eventData = {
                         id: self.event.id,
                         title: self.event.title,
@@ -953,7 +955,10 @@ const EventPage = {
                         start_time: self.event.start_time,
                         image: self.event.image,
                         venue: self.event.venue,
-                        taxes: self.event.taxes || []
+                        taxes: self.event.taxes || [],
+                        target_price: targetPrice,
+                        commission_rate: commissionRate,
+                        commission_mode: commissionMode
                     };
                     console.log('[EventPage] eventData for cart:', eventData);
 
@@ -965,6 +970,12 @@ const EventPage = {
                         if (tt.original_price) {
                             finalOriginalPrice = tt.original_price + (tt.original_price * commissionRate / 100);
                         }
+                    }
+
+                    // Use target_price as original_price if applicable
+                    // (when target_price exists and is greater than the display price)
+                    if (targetPrice && finalPrice < targetPrice) {
+                        finalOriginalPrice = targetPrice;
                     }
 
                     var ticketTypeData = {
