@@ -7,6 +7,7 @@ use App\Filament\Marketplace\Resources\ArtistResource;
 use App\Filament\Marketplace\Resources\VenueResource;
 use App\Models\Event;
 use App\Models\EventGenre;
+use App\Models\EventTag;
 use App\Models\EventType;
 use App\Models\MarketplaceCity;
 use App\Models\MarketplaceEventCategory;
@@ -129,7 +130,7 @@ class EventResource extends Resource
                                 }
                             }
                         })
-                        ->helperText('The selected organizer will receive payouts for this event')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'The selected organizer will receive payouts for this event')
                         ->prefixIcon('heroicon-m-building-office-2'),
 
                     Forms\Components\Placeholder::make('organizer_info')
@@ -471,12 +472,28 @@ class EventResource extends Resource
                                         . ($venue->city ? ' (' . $venue->city . ')' : '')
                                 ]);
                         })
-                        ->afterStateUpdated(function ($state, SSet $set) {
+                        ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
                             if ($state) {
                                 $venue = Venue::find($state);
                                 if ($venue) {
                                     $set('address', $venue->address ?? $venue->full_address ?? '');
                                     $set('website_url', $venue->website_url ?? '');
+
+                                    // Auto-fill marketplace_city_id by matching venue city name
+                                    if ($venue->city) {
+                                        $cityName = strtolower(trim($venue->city));
+                                        $matchedCity = MarketplaceCity::where('marketplace_client_id', $marketplace?->id)
+                                            ->where('is_visible', true)
+                                            ->get()
+                                            ->first(function ($city) use ($cityName, $marketplaceLanguage) {
+                                                $localizedName = strtolower($city->name[$marketplaceLanguage] ?? $city->name['ro'] ?? '');
+                                                return $localizedName === $cityName;
+                                            });
+
+                                        if ($matchedCity) {
+                                            $set('marketplace_city_id', $matchedCity->id);
+                                        }
+                                    }
                                 }
                             }
                         })
@@ -505,7 +522,7 @@ class EventResource extends Resource
                         ->searchable()
                         ->preload()
                         ->placeholder('Select a city')
-                        ->helperText('Filter events by city on the website')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Filter events by city on the website')
                         ->nullable(),
                     Forms\Components\TextInput::make('address')
                         ->label('Address')
@@ -579,7 +596,17 @@ class EventResource extends Resource
                         ->searchable()
                         ->preload()
                         ->placeholder('Select a category')
-                        ->helperText('Custom marketplace event category')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Custom marketplace event category')
+                        ->live()
+                        ->afterStateUpdated(function ($state, SSet $set) {
+                            // Auto-fill eventTypes from the category's linked event types
+                            if ($state) {
+                                $category = MarketplaceEventCategory::find($state);
+                                if ($category && !empty($category->event_type_ids)) {
+                                    $set('eventTypes', $category->event_type_ids);
+                                }
+                            }
+                        })
                         ->nullable(),
 
                     Forms\Components\Select::make('eventTypes')
@@ -660,7 +687,30 @@ class EventResource extends Resource
                         ->relationship('tags', 'name')
                         ->multiple()
                         ->preload()
-                        ->searchable(),
+                        ->searchable()
+                        ->createOptionForm([
+                            Forms\Components\TextInput::make('name')
+                                ->label('Tag name')
+                                ->required()
+                                ->maxLength(100)
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(function ($state, SSet $set) {
+                                    if ($state) {
+                                        $set('slug', Str::slug($state));
+                                    }
+                                }),
+                            Forms\Components\TextInput::make('slug')
+                                ->label('Slug')
+                                ->maxLength(100)
+                                ->rule('alpha_dash'),
+                        ])
+                        ->createOptionUsing(function (array $data): int {
+                            $tag = EventTag::create([
+                                'name' => $data['name'],
+                                'slug' => $data['slug'] ?: Str::slug($data['name']),
+                            ]);
+                            return $tag->id;
+                        }),
 
                     // Dynamic tax display based on selected event types
                     Forms\Components\Placeholder::make('applicable_taxes')
@@ -746,21 +796,13 @@ class EventResource extends Resource
 
                             return new HtmlString($html);
                         }),
-                ])->columns(2),
+                ])->columns(3),
 
             // TARGET PRICE (Marketplace Admin only)
             SC\Section::make('Target Price')
                 ->description('Set a target price reference for this event (internal use only)')
                 ->schema([
-                    Forms\Components\TextInput::make('target_price')
-                        ->label('Target Price')
-                        ->numeric()
-                        ->minValue(0)
-                        ->step(0.01)
-                        ->suffix($marketplace?->currency ?? 'RON')
-                        ->placeholder('e.g. 100.00')
-                        ->helperText('Reference price for planning and negotiations. Not displayed publicly.')
-                        ->columnSpan(1),
+                    
                 ])->columns(2),
 
             // TICKETS
@@ -788,7 +830,7 @@ class EventResource extends Resource
                             ->exists() ?? false),
 
                     // Commission Mode and Rate for event
-                    SC\Grid::make(3)->schema([
+                    SC\Grid::make(4)->schema([
                         Forms\Components\Select::make('commission_mode')
                             ->label('Commission Mode')
                             ->options([
@@ -826,6 +868,15 @@ class EventResource extends Resource
                             ->helperText('Leave empty to use organizer\'s or marketplace default rate')
                             ->live()
                             ->nullable(),
+
+                        Forms\Components\TextInput::make('target_price')
+                            ->label('Target Price')
+                            ->numeric()
+                            ->minValue(0)
+                            ->step(0.01)
+                            ->suffix($marketplace?->currency ?? 'RON')
+                            ->placeholder('e.g. 100.00')
+                            ->helperText('Reference price for planning and negotiations. Not displayed publicly.'),
 
                         Forms\Components\Placeholder::make('commission_example')
                             ->label('Example (100 RON ticket)')
@@ -1020,7 +1071,26 @@ class EventResource extends Resource
                                     ->native(false)
                                     ->seconds(false)
                                     ->displayFormat('Y-m-d H:i')
-                                    ->minDate(now()),
+                                    ->minDate(now())
+                                    ->live(debounce: 500)
+                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get, string $statePath) {
+                                        if (!$state) return;
+
+                                        $selectedDate = Carbon::parse($state);
+                                        $now = Carbon::now();
+
+                                        // If the selected date is today and time is midnight (default), set current time
+                                        if ($selectedDate->isToday() && $selectedDate->format('H:i') === '00:00') {
+                                            // Set to current time, rounded up to next 5 minutes
+                                            $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
+                                            $set($statePath, $newTime->format('Y-m-d H:i'));
+                                        }
+                                        // Ensure the datetime is not in the past
+                                        elseif ($selectedDate->lt($now)) {
+                                            $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
+                                            $set($statePath, $newTime->format('Y-m-d H:i'));
+                                        }
+                                    }),
                                 Forms\Components\DateTimePicker::make('sales_end_at')
                                     ->label('Sale ends')
                                     ->native(false)
@@ -1090,7 +1160,7 @@ class EventResource extends Resource
                             // Scheduling fields - shown when ticket is NOT active
                             Forms\Components\DateTimePicker::make('scheduled_at')
                                 ->label('Schedule Activation')
-                                ->helperText('When this ticket type should automatically become active')
+                                ->hintIcon('heroicon-o-information-circle', tooltip: 'When this ticket type should automatically become active')
                                 ->native(false)
                                 ->seconds(false)
                                 ->displayFormat('Y-m-d H:i')
@@ -1100,7 +1170,7 @@ class EventResource extends Resource
 
                             Forms\Components\Toggle::make('autostart_when_previous_sold_out')
                                 ->label('Autostart when previous sold out')
-                                ->helperText('Activate automatically when previous ticket types reach 0 capacity')
+                                ->hintIcon('heroicon-o-information-circle', tooltip: 'Activate automatically when previous ticket types reach 0 capacity')
                                 ->visible(fn (SGet $get) => !$get('is_active'))
                                 ->columnSpan(4),
                         ]),

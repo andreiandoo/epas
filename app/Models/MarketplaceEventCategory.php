@@ -33,6 +33,7 @@ class MarketplaceEventCategory extends Model
         'is_visible',
         'is_featured',
         'event_count',
+        'event_type_ids',
     ];
 
     protected $casts = [
@@ -42,6 +43,7 @@ class MarketplaceEventCategory extends Model
         'meta_description' => 'array',
         'is_visible' => 'boolean',
         'is_featured' => 'boolean',
+        'event_type_ids' => 'array',
     ];
 
     protected static function boot()

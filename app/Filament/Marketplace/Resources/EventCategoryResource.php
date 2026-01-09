@@ -16,6 +16,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Models\EventType;
 use Illuminate\Support\Str;
 
 class EventCategoryResource extends Resource
@@ -146,6 +147,24 @@ class EventCategoryResource extends Resource
 
                         Forms\Components\Toggle::make('is_featured')
                             ->label('Featured'),
+
+                        Forms\Components\Select::make('event_type_ids')
+                            ->label('Linked Event Types')
+                            ->helperText('When this category is selected on an event, these event types will be auto-filled')
+                            ->multiple()
+                            ->options(function () {
+                                return EventType::query()
+                                    ->whereNotNull('parent_id')
+                                    ->orderBy('name')
+                                    ->get()
+                                    ->mapWithKeys(fn ($type) => [
+                                        $type->id => ($type->parent ? $type->parent->getTranslation('name', 'ro') . ' > ' : '')
+                                            . $type->getTranslation('name', 'ro')
+                                    ]);
+                            })
+                            ->searchable()
+                            ->preload()
+                            ->columnSpanFull(),
 
                         SC\Tabs::make('SEO Translations')
                             ->tabs([
