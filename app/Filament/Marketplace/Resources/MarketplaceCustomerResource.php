@@ -4,6 +4,11 @@ namespace App\Filament\Marketplace\Resources;
 
 use App\Filament\Marketplace\Resources\MarketplaceCustomerResource\Pages;
 use App\Models\MarketplaceCustomer;
+use Filament\Actions\ViewAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -246,13 +251,13 @@ class MarketplaceCustomerResource extends Resource
                 Tables\Filters\TernaryFilter::make('accepts_marketing')
                     ->label('Marketing Consent'),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
