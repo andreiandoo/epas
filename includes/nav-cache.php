@@ -309,26 +309,36 @@ function saveFeaturedCitiesCache(array $data): void {
 function fetchFeaturedCitiesFromAPI(): array {
     require_once __DIR__ . '/../includes/config.php';
 
-    // Use internal API call via proxy
-    $proxyUrl = '/api/proxy.php?action=locations.cities.featured';
-    $fullUrl = (defined('SITE_URL') ? SITE_URL : '') . $proxyUrl;
+    // Call API directly (not through proxy) for server-side requests
+    $apiUrl = API_BASE_URL . '/locations/cities/featured';
 
     $context = stream_context_create([
         'http' => [
+            'method' => 'GET',
+            'header' => [
+                'X-API-Key: ' . API_KEY,
+                'Accept: application/json',
+            ],
             'timeout' => 5,
             'ignore_errors' => true
+        ],
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false
         ]
     ]);
 
-    $response = @file_get_contents($fullUrl, false, $context);
+    $response = @file_get_contents($apiUrl, false, $context);
 
     if ($response === false) {
+        error_log('[nav-cache] Failed to fetch featured cities from API: ' . $apiUrl);
         return getDefaultFeaturedCities();
     }
 
     $data = json_decode($response, true);
 
     if (!$data || !isset($data['success']) || !$data['success'] || !isset($data['data']['cities'])) {
+        error_log('[nav-cache] Invalid API response for featured cities: ' . substr($response, 0, 500));
         return getDefaultFeaturedCities();
     }
 
@@ -473,31 +483,41 @@ function saveEventCategoriesCache(array $data): void {
 }
 
 /**
- * Fetch event categories from API via proxy
+ * Fetch event categories from API directly
  */
 function fetchEventCategoriesFromAPI(): array {
     require_once __DIR__ . '/../includes/config.php';
 
-    // Use internal API call via proxy
-    $proxyUrl = '/api/proxy.php?action=event-categories';
-    $fullUrl = (defined('SITE_URL') ? SITE_URL : '') . $proxyUrl;
+    // Call API directly (not through proxy) for server-side requests
+    $apiUrl = API_BASE_URL . '/event-categories';
 
     $context = stream_context_create([
         'http' => [
+            'method' => 'GET',
+            'header' => [
+                'X-API-Key: ' . API_KEY,
+                'Accept: application/json',
+            ],
             'timeout' => 5,
             'ignore_errors' => true
+        ],
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false
         ]
     ]);
 
-    $response = @file_get_contents($fullUrl, false, $context);
+    $response = @file_get_contents($apiUrl, false, $context);
 
     if ($response === false) {
+        error_log('[nav-cache] Failed to fetch event categories from API: ' . $apiUrl);
         return getDefaultEventCategories();
     }
 
     $data = json_decode($response, true);
 
     if (!$data || !isset($data['success']) || !$data['success'] || !isset($data['data']['categories'])) {
+        error_log('[nav-cache] Invalid API response for event categories: ' . substr($response, 0, 500));
         return getDefaultEventCategories();
     }
 
@@ -601,31 +621,41 @@ function saveFeaturedVenuesCache(array $data): void {
 }
 
 /**
- * Fetch featured venues from API via proxy
+ * Fetch featured venues from API directly
  */
 function fetchFeaturedVenuesFromAPI(): array {
     require_once __DIR__ . '/../includes/config.php';
 
-    // Use internal API call via proxy
-    $proxyUrl = '/api/proxy.php?action=venues.featured';
-    $fullUrl = (defined('SITE_URL') ? SITE_URL : '') . $proxyUrl;
+    // Call API directly (not through proxy) for server-side requests
+    $apiUrl = API_BASE_URL . '/venues/featured';
 
     $context = stream_context_create([
         'http' => [
+            'method' => 'GET',
+            'header' => [
+                'X-API-Key: ' . API_KEY,
+                'Accept: application/json',
+            ],
             'timeout' => 5,
             'ignore_errors' => true
+        ],
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false
         ]
     ]);
 
-    $response = @file_get_contents($fullUrl, false, $context);
+    $response = @file_get_contents($apiUrl, false, $context);
 
     if ($response === false) {
+        error_log('[nav-cache] Failed to fetch featured venues from API: ' . $apiUrl);
         return getDefaultFeaturedVenues();
     }
 
     $data = json_decode($response, true);
 
     if (!$data || !isset($data['success']) || !$data['success'] || !isset($data['data']['venues'])) {
+        error_log('[nav-cache] Invalid API response for featured venues: ' . substr($response, 0, 500));
         return getDefaultFeaturedVenues();
     }
 
@@ -775,26 +805,36 @@ function saveVenueCategoriesCache(array $data): void {
 function fetchVenueCategoriesFromAPI(): array {
     require_once __DIR__ . '/../includes/config.php';
 
-    // Use internal API call via proxy
-    $proxyUrl = '/api/proxy.php?action=venue-categories';
-    $fullUrl = (defined('SITE_URL') ? SITE_URL : '') . $proxyUrl;
+    // Call API directly (not through proxy) for server-side requests
+    $apiUrl = API_BASE_URL . '/venue-categories';
 
     $context = stream_context_create([
         'http' => [
+            'method' => 'GET',
+            'header' => [
+                'X-API-Key: ' . API_KEY,
+                'Accept: application/json',
+            ],
             'timeout' => 5,
             'ignore_errors' => true
+        ],
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false
         ]
     ]);
 
-    $response = @file_get_contents($fullUrl, false, $context);
+    $response = @file_get_contents($apiUrl, false, $context);
 
     if ($response === false) {
+        error_log('[nav-cache] Failed to fetch venue categories from API: ' . $apiUrl);
         return getDefaultVenueCategories();
     }
 
     $data = json_decode($response, true);
 
     if (!$data || !isset($data['success']) || !$data['success'] || !isset($data['data']['categories'])) {
+        error_log('[nav-cache] Invalid API response for venue categories: ' . substr($response, 0, 500));
         return getDefaultVenueCategories();
     }
 

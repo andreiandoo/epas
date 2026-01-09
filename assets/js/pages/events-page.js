@@ -256,14 +256,23 @@ const EventsPage = {
     },
 
     /**
-     * Render a month group with header and events grid
+     * Render a month group with header and events grid/list
+     * Uses AmbiletEventCard.render() for grid view and AmbiletEventCard.renderHorizontal() for list view
      */
     renderMonthGroup(group) {
-        const eventsHtml = group.events.map(item => this.renderEventCard(item.raw)).join('');
+        // Use the unified AmbiletEventCard component based on current view
+        let eventsHtml;
+        if (this.view === 'list') {
+            // List view - horizontal cards
+            eventsHtml = group.events.map(item => AmbiletEventCard.renderHorizontal(item.raw)).join('');
+        } else {
+            // Grid view - standard grid cards
+            eventsHtml = group.events.map(item => AmbiletEventCard.render(item.raw)).join('');
+        }
 
         const gridClass = this.view === 'grid'
             ? 'grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-            : 'grid grid-cols-1 gap-6';
+            : 'flex flex-col gap-4';
 
         return '<div class="month-group">' +
             '<div class="flex items-center gap-4 mb-6">' +
@@ -275,53 +284,6 @@ const EventsPage = {
             '</div>' +
             '<div class="' + gridClass + '">' + eventsHtml + '</div>' +
         '</div>';
-    },
-
-    /**
-     * Custom event card for events page
-     */
-    renderEventCard(event) {
-        // Normalize event data
-        const normalized = AmbiletDataTransformer.normalizeEvent(event);
-        if (!normalized) return '';
-
-        const venueCity = normalized.city ? normalized.venue + ', ' + normalized.city : normalized.venue;
-
-        return '<a href="/bilete/' + normalized.slug + '" class="overflow-hidden transition-all bg-white border border-gray-200 group rounded-2xl hover:shadow-xl hover:-translate-y-1">' +
-            '<div class="relative aspect-[16/10] overflow-hidden">' +
-                '<img src="' + (normalized.image || AmbiletEventCard.PLACEHOLDER) + '" alt="' + AmbiletEventCard.escapeHtml(normalized.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy" onerror="this.src=\'' + AmbiletEventCard.PLACEHOLDER + '\'">' +
-                '<div class="absolute top-3 left-3">' +
-                    '<span class="px-3 py-1 text-xs font-bold text-white rounded-full bg-primary">' + AmbiletEventCard.escapeHtml(normalized.category || 'Evenimente') + '</span>' +
-                '</div>' +
-                '<div class="absolute flex flex-col items-center justify-center text-center bg-white shadow-lg w-14 h-14 rounded-xl top-3 right-3">' +
-                    '<span class="text-xs font-medium text-gray-500 uppercase">' + normalized.weekday + '</span>' +
-                    '<span class="text-lg font-bold text-gray-900">' + normalized.day + '</span>' +
-                    '<span class="text-[10px] font-medium text-gray-500 uppercase">' + normalized.month + '</span>' +
-                '</div>' +
-            '</div>' +
-            '<div class="p-4">' +
-                '<h3 class="mb-2 text-lg font-bold text-gray-900 transition-colors line-clamp-2 group-hover:text-primary">' + AmbiletEventCard.escapeHtml(normalized.title) + '</h3>' +
-                '<div class="flex items-center gap-2 mb-3 text-sm text-gray-500">' +
-                    '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>' +
-                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>' +
-                    '</svg>' +
-                    AmbiletEventCard.escapeHtml(venueCity) +
-                '</div>' +
-                '<div class="flex items-center justify-between">' +
-                    '<div class="flex items-center gap-1 text-sm text-gray-500">' +
-                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
-                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>' +
-                        '</svg>' +
-                        (normalized.time || '20:00') +
-                    '</div>' +
-                    '<div class="text-right">' +
-                        '<span class="text-xs text-gray-500">de la</span>' +
-                        '<span class="ml-1 text-lg font-bold text-primary">' + normalized.priceFormatted + '</span>' +
-                    '</div>' +
-                '</div>' +
-            '</div>' +
-        '</a>';
     },
 
     /**

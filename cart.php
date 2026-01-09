@@ -339,8 +339,19 @@ const CartPage = {
         promoSection.classList.remove('hidden');
         timerBar.classList.remove('hidden');
 
-        container.innerHTML = items.map((item, index) => this.renderCartItem(item, index)).join('');
-        this.updateSummary();
+        try {
+            console.log('[CartPage] About to render items, count:', items.length);
+            const html = items.map((item, index) => {
+                console.log('[CartPage] Rendering item', index, ':', item);
+                return this.renderCartItem(item, index);
+            }).join('');
+            console.log('[CartPage] Generated HTML length:', html.length);
+            container.innerHTML = html;
+            console.log('[CartPage] Items rendered to container');
+            this.updateSummary();
+        } catch (error) {
+            console.error('[CartPage] Error rendering items:', error);
+        }
     },
 
     renderCartItem(item, index) {
