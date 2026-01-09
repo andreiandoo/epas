@@ -773,14 +773,8 @@ class EventsController extends BaseController
         // Get event type IDs
         $eventTypeIds = $event->eventTypes->pluck('id')->toArray();
 
-        // If no event types, return empty array
-        if (empty($eventTypeIds)) {
-            // Fall back to global taxes only
-            $eventTypeIds = [];
-        }
-
-        // Query taxes that apply to these event types (or are global)
-        $taxes = GeneralTax::query()
+        // Build base query for global taxes
+        $query = GeneralTax::query()
             ->whereNull('tenant_id') // Global taxes only (not tenant-specific)
             ->where('is_active', true)
             ->where('visible_on_checkout', true)
@@ -789,18 +783,25 @@ class EventsController extends BaseController
             })
             ->where(function ($q) {
                 $q->whereNull('valid_until')->orWhere('valid_until', '>=', now());
-            })
-            ->where(function ($q) use ($eventTypeIds) {
-                // Match taxes that:
-                // 1. Have no event_type_id (apply to all event types)
-                // 2. OR have an event_type_id that matches one of the event's types
-                $q->whereNull('event_type_id');
-                if (!empty($eventTypeIds)) {
-                    $q->orWhereIn('event_type_id', $eventTypeIds);
-                }
-            })
-            ->orderByDesc('priority')
-            ->get();
+            });
+
+        // Check if event_type_id column exists before filtering by it
+        try {
+            if (!empty($eventTypeIds) && \Schema::hasColumn('general_taxes', 'event_type_id')) {
+                $query->where(function ($q) use ($eventTypeIds) {
+                    // Match taxes that:
+                    // 1. Have no event_type_id (apply to all event types)
+                    // 2. OR have an event_type_id that matches one of the event's types
+                    $q->whereNull('event_type_id')
+                      ->orWhereIn('event_type_id', $eventTypeIds);
+                });
+            }
+        } catch (\Exception $e) {
+            // Column doesn't exist, just continue without event type filter
+            \Log::debug('event_type_id column not found in general_taxes, skipping filter');
+        }
+
+        $taxes = $query->orderByDesc('priority')->get();
 
         return $taxes->map(function ($tax) {
             return [
