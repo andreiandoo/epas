@@ -70,8 +70,12 @@
                         {{-- Configuration Form (shown when editing this payment method) --}}
                         @if($this->editingPaymentMethodId === $pm['id'])
                             <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                                <form wire:submit.prevent="savePaymentMethod">
-                                    <div class="space-y-4">
+                                <form wire:submit.prevent="savePaymentMethod" autocomplete="off">
+                                    {{-- Hidden field to prevent autofill --}}
+                                    <input type="text" style="display:none" />
+                                    <input type="password" style="display:none" />
+
+                                    <div class="space-y-6">
                                         {{-- Status toggles --}}
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <label class="flex items-center gap-3">
@@ -84,72 +88,109 @@
                                             </label>
                                         </div>
 
-                                        {{-- Dynamic settings fields based on schema --}}
+                                        {{-- Dynamic settings fields based on schema with sections --}}
                                         @if(count($pm['settings_schema']) > 0)
-                                            <div class="mt-4">
-                                                <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Configuration Settings</h4>
-                                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    @foreach($pm['settings_schema'] as $field)
-                                                        <div class="{{ ($field['type'] ?? 'text') === 'textarea' ? 'md:col-span-2' : '' }}">
-                                                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                                {{ $field['label'] }}
-                                                                @if($field['required'] ?? false)
-                                                                    <span class="text-danger-500">*</span>
-                                                                @endif
-                                                            </label>
-                                                            @if(($field['type'] ?? 'text') === 'textarea')
-                                                                <textarea
-                                                                    wire:model="formData.settings.{{ $field['key'] }}"
-                                                                    rows="3"
-                                                                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                                                    @if($field['required'] ?? false) required @endif
-                                                                ></textarea>
-                                                            @elseif(($field['type'] ?? 'text') === 'password')
-                                                                <input
-                                                                    type="password"
-                                                                    wire:model="formData.settings.{{ $field['key'] }}"
-                                                                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                                                    @if($field['required'] ?? false) required @endif
-                                                                />
-                                                            @elseif(($field['type'] ?? 'text') === 'boolean')
-                                                                <label class="flex items-center gap-2 mt-2">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        wire:model="formData.settings.{{ $field['key'] }}"
-                                                                        class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                                                                    />
-                                                                    <span class="text-sm text-gray-600 dark:text-gray-400">{{ $field['label'] }}</span>
-                                                                </label>
-                                                            @elseif(($field['type'] ?? 'text') === 'select')
-                                                                <select
-                                                                    wire:model="formData.settings.{{ $field['key'] }}"
-                                                                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                                                    @if($field['required'] ?? false) required @endif
-                                                                >
-                                                                    <option value="">Select...</option>
-                                                                    @foreach($field['options'] ?? [] as $option)
-                                                                        <option value="{{ $option }}">{{ ucfirst($option) }}</option>
-                                                                    @endforeach
-                                                                </select>
-                                                            @elseif(($field['type'] ?? 'text') === 'number')
-                                                                <input
-                                                                    type="number"
-                                                                    wire:model="formData.settings.{{ $field['key'] }}"
-                                                                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                                                    @if($field['required'] ?? false) required @endif
-                                                                />
-                                                            @else
-                                                                <input
-                                                                    type="text"
-                                                                    wire:model="formData.settings.{{ $field['key'] }}"
-                                                                    class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                                                    @if($field['required'] ?? false) required @endif
-                                                                />
+                                            @php
+                                                $sections = $pm['settings_sections'] ?? [];
+                                                $fieldsBySection = collect($pm['settings_schema'])->groupBy(fn($f) => $f['section'] ?? 'default');
+                                            @endphp
+
+                                            @foreach($fieldsBySection as $sectionKey => $fields)
+                                                <div class="mt-4">
+                                                    @if(isset($sections[$sectionKey]))
+                                                        <div class="mb-3">
+                                                            <h4 class="text-sm font-medium text-gray-900 dark:text-white">{{ $sections[$sectionKey]['label'] }}</h4>
+                                                            @if(isset($sections[$sectionKey]['description']))
+                                                                <p class="text-xs text-gray-500 dark:text-gray-400">{{ $sections[$sectionKey]['description'] }}</p>
                                                             @endif
                                                         </div>
-                                                    @endforeach
+                                                    @elseif($sectionKey === 'default')
+                                                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">Configuration Settings</h4>
+                                                    @endif
+
+                                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 {{ $sectionKey !== 'mode' ? 'p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg' : '' }}">
+                                                        @foreach($fields as $field)
+                                                            <div class="{{ ($field['type'] ?? 'text') === 'textarea' ? 'md:col-span-2' : '' }} {{ ($field['type'] ?? 'text') === 'boolean' ? 'md:col-span-2' : '' }}">
+                                                                @if(($field['type'] ?? 'text') !== 'boolean')
+                                                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        {{ $field['label'] }}
+                                                                        @if($field['required'] ?? false)
+                                                                            <span class="text-danger-500">*</span>
+                                                                        @endif
+                                                                    </label>
+                                                                @endif
+
+                                                                @if(($field['type'] ?? 'text') === 'textarea')
+                                                                    <textarea
+                                                                        wire:model="formData.settings.{{ $field['key'] }}"
+                                                                        rows="3"
+                                                                        autocomplete="off"
+                                                                        data-lpignore="true"
+                                                                        data-form-type="other"
+                                                                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 font-mono text-sm"
+                                                                        placeholder="{{ $field['placeholder'] ?? '' }}"
+                                                                        @if($field['required'] ?? false) required @endif
+                                                                    ></textarea>
+                                                                @elseif(($field['type'] ?? 'text') === 'password')
+                                                                    <input
+                                                                        type="password"
+                                                                        wire:model="formData.settings.{{ $field['key'] }}"
+                                                                        autocomplete="new-password"
+                                                                        data-lpignore="true"
+                                                                        data-form-type="other"
+                                                                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 font-mono text-sm"
+                                                                        placeholder="{{ $field['placeholder'] ?? '' }}"
+                                                                        @if($field['required'] ?? false) required @endif
+                                                                    />
+                                                                @elseif(($field['type'] ?? 'text') === 'boolean')
+                                                                    <label class="flex items-center gap-2">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            wire:model="formData.settings.{{ $field['key'] }}"
+                                                                            class="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                                                                        />
+                                                                        <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $field['label'] }}</span>
+                                                                    </label>
+                                                                @elseif(($field['type'] ?? 'text') === 'select')
+                                                                    <select
+                                                                        wire:model="formData.settings.{{ $field['key'] }}"
+                                                                        autocomplete="off"
+                                                                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                                                                        @if($field['required'] ?? false) required @endif
+                                                                    >
+                                                                        <option value="">Select...</option>
+                                                                        @foreach($field['options'] ?? [] as $option)
+                                                                            <option value="{{ $option }}">{{ ucfirst($option) }}</option>
+                                                                        @endforeach
+                                                                    </select>
+                                                                @elseif(($field['type'] ?? 'text') === 'number')
+                                                                    <input
+                                                                        type="number"
+                                                                        wire:model="formData.settings.{{ $field['key'] }}"
+                                                                        autocomplete="off"
+                                                                        data-lpignore="true"
+                                                                        data-form-type="other"
+                                                                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                                                                        placeholder="{{ $field['placeholder'] ?? '' }}"
+                                                                        @if($field['required'] ?? false) required @endif
+                                                                    />
+                                                                @else
+                                                                    <input
+                                                                        type="text"
+                                                                        wire:model="formData.settings.{{ $field['key'] }}"
+                                                                        autocomplete="off"
+                                                                        data-lpignore="true"
+                                                                        data-form-type="other"
+                                                                        class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500 font-mono text-sm"
+                                                                        placeholder="{{ $field['placeholder'] ?? '' }}"
+                                                                        @if($field['required'] ?? false) required @endif
+                                                                    />
+                                                                @endif
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            @endforeach
                                         @endif
 
                                         {{-- Form actions --}}

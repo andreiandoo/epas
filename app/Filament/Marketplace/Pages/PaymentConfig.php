@@ -58,6 +58,7 @@ class PaymentConfig extends Page implements HasForms
                     'status' => $ms->pivot->status,
                     'settings' => $ms->pivot->settings ?? [],
                     'settings_schema' => $ms->metadata['settings_schema'] ?? [],
+                    'settings_sections' => $ms->metadata['settings_sections'] ?? [],
                     'is_configured' => $this->isPaymentMethodConfigured($ms),
                 ];
             })

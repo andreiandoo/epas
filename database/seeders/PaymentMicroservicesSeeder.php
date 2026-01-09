@@ -29,10 +29,23 @@ class PaymentMicroservicesSeeder extends Seeder
                     'type' => 'payment_gateway',
                     'supported_currencies' => ['RON', 'EUR', 'USD'],
                     'settings_schema' => [
-                        ['key' => 'publishable_key', 'label' => 'Publishable Key', 'type' => 'text', 'required' => true],
-                        ['key' => 'secret_key', 'label' => 'Secret Key', 'type' => 'password', 'required' => true],
-                        ['key' => 'webhook_secret', 'label' => 'Webhook Secret', 'type' => 'password', 'required' => false],
-                        ['key' => 'test_mode', 'label' => 'Test Mode', 'type' => 'boolean', 'default' => true],
+                        // Mode selection
+                        ['key' => 'test_mode', 'label' => 'Enable Test Mode', 'type' => 'boolean', 'default' => true, 'section' => 'mode'],
+
+                        // Test/Sandbox credentials
+                        ['key' => 'test_publishable_key', 'label' => 'Test Publishable Key', 'type' => 'text', 'required' => false, 'section' => 'test', 'placeholder' => 'pk_test_...'],
+                        ['key' => 'test_secret_key', 'label' => 'Test Secret Key', 'type' => 'password', 'required' => false, 'section' => 'test', 'placeholder' => 'sk_test_...'],
+                        ['key' => 'test_webhook_secret', 'label' => 'Test Webhook Secret', 'type' => 'password', 'required' => false, 'section' => 'test', 'placeholder' => 'whsec_...'],
+
+                        // Live/Production credentials
+                        ['key' => 'live_publishable_key', 'label' => 'Live Publishable Key', 'type' => 'text', 'required' => false, 'section' => 'live', 'placeholder' => 'pk_live_...'],
+                        ['key' => 'live_secret_key', 'label' => 'Live Secret Key', 'type' => 'password', 'required' => false, 'section' => 'live', 'placeholder' => 'sk_live_...'],
+                        ['key' => 'live_webhook_secret', 'label' => 'Live Webhook Secret', 'type' => 'password', 'required' => false, 'section' => 'live', 'placeholder' => 'whsec_...'],
+                    ],
+                    'settings_sections' => [
+                        'mode' => ['label' => 'Environment', 'description' => 'Select which environment to use'],
+                        'test' => ['label' => 'Test/Sandbox Credentials', 'description' => 'Use these credentials for testing'],
+                        'live' => ['label' => 'Live/Production Credentials', 'description' => 'Use these credentials for real transactions'],
                     ],
                 ],
             ],
@@ -55,10 +68,23 @@ class PaymentMicroservicesSeeder extends Seeder
                     'type' => 'payment_gateway',
                     'supported_currencies' => ['RON', 'EUR'],
                     'settings_schema' => [
-                        ['key' => 'merchant_id', 'label' => 'Merchant ID (Signature)', 'type' => 'text', 'required' => true],
-                        ['key' => 'public_key', 'label' => 'Public Key (Certificate)', 'type' => 'textarea', 'required' => true],
-                        ['key' => 'private_key', 'label' => 'Private Key', 'type' => 'textarea', 'required' => true],
-                        ['key' => 'test_mode', 'label' => 'Test Mode (Sandbox)', 'type' => 'boolean', 'default' => true],
+                        // Mode selection
+                        ['key' => 'test_mode', 'label' => 'Enable Sandbox Mode', 'type' => 'boolean', 'default' => true, 'section' => 'mode'],
+
+                        // Sandbox credentials
+                        ['key' => 'test_merchant_id', 'label' => 'Sandbox Merchant ID (Signature)', 'type' => 'text', 'required' => false, 'section' => 'test'],
+                        ['key' => 'test_public_key', 'label' => 'Sandbox Public Key (Certificate)', 'type' => 'textarea', 'required' => false, 'section' => 'test'],
+                        ['key' => 'test_private_key', 'label' => 'Sandbox Private Key', 'type' => 'textarea', 'required' => false, 'section' => 'test'],
+
+                        // Live credentials
+                        ['key' => 'live_merchant_id', 'label' => 'Live Merchant ID (Signature)', 'type' => 'text', 'required' => false, 'section' => 'live'],
+                        ['key' => 'live_public_key', 'label' => 'Live Public Key (Certificate)', 'type' => 'textarea', 'required' => false, 'section' => 'live'],
+                        ['key' => 'live_private_key', 'label' => 'Live Private Key', 'type' => 'textarea', 'required' => false, 'section' => 'live'],
+                    ],
+                    'settings_sections' => [
+                        'mode' => ['label' => 'Environment', 'description' => 'Select which environment to use'],
+                        'test' => ['label' => 'Sandbox Credentials', 'description' => 'Use these credentials for testing in sandbox mode'],
+                        'live' => ['label' => 'Live/Production Credentials', 'description' => 'Use these credentials for real transactions'],
                     ],
                 ],
             ],
