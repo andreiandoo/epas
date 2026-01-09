@@ -13,7 +13,6 @@ use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Notifications\Notification;
 
 class PaymentMethodsRelationManager extends RelationManager
 {
@@ -239,20 +238,6 @@ class PaymentMethodsRelationManager extends RelationManager
                                         ->updateExistingPivot($ms->id, ['is_default' => false]);
                                 });
                         }
-                    }),
-
-                Tables\Actions\Action::make('test_connection')
-                    ->label('Test')
-                    ->icon('heroicon-o-signal')
-                    ->color('info')
-                    ->visible(fn ($record) => in_array($record->slug, ['payment-stripe', 'payment-netopia']))
-                    ->action(function ($record) {
-                        // TODO: Implement actual connection testing
-                        Notification::make()
-                            ->title('Connection Test')
-                            ->body('Connection testing is not yet implemented for ' . ($record->getTranslation('name', 'en') ?? $record->name))
-                            ->info()
-                            ->send();
                     }),
 
                 DetachAction::make()
