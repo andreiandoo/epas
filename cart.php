@@ -310,6 +310,11 @@ const CartPage = {
 
     render() {
         const items = AmbiletCart.getItems();
+        console.log('[CartPage] Cart items:', items);
+        console.log('[CartPage] First item:', items[0]);
+        console.log('[CartPage] Taxes from cart:', items[0]?.event?.taxes);
+        console.log('[CartPage] CartPage.taxes:', this.taxes);
+
         const loading = document.getElementById('cart-loading');
         const container = document.getElementById('cartItems');
         const emptyState = document.getElementById('emptyCart');

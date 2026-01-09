@@ -235,8 +235,15 @@ const EventPage = {
     async loadEvent() {
         try {
             const response = await AmbiletAPI.getEvent(this.slug);
+            console.log('[EventPage] API Response:', response);
+            console.log('[EventPage] Taxes from API:', response.data?.taxes);
+            console.log('[EventPage] Target price from API:', response.data?.event?.target_price);
+            console.log('[EventPage] Ticket types from API:', response.data?.ticket_types);
             if (response.success && response.data) {
                 this.event = this.transformApiData(response.data);
+                console.log('[EventPage] Transformed event:', this.event);
+                console.log('[EventPage] Event taxes:', this.event.taxes);
+                console.log('[EventPage] Event ticket_types:', this.ticketTypes);
                 this.render();
             } else {
                 this.showError('Eveniment negasit');
@@ -316,6 +323,7 @@ const EventPage = {
             artists: artistsData,
             ticket_types: ticketTypesData.map(function(tt) {
                 var available = tt.available_quantity !== undefined ? tt.available_quantity : (tt.available !== undefined ? tt.available : 999);
+                console.log('[EventPage] Processing ticket type:', tt.name, 'price:', tt.price, 'original_price:', tt.original_price);
                 return {
                     id: tt.id,
                     name: tt.name,
@@ -611,6 +619,7 @@ const EventPage = {
             const hasDiscount = tt.original_price && tt.original_price > tt.price;
             const discountPercent = hasDiscount ? Math.round((1 - tt.price / tt.original_price) * 100) : 0;
             const isSoldOut = tt.is_sold_out || tt.available <= 0;
+            console.log('[EventPage] Rendering ticket:', tt.name, 'hasDiscount:', hasDiscount, 'original_price:', tt.original_price, 'price:', tt.price, 'discountPercent:', discountPercent);
 
             // Availability display
             let availabilityHtml = '';
@@ -797,6 +806,9 @@ const EventPage = {
         var commissionRate = this.event.commission_rate || 5;
         var commissionMode = this.event.commission_mode || 'included';
 
+        console.log('[EventPage] addToCart called');
+        console.log('[EventPage] Event taxes to add:', self.event.taxes);
+
         for (var ticketId in this.quantities) {
             var qty = this.quantities[ticketId];
             if (qty > 0) {
@@ -812,6 +824,7 @@ const EventPage = {
                         venue: self.event.venue,
                         taxes: self.event.taxes || []
                     };
+                    console.log('[EventPage] eventData for cart:', eventData);
 
                     // Calculate final price including commission when added_on_top
                     var finalPrice = tt.price;
