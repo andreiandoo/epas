@@ -1,6 +1,7 @@
 /**
  * Ambilet.ro - Events Page Controller
  * Handles main events listing page with filtering, sorting, search
+ * Events are grouped by month for better organization
  *
  * Dependencies: AmbiletAPI, AmbiletEventCard, AmbiletPagination, AmbiletEmptyState, AmbiletDataTransformer
  */
@@ -9,7 +10,7 @@ const EventsPage = {
     // State
     events: [],
     page: 1,
-    perPage: 12,
+    perPage: 24, // Increased to show more events per page when grouped
     totalPages: 1,
     view: 'grid',
     filters: {
@@ -23,6 +24,12 @@ const EventsPage = {
         sort: 'date',
         search: ''
     },
+
+    // Month names in Romanian
+    monthNames: [
+        'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+        'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
+    ],
 
     // DOM element IDs
     elements: {
@@ -183,7 +190,40 @@ const EventsPage = {
     },
 
     /**
-     * Render events to grid
+     * Group events by month
+     */
+    groupEventsByMonth(events) {
+        const groups = {};
+
+        events.forEach(event => {
+            const normalized = AmbiletDataTransformer.normalizeEvent(event);
+            if (!normalized) return;
+
+            // Get event date
+            const dateStr = event.date || event.starts_at || event.event_date;
+            if (!dateStr) return;
+
+            const date = new Date(dateStr);
+            const monthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+            const monthLabel = this.monthNames[date.getMonth()] + ' ' + date.getFullYear();
+
+            if (!groups[monthKey]) {
+                groups[monthKey] = {
+                    key: monthKey,
+                    label: monthLabel,
+                    events: []
+                };
+            }
+
+            groups[monthKey].events.push({ raw: event, normalized: normalized });
+        });
+
+        // Sort by month key and return as array
+        return Object.values(groups).sort((a, b) => a.key.localeCompare(b.key));
+    },
+
+    /**
+     * Render events to grid, grouped by month
      */
     renderEvents() {
         const grid = document.getElementById(this.elements.eventsGrid);
@@ -196,11 +236,45 @@ const EventsPage = {
             return;
         }
 
-        // Normalize and render events
-        const html = this.events.map(event => this.renderEventCard(event)).join('');
+        // Group events by month
+        const monthGroups = this.groupEventsByMonth(this.events);
+
+        if (monthGroups.length === 0) {
+            this.showEmpty();
+            return;
+        }
+
+        // Render grouped events
+        let html = '';
+        monthGroups.forEach(group => {
+            html += this.renderMonthGroup(group);
+        });
+
         grid.innerHTML = html;
-        grid.classList.remove('hidden');
-        grid.classList.add('grid');
+        grid.classList.remove('hidden', 'grid');
+        grid.classList.add('flex', 'flex-col', 'gap-8');
+    },
+
+    /**
+     * Render a month group with header and events grid
+     */
+    renderMonthGroup(group) {
+        const eventsHtml = group.events.map(item => this.renderEventCard(item.raw)).join('');
+
+        const gridClass = this.view === 'grid'
+            ? 'grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+            : 'grid grid-cols-1 gap-6';
+
+        return '<div class="month-group">' +
+            '<div class="flex items-center gap-4 mb-6">' +
+                '<h2 class="text-2xl font-bold text-gray-900">' + group.label + '</h2>' +
+                '<span class="px-3 py-1 text-sm font-medium text-gray-600 bg-gray-100 rounded-full">' +
+                    group.events.length + ' ' + (group.events.length === 1 ? 'eveniment' : 'evenimente') +
+                '</span>' +
+                '<div class="flex-1 h-px bg-gray-200"></div>' +
+            '</div>' +
+            '<div class="' + gridClass + '">' + eventsHtml + '</div>' +
+        '</div>';
     },
 
     /**
@@ -401,6 +475,7 @@ const EventsPage = {
         if (this.filters.category) params.set('categorie', this.filters.category);
         if (this.filters.city) params.set('oras', this.filters.city);
         if (this.filters.genre) params.set('gen', this.filters.genre);
+        if (this.filters.artist) params.set('artist', this.filters.artist);
         if (this.filters.date) params.set('data', this.filters.date);
         if (this.filters.price) params.set('pret', this.filters.price);
         if (this.filters.sort && this.filters.sort !== 'date') params.set('sortare', this.filters.sort);
@@ -427,6 +502,7 @@ const EventsPage = {
         }
         if (this.filters.city) activeFilters.push({ key: 'city', label: 'Oras: ' + this.filters.city });
         if (this.filters.genre) activeFilters.push({ key: 'genre', label: 'Gen: ' + this.filters.genre });
+        if (this.filters.artist) activeFilters.push({ key: 'artist', label: 'Artist: ' + this.filters.artist });
         if (this.filters.date) activeFilters.push({ key: 'date', label: 'Data: ' + this.filters.date });
         if (this.filters.price) activeFilters.push({ key: 'price', label: 'Pret: ' + this.filters.price });
         if (this.filters.search) activeFilters.push({ key: 'search', label: 'Cautare: ' + this.filters.search });
@@ -474,7 +550,10 @@ const EventsPage = {
             if (el) el.value = '';
         }
 
-        this.applyFilters();
+        this.page = 1;
+        this.updateURL();
+        this.updateActiveFilters();
+        this.loadEvents();
     },
 
     /**
@@ -488,9 +567,8 @@ const EventsPage = {
 
         if (!grid) return;
 
+        // Update view buttons
         if (view === 'grid') {
-            grid.classList.remove('grid-cols-1');
-            grid.classList.add('sm:grid-cols-2', 'lg:grid-cols-3', 'xl:grid-cols-4');
             if (gridBtn) {
                 gridBtn.classList.add('bg-primary', 'text-white');
                 gridBtn.classList.remove('bg-white');
@@ -500,8 +578,6 @@ const EventsPage = {
                 listBtn.classList.add('bg-white');
             }
         } else {
-            grid.classList.add('grid-cols-1');
-            grid.classList.remove('sm:grid-cols-2', 'lg:grid-cols-3', 'xl:grid-cols-4');
             if (listBtn) {
                 listBtn.classList.add('bg-primary', 'text-white');
                 listBtn.classList.remove('bg-white');
@@ -510,6 +586,11 @@ const EventsPage = {
                 gridBtn.classList.remove('bg-primary', 'text-white');
                 gridBtn.classList.add('bg-white');
             }
+        }
+
+        // Re-render events with new view
+        if (this.events.length > 0) {
+            this.renderEvents();
         }
     }
 };

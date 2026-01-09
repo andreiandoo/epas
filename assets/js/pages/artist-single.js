@@ -437,14 +437,15 @@ const ArtistPage = {
 
     /**
      * Render about section
+     * Note: Biography content comes from trusted admin panel and may contain HTML formatting
      */
     renderAbout(about) {
         var container = document.getElementById(this.elements.aboutCard);
         if (!container) return;
 
-        var self = this;
         container.innerHTML = about.map(function(text) {
-            return '<p class="text-base leading-[1.8] text-gray-600 mb-4 last:mb-0">' + self.escapeHtml(text) + '</p>';
+            // Render HTML content directly - content is from trusted source (admin panel)
+            return '<div class="text-base leading-[1.8] text-gray-600 mb-4 last:mb-0 prose prose-sm max-w-none">' + text + '</div>';
         }).join('');
     },
 

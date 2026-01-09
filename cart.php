@@ -120,10 +120,10 @@ require_once __DIR__ . '/includes/header.php';
 
                             <!-- Savings -->
                             <div id="savingsRow" class="hidden p-3 mb-6 bg-success/10 rounded-xl">
-                                <div class="flex items-center justify-between">
+                                <div class="flex flex-col gap-1">
                                     <div class="flex items-center gap-2">
                                         <span class="text-lg text-success">🎉</span>
-                                        <span class="text-sm font-medium text-success">Economisești:</span>
+                                        <span id="savingsText" class="text-sm font-medium text-success">Economisești:</span>
                                     </div>
                                     <span id="savings" class="font-bold text-success">0.00 lei</span>
                                 </div>
@@ -232,10 +232,47 @@ const CartPage = {
     endTime: null,
     appliedPromo: null,
     discount: 0,
+    taxes: [], // Dynamic taxes from API/config
 
-    init() {
+    async init() {
+        await this.loadTaxes();
         this.setupTimer();
         this.render();
+    },
+
+    /**
+     * Load taxes from API or use defaults from config
+     */
+    async loadTaxes() {
+        try {
+            // Try to load taxes from API
+            if (typeof AmbiletAPI !== 'undefined') {
+                const response = await AmbiletAPI.get('/config/taxes');
+                if (response.success && response.data?.taxes) {
+                    this.taxes = response.data.taxes;
+                    return;
+                }
+            }
+        } catch (e) {
+            console.log('Using default taxes from config');
+        }
+
+        // Fallback to config or empty if not available
+        if (typeof AMBILET_CONFIG !== 'undefined' && AMBILET_CONFIG.TAXES) {
+            // Transform config taxes to array format
+            this.taxes = [];
+            if (AMBILET_CONFIG.TAXES.RED_CROSS) {
+                this.taxes.push({
+                    name: 'Taxa Crucea Roșie',
+                    value: AMBILET_CONFIG.TAXES.RED_CROSS * 100,
+                    value_type: 'percent',
+                    is_active: true
+                });
+            }
+        } else {
+            // Default empty - no extra taxes
+            this.taxes = [];
+        }
     },
 
     setupTimer() {
@@ -463,11 +500,13 @@ const CartPage = {
         let subtotal = 0;
         let totalItems = 0;
         let savings = 0;
+        const savingsTickets = []; // Track which tickets have discounts
 
         items.forEach(item => {
             // Handle both AmbiletCart format and legacy format
             const price = item.ticketType?.price || item.price || 0;
             const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
+            const ticketName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
             const quantity = item.quantity || 1;
 
             subtotal += price * quantity;
@@ -475,19 +514,54 @@ const CartPage = {
 
             // Calculate savings for discounted items
             if (originalPrice && originalPrice > price) {
-                savings += (originalPrice - price) * quantity;
+                const itemSavings = (originalPrice - price) * quantity;
+                savings += itemSavings;
+                savingsTickets.push(ticketName);
             }
         });
 
-        const taxRedCross = subtotal * 0.01;
-        let total = subtotal + taxRedCross - this.discount;
+        // Calculate taxes dynamically
+        let totalTaxes = 0;
+        const taxBreakdown = [];
+
+        this.taxes.forEach(tax => {
+            if (!tax.is_active) return;
+            let taxAmount = 0;
+            if (tax.value_type === 'percent') {
+                taxAmount = subtotal * (tax.value / 100);
+            } else if (tax.value_type === 'fixed') {
+                taxAmount = tax.value * totalItems;
+            }
+            totalTaxes += taxAmount;
+            taxBreakdown.push({ name: tax.name, amount: taxAmount, value: tax.value, value_type: tax.value_type });
+        });
+
+        let total = subtotal + totalTaxes - this.discount;
         const points = Math.floor(total / 10);
 
         // Update DOM
         document.getElementById('totalItems').textContent = totalItems;
         document.getElementById('summaryItems').textContent = totalItems;
         document.getElementById('subtotal').textContent = AmbiletUtils.formatCurrency(subtotal);
-        document.getElementById('taxRedCross').textContent = AmbiletUtils.formatCurrency(taxRedCross);
+
+        // Update taxes in DOM - find the tax row and update it
+        const taxRedCrossEl = document.getElementById('taxRedCross');
+        if (taxRedCrossEl) {
+            if (taxBreakdown.length > 0) {
+                // Show first tax (usually Red Cross)
+                const firstTax = taxBreakdown[0];
+                taxRedCrossEl.textContent = AmbiletUtils.formatCurrency(firstTax.amount);
+                // Update the label as well
+                const taxLabel = taxRedCrossEl.closest('.flex').querySelector('.text-muted');
+                if (taxLabel && firstTax.value_type === 'percent') {
+                    taxLabel.childNodes[0].textContent = `${firstTax.name} (${firstTax.value}%)`;
+                }
+            } else {
+                // No taxes configured - show 0
+                taxRedCrossEl.textContent = AmbiletUtils.formatCurrency(0);
+            }
+        }
+
         document.getElementById('totalPrice').textContent = AmbiletUtils.formatCurrency(total);
 
         // Discount row
@@ -498,10 +572,17 @@ const CartPage = {
             document.getElementById('discountRow').classList.add('hidden');
         }
 
-        // Savings row
+        // Savings row with ticket name
         if (savings > 0) {
             document.getElementById('savingsRow').classList.remove('hidden');
             document.getElementById('savings').textContent = AmbiletUtils.formatCurrency(savings);
+
+            // Update the savings text to include ticket name(s)
+            const savingsTextEl = document.getElementById('savingsText');
+            if (savingsTextEl && savingsTickets.length > 0) {
+                const ticketNames = [...new Set(savingsTickets)].join(', ');
+                savingsTextEl.textContent = `Fiindcă cumperi bilete ${ticketNames} ai economisit:`;
+            }
         } else {
             document.getElementById('savingsRow').classList.add('hidden');
         }
