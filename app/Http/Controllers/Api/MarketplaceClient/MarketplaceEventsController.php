@@ -234,6 +234,8 @@ class MarketplaceEventsController extends BaseController
                 'capacity' => $venue?->capacity,
                 'is_featured' => $event->is_homepage_featured || $event->is_general_featured,
                 'target_price' => $targetPrice,
+                'views_count' => (int) ($event->views_count ?? 0),
+                'interested_count' => (int) ($event->interested_count ?? 0),
             ],
             'organizer' => $organizer ? [
                 'id' => $organizer->id,

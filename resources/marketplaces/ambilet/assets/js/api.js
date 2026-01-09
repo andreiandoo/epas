@@ -357,6 +357,11 @@ const AmbiletAPI = {
         if (endpoint.includes('/cart')) return 'cart';
         if (endpoint.includes('/checkout')) return 'checkout';
 
+        // Event tracking endpoints (must be before general /events routes)
+        if (endpoint.match(/\/events\/[a-z0-9-]+\/track-view$/i)) return 'event.track-view';
+        if (endpoint.match(/\/events\/[a-z0-9-]+\/toggle-interest$/i)) return 'event.toggle-interest';
+        if (endpoint.match(/\/events\/[a-z0-9-]+\/check-interest$/i)) return 'event.check-interest';
+
         // Events endpoints (match /events but not /marketplace-events which is handled above)
         if (endpoint.match(/^\/events\/[a-z0-9-]+$/i)) return 'event';
         if (endpoint.startsWith('/events')) return 'events';
@@ -411,6 +416,12 @@ const AmbiletAPI = {
         const eventMatch = endpoint.match(/\/marketplace-events\/([a-z0-9-]+)$/i);
         if (eventMatch) {
             return `slug=${encodeURIComponent(eventMatch[1])}`;
+        }
+
+        // Extract slug from event tracking endpoints: /events/{slug}/track-view, /events/{slug}/toggle-interest, /events/{slug}/check-interest
+        const eventTrackingMatch = endpoint.match(/\/events\/([a-z0-9-]+)\/(track-view|toggle-interest|check-interest)$/i);
+        if (eventTrackingMatch) {
+            return `slug=${encodeURIComponent(eventTrackingMatch[1])}`;
         }
 
         const venueMatch = endpoint.match(/\/venues\/([a-z0-9-]+)$/i);
