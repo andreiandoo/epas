@@ -81,7 +81,7 @@
                     type="text"
                     id="epas-global-search-input"
                     placeholder="{{ $searchPlaceholder }}"
-                    class="dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:border-gray-600"
+                    class="dark:bg-gray-800 dark:text-white dark:placeholder-gray-400 dark:border-transparent"
                     autocomplete="off"
                     data-panel="{{ $panelType }}"
                     @if($tenantSlug) data-tenant="{{ $tenantSlug }}" @endif
@@ -104,7 +104,7 @@
                     <button
                         @click="open = !open"
                         type="button"
-                        class="flex items-center gap-2 px-3 py-2 text-sm text-amber-700 transition bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700"
+                        class="flex items-center gap-2 px-3 py-2 text-sm transition border rounded-lg text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:border-transparent"
                     >
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>

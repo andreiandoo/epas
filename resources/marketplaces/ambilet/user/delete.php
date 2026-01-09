@@ -6,14 +6,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
-<!-- Main Container with Sidebar -->
-<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
-    <div class="flex flex-col gap-6 lg:flex-row">
-        <!-- Sidebar -->
-        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
-
-        <!-- Main Content -->
-        <main class="flex-1 min-w-0 lg:pt-24">
+<?php require_once dirname(__DIR__) . '/includes/user-wrap.php'; ?>
             <!-- Breadcrumb -->
             <nav class="flex items-center gap-2 mb-6 text-sm">
                 <a href="/cont" class="text-muted hover:text-primary">Contul meu</a>
@@ -24,7 +17,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </nav>
 
             <!-- Delete Card -->
-            <div class="max-w-xl mx-auto bg-white border rounded-2xl border-border overflow-hidden">
+            <div class="max-w-xl mx-auto overflow-hidden bg-white border rounded-2xl border-border">
                 <!-- Header -->
                 <div class="p-6 text-center text-white bg-gradient-to-r from-red-600 to-red-700">
                     <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-white/20">
@@ -37,7 +30,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <!-- Body -->
                 <div class="p-6">
                     <!-- Warning Box -->
-                    <div class="p-4 mb-6 border rounded-xl bg-red-50 border-red-200">
+                    <div class="p-4 mb-6 border border-red-200 rounded-xl bg-red-50">
                         <h3 class="flex items-center gap-2 mb-3 text-sm font-semibold text-red-800">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                             Vei pierde permanent
@@ -109,7 +102,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                             </select>
                         </div>
 
-                        <div class="space-y-3 mb-6">
+                        <div class="mb-6 space-y-3">
                             <label class="flex items-start gap-3 cursor-pointer">
                                 <input type="checkbox" class="mt-1 checkbox" id="confirm1" required>
                                 <span class="text-sm text-muted">Inteleg ca toate datele mele vor fi sterse permanent si nu pot fi recuperate</span>
@@ -135,11 +128,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
-</div>
-
-<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
+<?php 
+require_once dirname(__DIR__) . '/includes/user-wrap-end.php';
+require_once dirname(__DIR__) . '/includes/user-footer.php'; 
+?>
 
 <?php
 $scriptsExtra = <<<'JS'

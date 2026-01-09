@@ -162,10 +162,73 @@ const AmbiletCart = {
     },
 
     /**
-     * Calculate Red Cross tax (1%)
+     * Get savings with ticket names for display message
+     * Returns { amount: number, ticketNames: string[] }
+     */
+    getSavingsWithTickets() {
+        const cart = this.getCart();
+        let totalSavings = 0;
+        const ticketNames = [];
+
+        cart.items.forEach(item => {
+            if (item.ticketType.originalPrice && item.ticketType.originalPrice > item.ticketType.price) {
+                totalSavings += (item.ticketType.originalPrice - item.ticketType.price) * item.quantity;
+                ticketNames.push(item.ticketType.name);
+            }
+        });
+
+        return {
+            amount: totalSavings,
+            ticketNames: [...new Set(ticketNames)] // Remove duplicates
+        };
+    },
+
+    /**
+     * Get configured taxes
+     * Returns taxes from config or empty array if not configured
+     */
+    getTaxes() {
+        if (typeof AMBILET_CONFIG !== 'undefined' && AMBILET_CONFIG.TAXES) {
+            const taxes = [];
+            if (AMBILET_CONFIG.TAXES.RED_CROSS) {
+                taxes.push({
+                    name: 'Taxa Crucea Roșie',
+                    value: AMBILET_CONFIG.TAXES.RED_CROSS * 100, // Convert to percent (0.01 -> 1)
+                    value_type: 'percent',
+                    is_active: true
+                });
+            }
+            return taxes;
+        }
+        return [];
+    },
+
+    /**
+     * Calculate total taxes based on configured taxes
+     */
+    getTotalTaxes() {
+        const subtotal = this.getSubtotal();
+        const taxes = this.getTaxes();
+        let totalTaxes = 0;
+
+        taxes.forEach(tax => {
+            if (!tax.is_active) return;
+            if (tax.value_type === 'percent') {
+                totalTaxes += subtotal * (tax.value / 100);
+            } else if (tax.value_type === 'fixed') {
+                totalTaxes += tax.value * this.getItemCount();
+            }
+        });
+
+        return totalTaxes;
+    },
+
+    /**
+     * Calculate Red Cross tax (legacy method for backwards compatibility)
+     * @deprecated Use getTotalTaxes() instead
      */
     getRedCrossTax() {
-        return this.getSubtotal() * AMBILET_CONFIG.TAXES.RED_CROSS;
+        return this.getTotalTaxes();
     },
 
     /**
@@ -275,12 +338,16 @@ const AmbiletCart = {
      * Get cart summary
      */
     getSummary() {
+        const savingsInfo = this.getSavingsWithTickets();
         return {
             items: this.getCart().items,
             itemCount: this.getItemCount(),
             subtotal: this.getSubtotal(),
-            savings: this.getSavings(),
-            redCrossTax: this.getRedCrossTax(),
+            savings: savingsInfo.amount,
+            savingsTicketNames: savingsInfo.ticketNames,
+            taxes: this.getTaxes(),
+            totalTaxes: this.getTotalTaxes(),
+            redCrossTax: this.getRedCrossTax(), // Legacy support
             promoCode: this.getPromoCode(),
             promoDiscount: this.getPromoDiscount(),
             total: this.getTotal(),

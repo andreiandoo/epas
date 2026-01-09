@@ -1475,7 +1475,24 @@ class EventResource extends Resource
                                 ->label('Active?')
                                 ->default(true)
                                 ->live()
-                                ->columnSpan(12),
+                                ->columnSpan(4),
+
+                            // Scheduling fields - shown when ticket is NOT active
+                            Forms\Components\DateTimePicker::make('scheduled_at')
+                                ->label('Schedule Activation')
+                                ->helperText('When this ticket type should automatically become active')
+                                ->native(false)
+                                ->seconds(false)
+                                ->displayFormat('Y-m-d H:i')
+                                ->minDate(now())
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => !$get('is_active'))
+                                ->columnSpan(4),
+
+                            Forms\Components\Toggle::make('autostart_when_previous_sold_out')
+                                ->label('Autostart when previous sold out')
+                                ->helperText('Activate automatically when previous ticket types reach 0 capacity')
+                                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => !$get('is_active'))
+                                ->columnSpan(4),
                         ]),
                 ])
                 ->collapsible(),

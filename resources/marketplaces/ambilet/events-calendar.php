@@ -182,14 +182,14 @@ include 'includes/header.php'; ?>
         async loadFilters() {
             try {
                 // Load categories
-                var catResponse = await AmbiletAPI.get('/marketplace-events/categories');
+                var catResponse = await AmbiletAPI.get('/event-categories');
                 if (catResponse.success && catResponse.data && catResponse.data.categories) {
                     this.categories = catResponse.data.categories;
                     this.renderCategoryFilter();
                 }
 
                 // Load cities
-                var cityResponse = await AmbiletAPI.get('/marketplace-events/cities');
+                var cityResponse = await AmbiletAPI.get('/events/cities');
                 if (cityResponse.success && cityResponse.data && cityResponse.data.cities) {
                     this.cities = cityResponse.data.cities;
                     this.renderCityFilter();
@@ -222,20 +222,20 @@ include 'includes/header.php'; ?>
                 var firstDay = new Date(this.currentYear, this.currentMonth, 1);
                 var lastDay = new Date(this.currentYear, this.currentMonth + 1, 0);
 
-                var params = {
+                var params = new URLSearchParams({
                     from_date: firstDay.toISOString().split('T')[0],
                     to_date: lastDay.toISOString().split('T')[0],
                     per_page: 100
-                };
+                });
 
                 if (this.selectedCategory) {
-                    params.category = this.selectedCategory;
+                    params.set('category', this.selectedCategory);
                 }
                 if (this.selectedCity) {
-                    params.city = this.selectedCity;
+                    params.set('city', this.selectedCity);
                 }
 
-                var response = await AmbiletAPI.getEvents(params);
+                var response = await AmbiletAPI.get('/events?' + params.toString());
 
                 if (response.success && response.data) {
                     this.allEvents = response.data;
@@ -243,7 +243,8 @@ include 'includes/header.php'; ?>
 
                     // Group events by date
                     response.data.forEach(function(event) {
-                        var dateStr = event.starts_at ? event.starts_at.split('T')[0] : null;
+                        // API returns: starts_at or event_date; name; venue (string) and city
+                        var dateStr = event.starts_at ? event.starts_at.split('T')[0] : (event.event_date || null);
                         if (dateStr) {
                             if (!CalendarPage.events[dateStr]) {
                                 CalendarPage.events[dateStr] = [];
@@ -253,8 +254,8 @@ include 'includes/header.php'; ?>
                                 name: event.name,
                                 slug: event.slug,
                                 type: event.category || 'Eveniment',
-                                venue: event.venue_name,
-                                city: event.venue_city,
+                                venue: (typeof event.venue === 'string' ? event.venue : event.venue?.name) || '',
+                                city: event.city || '',
                                 price_from: event.price_from
                             });
                         }
@@ -275,7 +276,7 @@ include 'includes/header.php'; ?>
 
         async loadFeaturedEvents() {
             try {
-                var response = await AmbiletAPI.get('/marketplace-events/featured', { limit: 4 });
+                var response = await AmbiletAPI.get('/events/featured?limit=4');
                 if (response.success && response.data && response.data.events) {
                     this.renderFeaturedEvents(response.data.events);
                 } else if (this.allEvents.length > 0) {
@@ -325,7 +326,7 @@ include 'includes/header.php'; ?>
 
                 dayEvents.slice(0, 2).forEach(function(event) {
                     var colorClass = CalendarPage.typeColors[event.type] || CalendarPage.typeColors['default'];
-                    html += '<a href="/event/' + CalendarPage.escapeHtml(event.slug) + '" class="block px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis ' + colorClass + ' hover:opacity-80">' + CalendarPage.escapeHtml(event.name) + '</a>';
+                    html += '<a href="/bilete/' + CalendarPage.escapeHtml(event.slug) + '" class="block px-2 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis ' + colorClass + ' hover:opacity-80">' + CalendarPage.escapeHtml(event.name) + '</a>';
                 });
 
                 if (dayEvents.length > 2) {
@@ -357,12 +358,15 @@ include 'includes/header.php'; ?>
 
             var html = '';
             this.allEvents.forEach(function(event) {
-                var date = new Date(event.starts_at);
+                // API returns: starts_at or event_date; name; venue (string) and city; price_from
+                var eventDate = event.starts_at || event.event_date;
+                var date = new Date(eventDate);
                 var dayNum = date.getDate();
                 var monthName = CalendarPage.monthNamesShort[date.getMonth()];
                 var colorClass = CalendarPage.typeColors[event.category] || CalendarPage.typeColors['default'];
+                var eventVenue = (typeof event.venue === 'string' ? event.venue : event.venue?.name) || '';
 
-                html += '<a href="/event/' + CalendarPage.escapeHtml(event.slug) + '" class="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-2xl hover:border-primary hover:shadow-md transition-all">' +
+                html += '<a href="/bilete/' + CalendarPage.escapeHtml(event.slug) + '" class="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-2xl hover:border-primary hover:shadow-md transition-all">' +
                     '<div class="flex flex-col items-center justify-center w-16 h-16 text-center bg-gradient-to-br from-primary to-primary-light rounded-xl">' +
                         '<div class="text-2xl font-bold text-white">' + dayNum + '</div>' +
                         '<div class="text-[10px] font-semibold text-white/80 uppercase">' + monthName + '</div>' +
@@ -370,7 +374,7 @@ include 'includes/header.php'; ?>
                     '<div class="flex-1">' +
                         '<span class="inline-block px-2.5 py-1 rounded-md text-[11px] font-semibold mb-1 ' + colorClass + '">' + CalendarPage.escapeHtml(event.category || 'Eveniment') + '</span>' +
                         '<h3 class="text-base font-bold text-secondary">' + CalendarPage.escapeHtml(event.name) + '</h3>' +
-                        '<p class="text-sm text-muted">' + CalendarPage.escapeHtml(event.venue_name || '') + (event.venue_city ? ', ' + CalendarPage.escapeHtml(event.venue_city) : '') + '</p>' +
+                        '<p class="text-sm text-muted">' + CalendarPage.escapeHtml(eventVenue) + (event.city ? ', ' + CalendarPage.escapeHtml(event.city) : '') + '</p>' +
                     '</div>' +
                     '<div class="text-right">' +
                         (event.price_from ? '<div class="text-lg font-bold text-primary">de la ' + event.price_from + ' lei</div>' : '') +
@@ -386,12 +390,15 @@ include 'includes/header.php'; ?>
             if (!container || !events.length) return;
 
             var html = events.map(function(event) {
-                var date = new Date(event.starts_at);
+                // API returns: starts_at or event_date; name; venue (string) and city; image_url or image
+                var eventDate = event.starts_at || event.event_date;
+                var date = new Date(eventDate);
                 var dayNum = date.getDate();
                 var monthName = CalendarPage.monthNamesShort[date.getMonth()];
-                var imageUrl = event.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=200&fit=crop';
+                var imageUrl = event.image_url || event.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=200&fit=crop';
+                var eventVenue = (typeof event.venue === 'string' ? event.venue : event.venue?.name) || '';
 
-                return '<a href="/event/' + CalendarPage.escapeHtml(event.slug) + '" class="overflow-hidden transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-lg group">' +
+                return '<a href="/bilete/' + CalendarPage.escapeHtml(event.slug) + '" class="overflow-hidden transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-lg group">' +
                     '<div class="relative bg-center bg-cover h-36" style="background-image: url(\'' + CalendarPage.escapeHtml(imageUrl) + '\')">' +
                         '<div class="absolute px-3 py-2 text-center bg-white shadow-md top-3 left-3 rounded-xl">' +
                             '<div class="text-xl font-extrabold leading-none text-primary">' + dayNum + '</div>' +
@@ -406,7 +413,7 @@ include 'includes/header.php'; ?>
                                 '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>' +
                                 '<circle cx="12" cy="10" r="3"/>' +
                             '</svg>' +
-                            CalendarPage.escapeHtml((event.venue_name || '') + (event.venue_city ? ', ' + event.venue_city : '')) +
+                            CalendarPage.escapeHtml(eventVenue + (event.city ? ', ' + event.city : '')) +
                         '</p>' +
                     '</div>' +
                 '</a>';
@@ -487,7 +494,7 @@ include 'includes/header.php'; ?>
 
             // Navigate to first event or show modal with events
             if (dayEvents.length === 1) {
-                window.location.href = '/event/' + dayEvents[0].slug;
+                window.location.href = '/bilete/' + dayEvents[0].slug;
             } else {
                 // For multiple events, could show a modal - for now just go to events page with date filter
                 window.location.href = '/evenimente?date=' + dateStr;

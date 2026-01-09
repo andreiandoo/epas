@@ -24,6 +24,8 @@ class MarketplaceTicketType extends Model
         'max_per_order',
         'sale_starts_at',
         'sale_ends_at',
+        'scheduled_at',
+        'autostart_when_previous_sold_out',
         'status',
         'is_visible',
         'sort_order',
@@ -33,6 +35,8 @@ class MarketplaceTicketType extends Model
         'price' => 'decimal:2',
         'sale_starts_at' => 'datetime',
         'sale_ends_at' => 'datetime',
+        'scheduled_at' => 'datetime',
+        'autostart_when_previous_sold_out' => 'boolean',
         'is_visible' => 'boolean',
     ];
 

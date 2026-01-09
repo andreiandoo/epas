@@ -24,6 +24,8 @@ class TicketType extends Model
         // Real database columns
         'sales_start_at',
         'sales_end_at',
+        'scheduled_at',
+        'autostart_when_previous_sold_out',
         // Virtual fields (handled by mutators)
         'price_max',
         'price',
@@ -36,6 +38,8 @@ class TicketType extends Model
         'bulk_discounts' => 'array',
         'sales_start_at' => 'datetime',
         'sales_end_at'   => 'datetime',
+        'scheduled_at'   => 'datetime',
+        'autostart_when_previous_sold_out' => 'boolean',
     ];
 
     protected $appends = [

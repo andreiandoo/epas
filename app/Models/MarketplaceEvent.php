@@ -44,6 +44,7 @@ class MarketplaceEvent extends Model
         'sales_start_at',
         'sales_end_at',
         'max_tickets_per_order',
+        'target_price',
         'submitted_at',
         'approved_at',
         'approved_by',
@@ -69,6 +70,7 @@ class MarketplaceEvent extends Model
         'points_per_purchase' => 'decimal:2',
         'max_points_discount_percent' => 'decimal:2',
         'revenue' => 'decimal:2',
+        'target_price' => 'decimal:2',
     ];
 
     protected static function boot()

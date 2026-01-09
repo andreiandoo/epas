@@ -58,6 +58,10 @@ body {
     background: var(--primary-dark);
 }
 
+a:hover {
+    text-decoration: none;
+}
+
 /* ==================== BUTTONS ==================== */
 .btn {
     display: inline-flex;
@@ -546,8 +550,8 @@ body {
 
 .tooltip:hover::before,
 .tooltip:hover::after {
-    opacity: 1;
-    visibility: visible;
+    opacity: 0;
+    visibility: hidden;
 }
 
 /* ==================== USER DASHBOARD ==================== */
@@ -584,6 +588,10 @@ body {
 .ticket-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+}
+.cursor-default.ticket-card:hover {
+    transform:none;
+    box-shadow: none;
 }
 
 .ticket-divider {

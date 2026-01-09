@@ -748,6 +748,21 @@ class EventResource extends Resource
                         }),
                 ])->columns(2),
 
+            // TARGET PRICE (Marketplace Admin only)
+            SC\Section::make('Target Price')
+                ->description('Set a target price reference for this event (internal use only)')
+                ->schema([
+                    Forms\Components\TextInput::make('target_price')
+                        ->label('Target Price')
+                        ->numeric()
+                        ->minValue(0)
+                        ->step(0.01)
+                        ->suffix($marketplace?->currency ?? 'RON')
+                        ->placeholder('e.g. 100.00')
+                        ->helperText('Reference price for planning and negotiations. Not displayed publicly.')
+                        ->columnSpan(1),
+                ])->columns(2),
+
             // TICKETS
             SC\Section::make('Tickets')
                 ->schema([
@@ -1070,7 +1085,24 @@ class EventResource extends Resource
                                 ->label('Active?')
                                 ->default(true)
                                 ->live()
-                                ->columnSpan(12),
+                                ->columnSpan(4),
+
+                            // Scheduling fields - shown when ticket is NOT active
+                            Forms\Components\DateTimePicker::make('scheduled_at')
+                                ->label('Schedule Activation')
+                                ->helperText('When this ticket type should automatically become active')
+                                ->native(false)
+                                ->seconds(false)
+                                ->displayFormat('Y-m-d H:i')
+                                ->minDate(now())
+                                ->visible(fn (SGet $get) => !$get('is_active'))
+                                ->columnSpan(4),
+
+                            Forms\Components\Toggle::make('autostart_when_previous_sold_out')
+                                ->label('Autostart when previous sold out')
+                                ->helperText('Activate automatically when previous ticket types reach 0 capacity')
+                                ->visible(fn (SGet $get) => !$get('is_active'))
+                                ->columnSpan(4),
                         ]),
                 ])->collapsible(),
 

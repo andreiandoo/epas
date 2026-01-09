@@ -8,20 +8,20 @@ require_once __DIR__ . '/includes/header.php';
 
     <!-- Progress Steps -->
     <div class="bg-white border-b border-gray-200 mt-28 mobile:mt-20">
-        <div class="max-w-7xl mx-auto px-4 py-4">
+        <div class="px-4 py-4 mx-auto max-w-7xl">
             <div class="flex items-center justify-center gap-4">
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold">1</div>
+                    <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-white rounded-full bg-primary">1</div>
                     <span class="text-sm font-semibold text-primary">Coș</span>
                 </div>
                 <div class="w-12 h-px bg-gray-300"></div>
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-sm font-bold border border-gray-200">2</div>
+                    <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-400 bg-gray-100 border border-gray-200 rounded-full">2</div>
                     <span class="text-sm text-gray-400">Checkout</span>
                 </div>
                 <div class="w-12 h-px bg-gray-300"></div>
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-sm font-bold border border-gray-200">3</div>
+                    <div class="flex items-center justify-center w-8 h-8 text-sm font-bold text-gray-400 bg-gray-100 border border-gray-200 rounded-full">3</div>
                     <span class="text-sm text-gray-400">Confirmare</span>
                 </div>
             </div>
@@ -29,55 +29,55 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 
     <!-- Reservation Timer -->
-    <div id="timer-bar" class="bg-warning/10 border-b border-warning/20">
-        <div class="max-w-7xl mx-auto px-4 py-3">
+    <div id="timer-bar" class="border-b bg-warning/10 border-warning/20">
+        <div class="px-4 py-3 mx-auto max-w-7xl">
             <div class="flex items-center justify-center gap-2 text-sm">
                 <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <span class="text-secondary">Biletele sunt rezervate pentru tine încă</span>
-                <span id="countdown" class="countdown font-bold text-warning tabular-nums">14:59</span>
+                <span id="countdown" class="font-bold countdown text-warning tabular-nums">14:59</span>
                 <span class="text-secondary">minute</span>
             </div>
         </div>
     </div>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 py-8">
-        <div class="flex flex-col lg:flex-row gap-8">
+    <main class="px-4 py-8 mx-auto max-w-7xl">
+        <div class="flex flex-col gap-8 lg:flex-row">
             <!-- Left Column - Cart Items -->
             <div class="lg:w-2/3">
                 <div class="flex items-center justify-between mb-6">
-                    <h1 class="text-2xl md:text-3xl font-bold text-secondary">Coșul tău</h1>
+                    <h1 class="text-2xl font-bold md:text-3xl text-secondary">Coșul tău</h1>
                     <span class="text-muted"><span id="totalItems">0</span> bilete</span>
                 </div>
 
                 <!-- Cart Items Loading -->
                 <div id="cart-loading" class="space-y-4">
-                    <div class="skeleton h-40 rounded-2xl"></div>
-                    <div class="skeleton h-40 rounded-2xl"></div>
+                    <div class="h-40 skeleton rounded-2xl"></div>
+                    <div class="h-40 skeleton rounded-2xl"></div>
                 </div>
 
                 <!-- Cart Items Container -->
-                <div id="cartItems" class="space-y-4 hidden"></div>
+                <div id="cartItems" class="hidden space-y-4"></div>
 
                 <!-- Empty Cart State -->
-                <div id="emptyCart" class="hidden bg-white rounded-2xl border border-border p-12 text-center">
-                    <div class="w-24 h-24 bg-surface rounded-full flex items-center justify-center mx-auto mb-6">
+                <div id="emptyCart" class="hidden p-12 text-center bg-white border rounded-2xl border-border">
+                    <div class="flex items-center justify-center w-24 h-24 mx-auto mb-6 rounded-full bg-surface">
                         <svg class="w-12 h-12 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                     </div>
-                    <h3 class="text-xl font-bold text-secondary mb-2">Coșul tău este gol</h3>
-                    <p class="text-muted mb-6">Nu ai niciun bilet în coș. Explorează evenimentele noastre!</p>
-                    <a href="/" class="btn-primary inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white">
+                    <h3 class="mb-2 text-xl font-bold text-secondary">Coșul tău este gol</h3>
+                    <p class="mb-6 text-muted">Nu ai niciun bilet în coș. Explorează evenimentele noastre!</p>
+                    <a href="/evenimente" class="inline-flex items-center gap-2 px-6 py-3 font-bold text-white btn-primary rounded-xl">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                         Descoperă evenimente
                     </a>
                 </div>
 
                 <!-- Promo Code -->
-                <div id="promo-section" class="mt-6 bg-white rounded-2xl border border-border p-5 hidden">
-                    <h3 class="font-semibold text-secondary mb-3">Ai un cod promoțional?</h3>
+                <div id="promo-section" class="hidden p-5 mt-6 bg-white border rounded-2xl border-border">
+                    <h3 class="mb-3 font-semibold text-secondary">Ai un cod promoțional?</h3>
                     <div class="flex gap-3">
-                        <input type="text" id="promoCode" placeholder="Introdu codul aici" class="flex-1 px-4 py-3 bg-surface border border-border rounded-xl text-secondary placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
-                        <button onclick="CartPage.applyPromo()" class="px-6 py-3 bg-secondary text-white font-semibold rounded-xl hover:bg-secondary/90 transition-colors">
+                        <input type="text" id="promoCode" placeholder="Introdu codul aici" class="flex-1 px-4 py-3 transition-all border bg-surface border-border rounded-xl text-secondary placeholder-muted focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                        <button onclick="CartPage.applyPromo()" class="px-6 py-3 font-semibold text-white transition-colors bg-secondary rounded-xl hover:bg-secondary/90">
                             Aplică
                         </button>
                     </div>
@@ -88,14 +88,14 @@ require_once __DIR__ . '/includes/header.php';
             <!-- Right Column - Order Summary -->
             <div class="lg:w-1/3">
                 <div id="summary-section" class="hidden sticky top-[140px]">
-                    <div class="bg-white rounded-2xl border border-border overflow-hidden">
+                    <div class="overflow-hidden bg-white border rounded-2xl border-border">
                         <div class="p-6 border-b border-border">
                             <h2 class="text-xl font-bold text-secondary">Sumar comandă</h2>
                         </div>
 
                         <div class="p-6">
                             <!-- Order Lines -->
-                            <div class="space-y-3 mb-6">
+                            <div class="mb-6 space-y-3">
                                 <div class="flex justify-between text-sm">
                                     <span class="text-muted">Subtotal (<span id="summaryItems">0</span> bilete)</span>
                                     <span id="subtotal" class="font-medium">0.00 lei</span>
@@ -103,43 +103,43 @@ require_once __DIR__ . '/includes/header.php';
                                 <div class="flex justify-between text-sm">
                                     <div class="flex items-center gap-1">
                                         <span class="text-muted">Taxa Crucea Roșie (1%)</span>
-                                        <div class="tooltip-trigger relative">
+                                        <div class="relative tooltip-trigger">
                                             <svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                            <div class="tooltip absolute right-0 top-full mt-2 w-56 bg-secondary text-white p-3 rounded-xl shadow-xl z-10 text-xs">
+                                            <div class="absolute right-0 z-10 w-56 p-3 mt-2 text-xs text-white shadow-xl tooltip top-full bg-secondary rounded-xl">
                                                 Taxa Crucea Roșie este obligatorie conform legislației în vigoare și se adaugă la prețul biletelor pentru evenimente.
                                             </div>
                                         </div>
                                     </div>
                                     <span id="taxRedCross" class="font-medium">0.00 lei</span>
                                 </div>
-                                <div id="discountRow" class="hidden flex justify-between text-sm">
+                                <div id="discountRow" class="flex justify-between hidden text-sm">
                                     <span class="text-success">Reducere aplicată</span>
                                     <span id="discountAmount" class="font-medium text-success">-0.00 lei</span>
                                 </div>
                             </div>
 
                             <!-- Savings -->
-                            <div id="savingsRow" class="hidden mb-6 p-3 bg-success/10 rounded-xl">
-                                <div class="flex items-center justify-between">
+                            <div id="savingsRow" class="hidden p-3 mb-6 bg-success/10 rounded-xl">
+                                <div class="flex flex-col gap-1">
                                     <div class="flex items-center gap-2">
-                                        <span class="text-success text-lg">🎉</span>
-                                        <span class="text-sm font-medium text-success">Economisești:</span>
+                                        <span class="text-lg text-success">🎉</span>
+                                        <span id="savingsText" class="text-sm font-medium text-success">Economisești:</span>
                                     </div>
                                     <span id="savings" class="font-bold text-success">0.00 lei</span>
                                 </div>
                             </div>
 
                             <!-- Total -->
-                            <div class="flex justify-between items-center py-4 border-t border-border">
+                            <div class="flex items-center justify-between py-4 border-t border-border">
                                 <span class="text-lg font-bold text-secondary">Total de plată</span>
                                 <span id="totalPrice" class="text-2xl font-bold text-primary">0.00 lei</span>
                             </div>
 
                             <!-- Points Earned -->
-                            <div class="mt-4 p-4 bg-gradient-to-r from-accent/10 to-accent/5 rounded-xl border border-accent/20">
+                            <div class="p-4 mt-4 border bg-gradient-to-r from-accent/10 to-accent/5 rounded-xl border-accent/20">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center">
+                                        <div class="flex items-center justify-center w-10 h-10 rounded-full bg-accent/20">
                                             <span class="text-xl">🎁</span>
                                         </div>
                                         <div>
@@ -155,13 +155,13 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
 
                             <!-- Checkout Button -->
-                            <a href="/checkout" id="checkoutBtn" class="btn-primary mt-6 w-full py-4 rounded-xl font-bold text-white text-lg flex items-center justify-center gap-2">
+                            <a href="/finalizare" id="checkoutBtn" class="flex items-center justify-center w-full gap-2 py-4 mt-6 text-lg font-bold text-white btn-primary rounded-xl">
                                 Continuă spre plată
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
                             </a>
 
                             <!-- Trust Badges -->
-                            <div class="mt-6 pt-6 border-t border-border">
+                            <div class="pt-6 mt-6 border-t border-border">
                                 <div class="grid grid-cols-2 gap-3">
                                     <div class="flex items-center gap-2 text-xs text-muted">
                                         <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
@@ -185,13 +185,13 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
 
                     <!-- Payment Methods -->
-                    <div class="mt-4 bg-white rounded-2xl border border-border p-4">
-                        <p class="text-xs text-muted text-center mb-3">Metode de plată acceptate</p>
+                    <div class="p-4 mt-4 bg-white border rounded-2xl border-border">
+                        <p class="mb-3 text-xs text-center text-muted">Metode de plată acceptate</p>
                         <div class="flex items-center justify-center gap-4">
                             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/200px-Visa_Inc._logo.svg.png" alt="Visa" class="h-6 opacity-60">
                             <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/200px-Mastercard-logo.svg.png" alt="Mastercard" class="h-6 opacity-60">
-                            <div class="px-2 py-1 bg-surface rounded text-xs font-semibold text-muted">Apple Pay</div>
-                            <div class="px-2 py-1 bg-surface rounded text-xs font-semibold text-muted">Google Pay</div>
+                            <div class="px-2 py-1 text-xs font-semibold rounded bg-surface text-muted">Apple Pay</div>
+                            <div class="px-2 py-1 text-xs font-semibold rounded bg-surface text-muted">Google Pay</div>
                         </div>
                     </div>
                 </div>
@@ -232,10 +232,47 @@ const CartPage = {
     endTime: null,
     appliedPromo: null,
     discount: 0,
+    taxes: [], // Dynamic taxes from API/config
 
-    init() {
+    async init() {
+        await this.loadTaxes();
         this.setupTimer();
         this.render();
+    },
+
+    /**
+     * Load taxes from API or use defaults from config
+     */
+    async loadTaxes() {
+        try {
+            // Try to load taxes from API
+            if (typeof AmbiletAPI !== 'undefined') {
+                const response = await AmbiletAPI.get('/config/taxes');
+                if (response.success && response.data?.taxes) {
+                    this.taxes = response.data.taxes;
+                    return;
+                }
+            }
+        } catch (e) {
+            console.log('Using default taxes from config');
+        }
+
+        // Fallback to config or empty if not available
+        if (typeof AMBILET_CONFIG !== 'undefined' && AMBILET_CONFIG.TAXES) {
+            // Transform config taxes to array format
+            this.taxes = [];
+            if (AMBILET_CONFIG.TAXES.RED_CROSS) {
+                this.taxes.push({
+                    name: 'Taxa Crucea Roșie',
+                    value: AMBILET_CONFIG.TAXES.RED_CROSS * 100,
+                    value_type: 'percent',
+                    is_active: true
+                });
+            }
+        } else {
+            // Default empty - no extra taxes
+            this.taxes = [];
+        }
     },
 
     setupTimer() {
@@ -335,11 +372,11 @@ const CartPage = {
         const categoryBadge = categoryName ? '<span class="px-2 py-0.5 bg-accent/10 text-accent text-xs font-semibold rounded">' + categoryName + '</span>' : '';
         const discountBadge = hasDiscount ? '<span class="discount-badge px-2 py-0.5 text-white text-xs font-bold rounded">-' + discountPercent + '%</span>' : '';
 
-        return '<div class="cart-item bg-white rounded-2xl border-2 border-border p-5" data-index="' + index + '">' +
-            '<div class="flex flex-col md:flex-row gap-4">' +
+        return '<div class="p-5 bg-white border-2 cart-item rounded-2xl border-border" data-index="' + index + '">' +
+            '<div class="flex flex-col gap-4 md:flex-row">' +
                 '<!-- Event Image -->' +
-                '<div class="md:w-32 h-24 md:h-auto flex-shrink-0">' +
-                    '<img src="' + eventImage + '" alt="' + eventTitle + '" class="w-full h-full object-cover rounded-xl">' +
+                '<div class="flex-shrink-0 h-24 md:w-32 md:h-auto">' +
+                    '<img src="' + eventImage + '" alt="' + eventTitle + '" class="object-cover w-full h-full rounded-xl">' +
                 '</div>' +
 
                 '<!-- Event Details -->' +
@@ -350,18 +387,18 @@ const CartPage = {
                                 categoryBadge +
                                 discountBadge +
                             '</div>' +
-                            '<h3 class="font-bold text-secondary text-lg">' + eventTitle + '</h3>' +
-                            '<p class="text-sm text-muted mt-1">' + formattedDate + (venueName ? ' • ' + venueName : '') + '</p>' +
+                            '<h3 class="text-lg font-bold text-secondary">' + eventTitle + '</h3>' +
+                            '<p class="mt-1 text-sm text-muted">' + formattedDate + (venueName ? ' • ' + venueName : '') + '</p>' +
                         '</div>' +
-                        '<button onclick="CartPage.removeItem(' + index + ')" class="remove-btn p-2 rounded-lg transition-colors" title="Șterge">' +
+                        '<button onclick="CartPage.removeItem(' + index + ')" class="p-2 transition-colors rounded-lg remove-btn" title="Șterge">' +
                             '<svg class="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
                         '</button>' +
                     '</div>' +
 
                     '<!-- Ticket Type -->' +
-                    '<div class="mt-4 p-3 bg-surface rounded-xl">' +
-                        '<div class="flex items-center justify-between flex-wrap gap-3">' +
-                            '<div class="tooltip-trigger relative">' +
+                    '<div class="p-3 mt-4 bg-surface rounded-xl">' +
+                        '<div class="flex flex-wrap items-center justify-between gap-3">' +
+                            '<div class="relative tooltip-trigger">' +
                                 '<div class="flex items-center gap-2">' +
                                     '<span class="font-semibold text-secondary">' + ticketTypeName + '</span>' +
                                     '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
@@ -369,8 +406,8 @@ const CartPage = {
                                 (ticketTypeDesc ? '<p class="text-xs text-muted mt-0.5">' + ticketTypeDesc + '</p>' : '') +
 
                                 '<!-- Price Breakdown Tooltip -->' +
-                                '<div class="tooltip absolute left-0 top-full mt-2 w-72 bg-secondary text-white p-4 rounded-xl shadow-xl z-10">' +
-                                    '<p class="font-semibold mb-3 text-sm border-b border-white/20 pb-2">Detalii preț bilet</p>' +
+                                '<div class="absolute left-0 z-10 p-4 mt-2 text-white shadow-xl tooltip top-full w-72 bg-secondary rounded-xl">' +
+                                    '<p class="pb-2 mb-3 text-sm font-semibold border-b border-white/20">Detalii preț bilet</p>' +
                                     '<div class="space-y-2 text-xs">' +
                                         '<div class="flex justify-between">' +
                                             '<span class="text-white/70">Preț bilet (net):</span>' +
@@ -380,11 +417,11 @@ const CartPage = {
                                             '<span class="text-white/70">Comision platformă (5%):</span>' +
                                             '<span>' + AmbiletUtils.formatCurrency(price * 0.05) + '</span>' +
                                         '</div>' +
-                                        '<div class="flex justify-between border-t border-white/20 pt-2 mt-2">' +
+                                        '<div class="flex justify-between pt-2 mt-2 border-t border-white/20">' +
                                             '<span class="font-semibold">Preț bilet:</span>' +
                                             '<span class="font-semibold">' + AmbiletUtils.formatCurrency(price) + '</span>' +
                                         '</div>' +
-                                        '<div class="mt-3 pt-2 border-t border-white/10">' +
+                                        '<div class="pt-2 mt-3 border-t border-white/10">' +
                                             '<p class="text-white/50 text-[10px] mb-1">Taxe suplimentare (adăugate la total):</p>' +
                                             '<div class="flex justify-between text-white/60">' +
                                                 '<span>Taxa Crucea Roșie (1%):</span>' +
@@ -398,14 +435,14 @@ const CartPage = {
                             '<div class="flex items-center gap-4">' +
                                 '<!-- Quantity Controls -->' +
                                 '<div class="flex items-center gap-2">' +
-                                    '<button onclick="CartPage.updateQuantity(' + index + ', -1)" class="w-8 h-8 rounded-lg bg-white border border-border hover:border-primary hover:text-primary transition-colors flex items-center justify-center font-bold">-</button>' +
-                                    '<span class="w-8 text-center font-bold">' + quantity + '</span>' +
-                                    '<button onclick="CartPage.updateQuantity(' + index + ', 1)" class="w-8 h-8 rounded-lg bg-white border border-border hover:border-primary hover:text-primary transition-colors flex items-center justify-center font-bold">+</button>' +
+                                    '<button onclick="CartPage.updateQuantity(' + index + ', -1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors bg-white border rounded-lg border-border hover:border-primary hover:text-primary">-</button>' +
+                                    '<span class="w-8 font-bold text-center">' + quantity + '</span>' +
+                                    '<button onclick="CartPage.updateQuantity(' + index + ', 1)" class="flex items-center justify-center w-8 h-8 font-bold transition-colors bg-white border rounded-lg border-border hover:border-primary hover:text-primary">+</button>' +
                                 '</div>' +
 
                                 '<!-- Price -->' +
                                 '<div class="text-right min-w-[80px]">' +
-                                    (hasDiscount ? '<span class="text-sm text-muted line-through block">' + AmbiletUtils.formatCurrency(originalPrice * quantity) + '</span>' : '') +
+                                    (hasDiscount ? '<span class="block text-sm line-through text-muted">' + AmbiletUtils.formatCurrency(originalPrice * quantity) + '</span>' : '') +
                                     '<span class="text-lg font-bold text-primary">' + AmbiletUtils.formatCurrency(price * quantity) + '</span>' +
                                 '</div>' +
                             '</div>' +
@@ -463,11 +500,13 @@ const CartPage = {
         let subtotal = 0;
         let totalItems = 0;
         let savings = 0;
+        const savingsTickets = []; // Track which tickets have discounts
 
         items.forEach(item => {
             // Handle both AmbiletCart format and legacy format
             const price = item.ticketType?.price || item.price || 0;
             const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
+            const ticketName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
             const quantity = item.quantity || 1;
 
             subtotal += price * quantity;
@@ -475,19 +514,54 @@ const CartPage = {
 
             // Calculate savings for discounted items
             if (originalPrice && originalPrice > price) {
-                savings += (originalPrice - price) * quantity;
+                const itemSavings = (originalPrice - price) * quantity;
+                savings += itemSavings;
+                savingsTickets.push(ticketName);
             }
         });
 
-        const taxRedCross = subtotal * 0.01;
-        let total = subtotal + taxRedCross - this.discount;
+        // Calculate taxes dynamically
+        let totalTaxes = 0;
+        const taxBreakdown = [];
+
+        this.taxes.forEach(tax => {
+            if (!tax.is_active) return;
+            let taxAmount = 0;
+            if (tax.value_type === 'percent') {
+                taxAmount = subtotal * (tax.value / 100);
+            } else if (tax.value_type === 'fixed') {
+                taxAmount = tax.value * totalItems;
+            }
+            totalTaxes += taxAmount;
+            taxBreakdown.push({ name: tax.name, amount: taxAmount, value: tax.value, value_type: tax.value_type });
+        });
+
+        let total = subtotal + totalTaxes - this.discount;
         const points = Math.floor(total / 10);
 
         // Update DOM
         document.getElementById('totalItems').textContent = totalItems;
         document.getElementById('summaryItems').textContent = totalItems;
         document.getElementById('subtotal').textContent = AmbiletUtils.formatCurrency(subtotal);
-        document.getElementById('taxRedCross').textContent = AmbiletUtils.formatCurrency(taxRedCross);
+
+        // Update taxes in DOM - find the tax row and update it
+        const taxRedCrossEl = document.getElementById('taxRedCross');
+        if (taxRedCrossEl) {
+            if (taxBreakdown.length > 0) {
+                // Show first tax (usually Red Cross)
+                const firstTax = taxBreakdown[0];
+                taxRedCrossEl.textContent = AmbiletUtils.formatCurrency(firstTax.amount);
+                // Update the label as well
+                const taxLabel = taxRedCrossEl.closest('.flex').querySelector('.text-muted');
+                if (taxLabel && firstTax.value_type === 'percent') {
+                    taxLabel.childNodes[0].textContent = `${firstTax.name} (${firstTax.value}%)`;
+                }
+            } else {
+                // No taxes configured - show 0
+                taxRedCrossEl.textContent = AmbiletUtils.formatCurrency(0);
+            }
+        }
+
         document.getElementById('totalPrice').textContent = AmbiletUtils.formatCurrency(total);
 
         // Discount row
@@ -498,10 +572,17 @@ const CartPage = {
             document.getElementById('discountRow').classList.add('hidden');
         }
 
-        // Savings row
+        // Savings row with ticket name
         if (savings > 0) {
             document.getElementById('savingsRow').classList.remove('hidden');
             document.getElementById('savings').textContent = AmbiletUtils.formatCurrency(savings);
+
+            // Update the savings text to include ticket name(s)
+            const savingsTextEl = document.getElementById('savingsText');
+            if (savingsTextEl && savingsTickets.length > 0) {
+                const ticketNames = [...new Set(savingsTickets)].join(', ');
+                savingsTextEl.textContent = `Fiindcă cumperi bilete ${ticketNames} ai economisit:`;
+            }
         } else {
             document.getElementById('savingsRow').classList.add('hidden');
         }
