@@ -85,9 +85,10 @@ const EventPage = {
      */
     async trackView() {
         try {
-            await AmbiletAPI.trackEventView(this.slug);
+            var response = await AmbiletAPI.trackEventView(this.slug);
+            console.log('[EventPage] Track view response:', response);
         } catch (e) {
-            console.log('View tracking failed:', e);
+            console.error('[EventPage] View tracking failed:', e);
         }
     },
 
@@ -97,20 +98,22 @@ const EventPage = {
     async loadInterestStatus() {
         try {
             var response = await AmbiletAPI.checkEventInterest(this.slug);
+            console.log('[EventPage] Interest check response:', response);
             if (response.success && response.data) {
                 this.isInterested = response.data.is_interested;
                 this.updateInterestButton();
-                if (response.data.interested_count) {
+                // Check for !== undefined to handle 0 values correctly
+                if (response.data.interested_count !== undefined) {
                     document.getElementById(this.elements.eventInterested).textContent =
                         this.formatCount(response.data.interested_count) + ' interesati';
                 }
-                if (response.data.views_count) {
+                if (response.data.views_count !== undefined) {
                     document.getElementById(this.elements.eventViews).textContent =
                         this.formatCount(response.data.views_count) + ' vizualizari';
                 }
             }
         } catch (e) {
-            console.log('Interest check failed:', e);
+            console.error('[EventPage] Interest check failed:', e);
         }
     },
 
@@ -120,14 +123,16 @@ const EventPage = {
     async toggleInterest() {
         try {
             var response = await AmbiletAPI.toggleEventInterest(this.slug);
+            console.log('[EventPage] Toggle interest response:', response);
             if (response.success && response.data) {
                 this.isInterested = response.data.is_interested;
                 this.updateInterestButton();
+                var count = response.data.interested_count ?? 0;
                 document.getElementById(this.elements.eventInterested).textContent =
-                    this.formatCount(response.data.interested_count) + ' interesati';
+                    this.formatCount(count) + ' interesati';
             }
         } catch (e) {
-            console.error('Toggle interest failed:', e);
+            console.error('[EventPage] Toggle interest failed:', e);
         }
     },
 
