@@ -427,7 +427,6 @@ const CheckoutPage = {
                                     <p class="text-xs text-muted">${eventTitle}</p>
                                 </div>
                             </div>
-                            ${hasDiscount ? `<span class="px-2 py-1 text-xs font-semibold rounded bg-success/10 text-success">-${discountPercent}%</span>` : ''}
                         </div>
                         <div class="grid gap-4 md:grid-cols-2">
                             <div>
@@ -488,7 +487,7 @@ const CheckoutPage = {
         const eventImage = firstItem.event?.image || firstItem.event_image || '/assets/images/placeholder-event.jpg';
         const eventTitle = firstItem.event?.title || firstItem.event_title || 'Eveniment';
         const eventDate = firstItem.event?.date || firstItem.event_date || '';
-        const venueName = firstItem.event?.venue || firstItem.venue_name || '';
+        const venueName = firstItem.event?.venue?.name || (typeof firstItem.event?.venue === 'string' ? firstItem.event.venue : '') || firstItem.venue_name || '';
 
         // Event info
         const eventInfo = document.getElementById('event-info');

@@ -113,7 +113,7 @@ require_once __DIR__ . '/includes/header.php';
                             <!-- Savings -->
                             <div id="savingsRow" class="hidden py-2 px-3 mb-3 bg-success/10 rounded-xl">
                                 <div class="flex flex-col gap-1">
-                                    <div class="flex items-center gap-2">
+                                    <div class="flex items-center justify-between gap-2">
                                         <span id="savingsText" class="text-sm font-medium text-success">Alegând [numebilet] economisești:</span>
                                         <span id="savings" class="flex-none font-bold text-success">0.00 lei</span>
                                     </div>
@@ -448,7 +448,7 @@ const CartPage = {
                             (ticketDescription ? '<p class="text-xs text-muted mt-0.5">' + ticketDescription + '</p>' : '') +
                             '<div class="tooltip absolute left-0 top-full mt-2 w-72 bg-secondary text-white p-4 rounded-xl shadow-xl z-10">' + tooltipHtml + '</div>' +
                         '</div>' +
-                        '<div class="flex items-center gap-2">' +
+                        '<div class="flex items-center ml-auto mr-8 gap-2">' +
                             '<button onclick="CartPage.updateQuantity(' + index + ', -1)" class="flex items-center justify-center w-8 h-8 border rounded-lg border-border hover:bg-surface">' +
                                 '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                                     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>' +
