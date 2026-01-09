@@ -100,17 +100,9 @@ require_once __DIR__ . '/includes/header.php';
                                     <span class="text-muted">Subtotal (<span id="summaryItems">0</span> bilete)</span>
                                     <span id="subtotal" class="font-medium">0.00 lei</span>
                                 </div>
-                                <div class="flex justify-between text-sm">
-                                    <div class="flex items-center gap-1">
-                                        <span class="text-muted">Taxa Crucea Roșie (1%)</span>
-                                        <div class="relative tooltip-trigger">
-                                            <svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                            <div class="absolute right-0 z-10 w-56 p-3 mt-2 text-xs text-white shadow-xl tooltip top-full bg-secondary rounded-xl">
-                                                Taxa Crucea Roșie este obligatorie conform legislației în vigoare și se adaugă la prețul biletelor pentru evenimente.
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <span id="taxRedCross" class="font-medium">0.00 lei</span>
+                                <!-- Dynamic taxes container -->
+                                <div id="taxesContainer" class="space-y-2">
+                                    <!-- Taxes will be rendered dynamically by JS -->
                                 </div>
                                 <div id="discountRow" class="flex justify-between hidden text-sm">
                                     <span class="text-success">Reducere aplicată</span>
@@ -241,9 +233,16 @@ const CartPage = {
     },
 
     /**
-     * Load taxes from API or use defaults from config
+     * Load taxes from cart items or use defaults from config
      */
     async loadTaxes() {
+        // First, try to get taxes from cart items (stored when adding to cart)
+        const items = AmbiletCart.getItems();
+        if (items.length > 0 && items[0].event?.taxes?.length > 0) {
+            this.taxes = items[0].event.taxes.filter(t => t.is_added_to_price !== false);
+            return;
+        }
+
         try {
             // Try to load taxes from API
             if (typeof AmbiletAPI !== 'undefined') {
@@ -421,13 +420,18 @@ const CartPage = {
                                             '<span class="font-semibold">Preț bilet:</span>' +
                                             '<span class="font-semibold">' + AmbiletUtils.formatCurrency(price) + '</span>' +
                                         '</div>' +
+                                        (CartPage.taxes.length > 0 ?
                                         '<div class="pt-2 mt-3 border-t border-white/10">' +
                                             '<p class="text-white/50 text-[10px] mb-1">Taxe suplimentare (adăugate la total):</p>' +
-                                            '<div class="flex justify-between text-white/60">' +
-                                                '<span>Taxa Crucea Roșie (1%):</span>' +
-                                                '<span>+' + AmbiletUtils.formatCurrency(price * 0.01) + '/bilet</span>' +
-                                            '</div>' +
-                                        '</div>' +
+                                            CartPage.taxes.map(function(tax) {
+                                                var taxPerTicket = tax.value_type === 'percent' ? price * (tax.value / 100) : tax.value;
+                                                var rateLabel = tax.value_type === 'percent' ? '(' + tax.value + '%)' : '';
+                                                return '<div class="flex justify-between text-white/60">' +
+                                                    '<span>' + tax.name + ' ' + rateLabel + ':</span>' +
+                                                    '<span>+' + AmbiletUtils.formatCurrency(taxPerTicket) + '/bilet</span>' +
+                                                '</div>';
+                                            }).join('') +
+                                        '</div>' : '') +
                                     '</div>' +
                                 '</div>' +
                             '</div>' +
@@ -544,21 +548,27 @@ const CartPage = {
         document.getElementById('summaryItems').textContent = totalItems;
         document.getElementById('subtotal').textContent = AmbiletUtils.formatCurrency(subtotal);
 
-        // Update taxes in DOM - find the tax row and update it
-        const taxRedCrossEl = document.getElementById('taxRedCross');
-        if (taxRedCrossEl) {
+        // Render taxes dynamically
+        const taxesContainer = document.getElementById('taxesContainer');
+        if (taxesContainer) {
             if (taxBreakdown.length > 0) {
-                // Show first tax (usually Red Cross)
-                const firstTax = taxBreakdown[0];
-                taxRedCrossEl.textContent = AmbiletUtils.formatCurrency(firstTax.amount);
-                // Update the label as well
-                const taxLabel = taxRedCrossEl.closest('.flex').querySelector('.text-muted');
-                if (taxLabel && firstTax.value_type === 'percent') {
-                    taxLabel.childNodes[0].textContent = `${firstTax.name} (${firstTax.value}%)`;
-                }
+                taxesContainer.innerHTML = taxBreakdown.map(function(tax) {
+                    const rateLabel = tax.value_type === 'percent' ? '(' + tax.value + '%)' : '';
+                    return '<div class="flex justify-between text-sm">' +
+                        '<div class="flex items-center gap-1">' +
+                            '<span class="text-muted">' + tax.name + ' ' + rateLabel + '</span>' +
+                            '<div class="relative tooltip-trigger">' +
+                                '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+                                '<div class="absolute right-0 z-10 w-56 p-3 mt-2 text-xs text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' +
+                                    'Această taxă este obligatorie conform legislației în vigoare și se adaugă la prețul biletelor.' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                        '<span class="font-medium">' + AmbiletUtils.formatCurrency(tax.amount) + '</span>' +
+                    '</div>';
+                }).join('');
             } else {
-                // No taxes configured - show 0
-                taxRedCrossEl.textContent = AmbiletUtils.formatCurrency(0);
+                taxesContainer.innerHTML = '';
             }
         }
 

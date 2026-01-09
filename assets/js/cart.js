@@ -56,7 +56,8 @@ const AmbiletCart = {
                     time: eventData.start_time,
                     image: eventData.image || eventData.featured_image,
                     venue: eventData.venue?.name,
-                    city: eventData.venue?.city
+                    city: eventData.venue?.city,
+                    taxes: eventData.taxes || []
                 },
                 ticketTypeId,
                 ticketType: {

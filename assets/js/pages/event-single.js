@@ -681,7 +681,7 @@ const EventPage = {
                         (isSoldOut ? '' : '<div class="absolute left-0 z-10 w-64 p-4 mt-2 text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' + tooltipHtml + '</div>') +
                     '</div>' +
                     '<div class="text-right">' +
-                        (hasDiscount && !isSoldOut ? '<span class="text-sm line-through text-muted">' + (commissionMode === 'add_on_top' ? (tt.original_price + tt.original_price * commissionRate / 100).toFixed(0) : tt.original_price) + ' lei</span>' : '') +
+                        (hasDiscount && !isSoldOut ? '<span class="text-sm line-through text-muted">' + (commissionMode === 'added_on_top' ? (tt.original_price + tt.original_price * commissionRate / 100).toFixed(0) : tt.original_price) + ' lei</span>' : '') +
                         '<span class="block text-xl font-bold ' + priceClasses + '">' + displayPrice.toFixed(2) + ' lei</span>' +
                     '</div>' +
                 '</div>' +
@@ -727,7 +727,7 @@ const EventPage = {
             var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketId); });
             if (tt) {
                 var ticketPrice = tt.price;
-                if (commissionMode === 'add_on_top') {
+                if (commissionMode === 'added_on_top') {
                     ticketPrice = tt.price + (tt.price * commissionRate / 100);
                 }
                 subtotal += qty * ticketPrice;
@@ -809,13 +809,14 @@ const EventPage = {
                         start_date: self.event.start_date || self.event.date,
                         start_time: self.event.start_time,
                         image: self.event.image,
-                        venue: self.event.venue
+                        venue: self.event.venue,
+                        taxes: self.event.taxes || []
                     };
 
-                    // Calculate final price including commission when add_on_top
+                    // Calculate final price including commission when added_on_top
                     var finalPrice = tt.price;
                     var finalOriginalPrice = tt.original_price;
-                    if (commissionMode === 'add_on_top') {
+                    if (commissionMode === 'added_on_top') {
                         finalPrice = tt.price + (tt.price * commissionRate / 100);
                         if (tt.original_price) {
                             finalOriginalPrice = tt.original_price + (tt.original_price * commissionRate / 100);
