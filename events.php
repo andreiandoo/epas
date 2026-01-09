@@ -51,7 +51,7 @@ require_once __DIR__ . '/includes/header.php';
 <!-- Hero Banner -->
 <section class="relative pt-40 pb-8 overflow-hidden bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
     <div class="absolute inset-0 opacity-10">
-        <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"1\"%3E%3Cpath d=\"M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
+        <div class="absolute inset-0"></div>
     </div>
     <div class="relative px-4 mx-auto max-w-7xl">
         <div class="flex flex-col items-center text-center">
@@ -68,13 +68,7 @@ require_once __DIR__ . '/includes/header.php';
                 Găsește și cumpără bilete pentru cele mai tari concerte, festivaluri, spectacole de teatru și multe altele.
             </p>
         </div>
-    </div>
-</section>
-
-<!-- Category Quick Filters -->
-<section class="py-6 bg-white border-b border-gray-200">
-    <div class="px-4 mx-auto max-w-7xl">
-        <div id="categoryFilters" class="flex items-center gap-3 overflow-x-auto scrollbar-hide">
+        <div id="categoryFilters" class="flex items-center justify-center gap-3 overflow-x-auto scrollbar-hide">
             <button onclick="EventsPage.setCategory('')" data-category="" class="category-btn flex-shrink-0 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer <?= !$filterCategory ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>">
                 Toate
             </button>

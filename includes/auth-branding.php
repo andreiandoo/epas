@@ -54,10 +54,10 @@ $authFeatures = $authFeatures ?? [
         </div>
 
         <div class="flex items-center gap-6">
-            <a href="/organizer/landing.php" class="text-white/60 hover:text-white transition-colors">
+            <a href="/organizator/login" class="text-white/60 hover:text-white transition-colors">
                 Ești organizator?
             </a>
-            <a href="/help.php" class="text-white/60 hover:text-white transition-colors">
+            <a href="/ajutor" class="text-white/60 hover:text-white transition-colors">
                 Ajutor
             </a>
         </div>
