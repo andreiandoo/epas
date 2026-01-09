@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Tenant connections to LinkedIn Ads
+        if (Schema::hasTable('linkedin_ads_connections')) {
+            return;
+        }
+
         Schema::create('linkedin_ads_connections', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
@@ -28,6 +32,10 @@ return new class extends Migration
         });
 
         // Conversion rules defined in LinkedIn
+        if (Schema::hasTable('linkedin_ads_conversion_rules')) {
+            return;
+        }
+
         Schema::create('linkedin_ads_conversion_rules', function (Blueprint $table) {
             $table->id();
             $table->foreignId('connection_id')->constrained('linkedin_ads_connections')->cascadeOnDelete();
@@ -44,6 +52,10 @@ return new class extends Migration
         });
 
         // Conversions sent to LinkedIn
+        if (Schema::hasTable('linkedin_ads_conversions')) {
+            return;
+        }
+
         Schema::create('linkedin_ads_conversions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('connection_id')->constrained('linkedin_ads_connections')->cascadeOnDelete();
@@ -68,6 +80,10 @@ return new class extends Migration
         });
 
         // Matched audiences
+        if (Schema::hasTable('linkedin_ads_audiences')) {
+            return;
+        }
+
         Schema::create('linkedin_ads_audiences', function (Blueprint $table) {
             $table->id();
             $table->foreignId('connection_id')->constrained('linkedin_ads_connections')->cascadeOnDelete();
@@ -83,6 +99,10 @@ return new class extends Migration
         });
 
         // Batch uploads
+        if (Schema::hasTable('linkedin_ads_batches')) {
+            return;
+        }
+
         Schema::create('linkedin_ads_batches', function (Blueprint $table) {
             $table->id();
             $table->foreignId('connection_id')->constrained('linkedin_ads_connections')->cascadeOnDelete();

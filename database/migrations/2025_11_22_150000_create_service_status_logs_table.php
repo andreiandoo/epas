@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('service_status_logs')) {
+            return;
+        }
+
         Schema::create('service_status_logs', function (Blueprint $table) {
             $table->id();
             $table->string('service_name'); // core, api, microservice slug

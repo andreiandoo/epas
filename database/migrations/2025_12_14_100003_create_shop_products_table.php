@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('shop_products')) {
+            return;
+        }
+
         Schema::create('shop_products', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
@@ -77,6 +81,10 @@ return new class extends Migration
         });
 
         // Product-Attribute pivot (which attributes apply to this product)
+        if (Schema::hasTable('shop_product_attribute')) {
+            return;
+        }
+
         Schema::create('shop_product_attribute', function (Blueprint $table) {
             $table->uuid('product_id');
             $table->uuid('attribute_id');

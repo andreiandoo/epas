@@ -28,6 +28,10 @@ return new class extends Migration
         });
 
         // Create contract versions table for versioning
+        if (Schema::hasTable('contract_versions')) {
+            return;
+        }
+
         Schema::create('contract_versions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');

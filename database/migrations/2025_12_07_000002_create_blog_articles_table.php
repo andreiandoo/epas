@@ -12,6 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         // Blog categories
+        if (Schema::hasTable('blog_categories')) {
+            return;
+        }
+
         Schema::create('blog_categories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -35,6 +39,10 @@ return new class extends Migration
         });
 
         // Blog tags
+        if (Schema::hasTable('blog_tags')) {
+            return;
+        }
+
         Schema::create('blog_tags', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -49,6 +57,10 @@ return new class extends Migration
         });
 
         // Blog authors
+        if (Schema::hasTable('blog_authors')) {
+            return;
+        }
+
         Schema::create('blog_authors', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -75,6 +87,10 @@ return new class extends Migration
         });
 
         // Blog series (article collections)
+        if (Schema::hasTable('blog_series')) {
+            return;
+        }
+
         Schema::create('blog_series', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -94,6 +110,10 @@ return new class extends Migration
         });
 
         // Blog articles
+        if (Schema::hasTable('blog_articles')) {
+            return;
+        }
+
         Schema::create('blog_articles', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -173,6 +193,10 @@ return new class extends Migration
         });
 
         // Article-Tag pivot table
+        if (Schema::hasTable('blog_article_tag')) {
+            return;
+        }
+
         Schema::create('blog_article_tag', function (Blueprint $table) {
             $table->uuid('article_id');
             $table->foreignId('tag_id')->constrained('blog_tags')->onDelete('cascade');
@@ -183,6 +207,10 @@ return new class extends Migration
         });
 
         // Article revisions for version history
+        if (Schema::hasTable('blog_article_revisions')) {
+            return;
+        }
+
         Schema::create('blog_article_revisions', function (Blueprint $table) {
             $table->id();
             $table->uuid('article_id');
@@ -201,6 +229,10 @@ return new class extends Migration
         });
 
         // Article views tracking
+        if (Schema::hasTable('blog_article_views')) {
+            return;
+        }
+
         Schema::create('blog_article_views', function (Blueprint $table) {
             $table->id();
             $table->uuid('article_id');
@@ -222,6 +254,10 @@ return new class extends Migration
         });
 
         // Blog comments
+        if (Schema::hasTable('blog_comments')) {
+            return;
+        }
+
         Schema::create('blog_comments', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('article_id');
@@ -259,6 +295,10 @@ return new class extends Migration
         });
 
         // Blog newsletter subscriptions
+        if (Schema::hasTable('blog_subscriptions')) {
+            return;
+        }
+
         Schema::create('blog_subscriptions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');

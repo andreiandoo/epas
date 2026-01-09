@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('anaf_queue')) {
+            return;
+        }
+
         Schema::create('anaf_queue', function (Blueprint $table) {
             $table->id();
             $table->string('tenant_id')->index();

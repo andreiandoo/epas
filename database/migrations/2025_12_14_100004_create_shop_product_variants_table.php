@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('shop_product_variants')) {
+            return;
+        }
+
         Schema::create('shop_product_variants', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('product_id');
@@ -26,6 +30,10 @@ return new class extends Migration
         });
 
         // Variant-AttributeValue pivot (which attribute values define this variant)
+        if (Schema::hasTable('shop_variant_attribute_value')) {
+            return;
+        }
+
         Schema::create('shop_variant_attribute_value', function (Blueprint $table) {
             $table->uuid('variant_id');
             $table->uuid('attribute_value_id');

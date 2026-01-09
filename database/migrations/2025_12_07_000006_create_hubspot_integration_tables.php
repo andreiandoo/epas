@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('hubspot_connections')) {
+            return;
+        }
+
         Schema::create('hubspot_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -28,6 +32,10 @@ return new class extends Migration
             $table->unique(['tenant_id', 'hub_id']);
         });
 
+        if (Schema::hasTable('hubspot_sync_logs')) {
+            return;
+        }
+
         Schema::create('hubspot_sync_logs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -45,6 +53,10 @@ return new class extends Migration
             $table->foreign('connection_id')->references('id')->on('hubspot_connections')->onDelete('cascade');
             $table->index(['connection_id', 'object_type']);
         });
+
+        if (Schema::hasTable('hubspot_property_mappings')) {
+            return;
+        }
 
         Schema::create('hubspot_property_mappings', function (Blueprint $table) {
             $table->id();

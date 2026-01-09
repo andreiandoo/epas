@@ -12,6 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         // Marketplace Organizers - Event creators on a marketplace
+        if (Schema::hasTable('marketplace_organizers')) {
+            return;
+        }
+
         Schema::create('marketplace_organizers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();
@@ -62,6 +66,10 @@ return new class extends Migration
         });
 
         // Marketplace Customers - Ticket buyers on a marketplace
+        if (Schema::hasTable('marketplace_customers')) {
+            return;
+        }
+
         Schema::create('marketplace_customers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();
@@ -109,6 +117,10 @@ return new class extends Migration
 
         // Marketplace Events - Events created by marketplace organizers
         // These are separate from tenant events but use similar structure
+        if (Schema::hasTable('marketplace_events')) {
+            return;
+        }
+
         Schema::create('marketplace_events', function (Blueprint $table) {
             $table->id();
             $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();
@@ -171,6 +183,10 @@ return new class extends Migration
         });
 
         // Marketplace Ticket Types
+        if (Schema::hasTable('marketplace_ticket_types')) {
+            return;
+        }
+
         Schema::create('marketplace_ticket_types', function (Blueprint $table) {
             $table->id();
             $table->foreignId('marketplace_event_id')->constrained()->cascadeOnDelete();

@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('performance_metrics')) {
+            return;
+        }
+
         Schema::create('performance_metrics', function (Blueprint $table) {
             $table->id();
             $table->string('tenant_id')->nullable()->index();

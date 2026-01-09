@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('feature_flags')) {
+            return;
+        }
+
         Schema::create('feature_flags', function (Blueprint $table) {
             $table->id();
             $table->string('key')->unique()->index(); // e.g., 'microservices.whatsapp.enabled'
@@ -24,6 +28,10 @@ return new class extends Migration
             $table->json('metadata')->nullable(); // Additional metadata
             $table->timestamps();
         });
+
+        if (Schema::hasTable('tenant_feature_flags')) {
+            return;
+        }
 
         Schema::create('tenant_feature_flags', function (Blueprint $table) {
             $table->id();

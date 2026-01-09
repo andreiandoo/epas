@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('marketplace_customer_payment_methods')) {
+            return;
+        }
+
         Schema::create('marketplace_customer_payment_methods', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('marketplace_client_id');

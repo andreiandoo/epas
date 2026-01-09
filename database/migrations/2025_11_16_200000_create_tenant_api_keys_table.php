@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('tenant_api_keys')) {
+            return;
+        }
+
         Schema::create('tenant_api_keys', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id');
@@ -32,6 +36,10 @@ return new class extends Migration
         });
 
         // Optional: Detailed usage tracking table
+        if (Schema::hasTable('tenant_api_usage')) {
+            return;
+        }
+
         Schema::create('tenant_api_usage', function (Blueprint $table) {
             $table->id();
             $table->foreignId('api_key_id');

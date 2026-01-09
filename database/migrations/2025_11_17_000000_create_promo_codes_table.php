@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('promo_codes')) {
+            return;
+        }
+
         Schema::create('promo_codes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id');

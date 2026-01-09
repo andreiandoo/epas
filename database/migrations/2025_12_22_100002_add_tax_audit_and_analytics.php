@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Tax Audit Log - tracks all changes to tax configurations
+        if (Schema::hasTable('tax_audit_logs')) {
+            return;
+        }
+
         Schema::create('tax_audit_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
@@ -29,6 +33,10 @@ return new class extends Migration
         });
 
         // Tax Collection Records - for analytics
+        if (Schema::hasTable('tax_collection_records')) {
+            return;
+        }
+
         Schema::create('tax_collection_records', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();
@@ -59,6 +67,10 @@ return new class extends Migration
         });
 
         // Tax Analytics Cache - pre-aggregated data for faster queries
+        if (Schema::hasTable('tax_analytics_cache')) {
+            return;
+        }
+
         Schema::create('tax_analytics_cache', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnDelete();

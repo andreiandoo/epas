@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('tenant_notifications')) {
+            return;
+        }
+
         Schema::create('tenant_notifications', function (Blueprint $table) {
             $table->id();
             $table->string('tenant_id')->index();

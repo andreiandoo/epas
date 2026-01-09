@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Group bookings
+        if (Schema::hasTable('group_bookings')) {
+            return;
+        }
+
         Schema::create('group_bookings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -33,6 +37,10 @@ return new class extends Migration
         });
 
         // Group members
+        if (Schema::hasTable('group_booking_members')) {
+            return;
+        }
+
         Schema::create('group_booking_members', function (Blueprint $table) {
             $table->id();
             $table->foreignId('group_booking_id')->constrained()->onDelete('cascade');
@@ -51,6 +59,10 @@ return new class extends Migration
         });
 
         // Group pricing tiers
+        if (Schema::hasTable('group_pricing_tiers')) {
+            return;
+        }
+
         Schema::create('group_pricing_tiers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');

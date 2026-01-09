@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Waitlist entries
+        if (Schema::hasTable('event_waitlist')) {
+            return;
+        }
+
         Schema::create('event_waitlist', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -30,6 +34,10 @@ return new class extends Migration
         });
 
         // Resale listings
+        if (Schema::hasTable('resale_listings')) {
+            return;
+        }
+
         Schema::create('resale_listings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -51,6 +59,10 @@ return new class extends Migration
         });
 
         // Resale transactions
+        if (Schema::hasTable('resale_transactions')) {
+            return;
+        }
+
         Schema::create('resale_transactions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('listing_id')->constrained('resale_listings')->onDelete('cascade');
@@ -68,6 +80,10 @@ return new class extends Migration
         });
 
         // Resale policies
+        if (Schema::hasTable('resale_policies')) {
+            return;
+        }
+
         Schema::create('resale_policies', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');

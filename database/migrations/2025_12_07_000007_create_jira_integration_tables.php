@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('jira_connections')) {
+            return;
+        }
+
         Schema::create('jira_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -28,6 +32,10 @@ return new class extends Migration
             $table->unique(['tenant_id', 'cloud_id']);
         });
 
+        if (Schema::hasTable('jira_projects')) {
+            return;
+        }
+
         Schema::create('jira_projects', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -41,6 +49,10 @@ return new class extends Migration
             $table->foreign('connection_id')->references('id')->on('jira_connections')->onDelete('cascade');
             $table->unique(['connection_id', 'project_id']);
         });
+
+        if (Schema::hasTable('jira_issues')) {
+            return;
+        }
 
         Schema::create('jira_issues', function (Blueprint $table) {
             $table->id();
@@ -63,6 +75,10 @@ return new class extends Migration
             $table->foreign('connection_id')->references('id')->on('jira_connections')->onDelete('cascade');
             $table->unique(['connection_id', 'issue_id']);
         });
+
+        if (Schema::hasTable('jira_webhooks')) {
+            return;
+        }
 
         Schema::create('jira_webhooks', function (Blueprint $table) {
             $table->id();

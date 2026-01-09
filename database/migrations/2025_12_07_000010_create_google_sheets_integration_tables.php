@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('google_sheets_connections')) {
+            return;
+        }
+
         Schema::create('google_sheets_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -28,6 +32,10 @@ return new class extends Migration
             $table->unique(['tenant_id', 'google_user_id']);
         });
 
+        if (Schema::hasTable('google_sheets_spreadsheets')) {
+            return;
+        }
+
         Schema::create('google_sheets_spreadsheets', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -45,6 +53,10 @@ return new class extends Migration
             $table->foreign('connection_id')->references('id')->on('google_sheets_connections')->onDelete('cascade');
             $table->unique(['connection_id', 'spreadsheet_id', 'purpose'], 'gs_sheets_conn_sheet_purpose_unique');
         });
+
+        if (Schema::hasTable('google_sheets_sync_jobs')) {
+            return;
+        }
 
         Schema::create('google_sheets_sync_jobs', function (Blueprint $table) {
             $table->id();
@@ -65,6 +77,10 @@ return new class extends Migration
 
             $table->foreign('spreadsheet_id')->references('id')->on('google_sheets_spreadsheets')->onDelete('cascade');
         });
+
+        if (Schema::hasTable('google_sheets_column_mappings')) {
+            return;
+        }
 
         Schema::create('google_sheets_column_mappings', function (Blueprint $table) {
             $table->id();

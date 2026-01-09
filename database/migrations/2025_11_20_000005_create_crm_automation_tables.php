@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Customer segments
+        if (Schema::hasTable('customer_segments')) {
+            return;
+        }
+
         Schema::create('customer_segments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -24,6 +28,10 @@ return new class extends Migration
         });
 
         // Customer segment membership
+        if (Schema::hasTable('customer_segment_members')) {
+            return;
+        }
+
         Schema::create('customer_segment_members', function (Blueprint $table) {
             $table->id();
             $table->foreignId('segment_id')->constrained('customer_segments')->onDelete('cascade');
@@ -35,6 +43,10 @@ return new class extends Migration
         });
 
         // Email campaigns
+        if (Schema::hasTable('email_campaigns')) {
+            return;
+        }
+
         Schema::create('email_campaigns', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -57,6 +69,10 @@ return new class extends Migration
         });
 
         // Campaign recipients
+        if (Schema::hasTable('campaign_recipients')) {
+            return;
+        }
+
         Schema::create('campaign_recipients', function (Blueprint $table) {
             $table->id();
             $table->foreignId('campaign_id')->constrained('email_campaigns')->onDelete('cascade');
@@ -72,6 +88,10 @@ return new class extends Migration
         });
 
         // Automation workflows
+        if (Schema::hasTable('automation_workflows')) {
+            return;
+        }
+
         Schema::create('automation_workflows', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -88,6 +108,10 @@ return new class extends Migration
         });
 
         // Workflow steps
+        if (Schema::hasTable('automation_steps')) {
+            return;
+        }
+
         Schema::create('automation_steps', function (Blueprint $table) {
             $table->id();
             $table->foreignId('workflow_id')->constrained('automation_workflows')->onDelete('cascade');
@@ -100,6 +124,10 @@ return new class extends Migration
         });
 
         // Customer journey through workflow
+        if (Schema::hasTable('automation_enrollments')) {
+            return;
+        }
+
         Schema::create('automation_enrollments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('workflow_id')->constrained('automation_workflows')->onDelete('cascade');
@@ -114,6 +142,10 @@ return new class extends Migration
         });
 
         // Customer notes and activities
+        if (Schema::hasTable('customer_activities')) {
+            return;
+        }
+
         Schema::create('customer_activities', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');

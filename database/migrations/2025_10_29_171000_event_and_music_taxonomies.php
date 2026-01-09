@@ -8,6 +8,10 @@ return new class extends Migration {
     public function up(): void
     {
         // Event Genres (global)
+        if (Schema::hasTable('event_genres')) {
+            return;
+        }
+
         Schema::create('event_genres', function (Blueprint $table) {
             $table->id();
             $table->string('name', 190)->unique();
@@ -15,6 +19,10 @@ return new class extends Migration {
         });
 
         // Event <-> EventGenre (many-to-many)
+        if (Schema::hasTable('event_genre_event')) {
+            return;
+        }
+
         Schema::create('event_genre_event', function (Blueprint $table) {
             $table->id();
             $table->foreignId('event_id')->constrained('events')->cascadeOnUpdate()->cascadeOnDelete();
@@ -23,11 +31,19 @@ return new class extends Migration {
         });
 
         // Event Categories (global)
+        if (Schema::hasTable('event_categories')) {
+            return;
+        }
+
         Schema::create('event_categories', function (Blueprint $table) {
             $table->id();
             $table->string('name', 190)->unique();
             $table->timestamps();
         });
+
+        if (Schema::hasTable('category_event')) {
+            return;
+        }
 
         Schema::create('category_event', function (Blueprint $table) {
             $table->id();
@@ -37,6 +53,10 @@ return new class extends Migration {
         });
 
         // Event Tags (per-tenant)
+        if (Schema::hasTable('event_tags')) {
+            return;
+        }
+
         Schema::create('event_tags', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnUpdate()->cascadeOnDelete();
@@ -44,6 +64,10 @@ return new class extends Migration {
             $table->timestamps();
             $table->unique(['tenant_id','name']);
         });
+
+        if (Schema::hasTable('event_event_tag')) {
+            return;
+        }
 
         Schema::create('event_event_tag', function (Blueprint $table) {
             $table->id();
@@ -53,11 +77,19 @@ return new class extends Migration {
         });
 
         // Music Genres (global) + Artist pivot
+        if (Schema::hasTable('music_genres')) {
+            return;
+        }
+
         Schema::create('music_genres', function (Blueprint $table) {
             $table->id();
             $table->string('name', 190)->unique();
             $table->timestamps();
         });
+
+        if (Schema::hasTable('artist_music_genre')) {
+            return;
+        }
 
         Schema::create('artist_music_genre', function (Blueprint $table) {
             $table->id();

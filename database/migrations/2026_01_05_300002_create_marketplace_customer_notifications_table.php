@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('marketplace_customer_notifications')) {
+            return;
+        }
+
         Schema::create('marketplace_customer_notifications', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('marketplace_client_id');

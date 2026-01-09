@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Facebook Conversions API connections
+        if (Schema::hasTable('facebook_capi_connections')) {
+            return;
+        }
+
         Schema::create('facebook_capi_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -29,6 +33,10 @@ return new class extends Migration
         });
 
         // Event configurations (what data to send for each event type)
+        if (Schema::hasTable('facebook_capi_event_configs')) {
+            return;
+        }
+
         Schema::create('facebook_capi_event_configs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -45,6 +53,10 @@ return new class extends Migration
         });
 
         // Sent events log
+        if (Schema::hasTable('facebook_capi_events')) {
+            return;
+        }
+
         Schema::create('facebook_capi_events', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -71,6 +83,10 @@ return new class extends Migration
         });
 
         // Event batches (for batch sending)
+        if (Schema::hasTable('facebook_capi_batches')) {
+            return;
+        }
+
         Schema::create('facebook_capi_batches', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -87,6 +103,10 @@ return new class extends Migration
         });
 
         // Custom audiences (for syncing customer lists)
+        if (Schema::hasTable('facebook_capi_custom_audiences')) {
+            return;
+        }
+
         Schema::create('facebook_capi_custom_audiences', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');

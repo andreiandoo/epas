@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('salesforce_connections')) {
+            return;
+        }
+
         Schema::create('salesforce_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -27,6 +31,10 @@ return new class extends Migration
             $table->unique(['tenant_id', 'org_id']);
         });
 
+        if (Schema::hasTable('salesforce_sync_logs')) {
+            return;
+        }
+
         Schema::create('salesforce_sync_logs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -44,6 +52,10 @@ return new class extends Migration
             $table->foreign('connection_id')->references('id')->on('salesforce_connections')->onDelete('cascade');
             $table->index(['connection_id', 'object_type']);
         });
+
+        if (Schema::hasTable('salesforce_field_mappings')) {
+            return;
+        }
 
         Schema::create('salesforce_field_mappings', function (Blueprint $table) {
             $table->id();

@@ -13,6 +13,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('marketplace_venue_categories')) {
+            return;
+        }
+
         Schema::create('marketplace_venue_categories', function (Blueprint $table) {
             $table->id();
 
@@ -40,6 +44,10 @@ return new class extends Migration
         });
 
         // Pivot table for venue-category relationships
+        if (Schema::hasTable('marketplace_venue_category_venue')) {
+            return;
+        }
+
         Schema::create('marketplace_venue_category_venue', function (Blueprint $table) {
             $table->id();
 

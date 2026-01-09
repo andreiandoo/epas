@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Door sales transactions
+        if (Schema::hasTable('door_sales')) {
+            return;
+        }
+
         Schema::create('door_sales', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -39,6 +43,10 @@ return new class extends Migration
         });
 
         // Door sale line items
+        if (Schema::hasTable('door_sale_items')) {
+            return;
+        }
+
         Schema::create('door_sale_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('door_sale_id')->constrained()->onDelete('cascade');
@@ -52,6 +60,10 @@ return new class extends Migration
         });
 
         // Platform fee tracking for revenue
+        if (Schema::hasTable('door_sale_platform_fees')) {
+            return;
+        }
+
         Schema::create('door_sale_platform_fees', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');

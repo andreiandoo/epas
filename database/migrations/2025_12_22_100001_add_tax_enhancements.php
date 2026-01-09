@@ -20,6 +20,10 @@ return new class extends Migration {
         });
 
         // Tax Exemptions table
+        if (Schema::hasTable('tax_exemptions')) {
+            return;
+        }
+
         Schema::create('tax_exemptions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnUpdate()->cascadeOnDelete();
@@ -41,6 +45,10 @@ return new class extends Migration {
         });
 
         // Tax Import Logs table
+        if (Schema::hasTable('tax_import_logs')) {
+            return;
+        }
+
         Schema::create('tax_import_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnUpdate()->cascadeOnDelete();

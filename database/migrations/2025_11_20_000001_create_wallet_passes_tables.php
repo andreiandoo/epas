@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('wallet_passes')) {
+            return;
+        }
+
         Schema::create('wallet_passes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -29,6 +33,10 @@ return new class extends Migration
             $table->index(['ticket_id', 'platform']);
         });
 
+        if (Schema::hasTable('wallet_push_registrations')) {
+            return;
+        }
+
         Schema::create('wallet_push_registrations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('pass_id')->constrained('wallet_passes')->onDelete('cascade');
@@ -38,6 +46,10 @@ return new class extends Migration
 
             $table->unique(['pass_id', 'device_library_id']);
         });
+
+        if (Schema::hasTable('wallet_pass_updates')) {
+            return;
+        }
 
         Schema::create('wallet_pass_updates', function (Blueprint $table) {
             $table->id();

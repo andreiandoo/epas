@@ -12,6 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         // Gift Cards table
+        if (Schema::hasTable('marketplace_gift_cards')) {
+            return;
+        }
+
         Schema::create('marketplace_gift_cards', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('marketplace_client_id');
@@ -84,6 +88,10 @@ return new class extends Migration
         });
 
         // Gift Card Transactions (usage history)
+        if (Schema::hasTable('marketplace_gift_card_transactions')) {
+            return;
+        }
+
         Schema::create('marketplace_gift_card_transactions', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('marketplace_gift_card_id');
@@ -130,6 +138,10 @@ return new class extends Migration
         });
 
         // Gift Card Designs/Templates
+        if (Schema::hasTable('marketplace_gift_card_designs')) {
+            return;
+        }
+
         Schema::create('marketplace_gift_card_designs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('marketplace_client_id');

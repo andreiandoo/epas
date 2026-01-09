@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('domain_verifications')) {
+            return;
+        }
+
         Schema::create('domain_verifications', function (Blueprint $table) {
             $table->id();
             $table->foreignId('domain_id')->constrained()->onDelete('cascade');

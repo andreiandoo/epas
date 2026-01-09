@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('shop_attributes')) {
+            return;
+        }
+
         Schema::create('shop_attributes', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
@@ -21,6 +25,10 @@ return new class extends Migration
             $table->unique(['tenant_id', 'slug']);
             $table->index('tenant_id');
         });
+
+        if (Schema::hasTable('shop_attribute_values')) {
+            return;
+        }
 
         Schema::create('shop_attribute_values', function (Blueprint $table) {
             $table->uuid('id')->primary();

@@ -12,6 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         // Email Templates for marketplace
+        if (Schema::hasTable('marketplace_email_templates')) {
+            return;
+        }
+
         Schema::create('marketplace_email_templates', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('marketplace_client_id');
@@ -32,6 +36,10 @@ return new class extends Migration
         });
 
         // Email Logs
+        if (Schema::hasTable('marketplace_email_logs')) {
+            return;
+        }
+
         Schema::create('marketplace_email_logs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('marketplace_client_id');
@@ -73,6 +81,10 @@ return new class extends Migration
         });
 
         // Contact Lists for newsletters
+        if (Schema::hasTable('marketplace_contact_lists')) {
+            return;
+        }
+
         Schema::create('marketplace_contact_lists', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('marketplace_client_id');
@@ -90,6 +102,10 @@ return new class extends Migration
         });
 
         // Contact Tags
+        if (Schema::hasTable('marketplace_contact_tags')) {
+            return;
+        }
+
         Schema::create('marketplace_contact_tags', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('marketplace_client_id');
@@ -103,6 +119,10 @@ return new class extends Migration
         });
 
         // Contact List Members (pivot)
+        if (Schema::hasTable('marketplace_contact_list_members')) {
+            return;
+        }
+
         Schema::create('marketplace_contact_list_members', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('list_id');
@@ -120,6 +140,10 @@ return new class extends Migration
         });
 
         // Contact Tag assignments (pivot)
+        if (Schema::hasTable('marketplace_customer_tags')) {
+            return;
+        }
+
         Schema::create('marketplace_customer_tags', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('marketplace_customer_id');
@@ -134,6 +158,10 @@ return new class extends Migration
         });
 
         // Newsletters/Campaigns
+        if (Schema::hasTable('marketplace_newsletters')) {
+            return;
+        }
+
         Schema::create('marketplace_newsletters', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('marketplace_client_id');
@@ -169,6 +197,10 @@ return new class extends Migration
         });
 
         // Newsletter Recipients
+        if (Schema::hasTable('marketplace_newsletter_recipients')) {
+            return;
+        }
+
         Schema::create('marketplace_newsletter_recipients', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('newsletter_id');

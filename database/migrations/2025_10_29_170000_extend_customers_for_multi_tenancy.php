@@ -21,6 +21,10 @@ return new class extends Migration {
         });
 
         // pivot many-to-many Customer <-> Tenant
+        if (Schema::hasTable('customer_tenant')) {
+            return;
+        }
+
         Schema::create('customer_tenant', function (Blueprint $table) {
             $table->id();
             $table->foreignId('customer_id')->constrained('customers')->cascadeOnUpdate()->cascadeOnDelete();

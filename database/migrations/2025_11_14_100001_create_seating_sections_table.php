@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('seating_sections')) {
+            return;
+        }
+
         Schema::create('seating_sections', function (Blueprint $table) {
             $table->id();
             $table->foreignId('layout_id')->constrained('seating_layouts')->onDelete('cascade');

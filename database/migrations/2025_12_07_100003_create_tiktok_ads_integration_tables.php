@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Tenant connections to TikTok Ads
+        if (Schema::hasTable('tiktok_ads_connections')) {
+            return;
+        }
+
         Schema::create('tiktok_ads_connections', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
@@ -28,6 +32,10 @@ return new class extends Migration
         });
 
         // Event configurations
+        if (Schema::hasTable('tiktok_ads_event_configs')) {
+            return;
+        }
+
         Schema::create('tiktok_ads_event_configs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('connection_id')->constrained('tiktok_ads_connections')->cascadeOnDelete();
@@ -42,6 +50,10 @@ return new class extends Migration
         });
 
         // Events sent to TikTok
+        if (Schema::hasTable('tiktok_ads_events')) {
+            return;
+        }
+
         Schema::create('tiktok_ads_events', function (Blueprint $table) {
             $table->id();
             $table->foreignId('connection_id')->constrained('tiktok_ads_connections')->cascadeOnDelete();
@@ -69,6 +81,10 @@ return new class extends Migration
         });
 
         // Batch uploads
+        if (Schema::hasTable('tiktok_ads_batches')) {
+            return;
+        }
+
         Schema::create('tiktok_ads_batches', function (Blueprint $table) {
             $table->id();
             $table->foreignId('connection_id')->constrained('tiktok_ads_connections')->cascadeOnDelete();
@@ -81,6 +97,10 @@ return new class extends Migration
         });
 
         // Custom audiences for TikTok
+        if (Schema::hasTable('tiktok_ads_audiences')) {
+            return;
+        }
+
         Schema::create('tiktok_ads_audiences', function (Blueprint $table) {
             $table->id();
             $table->foreignId('connection_id')->constrained('tiktok_ads_connections')->cascadeOnDelete();

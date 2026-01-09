@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('mkt_promo_codes')) {
+            return;
+        }
+
         Schema::create('mkt_promo_codes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();
@@ -55,6 +59,10 @@ return new class extends Migration
         });
 
         // Track promo code usage
+        if (Schema::hasTable('marketplace_promo_code_usage')) {
+            return;
+        }
+
         Schema::create('marketplace_promo_code_usage', function (Blueprint $table) {
             $table->id();
             $table->foreignId('promo_code_id')->constrained('mkt_promo_codes')->cascadeOnDelete();

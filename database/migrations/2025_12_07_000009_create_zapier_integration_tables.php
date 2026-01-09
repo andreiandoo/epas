@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('zapier_connections')) {
+            return;
+        }
+
         Schema::create('zapier_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -21,6 +25,10 @@ return new class extends Migration
 
             $table->unique(['tenant_id']);
         });
+
+        if (Schema::hasTable('zapier_triggers')) {
+            return;
+        }
 
         Schema::create('zapier_triggers', function (Blueprint $table) {
             $table->id();
@@ -37,6 +45,10 @@ return new class extends Migration
             $table->unique(['connection_id', 'trigger_type', 'webhook_url']);
         });
 
+        if (Schema::hasTable('zapier_trigger_logs')) {
+            return;
+        }
+
         Schema::create('zapier_trigger_logs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('trigger_id');
@@ -51,6 +63,10 @@ return new class extends Migration
 
             $table->foreign('trigger_id')->references('id')->on('zapier_triggers')->onDelete('cascade');
         });
+
+        if (Schema::hasTable('zapier_actions')) {
+            return;
+        }
 
         Schema::create('zapier_actions', function (Blueprint $table) {
             $table->id();

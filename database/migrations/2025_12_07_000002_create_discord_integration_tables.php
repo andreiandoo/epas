@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('discord_connections')) {
+            return;
+        }
+
         Schema::create('discord_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -28,6 +32,10 @@ return new class extends Migration
             $table->unique(['tenant_id', 'guild_id']);
         });
 
+        if (Schema::hasTable('discord_webhooks')) {
+            return;
+        }
+
         Schema::create('discord_webhooks', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -41,6 +49,10 @@ return new class extends Migration
 
             $table->foreign('connection_id')->references('id')->on('discord_connections')->onDelete('cascade');
         });
+
+        if (Schema::hasTable('discord_messages')) {
+            return;
+        }
 
         Schema::create('discord_messages', function (Blueprint $table) {
             $table->id();

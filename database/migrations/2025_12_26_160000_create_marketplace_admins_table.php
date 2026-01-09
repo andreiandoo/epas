@@ -12,6 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         // Marketplace Admins - Admin users for each marketplace client
+        if (Schema::hasTable('marketplace_admins')) {
+            return;
+        }
+
         Schema::create('marketplace_admins', function (Blueprint $table) {
             $table->id();
             $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();
@@ -53,6 +57,10 @@ return new class extends Migration
         });
 
         // Marketplace Carts - Session-based carts for customers
+        if (Schema::hasTable('marketplace_carts')) {
+            return;
+        }
+
         Schema::create('marketplace_carts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();

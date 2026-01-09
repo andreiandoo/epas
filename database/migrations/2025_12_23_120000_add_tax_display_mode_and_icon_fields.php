@@ -23,6 +23,10 @@ return new class extends Migration
         });
 
         // 3. Create pivot table for multi-select event types on general_taxes
+        if (Schema::hasTable('general_tax_event_type')) {
+            return;
+        }
+
         Schema::create('general_tax_event_type', function (Blueprint $table) {
             $table->id();
             $table->foreignId('general_tax_id')->constrained('general_taxes')->cascadeOnDelete();

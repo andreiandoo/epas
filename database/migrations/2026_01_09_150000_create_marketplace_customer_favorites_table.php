@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('marketplace_customer_favorites')) {
+            return;
+        }
+
         Schema::create('marketplace_customer_favorites', function (Blueprint $table) {
             $table->id();
             $table->foreignId('marketplace_client_id')->constrained()->onDelete('cascade');

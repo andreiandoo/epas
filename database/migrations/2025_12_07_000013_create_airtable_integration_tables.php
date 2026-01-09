@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Airtable connections (Personal Access Token or OAuth)
+        if (Schema::hasTable('airtable_connections')) {
+            return;
+        }
+
         Schema::create('airtable_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -30,6 +34,10 @@ return new class extends Migration
         });
 
         // Linked Airtable bases
+        if (Schema::hasTable('airtable_bases')) {
+            return;
+        }
+
         Schema::create('airtable_bases', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -46,6 +54,10 @@ return new class extends Migration
         });
 
         // Table sync configurations
+        if (Schema::hasTable('airtable_table_syncs')) {
+            return;
+        }
+
         Schema::create('airtable_table_syncs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('base_id');
@@ -66,6 +78,10 @@ return new class extends Migration
         });
 
         // Sync job history
+        if (Schema::hasTable('airtable_sync_jobs')) {
+            return;
+        }
+
         Schema::create('airtable_sync_jobs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('table_sync_id');
@@ -86,6 +102,10 @@ return new class extends Migration
         });
 
         // Record mapping (local ID <=> Airtable record ID)
+        if (Schema::hasTable('airtable_record_mappings')) {
+            return;
+        }
+
         Schema::create('airtable_record_mappings', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('table_sync_id');

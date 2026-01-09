@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('twilio_connections')) {
+            return;
+        }
+
         Schema::create('twilio_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -25,6 +29,10 @@ return new class extends Migration
 
             $table->unique(['tenant_id']);
         });
+
+        if (Schema::hasTable('twilio_messages')) {
+            return;
+        }
 
         Schema::create('twilio_messages', function (Blueprint $table) {
             $table->id();
@@ -49,6 +57,10 @@ return new class extends Migration
             $table->index(['connection_id', 'to_number']);
         });
 
+        if (Schema::hasTable('twilio_calls')) {
+            return;
+        }
+
         Schema::create('twilio_calls', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -69,6 +81,10 @@ return new class extends Migration
 
             $table->foreign('connection_id')->references('id')->on('twilio_connections')->onDelete('cascade');
         });
+
+        if (Schema::hasTable('twilio_webhooks')) {
+            return;
+        }
 
         Schema::create('twilio_webhooks', function (Blueprint $table) {
             $table->id();

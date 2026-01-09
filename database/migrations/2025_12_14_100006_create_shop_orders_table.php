@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('shop_orders')) {
+            return;
+        }
+
         Schema::create('shop_orders', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
@@ -80,6 +84,10 @@ return new class extends Migration
             $table->index(['tenant_id', 'created_at']);
             $table->index(['tenant_id', 'event_id']);
         });
+
+        if (Schema::hasTable('shop_order_items')) {
+            return;
+        }
 
         Schema::create('shop_order_items', function (Blueprint $table) {
             $table->uuid('id')->primary();

@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Zoom OAuth connections
+        if (Schema::hasTable('zoom_connections')) {
+            return;
+        }
+
         Schema::create('zoom_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -32,6 +36,10 @@ return new class extends Migration
         });
 
         // Zoom meetings (scheduled or instant)
+        if (Schema::hasTable('zoom_meetings')) {
+            return;
+        }
+
         Schema::create('zoom_meetings', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -60,6 +68,10 @@ return new class extends Migration
         });
 
         // Zoom webinars
+        if (Schema::hasTable('zoom_webinars')) {
+            return;
+        }
+
         Schema::create('zoom_webinars', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -88,6 +100,10 @@ return new class extends Migration
         });
 
         // Meeting/Webinar registrants and participants
+        if (Schema::hasTable('zoom_participants')) {
+            return;
+        }
+
         Schema::create('zoom_participants', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -116,6 +132,10 @@ return new class extends Migration
         });
 
         // Meeting recordings
+        if (Schema::hasTable('zoom_recordings')) {
+            return;
+        }
+
         Schema::create('zoom_recordings', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -139,6 +159,10 @@ return new class extends Migration
         });
 
         // Zoom webhooks
+        if (Schema::hasTable('zoom_webhook_events')) {
+            return;
+        }
+
         Schema::create('zoom_webhook_events', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id')->nullable();

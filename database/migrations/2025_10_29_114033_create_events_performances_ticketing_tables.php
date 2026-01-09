@@ -8,6 +8,10 @@ return new class extends Migration {
     public function up(): void
     {
         // EVENTS
+        if (Schema::hasTable('events')) {
+            return;
+        }
+
         Schema::create('events', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnUpdate()->cascadeOnDelete();
@@ -25,6 +29,10 @@ return new class extends Migration {
         });
 
         // PERFORMANCES (occurrences)
+        if (Schema::hasTable('performances')) {
+            return;
+        }
+
         Schema::create('performances', function (Blueprint $table) {
             $table->id();
             $table->foreignId('event_id')->constrained('events')->cascadeOnUpdate()->cascadeOnDelete();
@@ -37,6 +45,10 @@ return new class extends Migration {
         });
 
         // TICKET TYPES (early-bird, standard, etc.)
+        if (Schema::hasTable('ticket_types')) {
+            return;
+        }
+
         Schema::create('ticket_types', function (Blueprint $table) {
             $table->id();
             $table->foreignId('event_id')->constrained('events')->cascadeOnUpdate()->cascadeOnDelete();
@@ -55,6 +67,10 @@ return new class extends Migration {
         });
 
         // TICKETS
+        if (Schema::hasTable('tickets')) {
+            return;
+        }
+
         Schema::create('tickets', function (Blueprint $table) {
             $table->id();
             $table->foreignId('order_id')->nullable()->constrained('orders')->cascadeOnUpdate()->nullOnDelete();

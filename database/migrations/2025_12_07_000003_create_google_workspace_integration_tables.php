@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('google_workspace_connections')) {
+            return;
+        }
+
         Schema::create('google_workspace_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -29,6 +33,10 @@ return new class extends Migration
             $table->unique(['tenant_id', 'google_user_id']);
         });
 
+        if (Schema::hasTable('google_drive_files')) {
+            return;
+        }
+
         Schema::create('google_drive_files', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -44,6 +52,10 @@ return new class extends Migration
 
             $table->foreign('connection_id')->references('id')->on('google_workspace_connections')->onDelete('cascade');
         });
+
+        if (Schema::hasTable('google_calendar_events')) {
+            return;
+        }
 
         Schema::create('google_calendar_events', function (Blueprint $table) {
             $table->id();
@@ -63,6 +75,10 @@ return new class extends Migration
 
             $table->foreign('connection_id')->references('id')->on('google_workspace_connections')->onDelete('cascade');
         });
+
+        if (Schema::hasTable('google_gmail_messages')) {
+            return;
+        }
 
         Schema::create('google_gmail_messages', function (Blueprint $table) {
             $table->id();

@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('tenant_webhooks')) {
+            return;
+        }
+
         Schema::create('tenant_webhooks', function (Blueprint $table) {
             $table->id();
             $table->string('tenant_id')->index();
@@ -32,6 +36,10 @@ return new class extends Migration
 
             $table->index(['tenant_id', 'status']);
         });
+
+        if (Schema::hasTable('tenant_webhook_deliveries')) {
+            return;
+        }
 
         Schema::create('tenant_webhook_deliveries', function (Blueprint $table) {
             $table->id();

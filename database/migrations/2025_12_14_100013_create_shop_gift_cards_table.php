@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('shop_gift_cards')) {
+            return;
+        }
+
         Schema::create('shop_gift_cards', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
@@ -38,6 +42,10 @@ return new class extends Migration
             $table->index(['tenant_id', 'code']);
             $table->index(['tenant_id', 'status']);
         });
+
+        if (Schema::hasTable('shop_gift_card_transactions')) {
+            return;
+        }
 
         Schema::create('shop_gift_card_transactions', function (Blueprint $table) {
             $table->uuid('id')->primary();

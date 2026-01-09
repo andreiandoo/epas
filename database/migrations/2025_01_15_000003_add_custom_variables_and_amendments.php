@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Custom variables table
+        if (Schema::hasTable('contract_custom_variables')) {
+            return;
+        }
+
         Schema::create('contract_custom_variables', function (Blueprint $table) {
             $table->id();
             $table->string('name'); // e.g., 'late_fee_percentage'
@@ -25,6 +29,10 @@ return new class extends Migration
         });
 
         // Tenant custom variable values
+        if (Schema::hasTable('tenant_custom_variables')) {
+            return;
+        }
+
         Schema::create('tenant_custom_variables', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -36,6 +44,10 @@ return new class extends Migration
         });
 
         // Contract amendments table
+        if (Schema::hasTable('contract_amendments')) {
+            return;
+        }
+
         Schema::create('contract_amendments', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');

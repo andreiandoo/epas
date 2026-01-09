@@ -7,6 +7,10 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        if (Schema::hasTable('artists')) {
+            return;
+        }
+
         Schema::create('artists', function (Blueprint $table) {
             $table->id();
             $table->string('name', 190);
@@ -20,6 +24,10 @@ return new class extends Migration {
 
             $table->index('status');
         });
+
+        if (Schema::hasTable('event_artist')) {
+            return;
+        }
 
         Schema::create('event_artist', function (Blueprint $table) {
             $table->id();

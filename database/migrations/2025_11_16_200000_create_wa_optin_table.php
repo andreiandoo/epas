@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('wa_optin')) {
+            return;
+        }
+
         Schema::create('wa_optin', function (Blueprint $table) {
             $table->id();
             $table->string('tenant_id')->index();

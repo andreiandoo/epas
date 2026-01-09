@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Telegram Bot connections
+        if (Schema::hasTable('telegram_bot_connections')) {
+            return;
+        }
+
         Schema::create('telegram_bot_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -28,6 +32,10 @@ return new class extends Migration
         });
 
         // Telegram channels/groups the bot is added to
+        if (Schema::hasTable('telegram_chats')) {
+            return;
+        }
+
         Schema::create('telegram_chats', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -45,6 +53,10 @@ return new class extends Migration
         });
 
         // Messages sent/received
+        if (Schema::hasTable('telegram_messages')) {
+            return;
+        }
+
         Schema::create('telegram_messages', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -69,6 +81,10 @@ return new class extends Migration
         });
 
         // Subscribers (users who started the bot)
+        if (Schema::hasTable('telegram_subscribers')) {
+            return;
+        }
+
         Schema::create('telegram_subscribers', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -90,6 +106,10 @@ return new class extends Migration
         });
 
         // Webhook updates log
+        if (Schema::hasTable('telegram_updates')) {
+            return;
+        }
+
         Schema::create('telegram_updates', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id')->nullable();

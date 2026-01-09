@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Tenant connections to Google Ads
+        if (Schema::hasTable('google_ads_connections')) {
+            return;
+        }
+
         Schema::create('google_ads_connections', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
@@ -28,6 +32,10 @@ return new class extends Migration
         });
 
         // Conversion actions defined in Google Ads
+        if (Schema::hasTable('google_ads_conversion_actions')) {
+            return;
+        }
+
         Schema::create('google_ads_conversion_actions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('connection_id')->constrained('google_ads_connections')->cascadeOnDelete();
@@ -45,6 +53,10 @@ return new class extends Migration
         });
 
         // Conversion events sent to Google Ads
+        if (Schema::hasTable('google_ads_conversions')) {
+            return;
+        }
+
         Schema::create('google_ads_conversions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('connection_id')->constrained('google_ads_connections')->cascadeOnDelete();
@@ -73,6 +85,10 @@ return new class extends Migration
         });
 
         // Audience lists for Customer Match
+        if (Schema::hasTable('google_ads_audiences')) {
+            return;
+        }
+
         Schema::create('google_ads_audiences', function (Blueprint $table) {
             $table->id();
             $table->foreignId('connection_id')->constrained('google_ads_connections')->cascadeOnDelete();
@@ -90,6 +106,10 @@ return new class extends Migration
         });
 
         // Offline click conversions batch uploads
+        if (Schema::hasTable('google_ads_upload_batches')) {
+            return;
+        }
+
         Schema::create('google_ads_upload_batches', function (Blueprint $table) {
             $table->id();
             $table->foreignId('connection_id')->constrained('google_ads_connections')->cascadeOnDelete();

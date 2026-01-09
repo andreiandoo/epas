@@ -11,6 +11,10 @@ return new class extends Migration
         // ===========================================
         // CORE CUSTOMERS - Platform-wide customer database
         // ===========================================
+        if (Schema::hasTable('core_customers')) {
+            return;
+        }
+
         Schema::create('core_customers', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique()->comment('Public identifier for APIs');
@@ -164,6 +168,10 @@ return new class extends Migration
         // ===========================================
         // CORE CUSTOMER EVENTS - All interactions
         // ===========================================
+        if (Schema::hasTable('core_customer_events')) {
+            return;
+        }
+
         Schema::create('core_customer_events', function (Blueprint $table) {
             $table->id();
             $table->foreignId('customer_id')->nullable()->constrained('core_customers')->nullOnDelete();
@@ -259,6 +267,10 @@ return new class extends Migration
         // ===========================================
         // CORE SESSIONS - Visitor sessions
         // ===========================================
+        if (Schema::hasTable('core_sessions')) {
+            return;
+        }
+
         Schema::create('core_sessions', function (Blueprint $table) {
             $table->id();
             $table->uuid('session_id')->unique();
@@ -319,6 +331,10 @@ return new class extends Migration
         // ===========================================
         // PLATFORM AD ACCOUNTS - Core admin's own accounts
         // ===========================================
+        if (Schema::hasTable('platform_ad_accounts')) {
+            return;
+        }
+
         Schema::create('platform_ad_accounts', function (Blueprint $table) {
             $table->id();
             $table->string('platform', 50)->comment('google_ads, meta, tiktok, linkedin');
@@ -341,6 +357,10 @@ return new class extends Migration
         // ===========================================
         // PLATFORM CONVERSIONS - Conversions sent to platform accounts
         // ===========================================
+        if (Schema::hasTable('platform_conversions')) {
+            return;
+        }
+
         Schema::create('platform_conversions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('customer_id')->nullable()->constrained('core_customers')->nullOnDelete();
@@ -376,6 +396,10 @@ return new class extends Migration
         // ===========================================
         // CUSTOMER AUDIENCES - For ad platform syncing
         // ===========================================
+        if (Schema::hasTable('platform_audiences')) {
+            return;
+        }
+
         Schema::create('platform_audiences', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ad_account_id')->constrained('platform_ad_accounts')->cascadeOnDelete();
@@ -402,6 +426,10 @@ return new class extends Migration
         // ===========================================
         // AUDIENCE MEMBERS - Customers in each audience
         // ===========================================
+        if (Schema::hasTable('platform_audience_members')) {
+            return;
+        }
+
         Schema::create('platform_audience_members', function (Blueprint $table) {
             $table->id();
             $table->foreignId('audience_id')->constrained('platform_audiences')->cascadeOnDelete();

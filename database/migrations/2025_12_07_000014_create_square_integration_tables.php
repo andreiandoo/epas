@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Square OAuth connections
+        if (Schema::hasTable('square_connections')) {
+            return;
+        }
+
         Schema::create('square_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -30,6 +34,10 @@ return new class extends Migration
         });
 
         // Square locations
+        if (Schema::hasTable('square_locations')) {
+            return;
+        }
+
         Schema::create('square_locations', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -50,6 +58,10 @@ return new class extends Migration
         });
 
         // Square catalog items synced
+        if (Schema::hasTable('square_catalog_items')) {
+            return;
+        }
+
         Schema::create('square_catalog_items', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -73,6 +85,10 @@ return new class extends Migration
         });
 
         // Square orders/transactions
+        if (Schema::hasTable('square_orders')) {
+            return;
+        }
+
         Schema::create('square_orders', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -97,6 +113,10 @@ return new class extends Migration
         });
 
         // Square payments
+        if (Schema::hasTable('square_payments')) {
+            return;
+        }
+
         Schema::create('square_payments', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -120,6 +140,10 @@ return new class extends Migration
         });
 
         // Square webhooks
+        if (Schema::hasTable('square_webhooks')) {
+            return;
+        }
+
         Schema::create('square_webhooks', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -134,6 +158,10 @@ return new class extends Migration
         });
 
         // Square webhook events log
+        if (Schema::hasTable('square_webhook_events')) {
+            return;
+        }
+
         Schema::create('square_webhook_events', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id')->nullable();

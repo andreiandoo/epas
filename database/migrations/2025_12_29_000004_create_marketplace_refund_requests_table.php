@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('marketplace_refund_requests')) {
+            return;
+        }
+
         Schema::create('marketplace_refund_requests', function (Blueprint $table) {
             $table->id();
             $table->string('reference')->unique(); // REF-XXXXXX

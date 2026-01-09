@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('shop_digital_downloads')) {
+            return;
+        }
+
         Schema::create('shop_digital_downloads', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->uuid('order_item_id');

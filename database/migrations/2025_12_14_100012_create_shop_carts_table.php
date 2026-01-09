@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Persistent carts for abandoned cart recovery
+        if (Schema::hasTable('shop_carts')) {
+            return;
+        }
+
         Schema::create('shop_carts', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
@@ -33,6 +37,10 @@ return new class extends Migration
             $table->index(['tenant_id', 'session_id']);
             $table->index(['tenant_id', 'email']);
         });
+
+        if (Schema::hasTable('shop_cart_items')) {
+            return;
+        }
 
         Schema::create('shop_cart_items', function (Blueprint $table) {
             $table->uuid('id')->primary();

@@ -8,6 +8,10 @@ return new class extends Migration {
     public function up(): void
     {
         // General Taxes
+        if (Schema::hasTable('general_taxes')) {
+            return;
+        }
+
         Schema::create('general_taxes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnUpdate()->cascadeOnDelete();
@@ -33,6 +37,10 @@ return new class extends Migration {
         });
 
         // Local Taxes
+        if (Schema::hasTable('local_taxes')) {
+            return;
+        }
+
         Schema::create('local_taxes', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained('tenants')->cascadeOnUpdate()->cascadeOnDelete();
@@ -56,6 +64,10 @@ return new class extends Migration {
         });
 
         // Pivot table for local taxes and event types (many-to-many)
+        if (Schema::hasTable('local_tax_event_type')) {
+            return;
+        }
+
         Schema::create('local_tax_event_type', function (Blueprint $table) {
             $table->id();
             $table->foreignId('local_tax_id')->constrained('local_taxes')->cascadeOnUpdate()->cascadeOnDelete();

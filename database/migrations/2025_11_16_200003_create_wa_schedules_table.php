@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('wa_schedules')) {
+            return;
+        }
+
         Schema::create('wa_schedules', function (Blueprint $table) {
             $table->id();
             $table->string('tenant_id')->index();

@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('microservice_metrics')) {
+            return;
+        }
+
         Schema::create('microservice_metrics', function (Blueprint $table) {
             $table->id();
             $table->string('tenant_id')->index();
@@ -25,6 +29,10 @@ return new class extends Migration
             $table->index(['tenant_id', 'microservice_slug', 'created_at'], 'idx_metrics_tenant_ms_time');
             $table->index(['microservice_slug', 'created_at'], 'idx_metrics_ms_time');
         });
+
+        if (Schema::hasTable('microservice_usage_summary')) {
+            return;
+        }
 
         Schema::create('microservice_usage_summary', function (Blueprint $table) {
             $table->id();

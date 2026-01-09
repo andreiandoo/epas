@@ -14,6 +14,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('cookie_consents')) {
+            return;
+        }
+
         Schema::create('cookie_consents', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -67,6 +71,10 @@ return new class extends Migration
         });
 
         // Consent history table for audit trail
+        if (Schema::hasTable('cookie_consent_history')) {
+            return;
+        }
+
         Schema::create('cookie_consent_history', function (Blueprint $table) {
             $table->id();
             $table->foreignId('cookie_consent_id')->constrained()->onDelete('cascade');

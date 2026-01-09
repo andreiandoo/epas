@@ -21,6 +21,10 @@ return new class extends Migration
         });
 
         // Payment splits tracking
+        if (Schema::hasTable('payment_splits')) {
+            return;
+        }
+
         Schema::create('payment_splits', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -40,6 +44,10 @@ return new class extends Migration
         });
 
         // Stripe Connect onboarding sessions
+        if (Schema::hasTable('stripe_connect_sessions')) {
+            return;
+        }
+
         Schema::create('stripe_connect_sessions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');

@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('tenant_microservices')) {
+            return;
+        }
+
         Schema::create('tenant_microservices', function (Blueprint $table) {
             $table->id();
             $table->string('tenant_id')->index();

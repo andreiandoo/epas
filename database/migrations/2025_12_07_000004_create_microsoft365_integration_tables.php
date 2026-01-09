@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('microsoft365_connections')) {
+            return;
+        }
+
         Schema::create('microsoft365_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -29,6 +33,10 @@ return new class extends Migration
             $table->unique(['tenant_id', 'microsoft_user_id']);
         });
 
+        if (Schema::hasTable('microsoft_onedrive_files')) {
+            return;
+        }
+
         Schema::create('microsoft_onedrive_files', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -44,6 +52,10 @@ return new class extends Migration
 
             $table->foreign('connection_id')->references('id')->on('microsoft365_connections')->onDelete('cascade');
         });
+
+        if (Schema::hasTable('microsoft_outlook_messages')) {
+            return;
+        }
 
         Schema::create('microsoft_outlook_messages', function (Blueprint $table) {
             $table->id();
@@ -63,6 +75,10 @@ return new class extends Migration
 
             $table->foreign('connection_id')->references('id')->on('microsoft365_connections')->onDelete('cascade');
         });
+
+        if (Schema::hasTable('microsoft_teams_messages')) {
+            return;
+        }
 
         Schema::create('microsoft_teams_messages', function (Blueprint $table) {
             $table->id();

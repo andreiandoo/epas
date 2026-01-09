@@ -12,6 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         // Marketplace Payouts - Organizer withdrawal requests
+        if (Schema::hasTable('marketplace_payouts')) {
+            return;
+        }
+
         Schema::create('marketplace_payouts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();
@@ -76,6 +80,10 @@ return new class extends Migration
         });
 
         // Marketplace Transactions - Ledger of all financial movements
+        if (Schema::hasTable('marketplace_transactions')) {
+            return;
+        }
+
         Schema::create('marketplace_transactions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('marketplace_client_id')->constrained()->cascadeOnDelete();

@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('marketplace_clients')) {
+            return;
+        }
+
         Schema::create('marketplace_clients', function (Blueprint $table) {
             $table->id();
             $table->string('name');
@@ -36,6 +40,10 @@ return new class extends Migration
         });
 
         // Track which tenants a marketplace client can sell tickets for
+        if (Schema::hasTable('marketplace_client_tenants')) {
+            return;
+        }
+
         Schema::create('marketplace_client_tenants', function (Blueprint $table) {
             $table->id();
             $table->foreignId('marketplace_client_id')->constrained()->onDelete('cascade');

@@ -14,6 +14,10 @@ return new class extends Migration
         });
 
         // Create table to track which customers are interested in which events
+        if (Schema::hasTable('event_interests')) {
+            return;
+        }
+
         Schema::create('event_interests', function (Blueprint $table) {
             $table->id();
             $table->foreignId('event_id')->constrained('events')->onDelete('cascade');

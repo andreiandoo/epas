@@ -12,6 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         // Coupon campaigns
+        if (Schema::hasTable('coupon_campaigns')) {
+            return;
+        }
+
         Schema::create('coupon_campaigns', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -33,6 +37,10 @@ return new class extends Migration
         });
 
         // Coupon codes (enhanced)
+        if (Schema::hasTable('coupon_codes')) {
+            return;
+        }
+
         Schema::create('coupon_codes', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -94,6 +102,10 @@ return new class extends Migration
         });
 
         // Coupon redemptions
+        if (Schema::hasTable('coupon_redemptions')) {
+            return;
+        }
+
         Schema::create('coupon_redemptions', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -126,6 +138,10 @@ return new class extends Migration
         });
 
         // Bulk code generation jobs
+        if (Schema::hasTable('coupon_generation_jobs')) {
+            return;
+        }
+
         Schema::create('coupon_generation_jobs', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -146,6 +162,10 @@ return new class extends Migration
         });
 
         // Validation attempts (for fraud detection)
+        if (Schema::hasTable('coupon_validation_attempts')) {
+            return;
+        }
+
         Schema::create('coupon_validation_attempts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');

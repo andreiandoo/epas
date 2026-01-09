@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // WhatsApp Business Cloud API connections (direct Meta API - no BSP fees)
+        if (Schema::hasTable('whatsapp_cloud_connections')) {
+            return;
+        }
+
         Schema::create('whatsapp_cloud_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -29,6 +33,10 @@ return new class extends Migration
         });
 
         // Message templates (must be pre-approved by Meta)
+        if (Schema::hasTable('whatsapp_cloud_templates')) {
+            return;
+        }
+
         Schema::create('whatsapp_cloud_templates', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -49,6 +57,10 @@ return new class extends Migration
         });
 
         // Outbound and inbound messages
+        if (Schema::hasTable('whatsapp_cloud_messages')) {
+            return;
+        }
+
         Schema::create('whatsapp_cloud_messages', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -77,6 +89,10 @@ return new class extends Migration
         });
 
         // Customer contacts / conversations
+        if (Schema::hasTable('whatsapp_cloud_contacts')) {
+            return;
+        }
+
         Schema::create('whatsapp_cloud_contacts', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -96,6 +112,10 @@ return new class extends Migration
         });
 
         // Webhook events log
+        if (Schema::hasTable('whatsapp_cloud_webhook_events')) {
+            return;
+        }
+
         Schema::create('whatsapp_cloud_webhook_events', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id')->nullable();

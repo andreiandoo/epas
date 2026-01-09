@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Stock alerts - notify when product is back in stock
+        if (Schema::hasTable('shop_stock_alerts')) {
+            return;
+        }
+
         Schema::create('shop_stock_alerts', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();

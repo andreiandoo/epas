@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('slack_connections')) {
+            return;
+        }
+
         Schema::create('slack_connections', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tenant_id')->index();
@@ -28,6 +32,10 @@ return new class extends Migration
             $table->unique(['tenant_id', 'workspace_id']);
         });
 
+        if (Schema::hasTable('slack_channels')) {
+            return;
+        }
+
         Schema::create('slack_channels', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('connection_id');
@@ -42,6 +50,10 @@ return new class extends Migration
             $table->foreign('connection_id')->references('id')->on('slack_connections')->onDelete('cascade');
             $table->unique(['connection_id', 'channel_id']);
         });
+
+        if (Schema::hasTable('slack_messages')) {
+            return;
+        }
 
         Schema::create('slack_messages', function (Blueprint $table) {
             $table->id();
@@ -61,6 +73,10 @@ return new class extends Migration
             $table->foreign('connection_id')->references('id')->on('slack_connections')->onDelete('cascade');
             $table->index(['connection_id', 'channel_id']);
         });
+
+        if (Schema::hasTable('slack_webhooks')) {
+            return;
+        }
 
         Schema::create('slack_webhooks', function (Blueprint $table) {
             $table->id();

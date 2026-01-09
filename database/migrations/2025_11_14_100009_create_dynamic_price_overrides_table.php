@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('dynamic_price_overrides')) {
+            return;
+        }
+
         Schema::create('dynamic_price_overrides', function (Blueprint $table) {
             $table->id();
             $table->foreignId('event_seating_id')->constrained('event_seating_layouts')->onDelete('cascade');

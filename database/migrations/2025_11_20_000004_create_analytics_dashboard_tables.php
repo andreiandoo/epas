@@ -9,6 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Custom dashboards
+        if (Schema::hasTable('analytics_dashboards')) {
+            return;
+        }
+
         Schema::create('analytics_dashboards', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -25,6 +29,10 @@ return new class extends Migration
         });
 
         // Dashboard widgets
+        if (Schema::hasTable('analytics_widgets')) {
+            return;
+        }
+
         Schema::create('analytics_widgets', function (Blueprint $table) {
             $table->id();
             $table->foreignId('dashboard_id')->constrained('analytics_dashboards')->onDelete('cascade');
@@ -38,6 +46,10 @@ return new class extends Migration
         });
 
         // Saved reports
+        if (Schema::hasTable('analytics_reports')) {
+            return;
+        }
+
         Schema::create('analytics_reports', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -54,6 +66,10 @@ return new class extends Migration
         });
 
         // Aggregated metrics cache
+        if (Schema::hasTable('analytics_metrics')) {
+            return;
+        }
+
         Schema::create('analytics_metrics', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');
@@ -69,6 +85,10 @@ return new class extends Migration
         });
 
         // Real-time event tracking
+        if (Schema::hasTable('analytics_events')) {
+            return;
+        }
+
         Schema::create('analytics_events', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->onDelete('cascade');

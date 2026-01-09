@@ -35,6 +35,10 @@ return new class extends Migration
         });
 
         // Create table for storing customer merge history
+        if (Schema::hasTable('customer_merge_logs')) {
+            return;
+        }
+
         Schema::create('customer_merge_logs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('source_customer_id');
@@ -48,6 +52,10 @@ return new class extends Migration
         });
 
         // Create table for churn predictions history
+        if (Schema::hasTable('churn_predictions')) {
+            return;
+        }
+
         Schema::create('churn_predictions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('core_customer_id')->constrained('core_customers')->cascadeOnDelete();
@@ -63,6 +71,10 @@ return new class extends Migration
         });
 
         // Create table for attribution data
+        if (Schema::hasTable('attribution_touchpoints')) {
+            return;
+        }
+
         Schema::create('attribution_touchpoints', function (Blueprint $table) {
             $table->id();
             $table->foreignId('core_customer_id')->constrained('core_customers')->cascadeOnDelete();
@@ -83,6 +95,10 @@ return new class extends Migration
         });
 
         // Create table for duplicate detection results
+        if (Schema::hasTable('duplicate_customer_matches')) {
+            return;
+        }
+
         Schema::create('duplicate_customer_matches', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('customer_a_id');
