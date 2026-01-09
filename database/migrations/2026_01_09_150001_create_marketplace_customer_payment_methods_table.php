@@ -10,8 +10,13 @@ return new class extends Migration
     {
         Schema::create('marketplace_customer_payment_methods', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('marketplace_client_id')->constrained()->onDelete('cascade');
-            $table->foreignId('marketplace_customer_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('marketplace_client_id');
+            $table->unsignedBigInteger('marketplace_customer_id');
+
+            $table->foreign('marketplace_client_id', 'mcpm_client_fk')
+                ->references('id')->on('marketplace_clients')->onDelete('cascade');
+            $table->foreign('marketplace_customer_id', 'mcpm_customer_fk')
+                ->references('id')->on('marketplace_customers')->onDelete('cascade');
 
             // Payment method type (stripe, netopia, etc.)
             $table->string('provider', 50); // stripe, netopia
