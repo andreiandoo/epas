@@ -194,17 +194,18 @@ class MarketplaceClientResource extends Resource
                         ->icon('heroicon-o-puzzle-piece')
                         ->schema([
                             SC\Section::make('Enable Microservices')
-                                ->description('Select which microservices to enable for this marketplace')
+                                ->description('Select which microservices to enable for this marketplace. Payment methods are configured in the Payment Methods relation tab below.')
                                 ->schema([
                                     Forms\Components\CheckboxList::make('enabled_microservices')
                                         ->label('')
-                                        ->options(fn () => Microservice::active()->pluck('name', 'id')->map(fn ($name) => is_array($name) ? ($name['en'] ?? $name['ro'] ?? reset($name)) : $name))
-                                        ->descriptions(fn () => Microservice::active()->pluck('short_description', 'id')->map(fn ($desc) => is_array($desc) ? ($desc['en'] ?? $desc['ro'] ?? reset($desc) ?? '') : ($desc ?? '')))
+                                        ->options(fn () => Microservice::active()->where('category', '!=', 'payment')->pluck('name', 'id')->map(fn ($name) => is_array($name) ? ($name['en'] ?? $name['ro'] ?? reset($name)) : $name))
+                                        ->descriptions(fn () => Microservice::active()->where('category', '!=', 'payment')->pluck('short_description', 'id')->map(fn ($desc) => is_array($desc) ? ($desc['en'] ?? $desc['ro'] ?? reset($desc) ?? '') : ($desc ?? '')))
                                         ->columns(2)
                                         ->bulkToggleable()
                                         ->afterStateHydrated(function ($component, $record) {
                                             if ($record) {
                                                 $enabledIds = $record->microservices()
+                                                    ->where('category', '!=', 'payment')
                                                     ->wherePivot('is_active', true)
                                                     ->pluck('microservices.id')
                                                     ->toArray();
@@ -222,8 +223,8 @@ class MarketplaceClientResource extends Resource
                                     ->action(function ($record, \Filament\Schemas\Components\Utilities\Get $get) {
                                         $enabledIds = $get('enabled_microservices') ?? [];
 
-                                        // Get all microservices
-                                        $allMicroservices = Microservice::active()->pluck('id')->toArray();
+                                        // Get all non-payment microservices
+                                        $allMicroservices = Microservice::active()->where('category', '!=', 'payment')->pluck('id')->toArray();
 
                                         foreach ($allMicroservices as $microserviceId) {
                                             $isEnabled = in_array($microserviceId, $enabledIds);
@@ -233,17 +234,20 @@ class MarketplaceClientResource extends Resource
                                                 // Attach new
                                                 $record->microservices()->attach($microserviceId, [
                                                     'is_active' => true,
+                                                    'status' => 'active',
                                                     'activated_at' => now(),
                                                 ]);
                                             } elseif ($isEnabled && $existing) {
                                                 // Update to active
                                                 $record->microservices()->updateExistingPivot($microserviceId, [
                                                     'is_active' => true,
+                                                    'status' => 'active',
                                                 ]);
                                             } elseif (!$isEnabled && $existing) {
                                                 // Deactivate
                                                 $record->microservices()->updateExistingPivot($microserviceId, [
                                                     'is_active' => false,
+                                                    'status' => 'inactive',
                                                 ]);
                                             }
                                         }
@@ -415,6 +419,7 @@ class MarketplaceClientResource extends Resource
             MarketplaceClientResource\RelationManagers\TenantsRelationManager::class,
             MarketplaceClientResource\RelationManagers\AdminsRelationManager::class,
             MarketplaceClientResource\RelationManagers\OrganizersRelationManager::class,
+            MarketplaceClientResource\RelationManagers\PaymentMethodsRelationManager::class,
             MarketplaceClientResource\RelationManagers\MicroservicesRelationManager::class,
         ];
     }

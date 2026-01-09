@@ -450,7 +450,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                 </button>
 
                 <!-- Login -->
-                <a href="/login" class="login-btn hidden sm:flex items-center gap-2 px-4 py-2.5 border-2 rounded-xl font-semibold transition-all <?= $transparentHeader ? 'border-white/30 text-white hover:border-white hover:bg-white/10' : 'border-border hover:border-primary hover:text-primary' ?>" id="loginBtn">
+                <a href="/autentificare" class="login-btn hidden sm:flex items-center gap-2 px-4 py-2.5 border-2 rounded-xl font-semibold transition-all <?= $transparentHeader ? 'border-white/30 text-white hover:border-white hover:bg-white/10' : 'border-border hover:border-primary hover:text-primary' ?>" id="loginBtn">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
                     </svg>

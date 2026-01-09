@@ -9,7 +9,7 @@ $bodyClass = 'min-h-screen flex bg-surface';
 
 // Auth branding customization
 $authTitle = 'Bine ai revenit!';
-$authSubtitle = 'Acceseaza contul tau pentru a vedea biletele, a descoperi evenimente noi si a folosi punctele acumulate.';
+$authSubtitle = 'Accesează contul tău pentru a vedea biletele, a descoperi evenimente noi și a folosi punctele acumulate.';
 
 require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/auth-branding.php';
@@ -32,7 +32,7 @@ require_once __DIR__ . '/includes/auth-branding.php';
 
             <div class="bg-white rounded-2xl border border-border p-8">
                 <div class="text-center mb-8">
-                    <h2 class="text-2xl font-bold text-secondary">Conecteaza-te</h2>
+                    <h2 class="text-2xl font-bold text-secondary">Conectează-te</h2>
                     <p class="text-muted mt-2">Introdu datele tale pentru a accesa contul</p>
                 </div>
 
@@ -47,7 +47,7 @@ require_once __DIR__ . '/includes/auth-branding.php';
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <label for="password" class="block text-sm font-medium text-secondary">Parola</label>
-                            <a href="/forgot-password" class="text-sm text-primary hover:underline">Ai uitat parola?</a>
+                            <a href="/parola-uitata" class="text-sm text-primary hover:underline">Ai uitat parola?</a>
                         </div>
                         <input type="password" id="password" name="password" required
                                class="input w-full"
@@ -57,11 +57,11 @@ require_once __DIR__ . '/includes/auth-branding.php';
                     <div class="flex items-center">
                         <input type="checkbox" id="remember" name="remember"
                                class="w-4 h-4 text-primary border-border rounded focus:ring-primary">
-                        <label for="remember" class="ml-2 text-sm text-muted">Tine-ma minte</label>
+                        <label for="remember" class="ml-2 text-sm text-muted">Ține-mă minte</label>
                     </div>
 
                     <button type="submit" class="btn btn-primary w-full btn-lg">
-                        Conecteaza-te
+                        Conectează-te
                     </button>
                 </form>
 
@@ -71,7 +71,7 @@ require_once __DIR__ . '/includes/auth-branding.php';
                             <div class="w-full border-t border-border"></div>
                         </div>
                         <div class="relative flex justify-center text-sm">
-                            <span class="px-4 bg-white text-muted">sau continua cu</span>
+                            <span class="px-4 bg-white text-muted">sau continuă cu</span>
                         </div>
                     </div>
 
@@ -96,7 +96,7 @@ require_once __DIR__ . '/includes/auth-branding.php';
 
                 <p class="text-center text-muted mt-8">
                     Nu ai cont?
-                    <a href="/register" class="text-primary font-medium hover:underline">Creeaza cont gratuit</a>
+                    <a href="/inregistrare" class="text-primary font-medium hover:underline">Creează cont gratuit</a>
                 </p>
             </div>
         </div>

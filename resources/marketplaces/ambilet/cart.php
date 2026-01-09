@@ -89,13 +89,13 @@ require_once __DIR__ . '/includes/header.php';
             <div class="lg:w-1/3">
                 <div id="summary-section" class="hidden sticky top-[140px]">
                     <div class="overflow-hidden bg-white border rounded-2xl border-border">
-                        <div class="p-6 border-b border-border">
+                        <div class="p-3 border-b border-border">
                             <h2 class="text-xl font-bold text-secondary">Sumar comandă</h2>
                         </div>
 
-                        <div class="p-6">
+                        <div class="p-3">
                             <!-- Order Lines -->
-                            <div class="mb-6 space-y-3">
+                            <div class="mb-3 space-y-3">
                                 <div class="flex justify-between text-sm">
                                     <span class="text-muted">Subtotal (<span id="summaryItems">0</span> bilete)</span>
                                     <span id="subtotal" class="font-medium">0.00 lei</span>
@@ -111,13 +111,13 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
 
                             <!-- Savings -->
-                            <div id="savingsRow" class="hidden p-3 mb-6 bg-success/10 rounded-xl">
+                            <div id="savingsRow" class="hidden py-2 px-3 mb-3 bg-success/10 rounded-xl">
                                 <div class="flex flex-col gap-1">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-lg text-success">🎉</span>
+                                    <div class="flex items-center justify-between gap-2">
                                         <span id="savingsText" class="text-sm font-medium text-success">Alegând [numebilet] economisești:</span>
+                                        <span id="savings" class="flex-none font-bold text-success">0.00 lei</span>
                                     </div>
-                                    <span id="savings" class="font-bold text-success">0.00 lei</span>
+                                    
                                 </div>
                             </div>
 
@@ -128,7 +128,7 @@ require_once __DIR__ . '/includes/header.php';
                             </div>
 
                             <!-- Points Earned -->
-                            <div class="p-4 mt-4 border bg-gradient-to-r from-accent/10 to-accent/5 rounded-xl border-accent/20">
+                            <div class="p-4 mt-2 border bg-gradient-to-r from-accent/10 to-accent/5 rounded-xl border-accent/20">
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-3">
                                         <div class="flex items-center justify-center w-10 h-10 rounded-full bg-accent/20">
@@ -153,21 +153,21 @@ require_once __DIR__ . '/includes/header.php';
                             </a>
 
                             <!-- Trust Badges -->
-                            <div class="pt-6 mt-6 border-t border-border">
+                            <div class="pt-6 mt-3 border-t border-border">
                                 <div class="grid grid-cols-2 gap-3">
-                                    <div class="flex items-center gap-2 text-xs text-muted">
+                                    <div class="flex items-center justify-center gap-2 text-xs text-muted">
                                         <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                                         Plată securizată
                                     </div>
-                                    <div class="flex items-center gap-2 text-xs text-muted">
+                                    <div class="flex items-center justify-center gap-2 text-xs text-muted">
                                         <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                         Bilete instant
                                     </div>
-                                    <div class="flex items-center gap-2 text-xs text-muted">
+                                    <div class="flex items-center justify-center gap-2 text-xs text-muted">
                                         <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
                                         Card sau transfer
                                     </div>
-                                    <div class="flex items-center gap-2 text-xs text-muted">
+                                    <div class="flex items-center justify-center gap-2 text-xs text-muted">
                                         <svg class="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                         Garanție 100%
                                     </div>
@@ -427,7 +427,7 @@ const CartPage = {
         tooltipHtml += '</div>';
 
         return '<div class="bg-white border-2 cart-item rounded-2xl border-border" data-item-key="' + itemKey + '" data-index="' + index + '">' +
-            '<div class="flex gap-4 p-6">' +
+            '<div class="flex gap-4 p-3">' +
                 '<div class="w-24 h-24 overflow-hidden rounded-xl shrink-0">' +
                     '<img src="' + eventImage + '" alt="' + eventTitle + '" class="object-cover w-full h-full">' +
                 '</div>' +
@@ -437,7 +437,7 @@ const CartPage = {
                         formattedDate +
                         (venueName ? ' • ' + venueName : '') +
                     '</p>' +
-                    '<div class="mt-2">' +
+                    '<div class="flex items-center justify-between mt-3">' +
                         '<div class="tooltip-trigger relative inline-block">' +
                             '<div class="flex items-center gap-2">' +
                                 '<span class="inline-flex items-center px-2 py-1 text-sm font-semibold rounded bg-surface text-secondary">' + ticketTypeName +
@@ -448,9 +448,7 @@ const CartPage = {
                             (ticketDescription ? '<p class="text-xs text-muted mt-0.5">' + ticketDescription + '</p>' : '') +
                             '<div class="tooltip absolute left-0 top-full mt-2 w-72 bg-secondary text-white p-4 rounded-xl shadow-xl z-10">' + tooltipHtml + '</div>' +
                         '</div>' +
-                    '</div>' +
-                    '<div class="flex items-center justify-between mt-3">' +
-                        '<div class="flex items-center gap-2">' +
+                        '<div class="flex items-center ml-auto mr-8 gap-2">' +
                             '<button onclick="CartPage.updateQuantity(' + index + ', -1)" class="flex items-center justify-center w-8 h-8 border rounded-lg border-border hover:bg-surface">' +
                                 '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                                     '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>' +
@@ -613,7 +611,7 @@ const CartPage = {
             const savingsTextEl = document.getElementById('savingsText');
             if (savingsTextEl && savingsTickets.length > 0) {
                 const ticketNames = [...new Set(savingsTickets)].join(', ');
-                savingsTextEl.textContent = `Alegând ${ticketNames} economisești:`;
+                savingsTextEl.textContent = `Alegând ${ticketNames} ai economisit:`;
             }
         } else {
             document.getElementById('savingsRow').classList.add('hidden');

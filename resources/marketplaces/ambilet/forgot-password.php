@@ -64,7 +64,7 @@ require_once __DIR__ . '/includes/head.php';
             <div class="w-full max-w-md">
                 <!-- Initial State - Request Form -->
                 <div id="requestForm">
-                    <a href="/login" class="inline-flex items-center gap-2 text-sm text-muted hover:text-primary mb-8">
+                    <a href="/autentificare" class="inline-flex items-center gap-2 text-sm text-muted hover:text-primary mb-8">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                         Înapoi la autentificare
                     </a>

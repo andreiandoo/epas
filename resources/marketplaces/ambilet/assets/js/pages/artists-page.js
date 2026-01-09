@@ -196,7 +196,7 @@ const ArtistsPage = {
                             '<line x1="8" y1="2" x2="8" y2="6"/>' +
                             '<line x1="3" y1="10" x2="21" y2="10"/>' +
                         '</svg>' +
-                        eventsCount + ' evenimente' +
+                        (eventsCount === 0 ? 'Fără evenimente' : (eventsCount === 1 ? '1 eveniment' : eventsCount + ' evenimente')) +
                     '</span>' +
                     '<span class="flex items-center gap-1.5">' +
                         '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
@@ -271,13 +271,9 @@ const ArtistsPage = {
                     '<line x1="8" y1="2" x2="8" y2="6"/>' +
                     '<line x1="3" y1="10" x2="21" y2="10"/>' +
                 '</svg>' +
-                eventsCount + ' evenimente viitoare' +
+                (eventsCount === 1 ? '1 eveniment viitor' : eventsCount + ' evenimente viitoare') +
             '</span>' :
             '<span class="text-xs text-muted">Fără evenimente programate</span>';
-
-        const eventsBadge = eventsCount > 0 ?
-            '<span class="absolute px-3 py-1.5 text-xs font-semibold text-white rounded-lg bottom-3 right-3 bg-primary">' +
-                eventsCount + ' evenimente</span>' : '';
 
         return '<a href="/artist/' + this.escapeHtml(artist.slug) + '" ' +
             'class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary">' +
@@ -286,7 +282,6 @@ const ArtistsPage = {
                     'class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy">' +
                 '<span class="absolute px-3 py-1.5 text-xs font-semibold text-white uppercase rounded-full top-3 left-3 bg-black/60 backdrop-blur-sm">' +
                     this.escapeHtml(genre) + '</span>' +
-                eventsBadge +
             '</div>' +
             '<div class="p-5 text-center">' +
                 '<h3 class="flex items-center justify-center mb-1 text-base font-bold text-secondary">' +

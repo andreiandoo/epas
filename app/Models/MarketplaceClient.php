@@ -76,8 +76,16 @@ class MarketplaceClient extends Model
     public function microservices(): BelongsToMany
     {
         return $this->belongsToMany(Microservice::class, 'marketplace_client_microservices')
-            ->withPivot(['is_active', 'activated_at', 'expires_at', 'configuration'])
+            ->withPivot(['status', 'is_active', 'activated_at', 'expires_at', 'settings', 'usage_stats', 'is_default', 'sort_order'])
             ->withTimestamps();
+    }
+
+    /**
+     * Get the pivot records directly
+     */
+    public function marketplaceClientMicroservices(): HasMany
+    {
+        return $this->hasMany(MarketplaceClientMicroservice::class);
     }
 
     /**
@@ -87,7 +95,7 @@ class MarketplaceClient extends Model
     {
         return $this->microservices()
             ->where('slug', $slug)
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->exists();
     }
 
@@ -98,10 +106,54 @@ class MarketplaceClient extends Model
     {
         $microservice = $this->microservices()
             ->where('slug', $slug)
-            ->wherePivot('is_active', true)
+            ->wherePivot('status', 'active')
             ->first();
 
-        return $microservice?->pivot?->configuration;
+        return $microservice?->pivot?->settings;
+    }
+
+    /**
+     * Get all active payment methods for this marketplace
+     */
+    public function getActivePaymentMethods()
+    {
+        return $this->microservices()
+            ->where('category', 'payment')
+            ->wherePivot('status', 'active')
+            ->orderByPivot('sort_order')
+            ->get();
+    }
+
+    /**
+     * Get the default payment method
+     */
+    public function getDefaultPaymentMethod(): ?Microservice
+    {
+        return $this->microservices()
+            ->where('category', 'payment')
+            ->wherePivot('status', 'active')
+            ->wherePivot('is_default', true)
+            ->first();
+    }
+
+    /**
+     * Check if a payment method is enabled
+     */
+    public function hasPaymentMethod(string $slug): bool
+    {
+        return $this->microservices()
+            ->where('slug', $slug)
+            ->where('category', 'payment')
+            ->wherePivot('status', 'active')
+            ->exists();
+    }
+
+    /**
+     * Get payment method settings
+     */
+    public function getPaymentMethodSettings(string $slug): ?array
+    {
+        return $this->getMicroserviceConfig($slug);
     }
 
     /**

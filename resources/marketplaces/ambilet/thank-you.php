@@ -11,7 +11,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="confetti-container" id="confetti"></div>
 
     <!-- Progress Steps - All Complete -->
-    <div class="bg-white border-b border-gray-200">
+    <div class="bg-white border-b border-gray-200 mt-28 mobile:mt-20">
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex items-center justify-center gap-4">
                 <div class="flex items-center gap-2">

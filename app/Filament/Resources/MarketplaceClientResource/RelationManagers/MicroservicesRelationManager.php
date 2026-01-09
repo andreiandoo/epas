@@ -35,7 +35,7 @@ class MicroservicesRelationManager extends RelationManager
                     ->label('Expires At')
                     ->helperText('Leave empty for no expiration'),
 
-                Forms\Components\KeyValue::make('configuration')
+                Forms\Components\KeyValue::make('settings')
                     ->label('Configuration')
                     ->helperText('Custom configuration for this microservice')
                     ->columnSpanFull(),
@@ -46,6 +46,7 @@ class MicroservicesRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('name')
+            ->modifyQueryUsing(fn ($query) => $query->where('category', '!=', 'payment'))
             ->columns([
                 Tables\Columns\ImageColumn::make('icon_image')
                     ->label('')
@@ -92,7 +93,7 @@ class MicroservicesRelationManager extends RelationManager
                 AttachAction::make()
                     ->label('Add Microservice')
                     ->preloadRecordSelect()
-                    ->recordSelectOptionsQuery(fn ($query) => $query->where('is_active', true))
+                    ->recordSelectOptionsQuery(fn ($query) => $query->where('is_active', true)->where('category', '!=', 'payment'))
                     ->form(fn (AttachAction $action): array => [
                         $action->getRecordSelect(),
                         Forms\Components\Toggle::make('is_active')
@@ -100,7 +101,7 @@ class MicroservicesRelationManager extends RelationManager
                             ->default(true),
                         Forms\Components\DatePicker::make('expires_at')
                             ->label('Expires At'),
-                        Forms\Components\KeyValue::make('configuration')
+                        Forms\Components\KeyValue::make('settings')
                             ->label('Configuration'),
                     ])
                     ->mutateFormDataUsing(function (array $data): array {
@@ -123,11 +124,12 @@ class MicroservicesRelationManager extends RelationManager
                 ]),
             ])
             ->emptyStateHeading('No microservices enabled')
-            ->emptyStateDescription('Add microservices to enable additional features for this marketplace.')
+            ->emptyStateDescription('Add microservices to enable additional features for this marketplace. Payment methods are configured in the Payment Methods tab.')
             ->emptyStateActions([
                 AttachAction::make()
                     ->label('Add First Microservice')
-                    ->preloadRecordSelect(),
+                    ->preloadRecordSelect()
+                    ->recordSelectOptionsQuery(fn ($query) => $query->where('is_active', true)->where('category', '!=', 'payment')),
             ]);
     }
 }
