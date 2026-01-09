@@ -383,9 +383,9 @@ const CheckoutPage = {
     },
 
     loadTaxes() {
-        // Load taxes from cart items (stored when adding to cart)
+        // Load ALL taxes from cart items (both included in price and added on top)
         if (this.items.length > 0 && this.items[0].event?.taxes?.length > 0) {
-            this.taxes = this.items[0].event.taxes.filter(t => t.is_added_to_price !== false);
+            this.taxes = this.items[0].event.taxes.filter(t => t.is_active !== false);
         } else {
             this.taxes = [];
         }

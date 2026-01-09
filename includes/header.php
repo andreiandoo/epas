@@ -656,11 +656,11 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 
         <!-- Action Buttons -->
         <div class="space-y-2">
-            <a href="/checkout" class="flex items-center justify-center w-full gap-2 px-4 py-3 font-semibold text-white transition-all bg-gradient-to-br from-primary to-primary-light rounded-xl hover:shadow-lg">
+            <a href="/finalizare" class="flex items-center justify-center w-full gap-2 px-4 py-3 font-semibold text-white transition-all bg-gradient-to-br from-primary to-primary-light rounded-xl hover:shadow-lg">
+                Finalizează comanda
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                 </svg>
-                Finalizează comanda
             </a>
             <a href="/cos" class="flex items-center justify-center w-full gap-2 px-4 py-3 font-semibold text-gray-700 transition-all bg-white border border-gray-200 rounded-xl hover:bg-gray-50">
                 Vezi coșul complet

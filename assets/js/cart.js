@@ -185,13 +185,14 @@ const AmbiletCart = {
     },
 
     /**
-     * Get taxes from cart items (stored when adding to cart from event page)
+     * Get ALL taxes from cart items (stored when adding to cart from event page)
      * Returns taxes from first cart item or empty array if not available
      */
     getTaxes() {
         const items = this.getItems();
         if (items.length > 0 && items[0].event?.taxes?.length > 0) {
-            return items[0].event.taxes.filter(t => t.is_added_to_price !== false);
+            // Return ALL active taxes (both included in price and added on top)
+            return items[0].event.taxes.filter(t => t.is_active !== false);
         }
         return [];
     },
