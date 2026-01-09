@@ -41,10 +41,12 @@ const AmbiletHeader = {
         const isLoggedIn = typeof AmbiletAuth !== 'undefined' && AmbiletAuth.isLoggedIn();
         const loginLink = document.querySelector('a[href="/login"]');
         const userMenu = document.getElementById('headerUserMenu');
+        const loginBtn = document.getElementById('loginBtn');
 
         if (isLoggedIn && userMenu) {
             const user = AmbiletAuth.getCurrentUser();
             loginLink?.closest('.hidden')?.classList.add('!hidden');
+            loginBtn?.classList.remove('sm:flex');
             userMenu.style.display = '';
 
             // Update user info

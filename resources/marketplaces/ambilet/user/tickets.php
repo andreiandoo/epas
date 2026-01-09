@@ -15,14 +15,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
     }
 </style>
 
-<!-- Main Container with Sidebar -->
-<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
-    <div class="flex flex-col gap-6 lg:flex-row">
-        <!-- Sidebar -->
-        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
-
-        <!-- Main Content -->
-        <main class="flex-1 min-w-0 lg:pt-24">
+<?php require_once dirname(__DIR__) . '/includes/user-wrap.php'; ?>
         <!-- Page Header -->
         <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -68,11 +61,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 Descopera evenimente
             </a>
         </div>
-        </main>
-    </div>
-</div>
-
-<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
+<?php 
+require_once dirname(__DIR__) . '/includes/user-wrap-end.php';
+require_once dirname(__DIR__) . '/includes/user-footer.php'; 
+?>
 
 <?php
 $scriptsExtra = <<<'JS'

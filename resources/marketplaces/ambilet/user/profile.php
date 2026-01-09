@@ -14,14 +14,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
     .artist-card:hover { transform: scale(1.05); }
 </style>
 
-<!-- Main Container with Sidebar -->
-<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
-    <div class="flex flex-col gap-6 lg:flex-row">
-        <!-- Sidebar -->
-        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
-
-        <!-- Main Content -->
-        <main class="flex-1 min-w-0 lg:pt-24">
+<?php require_once dirname(__DIR__) . '/includes/user-wrap.php'; ?>
             <!-- Profile Header -->
             <div class="mb-6 overflow-hidden bg-white border rounded-2xl lg:rounded-3xl border-border">
                 <!-- Cover -->
@@ -179,11 +172,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
-</div>
-
-<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
+<?php 
+require_once dirname(__DIR__) . '/includes/user-wrap-end.php';
+require_once dirname(__DIR__) . '/includes/user-footer.php'; 
+?>
 
 <?php
 $scriptsExtra = <<<'JS'

@@ -20,14 +20,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
     .tab-btn.active { background: white; color: #A51C30; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 </style>
 
-<!-- Main Container with Sidebar -->
-<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
-    <div class="flex flex-col gap-6 lg:flex-row">
-        <!-- Sidebar -->
-        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
-
-        <!-- Main Content -->
-        <main class="flex-1 min-w-0 lg:pt-24">
+<?php require_once dirname(__DIR__) . '/includes/user-wrap.php'; ?>
             <!-- Page Header -->
             <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -84,11 +77,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <!-- Populated by JavaScript -->
                 </div>
             </div>
-        </main>
-    </div>
-</div>
-
-<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
+<?php 
+require_once dirname(__DIR__) . '/includes/user-wrap-end.php';
+require_once dirname(__DIR__) . '/includes/user-footer.php'; 
+?>
 
 <?php
 $scriptsExtra = <<<'JS'

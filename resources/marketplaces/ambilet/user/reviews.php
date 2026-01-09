@@ -6,14 +6,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
-<!-- Main Container with Sidebar -->
-<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
-    <div class="flex flex-col gap-6 lg:flex-row">
-        <!-- Sidebar -->
-        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
-
-        <!-- Main Content -->
-        <main class="flex-1 min-w-0 lg:pt-24">
+<?php require_once dirname(__DIR__) . '/includes/user-wrap.php'; ?>
             <!-- Page Header -->
             <div class="mb-6">
                 <h1 class="text-2xl font-bold text-secondary">Recenziile mele</h1>
@@ -94,11 +87,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <p class="mb-6 text-muted">Dupa ce participi la un eveniment, poti lasa o recenzie pentru a ajuta alti utilizatori.</p>
                 <a href="/cont/bilete" class="btn btn-primary">Vezi biletele tale</a>
             </div>
-        </main>
-    </div>
-</div>
-
-<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
+<?php 
+require_once dirname(__DIR__) . '/includes/user-wrap-end.php';
+require_once dirname(__DIR__) . '/includes/user-footer.php'; 
+?>
 
 <?php
 $scriptsExtra = <<<'JS'

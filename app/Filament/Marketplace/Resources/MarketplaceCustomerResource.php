@@ -16,6 +16,7 @@ use Filament\Schemas\Components as SC;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
 class MarketplaceCustomerResource extends Resource
@@ -149,6 +150,175 @@ class MarketplaceCustomerResource extends Resource
                             ->label('Registered')
                             ->content(fn ($record) => $record?->created_at?->format('d M Y H:i') ?? '-'),
                     ])->columns(4)
+                    ->visibleOn('edit'),
+
+                SC\Section::make('Notification Preferences')
+                    ->icon('heroicon-o-bell')
+                    ->description('User notification settings')
+                    ->schema([
+                        Forms\Components\Toggle::make('settings.notification_preferences.reminders')
+                            ->label('Event Reminders')
+                            ->helperText('Receive reminder 24h before events')
+                            ->default(true),
+
+                        Forms\Components\Toggle::make('settings.notification_preferences.newsletter')
+                            ->label('Newsletter & Offers')
+                            ->helperText('Receive information about new events and special offers')
+                            ->default(true),
+
+                        Forms\Components\Toggle::make('settings.notification_preferences.favorites')
+                            ->label('Favorite Updates')
+                            ->helperText('Receive notifications when favorite events are approaching')
+                            ->default(true),
+
+                        Forms\Components\Toggle::make('settings.notification_preferences.history')
+                            ->label('Browsing History')
+                            ->helperText('Save viewed events for personalized recommendations')
+                            ->default(true),
+
+                        Forms\Components\Toggle::make('settings.notification_preferences.marketing')
+                            ->label('Marketing Cookies')
+                            ->helperText('Allow display of personalized ads')
+                            ->default(false),
+                    ])->columns(2)
+                    ->collapsible()
+                    ->visibleOn('edit'),
+
+                SC\Section::make('Saved Payment Methods')
+                    ->icon('heroicon-o-credit-card')
+                    ->description('Saved cards and payment methods')
+                    ->schema([
+                        Forms\Components\Placeholder::make('payment_methods_list')
+                            ->label('')
+                            ->content(function ($record) {
+                                if (!$record) {
+                                    return 'Save the record first to see payment methods.';
+                                }
+
+                                $paymentMethods = $record->activePaymentMethods;
+
+                                if ($paymentMethods->isEmpty()) {
+                                    return new HtmlString('<p class="text-gray-500 dark:text-gray-400">No saved payment methods.</p>');
+                                }
+
+                                $html = '<div class="space-y-2">';
+                                foreach ($paymentMethods as $pm) {
+                                    $brand = ucfirst($pm->card_brand ?? 'Card');
+                                    $isDefault = $pm->is_default ? '<span class="ml-2 px-2 py-0.5 text-xs rounded bg-primary-100 text-primary-700 dark:bg-primary-800 dark:text-primary-300">Default</span>' : '';
+                                    $expired = $pm->isExpired() ? '<span class="ml-2 px-2 py-0.5 text-xs rounded bg-danger-100 text-danger-700 dark:bg-danger-800 dark:text-danger-300">Expired</span>' : '';
+
+                                    $html .= '<div class="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">';
+                                    $html .= '<div class="flex-1">';
+                                    $html .= '<div class="font-medium">' . e($brand) . ' •••• ' . e($pm->card_last_four) . $isDefault . $expired . '</div>';
+                                    $html .= '<div class="text-sm text-gray-500 dark:text-gray-400">';
+                                    $html .= 'Expires ' . e($pm->expiry_date ?? 'N/A');
+                                    if ($pm->cardholder_name) {
+                                        $html .= ' • ' . e($pm->cardholder_name);
+                                    }
+                                    $html .= '</div>';
+                                    $html .= '</div>';
+                                    $html .= '</div>';
+                                }
+                                $html .= '</div>';
+
+                                return new HtmlString($html);
+                            }),
+                    ])
+                    ->collapsible()
+                    ->collapsed()
+                    ->visibleOn('edit'),
+
+                SC\Section::make('Favorites')
+                    ->icon('heroicon-o-heart')
+                    ->description('Favorite events, artists, and venues')
+                    ->schema([
+                        Forms\Components\Placeholder::make('favorite_events_list')
+                            ->label('Favorite Events')
+                            ->content(function ($record) {
+                                if (!$record) {
+                                    return '-';
+                                }
+
+                                $events = $record->favoriteEvents;
+
+                                if ($events->isEmpty()) {
+                                    return new HtmlString('<p class="text-gray-500 dark:text-gray-400">No favorite events.</p>');
+                                }
+
+                                $html = '<div class="space-y-1">';
+                                foreach ($events->take(10) as $event) {
+                                    $date = $event->starts_at ? $event->starts_at->format('d M Y') : '';
+                                    $html .= '<div class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded">';
+                                    $html .= '<span class="font-medium">' . e($event->name) . '</span>';
+                                    if ($date) {
+                                        $html .= '<span class="text-sm text-gray-500">(' . $date . ')</span>';
+                                    }
+                                    $html .= '</div>';
+                                }
+                                if ($events->count() > 10) {
+                                    $html .= '<p class="text-sm text-gray-500">+ ' . ($events->count() - 10) . ' more</p>';
+                                }
+                                $html .= '</div>';
+
+                                return new HtmlString($html);
+                            }),
+
+                        Forms\Components\Placeholder::make('favorite_artists_list')
+                            ->label('Favorite Artists')
+                            ->content(function ($record) {
+                                if (!$record) {
+                                    return '-';
+                                }
+
+                                $artists = $record->favoriteArtists;
+
+                                if ($artists->isEmpty()) {
+                                    return new HtmlString('<p class="text-gray-500 dark:text-gray-400">No favorite artists.</p>');
+                                }
+
+                                $html = '<div class="flex flex-wrap gap-2">';
+                                foreach ($artists->take(20) as $artist) {
+                                    $name = is_array($artist->name) ? ($artist->name['en'] ?? $artist->name['ro'] ?? reset($artist->name)) : $artist->name;
+                                    $html .= '<span class="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm">' . e($name) . '</span>';
+                                }
+                                if ($artists->count() > 20) {
+                                    $html .= '<span class="px-3 py-1 text-sm text-gray-500">+ ' . ($artists->count() - 20) . ' more</span>';
+                                }
+                                $html .= '</div>';
+
+                                return new HtmlString($html);
+                            }),
+
+                        Forms\Components\Placeholder::make('favorite_venues_list')
+                            ->label('Favorite Venues')
+                            ->content(function ($record) {
+                                if (!$record) {
+                                    return '-';
+                                }
+
+                                $venues = $record->favoriteVenues;
+
+                                if ($venues->isEmpty()) {
+                                    return new HtmlString('<p class="text-gray-500 dark:text-gray-400">No favorite venues.</p>');
+                                }
+
+                                $html = '<div class="flex flex-wrap gap-2">';
+                                foreach ($venues->take(20) as $venue) {
+                                    $name = is_array($venue->name) ? ($venue->name['en'] ?? $venue->name['ro'] ?? reset($venue->name)) : $venue->name;
+                                    $city = $venue->city ?? '';
+                                    $label = $city ? "{$name} ({$city})" : $name;
+                                    $html .= '<span class="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm">' . e($label) . '</span>';
+                                }
+                                if ($venues->count() > 20) {
+                                    $html .= '<span class="px-3 py-1 text-sm text-gray-500">+ ' . ($venues->count() - 20) . ' more</span>';
+                                }
+                                $html .= '</div>';
+
+                                return new HtmlString($html);
+                            }),
+                    ])
+                    ->collapsible()
+                    ->collapsed()
                     ->visibleOn('edit'),
             ]);
     }

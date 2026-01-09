@@ -114,6 +114,58 @@ class MarketplaceCustomer extends Authenticatable
         return $this->hasMany(MarketplaceGiftCard::class, 'recipient_email', 'email');
     }
 
+    public function paymentMethods(): HasMany
+    {
+        return $this->hasMany(MarketplaceCustomerPaymentMethod::class, 'marketplace_customer_id');
+    }
+
+    public function activePaymentMethods(): HasMany
+    {
+        return $this->paymentMethods()->where('is_active', true);
+    }
+
+    /**
+     * Favorite events via pivot table
+     */
+    public function favoriteEvents(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            MarketplaceEvent::class,
+            'marketplace_customer_favorites',
+            'marketplace_customer_id',
+            'favoriteable_id'
+        )->wherePivot('favoriteable_type', 'event')
+         ->withTimestamps();
+    }
+
+    /**
+     * Favorite artists via pivot table
+     */
+    public function favoriteArtists(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Artist::class,
+            'marketplace_customer_favorites',
+            'marketplace_customer_id',
+            'favoriteable_id'
+        )->wherePivot('favoriteable_type', 'artist')
+         ->withTimestamps();
+    }
+
+    /**
+     * Favorite venues via pivot table
+     */
+    public function favoriteVenues(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Venue::class,
+            'marketplace_customer_favorites',
+            'marketplace_customer_id',
+            'favoriteable_id'
+        )->wherePivot('favoriteable_type', 'venue')
+         ->withTimestamps();
+    }
+
     /**
      * Get total available gift card balance for this customer
      */
