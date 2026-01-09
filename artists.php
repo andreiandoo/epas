@@ -144,7 +144,7 @@ require_once __DIR__ . '/includes/head.php';
 
     <!-- Alphabet Navigation -->
     <section class="mb-8">
-        <div class="flex flex-wrap gap-1.5 p-4 bg-white border rounded-2xl border-border" id="alphabetNav">
+        <div class="flex flex-wrap justify-between gap-1.5 p-4 bg-white border rounded-2xl border-border" id="alphabetNav">
             <?php
             $letters = array_merge(range('A', 'Z'));
             foreach ($letters as $letter):
