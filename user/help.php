@@ -6,14 +6,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
-<!-- Main Container with Sidebar -->
-<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
-    <div class="flex flex-col gap-6 lg:flex-row">
-        <!-- Sidebar -->
-        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
-
-        <!-- Main Content -->
-        <main class="flex-1 min-w-0 lg:pt-24">
+<?php require_once dirname(__DIR__) . '/includes/user-wrap.php'; ?>
         <!-- Search Header -->
         <div class="relative p-6 mb-8 overflow-hidden text-center text-white bg-gradient-to-r from-primary via-primary-dark to-secondary rounded-2xl lg:p-10">
             <div class="absolute top-0 right-0 w-64 h-64 translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5"></div>
@@ -219,11 +212,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
         <div class="mt-8 text-center">
             <p class="text-sm text-muted">Program suport: Luni - Vineri 09:00 - 20:00 - Sambata 10:00 - 16:00</p>
         </div>
-        </main>
-    </div>
-</div>
-
-<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
+<?php 
+require_once dirname(__DIR__) . '/includes/user-wrap-end.php';
+require_once dirname(__DIR__) . '/includes/user-footer.php'; 
+?>
 
 <?php
 $scriptsExtra = <<<'JS'

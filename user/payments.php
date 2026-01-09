@@ -5,15 +5,7 @@ $currentPage = 'payments';
 require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/header.php';
 ?>
-
-<!-- Main Container with Sidebar -->
-<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
-    <div class="flex flex-col gap-6 lg:flex-row">
-        <!-- Sidebar -->
-        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
-
-        <!-- Main Content -->
-        <main class="flex-1 min-w-0 lg:pt-24">
+<?php require_once dirname(__DIR__) . '/includes/user-wrap.php'; ?>
         <!-- Breadcrumb -->
         <div class="flex items-center gap-2 mb-6 text-sm">
             <a href="/cont/setari" class="text-muted hover:text-primary">Setari</a>
@@ -119,9 +111,6 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <p class="text-sm text-muted">Toate informatiile de plata sunt criptate si procesate in siguranta. Nu stocam niciodata numerele complete ale cardurilor.</p>
             </div>
         </div>
-        </main>
-    </div>
-</div>
 
 <!-- Add Card Modal -->
     <div id="cardModal" class="fixed inset-0 z-50 items-center justify-center hidden p-4 modal bg-black/50">
@@ -193,7 +182,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
         </div>
     </div>
 
-<?php require_once dirname(__DIR__) . '/includes/user-footer.php'; ?>
+<?php 
+require_once dirname(__DIR__) . '/includes/user-wrap-end.php';
+require_once dirname(__DIR__) . '/includes/user-footer.php'; 
+?>
 
 <?php
 $scriptsExtra = <<<'JS'

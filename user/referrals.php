@@ -6,14 +6,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
 require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
-<!-- Main Container with Sidebar -->
-<div class="px-4 py-6 mx-auto max-w-7xl lg:py-8">
-    <div class="flex flex-col gap-6 lg:flex-row">
-        <!-- Sidebar -->
-        <?php require_once dirname(__DIR__) . '/includes/user-sidebar.php'; ?>
-
-        <!-- Main Content -->
-        <main class="flex-1 min-w-0 lg:pt-24">
+<?php require_once dirname(__DIR__) . '/includes/user-wrap.php'; ?>
             <!-- Hero Section -->
             <div class="relative p-6 mb-6 overflow-hidden text-white lg:p-10 rounded-2xl bg-gradient-to-br from-secondary to-gray-900">
                 <div class="absolute top-0 right-0 w-1/2 h-full opacity-30 bg-gradient-radial from-primary/50 to-transparent"></div>
@@ -155,11 +148,10 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <p class="text-muted">Nu ai inca tranzactii in istoric.</p>
                 </div>
             </div>
-        </main>
-    </div>
-</div>
-
-<?php require_once dirname(__DIR__) . '/includes/footer.php'; ?>
+<?php 
+require_once dirname(__DIR__) . '/includes/user-wrap-end.php';
+require_once dirname(__DIR__) . '/includes/user-footer.php'; 
+?>
 
 <?php
 $scriptsExtra = <<<'JS'
