@@ -250,8 +250,8 @@ class PaymentMethodsRelationManager extends RelationManager
                         ->label('Remove Selected'),
                 ]),
             ])
-            ->reorderable('sort_order')
-            ->defaultSort('sort_order')
+            ->reorderable('marketplace_client_microservices.sort_order')
+            ->defaultSort('marketplace_client_microservices.sort_order')
             ->emptyStateHeading('No payment methods enabled')
             ->emptyStateDescription('Add payment methods to allow customers to pay for tickets.')
             ->emptyStateIcon('heroicon-o-credit-card')
