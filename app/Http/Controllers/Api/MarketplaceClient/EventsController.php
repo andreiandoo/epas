@@ -236,6 +236,7 @@ class EventsController extends BaseController
                     ->orderBy('id');
             },
             'artists',
+            'eventTypes', // Load event types for tax calculation
         ]);
 
         // Support both ID and slug lookup
@@ -396,31 +397,8 @@ class EventsController extends BaseController
             }),
             'commission_rate' => $commission,
             'commission_mode' => $commissionMode,
-            // Get applicable taxes (global taxes visible on checkout)
-            'taxes' => GeneralTax::query()
-                ->whereNull('tenant_id') // Global taxes only (applicable to all)
-                ->where('is_active', true)
-                ->where('visible_on_checkout', true)
-                ->where(function ($q) {
-                    $q->whereNull('valid_from')->orWhere('valid_from', '<=', now());
-                })
-                ->where(function ($q) {
-                    $q->whereNull('valid_until')->orWhere('valid_until', '>=', now());
-                })
-                ->orderByDesc('priority')
-                ->get()
-                ->map(function ($tax) {
-                    return [
-                        'id' => $tax->id,
-                        'name' => $tax->name,
-                        'value' => (float) $tax->value,
-                        'value_type' => $tax->value_type, // 'percent' or 'fixed'
-                        'currency' => $tax->currency,
-                        'is_added_to_price' => (bool) $tax->is_added_to_price,
-                        'explanation' => strip_tags($tax->explanation ?? ''),
-                        'icon_svg' => $tax->icon_svg,
-                    ];
-                }),
+            // Get applicable taxes based on event's event types
+            'taxes' => $this->getEventTaxes($event, $client),
         ]);
     }
 
@@ -785,5 +763,56 @@ class EventsController extends BaseController
             'interested_count' => $event->interested_count,
             'views_count' => $event->views_count,
         ]);
+    }
+
+    /**
+     * Get applicable taxes for an event based on its event types
+     */
+    protected function getEventTaxes(Event $event, $client): array
+    {
+        // Get event type IDs
+        $eventTypeIds = $event->eventTypes->pluck('id')->toArray();
+
+        // If no event types, return empty array
+        if (empty($eventTypeIds)) {
+            // Fall back to global taxes only
+            $eventTypeIds = [];
+        }
+
+        // Query taxes that apply to these event types (or are global)
+        $taxes = GeneralTax::query()
+            ->whereNull('tenant_id') // Global taxes only (not tenant-specific)
+            ->where('is_active', true)
+            ->where('visible_on_checkout', true)
+            ->where(function ($q) {
+                $q->whereNull('valid_from')->orWhere('valid_from', '<=', now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('valid_until')->orWhere('valid_until', '>=', now());
+            })
+            ->where(function ($q) use ($eventTypeIds) {
+                // Match taxes that:
+                // 1. Have no event_type_id (apply to all event types)
+                // 2. OR have an event_type_id that matches one of the event's types
+                $q->whereNull('event_type_id');
+                if (!empty($eventTypeIds)) {
+                    $q->orWhereIn('event_type_id', $eventTypeIds);
+                }
+            })
+            ->orderByDesc('priority')
+            ->get();
+
+        return $taxes->map(function ($tax) {
+            return [
+                'id' => $tax->id,
+                'name' => $tax->name,
+                'value' => (float) $tax->value,
+                'value_type' => $tax->value_type, // 'percent' or 'fixed'
+                'currency' => $tax->currency,
+                'is_added_to_price' => (bool) $tax->is_added_to_price,
+                'explanation' => strip_tags($tax->explanation ?? ''),
+                'icon_svg' => $tax->icon_svg,
+            ];
+        })->toArray();
     }
 }
