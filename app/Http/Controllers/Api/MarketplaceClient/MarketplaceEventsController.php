@@ -431,7 +431,10 @@ class MarketplaceEventsController extends BaseController
         }
 
         // Get session ID for anonymous users
-        $sessionId = $request->header('X-Session-ID') ?? session()->getId();
+        // Use header, cookie, or generate based on IP+User-Agent
+        $sessionId = $request->header('X-Session-ID')
+            ?? $request->cookie('ambilet_session')
+            ?? md5($request->ip() . $request->userAgent());
 
         // Check if already interested
         $existing = \DB::table('event_interests')
@@ -493,7 +496,10 @@ class MarketplaceEventsController extends BaseController
         }
 
         // Get session ID for anonymous users
-        $sessionId = $request->header('X-Session-ID') ?? session()->getId();
+        // Use header, cookie, or generate based on IP+User-Agent
+        $sessionId = $request->header('X-Session-ID')
+            ?? $request->cookie('ambilet_session')
+            ?? md5($request->ip() . $request->userAgent());
 
         // Check if interested
         $isInterested = \DB::table('event_interests')
