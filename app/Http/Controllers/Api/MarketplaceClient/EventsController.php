@@ -144,7 +144,10 @@ class EventsController extends BaseController
         $sortField = $request->get('sort', 'date');
         $sortDir = strtoupper($request->get('order', 'asc')) === 'DESC' ? 'DESC' : 'ASC';
 
-        if ($sortField === 'date' || $sortField === 'starts_at' || $sortField === 'event_date') {
+        if ($sortField === 'latest') {
+            // Sort by creation date (newest first)
+            $query->orderBy('created_at', 'desc');
+        } elseif ($sortField === 'date' || $sortField === 'starts_at' || $sortField === 'event_date') {
             $query->orderByRaw("COALESCE(event_date, DATE(starts_at)) {$sortDir}");
         } else {
             $query->orderBy($sortField, $sortDir);

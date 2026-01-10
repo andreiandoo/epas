@@ -158,32 +158,37 @@ class ReferralsController extends BaseController
                 ->increment('clicks');
         } else {
             // Fallback: check gamification_customer_points.referral_code
-            $gamificationPoints = DB::table('gamification_customer_points')
-                ->where('referral_code', $code)
-                ->where('marketplace_client_id', $client->id)
-                ->first();
+            try {
+                $gamificationPoints = DB::table('gamification_customer_points')
+                    ->where('referral_code', $code)
+                    ->where('marketplace_client_id', $client->id)
+                    ->first();
 
-            if (!$gamificationPoints) {
+                if (!$gamificationPoints) {
+                    return $this->error('Cod de referral invalid', 404);
+                }
+
+                $customerId = $gamificationPoints->marketplace_customer_id;
+
+                // Create a record in marketplace_referral_codes for future tracking
+                $referralCodeId = DB::table('marketplace_referral_codes')->insertGetId([
+                    'marketplace_client_id' => $client->id,
+                    'marketplace_customer_id' => $customerId,
+                    'code' => $code,
+                    'is_active' => true,
+                    'clicks' => 1,
+                    'signups' => 0,
+                    'conversions' => 0,
+                    'total_value' => 0,
+                    'points_earned' => 0,
+                    'pending_points' => 0,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } catch (\Exception $e) {
+                // Table may not exist, return invalid code
                 return $this->error('Cod de referral invalid', 404);
             }
-
-            $customerId = $gamificationPoints->marketplace_customer_id;
-
-            // Create a record in marketplace_referral_codes for future tracking
-            $referralCodeId = DB::table('marketplace_referral_codes')->insertGetId([
-                'marketplace_client_id' => $client->id,
-                'marketplace_customer_id' => $customerId,
-                'code' => $code,
-                'is_active' => true,
-                'clicks' => 1,
-                'signups' => 0,
-                'conversions' => 0,
-                'total_value' => 0,
-                'points_earned' => 0,
-                'pending_points' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
         }
 
         // Get referrer info
