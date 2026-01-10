@@ -174,10 +174,19 @@ class OrganizerResource extends Resource
                             ->suffix('%')
                             ->helperText('Leave empty to use marketplace default'),
 
+                        Forms\Components\Select::make('default_commission_mode')
+                            ->label('Default Commission Mode')
+                            ->options([
+                                'included' => 'Included in price',
+                                'added_on_top' => 'Added on top of price',
+                            ])
+                            ->placeholder('Use marketplace default')
+                            ->helperText('Applied automatically when creating events for this organizer'),
+
                         Forms\Components\DateTimePicker::make('verified_at')
                             ->label('Verified At'),
                     ])
-                    ->columns(3),
+                    ->columns(2),
 
                 Section::make('Feature Access')
                     ->schema([

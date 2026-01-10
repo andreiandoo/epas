@@ -38,6 +38,7 @@ class MarketplaceOrganizer extends Authenticatable
         'email_verification_token',
         'email_verification_expires_at',
         'commission_rate',
+        'default_commission_mode',
         'settings',
         'gamification_enabled',
         'invitations_enabled',
@@ -162,6 +163,21 @@ class MarketplaceOrganizer extends Authenticatable
 
         // Fall back to marketplace client's rate
         return (float) $this->marketplaceClient->commission_rate;
+    }
+
+    /**
+     * Get the effective commission mode for this organizer
+     * Returns 'included' or 'added_on_top'
+     */
+    public function getEffectiveCommissionMode(): string
+    {
+        // Organizer-specific mode takes priority
+        if ($this->default_commission_mode !== null) {
+            return $this->default_commission_mode;
+        }
+
+        // Fall back to marketplace client's mode
+        return $this->marketplaceClient->commission_mode ?? 'included';
     }
 
     // =========================================

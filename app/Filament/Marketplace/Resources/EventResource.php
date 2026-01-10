@@ -119,9 +119,14 @@ class EventResource extends Resource
                             if ($state) {
                                 $organizer = MarketplaceOrganizer::find($state);
                                 if ($organizer) {
-                                    // Pre-fill custom commission with organizer's rate if set
+                                    // Pre-fill commission rate with organizer's rate if set
                                     $rate = $organizer->commission_rate ?? $marketplace?->commission_rate;
                                     $set('commission_rate', $rate);
+
+                                    // Pre-fill commission mode with organizer's default if set
+                                    if ($organizer->default_commission_mode) {
+                                        $set('commission_mode', $organizer->default_commission_mode);
+                                    }
 
                                     // Pre-fill ticket terms from organizer if available
                                     if ($organizer->ticket_terms) {
@@ -155,12 +160,14 @@ class EventResource extends Resource
                                 : '<span class="text-gray-500">Not verified</span>';
 
                             $commissionRate = $organizer->commission_rate ?? $marketplace?->commission_rate ?? 5;
+                            $commissionMode = $organizer->default_commission_mode ?? $marketplace->commission_mode ?? 'included';
+                            $commissionModeLabel = $commissionMode === 'included' ? 'Included in price' : 'Added on top';
 
                             return new HtmlString("
                                 <div class='space-y-1 text-sm'>
                                     <div><strong>Email:</strong> {$organizer->email}</div>
                                     <div><strong>Status:</strong> {$status} | {$verified}</div>
-                                    <div><strong>Default Commission:</strong> {$commissionRate}%</div>
+                                    <div><strong>Default Commission:</strong> {$commissionRate}% ({$commissionModeLabel})</div>
                                     <div><strong>Events:</strong> {$organizer->total_events} | <strong>Revenue:</strong> " . number_format($organizer->total_revenue, 2) . " RON</div>
                                 </div>
                             ");
@@ -837,14 +844,20 @@ class EventResource extends Resource
                                 'included' => 'Include in price (organizer receives less)',
                                 'added_on_top' => 'Add on top (customer pays more)',
                             ])
-                            ->placeholder('Use default from contract')
-                            ->helperText(function () use ($marketplace) {
+                            ->placeholder(function (SGet $get) use ($marketplace) {
+                                $organizerId = $get('marketplace_organizer_id');
+                                if ($organizerId) {
+                                    $organizer = MarketplaceOrganizer::find($organizerId);
+                                    if ($organizer && $organizer->default_commission_mode) {
+                                        $modeText = $organizer->default_commission_mode === 'included' ? 'Included' : 'Added on top';
+                                        return "{$modeText} (organizer default)";
+                                    }
+                                }
                                 $mode = $marketplace->commission_mode ?? 'included';
-                                $modeText = $mode === 'included'
-                                    ? 'included in price'
-                                    : 'added on top';
-                                return "Default: {$modeText}";
+                                $modeText = $mode === 'included' ? 'Included' : 'Added on top';
+                                return "{$modeText} (marketplace default)";
                             })
+                            ->helperText('Leave empty to use organizer\'s or marketplace default mode')
                             ->live()
                             ->nullable(),
 
