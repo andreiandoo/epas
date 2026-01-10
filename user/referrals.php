@@ -174,27 +174,45 @@ const ReferralsPage = {
             const response = await AmbiletAPI.customer.getReferrals();
             if (response.success && response.data) {
                 const data = response.data;
-                this.referralLink = data.referral_link || data.code?.url || 'ambilet.ro/r/' + (data.code?.code || AmbiletAuth.getUser()?.referral_code || 'CODE');
+                // API returns 'link' for full URL and 'code' as string
+                this.referralLink = data.link || data.referral_link || this.buildReferralLink(data.code);
                 document.getElementById('referral-link').value = this.referralLink;
                 this.updateStats(data.stats || {});
-                this.renderReferrals(data.referrals || []);
+                this.renderReferrals(data.recent_referrals || data.referrals || []);
                 this.renderHistory(data.history || []);
             } else {
-                const user = AmbiletAuth.getUser();
-                document.getElementById('referral-link').value = 'ambilet.ro/r/' + (user?.referral_code || 'CODE');
+                this.useUserReferralCode();
             }
         } catch (error) {
             console.error('Error loading referral data:', error);
-            const user = AmbiletAuth.getUser();
-            document.getElementById('referral-link').value = 'ambilet.ro/r/' + (user?.referral_code || 'CODE');
+            this.useUserReferralCode();
         }
     },
 
+    useUserReferralCode() {
+        const user = AmbiletAuth.getUser();
+        const code = user?.referral_code;
+        if (code) {
+            document.getElementById('referral-link').value = this.buildReferralLink(code);
+        } else {
+            document.getElementById('referral-link').value = 'Nu ai inca un cod de referral';
+        }
+    },
+
+    buildReferralLink(code) {
+        if (!code) return '';
+        // Use current domain for the referral link
+        const domain = window.location.hostname;
+        return 'https://' + domain + '/?ref=' + code;
+    },
+
     updateStats(stats) {
-        document.getElementById('stat-invited').textContent = stats.invited || '0';
-        document.getElementById('stat-completed').textContent = stats.completed || '0';
-        document.getElementById('stat-pending').textContent = stats.pending || '0';
-        document.getElementById('stat-credit').textContent = (stats.credit || 0) + ' RON';
+        // API returns: clicks, registrations, conversions, total_earnings, pending_rewards
+        document.getElementById('stat-invited').textContent = stats.registrations || stats.invited || '0';
+        document.getElementById('stat-completed').textContent = stats.conversions || stats.completed || '0';
+        const pending = (stats.registrations || 0) - (stats.conversions || 0);
+        document.getElementById('stat-pending').textContent = stats.pending || (pending > 0 ? pending : 0);
+        document.getElementById('stat-credit').textContent = (stats.total_earnings || stats.credit || 0) + ' ' + (stats.currency || 'RON');
     },
 
     renderReferrals(referrals) {
@@ -285,19 +303,22 @@ const ReferralsPage = {
 
 function shareOnFacebook() {
     const link = document.getElementById('referral-link').value;
-    window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent('https://' + link), '_blank', 'width=600,height=400');
+    const url = link.startsWith('http') ? link : 'https://' + link;
+    window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url), '_blank', 'width=600,height=400');
 }
 
 function shareOnWhatsApp() {
     const link = document.getElementById('referral-link').value;
-    const text = 'Inregistreaza-te pe AmBilet folosind link-ul meu si primesti 15 RON discount la prima comanda! ' + 'https://' + link;
+    const url = link.startsWith('http') ? link : 'https://' + link;
+    const text = 'Inregistreaza-te folosind link-ul meu si primesti discount la prima comanda! ' + url;
     window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
 }
 
 function shareByEmail() {
     const link = document.getElementById('referral-link').value;
-    const subject = 'Ti-am trimis 15 RON pentru bilete pe AmBilet!';
-    const body = 'Salut!\n\nInregistreaza-te pe AmBilet folosind link-ul meu si primesti 15 RON discount la prima comanda!\n\nhttps://' + link + '\n\nNe vedem la concert!';
+    const url = link.startsWith('http') ? link : 'https://' + link;
+    const subject = 'Ti-am trimis un discount pentru bilete!';
+    const body = 'Salut!\n\nInregistreaza-te folosind link-ul meu si primesti discount la prima comanda!\n\n' + url + '\n\nNe vedem la concert!';
     window.location.href = 'mailto:?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
 }
 
