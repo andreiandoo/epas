@@ -103,7 +103,6 @@ const WatchlistPage = {
         try {
             // Load events from watchlist API
             const eventsResponse = await AmbiletAPI.customer.getWatchlist();
-            console.log('[WatchlistPage] Events response:', eventsResponse);
             if (eventsResponse.success && eventsResponse.data) {
                 // API returns array directly in data, not data.events
                 this.events = Array.isArray(eventsResponse.data) ? eventsResponse.data : [];
@@ -130,20 +129,18 @@ const WatchlistPage = {
                     this.artists = Array.isArray(artistsResponse.data) ? artistsResponse.data : [];
                 }
             } catch (e) {
-                console.log('[WatchlistPage] Artists load error:', e);
+                console.error('Artists load error:', e);
                 this.artists = [];
             }
 
             // Load favorite venues
             try {
                 const venuesResponse = await AmbiletAPI.getFavoriteVenues();
-                console.log('[WatchlistPage] Venues response:', venuesResponse);
                 if (venuesResponse.success && venuesResponse.data) {
                     this.venues = Array.isArray(venuesResponse.data) ? venuesResponse.data : [];
-                    console.log('[WatchlistPage] Venues loaded:', this.venues.length, 'venues');
                 }
             } catch (e) {
-                console.log('[WatchlistPage] Venues load error:', e);
+                console.error('Venues load error:', e);
                 this.venues = [];
             }
         } catch (error) {
