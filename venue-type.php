@@ -147,7 +147,7 @@ $typeEmoji = match($typeSlug) {
         <div class="absolute right-0 w-2/5 h-full bg-gradient-to-l from-white/5 to-transparent"></div>
     </div>
 
-    <div class="relative z-10 max-w-6xl px-6 mx-auto">
+    <div class="relative z-10 max-w-7xl px-6 mx-auto">
         <!-- Breadcrumb -->
         <nav class="flex items-center gap-2 mb-6 text-sm">
             <a href="/" class="transition-colors text-white/60 hover:text-white">Acasă</a>
