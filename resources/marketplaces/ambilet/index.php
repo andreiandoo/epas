@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 // Load hero featured event
 async function loadHeroEvent() {
     try {
-        const response = await AmbiletAPI.get('/events?featured=true&limit=1');
+        const response = await AmbiletAPI.get('/marketplace-events?featured=true&limit=1');
         if (response.data && response.data.length > 0) {
             const event = response.data[0];
             renderHero(event);
@@ -291,7 +291,7 @@ function renderHero(event) {
 // Load featured events
 async function loadFeaturedEvents() {
     try {
-        const response = await AmbiletAPI.get('/events?featured=true&limit=6');
+        const response = await AmbiletAPI.get('/marketplace-events?featured=true&limit=6');
         if (response.data) {
             renderFeaturedEvents(response.data);
         }
@@ -341,7 +341,7 @@ function renderFeaturedEvents(events) {
 // Load categories
 async function loadCategories() {
     try {
-        const response = await AmbiletAPI.get('/categories');
+        const response = await AmbiletAPI.getCategories();
         if (response.data) {
             renderCategories(response.data);
         }
@@ -382,7 +382,7 @@ function renderCategories(categories) {
 // Load cities
 async function loadCities() {
     try {
-        const response = await AmbiletAPI.get('/cities?limit=6');
+        const response = await AmbiletAPI.get('/locations/cities/featured?limit=6');
         if (response.data) {
             renderCities(response.data);
         }
@@ -414,7 +414,7 @@ function renderCities(cities) {
 // Load latest events
 async function loadLatestEvents() {
     try {
-        const response = await AmbiletAPI.get('/events?sort=-created_at&limit=8');
+        const response = await AmbiletAPI.get('/marketplace-events?sort=latest&limit=8');
         if (response.data) {
             renderLatestEvents(response.data);
         }
