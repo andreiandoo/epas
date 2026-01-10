@@ -26,7 +26,7 @@ class TaxTemplateResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-document-text';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Tax & Invoicing';
+    protected static \UnitEnum|string|null $navigationGroup = 'Reports';
 
     protected static ?int $navigationSort = 2;
 

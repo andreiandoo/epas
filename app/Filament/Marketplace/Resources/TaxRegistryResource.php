@@ -28,7 +28,7 @@ class TaxRegistryResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-library';
 
-    protected static \UnitEnum|string|null $navigationGroup = 'Tax & Invoicing';
+    protected static \UnitEnum|string|null $navigationGroup = 'Reports';
 
     protected static ?int $navigationSort = 1;
 

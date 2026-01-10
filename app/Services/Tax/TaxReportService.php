@@ -173,10 +173,13 @@ class TaxReportService
             ->validOn($date)
             ->where(function ($q) use ($eventTypeId) {
                 if ($eventTypeId) {
-                    $q->where('event_type_id', $eventTypeId)
-                      ->orWhereNull('event_type_id');
+                    // Taxes that apply to this specific event type OR global taxes (no event types)
+                    $q->whereHas('eventTypes', function ($subQ) use ($eventTypeId) {
+                        $subQ->where('event_types.id', $eventTypeId);
+                    })->orWhereDoesntHave('eventTypes');
                 } else {
-                    $q->whereNull('event_type_id');
+                    // Only global taxes (no event types assigned)
+                    $q->whereDoesntHave('eventTypes');
                 }
             })
             ->orderByDesc('priority')
