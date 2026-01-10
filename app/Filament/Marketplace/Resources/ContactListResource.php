@@ -121,11 +121,6 @@ class ContactListResource extends Resource
                                             'purchase_count' => 'Number of purchases',
                                             'purchased_category' => 'Purchased from category',
                                         ],
-                                        'User Type' => [
-                                            'is_artist' => 'Is registered as artist',
-                                            'is_venue' => 'Is registered as venue',
-                                            'is_organizer' => 'Is registered as organizer',
-                                        ],
                                         'Support' => [
                                             'has_refund_request' => 'Has requested refund',
                                         ],

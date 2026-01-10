@@ -791,6 +791,281 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    // ==================== ORGANIZER AUTH ====================
+
+    case 'organizer.register':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/marketplace-client/organizer/register';
+        break;
+
+    case 'organizer.login':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/marketplace-client/organizer/login';
+        break;
+
+    case 'organizer.logout':
+        $method = 'POST';
+        $endpoint = '/marketplace-client/organizer/logout';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.me':
+        $method = 'GET';
+        $endpoint = '/marketplace-client/organizer/me';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.profile':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/marketplace-client/organizer/profile';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.password':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/marketplace-client/organizer/password';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.forgot-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/marketplace-client/organizer/forgot-password';
+        break;
+
+    case 'organizer.reset-password':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/marketplace-client/organizer/reset-password';
+        break;
+
+    case 'organizer.verify-email':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/marketplace-client/organizer/verify-email';
+        break;
+
+    case 'organizer.resend-verification':
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/marketplace-client/organizer/resend-verification';
+        break;
+
+    case 'organizer.payout-details':
+        $method = 'PUT';
+        $body = file_get_contents('php://input');
+        $endpoint = '/marketplace-client/organizer/payout-details';
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER DASHBOARD ====================
+
+    case 'organizer.dashboard':
+        $method = 'GET';
+        $endpoint = '/marketplace-client/organizer/dashboard';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.dashboard.timeline':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['period'])) $params['period'] = $_GET['period'];
+        if (isset($_GET['start_date'])) $params['start_date'] = $_GET['start_date'];
+        if (isset($_GET['end_date'])) $params['end_date'] = $_GET['end_date'];
+        $endpoint = '/marketplace-client/organizer/dashboard/timeline' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER EVENTS ====================
+
+    case 'organizer.events':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        } else {
+            $params = [];
+            if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+            if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+            if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        }
+        $endpoint = '/marketplace-client/organizer/events' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'PUT') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/marketplace-client/organizer/events/' . urlencode($eventId);
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.submit':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/marketplace-client/organizer/events/' . urlencode($eventId) . '/submit';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.cancel':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'POST';
+        $endpoint = '/marketplace-client/organizer/events/' . urlencode($eventId) . '/cancel';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.participants':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 100);
+        if (isset($_GET['search'])) $params['search'] = $_GET['search'];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        $endpoint = '/marketplace-client/organizer/events/' . urlencode($eventId) . '/participants' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.participants.export':
+        $eventId = $_GET['event_id'] ?? '';
+        if (!$eventId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id parameter']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/marketplace-client/organizer/events/' . urlencode($eventId) . '/participants/export';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.event.checkin':
+        $eventId = $_GET['event_id'] ?? '';
+        $barcode = $_GET['barcode'] ?? '';
+        if (!$eventId || !$barcode) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing event_id or barcode parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD'];
+        $endpoint = '/marketplace-client/organizer/events/' . urlencode($eventId) . '/check-in/' . urlencode($barcode);
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER ORDERS ====================
+
+    case 'organizer.orders':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+        if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/marketplace-client/organizer/orders' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER FINANCE ====================
+
+    case 'organizer.balance':
+        $method = 'GET';
+        $endpoint = '/marketplace-client/organizer/balance';
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.transactions':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+        if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        $endpoint = '/marketplace-client/organizer/transactions' . ($params ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.payouts':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        } else {
+            $params = [];
+            if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+            if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+            if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        }
+        $endpoint = '/marketplace-client/organizer/payouts' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.payout':
+        $payoutId = $_GET['payout_id'] ?? '';
+        if (!$payoutId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing payout_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD']; // DELETE for canceling
+        $endpoint = '/marketplace-client/organizer/payouts/' . urlencode($payoutId);
+        $requiresAuth = true;
+        break;
+
+    // ==================== ORGANIZER PROMO CODES ====================
+
+    case 'organizer.promo-codes':
+        $method = $_SERVER['REQUEST_METHOD'];
+        if ($method === 'POST') {
+            $body = file_get_contents('php://input');
+        } else {
+            $params = [];
+            if (isset($_GET['event_id'])) $params['event_id'] = $_GET['event_id'];
+            if (isset($_GET['status'])) $params['status'] = $_GET['status'];
+            if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
+            if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        }
+        $endpoint = '/marketplace-client/organizer/promo-codes' . (!empty($params) ? '?' . http_build_query($params) : '');
+        $requiresAuth = true;
+        break;
+
+    case 'organizer.promo-code':
+        $codeId = $_GET['code_id'] ?? '';
+        if (!$codeId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing code_id parameter']);
+            exit;
+        }
+        $method = $_SERVER['REQUEST_METHOD']; // PUT for update, DELETE for delete
+        if ($method === 'PUT') {
+            $body = file_get_contents('php://input');
+        }
+        $endpoint = '/marketplace-client/organizer/promo-codes/' . urlencode($codeId);
+        $requiresAuth = true;
+        break;
+
     default:
         http_response_code(400);
         echo json_encode(['error' => 'Unknown action: ' . $action]);
@@ -2588,6 +2863,163 @@ function getMockData($action, $params) {
                 'success' => true,
                 'message' => 'Rewards claimed successfully',
                 'data' => ['points_claimed' => 100, 'new_balance' => 1350]
+            ];
+
+        // ==================== ORGANIZER AUTH (Demo Mode) ====================
+
+        case 'organizer.register':
+            $body = json_decode(file_get_contents('php://input'), true) ?: [];
+            $demoOrganizer = [
+                'id' => 1,
+                'email' => $body['email'] ?? 'demo@organizer.com',
+                'company_name' => $body['company_name'] ?? 'Demo Organizer',
+                'contact_name' => $body['contact_name'] ?? 'Demo Contact',
+                'phone' => $body['phone'] ?? '+40700000000',
+                'status' => 'pending',
+                'created_at' => date('c'),
+            ];
+            $_SESSION['demo_organizer'] = $demoOrganizer;
+            $_SESSION['demo_organizer_token'] = 'demo_org_token_' . time();
+            return [
+                'success' => true,
+                'message' => 'Registration successful. Please verify your email.',
+                'data' => [
+                    'organizer' => $demoOrganizer,
+                    'token' => $_SESSION['demo_organizer_token'],
+                    'requires_verification' => true,
+                ]
+            ];
+
+        case 'organizer.login':
+            $body = json_decode(file_get_contents('php://input'), true) ?: [];
+            $demoOrganizer = [
+                'id' => 1,
+                'email' => $body['email'] ?? 'demo@organizer.com',
+                'company_name' => 'Demo Organizer SRL',
+                'contact_name' => 'Ion Demo',
+                'phone' => '+40700000000',
+                'status' => 'active',
+                'is_verified' => true,
+                'balance' => 15420.50,
+                'total_events' => 12,
+                'total_tickets_sold' => 3450,
+                'created_at' => '2024-01-15T10:00:00Z',
+            ];
+            $_SESSION['demo_organizer'] = $demoOrganizer;
+            $_SESSION['demo_organizer_token'] = 'demo_org_token_' . time();
+            return [
+                'success' => true,
+                'message' => 'Login successful',
+                'data' => [
+                    'organizer' => $demoOrganizer,
+                    'token' => $_SESSION['demo_organizer_token'],
+                ]
+            ];
+
+        case 'organizer.logout':
+            unset($_SESSION['demo_organizer'], $_SESSION['demo_organizer_token']);
+            return [
+                'success' => true,
+                'message' => 'Logged out successfully',
+                'data' => null
+            ];
+
+        case 'organizer.me':
+            if (empty($_SESSION['demo_organizer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => ['organizer' => $_SESSION['demo_organizer'] ?? [
+                    'id' => 1,
+                    'email' => 'demo@organizer.com',
+                    'company_name' => 'Demo Organizer SRL',
+                    'contact_name' => 'Ion Demo',
+                    'status' => 'active',
+                ]]
+            ];
+
+        case 'organizer.profile':
+            if (empty($_SESSION['demo_organizer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            $body = json_decode(file_get_contents('php://input'), true) ?: [];
+            if (!empty($body) && isset($_SESSION['demo_organizer'])) {
+                $_SESSION['demo_organizer'] = array_merge($_SESSION['demo_organizer'], $body);
+            }
+            return ['success' => true, 'message' => 'Profile updated successfully'];
+
+        case 'organizer.dashboard':
+            if (empty($_SESSION['demo_organizer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    'summary' => [
+                        'total_revenue' => 45620.00,
+                        'total_tickets_sold' => 1234,
+                        'total_events' => 8,
+                        'active_events' => 3,
+                        'available_balance' => 15420.50,
+                        'pending_balance' => 5200.00,
+                    ],
+                    'recent_sales' => [
+                        ['date' => date('Y-m-d'), 'tickets' => 45, 'revenue' => 2250.00],
+                        ['date' => date('Y-m-d', strtotime('-1 day')), 'tickets' => 32, 'revenue' => 1600.00],
+                        ['date' => date('Y-m-d', strtotime('-2 days')), 'tickets' => 28, 'revenue' => 1400.00],
+                    ],
+                ]
+            ];
+
+        case 'organizer.events':
+            if (empty($_SESSION['demo_organizer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    [
+                        'id' => 1,
+                        'title' => 'Concert Demo - Rock Night',
+                        'slug' => 'concert-demo-rock-night',
+                        'start_date' => date('Y-m-d', strtotime('+7 days')),
+                        'status' => 'published',
+                        'tickets_sold' => 450,
+                        'tickets_total' => 1000,
+                        'revenue' => 22500.00,
+                    ],
+                    [
+                        'id' => 2,
+                        'title' => 'Festival Demo',
+                        'slug' => 'festival-demo',
+                        'start_date' => date('Y-m-d', strtotime('+30 days')),
+                        'status' => 'draft',
+                        'tickets_sold' => 0,
+                        'tickets_total' => 5000,
+                        'revenue' => 0,
+                    ],
+                ],
+                'meta' => ['current_page' => 1, 'last_page' => 1, 'per_page' => 10, 'total' => 2]
+            ];
+
+        case 'organizer.balance':
+            if (empty($_SESSION['demo_organizer_token'])) {
+                http_response_code(401);
+                return ['success' => false, 'message' => 'Unauthorized'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    'available' => 15420.50,
+                    'pending' => 5200.00,
+                    'total_earned' => 45620.00,
+                    'total_withdrawn' => 25000.00,
+                ]
             ];
 
         default:

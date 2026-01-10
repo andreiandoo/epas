@@ -41,9 +41,6 @@ class MarketplaceContactList extends Model
         'purchase_count' => 'Has made X purchases',
         'purchased_category' => 'Purchased from category',
         'purchased_genre' => 'Purchased from genre',
-        'is_artist' => 'Is registered as artist',
-        'is_venue' => 'Is registered as venue',
-        'is_organizer' => 'Is registered as organizer',
         'has_refund_request' => 'Has requested refund',
         'city' => 'Lives in city',
         'state' => 'Lives in state/region',
@@ -163,34 +160,6 @@ class MarketplaceContactList extends Model
                       ->whereHas('marketplaceEvent', function ($eq) use ($value) {
                           $eq->whereJsonContains('tags', $value);
                       });
-                });
-                break;
-
-            case 'is_artist':
-                // Check if customer email matches an artist email
-                $query->whereIn('email', function ($subQuery) {
-                    $subQuery->select('email')
-                        ->from('artists')
-                        ->whereNotNull('email');
-                });
-                break;
-
-            case 'is_venue':
-                // Check if customer email matches a venue contact email
-                $query->whereIn('email', function ($subQuery) {
-                    $subQuery->select('email')
-                        ->from('venues')
-                        ->whereNotNull('email');
-                });
-                break;
-
-            case 'is_organizer':
-                // Check if customer email matches an organizer email
-                $query->whereIn('email', function ($subQuery) use ($query) {
-                    $subQuery->select('email')
-                        ->from('marketplace_organizers')
-                        ->where('marketplace_client_id', $this->marketplace_client_id)
-                        ->whereNotNull('email');
                 });
                 break;
 

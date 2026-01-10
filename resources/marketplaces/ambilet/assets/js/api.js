@@ -388,6 +388,45 @@ const AmbiletAPI = {
         // Cities endpoint
         if (endpoint.startsWith('/cities')) return 'cities';
 
+        // Organizer auth endpoints
+        if (endpoint === '/organizer/register') return 'organizer.register';
+        if (endpoint === '/organizer/login') return 'organizer.login';
+        if (endpoint === '/organizer/logout') return 'organizer.logout';
+        if (endpoint === '/organizer/me') return 'organizer.me';
+        if (endpoint === '/organizer/profile') return 'organizer.profile';
+        if (endpoint === '/organizer/password') return 'organizer.password';
+        if (endpoint === '/organizer/forgot-password') return 'organizer.forgot-password';
+        if (endpoint === '/organizer/reset-password') return 'organizer.reset-password';
+        if (endpoint === '/organizer/verify-email') return 'organizer.verify-email';
+        if (endpoint === '/organizer/resend-verification') return 'organizer.resend-verification';
+        if (endpoint === '/organizer/payout-details') return 'organizer.payout-details';
+
+        // Organizer dashboard
+        if (endpoint === '/organizer/dashboard') return 'organizer.dashboard';
+        if (endpoint === '/organizer/dashboard/timeline') return 'organizer.dashboard.timeline';
+
+        // Organizer events
+        if (endpoint.match(/\/organizer\/events\/\d+\/participants\/export$/)) return 'organizer.event.participants.export';
+        if (endpoint.match(/\/organizer\/events\/\d+\/participants$/)) return 'organizer.event.participants';
+        if (endpoint.match(/\/organizer\/events\/\d+\/check-in\//)) return 'organizer.event.checkin';
+        if (endpoint.match(/\/organizer\/events\/\d+\/submit$/)) return 'organizer.event.submit';
+        if (endpoint.match(/\/organizer\/events\/\d+\/cancel$/)) return 'organizer.event.cancel';
+        if (endpoint.match(/\/organizer\/events\/\d+$/)) return 'organizer.event';
+        if (endpoint === '/organizer/events' || endpoint.includes('/organizer/events?')) return 'organizer.events';
+
+        // Organizer orders
+        if (endpoint === '/organizer/orders' || endpoint.includes('/organizer/orders?')) return 'organizer.orders';
+
+        // Organizer finance
+        if (endpoint === '/organizer/balance') return 'organizer.balance';
+        if (endpoint === '/organizer/transactions' || endpoint.includes('/organizer/transactions?')) return 'organizer.transactions';
+        if (endpoint.match(/\/organizer\/payouts\/\d+$/)) return 'organizer.payout';
+        if (endpoint === '/organizer/payouts' || endpoint.includes('/organizer/payouts?')) return 'organizer.payouts';
+
+        // Organizer promo codes
+        if (endpoint.match(/\/organizer\/promo-codes\/\d+$/)) return 'organizer.promo-code';
+        if (endpoint === '/organizer/promo-codes' || endpoint.includes('/organizer/promo-codes?')) return 'organizer.promo-codes';
+
         return null; // unknown endpoint - will cause error
     },
 
@@ -480,6 +519,44 @@ const AmbiletAPI = {
         const regionMatch = endpoint.match(/\/locations\/regions\/([a-z0-9-]+)$/i);
         if (regionMatch) {
             return `slug=${encodeURIComponent(regionMatch[1])}`;
+        }
+
+        // Organizer event endpoints - extract event ID
+        const organizerEventParticipantsMatch = endpoint.match(/\/organizer\/events\/(\d+)\/participants/);
+        if (organizerEventParticipantsMatch) {
+            const eventId = organizerEventParticipantsMatch[1];
+            const queryStart = endpoint.indexOf('?');
+            if (queryStart !== -1) {
+                return `event_id=${encodeURIComponent(eventId)}&${endpoint.substring(queryStart + 1)}`;
+            }
+            return `event_id=${encodeURIComponent(eventId)}`;
+        }
+
+        const organizerEventCheckinMatch = endpoint.match(/\/organizer\/events\/(\d+)\/check-in\/(.+)/);
+        if (organizerEventCheckinMatch) {
+            return `event_id=${encodeURIComponent(organizerEventCheckinMatch[1])}&barcode=${encodeURIComponent(organizerEventCheckinMatch[2])}`;
+        }
+
+        const organizerEventActionMatch = endpoint.match(/\/organizer\/events\/(\d+)\/(submit|cancel)$/);
+        if (organizerEventActionMatch) {
+            return `event_id=${encodeURIComponent(organizerEventActionMatch[1])}`;
+        }
+
+        const organizerEventMatch = endpoint.match(/\/organizer\/events\/(\d+)$/);
+        if (organizerEventMatch) {
+            return `event_id=${encodeURIComponent(organizerEventMatch[1])}`;
+        }
+
+        // Organizer payout endpoint - extract payout ID
+        const organizerPayoutMatch = endpoint.match(/\/organizer\/payouts\/(\d+)$/);
+        if (organizerPayoutMatch) {
+            return `payout_id=${encodeURIComponent(organizerPayoutMatch[1])}`;
+        }
+
+        // Organizer promo code endpoint - extract code ID
+        const organizerPromoCodeMatch = endpoint.match(/\/organizer\/promo-codes\/(\d+)$/);
+        if (organizerPromoCodeMatch) {
+            return `code_id=${encodeURIComponent(organizerPromoCodeMatch[1])}`;
         }
 
         // Pass through query params
