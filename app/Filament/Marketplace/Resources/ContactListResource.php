@@ -44,9 +44,10 @@ class ContactListResource extends Resource
 
         // Get categories for the marketplace
         $categories = MarketplaceEventCategory::where('marketplace_client_id', $marketplace?->id)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->pluck('name', 'id')
+            ->where('is_visible', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->mapWithKeys(fn ($cat) => [$cat->id => $cat->getLocalizedName()])
             ->toArray();
 
         // Get unique cities from customers
