@@ -170,7 +170,7 @@ $judete = [
                                 <p class="font-medium text-secondary">Remindere evenimente</p>
                                 <p class="text-sm text-muted">Primeste reminder cu 24h inainte de eveniment</p>
                             </div>
-                            <input type="checkbox" class="toggle" id="notif-reminders" checked>
+                            <input type="checkbox" class="toggle" id="notif-reminders">
                         </label>
 
                         <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
@@ -186,7 +186,23 @@ $judete = [
                                 <p class="font-medium text-secondary">Actualizari favorite</p>
                                 <p class="text-sm text-muted">Primeste notificari cand evenimentele favorite se apropie</p>
                             </div>
-                            <input type="checkbox" class="toggle" id="notif-favorites" checked>
+                            <input type="checkbox" class="toggle" id="notif-favorites">
+                        </label>
+
+                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
+                            <div>
+                                <p class="font-medium text-secondary">Istoric navigare</p>
+                                <p class="text-sm text-muted">Salveaza evenimentele vizualizate pentru recomandari personalizate</p>
+                            </div>
+                            <input type="checkbox" class="toggle" id="notif-history">
+                        </label>
+
+                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
+                            <div>
+                                <p class="font-medium text-secondary">Cookie-uri marketing</p>
+                                <p class="text-sm text-muted">Permite afisarea de reclame personalizate</p>
+                            </div>
+                            <input type="checkbox" class="toggle" id="notif-marketing">
                         </label>
                     </div>
 
@@ -334,20 +350,32 @@ const SettingsPage = {
         document.getElementById('city').value = c.city || '';
         document.getElementById('language').value = c.locale || 'ro';
 
-        // Newsletter preference
-        if (c.accepts_marketing !== undefined) {
-            document.getElementById('notif-newsletter').checked = c.accepts_marketing;
-        }
+        // Load notification preferences from customer settings
+        this.loadNotificationSettings();
     },
 
     loadNotificationSettings() {
-        const settings = JSON.parse(localStorage.getItem('ambilet_settings') || '{}');
-        if (settings.reminders !== undefined) {
-            document.getElementById('notif-reminders').checked = settings.reminders;
-        }
-        if (settings.favorites !== undefined) {
-            document.getElementById('notif-favorites').checked = settings.favorites;
-        }
+        const c = this.customer;
+        if (!c) return;
+
+        // Get notification preferences from customer.settings.notification_preferences
+        const prefs = c.settings?.notification_preferences || {};
+
+        // Default values if not set
+        const defaults = {
+            reminders: true,
+            newsletter: true,
+            favorites: true,
+            history: true,
+            marketing: false
+        };
+
+        // Set checkbox values from DB or defaults
+        document.getElementById('notif-reminders').checked = prefs.reminders ?? defaults.reminders;
+        document.getElementById('notif-newsletter').checked = prefs.newsletter ?? c.accepts_marketing ?? defaults.newsletter;
+        document.getElementById('notif-favorites').checked = prefs.favorites ?? defaults.favorites;
+        document.getElementById('notif-history').checked = prefs.history ?? defaults.history;
+        document.getElementById('notif-marketing').checked = prefs.marketing ?? defaults.marketing;
     },
 
     setupEventListeners() {
@@ -540,19 +568,18 @@ async function saveNotificationSettings() {
     btn.disabled = true;
 
     try {
-        const settings = {
+        const notificationPreferences = {
             reminders: document.getElementById('notif-reminders').checked,
             newsletter: document.getElementById('notif-newsletter').checked,
-            favorites: document.getElementById('notif-favorites').checked
+            favorites: document.getElementById('notif-favorites').checked,
+            history: document.getElementById('notif-history').checked,
+            marketing: document.getElementById('notif-marketing').checked
         };
 
-        // Save to localStorage
-        localStorage.setItem('ambilet_settings', JSON.stringify(settings));
-
-        // Save newsletter preference to API
+        // Save to API
         await AmbiletAPI.put('/customer/settings', {
-            accepts_marketing: settings.newsletter,
-            notification_preferences: settings
+            accepts_marketing: notificationPreferences.newsletter,
+            notification_preferences: notificationPreferences
         });
 
         AmbiletNotifications.success('Preferintele au fost salvate!');
