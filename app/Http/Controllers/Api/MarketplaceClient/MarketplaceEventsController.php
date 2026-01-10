@@ -26,7 +26,7 @@ class MarketplaceEventsController extends BaseController
             ->whereNull('is_cancelled')
             ->orWhere('is_cancelled', false)
             ->with([
-                'marketplaceOrganizer:id,name,slug,logo,verified_at,commission_mode,commission_rate',
+                'marketplaceOrganizer:id,name,slug,logo,verified_at,default_commission_mode,commission_rate',
                 'marketplaceEventCategory',
                 'venue:id,name,city,address',
                 'ticketTypes:id,event_id,price',
@@ -151,7 +151,7 @@ class MarketplaceEventsController extends BaseController
             })
             ->where('event_date', '>=', now()->toDateString())
             ->with([
-                'marketplaceOrganizer:id,name,slug,logo,verified_at,commission_mode,commission_rate',
+                'marketplaceOrganizer:id,name,slug,logo,verified_at,default_commission_mode,commission_rate',
                 'venue:id,name,city',
                 'marketplaceEventCategory',
                 'ticketTypes:id,event_id,price',
@@ -538,7 +538,7 @@ class MarketplaceEventsController extends BaseController
         $organizer = $event->marketplaceOrganizer;
 
         // Get commission settings (event > organizer > marketplace default)
-        $commissionMode = $event->commission_mode ?? $organizer?->commission_mode ?? $client?->commission_mode ?? 'included';
+        $commissionMode = $event->commission_mode ?? $organizer?->default_commission_mode ?? $client?->commission_mode ?? 'included';
         $commissionRate = (float) ($event->commission_rate ?? $organizer?->commission_rate ?? $client?->commission_rate ?? 5.0);
 
         // Get minimum price from ticket types

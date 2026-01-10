@@ -314,7 +314,7 @@ const AmbiletEventCard = {
         const commissionMode = apiEvent.commission_mode || 'included';
         const commissionRate = apiEvent.commission_rate || 0;
         if (commissionMode === 'added_on_top' && commissionRate > 0 && minPrice > 0) {
-            minPrice = Math.ceil(minPrice + (minPrice * commissionRate / 100));
+            minPrice = parseFloat((minPrice + (minPrice * commissionRate / 100)).toFixed(2));
         }
 
         // Extract category
