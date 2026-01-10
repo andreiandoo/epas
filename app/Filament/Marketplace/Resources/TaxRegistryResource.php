@@ -38,6 +38,8 @@ class TaxRegistryResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Tax Registry';
 
+    protected static ?string $slug = 'tax-registry';
+
     public static function getEloquentQuery(): Builder
     {
         $marketplace = static::getMarketplaceClient();

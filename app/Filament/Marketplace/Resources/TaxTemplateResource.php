@@ -36,6 +36,8 @@ class TaxTemplateResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Tax Templates';
 
+    protected static ?string $slug = 'tax-templates';
+
     public static function getEloquentQuery(): Builder
     {
         $marketplace = static::getMarketplaceClient();
