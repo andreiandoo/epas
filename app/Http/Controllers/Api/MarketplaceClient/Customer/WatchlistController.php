@@ -101,11 +101,11 @@ class WatchlistController extends BaseController
                     }
                 }
 
-                // Get genre from event_genres pivot
-                $eventGenre = DB::table('event_genre')
-                    ->join('genres', 'genres.id', '=', 'event_genre.genre_id')
-                    ->where('event_genre.event_id', $event->id)
-                    ->first(['genres.name']);
+                // Get genre from event_event_genre pivot
+                $eventGenre = DB::table('event_event_genre')
+                    ->join('event_genres', 'event_genres.id', '=', 'event_event_genre.event_genre_id')
+                    ->where('event_event_genre.event_id', $event->id)
+                    ->first(['event_genres.name']);
                 if ($eventGenre) {
                     $genreData = is_string($eventGenre->name) ? json_decode($eventGenre->name, true) : $eventGenre->name;
                     $genre = is_array($genreData) ? ($genreData['ro'] ?? $genreData['en'] ?? reset($genreData)) : $eventGenre->name;

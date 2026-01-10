@@ -1287,6 +1287,7 @@ use App\Http\Controllers\Api\MarketplaceClient\TicketsController as MarketplaceT
 use App\Http\Controllers\Api\MarketplaceClient\StatisticsController as MarketplaceStatisticsController;
 use App\Http\Controllers\Api\MarketplaceClient\NewsletterTrackingController;
 use App\Http\Controllers\Api\MarketplaceClient\PromoCodeController as MarketplacePromoCodeController;
+use App\Http\Controllers\Api\MarketplaceClient\Customer\FavoritesController as CustomerFavoritesController;
 
 Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Handle OPTIONS preflight requests
@@ -1600,7 +1601,6 @@ use App\Http\Controllers\Api\MarketplaceClient\Customer\WatchlistController as C
 use App\Http\Controllers\Api\MarketplaceClient\Customer\RewardsController as CustomerRewardsController;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\NotificationsController as CustomerNotificationsController;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\ReferralsController as CustomerReferralsController;
-use App\Http\Controllers\Api\MarketplaceClient\Customer\FavoritesController as CustomerFavoritesController;
 
 Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no customer auth)
