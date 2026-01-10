@@ -16,7 +16,11 @@ class MarketplaceTaxTemplate extends Model
         'slug',
         'description',
         'html_content',
+        'page_orientation',
+        'html_content_page_2',
+        'page_2_orientation',
         'type',
+        'trigger',
         'is_default',
         'is_active',
     ];
@@ -24,6 +28,22 @@ class MarketplaceTaxTemplate extends Model
     protected $casts = [
         'is_default' => 'boolean',
         'is_active' => 'boolean',
+    ];
+
+    /**
+     * Template triggers
+     */
+    public const TRIGGERS = [
+        'after_event_published' => 'After Event is Published',
+        'after_event_finished' => 'After Event is Finished',
+    ];
+
+    /**
+     * Page orientations
+     */
+    public const ORIENTATIONS = [
+        'portrait' => 'Portrait (A4 Vertical)',
+        'landscape' => 'Landscape (A4 Horizontal)',
     ];
 
     /**
@@ -78,7 +98,11 @@ class MarketplaceTaxTemplate extends Model
             '{{event_date}}' => 'Event Date',
             '{{venue_name}}' => 'Venue Name',
             '{{venue_address}}' => 'Venue Address',
-            '{{ticket_types_table}}' => 'Ticket Types Table (with names, prices, quantities)',
+            '{{ticket_types_table}}' => 'Ticket Types Table (with names, prices, available, sold)',
+            '{{total_tickets_available}}' => 'Total Tickets Available (Initial)',
+            '{{total_tickets_sold}}' => 'Total Tickets Sold',
+            '{{total_sales_value}}' => 'Total Sales Value',
+            '{{total_sales_currency}}' => 'Sales Currency',
         ],
         'Order' => [
             '{{order_number}}' => 'Order Number',
@@ -87,6 +111,14 @@ class MarketplaceTaxTemplate extends Model
             '{{order_currency}}' => 'Currency',
             '{{customer_name}}' => 'Customer Name',
             '{{customer_email}}' => 'Customer Email',
+        ],
+        'Date/Time' => [
+            '{{current_day}}' => 'Current Day (01-31)',
+            '{{current_month}}' => 'Current Month (01-12)',
+            '{{current_month_name}}' => 'Current Month Name',
+            '{{current_year}}' => 'Current Year',
+            '{{current_date}}' => 'Current Date (DD.MM.YYYY)',
+            '{{current_datetime}}' => 'Current Date & Time',
         ],
     ];
 
@@ -231,23 +263,47 @@ class MarketplaceTaxTemplate extends Model
                 $variables['venue_address'] = '';
             }
 
-            // Build ticket types table
+            // Calculate totals
+            $totalAvailable = 0;
+            $totalSold = 0;
+            $totalSalesValue = 0;
+            $currency = 'RON';
+
+            // Build ticket types table with available column
             $ticketTypesHtml = '<table style="width:100%; border-collapse: collapse;">';
-            $ticketTypesHtml .= '<thead><tr><th style="border:1px solid #ddd; padding:8px; text-align:left;">Ticket Type</th>';
+            $ticketTypesHtml .= '<thead><tr>';
+            $ticketTypesHtml .= '<th style="border:1px solid #ddd; padding:8px; text-align:left;">Ticket Type</th>';
             $ticketTypesHtml .= '<th style="border:1px solid #ddd; padding:8px; text-align:right;">Price</th>';
-            $ticketTypesHtml .= '<th style="border:1px solid #ddd; padding:8px; text-align:right;">Qty Sold</th></tr></thead><tbody>';
+            $ticketTypesHtml .= '<th style="border:1px solid #ddd; padding:8px; text-align:right;">Available</th>';
+            $ticketTypesHtml .= '<th style="border:1px solid #ddd; padding:8px; text-align:right;">Sold</th>';
+            $ticketTypesHtml .= '</tr></thead><tbody>';
 
             if ($event->ticketTypes) {
                 foreach ($event->ticketTypes as $ticketType) {
+                    $available = (int) ($ticketType->quantity ?? $ticketType->initial_quantity ?? 0);
+                    $sold = (int) ($ticketType->sold_count ?? $ticketType->tickets_sold ?? 0);
+                    $price = (float) ($ticketType->price ?? 0);
+                    $currency = $ticketType->currency ?? 'RON';
+
+                    $totalAvailable += $available;
+                    $totalSold += $sold;
+                    $totalSalesValue += ($sold * $price);
+
                     $ticketTypesHtml .= '<tr>';
                     $ticketTypesHtml .= '<td style="border:1px solid #ddd; padding:8px;">' . htmlspecialchars($ticketType->name ?? '') . '</td>';
-                    $ticketTypesHtml .= '<td style="border:1px solid #ddd; padding:8px; text-align:right;">' . number_format($ticketType->price ?? 0, 2) . ' ' . ($ticketType->currency ?? 'RON') . '</td>';
-                    $ticketTypesHtml .= '<td style="border:1px solid #ddd; padding:8px; text-align:right;">' . ($ticketType->sold_count ?? 0) . '</td>';
+                    $ticketTypesHtml .= '<td style="border:1px solid #ddd; padding:8px; text-align:right;">' . number_format($price, 2) . ' ' . $currency . '</td>';
+                    $ticketTypesHtml .= '<td style="border:1px solid #ddd; padding:8px; text-align:right;">' . $available . '</td>';
+                    $ticketTypesHtml .= '<td style="border:1px solid #ddd; padding:8px; text-align:right;">' . $sold . '</td>';
                     $ticketTypesHtml .= '</tr>';
                 }
             }
             $ticketTypesHtml .= '</tbody></table>';
+
             $variables['ticket_types_table'] = $ticketTypesHtml;
+            $variables['total_tickets_available'] = $totalAvailable;
+            $variables['total_tickets_sold'] = $totalSold;
+            $variables['total_sales_value'] = number_format($totalSalesValue, 2);
+            $variables['total_sales_currency'] = $currency;
         }
 
         // Order variables
@@ -259,6 +315,15 @@ class MarketplaceTaxTemplate extends Model
             $variables['customer_name'] = $order->customer_name ?? ($order->customer->full_name ?? '');
             $variables['customer_email'] = $order->customer_email ?? ($order->customer->email ?? '');
         }
+
+        // Date/Time variables (always available)
+        $now = now();
+        $variables['current_day'] = $now->format('d');
+        $variables['current_month'] = $now->format('m');
+        $variables['current_month_name'] = $now->translatedFormat('F');
+        $variables['current_year'] = $now->format('Y');
+        $variables['current_date'] = $now->format('d.m.Y');
+        $variables['current_datetime'] = $now->format('d.m.Y H:i');
 
         return $variables;
     }

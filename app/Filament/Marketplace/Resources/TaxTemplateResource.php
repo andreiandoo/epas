@@ -62,6 +62,12 @@ class TaxTemplateResource extends Resource
                             ->required()
                             ->default('invoice'),
 
+                        Forms\Components\Select::make('trigger')
+                            ->label('Build Template Trigger')
+                            ->options(MarketplaceTaxTemplate::TRIGGERS)
+                            ->placeholder('Select when to generate this template')
+                            ->helperText('When should this template be automatically generated?'),
+
                         Forms\Components\Textarea::make('description')
                             ->label('Description')
                             ->rows(2)
@@ -110,17 +116,42 @@ class TaxTemplateResource extends Resource
                     ->collapsible()
                     ->collapsed(),
 
-                Section::make('HTML Content')
+                Section::make('Page 1 - HTML Content')
                     ->icon('heroicon-o-code-bracket')
                     ->schema([
+                        Forms\Components\Select::make('page_orientation')
+                            ->label('Page 1 Orientation')
+                            ->options(MarketplaceTaxTemplate::ORIENTATIONS)
+                            ->default('portrait')
+                            ->required(),
+
                         Forms\Components\Textarea::make('html_content')
-                            ->label('HTML Template')
+                            ->label('Page 1 HTML Template')
                             ->required()
                             ->rows(20)
                             ->columnSpanFull()
                             ->helperText('Use the variables above in your HTML. Example: {{marketplace_legal_name}}')
                             ->extraAttributes(['class' => 'font-mono text-sm']),
                     ]),
+
+                Section::make('Page 2 - HTML Content (Optional)')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->description('Add a second page if your template needs multiple pages (e.g., one portrait, one landscape)')
+                    ->schema([
+                        Forms\Components\Select::make('page_2_orientation')
+                            ->label('Page 2 Orientation')
+                            ->options(MarketplaceTaxTemplate::ORIENTATIONS)
+                            ->placeholder('Select orientation for page 2'),
+
+                        Forms\Components\Textarea::make('html_content_page_2')
+                            ->label('Page 2 HTML Template')
+                            ->rows(20)
+                            ->columnSpanFull()
+                            ->helperText('Leave empty if you only need one page')
+                            ->extraAttributes(['class' => 'font-mono text-sm']),
+                    ])
+                    ->collapsible()
+                    ->collapsed(),
 
                 Section::make('Preview')
                     ->icon('heroicon-o-eye')
@@ -171,7 +202,11 @@ class TaxTemplateResource extends Resource
                                     'event_date' => date('d.m.Y H:i', strtotime('+30 days')),
                                     'venue_name' => 'Arena Exemplu',
                                     'venue_address' => 'Str. Arenei Nr. 1, București',
-                                    'ticket_types_table' => '<table style="width:100%; border-collapse: collapse;"><thead><tr><th style="border:1px solid #ddd; padding:8px; text-align:left;">Ticket Type</th><th style="border:1px solid #ddd; padding:8px; text-align:right;">Price</th><th style="border:1px solid #ddd; padding:8px; text-align:right;">Qty Sold</th></tr></thead><tbody><tr><td style="border:1px solid #ddd; padding:8px;">General Admission</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">150.00 RON</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">245</td></tr><tr><td style="border:1px solid #ddd; padding:8px;">VIP</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">350.00 RON</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">52</td></tr></tbody></table>',
+                                    'ticket_types_table' => '<table style="width:100%; border-collapse: collapse;"><thead><tr><th style="border:1px solid #ddd; padding:8px; text-align:left;">Ticket Type</th><th style="border:1px solid #ddd; padding:8px; text-align:right;">Price</th><th style="border:1px solid #ddd; padding:8px; text-align:right;">Available</th><th style="border:1px solid #ddd; padding:8px; text-align:right;">Sold</th></tr></thead><tbody><tr><td style="border:1px solid #ddd; padding:8px;">General Admission</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">150.00 RON</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">500</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">245</td></tr><tr><td style="border:1px solid #ddd; padding:8px;">VIP</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">350.00 RON</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">100</td><td style="border:1px solid #ddd; padding:8px; text-align:right;">52</td></tr></tbody></table>',
+                                    'total_tickets_available' => '600',
+                                    'total_tickets_sold' => '297',
+                                    'total_sales_value' => '54,950.00',
+                                    'total_sales_currency' => 'RON',
 
                                     'order_number' => 'ORD-2024-00123',
                                     'order_date' => date('d.m.Y H:i'),
@@ -179,6 +214,14 @@ class TaxTemplateResource extends Resource
                                     'order_currency' => 'RON',
                                     'customer_name' => 'Ion Popescu',
                                     'customer_email' => 'ion.popescu@example.com',
+
+                                    // Date/Time variables
+                                    'current_day' => date('d'),
+                                    'current_month' => date('m'),
+                                    'current_month_name' => date('F'),
+                                    'current_year' => date('Y'),
+                                    'current_date' => date('d.m.Y'),
+                                    'current_datetime' => date('d.m.Y H:i'),
                                 ];
 
                                 // Process template
@@ -224,10 +267,28 @@ class TaxTemplateResource extends Resource
                         default => 'gray',
                     }),
 
+                Tables\Columns\TextColumn::make('trigger')
+                    ->label('Trigger')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => $state ? (MarketplaceTaxTemplate::TRIGGERS[$state] ?? ucfirst($state)) : '-')
+                    ->color(fn (?string $state): string => match ($state) {
+                        'after_event_published' => 'info',
+                        'after_event_finished' => 'success',
+                        default => 'gray',
+                    })
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('page_orientation')
+                    ->label('Orientation')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => $state === 'landscape' ? 'Landscape' : 'Portrait')
+                    ->color(fn (?string $state): string => $state === 'landscape' ? 'warning' : 'info')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 Tables\Columns\TextColumn::make('description')
                     ->label('Description')
                     ->limit(50)
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\IconColumn::make('is_default')
                     ->label('Default')
