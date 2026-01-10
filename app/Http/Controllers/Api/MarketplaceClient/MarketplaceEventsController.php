@@ -29,7 +29,7 @@ class MarketplaceEventsController extends BaseController
                 'marketplaceOrganizer:id,name,slug,logo,verified_at,default_commission_mode,commission_rate',
                 'marketplaceEventCategory',
                 'venue:id,name,city,address',
-                'ticketTypes:id,event_id,price',
+                'ticketTypes:id,event_id,price_cents',
             ]);
 
         // Filter upcoming only by default
@@ -154,7 +154,7 @@ class MarketplaceEventsController extends BaseController
                 'marketplaceOrganizer:id,name,slug,logo,verified_at,default_commission_mode,commission_rate',
                 'venue:id,name,city',
                 'marketplaceEventCategory',
-                'ticketTypes:id,event_id,price',
+                'ticketTypes:id,event_id,price_cents',
             ])
             ->orderBy('event_date')
             ->orderBy('start_time')
@@ -541,11 +541,15 @@ class MarketplaceEventsController extends BaseController
         $commissionMode = $event->commission_mode ?? $organizer?->default_commission_mode ?? $client?->commission_mode ?? 'included';
         $commissionRate = (float) ($event->commission_rate ?? $organizer?->commission_rate ?? $client?->commission_rate ?? 5.0);
 
-        // Get minimum price from ticket types
+        // Get minimum price from ticket types (price stored in cents)
         $minPrice = null;
         if ($event->relationLoaded('ticketTypes') && $event->ticketTypes->isNotEmpty()) {
-            $minPrice = $event->ticketTypes->min('price');
-        } elseif ($event->min_price !== null) {
+            $minPriceCents = $event->ticketTypes->min('price_cents');
+            if ($minPriceCents !== null) {
+                $minPrice = $minPriceCents / 100;
+            }
+        }
+        if ($minPrice === null && $event->min_price !== null) {
             $minPrice = $event->min_price;
         }
 
