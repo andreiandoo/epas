@@ -45,7 +45,7 @@ class CustomerPointsResource extends Resource
         $marketplace = static::getMarketplaceClient();
         return parent::getEloquentQuery()
             ->where('marketplace_client_id', $marketplace?->id)
-            ->with(['customer']);
+            ->with(['marketplaceCustomer']);
     }
 
         public static function shouldRegisterNavigation(): bool
@@ -59,8 +59,8 @@ class CustomerPointsResource extends Resource
             ->schema([
                 SC\Section::make('Customer Information')
                     ->schema([
-                        Forms\Components\Select::make('customer_id')
-                            ->relationship('customer', 'email')
+                        Forms\Components\Select::make('marketplace_customer_id')
+                            ->relationship('marketplaceCustomer', 'email')
                             ->searchable()
                             ->preload()
                             ->required()
@@ -149,15 +149,15 @@ class CustomerPointsResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('customer.email')
+                Tables\Columns\TextColumn::make('marketplaceCustomer.email')
                     ->label('Customer')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('customer.first_name')
+                Tables\Columns\TextColumn::make('marketplaceCustomer.first_name')
                     ->label('Name')
-                    ->formatStateUsing(fn ($record) => trim(($record->customer->first_name ?? '') . ' ' . ($record->customer->last_name ?? '')) ?: '-')
-                    ->searchable(['customer.first_name', 'customer.last_name']),
+                    ->formatStateUsing(fn ($record) => trim(($record->marketplaceCustomer->first_name ?? '') . ' ' . ($record->marketplaceCustomer->last_name ?? '')) ?: '-')
+                    ->searchable(['marketplaceCustomer.first_name', 'marketplaceCustomer.last_name']),
 
                 Tables\Columns\TextColumn::make('current_balance')
                     ->label('Balance')

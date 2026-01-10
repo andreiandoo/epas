@@ -60,6 +60,11 @@ class CustomerPoints extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function marketplaceCustomer(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\MarketplaceCustomer::class);
+    }
+
     public function transactions(): HasMany
     {
         return $this->hasMany(PointsTransaction::class, 'customer_id', 'customer_id')
@@ -91,7 +96,7 @@ class CustomerPoints extends Model
     // ==========================================
 
     /**
-     * Get or create customer points record
+     * Get or create customer points record for tenant
      */
     public static function getOrCreate(int $tenantId, int $customerId): self
     {
@@ -99,6 +104,30 @@ class CustomerPoints extends Model
             [
                 'tenant_id' => $tenantId,
                 'customer_id' => $customerId,
+            ],
+            [
+                'total_earned' => 0,
+                'total_spent' => 0,
+                'total_expired' => 0,
+                'current_balance' => 0,
+                'pending_points' => 0,
+                'tier_points' => 0,
+                'referral_code' => self::generateReferralCode(),
+                'referral_count' => 0,
+                'referral_points_earned' => 0,
+            ]
+        );
+    }
+
+    /**
+     * Get or create customer points record for marketplace
+     */
+    public static function getOrCreateForMarketplace(int $marketplaceClientId, int $marketplaceCustomerId): self
+    {
+        return self::firstOrCreate(
+            [
+                'marketplace_client_id' => $marketplaceClientId,
+                'marketplace_customer_id' => $marketplaceCustomerId,
             ],
             [
                 'total_earned' => 0,
@@ -277,7 +306,9 @@ class CustomerPoints extends Model
     {
         $transaction = PointsTransaction::create([
             'tenant_id' => $this->tenant_id,
+            'marketplace_client_id' => $this->marketplace_client_id,
             'customer_id' => $this->customer_id,
+            'marketplace_customer_id' => $this->marketplace_customer_id,
             'type' => 'adjusted',
             'points' => $points,
             'balance_after' => $this->current_balance + $points,
