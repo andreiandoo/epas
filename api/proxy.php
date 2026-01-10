@@ -791,6 +791,13 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'customer.referrals.validate':
+        $method = 'GET';
+        $params = [];
+        if (isset($_GET['code'])) $params['code'] = $_GET['code'];
+        $endpoint = '/customer/referrals/validate' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
     // ==================== ORGANIZER AUTH ====================
 
     case 'organizer.register':
@@ -2863,6 +2870,23 @@ function getMockData($action, $params) {
                 'success' => true,
                 'message' => 'Rewards claimed successfully',
                 'data' => ['points_claimed' => 100, 'new_balance' => 1350]
+            ];
+
+        case 'customer.referrals.validate':
+            $code = $_GET['code'] ?? '';
+            if (empty($code)) {
+                return ['success' => false, 'message' => 'Cod de referral invalid'];
+            }
+            return [
+                'success' => true,
+                'data' => [
+                    'valid' => true,
+                    'code' => $code,
+                    'referrer_name' => 'Maria',
+                    'referred_reward' => 50,
+                    'reward_type' => 'points',
+                    'message' => 'Ai fost invitat de Maria! Inregistreaza-te si primesti 50 puncte bonus.',
+                ]
             ];
 
         // ==================== ORGANIZER AUTH (Demo Mode) ====================
