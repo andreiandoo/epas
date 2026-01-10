@@ -436,9 +436,21 @@ const AmbiletAPI = {
             return `slug=${encodeURIComponent(eventTrackingMatch[1])}`;
         }
 
+        // Venue favorite endpoints - extract slug before /toggle-favorite or /check-favorite
+        const venueFavoriteMatch = endpoint.match(/\/venues\/([a-z0-9-]+)\/(toggle-favorite|check-favorite)/i);
+        if (venueFavoriteMatch) {
+            return `slug=${encodeURIComponent(venueFavoriteMatch[1])}`;
+        }
+
         const venueMatch = endpoint.match(/\/venues\/([a-z0-9-]+)$/i);
         if (venueMatch) {
             return `slug=${encodeURIComponent(venueMatch[1])}`;
+        }
+
+        // Artist favorite endpoints - extract slug before /toggle-favorite or /check-favorite
+        const artistFavoriteMatch = endpoint.match(/\/artists\/([a-z0-9-]+)\/(toggle-favorite|check-favorite)/i);
+        if (artistFavoriteMatch) {
+            return `slug=${encodeURIComponent(artistFavoriteMatch[1])}`;
         }
 
         // Artist events endpoint - extract slug before /events
