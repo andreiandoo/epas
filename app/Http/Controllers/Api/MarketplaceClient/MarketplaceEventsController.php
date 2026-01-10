@@ -347,7 +347,6 @@ class MarketplaceEventsController extends BaseController
             ->pluck('event_count', 'marketplace_event_category_id');
 
         $categories = MarketplaceEventCategory::whereIn('id', $categoryIds->keys())
-            ->where('is_active', true)
             ->orderBy('sort_order')
             ->get()
             ->map(fn ($cat) => [
