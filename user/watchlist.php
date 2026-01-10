@@ -205,7 +205,7 @@ const WatchlistPage = {
         grid.innerHTML = this.events.map(event => {
             const isSoldOut = event.sold_out === true;
             const eventId = event.id || 0;
-            const eventUrl = '/eveniment/' + (event.slug || event.id);
+            const eventUrl = '/bilete/' + (event.slug || event.id);
             const hasPrice = event.price && event.price > 0;
             return '<div class="event-card bg-white rounded-xl lg:rounded-2xl border border-border overflow-hidden ' + (isSoldOut ? 'opacity-75' : '') + '">' +
                 '<a href="' + eventUrl + '" class="block relative">' +
@@ -259,19 +259,22 @@ const WatchlistPage = {
 
         grid.innerHTML = this.artists.map(artist => {
             const artistId = artist.id || 0;
-            return '<div class="p-5 text-center bg-white border event-card rounded-xl lg:rounded-2xl border-border">' +
-                '<div class="relative inline-block mb-4">' +
+            const artistUrl = '/artisti/' + (artist.slug || artist.id);
+            return '<div class="relative p-5 text-center bg-white border event-card rounded-xl lg:rounded-2xl border-border">' +
+                '<button onclick="event.stopPropagation(); WatchlistPage.removeFromWatchlist(\'artist\', ' + artistId + ')" class="absolute flex items-center justify-center w-8 h-8 bg-white border rounded-full shadow-lg heart-btn active top-3 right-3 border-border z-10">' +
+                    '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
+                '</button>' +
+                '<a href="' + artistUrl + '" class="block mb-4">' +
                     '<div class="w-24 h-24 mx-auto overflow-hidden rounded-full">' +
                         '<img src="' + (artist.image || '/assets/images/default-artist.jpg') + '" class="object-cover w-full h-full" alt="' + (artist.name || '') + '">' +
                     '</div>' +
-                    '<button onclick="WatchlistPage.removeFromWatchlist(\'artist\', ' + artistId + ')" class="absolute flex items-center justify-center w-8 h-8 bg-white border rounded-full shadow-lg heart-btn active -bottom-1 -right-1 border-border">' +
-                        '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
-                    '</button>' +
-                '</div>' +
-                '<h3 class="mb-1 font-bold text-secondary">' + (artist.name || '') + '</h3>' +
+                '</a>' +
+                '<a href="' + artistUrl + '">' +
+                    '<h3 class="mb-1 font-bold text-secondary hover:text-primary">' + (artist.name || '') + '</h3>' +
+                '</a>' +
                 '<p class="mb-3 text-sm text-muted">' + (artist.genre || '') + '</p>' +
                 '<div class="flex items-center justify-center gap-2 text-sm">' +
-                    '<span class="px-2 py-1 font-medium rounded-lg bg-success/10 text-success">' + (artist.events || 0) + ' eveniment' + ((artist.events || 0) > 1 ? 'e' : '') + '</span>' +
+                    '<a href="' + artistUrl + '" class="px-2 py-1 font-medium rounded-lg bg-success/10 text-success hover:bg-success/20">' + (artist.events || 0) + ' eveniment' + ((artist.events || 0) > 1 ? 'e' : '') + '</a>' +
                 '</div>' +
             '</div>';
         }).join('');
@@ -286,18 +289,19 @@ const WatchlistPage = {
 
         grid.innerHTML = this.venues.map(venue => {
             const venueId = venue.id || 0;
-            return '<div class="overflow-hidden bg-white border event-card rounded-xl lg:rounded-2xl border-border">' +
-                '<div class="relative h-32">' +
+            const venueUrl = '/locatii/' + (venue.slug || venue.id);
+            return '<div class="relative overflow-hidden bg-white border event-card rounded-xl lg:rounded-2xl border-border">' +
+                '<a href="' + venueUrl + '" class="block h-32">' +
                     '<img src="' + (venue.image || '/assets/images/default-venue.jpg') + '" class="object-cover w-full h-full" alt="' + (venue.name || '') + '">' +
-                    '<button onclick="WatchlistPage.removeFromWatchlist(\'venue\', ' + venueId + ')" class="absolute flex items-center justify-center w-8 h-8 rounded-full shadow-lg heart-btn active top-3 right-3 bg-white/90 backdrop-blur">' +
-                        '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
-                    '</button>' +
-                '</div>' +
-                '<div class="p-4">' +
-                    '<h3 class="mb-1 font-bold text-secondary">' + (venue.name || '') + '</h3>' +
+                '</a>' +
+                '<button onclick="event.stopPropagation(); WatchlistPage.removeFromWatchlist(\'venue\', ' + venueId + ')" class="absolute flex items-center justify-center w-8 h-8 rounded-full shadow-lg heart-btn active top-3 right-3 bg-white/90 backdrop-blur z-10">' +
+                    '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
+                '</button>' +
+                '<a href="' + venueUrl + '" class="block p-4">' +
+                    '<h3 class="mb-1 font-bold text-secondary hover:text-primary">' + (venue.name || '') + '</h3>' +
                     '<p class="mb-2 text-sm text-muted">' + (venue.city || '') + '</p>' +
                     '<span class="px-2 py-1 text-xs font-medium rounded-lg bg-primary/10 text-primary">' + (venue.events || 0) + ' evenimente</span>' +
-                '</div>' +
+                '</a>' +
             '</div>';
         }).join('');
     }

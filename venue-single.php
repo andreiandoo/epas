@@ -193,7 +193,7 @@ include __DIR__ . '/includes/header.php';
             </section>
 
             <!-- Gallery -->
-            <section class="mb-10">
+            <section id="gallerySection" class="mb-10">
                 <div class="flex items-center justify-between mb-5">
                     <h2 class="text-xl font-bold text-secondary flex items-center gap-2.5">
                         <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -260,7 +260,7 @@ include __DIR__ . '/includes/header.php';
             </div>
 
             <!-- Amenities -->
-            <div class="p-6 bg-white border rounded-2xl border-border">
+            <div id="amenitiesSection" class="p-6 bg-white border rounded-2xl border-border">
                 <h3 class="flex items-center gap-2 mb-5 text-base font-bold text-secondary">
                     <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polyline points="9 11 12 14 22 4"/>
