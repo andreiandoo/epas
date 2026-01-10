@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\MarketplaceCustomer;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class WatchlistController extends BaseController
@@ -293,7 +294,9 @@ class WatchlistController extends BaseController
      */
     protected function requireCustomer(Request $request): MarketplaceCustomer
     {
-        $customer = $request->user();
+        // Use Auth::guard('sanctum') to properly detect authenticated customers
+        // This works even when the route doesn't have auth:sanctum middleware
+        $customer = Auth::guard('sanctum')->user();
 
         if (!$customer instanceof MarketplaceCustomer) {
             abort(401, 'Unauthorized');

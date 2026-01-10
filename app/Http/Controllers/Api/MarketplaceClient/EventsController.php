@@ -695,77 +695,80 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
-        // Get session ID for anonymous users
-        // Use header, cookie, or generate based on IP+User-Agent
-        $sessionId = $request->header('X-Session-ID')
-            ?? $request->cookie('ambilet_session')
-            ?? md5($request->ip() . $request->userAgent());
-
-        // Check if already interested
-        $existingInterest = \DB::table('event_interests')
-            ->where('event_id', $event->id)
-            ->where('session_id', $sessionId)
-            ->first();
-
         // Check if user is authenticated (manually check sanctum guard since this route doesn't have auth:sanctum middleware)
         $customer = Auth::guard('sanctum')->user();
         $isAuthenticated = $customer instanceof MarketplaceCustomer;
 
-        if ($existingInterest) {
-            // Remove interest
-            DB::table('event_interests')
-                ->where('event_id', $event->id)
-                ->where('session_id', $sessionId)
-                ->delete();
-            $event->decrement('interested_count');
-            $isInterested = false;
+        $isInterested = false;
+        $inWatchlist = false;
 
-            // Also remove from watchlist if authenticated
-            if ($isAuthenticated) {
+        if ($isAuthenticated) {
+            // For authenticated users, toggle watchlist (this is what appears on /cont/favorite)
+            $existingWatchlist = DB::table('marketplace_customer_watchlist')
+                ->where('marketplace_customer_id', $customer->id)
+                ->where('event_id', $event->id)
+                ->first();
+
+            if ($existingWatchlist) {
+                // Remove from watchlist
                 DB::table('marketplace_customer_watchlist')
-                    ->where('marketplace_customer_id', $customer->id)
-                    ->where('event_id', $event->id)
+                    ->where('id', $existingWatchlist->id)
                     ->delete();
+                $event->decrement('interested_count');
+                $isInterested = false;
+                $inWatchlist = false;
+            } else {
+                // Add to watchlist
+                DB::table('marketplace_customer_watchlist')->insert([
+                    'marketplace_client_id' => $client->id,
+                    'marketplace_customer_id' => $customer->id,
+                    'event_id' => $event->id,
+                    'marketplace_event_id' => null,
+                    'notify_on_sale' => true,
+                    'notify_on_price_drop' => false,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                $event->increment('interested_count');
+                $isInterested = true;
+                $inWatchlist = true;
             }
         } else {
-            // Add interest
-            DB::table('event_interests')->insert([
-                'event_id' => $event->id,
-                'session_id' => $sessionId,
-                'ip_address' => $request->ip(),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-            $event->increment('interested_count');
-            $isInterested = true;
+            // For anonymous users, use session-based interest tracking
+            $sessionId = $request->header('X-Session-ID')
+                ?? $request->cookie('ambilet_session')
+                ?? md5($request->ip() . $request->userAgent());
 
-            // Also add to watchlist if authenticated
-            if ($isAuthenticated) {
-                // Check if not already in watchlist
-                $existingWatchlist = DB::table('marketplace_customer_watchlist')
-                    ->where('marketplace_customer_id', $customer->id)
-                    ->where('event_id', $event->id)
-                    ->exists();
+            $existingInterest = DB::table('event_interests')
+                ->where('event_id', $event->id)
+                ->where('session_id', $sessionId)
+                ->first();
 
-                if (!$existingWatchlist) {
-                    DB::table('marketplace_customer_watchlist')->insert([
-                        'marketplace_client_id' => $client->id,
-                        'marketplace_customer_id' => $customer->id,
-                        'event_id' => $event->id,
-                        'marketplace_event_id' => null, // Not from marketplace_events table
-                        'notify_on_sale' => true,
-                        'notify_on_price_drop' => false,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
+            if ($existingInterest) {
+                // Remove interest
+                DB::table('event_interests')
+                    ->where('id', $existingInterest->id)
+                    ->delete();
+                $event->decrement('interested_count');
+                $isInterested = false;
+            } else {
+                // Add interest
+                DB::table('event_interests')->insert([
+                    'event_id' => $event->id,
+                    'session_id' => $sessionId,
+                    'ip_address' => $request->ip(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                $event->increment('interested_count');
+                $isInterested = true;
             }
         }
 
         return $this->success([
             'is_interested' => $isInterested,
             'interested_count' => max(0, $event->refresh()->interested_count),
-            'in_watchlist' => $isAuthenticated && $isInterested,
+            'in_watchlist' => $inWatchlist,
         ]);
     }
 
@@ -785,19 +788,35 @@ class EventsController extends BaseController
             return $this->error('Event not found', 404);
         }
 
-        // Get session ID for anonymous users
-        // Use header, cookie, or generate based on IP+User-Agent
-        $sessionId = $request->header('X-Session-ID')
-            ?? $request->cookie('ambilet_session')
-            ?? md5($request->ip() . $request->userAgent());
+        // Check if user is authenticated (manually check sanctum guard)
+        $customer = Auth::guard('sanctum')->user();
+        $isAuthenticated = $customer instanceof MarketplaceCustomer;
 
-        $isInterested = \DB::table('event_interests')
-            ->where('event_id', $event->id)
-            ->where('session_id', $sessionId)
-            ->exists();
+        $isInterested = false;
+        $inWatchlist = false;
+
+        if ($isAuthenticated) {
+            // For authenticated users, check the watchlist (this is what appears on /cont/favorite)
+            $inWatchlist = DB::table('marketplace_customer_watchlist')
+                ->where('marketplace_customer_id', $customer->id)
+                ->where('event_id', $event->id)
+                ->exists();
+            $isInterested = $inWatchlist;
+        } else {
+            // For anonymous users, check session-based interest
+            $sessionId = $request->header('X-Session-ID')
+                ?? $request->cookie('ambilet_session')
+                ?? md5($request->ip() . $request->userAgent());
+
+            $isInterested = DB::table('event_interests')
+                ->where('event_id', $event->id)
+                ->where('session_id', $sessionId)
+                ->exists();
+        }
 
         return $this->success([
             'is_interested' => $isInterested,
+            'in_watchlist' => $inWatchlist,
             'interested_count' => $event->interested_count,
             'views_count' => $event->views_count,
         ]);
