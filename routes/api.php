@@ -1763,6 +1763,8 @@ Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'mar
     // Public referral tracking (no auth required)
     Route::post('/referrals/track-click', [CustomerReferralsController::class, 'trackClick'])
         ->name('api.marketplace-client.customer.referrals.track-click');
+    Route::get('/referrals/validate', [CustomerReferralsController::class, 'validateCode'])
+        ->name('api.marketplace-client.customer.referrals.validate');
 
     // Cart (public, session-based)
     Route::get('/cart', [App\Http\Controllers\Api\MarketplaceClient\Customer\CartController::class, 'index'])

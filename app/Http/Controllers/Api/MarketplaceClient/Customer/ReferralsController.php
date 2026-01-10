@@ -34,9 +34,11 @@ class ReferralsController extends BaseController
                 'code' => $code,
                 'is_active' => true,
                 'clicks' => 0,
-                'registrations' => 0,
+                'signups' => 0,
                 'conversions' => 0,
-                'total_earnings' => 0,
+                'total_value' => 0,
+                'points_earned' => 0,
+                'pending_points' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -62,33 +64,32 @@ class ReferralsController extends BaseController
                     'status' => $ref->status,
                     'registered_at' => $ref->registered_at,
                     'converted_at' => $ref->converted_at,
-                    'reward_amount' => $ref->reward_amount,
-                    'reward_type' => $ref->reward_type,
-                    'reward_claimed' => (bool) $ref->reward_claimed,
+                    'points_awarded' => $ref->points_awarded ?? 0,
+                    'order_value' => $ref->order_value,
                 ];
             });
 
-        // Calculate pending rewards
-        $pendingRewards = DB::table('marketplace_referrals')
+        // Calculate pending rewards (referrals that registered but haven't converted yet)
+        $pendingCount = DB::table('marketplace_referrals')
             ->where('referrer_id', $customer->id)
             ->where('marketplace_client_id', $client->id)
-            ->where('status', 'converted')
-            ->where('reward_claimed', false)
-            ->sum('reward_amount');
+            ->where('status', 'registered')
+            ->count();
 
         return $this->success([
             'code' => $referralCode->code,
             'link' => $referralLink,
             'stats' => [
-                'clicks' => $referralCode->clicks,
-                'registrations' => $referralCode->registrations,
-                'conversions' => $referralCode->conversions,
-                'conversion_rate' => $referralCode->registrations > 0
-                    ? round(($referralCode->conversions / $referralCode->registrations) * 100, 1)
+                'clicks' => $referralCode->clicks ?? 0,
+                'registrations' => $referralCode->signups ?? 0,
+                'conversions' => $referralCode->conversions ?? 0,
+                'conversion_rate' => ($referralCode->signups ?? 0) > 0
+                    ? round(($referralCode->conversions / $referralCode->signups) * 100, 1)
                     : 0,
-                'total_earnings' => (float) $referralCode->total_earnings,
-                'pending_rewards' => (float) $pendingRewards,
-                'currency' => 'RON',
+                'total_earnings' => (float) ($referralCode->points_earned ?? 0),
+                'pending_rewards' => (float) ($referralCode->pending_points ?? 0),
+                'pending_count' => $pendingCount,
+                'currency' => 'puncte',
             ],
             'rewards' => [
                 'referrer_reward' => $settings['referrer_reward'],
@@ -124,6 +125,50 @@ class ReferralsController extends BaseController
             'code' => $newCode,
             'link' => $referralLink,
         ], 'Referral code regenerated');
+    }
+
+    /**
+     * Validate a referral code and get info for notification (public, no auth)
+     */
+    public function validateCode(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        $validated = $request->validate([
+            'code' => 'required|string|max:20',
+        ]);
+
+        $referralCode = DB::table('marketplace_referral_codes')
+            ->where('code', $validated['code'])
+            ->where('marketplace_client_id', $client->id)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$referralCode) {
+            return $this->error('Cod de referral invalid', 404);
+        }
+
+        // Get referrer info
+        $referrer = DB::table('marketplace_customers')
+            ->where('id', $referralCode->marketplace_customer_id)
+            ->first();
+
+        // Get referral settings
+        $settings = $this->getReferralSettings($client->id);
+
+        // Increment clicks
+        DB::table('marketplace_referral_codes')
+            ->where('id', $referralCode->id)
+            ->increment('clicks');
+
+        return $this->success([
+            'valid' => true,
+            'code' => $referralCode->code,
+            'referrer_name' => $referrer ? ($referrer->first_name ?? 'Un prieten') : 'Un prieten',
+            'referred_reward' => $settings['referred_reward'],
+            'reward_type' => $settings['reward_type'],
+            'message' => 'Ai fost invitat de ' . ($referrer ? $referrer->first_name : 'un prieten') . '! Inregistreaza-te si primesti ' . $settings['referred_reward'] . ' puncte bonus.',
+        ]);
     }
 
     /**
@@ -170,7 +215,7 @@ class ReferralsController extends BaseController
                 'marketplace_customers.first_name',
                 'marketplace_customers.last_name',
                 'marketplace_referral_codes.conversions',
-                'marketplace_referral_codes.total_earnings',
+                'marketplace_referral_codes.points_earned',
             ])
             ->orderByDesc('marketplace_referral_codes.conversions')
             ->limit($limit)
@@ -182,7 +227,7 @@ class ReferralsController extends BaseController
                     'initials' => strtoupper($initials),
                     'name' => substr($item->first_name ?? '', 0, 1) . '***',
                     'conversions' => $item->conversions,
-                    'earnings' => (float) $item->total_earnings,
+                    'earnings' => (float) ($item->points_earned ?? 0),
                 ];
             });
 
@@ -192,83 +237,90 @@ class ReferralsController extends BaseController
     }
 
     /**
-     * Claim pending rewards
+     * Claim pending rewards (converted referrals that haven't been paid out yet)
      */
     public function claimRewards(Request $request): JsonResponse
     {
         $customer = $this->requireCustomer($request);
         $client = $this->requireClient($request);
 
-        // Get unclaimed rewards
+        // Get converted referrals that haven't had points awarded yet
         $pendingReferrals = DB::table('marketplace_referrals')
             ->where('referrer_id', $customer->id)
             ->where('marketplace_client_id', $client->id)
             ->where('status', 'converted')
-            ->where('reward_claimed', false)
+            ->whereNull('points_transaction_id')
             ->get();
 
         if ($pendingReferrals->isEmpty()) {
-            return $this->error('No pending rewards to claim', 400);
+            return $this->error('Nu ai recompense de revendicat', 400);
         }
 
-        $totalAmount = $pendingReferrals->sum('reward_amount');
-        $rewardType = $pendingReferrals->first()->reward_type;
+        $settings = $this->getReferralSettings($client->id);
+        $pointsPerReferral = $settings['referrer_reward'] ?? 50;
+        $totalPoints = $pendingReferrals->count() * $pointsPerReferral;
 
         DB::beginTransaction();
         try {
-            // Mark as claimed
+            // Get or create customer points
+            $customerPoints = DB::table('gamification_customer_points')
+                ->where('marketplace_customer_id', $customer->id)
+                ->where('marketplace_client_id', $client->id)
+                ->first();
+
+            $newBalance = ($customerPoints->current_balance ?? 0) + $totalPoints;
+
+            // Create points transaction
+            $transactionId = DB::table('gamification_points_transactions')->insertGetId([
+                'marketplace_client_id' => $client->id,
+                'marketplace_customer_id' => $customer->id,
+                'type' => 'earned',
+                'points' => $totalPoints,
+                'balance_after' => $newBalance,
+                'action_type' => 'referral_reward',
+                'description' => json_encode(['en' => 'Referral rewards claimed', 'ro' => 'Recompense referral revendicate']),
+                'created_at' => now(),
+            ]);
+
+            // Update customer points
+            if ($customerPoints) {
+                DB::table('gamification_customer_points')
+                    ->where('id', $customerPoints->id)
+                    ->update([
+                        'current_balance' => $newBalance,
+                        'total_earned' => ($customerPoints->total_earned ?? 0) + $totalPoints,
+                        'referral_points_earned' => ($customerPoints->referral_points_earned ?? 0) + $totalPoints,
+                        'updated_at' => now(),
+                    ]);
+            }
+
+            // Mark referrals as paid
             DB::table('marketplace_referrals')
                 ->whereIn('id', $pendingReferrals->pluck('id'))
                 ->update([
-                    'reward_claimed' => true,
-                    'reward_claimed_at' => now(),
+                    'points_awarded' => $pointsPerReferral,
+                    'points_transaction_id' => $transactionId,
                 ]);
 
-            // Add points or credit based on reward type
-            if ($rewardType === 'points') {
-                // Add points
-                $customerPoints = DB::table('gamification_customer_points')
-                    ->where('marketplace_customer_id', $customer->id)
-                    ->first();
-
-                if ($customerPoints) {
-                    DB::table('gamification_customer_points')
-                        ->where('id', $customerPoints->id)
-                        ->update([
-                            'balance' => $customerPoints->balance + $totalAmount,
-                            'lifetime_earned' => $customerPoints->lifetime_earned + $totalAmount,
-                            'updated_at' => now(),
-                        ]);
-                }
-
-                // Create points transaction
-                DB::table('gamification_points_transactions')->insert([
-                    'marketplace_client_id' => $client->id,
-                    'marketplace_customer_id' => $customer->id,
-                    'type' => 'earned',
-                    'points' => $totalAmount,
-                    'balance_after' => ($customerPoints->balance ?? 0) + $totalAmount,
-                    'action_type' => 'referral_reward',
-                    'description' => 'Referral rewards claimed',
-                    'created_at' => now(),
+            // Update referral code stats
+            DB::table('marketplace_referral_codes')
+                ->where('marketplace_customer_id', $customer->id)
+                ->where('marketplace_client_id', $client->id)
+                ->update([
+                    'points_earned' => DB::raw('points_earned + ' . $totalPoints),
+                    'pending_points' => DB::raw('GREATEST(0, pending_points - ' . $totalPoints . ')'),
                 ]);
-            } else {
-                // Add credit
-                DB::table('marketplace_customers')
-                    ->where('id', $customer->id)
-                    ->increment('credit_balance', $totalAmount);
-            }
 
             DB::commit();
 
             return $this->success([
-                'claimed_amount' => (float) $totalAmount,
-                'reward_type' => $rewardType,
+                'claimed_amount' => $totalPoints,
+                'reward_type' => 'points',
                 'referrals_count' => $pendingReferrals->count(),
-            ], 'Rewards claimed successfully');
+            ], 'Recompensele au fost revendicate cu succes!');
         } catch (\Exception $e) {
             DB::rollBack();
-            return $this->error('Failed to claim rewards', 500);
+            return $this->error('Eroare la revendicarea recompenselor: ' . $e->getMessage(), 500);
         }
     }
 

@@ -11,7 +11,9 @@ const AmbiletAuth = {
         ORGANIZER_TOKEN: 'ambilet_organizer_token',
         ORGANIZER_DATA: 'ambilet_organizer_data',
         USER_TYPE: 'ambilet_user_type',
-        REDIRECT_AFTER_LOGIN: 'ambilet_redirect_after_login'
+        REDIRECT_AFTER_LOGIN: 'ambilet_redirect_after_login',
+        REFERRAL_CODE: 'ambilet_referral_code',
+        REFERRAL_INFO: 'ambilet_referral_info'
     },
 
     /**
@@ -78,6 +80,12 @@ const AmbiletAuth = {
      */
     async registerCustomer(data) {
         try {
+            // Include referral code if present
+            const referralCode = this.getReferralCode();
+            if (referralCode && !data.referral_code) {
+                data.referral_code = referralCode;
+            }
+
             const response = await AmbiletAPI.customer.register(data);
 
             if (response.success) {
@@ -85,7 +93,25 @@ const AmbiletAuth = {
                 if (response.data.token) {
                     this.setCustomerSession(response.data.token, response.data.customer);
                 }
-                return { success: true, customer: response.data.customer, requiresVerification: !response.data.token };
+
+                // Clear stored referral code after successful registration
+                this.clearReferralCode();
+
+                // Show referral message if user was referred
+                if (response.data.referral && response.data.referral.message) {
+                    setTimeout(() => {
+                        if (typeof AmbiletNotifications !== 'undefined') {
+                            AmbiletNotifications.success(response.data.referral.message, 6000);
+                        }
+                    }, 500);
+                }
+
+                return {
+                    success: true,
+                    customer: response.data.customer,
+                    requiresVerification: !response.data.token,
+                    referral: response.data.referral
+                };
             }
 
             return { success: false, message: response.message || 'Registration failed' };
@@ -405,6 +431,123 @@ const AmbiletAuth = {
         return null;
     },
 
+    // ==================== REFERRAL HANDLING ====================
+
+    /**
+     * Get stored referral code
+     */
+    getReferralCode() {
+        return localStorage.getItem(this.KEYS.REFERRAL_CODE);
+    },
+
+    /**
+     * Store referral code
+     */
+    setReferralCode(code) {
+        localStorage.setItem(this.KEYS.REFERRAL_CODE, code);
+    },
+
+    /**
+     * Get stored referral info
+     */
+    getReferralInfo() {
+        const info = localStorage.getItem(this.KEYS.REFERRAL_INFO);
+        return info ? JSON.parse(info) : null;
+    },
+
+    /**
+     * Store referral info
+     */
+    setReferralInfo(info) {
+        localStorage.setItem(this.KEYS.REFERRAL_INFO, JSON.stringify(info));
+    },
+
+    /**
+     * Clear referral data
+     */
+    clearReferralCode() {
+        localStorage.removeItem(this.KEYS.REFERRAL_CODE);
+        localStorage.removeItem(this.KEYS.REFERRAL_INFO);
+    },
+
+    /**
+     * Check for referral code in URL and validate it
+     */
+    async checkReferralCode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const refCode = urlParams.get('ref');
+
+        if (!refCode) return;
+
+        // Don't process if user is already logged in
+        if (this.isLoggedIn()) return;
+
+        // Don't process if we already have this code stored
+        const storedCode = this.getReferralCode();
+        if (storedCode === refCode) {
+            // Show stored notification if available
+            this.showReferralBanner();
+            return;
+        }
+
+        try {
+            const response = await AmbiletAPI.customer.validateReferralCode(refCode);
+            if (response.success && response.data.valid) {
+                // Store the code and info
+                this.setReferralCode(refCode);
+                this.setReferralInfo(response.data);
+
+                // Show notification banner
+                this.showReferralBanner(response.data);
+
+                // Clean URL without page reload
+                const url = new URL(window.location);
+                url.searchParams.delete('ref');
+                window.history.replaceState({}, '', url);
+            }
+        } catch (error) {
+            console.error('Error validating referral code:', error);
+        }
+    },
+
+    /**
+     * Show referral notification banner
+     */
+    showReferralBanner(info = null) {
+        const referralInfo = info || this.getReferralInfo();
+        if (!referralInfo) return;
+
+        // Don't show if already logged in
+        if (this.isLoggedIn()) return;
+
+        // Create banner if it doesn't exist
+        let banner = document.getElementById('referral-banner');
+        if (banner) return; // Already showing
+
+        banner = document.createElement('div');
+        banner.id = 'referral-banner';
+        banner.className = 'fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-4 text-center shadow-lg';
+        banner.innerHTML = `
+            <div class="container mx-auto flex items-center justify-center gap-3 flex-wrap">
+                <span class="text-lg">🎉</span>
+                <span class="font-medium">${referralInfo.message || ('Ai fost invitat! Primesti ' + referralInfo.referred_reward + ' puncte bonus la inregistrare.')}</span>
+                <a href="/register" class="bg-white text-purple-600 px-4 py-1 rounded-full font-semibold hover:bg-gray-100 transition-colors text-sm">
+                    Inregistreaza-te acum
+                </a>
+                <button onclick="this.closest('#referral-banner').remove()" class="ml-2 text-white/80 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        `;
+
+        // Add some top padding to body to account for fixed banner
+        document.body.style.paddingTop = '56px';
+
+        document.body.insertBefore(banner, document.body.firstChild);
+    },
+
     /**
      * Initialize auth state (call on page load)
      */
@@ -413,6 +556,14 @@ const AmbiletAuth = {
         if (this.isLoggedIn()) {
             // Optionally verify token validity
             // this.refreshCurrentUser().catch(() => {});
+        } else {
+            // Check for referral code in URL
+            this.checkReferralCode();
+
+            // Show existing referral banner if code is stored
+            if (this.getReferralCode()) {
+                this.showReferralBanner();
+            }
         }
 
         // Dispatch initial state

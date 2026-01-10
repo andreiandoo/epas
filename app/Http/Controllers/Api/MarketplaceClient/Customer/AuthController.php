@@ -30,6 +30,7 @@ class AuthController extends BaseController
             'last_name' => 'required|string|max:100',
             'phone' => 'nullable|string|max:50',
             'accepts_marketing' => 'boolean',
+            'referral_code' => 'nullable|string|max:20',
         ]);
 
         // Check if email already exists for this marketplace
@@ -72,6 +73,12 @@ class AuthController extends BaseController
             'status' => 'active',
         ]);
 
+        // Track referral if code provided
+        $referralInfo = null;
+        if (!empty($validated['referral_code'])) {
+            $referralInfo = $this->trackReferralRegistration($client->id, $customer->id, $validated['referral_code']);
+        }
+
         // Send verification email
         $verificationToken = $customer->generateEmailVerificationToken();
         $customer->notify(new MarketplaceEmailVerificationNotification(
@@ -82,11 +89,90 @@ class AuthController extends BaseController
 
         $token = $customer->createToken('customer-api')->plainTextToken;
 
-        return $this->success([
+        $response = [
             'customer' => $this->formatCustomer($customer),
             'token' => $token,
             'requires_verification' => true,
-        ], 'Registration successful. Please verify your email.', 201);
+        ];
+
+        // Add referral info if registered through referral
+        if ($referralInfo) {
+            $response['referral'] = $referralInfo;
+        }
+
+        return $this->success($response, 'Registration successful. Please verify your email.', 201);
+    }
+
+    /**
+     * Track referral registration
+     */
+    protected function trackReferralRegistration(int $clientId, int $customerId, string $code): ?array
+    {
+        // Find the referral code
+        $referralCode = DB::table('marketplace_referral_codes')
+            ->where('marketplace_client_id', $clientId)
+            ->where('code', $code)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$referralCode) {
+            return null;
+        }
+
+        // Don't allow self-referral
+        if ($referralCode->marketplace_customer_id === $customerId) {
+            return null;
+        }
+
+        // Check if this customer was already referred
+        $existingReferral = DB::table('marketplace_referrals')
+            ->where('marketplace_client_id', $clientId)
+            ->where('referred_id', $customerId)
+            ->first();
+
+        if ($existingReferral) {
+            return null;
+        }
+
+        // Create referral record
+        DB::table('marketplace_referrals')->insert([
+            'marketplace_client_id' => $clientId,
+            'referral_code_id' => $referralCode->id,
+            'referrer_id' => $referralCode->marketplace_customer_id,
+            'referred_id' => $customerId,
+            'status' => 'registered',
+            'registered_at' => now(),
+            'expires_at' => now()->addDays(30), // 30 days to convert
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Update referral code stats
+        DB::table('marketplace_referral_codes')
+            ->where('id', $referralCode->id)
+            ->increment('signups');
+
+        // Get referrer info for notification
+        $referrer = DB::table('marketplace_customers')
+            ->where('id', $referralCode->marketplace_customer_id)
+            ->first();
+
+        // Get referral settings
+        $settings = DB::table('marketplace_client_settings')
+            ->where('marketplace_client_id', $clientId)
+            ->where('key', 'referral_program')
+            ->first();
+
+        $referralSettings = $settings && $settings->value
+            ? json_decode($settings->value, true)
+            : ['referrer_reward' => 50, 'referred_reward' => 25, 'reward_type' => 'points'];
+
+        return [
+            'referrer_name' => $referrer ? ($referrer->first_name ?? 'Un prieten') : 'Un prieten',
+            'referred_reward' => $referralSettings['referred_reward'],
+            'reward_type' => $referralSettings['reward_type'],
+            'message' => 'Ai fost invitat de ' . ($referrer ? $referrer->first_name : 'un prieten') . '! Vei primi ' . $referralSettings['referred_reward'] . ' puncte dupa prima comanda.',
+        ];
     }
 
     /**

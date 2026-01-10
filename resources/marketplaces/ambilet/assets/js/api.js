@@ -1151,6 +1151,13 @@ const AmbiletAPI = {
         },
 
         /**
+         * Validate a referral code (public, no auth required)
+         */
+        async validateReferralCode(code) {
+            return AmbiletAPI.get('/customer/referrals/validate', { code });
+        },
+
+        /**
          * Get cart
          */
         async getCart() {
