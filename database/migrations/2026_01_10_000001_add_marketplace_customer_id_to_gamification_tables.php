@@ -7,11 +7,41 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Add marketplace_customer_id to gamification tables to support marketplace customers
-     * (separate from regular tenant customers)
+     * Add marketplace_client_id and marketplace_customer_id to gamification tables
+     * to support marketplace customers (separate from regular tenant customers)
      */
     public function up(): void
     {
+        // =============================================
+        // STEP 1: Add marketplace_client_id to tables that don't have it
+        // =============================================
+
+        // Customer Points - add marketplace_client_id first
+        if (Schema::hasTable('customer_points') && !Schema::hasColumn('customer_points', 'marketplace_client_id')) {
+            Schema::table('customer_points', function (Blueprint $table) {
+                $table->foreignId('marketplace_client_id')
+                    ->nullable()
+                    ->after('tenant_id')
+                    ->constrained('marketplace_clients')
+                    ->cascadeOnDelete();
+            });
+        }
+
+        // Points Transactions - add marketplace_client_id first
+        if (Schema::hasTable('points_transactions') && !Schema::hasColumn('points_transactions', 'marketplace_client_id')) {
+            Schema::table('points_transactions', function (Blueprint $table) {
+                $table->foreignId('marketplace_client_id')
+                    ->nullable()
+                    ->after('tenant_id')
+                    ->constrained('marketplace_clients')
+                    ->cascadeOnDelete();
+            });
+        }
+
+        // =============================================
+        // STEP 2: Add marketplace_customer_id to all gamification tables
+        // =============================================
+
         // Customer Points
         if (Schema::hasTable('customer_points') && !Schema::hasColumn('customer_points', 'marketplace_customer_id')) {
             Schema::table('customer_points', function (Blueprint $table) {
@@ -93,7 +123,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        $tables = [
+        // Drop marketplace_customer_id from all tables
+        $tablesWithCustomerId = [
             'customer_points' => 'cp_mp_client_cust_idx',
             'points_transactions' => 'pt_mp_client_cust_created_idx',
             'customer_experience' => 'ce_mp_client_cust_unique',
@@ -102,12 +133,24 @@ return new class extends Migration
             'reward_redemptions' => 'rr_mp_client_cust_idx',
         ];
 
-        foreach ($tables as $tableName => $indexName) {
+        foreach ($tablesWithCustomerId as $tableName => $indexName) {
             if (Schema::hasTable($tableName) && Schema::hasColumn($tableName, 'marketplace_customer_id')) {
                 Schema::table($tableName, function (Blueprint $table) use ($indexName) {
                     $table->dropIndex($indexName);
                     $table->dropForeign(['marketplace_customer_id']);
                     $table->dropColumn('marketplace_customer_id');
+                });
+            }
+        }
+
+        // Drop marketplace_client_id from tables that didn't have it originally
+        $tablesWithClientId = ['customer_points', 'points_transactions'];
+
+        foreach ($tablesWithClientId as $tableName) {
+            if (Schema::hasTable($tableName) && Schema::hasColumn($tableName, 'marketplace_client_id')) {
+                Schema::table($tableName, function (Blueprint $table) {
+                    $table->dropForeign(['marketplace_client_id']);
+                    $table->dropColumn('marketplace_client_id');
                 });
             }
         }
