@@ -215,7 +215,12 @@ class FavoritesController extends BaseController
             ->get();
 
         $artistIds = $favorites->pluck('favoriteable_id');
-        $artists = Artist::whereIn('id', $artistIds)->get()->keyBy('id');
+        $artists = Artist::whereIn('id', $artistIds)
+            ->withCount(['events' => function ($query) {
+                $query->where('start_date', '>=', now());
+            }])
+            ->get()
+            ->keyBy('id');
 
         $formattedArtists = $favorites->map(function ($fav) use ($artists) {
             $artist = $artists->get($fav->favoriteable_id);
@@ -228,6 +233,7 @@ class FavoritesController extends BaseController
                 'slug' => $artist->slug,
                 'image' => $artist->main_image_full_url ?? $artist->image_url,
                 'genre' => $artist->genres->first()?->name ?? null,
+                'events' => $artist->events_count ?? 0,
                 'added_at' => $fav->created_at,
             ];
         })->filter()->values();
@@ -255,19 +261,36 @@ class FavoritesController extends BaseController
             ->get();
 
         $venueIds = $favorites->pluck('favoriteable_id');
-        $venues = Venue::whereIn('id', $venueIds)->get()->keyBy('id');
+        $venues = Venue::whereIn('id', $venueIds)
+            ->withCount(['events' => function ($query) {
+                $query->where('start_date', '>=', now());
+            }])
+            ->get()
+            ->keyBy('id');
 
         $formattedVenues = $favorites->map(function ($fav) use ($venues) {
             $venue = $venues->get($fav->favoriteable_id);
             if (!$venue) {
                 return null;
             }
+
+            // Handle image URL - check if already full URL or needs storage prefix
+            $imageUrl = null;
+            if ($venue->image_url) {
+                if (str_starts_with($venue->image_url, 'http://') || str_starts_with($venue->image_url, 'https://')) {
+                    $imageUrl = $venue->image_url;
+                } else {
+                    $imageUrl = url('storage/' . ltrim($venue->image_url, '/'));
+                }
+            }
+
             return [
                 'id' => $venue->id,
                 'name' => $venue->name,
                 'slug' => $venue->slug,
-                'image' => $venue->image_url ? url('storage/' . $venue->image_url) : null,
+                'image' => $imageUrl,
                 'city' => $venue->city,
+                'events' => $venue->events_count ?? 0,
                 'added_at' => $fav->created_at,
             ];
         })->filter()->values();

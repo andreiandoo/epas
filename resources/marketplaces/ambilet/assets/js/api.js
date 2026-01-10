@@ -333,14 +333,26 @@ const AmbiletAPI = {
         if (endpoint.includes('/marketplace-events/cities')) return 'cities';
         if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+$/i)) return 'event';
         if (endpoint.includes('/marketplace-events')) return 'events';
+
+        // Venues endpoints - specific patterns first, then fallback
+        if (endpoint.includes('/venues/featured')) return 'venues.featured';
+        if (endpoint.match(/\/venues\/[a-z0-9-]+\/toggle-favorite$/i)) return 'venue.toggle-favorite';
+        if (endpoint.match(/\/venues\/[a-z0-9-]+\/check-favorite$/i)) return 'venue.check-favorite';
         if (endpoint.match(/\/venues\/[a-z0-9-]+$/i)) return 'venue';
         if (endpoint.includes('/venues')) return 'venues';
 
-        // Artists endpoints
+        // Customer favorites endpoints (must be before artists/venues)
+        if (endpoint === '/customer/favorites/artists') return 'customer.favorites.artists';
+        if (endpoint === '/customer/favorites/venues') return 'customer.favorites.venues';
+        if (endpoint === '/customer/favorites/summary') return 'customer.favorites.summary';
+
+        // Artists endpoints - specific patterns first, then fallback
         if (endpoint.includes('/artists/featured')) return 'artists.featured';
         if (endpoint.includes('/artists/trending')) return 'artists.trending';
         if (endpoint.includes('/artists/genre-counts')) return 'artists.genre-counts';
         if (endpoint.includes('/artists/alphabet')) return 'artists.alphabet';
+        if (endpoint.match(/\/artists\/[a-z0-9-]+\/toggle-favorite$/i)) return 'artist.toggle-favorite';
+        if (endpoint.match(/\/artists\/[a-z0-9-]+\/check-favorite$/i)) return 'artist.check-favorite';
         if (endpoint.match(/\/artists\/[a-z0-9-]+\/events/i)) return 'artist.events';
         if (endpoint.match(/\/artists\/[a-z0-9-]+$/i)) return 'artist';
         if (endpoint.includes('/artists')) return 'artists';
@@ -865,10 +877,22 @@ const AmbiletAPI = {
         },
 
         /**
-         * Remove from watchlist
+         * Remove from watchlist/favorites
+         * @param {string} type - 'event', 'artist', or 'venue'
+         * @param {number} id - The item ID
          */
-        async removeFromWatchlist(watchlistId) {
-            return AmbiletAPI.delete(`/customer/watchlist/${watchlistId}`);
+        async removeFromWatchlist(type, id) {
+            if (type === 'event') {
+                // Remove event from watchlist
+                return AmbiletAPI.delete(`/customer/watchlist/${id}`);
+            } else if (type === 'artist') {
+                // Toggle artist favorite off
+                return AmbiletAPI.post(`/artists/${id}/toggle-favorite`);
+            } else if (type === 'venue') {
+                // Toggle venue favorite off
+                return AmbiletAPI.post(`/venues/${id}/toggle-favorite`);
+            }
+            return { success: false, message: 'Unknown type' };
         },
 
         /**

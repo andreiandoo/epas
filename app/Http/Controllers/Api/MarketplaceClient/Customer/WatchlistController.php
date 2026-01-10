@@ -70,6 +70,9 @@ class WatchlistController extends BaseController
             }
 
             // Handle date parsing based on event source
+            $category = null;
+            $genre = null;
+
             if ($eventSource === 'events') {
                 // Main events table uses event_date + start_time
                 $eventDate = $event->event_date ?? null;
@@ -88,14 +91,46 @@ class WatchlistController extends BaseController
                         $venueCity = $venue->city;
                     }
                 }
-                $image = $event->poster_url ?? $event->hero_image_url ?? null;
+
+                // Get category/genre from event_type
+                if ($event->event_type_id) {
+                    $eventType = DB::table('event_types')->where('id', $event->event_type_id)->first(['name']);
+                    if ($eventType) {
+                        $categoryData = is_string($eventType->name) ? json_decode($eventType->name, true) : $eventType->name;
+                        $category = is_array($categoryData) ? ($categoryData['ro'] ?? $categoryData['en'] ?? reset($categoryData)) : $eventType->name;
+                    }
+                }
+
+                // Get genre from event_genres pivot
+                $eventGenre = DB::table('event_genre')
+                    ->join('genres', 'genres.id', '=', 'event_genre.genre_id')
+                    ->where('event_genre.event_id', $event->id)
+                    ->first(['genres.name']);
+                if ($eventGenre) {
+                    $genreData = is_string($eventGenre->name) ? json_decode($eventGenre->name, true) : $eventGenre->name;
+                    $genre = is_array($genreData) ? ($genreData['ro'] ?? $genreData['en'] ?? reset($genreData)) : $eventGenre->name;
+                }
+
+                $imagePath = $event->poster_url ?? $event->hero_image_url ?? null;
             } else {
                 // Marketplace events table uses starts_at
                 $startsAt = \Carbon\Carbon::parse($event->starts_at ?? now());
                 $eventName = $event->name;
                 $venueName = $event->venue_name ?? null;
                 $venueCity = $event->venue_city ?? null;
-                $image = $event->image ?? null;
+                $imagePath = $event->image ?? null;
+                $category = $event->category ?? null;
+                $genre = $event->genre ?? null;
+            }
+
+            // Format image URL properly
+            $image = null;
+            if ($imagePath) {
+                if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
+                    $image = $imagePath;
+                } else {
+                    $image = url('storage/' . ltrim($imagePath, '/'));
+                }
             }
 
             $isUpcoming = $startsAt >= now();
@@ -116,6 +151,8 @@ class WatchlistController extends BaseController
                     'venue' => $venueName,
                     'city' => $venueCity,
                     'image' => $image,
+                    'category' => $category,
+                    'genre' => $genre,
                     'min_price' => $event->min_price ?? null,
                     'currency' => $event->currency ?? 'RON',
                     'is_upcoming' => $isUpcoming,
