@@ -348,7 +348,7 @@ function fetchFeaturedCitiesFromAPI(): array {
         $cities[] = [
             'name' => $city['name'],
             'slug' => $city['slug'],
-            'image' => $city['image'] ?? '/assets/images/default_city.png',
+            'image' => $city['image'] ?? '/assets/images/default-city.png',
             'count' => $city['events_count'] ?? 0,
             'featured' => $index === 0 // First city is featured (larger card)
         ];

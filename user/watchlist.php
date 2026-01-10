@@ -211,7 +211,7 @@ const WatchlistPage = {
             const hasPrice = event.price && event.price > 0;
             return '<div class="event-card bg-white rounded-xl lg:rounded-2xl border border-border overflow-hidden ' + (isSoldOut ? 'opacity-75' : '') + '">' +
                 '<a href="' + eventUrl + '" class="block relative">' +
-                    '<img src="' + (event.image || '/assets/images/default-event.jpg') + '" class="w-full h-40 object-cover ' + (isSoldOut ? 'grayscale' : '') + '" alt="' + (event.title || '') + '">' +
+                    '<img src="' + (event.image || '/assets/images/default-event.png') + '" class="w-full h-40 object-cover ' + (isSoldOut ? 'grayscale' : '') + '" alt="' + (event.title || '') + '">' +
                     (isSoldOut ?
                         '<div class="absolute inset-0 flex items-center justify-center bg-black/50">' +
                             '<span class="px-4 py-2 text-sm font-bold text-white rounded-lg bg-error">SOLD OUT</span>' +
@@ -268,7 +268,7 @@ const WatchlistPage = {
                 '</button>' +
                 '<a href="' + artistUrl + '" class="block mb-4">' +
                     '<div class="w-24 h-24 mx-auto overflow-hidden rounded-full">' +
-                        '<img src="' + (artist.image || '/assets/images/default-artist.jpg') + '" class="object-cover w-full h-full" alt="' + (artist.name || '') + '">' +
+                        '<img src="' + (artist.image || '/assets/images/default-artist.png') + '" class="object-cover w-full h-full" alt="' + (artist.name || '') + '">' +
                     '</div>' +
                 '</a>' +
                 '<a href="' + artistUrl + '">' +
@@ -294,7 +294,7 @@ const WatchlistPage = {
             const venueUrl = '/locatie/' + (venue.slug || venue.id);
             return '<div class="relative overflow-hidden bg-white border event-card rounded-xl lg:rounded-2xl border-border">' +
                 '<a href="' + venueUrl + '" class="block h-32">' +
-                    '<img src="' + (venue.image || '/assets/images/default-venue.jpg') + '" class="object-cover w-full h-full" alt="' + (venue.name || '') + '">' +
+                    '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" class="object-cover w-full h-full" alt="' + (venue.name || '') + '">' +
                 '</a>' +
                 '<button onclick="event.stopPropagation(); WatchlistPage.removeFromWatchlist(\'venue\', ' + venueId + ')" class="absolute flex items-center justify-center w-8 h-8 rounded-full shadow-lg heart-btn active top-3 right-3 bg-white/90 backdrop-blur z-10">' +
                     '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
