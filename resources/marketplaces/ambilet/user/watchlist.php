@@ -101,14 +101,31 @@ const WatchlistPage = {
 
     async loadWatchlist() {
         try {
-            const response = await AmbiletAPI.customer.getWatchlist();
-            if (response.success && response.data) {
-                this.events = response.data.events || [];
-                this.artists = response.data.artists || [];
-                this.venues = response.data.venues || [];
-            } else {
-                this.loadDemoData();
+            // Load events from watchlist API
+            const eventsResponse = await AmbiletAPI.customer.getWatchlist();
+            console.log('[WatchlistPage] Events response:', eventsResponse);
+            if (eventsResponse.success && eventsResponse.data) {
+                // API returns array directly in data, not data.events
+                this.events = Array.isArray(eventsResponse.data) ? eventsResponse.data : [];
+                // Transform event data to expected format
+                this.events = this.events.map(item => ({
+                    id: item.event?.id || item.id,
+                    title: item.event?.name || item.title || 'Eveniment',
+                    slug: item.event?.slug || item.slug,
+                    image: item.event?.image || item.image,
+                    date: item.event?.date_formatted || item.date,
+                    venue: item.event?.venue || item.venue,
+                    city: item.event?.city || item.city,
+                    category: item.event?.category || item.category,
+                    genre: item.event?.genre || item.genre,
+                    price: item.event?.min_price || item.price,
+                    sold_out: item.event?.is_sold_out || item.sold_out
+                }));
             }
+
+            // TODO: Load artists and venues from favorites API when implemented
+            this.artists = [];
+            this.venues = [];
         } catch (error) {
             console.log('Watchlist API error:', error);
             this.loadDemoData();
@@ -130,7 +147,7 @@ const WatchlistPage = {
         document.getElementById('events-count').textContent = this.events.length;
         document.getElementById('artists-count').textContent = this.artists.length;
         document.getElementById('venues-count').textContent = this.venues.length;
-        document.getElementById('notification-count').textContent = this.events.length + 2;
+        document.getElementById('notification-count').textContent = this.events.length;
 
         // Render all sections
         this.renderEvents();
