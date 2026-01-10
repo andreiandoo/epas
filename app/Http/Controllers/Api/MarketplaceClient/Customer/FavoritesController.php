@@ -210,15 +210,22 @@ class FavoritesController extends BaseController
 
         $favorites = DB::table('marketplace_customer_favorites')
             ->where('marketplace_customer_id', $customer->id)
+            ->where('marketplace_client_id', $client->id)
             ->where('favoriteable_type', 'artist')
             ->orderByDesc('created_at')
             ->get();
 
         $artistIds = $favorites->pluck('favoriteable_id');
+
+        // If no favorites, return empty array
+        if ($artistIds->isEmpty()) {
+            return $this->success([]);
+        }
+
         $artists = Artist::whereIn('id', $artistIds)
             ->with('artistGenres')
             ->withCount(['events' => function ($query) {
-                $query->where('event_date', '>=', now());
+                $query->where('event_date', '>=', now()->toDateString());
             }])
             ->get()
             ->keyBy('id');
@@ -264,14 +271,21 @@ class FavoritesController extends BaseController
 
         $favorites = DB::table('marketplace_customer_favorites')
             ->where('marketplace_customer_id', $customer->id)
+            ->where('marketplace_client_id', $client->id)
             ->where('favoriteable_type', 'venue')
             ->orderByDesc('created_at')
             ->get();
 
         $venueIds = $favorites->pluck('favoriteable_id');
+
+        // If no favorites, return empty array
+        if ($venueIds->isEmpty()) {
+            return $this->success([]);
+        }
+
         $venues = Venue::whereIn('id', $venueIds)
             ->withCount(['events' => function ($query) {
-                $query->where('event_date', '>=', now());
+                $query->where('event_date', '>=', now()->toDateString());
             }])
             ->get()
             ->keyBy('id');
@@ -321,16 +335,19 @@ class FavoritesController extends BaseController
 
         $artistsCount = DB::table('marketplace_customer_favorites')
             ->where('marketplace_customer_id', $customer->id)
+            ->where('marketplace_client_id', $client->id)
             ->where('favoriteable_type', 'artist')
             ->count();
 
         $venuesCount = DB::table('marketplace_customer_favorites')
             ->where('marketplace_customer_id', $customer->id)
+            ->where('marketplace_client_id', $client->id)
             ->where('favoriteable_type', 'venue')
             ->count();
 
         $eventsCount = DB::table('marketplace_customer_watchlist')
             ->where('marketplace_customer_id', $customer->id)
+            ->where('marketplace_client_id', $client->id)
             ->count();
 
         return $this->success([
