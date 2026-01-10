@@ -213,7 +213,9 @@ const RewardsPage = {
         try {
             const response = await AmbiletAPI.customer.getPoints();
             if (response.success && response.data) {
-                this.points = response.data.balance || 0;
+                // API returns nested structure: data.points.balance
+                const pointsData = response.data.points || response.data;
+                this.points = pointsData.balance || 0;
                 if (response.data.history) {
                     this.pointsHistory = response.data.history;
                 }
@@ -228,10 +230,12 @@ const RewardsPage = {
         try {
             const response = await AmbiletAPI.customer.getXP();
             if (response.success && response.data) {
-                this.xp = response.data.total_xp || 0;
-                this.level = response.data.level || 1;
-                this.levelName = response.data.level_name || 'Newbie';
-                this.nextLevelXP = response.data.next_level_xp || 1000;
+                // API returns nested structure: data.level.current, data.level.name, etc.
+                const levelData = response.data.level || {};
+                this.xp = levelData.total_xp || response.data.total_xp || 0;
+                this.level = levelData.current || (typeof response.data.level === 'number' ? response.data.level : 1);
+                this.levelName = levelData.name || response.data.level_name || 'Newbie';
+                this.nextLevelXP = levelData.xp_to_next || response.data.next_level_xp || 1000;
                 if (response.data.levels) {
                     this.levels = response.data.levels;
                 }
