@@ -148,7 +148,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         </div>
                         <span class="text-sm font-medium text-secondary">Descarca biletele</span>
                     </a>
-                    <a href="/" class="flex items-center gap-3 p-3 transition-colors bg-surface rounded-xl hover:bg-primary/10 group">
+                    <a href="/evenimente" class="flex items-center gap-3 p-3 transition-colors bg-surface rounded-xl hover:bg-primary/10 group">
                         <div class="flex items-center justify-center w-10 h-10 transition-colors rounded-lg bg-success/10 group-hover:bg-success">
                             <svg class="w-5 h-5 text-success group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                         </div>
@@ -311,7 +311,7 @@ const UserDashboard = {
     renderUpcomingEvents(events) {
         const container = document.getElementById('upcoming-events');
         if (!events.length) {
-            container.innerHTML = '<div class="py-8 text-center"><p class="text-muted">Nu ai evenimente programate</p><a href="/" class="inline-block px-4 py-2 mt-3 text-sm font-medium text-white rounded-lg bg-primary hover:bg-primary-dark">Descopera evenimente</a></div>';
+            container.innerHTML = '<div class="py-8 text-center"><p class="text-muted">Nu ai evenimente programate</p><a href="/evenimente" class="inline-block px-4 py-2 mt-3 text-sm font-medium text-white rounded-lg bg-primary hover:bg-primary-dark">Descopera evenimente</a></div>';
             return;
         }
 
