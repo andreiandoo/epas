@@ -306,9 +306,12 @@ class FavoritesController extends BaseController
                 }
             }
 
+            // Get venue name - it's a translatable field (JSON), so extract the string
+            $venueName = $venue->getTranslation('name', 'ro') ?? $venue->getTranslation('name', 'en') ?? $venue->name;
+
             return [
                 'id' => $venue->id,
-                'name' => $venue->name,
+                'name' => $venueName,
                 'slug' => $venue->slug,
                 'image' => $imageUrl,
                 'city' => $venue->city,
