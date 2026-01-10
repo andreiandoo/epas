@@ -26,20 +26,7 @@ include __DIR__ . '/includes/header.php';
     <img id="heroImage" src="" alt="" class="absolute inset-0 hidden object-cover object-center w-full h-full">
     <div class="absolute inset-0 bg-gradient-to-b from-black/30 to-black/70"></div>
 
-    <div class="relative z-10 flex flex-col justify-end h-full max-w-6xl px-6 pb-10 mx-auto">
-        <!-- Breadcrumb -->
-        <nav class="flex items-center gap-2 mb-4 text-sm text-white/70">
-            <a href="/" class="transition-colors hover:text-white">Acasă</a>
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"/>
-            </svg>
-            <a href="/locatii" class="transition-colors hover:text-white">Locații</a>
-            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="9 18 15 12 9 6"/>
-            </svg>
-            <span id="breadcrumbName" class="text-white/90"></span>
-        </nav>
-
+    <div class="relative z-10 flex flex-col justify-end h-full max-w-6xl px-6 pb-24 mx-auto">
         <!-- Venue Type Badge -->
         <div id="venueTypeBadge" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white/15 backdrop-blur-md rounded-full mb-4 w-fit text-sm font-semibold text-white">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -61,7 +48,7 @@ include __DIR__ . '/includes/header.php';
         </div>
 
         <!-- Follow Button -->
-        <button id="follow-btn" onclick="VenuePage.toggleFollow()" class="flex items-center gap-2 px-5 py-2.5 mt-4 bg-white/20 backdrop-blur-md rounded-xl text-white font-semibold transition-all hover:bg-white/30">
+        <button id="follow-btn" onclick="VenuePage.toggleFollow()" class="flex items-center gap-2 px-5 py-2.5 mt-4 bg-white/20 backdrop-blur-md rounded-xl text-white font-semibold transition-all hover:bg-white/30 absolute right-4 bottom-28">
             <svg id="follow-icon" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                 <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
