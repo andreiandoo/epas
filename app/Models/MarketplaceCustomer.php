@@ -125,7 +125,7 @@ class MarketplaceCustomer extends Authenticatable
     }
 
     /**
-     * Favorite events via pivot table
+     * Favorite events via pivot table (legacy - not currently used)
      */
     public function favoriteEvents(): BelongsToMany
     {
@@ -135,6 +135,20 @@ class MarketplaceCustomer extends Authenticatable
             'marketplace_customer_id',
             'favoriteable_id'
         )->wherePivot('favoriteable_type', 'event')
+         ->withTimestamps();
+    }
+
+    /**
+     * Watchlist events (events the customer is interested in)
+     */
+    public function watchlistEvents(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Event::class,
+            'marketplace_customer_watchlist',
+            'marketplace_customer_id',
+            'event_id'
+        )->withPivot(['notify_on_sale', 'notify_on_price_drop'])
          ->withTimestamps();
     }
 

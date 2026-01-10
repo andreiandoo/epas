@@ -232,24 +232,25 @@ class MarketplaceCustomerResource extends Resource
                     ->icon('heroicon-o-heart')
                     ->description('Favorite events, artists, and venues')
                     ->schema([
-                        Forms\Components\Placeholder::make('favorite_events_list')
-                            ->label('Favorite Events')
+                        Forms\Components\Placeholder::make('watchlist_events_list')
+                            ->label('Watchlist Events')
                             ->content(function ($record) {
                                 if (!$record) {
                                     return '-';
                                 }
 
-                                $events = $record->favoriteEvents;
+                                $events = $record->watchlistEvents;
 
                                 if ($events->isEmpty()) {
-                                    return new HtmlString('<p class="text-gray-500 dark:text-gray-400">No favorite events.</p>');
+                                    return new HtmlString('<p class="text-gray-500 dark:text-gray-400">No watchlist events.</p>');
                                 }
 
                                 $html = '<div class="space-y-1">';
                                 foreach ($events->take(10) as $event) {
-                                    $date = $event->starts_at ? $event->starts_at->format('d M Y') : '';
+                                    $title = is_array($event->title) ? ($event->title['en'] ?? $event->title['ro'] ?? reset($event->title)) : $event->title;
+                                    $date = $event->event_date ? \Carbon\Carbon::parse($event->event_date)->format('d M Y') : '';
                                     $html .= '<div class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded">';
-                                    $html .= '<span class="font-medium">' . e($event->name) . '</span>';
+                                    $html .= '<span class="font-medium">' . e($title) . '</span>';
                                     if ($date) {
                                         $html .= '<span class="text-sm text-gray-500">(' . $date . ')</span>';
                                     }
