@@ -470,7 +470,7 @@ const CitiesPage = {
 
     renderCities(append = false) {
         const container = document.getElementById('citiesGrid');
-        const defaultImage = 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=200&h=200&fit=crop';
+        const defaultImage = '/assets/images/default-city.png';
 
         if (!this.cities.length) {
             container.innerHTML = '<div class="col-span-4 py-12 text-center text-muted">Nu am găsit niciun oraș.</div>';
