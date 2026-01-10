@@ -93,7 +93,7 @@ class WatchlistController extends BaseController
                 }
 
                 // Get category/genre from event_type
-                if ($event->event_type_id) {
+                if (isset($event->event_type_id) && $event->event_type_id) {
                     $eventType = DB::table('event_types')->where('id', $event->event_type_id)->first(['name']);
                     if ($eventType) {
                         $categoryData = is_string($eventType->name) ? json_decode($eventType->name, true) : $eventType->name;
