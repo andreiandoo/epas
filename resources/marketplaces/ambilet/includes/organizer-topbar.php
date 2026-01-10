@@ -49,7 +49,7 @@ $skipJsComponents = true;
                         </div>
                     </div>
                     <div class="p-3 border-t border-border text-center">
-                        <a href="/organizer/notifications" class="text-sm text-primary font-medium hover:underline">Vezi toate notificarile</a>
+                        <a href="/organizer/notifications" class="text-sm text-primary font-medium">Vezi toate notificarile</a>
                     </div>
                 </div>
             </div>

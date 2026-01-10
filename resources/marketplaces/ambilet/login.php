@@ -47,7 +47,7 @@ require_once __DIR__ . '/includes/auth-branding.php';
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <label for="password" class="block text-sm font-medium text-secondary">Parola</label>
-                            <a href="/parola-uitata" class="text-sm text-primary hover:underline">Ai uitat parola?</a>
+                            <a href="/parola-uitata" class="text-sm text-primary">Ai uitat parola?</a>
                         </div>
                         <input type="password" id="password" name="password" required
                                class="input w-full"
@@ -96,7 +96,7 @@ require_once __DIR__ . '/includes/auth-branding.php';
 
                 <p class="text-center text-muted mt-8">
                     Nu ai cont?
-                    <a href="/inregistrare" class="text-primary font-medium hover:underline">Creează cont gratuit</a>
+                    <a href="/inregistrare" class="text-primary font-medium">Creează cont gratuit</a>
                 </p>
             </div>
         </div>

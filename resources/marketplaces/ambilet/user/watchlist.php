@@ -54,7 +54,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                             <p class="font-semibold text-secondary">Notificari active pentru <span id="notification-count">0</span> evenimente</p>
                             <p class="text-sm text-muted">Vei fi notificat cand biletele devin disponibile sau se apropie de sold out.</p>
                         </div>
-                        <a href="/cont/setari" class="text-sm font-medium text-primary hover:underline whitespace-nowrap">Gestioneaza →</a>
+                        <a href="/cont/setari" class="text-sm font-medium text-primary whitespace-nowrap">Gestioneaza →</a>
                     </div>
                 </div>
 
@@ -123,9 +123,27 @@ const WatchlistPage = {
                 }));
             }
 
-            // TODO: Load artists and venues from favorites API when implemented
-            this.artists = [];
-            this.venues = [];
+            // Load favorite artists
+            try {
+                const artistsResponse = await AmbiletAPI.getFavoriteArtists();
+                if (artistsResponse.success && artistsResponse.data) {
+                    this.artists = Array.isArray(artistsResponse.data) ? artistsResponse.data : [];
+                }
+            } catch (e) {
+                console.log('[WatchlistPage] Artists load error:', e);
+                this.artists = [];
+            }
+
+            // Load favorite venues
+            try {
+                const venuesResponse = await AmbiletAPI.getFavoriteVenues();
+                if (venuesResponse.success && venuesResponse.data) {
+                    this.venues = Array.isArray(venuesResponse.data) ? venuesResponse.data : [];
+                }
+            } catch (e) {
+                console.log('[WatchlistPage] Venues load error:', e);
+                this.venues = [];
+            }
         } catch (error) {
             console.log('Watchlist API error:', error);
             this.loadDemoData();

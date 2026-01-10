@@ -45,7 +45,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                 </svg>
                 <p class="mb-2 text-muted">Nu ai carduri salvate</p>
-                <button onclick="openModal()" class="text-sm font-medium text-primary hover:underline">Adauga primul card</button>
+                <button onclick="openModal()" class="text-sm font-medium text-primary">Adauga primul card</button>
             </div>
         </div>
 
@@ -65,7 +65,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                             <p class="text-xs text-muted" id="apple-pay-status">Neconectat</p>
                         </div>
                     </div>
-                    <button class="text-sm font-medium text-primary hover:underline" id="apple-pay-btn">Conecteaza</button>
+                    <button class="text-sm font-medium text-primary" id="apple-pay-btn">Conecteaza</button>
                 </div>
 
                 <!-- Google Pay -->
@@ -84,7 +84,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                             <p class="text-xs text-muted" id="google-pay-status">Neconectat</p>
                         </div>
                     </div>
-                    <button class="text-sm font-medium text-primary hover:underline" id="google-pay-btn">Conecteaza</button>
+                    <button class="text-sm font-medium text-primary" id="google-pay-btn">Conecteaza</button>
                 </div>
             </div>
         </div>
@@ -93,7 +93,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
         <div class="p-5 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="font-bold text-secondary">Adresa de facturare</h2>
-                <button onclick="editAddress()" class="text-sm font-medium text-primary hover:underline">Editeaza</button>
+                <button onclick="editAddress()" class="text-sm font-medium text-primary">Editeaza</button>
             </div>
 
             <div class="p-4 bg-surface rounded-xl" id="billing-address">

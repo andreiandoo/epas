@@ -291,7 +291,7 @@ const OrderDetailPage = {
                         </div>
                         `).join('')}
                     </div>
-                    <a href="/cont/bilete?order=${this.orderId}" class="inline-flex items-center gap-2 mt-4 text-sm font-semibold text-primary hover:underline">
+                    <a href="/cont/bilete?order=${this.orderId}" class="inline-flex items-center gap-2 mt-4 text-sm font-semibold text-primary">
                         Vezi si descarca biletele
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     </a>

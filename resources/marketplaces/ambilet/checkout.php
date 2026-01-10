@@ -188,9 +188,9 @@ require_once __DIR__ . '/includes/header.php';
                         <label class="flex items-start gap-3 cursor-pointer">
                             <input type="checkbox" id="termsCheckbox" class="checkbox-custom mt-0.5" required>
                             <span class="text-sm text-muted">
-                                Am citit și sunt de acord cu <a href="/termeni" class="text-primary hover:underline">Termenii și condițiile</a>,
-                                <a href="/confidentialitate" class="text-primary hover:underline">Politica de confidențialitate</a> și
-                                <a href="/retur" class="text-primary hover:underline">Politica de returnare</a>.
+                                Am citit și sunt de acord cu <a href="/termeni" class="text-primary">Termenii și condițiile</a>,
+                                <a href="/confidentialitate" class="text-primary">Politica de confidențialitate</a> și
+                                <a href="/retur" class="text-primary">Politica de returnare</a>.
                             </span>
                         </label>
 

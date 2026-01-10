@@ -613,6 +613,27 @@ const AmbiletAPI = {
     },
 
     /**
+     * Get list of all favorite artists
+     */
+    async getFavoriteArtists() {
+        return this.get('/customer/favorites/artists');
+    },
+
+    /**
+     * Get list of all favorite venues
+     */
+    async getFavoriteVenues() {
+        return this.get('/customer/favorites/venues');
+    },
+
+    /**
+     * Get favorites summary (counts)
+     */
+    async getFavoritesSummary() {
+        return this.get('/customer/favorites/summary');
+    },
+
+    /**
      * Get single venue details
      */
     async getVenue(slug) {

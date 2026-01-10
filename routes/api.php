@@ -1341,6 +1341,14 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
     Route::get("/venues/{venue}/check-favorite", [CustomerFavoritesController::class, "checkVenue"])
         ->name("api.marketplace-client.venues.check-favorite");
 
+    // List favorites
+    Route::get("/customer/favorites/artists", [CustomerFavoritesController::class, "listArtists"])
+        ->name("api.marketplace-client.favorites.artists");
+    Route::get("/customer/favorites/venues", [CustomerFavoritesController::class, "listVenues"])
+        ->name("api.marketplace-client.favorites.venues");
+    Route::get("/customer/favorites/summary", [CustomerFavoritesController::class, "summary"])
+        ->name("api.marketplace-client.favorites.summary");
+
     // Orders
     Route::get('/orders', [MarketplaceOrdersController::class, 'index'])
         ->name('api.marketplace-client.orders');

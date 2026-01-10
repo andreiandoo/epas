@@ -103,7 +103,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                                 <h2 class="text-lg font-bold text-secondary">Evenimentele tale</h2>
                                 <p id="events-count-text" class="text-sm text-muted">0 evenimente active</p>
                             </div>
-                            <a href="/organizer/events" class="text-sm text-primary font-medium hover:underline">Vezi toate &rarr;</a>
+                            <a href="/organizer/events" class="text-sm text-primary font-medium">Vezi toate &rarr;</a>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full" id="events-table">
@@ -210,7 +210,7 @@ require_once dirname(__DIR__) . '/includes/organizer-sidebar.php';
                     <div class="bg-white rounded-2xl border border-border p-5">
                         <h2 class="font-bold text-secondary mb-4">Activitate recenta</h2>
                         <div id="recent-activity" class="space-y-4"></div>
-                        <a href="/organizer/activity" class="block text-center text-sm text-primary font-medium mt-4 hover:underline">Vezi toata activitatea</a>
+                        <a href="/organizer/activity" class="block text-center text-sm text-primary font-medium mt-4">Vezi toata activitatea</a>
                     </div>
                 </div>
             </div>

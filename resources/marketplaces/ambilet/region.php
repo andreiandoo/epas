@@ -90,7 +90,7 @@ require_once __DIR__ . '/includes/header.php';
     <section class="mb-12">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-secondary">Orase din <span id="sectionRegionName">regiune</span></h2>
-            <button onclick="RegionPage.showAllCities()" id="showAllCitiesBtn" class="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+            <button onclick="RegionPage.showAllCities()" id="showAllCitiesBtn" class="flex items-center gap-1 text-sm font-semibold text-primary">
                 Vezi toate <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </button>
         </div>
@@ -112,7 +112,7 @@ require_once __DIR__ . '/includes/header.php';
     <section class="mb-12">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-secondary">Festivaluri din <span id="festivalsRegionName">regiune</span></h2>
-            <a href="/festivaluri?regiune=<?= htmlspecialchars($regionSlug) ?>" class="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+            <a href="/festivaluri?regiune=<?= htmlspecialchars($regionSlug) ?>" class="flex items-center gap-1 text-sm font-semibold text-primary">
                 Vezi toate <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </a>
         </div>
@@ -138,7 +138,7 @@ require_once __DIR__ . '/includes/header.php';
     <section class="mb-12">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-secondary">Toate evenimentele din <span id="eventsRegionName">regiune</span></h2>
-            <a href="/evenimente?regiune=<?= htmlspecialchars($regionSlug) ?>" class="flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+            <a href="/evenimente?regiune=<?= htmlspecialchars($regionSlug) ?>" class="flex items-center gap-1 text-sm font-semibold text-primary">
                 Vezi toate (<span id="eventsCount">0</span>) <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
             </a>
         </div>

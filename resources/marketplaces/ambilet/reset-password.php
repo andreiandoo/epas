@@ -120,7 +120,7 @@ require_once __DIR__ . '/includes/head.php';
                     </form>
 
                     <p class="text-center text-sm text-muted mt-6">
-                        <a href="/login" class="text-primary font-semibold hover:underline">Înapoi la autentificare</a>
+                        <a href="/login" class="text-primary font-semibold">Înapoi la autentificare</a>
                     </p>
                 </div>
 
@@ -156,7 +156,7 @@ require_once __DIR__ . '/includes/head.php';
                     <a href="/forgot-password" class="btn-primary inline-block w-full py-3.5 text-white font-semibold rounded-xl text-sm text-center mb-3">
                         Solicită link nou
                     </a>
-                    <a href="/login" class="block w-full py-3 text-center text-primary font-medium text-sm hover:underline">
+                    <a href="/login" class="block w-full py-3 text-center text-primary font-medium text-sm">
                         Înapoi la autentificare
                     </a>
                 </div>

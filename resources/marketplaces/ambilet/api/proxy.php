@@ -269,6 +269,21 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case "customer.favorites.artists":
+        $endpoint = "/customer/favorites/artists";
+        $requiresAuth = true;
+        break;
+
+    case "customer.favorites.venues":
+        $endpoint = "/customer/favorites/venues";
+        $requiresAuth = true;
+        break;
+
+    case "customer.favorites.summary":
+        $endpoint = "/customer/favorites/summary";
+        $requiresAuth = true;
+        break;
+
     case 'categories':
         $endpoint = '/categories';
         break;

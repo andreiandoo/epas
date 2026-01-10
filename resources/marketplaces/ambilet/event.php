@@ -137,7 +137,7 @@ require_once __DIR__ . '/includes/head.php';
                                 <p id="venue-name" class="font-semibold text-secondary"></p>
                                 <p id="venue-address" class="text-sm text-muted"></p>
                             </div>
-                            <a id="venue-link" href="#venue" class="text-sm font-semibold text-primary hover:underline">Vezi locatia &rarr;</a>
+                            <a id="venue-link" href="#venue" class="text-sm font-semibold text-primary">Vezi locatia &rarr;</a>
                         </div>
 
                         <!-- Social Stats -->
@@ -271,7 +271,7 @@ require_once __DIR__ . '/includes/head.php';
                     <h2 class="text-2xl font-bold text-secondary">Alte evenimente care ti-ar putea placea</h2>
                     <p class="mt-1 text-muted" id="related-category-text">Evenimente similare</p>
                 </div>
-                <a href="/evenimente" id="see-all-link" class="items-center hidden gap-2 font-semibold md:flex text-primary hover:underline">
+                <a href="/evenimente" id="see-all-link" class="items-center hidden gap-2 font-semibold md:flex text-primary">
                     Vezi toate
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 </a>

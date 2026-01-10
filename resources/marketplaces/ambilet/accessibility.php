@@ -30,23 +30,23 @@ $pageTitle = 'Declaratie de Accesibilitate';
             <div class="bg-surface rounded-2xl p-6 mb-8 border border-border">
                 <h3 class="text-sm font-bold text-muted uppercase tracking-wider mb-4">Cuprins</h3>
                 <ul class="space-y-2">
-                    <li><a href="#angajament" class="text-[15px] text-primary flex items-center gap-2 hover:underline">
+                    <li><a href="#angajament" class="text-[15px] text-primary flex items-center gap-2">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
                         Angajamentul nostru
                     </a></li>
-                    <li><a href="#standarde" class="text-[15px] text-primary flex items-center gap-2 hover:underline">
+                    <li><a href="#standarde" class="text-[15px] text-primary flex items-center gap-2">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
                         Standarde de conformitate
                     </a></li>
-                    <li><a href="#functionalitati" class="text-[15px] text-primary flex items-center gap-2 hover:underline">
+                    <li><a href="#functionalitati" class="text-[15px] text-primary flex items-center gap-2">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
                         Functionalitati de accesibilitate
                     </a></li>
-                    <li><a href="#limitari" class="text-[15px] text-primary flex items-center gap-2 hover:underline">
+                    <li><a href="#limitari" class="text-[15px] text-primary flex items-center gap-2">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
                         Limitari cunoscute
                     </a></li>
-                    <li><a href="#feedback" class="text-[15px] text-primary flex items-center gap-2 hover:underline">
+                    <li><a href="#feedback" class="text-[15px] text-primary flex items-center gap-2">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
                         Feedback si contact
                     </a></li>

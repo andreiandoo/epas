@@ -26,7 +26,7 @@ $faqs = [
             'answer' => '<p>După finalizarea comenzii, biletul tău va fi disponibil în mai multe moduri:</p>
                 <ul class="pl-5 mt-3 space-y-2 list-disc">
                     <li><strong>Email:</strong> Primești automat biletul în format PDF pe adresa de email folosită la comandă</li>
-                    <li><strong>Contul tău:</strong> Accesează <a href="/account/tickets" class="font-medium text-primary hover:underline">Biletele mele</a> pentru a descărca sau vizualiza biletele</li>
+                    <li><strong>Contul tău:</strong> Accesează <a href="/account/tickets" class="font-medium text-primary">Biletele mele</a> pentru a descărca sau vizualiza biletele</li>
                     <li><strong>Aplicația mobilă:</strong> Biletele sunt sincronizate automat în aplicație</li>
                 </ul>
                 <p class="mt-3">Codul QR de pe bilet este tot ce ai nevoie pentru a intra la eveniment. Poți să îl arăți direct de pe telefon sau printat.</p>',
@@ -36,7 +36,7 @@ $faqs = [
             'question' => 'Pot transfera biletul altei persoane?',
             'answer' => '<p>Da, poți transfera biletele către altă persoană din contul tău:</p>
                 <ul class="pl-5 mt-3 space-y-2 list-disc">
-                    <li>Accesează <a href="/account/tickets" class="font-medium text-primary hover:underline">Biletele mele</a></li>
+                    <li>Accesează <a href="/account/tickets" class="font-medium text-primary">Biletele mele</a></li>
                     <li>Selectează biletul pe care vrei să îl transferi</li>
                     <li>Click pe "Transferă bilet"</li>
                     <li>Introdu adresa de email a destinatarului</li>
@@ -50,9 +50,9 @@ $faqs = [
                     <li><strong>Verifică folderul Spam/Junk</strong> - uneori emailurile ajung acolo</li>
                     <li><strong>Verifică adresa de email</strong> - asigură-te că ai introdus corect adresa la comandă</li>
                     <li><strong>Așteaptă câteva minute</strong> - uneori livrarea poate dura până la 15 minute</li>
-                    <li><strong>Descarcă din cont</strong> - biletul este întotdeauna disponibil în <a href="/account/tickets" class="font-medium text-primary hover:underline">Biletele mele</a></li>
+                    <li><strong>Descarcă din cont</strong> - biletul este întotdeauna disponibil în <a href="/account/tickets" class="font-medium text-primary">Biletele mele</a></li>
                 </ul>
-                <p class="mt-3">Dacă problema persistă, <a href="/contact" class="font-medium text-primary hover:underline">contactează suportul</a> și te vom ajuta imediat.</p>'
+                <p class="mt-3">Dacă problema persistă, <a href="/contact" class="font-medium text-primary">contactează suportul</a> și te vom ajuta imediat.</p>'
         ]
     ],
     'payments' => [
@@ -77,14 +77,14 @@ $faqs = [
                     <li><strong>Încearcă alt card</strong> sau altă metodă de plată</li>
                     <li><strong>Contactează banca</strong> - uneori plățile online sunt blocate din motive de securitate</li>
                 </ul>
-                <p class="mt-3"><strong class="text-secondary">Important:</strong> Dacă ți s-au debitat banii dar nu ai primit biletul, <a href="/contact" class="font-medium text-primary hover:underline">contactează-ne imediat</a>.</p>'
+                <p class="mt-3"><strong class="text-secondary">Important:</strong> Dacă ți s-au debitat banii dar nu ai primit biletul, <a href="/contact" class="font-medium text-primary">contactează-ne imediat</a>.</p>'
         ],
         [
             'question' => 'Cum primesc factura pentru comandă?',
             'answer' => '<p>Factura este emisă automat pentru fiecare comandă:</p>
                 <ul class="pl-5 mt-3 space-y-2 list-disc">
                     <li>O primești pe email împreună cu biletul</li>
-                    <li>O poți descărca oricând din <a href="/account/orders" class="font-medium text-primary hover:underline">Istoricul comenzilor</a></li>
+                    <li>O poți descărca oricând din <a href="/account/orders" class="font-medium text-primary">Istoricul comenzilor</a></li>
                 </ul>
                 <p class="mt-3">Dacă ai nevoie de factură pe persoană juridică, introdu datele companiei (CUI, adresă) în formularul de checkout înainte de finalizarea comenzii.</p>'
         ]
@@ -108,7 +108,7 @@ $faqs = [
                     <li><strong>Procesare din partea noastră:</strong> 1-3 zile lucrătoare</li>
                     <li><strong>Returnare în cont:</strong> 5-14 zile lucrătoare (depinde de bancă)</li>
                 </ul>
-                <p class="mt-3">Vei primi un email de confirmare când inițiem rambursarea. Dacă nu primești banii în 14 zile lucrătoare, contactează banca ta sau <a href="/contact" class="font-medium text-primary hover:underline">echipa noastră de suport</a>.</p>'
+                <p class="mt-3">Vei primi un email de confirmare când inițiem rambursarea. Dacă nu primești banii în 14 zile lucrătoare, contactează banca ta sau <a href="/contact" class="font-medium text-primary">echipa noastră de suport</a>.</p>'
         ]
     ],
     'account' => [
@@ -116,18 +116,18 @@ $faqs = [
             'question' => 'Cum îmi schimb parola?',
             'answer' => '<p>Pentru a schimba parola:</p>
                 <ul class="pl-5 mt-3 space-y-2 list-disc">
-                    <li>Accesează <a href="/account/settings" class="font-medium text-primary hover:underline">Setări cont</a></li>
+                    <li>Accesează <a href="/account/settings" class="font-medium text-primary">Setări cont</a></li>
                     <li>Click pe "Schimbă parola"</li>
                     <li>Introdu parola actuală și noua parolă</li>
                     <li>Confirmă modificarea</li>
                 </ul>
-                <p class="mt-3">Dacă ai uitat parola, folosește opțiunea <a href="/forgot-password" class="font-medium text-primary hover:underline">"Am uitat parola"</a> de pe pagina de login pentru a o reseta.</p>'
+                <p class="mt-3">Dacă ai uitat parola, folosește opțiunea <a href="/forgot-password" class="font-medium text-primary">"Am uitat parola"</a> de pe pagina de login pentru a o reseta.</p>'
         ],
         [
             'question' => 'Cum îmi șterg contul?',
             'answer' => '<p>Pentru a șterge contul:</p>
                 <ul class="pl-5 mt-3 space-y-2 list-disc">
-                    <li>Accesează <a href="/account/settings" class="font-medium text-primary hover:underline">Setări cont</a></li>
+                    <li>Accesează <a href="/account/settings" class="font-medium text-primary">Setări cont</a></li>
                     <li>Scroll până la secțiunea "Zona periculoasă"</li>
                     <li>Click pe "Șterge contul"</li>
                     <li>Confirmă cu parola ta</li>

@@ -124,7 +124,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <!-- Alternative -->
                     <div class="pt-4 mt-6 text-center border-t border-border">
                         <p class="mb-2 text-sm text-muted">Nu esti sigur? Poti dezactiva temporar contul in schimb.</p>
-                        <a href="/cont/setari" class="text-sm font-semibold text-primary hover:underline">Dezactiveaza contul temporar &rarr;</a>
+                        <a href="/cont/setari" class="text-sm font-semibold text-primary">Dezactiveaza contul temporar &rarr;</a>
                     </div>
                 </div>
             </div>

@@ -145,7 +145,7 @@ require_once __DIR__ . '/includes/header.php';
         <div id="activeFilters" class="flex flex-wrap items-center gap-2 mt-3" style="display: none;">
             <span class="text-sm text-gray-500">Filtre active:</span>
             <div id="activeFilterTags" class="flex flex-wrap gap-2"></div>
-            <button onclick="EventsPage.clearFilters()" class="ml-2 text-sm font-medium text-primary hover:underline">Șterge toate</button>
+            <button onclick="EventsPage.clearFilters()" class="ml-2 text-sm font-medium text-primary">Șterge toate</button>
         </div>
     </div>
 </section>

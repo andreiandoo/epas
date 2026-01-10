@@ -147,7 +147,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <div class="p-5 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
                         <div class="flex items-center justify-between mb-4">
                             <h2 class="text-lg font-bold text-secondary">Badge-uri</h2>
-                            <a href="/cont/puncte" class="text-sm font-medium text-primary hover:underline">Vezi toate →</a>
+                            <a href="/cont/puncte" class="text-sm font-medium text-primary">Vezi toate →</a>
                         </div>
                         <div class="flex flex-wrap gap-3" id="badges-container">
                             <!-- Populated by JavaScript -->

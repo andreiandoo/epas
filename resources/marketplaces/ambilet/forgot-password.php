@@ -90,7 +90,7 @@ require_once __DIR__ . '/includes/head.php';
 
                     <p class="text-center text-sm text-muted mt-6">
                         Ți-ai amintit parola?
-                        <a href="/autentificare" class="text-primary font-semibold hover:underline">Autentifică-te</a>
+                        <a href="/autentificare" class="text-primary font-semibold">Autentifică-te</a>
                     </p>
                 </div>
 
@@ -126,7 +126,7 @@ require_once __DIR__ . '/includes/head.php';
                             Retrimite email-ul
                         </button>
 
-                        <a href="/login" class="block w-full py-3 text-center text-primary font-medium text-sm hover:underline">
+                        <a href="/login" class="block w-full py-3 text-center text-primary font-medium text-sm">
                             Înapoi la autentificare
                         </a>
                     </div>

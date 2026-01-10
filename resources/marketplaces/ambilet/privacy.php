@@ -351,7 +351,7 @@ require_once __DIR__ . '/includes/header.php';
                 <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Dreptul de a nu fi supus deciziilor automate:</strong> Inclusiv profilării cu efecte legale</li>
             </ul>
 
-            <p class="text-[15px] leading-[1.8] text-gray-600">Pentru exercitarea acestor drepturi, consultă pagina <a href="/gdpr" class="font-medium text-primary hover:underline">Drepturile GDPR</a> sau contactează-ne la <a href="mailto:dpo@ambilet.ro" class="font-medium text-primary hover:underline">dpo@ambilet.ro</a>.</p>
+            <p class="text-[15px] leading-[1.8] text-gray-600">Pentru exercitarea acestor drepturi, consultă pagina <a href="/gdpr" class="font-medium text-primary">Drepturile GDPR</a> sau contactează-ne la <a href="mailto:dpo@ambilet.ro" class="font-medium text-primary">dpo@ambilet.ro</a>.</p>
         </section>
 
         <!-- Section 9 -->
@@ -388,12 +388,12 @@ require_once __DIR__ . '/includes/header.php';
             </h2>
             <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Pentru orice întrebări sau solicitări legate de datele tale personale, poți contacta Responsabilul nostru cu Protecția Datelor (DPO):</p>
             <ul class="my-4 pl-6 list-disc space-y-2.5">
-                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Email:</strong> <a href="mailto:dpo@ambilet.ro" class="font-medium text-primary hover:underline">dpo@ambilet.ro</a></li>
-                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Telefon:</strong> <a href="tel:+40312345679" class="font-medium text-primary hover:underline">+40 31 234 5679</a></li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Email:</strong> <a href="mailto:dpo@ambilet.ro" class="font-medium text-primary">dpo@ambilet.ro</a></li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Telefon:</strong> <a href="tel:+40312345679" class="font-medium text-primary">+40 31 234 5679</a></li>
                 <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Adresă:</strong> Str. Exemplu nr. 123, București, România</li>
             </ul>
 
-            <p class="text-[15px] leading-[1.8] text-gray-600">De asemenea, ai dreptul de a depune o plângere la Autoritatea Națională de Supraveghere a Prelucrării Datelor cu Caracter Personal (ANSPDCP) la <a href="https://www.dataprotection.ro" target="_blank" class="font-medium text-primary hover:underline">www.dataprotection.ro</a>.</p>
+            <p class="text-[15px] leading-[1.8] text-gray-600">De asemenea, ai dreptul de a depune o plângere la Autoritatea Națională de Supraveghere a Prelucrării Datelor cu Caracter Personal (ANSPDCP) la <a href="https://www.dataprotection.ro" target="_blank" class="font-medium text-primary">www.dataprotection.ro</a>.</p>
         </section>
 
         <!-- Print Section -->

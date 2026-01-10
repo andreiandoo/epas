@@ -194,4 +194,119 @@ class FavoritesController extends BaseController
             'venue_id' => $venue->id,
         ]);
     }
+
+    /**
+     * Get all favorite artists for the current user
+     */
+    public function listArtists(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        // Check if user is authenticated
+        $customer = Auth::guard('sanctum')->user();
+        if (!$customer instanceof MarketplaceCustomer) {
+            return $this->error('Authentication required', 401);
+        }
+
+        $favorites = DB::table('marketplace_customer_favorites')
+            ->where('marketplace_customer_id', $customer->id)
+            ->where('favoriteable_type', 'artist')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $artistIds = $favorites->pluck('favoriteable_id');
+        $artists = Artist::whereIn('id', $artistIds)->get()->keyBy('id');
+
+        $formattedArtists = $favorites->map(function ($fav) use ($artists) {
+            $artist = $artists->get($fav->favoriteable_id);
+            if (!$artist) {
+                return null;
+            }
+            return [
+                'id' => $artist->id,
+                'name' => $artist->name,
+                'slug' => $artist->slug,
+                'image' => $artist->main_image_full_url ?? $artist->image_url,
+                'genre' => $artist->genres->first()?->name ?? null,
+                'added_at' => $fav->created_at,
+            ];
+        })->filter()->values();
+
+        return $this->success($formattedArtists);
+    }
+
+    /**
+     * Get all favorite venues for the current user
+     */
+    public function listVenues(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        // Check if user is authenticated
+        $customer = Auth::guard('sanctum')->user();
+        if (!$customer instanceof MarketplaceCustomer) {
+            return $this->error('Authentication required', 401);
+        }
+
+        $favorites = DB::table('marketplace_customer_favorites')
+            ->where('marketplace_customer_id', $customer->id)
+            ->where('favoriteable_type', 'venue')
+            ->orderByDesc('created_at')
+            ->get();
+
+        $venueIds = $favorites->pluck('favoriteable_id');
+        $venues = Venue::whereIn('id', $venueIds)->get()->keyBy('id');
+
+        $formattedVenues = $favorites->map(function ($fav) use ($venues) {
+            $venue = $venues->get($fav->favoriteable_id);
+            if (!$venue) {
+                return null;
+            }
+            return [
+                'id' => $venue->id,
+                'name' => $venue->name,
+                'slug' => $venue->slug,
+                'image' => $venue->image_url ? url('storage/' . $venue->image_url) : null,
+                'city' => $venue->city,
+                'added_at' => $fav->created_at,
+            ];
+        })->filter()->values();
+
+        return $this->success($formattedVenues);
+    }
+
+    /**
+     * Get favorites summary (counts) for the current user
+     */
+    public function summary(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+
+        // Check if user is authenticated
+        $customer = Auth::guard('sanctum')->user();
+        if (!$customer instanceof MarketplaceCustomer) {
+            return $this->error('Authentication required', 401);
+        }
+
+        $artistsCount = DB::table('marketplace_customer_favorites')
+            ->where('marketplace_customer_id', $customer->id)
+            ->where('favoriteable_type', 'artist')
+            ->count();
+
+        $venuesCount = DB::table('marketplace_customer_favorites')
+            ->where('marketplace_customer_id', $customer->id)
+            ->where('favoriteable_type', 'venue')
+            ->count();
+
+        $eventsCount = DB::table('marketplace_customer_watchlist')
+            ->where('marketplace_customer_id', $customer->id)
+            ->count();
+
+        return $this->success([
+            'events_count' => $eventsCount,
+            'artists_count' => $artistsCount,
+            'venues_count' => $venuesCount,
+            'total' => $eventsCount + $artistsCount + $venuesCount,
+        ]);
+    }
 }
