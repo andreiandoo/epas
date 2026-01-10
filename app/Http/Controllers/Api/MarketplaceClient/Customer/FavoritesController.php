@@ -228,12 +228,19 @@ class FavoritesController extends BaseController
             if (!$artist) {
                 return null;
             }
+            // Get genre name - it's a translatable field (JSON), so extract the string
+            $genreName = null;
+            $firstGenre = $artist->artistGenres->first();
+            if ($firstGenre) {
+                $genreName = $firstGenre->getTranslation('name', 'ro') ?? $firstGenre->getTranslation('name', 'en');
+            }
+
             return [
                 'id' => $artist->id,
                 'name' => $artist->name,
                 'slug' => $artist->slug,
                 'image' => $artist->main_image_full_url ?? $artist->image_url,
-                'genre' => $artist->artistGenres->first()?->name ?? null,
+                'genre' => $genreName,
                 'events' => $artist->events_count ?? 0,
                 'added_at' => $fav->created_at,
             ];

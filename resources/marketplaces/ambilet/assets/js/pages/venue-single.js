@@ -30,8 +30,11 @@ const VenuePage = {
         quickInfo: 'quickInfo',
         venueAddress: 'venueAddress',
         mapsLink: 'mapsLink',
+        venueMap: 'venueMap',
         venueAmenities: 'venueAmenities',
+        amenitiesSection: 'amenitiesSection',
         venueGallery: 'venueGallery',
+        gallerySection: 'gallerySection',
         eventsList: 'eventsList',
         similarVenues: 'similarVenues',
         followBtn: 'follow-btn',
@@ -282,6 +285,9 @@ const VenuePage = {
             addressEl.innerHTML = this.escapeHtml(venue.address).replace(/, /g, '<br>');
         }
 
+        // Render interactive Google Map
+        this.renderMap(venue);
+
         // Update Google Maps link
         var mapsLink = document.getElementById(this.elements.mapsLink);
         if (mapsLink) {
@@ -321,8 +327,16 @@ const VenuePage = {
         if (!container) return;
 
         if (description) {
-            container.innerHTML = '<p class="text-base leading-relaxed text-gray-600 whitespace-pre-line">' +
-                this.escapeHtml(description) + '</p>';
+            // Check if description contains HTML tags
+            var hasHtml = /<[a-z][\s\S]*>/i.test(description);
+            if (hasHtml) {
+                // Render HTML content directly (trusted from API)
+                container.innerHTML = '<div class="prose prose-sm max-w-none text-gray-600">' + description + '</div>';
+            } else {
+                // Plain text with whitespace preserved
+                container.innerHTML = '<p class="text-base leading-relaxed text-gray-600 whitespace-pre-line">' +
+                    this.escapeHtml(description) + '</p>';
+            }
         } else {
             container.innerHTML = '<p class="italic text-gray-500">Informații despre această locație vor fi disponibile în curând.</p>';
         }
@@ -404,16 +418,58 @@ const VenuePage = {
     },
 
     /**
+     * Render interactive Google Map
+     */
+    renderMap(venue) {
+        var mapContainer = document.getElementById(this.elements.venueMap);
+        if (!mapContainer) return;
+
+        // Build map query - prefer coordinates, fall back to address
+        var mapQuery = '';
+        if (venue.latitude && venue.longitude) {
+            mapQuery = venue.latitude + ',' + venue.longitude;
+        } else if (venue.address) {
+            mapQuery = encodeURIComponent(venue.address);
+        }
+
+        if (mapQuery) {
+            // Render Google Maps embed iframe
+            mapContainer.innerHTML = '<iframe ' +
+                'src="https://www.google.com/maps?q=' + mapQuery + '&output=embed" ' +
+                'width="100%" height="100%" ' +
+                'style="border:0; min-height:192px;" ' +
+                'allowfullscreen="" ' +
+                'loading="lazy" ' +
+                'referrerpolicy="no-referrer-when-downgrade">' +
+            '</iframe>';
+        } else {
+            // No location data - show placeholder
+            mapContainer.innerHTML = '<div class="flex flex-col items-center justify-center h-full gap-3 text-muted">' +
+                '<svg class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' +
+                    '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>' +
+                    '<circle cx="12" cy="10" r="3"/>' +
+                '</svg>' +
+                '<p class="text-sm">Locație indisponibilă</p>' +
+            '</div>';
+        }
+    },
+
+    /**
      * Render amenities
      */
     renderAmenities(amenities) {
         var container = document.getElementById(this.elements.venueAmenities);
+        var section = document.getElementById(this.elements.amenitiesSection);
         if (!container) return;
 
+        // Hide entire section if no amenities
         if (!amenities || amenities.length === 0) {
-            container.innerHTML = '<p class="col-span-2 text-sm italic text-gray-500">Nu sunt specificate facilități</p>';
+            if (section) section.style.display = 'none';
             return;
         }
+
+        // Show section if it was hidden
+        if (section) section.style.display = '';
 
         var self = this;
         var html = amenities.map(function(a) {
@@ -431,19 +487,17 @@ const VenuePage = {
      */
     renderGallery(gallery) {
         var container = document.getElementById(this.elements.venueGallery);
+        var section = document.getElementById(this.elements.gallerySection);
         if (!container) return;
 
+        // Hide entire section if no gallery images
         if (!gallery || gallery.length === 0) {
-            container.innerHTML =
-                '<div class="flex items-center justify-center col-span-3 py-12 text-gray-400 bg-gray-100 rounded-xl">' +
-                    '<svg class="w-12 h-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' +
-                        '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>' +
-                        '<circle cx="8.5" cy="8.5" r="1.5"/>' +
-                        '<polyline points="21 15 16 10 5 21"/>' +
-                    '</svg>' +
-                '</div>';
+            if (section) section.style.display = 'none';
             return;
         }
+
+        // Show section if it was hidden
+        if (section) section.style.display = '';
 
         var self = this;
         var html = gallery.slice(0, 5).map(function(img, idx) {
