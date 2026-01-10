@@ -308,7 +308,14 @@ const AmbiletEventCard = {
         }
 
         // Extract price
-        const minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
+        let minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
+
+        // Apply commission if mode is 'added_on_top'
+        const commissionMode = apiEvent.commission_mode || 'included';
+        const commissionRate = apiEvent.commission_rate || 0;
+        if (commissionMode === 'added_on_top' && commissionRate > 0 && minPrice > 0) {
+            minPrice = minPrice + (minPrice * commissionRate / 100);
+        }
 
         // Extract category
         let categoryName = '';
