@@ -393,22 +393,28 @@ class ReferralsController extends BaseController
      */
     protected function getReferralSettings(int $clientId): array
     {
-        $settings = DB::table('marketplace_client_settings')
-            ->where('marketplace_client_id', $clientId)
-            ->where('key', 'referral_program')
-            ->first();
-
-        if ($settings && $settings->value) {
-            return json_decode($settings->value, true);
-        }
-
         // Default settings
-        return [
+        $defaults = [
             'referrer_reward' => 50, // 50 points or RON
             'referred_reward' => 25, // 25 points or RON for new user
             'reward_type' => 'points', // 'points' or 'credit'
             'min_purchase' => 0, // Minimum purchase for conversion
         ];
+
+        try {
+            $settings = DB::table('marketplace_client_settings')
+                ->where('marketplace_client_id', $clientId)
+                ->where('key', 'referral_program')
+                ->first();
+
+            if ($settings && $settings->value) {
+                return json_decode($settings->value, true);
+            }
+        } catch (\Exception $e) {
+            // Table may not exist, return defaults
+        }
+
+        return $defaults;
     }
 
     /**
