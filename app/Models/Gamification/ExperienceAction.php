@@ -246,6 +246,21 @@ class ExperienceAction extends Model
                 'xp_type' => self::XP_TYPE_FIXED,
                 'xp_amount' => 50,
             ],
+            [
+                'action_type' => self::ACTION_PROFILE_COMPLETE,
+                'name' => ['en' => 'Profile Complete', 'ro' => 'Profil complet'],
+                'description' => ['en' => 'Earn XP for completing your profile', 'ro' => 'Câștigă XP pentru completarea profilului'],
+                'xp_type' => self::XP_TYPE_FIXED,
+                'xp_amount' => 20,
+            ],
+            [
+                'action_type' => self::ACTION_WISHLIST_ADD,
+                'name' => ['en' => 'Add to Wishlist', 'ro' => 'Adaugă la favorite'],
+                'description' => ['en' => 'Earn XP for adding events to your wishlist', 'ro' => 'Câștigă XP pentru adăugarea evenimentelor la favorite'],
+                'xp_type' => self::XP_TYPE_FIXED,
+                'xp_amount' => 5,
+                'max_times_per_day' => 10,
+            ],
         ];
 
         foreach ($defaults as $default) {
@@ -299,6 +314,21 @@ class ExperienceAction extends Model
                 'description' => ['en' => 'Bonus XP for your first purchase', 'ro' => 'XP bonus pentru prima ta achiziție'],
                 'xp_type' => self::XP_TYPE_FIXED,
                 'xp_amount' => 50,
+            ],
+            [
+                'action_type' => self::ACTION_PROFILE_COMPLETE,
+                'name' => ['en' => 'Profile Complete', 'ro' => 'Profil complet'],
+                'description' => ['en' => 'Earn XP for completing your profile', 'ro' => 'Câștigă XP pentru completarea profilului'],
+                'xp_type' => self::XP_TYPE_FIXED,
+                'xp_amount' => 20,
+            ],
+            [
+                'action_type' => self::ACTION_WISHLIST_ADD,
+                'name' => ['en' => 'Add to Wishlist', 'ro' => 'Adaugă la favorite'],
+                'description' => ['en' => 'Earn XP for adding events to your wishlist', 'ro' => 'Câștigă XP pentru adăugarea evenimentelor la favorite'],
+                'xp_type' => self::XP_TYPE_FIXED,
+                'xp_amount' => 5,
+                'max_times_per_day' => 10,
             ],
         ];
 

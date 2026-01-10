@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 use App\Models\Order;
 use App\Models\MarketplaceTransaction;
 use App\Models\Tenant;
+use App\Models\Gamification\ExperienceAction;
 use App\Notifications\MarketplaceOrderNotification;
 use App\Services\PaymentProcessors\PaymentProcessorFactory;
+use App\Services\Gamification\ExperienceService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -186,6 +188,9 @@ class PaymentController extends BaseController
                     })->afterResponse();
                 }
 
+                // Award XP for ticket purchase (gamification)
+                $this->awardPurchaseXp($order);
+
                 Log::channel('marketplace')->info('Payment completed for marketplace order', [
                     'order_id' => $order->id,
                     'client_slug' => $clientSlug,
@@ -248,5 +253,78 @@ class PaymentController extends BaseController
             'expires_at' => $order->expires_at?->toIso8601String(),
             'is_expired' => $order->expires_at && $order->expires_at->isPast(),
         ]);
+    }
+
+    /**
+     * Award XP for ticket purchase (and first purchase bonus)
+     */
+    protected function awardPurchaseXp(Order $order): void
+    {
+        // Only award XP if we have a marketplace customer
+        if (!$order->marketplace_customer_id || !$order->marketplace_client_id) {
+            return;
+        }
+
+        try {
+            $experienceService = app(ExperienceService::class);
+            $customerId = $order->marketplace_customer_id;
+            $marketplaceClientId = $order->marketplace_client_id;
+            $purchaseAmount = (float) $order->total;
+
+            // Award ticket_purchase XP (based on amount spent)
+            $experienceService->awardActionXpForMarketplace(
+                $marketplaceClientId,
+                $customerId,
+                ExperienceAction::ACTION_TICKET_PURCHASE,
+                $purchaseAmount,
+                [
+                    'reference_type' => Order::class,
+                    'reference_id' => $order->id,
+                    'description' => [
+                        'en' => "Ticket purchase - Order #{$order->order_number}",
+                        'ro' => "Achiziție bilete - Comanda #{$order->order_number}",
+                    ],
+                ]
+            );
+
+            // Check for first purchase bonus
+            $previousOrders = Order::where('marketplace_customer_id', $customerId)
+                ->where('marketplace_client_id', $marketplaceClientId)
+                ->where('id', '!=', $order->id)
+                ->where('payment_status', 'paid')
+                ->count();
+
+            if ($previousOrders === 0) {
+                // This is their first successful purchase - award first_purchase bonus
+                $experienceService->awardActionXpForMarketplace(
+                    $marketplaceClientId,
+                    $customerId,
+                    ExperienceAction::ACTION_FIRST_PURCHASE,
+                    $purchaseAmount,
+                    [
+                        'reference_type' => Order::class,
+                        'reference_id' => $order->id,
+                        'description' => [
+                            'en' => "First purchase bonus",
+                            'ro' => "Bonus primă achiziție",
+                        ],
+                    ]
+                );
+            }
+
+            Log::channel('marketplace')->info('XP awarded for purchase', [
+                'order_id' => $order->id,
+                'customer_id' => $customerId,
+                'amount' => $purchaseAmount,
+                'is_first_purchase' => $previousOrders === 0,
+            ]);
+
+        } catch (\Exception $e) {
+            // Log but don't fail the payment callback for XP issues
+            Log::channel('marketplace')->warning('Failed to award XP for purchase', [
+                'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

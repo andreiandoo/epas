@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Customer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\MarketplaceCustomer;
+use App\Models\Gamification\ExperienceAction;
+use App\Services\Gamification\ExperienceService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class WatchlistController extends BaseController
 {
@@ -256,6 +259,9 @@ class WatchlistController extends BaseController
             'updated_at' => now(),
         ]);
 
+        // Award XP for adding to wishlist
+        $this->awardWishlistXp($client->id, $customer->id, $id);
+
         return $this->success([
             'watchlist_id' => $id,
         ], 'Event added to watchlist', 201);
@@ -351,5 +357,44 @@ class WatchlistController extends BaseController
         }
 
         return $customer;
+    }
+
+    /**
+     * Award XP for adding to wishlist
+     */
+    protected function awardWishlistXp(int $marketplaceClientId, int $customerId, int $watchlistId): void
+    {
+        try {
+            $experienceService = app(ExperienceService::class);
+
+            $experienceService->awardActionXpForMarketplace(
+                $marketplaceClientId,
+                $customerId,
+                ExperienceAction::ACTION_WISHLIST_ADD,
+                0,
+                [
+                    'reference_type' => 'marketplace_customer_watchlist',
+                    'reference_id' => $watchlistId,
+                    'description' => [
+                        'en' => 'Added event to wishlist',
+                        'ro' => 'Eveniment adăugat la favorite',
+                    ],
+                ]
+            );
+
+            Log::channel('marketplace')->debug('XP awarded for wishlist add', [
+                'marketplace_client_id' => $marketplaceClientId,
+                'customer_id' => $customerId,
+                'watchlist_id' => $watchlistId,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::channel('marketplace')->warning('Failed to award XP for wishlist add', [
+                'marketplace_client_id' => $marketplaceClientId,
+                'customer_id' => $customerId,
+                'watchlist_id' => $watchlistId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

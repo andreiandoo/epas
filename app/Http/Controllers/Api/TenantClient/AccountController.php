@@ -9,6 +9,8 @@ use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\Shop\ShopOrder;
 use App\Services\Gamification\GamificationService;
+use App\Services\Gamification\ExperienceService;
+use App\Models\Gamification\ExperienceAction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -18,10 +20,14 @@ use Illuminate\Validation\ValidationException;
 class AccountController extends Controller
 {
     protected GamificationService $gamificationService;
+    protected ExperienceService $experienceService;
 
-    public function __construct(GamificationService $gamificationService)
-    {
+    public function __construct(
+        GamificationService $gamificationService,
+        ExperienceService $experienceService
+    ) {
         $this->gamificationService = $gamificationService;
+        $this->experienceService = $experienceService;
     }
 
     /**
@@ -682,6 +688,9 @@ class AccountController extends Controller
             'new_password' => 'sometimes|string|min:8|confirmed',
         ]);
 
+        // Check if profile was complete BEFORE update (for XP award)
+        $wasProfileComplete = $customer->isProfileComplete();
+
         // Update basic info
         if (isset($validated['first_name'])) {
             $customer->first_name = $validated['first_name'];
@@ -721,6 +730,29 @@ class AccountController extends Controller
 
         $customer->save();
 
+        // Award XP for profile completion (only once, when profile becomes complete)
+        $xpAwarded = false;
+        if (!$wasProfileComplete && $customer->isProfileComplete()) {
+            $tenant = $request->attributes->get('tenant');
+            if ($tenant) {
+                $transaction = $this->experienceService->awardActionXpForTenant(
+                    $tenant->id,
+                    $customer->id,
+                    ExperienceAction::ACTION_PROFILE_COMPLETE,
+                    0,
+                    [
+                        'reference_type' => Customer::class,
+                        'reference_id' => $customer->id,
+                        'description' => [
+                            'en' => 'Profile completed',
+                            'ro' => 'Profil completat',
+                        ],
+                    ]
+                );
+                $xpAwarded = $transaction !== null;
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Profilul a fost actualizat cu succes',
@@ -734,6 +766,8 @@ class AccountController extends Controller
                 'country' => $customer->country,
                 'date_of_birth' => $customer->date_of_birth?->format('Y-m-d'),
                 'age' => $customer->age,
+                'profile_complete' => $customer->isProfileComplete(),
+                'xp_awarded' => $xpAwarded,
             ],
         ]);
     }

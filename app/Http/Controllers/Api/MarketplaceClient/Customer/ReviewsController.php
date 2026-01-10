@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Customer;
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\MarketplaceCustomer;
 use App\Models\Order;
+use App\Models\Gamification\ExperienceAction;
+use App\Services\Gamification\ExperienceService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -199,6 +202,9 @@ class ReviewsController extends BaseController
             'updated_at' => now(),
         ]);
 
+        // Award XP for review submission
+        $this->awardReviewXp($client->id, $customer->id, $reviewId);
+
         return $this->success([
             'review_id' => $reviewId,
         ], 'Review submitted successfully. It will be published after moderation.', 201);
@@ -347,5 +353,44 @@ class ReviewsController extends BaseController
         }
 
         return $customer;
+    }
+
+    /**
+     * Award XP for submitting a review
+     */
+    protected function awardReviewXp(int $marketplaceClientId, int $customerId, int $reviewId): void
+    {
+        try {
+            $experienceService = app(ExperienceService::class);
+
+            $experienceService->awardActionXpForMarketplace(
+                $marketplaceClientId,
+                $customerId,
+                ExperienceAction::ACTION_REVIEW_SUBMITTED,
+                0,
+                [
+                    'reference_type' => 'marketplace_customer_reviews',
+                    'reference_id' => $reviewId,
+                    'description' => [
+                        'en' => 'Review submitted',
+                        'ro' => 'Recenzie trimisă',
+                    ],
+                ]
+            );
+
+            Log::channel('marketplace')->info('XP awarded for review', [
+                'marketplace_client_id' => $marketplaceClientId,
+                'customer_id' => $customerId,
+                'review_id' => $reviewId,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::channel('marketplace')->warning('Failed to award XP for review', [
+                'marketplace_client_id' => $marketplaceClientId,
+                'customer_id' => $customerId,
+                'review_id' => $reviewId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

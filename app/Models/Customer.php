@@ -165,4 +165,54 @@ class Customer extends Authenticatable
     {
         return $this->belongsTo(Customer::class, 'referred_by');
     }
+
+    /**
+     * Check if customer's profile is complete
+     * A profile is considered complete when all core personal info fields are filled
+     */
+    public function isProfileComplete(): bool
+    {
+        return !empty($this->first_name)
+            && !empty($this->last_name)
+            && !empty($this->phone)
+            && !empty($this->city)
+            && !empty($this->country)
+            && !empty($this->date_of_birth);
+    }
+
+    /**
+     * Get profile completion percentage (0-100)
+     */
+    public function getProfileCompletionPercentage(): int
+    {
+        $fields = [
+            $this->first_name,
+            $this->last_name,
+            $this->phone,
+            $this->city,
+            $this->country,
+            $this->date_of_birth,
+        ];
+
+        $filled = collect($fields)->filter(fn ($value) => !empty($value))->count();
+
+        return (int) round(($filled / count($fields)) * 100);
+    }
+
+    /**
+     * Get list of missing profile fields
+     */
+    public function getMissingProfileFields(): array
+    {
+        $missing = [];
+
+        if (empty($this->first_name)) $missing[] = 'first_name';
+        if (empty($this->last_name)) $missing[] = 'last_name';
+        if (empty($this->phone)) $missing[] = 'phone';
+        if (empty($this->city)) $missing[] = 'city';
+        if (empty($this->country)) $missing[] = 'country';
+        if (empty($this->date_of_birth)) $missing[] = 'date_of_birth';
+
+        return $missing;
+    }
 }
