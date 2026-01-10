@@ -285,7 +285,8 @@ switch ($action) {
         break;
 
     case 'categories':
-        $endpoint = '/events/categories';
+        // Use marketplace-events/categories which has the correct implementation
+        $endpoint = '/marketplace-events/categories';
         break;
 
     case 'event-categories':
