@@ -137,8 +137,10 @@ const WatchlistPage = {
             // Load favorite venues
             try {
                 const venuesResponse = await AmbiletAPI.getFavoriteVenues();
+                console.log('[WatchlistPage] Venues response:', venuesResponse);
                 if (venuesResponse.success && venuesResponse.data) {
                     this.venues = Array.isArray(venuesResponse.data) ? venuesResponse.data : [];
+                    console.log('[WatchlistPage] Venues loaded:', this.venues.length, 'venues');
                 }
             } catch (e) {
                 console.log('[WatchlistPage] Venues load error:', e);
