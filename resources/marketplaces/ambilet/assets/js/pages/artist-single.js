@@ -9,6 +9,7 @@ const ArtistPage = {
     // Configuration
     artistSlug: '',
     artistData: null,
+    isFollowing: false,
 
     // Month names for date formatting
     monthNames: ['IAN', 'FEB', 'MAR', 'APR', 'MAI', 'IUN', 'IUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'],
@@ -35,7 +36,10 @@ const ArtistPage = {
         socialInstagram: 'socialInstagram',
         socialYoutube: 'socialYoutube',
         socialTiktok: 'socialTiktok',
-        socialSpotify: 'socialSpotify'
+        socialSpotify: 'socialSpotify',
+        followBtn: 'follow-btn',
+        followIcon: 'follow-icon',
+        followText: 'follow-text'
     },
 
     /**
@@ -45,6 +49,7 @@ const ArtistPage = {
         // Get slug from window variable (set by PHP)
         this.artistSlug = window.ARTIST_SLUG || '';
         this.loadArtistData();
+        this.loadFollowStatus();
     },
 
     /**
@@ -596,6 +601,70 @@ const ArtistPage = {
                 '<p class="text-[13px] text-gray-500">' + self.escapeHtml(artist.genre) + '</p>' +
             '</a>';
         }).join('');
+    },
+
+    /**
+     * Load follow status for artist
+     */
+    async loadFollowStatus() {
+        if (!this.artistSlug) return;
+
+        try {
+            var response = await AmbiletAPI.checkArtistFavorite(this.artistSlug);
+            if (response.success && response.data) {
+                this.isFollowing = response.data.is_favorite;
+                this.updateFollowButton();
+            }
+        } catch (e) {
+            // Silently ignore - user not logged in or error
+            console.log('[ArtistPage] Follow status check skipped');
+        }
+    },
+
+    /**
+     * Toggle follow status for artist
+     */
+    async toggleFollow() {
+        if (!this.artistSlug) return;
+
+        // Check if user is logged in
+        if (!AmbiletAuth.isLoggedIn()) {
+            window.location.href = '/cont/autentificare?redirect=' + encodeURIComponent(window.location.pathname);
+            return;
+        }
+
+        try {
+            var response = await AmbiletAPI.toggleArtistFavorite(this.artistSlug);
+            console.log('[ArtistPage] Toggle follow response:', response);
+            if (response.success && response.data) {
+                this.isFollowing = response.data.is_favorite;
+                this.updateFollowButton();
+            }
+        } catch (e) {
+            console.error('[ArtistPage] Toggle follow failed:', e);
+            if (e.status === 401) {
+                window.location.href = '/cont/autentificare?redirect=' + encodeURIComponent(window.location.pathname);
+            }
+        }
+    },
+
+    /**
+     * Update follow button visual state
+     */
+    updateFollowButton() {
+        var btn = document.getElementById(this.elements.followBtn);
+        var text = document.getElementById(this.elements.followText);
+        if (!btn || !text) return;
+
+        if (this.isFollowing) {
+            btn.classList.remove('from-primary', 'to-primary-light');
+            btn.classList.add('from-gray-600', 'to-gray-700');
+            text.textContent = 'Urmărești';
+        } else {
+            btn.classList.remove('from-gray-600', 'to-gray-700');
+            btn.classList.add('from-primary', 'to-primary-light');
+            text.textContent = 'Urmărește';
+        }
     }
 };
 

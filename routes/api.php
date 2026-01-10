@@ -1331,6 +1331,15 @@ Route::prefix('marketplace-client')->middleware(['throttle:120,1', 'marketplace.
         ->name('api.marketplace-client.events.toggle-interest');
     Route::get('/events/{event}/check-interest', [MarketplaceEventsController::class, 'checkInterest'])
         ->name('api.marketplace-client.events.check-interest');
+// Artist/Venue Favorites (uses CustomerFavoritesController)
+    Route::post("/artists/{artist}/toggle-favorite", [CustomerFavoritesController::class, "toggleArtist"])
+        ->name("api.marketplace-client.artists.toggle-favorite");
+    Route::get("/artists/{artist}/check-favorite", [CustomerFavoritesController::class, "checkArtist"])
+        ->name("api.marketplace-client.artists.check-favorite");
+    Route::post("/venues/{venue}/toggle-favorite", [CustomerFavoritesController::class, "toggleVenue"])
+        ->name("api.marketplace-client.venues.toggle-favorite");
+    Route::get("/venues/{venue}/check-favorite", [CustomerFavoritesController::class, "checkVenue"])
+        ->name("api.marketplace-client.venues.check-favorite");
 
     // Orders
     Route::get('/orders', [MarketplaceOrdersController::class, 'index'])
@@ -1583,6 +1592,7 @@ use App\Http\Controllers\Api\MarketplaceClient\Customer\WatchlistController as C
 use App\Http\Controllers\Api\MarketplaceClient\Customer\RewardsController as CustomerRewardsController;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\NotificationsController as CustomerNotificationsController;
 use App\Http\Controllers\Api\MarketplaceClient\Customer\ReferralsController as CustomerReferralsController;
+use App\Http\Controllers\Api\MarketplaceClient\Customer\FavoritesController as CustomerFavoritesController;
 
 Route::prefix('marketplace-client/customer')->middleware(['throttle:120,1', 'marketplace.auth'])->group(function () {
     // Public routes (no customer auth)

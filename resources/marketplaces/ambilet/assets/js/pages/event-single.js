@@ -108,11 +108,7 @@ const EventPage = {
             if (response.success && response.data) {
                 this.isInterested = response.data.is_interested;
                 this.updateInterestButton();
-                // Check for !== undefined to handle 0 values correctly
-                if (response.data.interested_count !== undefined) {
-                    document.getElementById(this.elements.eventInterested).textContent =
-                        this.formatCount(response.data.interested_count) + ' interesati';
-                }
+                // Update views count only (interest button now shows text, not count)
                 if (response.data.views_count !== undefined) {
                     document.getElementById(this.elements.eventViews).textContent =
                         this.formatCount(response.data.views_count) + ' vizualizari';
@@ -144,9 +140,7 @@ const EventPage = {
             if (response.success && response.data) {
                 this.isInterested = response.data.is_interested;
                 this.updateInterestButton();
-                var count = response.data.interested_count ?? 0;
-                document.getElementById(this.elements.eventInterested).textContent =
-                    this.formatCount(count) + ' interesati';
+                // updateInterestButton now handles the text change
             }
         } catch (e) {
             console.error('[EventPage] Toggle interest failed:', e);
@@ -217,17 +211,20 @@ const EventPage = {
     },
 
     /**
-     * Update interest button visual state
+     * Update interest button visual state and text
      */
     updateInterestButton() {
         var btn = document.getElementById(this.elements.interestBtn);
         var icon = document.getElementById(this.elements.interestIcon);
+        var textSpan = document.getElementById(this.elements.eventInterested);
         if (this.isInterested) {
             btn.classList.add('border-primary', 'text-primary', 'bg-primary/5');
             icon.setAttribute('fill', 'currentColor');
+            textSpan.textContent = 'Trecut la favorite';
         } else {
             btn.classList.remove('border-primary', 'text-primary', 'bg-primary/5');
             icon.setAttribute('fill', 'none');
+            textSpan.textContent = 'Mă interesează';
         }
     },
 
@@ -505,8 +502,7 @@ const EventPage = {
             }
         }
 
-        // Stats
-        document.getElementById(this.elements.eventInterested).textContent = this.formatCount(e.interested_count || 0) + ' interesati';
+        // Stats (views only - interest button text is handled separately)
         document.getElementById(this.elements.eventViews).textContent = this.formatCount(e.views_count || 0) + ' vizualizari';
 
         // Description

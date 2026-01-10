@@ -585,6 +585,34 @@ const AmbiletAPI = {
     },
 
     /**
+     * Toggle favorite for an artist
+     */
+    async toggleArtistFavorite(slug) {
+        return this.post(`/artists/${slug}/toggle-favorite`);
+    },
+
+    /**
+     * Check if user has favorited an artist
+     */
+    async checkArtistFavorite(slug) {
+        return this.get(`/artists/${slug}/check-favorite`);
+    },
+
+    /**
+     * Toggle favorite for a venue
+     */
+    async toggleVenueFavorite(slug) {
+        return this.post(`/venues/${slug}/toggle-favorite`);
+    },
+
+    /**
+     * Check if user has favorited a venue
+     */
+    async checkVenueFavorite(slug) {
+        return this.get(`/venues/${slug}/check-favorite`);
+    },
+
+    /**
      * Get single venue details
      */
     async getVenue(slug) {
