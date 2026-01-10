@@ -342,8 +342,8 @@ function renderFeaturedEvents(events) {
 async function loadCategories() {
     try {
         const response = await AmbiletAPI.getCategories();
-        if (response.data) {
-            renderCategories(response.data);
+        if (response.data && response.data.categories) {
+            renderCategories(response.data.categories);
         }
     } catch (error) {
         console.warn('Failed to load categories:', error);
@@ -383,8 +383,8 @@ function renderCategories(categories) {
 async function loadCities() {
     try {
         const response = await AmbiletAPI.get('/locations/cities/featured?limit=6');
-        if (response.data) {
-            renderCities(response.data);
+        if (response.data && response.data.cities) {
+            renderCities(response.data.cities);
         }
     } catch (error) {
         console.warn('Failed to load cities:', error);
