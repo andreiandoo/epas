@@ -131,19 +131,36 @@ class VenuesController extends BaseController
         $upcomingEvents = $venue->events()
             ->where('event_date', '>=', now()->toDateString())
             ->where('is_cancelled', false)
+            ->with('ticketTypes')
             ->orderBy('event_date')
             ->limit(10)
             ->get()
             ->map(function ($event) use ($language) {
+                // Calculate min price from ticket types
+                $minPrice = $event->ticketTypes->map(function ($tt) {
+                    return ($tt->sale_price_cents ?? $tt->price_cents) / 100;
+                })->filter()->min();
+
+                // Get image URL - use APP_URL for consistent domain
+                $imageUrl = null;
+                $imagePath = $event->poster_url ?? $event->hero_image_url ?? null;
+                if ($imagePath) {
+                    if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
+                        $imageUrl = $imagePath;
+                    } else {
+                        $imageUrl = rtrim(config('app.url'), '/') . '/storage/' . ltrim($imagePath, '/');
+                    }
+                }
+
                 return [
                     'id' => $event->id,
                     'title' => $event->getTranslation('title', $language),
                     'slug' => $event->slug,
                     'event_date' => $event->event_date,
                     'start_time' => $event->start_time,
-                    'min_price' => $event->min_price_minor ? ($event->min_price_minor / 100) : null,
+                    'min_price' => $minPrice,
                     'currency' => $event->currency ?? 'RON',
-                    'image' => $event->main_image_url,
+                    'image' => $imageUrl,
                     'is_sold_out' => $event->is_sold_out ?? false,
                 ];
             });
@@ -161,8 +178,8 @@ class VenuesController extends BaseController
             'latitude' => $venue->latitude,
             'longitude' => $venue->longitude,
             'capacity' => $venue->capacity,
-            'image' => $venue->image_url,
-            'cover_image' => $venue->cover_image_url,
+            'image' => $this->formatImageUrl($venue->image_url),
+            'cover_image' => $this->formatImageUrl($venue->cover_image_url),
             'gallery' => $venue->gallery ?? [],
             'schedule' => $venue->schedule,
             'amenities' => $venue->amenities ?? [],
@@ -195,7 +212,7 @@ class VenuesController extends BaseController
             'city' => $venue->city,
             'address' => $venue->address,
             'capacity' => $venue->capacity,
-            'image' => $venue->image_url,
+            'image' => $this->formatImageUrl($venue->image_url),
             'events_count' => $venue->events()->where('event_date', '>=', now()->toDateString())->count(),
             'is_featured' => $venue->is_featured ?? false,
             'is_partner' => $venue->is_partner ?? false,
@@ -205,5 +222,21 @@ class VenuesController extends BaseController
                 'slug' => $cat->slug,
             ]),
         ];
+    }
+
+    /**
+     * Format image URL with full domain
+     */
+    protected function formatImageUrl(?string $imagePath): ?string
+    {
+        if (!$imagePath) {
+            return null;
+        }
+
+        if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
+            return $imagePath;
+        }
+
+        return rtrim(config('app.url'), '/') . '/storage/' . ltrim($imagePath, '/');
     }
 }

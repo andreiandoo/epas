@@ -168,11 +168,18 @@ class EventsController extends BaseController
                 ? ($event->event_date ? $event->event_date->format('Y-m-d') . ' ' . ($event->start_time ?? '00:00') : null)
                 : $event->starts_at;
 
-            // Get image (convert to absolute URL)
+            // Get image (convert to absolute URL using APP_URL for consistent domain)
             $imageRelative = $isMarketplaceEvent
                 ? ($event->poster_url ?? $event->hero_image_url ?? $event->image_url)
                 : $event->image_url;
-            $imageUrl = $imageRelative ? url('storage/' . ltrim($imageRelative, '/')) : null;
+            $imageUrl = null;
+            if ($imageRelative) {
+                if (str_starts_with($imageRelative, 'http://') || str_starts_with($imageRelative, 'https://')) {
+                    $imageUrl = $imageRelative;
+                } else {
+                    $imageUrl = rtrim(config('app.url'), '/') . '/storage/' . ltrim($imageRelative, '/');
+                }
+            }
 
             // Get category
             $category = $isMarketplaceEvent
@@ -311,16 +318,16 @@ class EventsController extends BaseController
             : $event->doors_open_at;
 
         // Get images: marketplace events use poster_url/hero_image_url, tenant events use image_url/cover_image_url
-        // Convert relative paths to absolute URLs
+        // Convert relative paths to absolute URLs using APP_URL for consistent domain
         $imageRelative = $isMarketplaceEvent
             ? ($event->poster_url ?? $event->hero_image_url ?? $event->image_url)
             : $event->image_url;
-        $imageUrl = $imageRelative ? url('storage/' . ltrim($imageRelative, '/')) : null;
+        $imageUrl = $this->formatImageUrl($imageRelative);
 
         $coverImageRelative = $isMarketplaceEvent
             ? ($event->hero_image_url ?? $event->poster_url ?? $event->cover_image_url)
             : $event->cover_image_url;
-        $coverImageUrl = $coverImageRelative ? url('storage/' . ltrim($coverImageRelative, '/')) : null;
+        $coverImageUrl = $this->formatImageUrl($coverImageRelative);
 
         // Get category
         $category = $isMarketplaceEvent
@@ -363,7 +370,7 @@ class EventsController extends BaseController
                 'latitude' => $event->venue->lat,
                 'longitude' => $event->venue->lng,
                 'google_maps_url' => $event->venue->google_maps_url,
-                'image' => $event->venue->image_url ? url('storage/' . $event->venue->image_url) : null,
+                'image' => $this->formatImageUrl($event->venue->image_url),
                 'capacity' => $event->venue->capacity,
             ] : null,
             'ticket_types' => $event->ticketTypes->map(function ($tt) use ($language) {
@@ -467,11 +474,11 @@ class EventsController extends BaseController
                     ? ($event->event_date ? $event->event_date->format('Y-m-d') . ' ' . ($event->start_time ?? '00:00') : null)
                     : $event->starts_at;
 
-                // Get image (convert to absolute URL)
+                // Get image (convert to absolute URL using APP_URL)
                 $imageRelative = $isMarketplaceEvent
                     ? ($event->poster_url ?? $event->hero_image_url ?? $event->image_url)
                     : $event->image_url;
-                $imageUrl = $imageRelative ? url('storage/' . ltrim($imageRelative, '/')) : null;
+                $imageUrl = $this->formatImageUrl($imageRelative);
 
                 // Calculate min price from active ticket types
                 $minPrice = $event->ticketTypes->map(function ($tt) {
@@ -872,5 +879,21 @@ class EventsController extends BaseController
                 'icon_svg' => $tax->icon_svg,
             ];
         })->toArray();
+    }
+
+    /**
+     * Format image URL with full domain
+     */
+    protected function formatImageUrl(?string $imagePath): ?string
+    {
+        if (!$imagePath) {
+            return null;
+        }
+
+        if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
+            return $imagePath;
+        }
+
+        return rtrim(config('app.url'), '/') . '/storage/' . ltrim($imagePath, '/');
     }
 }

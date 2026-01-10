@@ -216,6 +216,7 @@ class FavoritesController extends BaseController
 
         $artistIds = $favorites->pluck('favoriteable_id');
         $artists = Artist::whereIn('id', $artistIds)
+            ->with('genres')
             ->withCount(['events' => function ($query) {
                 $query->where('event_date', '>=', now());
             }])
