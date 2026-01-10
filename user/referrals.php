@@ -203,7 +203,7 @@ const ReferralsPage = {
         if (!code) return '';
         // Use current domain for the referral link
         const domain = window.location.hostname;
-        return 'https://' + domain + '/?ref=' + code;
+        return domain + '/?ref=' + code;
     },
 
     updateStats(stats) {
