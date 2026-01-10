@@ -23,6 +23,7 @@ class ExperienceTransaction extends Model
         'tenant_id',
         'marketplace_client_id',
         'customer_id',
+        'marketplace_customer_id',
         'xp',
         'xp_balance_after',
         'level_after',

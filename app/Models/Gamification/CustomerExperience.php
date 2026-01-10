@@ -20,6 +20,7 @@ class CustomerExperience extends Model
         'tenant_id',
         'marketplace_client_id',
         'customer_id',
+        'marketplace_customer_id',
         'total_xp',
         'current_level',
         'xp_to_next_level',
@@ -65,13 +66,18 @@ class CustomerExperience extends Model
         return $this->belongsTo(Customer::class);
     }
 
+    public function marketplaceCustomer(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\MarketplaceCustomer::class);
+    }
+
     public function transactions(): HasMany
     {
         if ($this->tenant_id) {
             return $this->hasMany(ExperienceTransaction::class, 'customer_id', 'customer_id')
                 ->where('tenant_id', $this->tenant_id);
         }
-        return $this->hasMany(ExperienceTransaction::class, 'customer_id', 'customer_id')
+        return $this->hasMany(ExperienceTransaction::class, 'marketplace_customer_id', 'marketplace_customer_id')
             ->where('marketplace_client_id', $this->marketplace_client_id);
     }
 
@@ -81,7 +87,7 @@ class CustomerExperience extends Model
             return $this->hasMany(CustomerBadge::class, 'customer_id', 'customer_id')
                 ->where('tenant_id', $this->tenant_id);
         }
-        return $this->hasMany(CustomerBadge::class, 'customer_id', 'customer_id')
+        return $this->hasMany(CustomerBadge::class, 'marketplace_customer_id', 'marketplace_customer_id')
             ->where('marketplace_client_id', $this->marketplace_client_id);
     }
 
@@ -147,14 +153,14 @@ class CustomerExperience extends Model
     /**
      * Get or create customer experience record for marketplace
      */
-    public static function getOrCreateForMarketplace(int $marketplaceClientId, int $customerId): self
+    public static function getOrCreateForMarketplace(int $marketplaceClientId, int $marketplaceCustomerId): self
     {
         $config = ExperienceConfig::getOrCreateForMarketplace($marketplaceClientId);
 
         return self::firstOrCreate(
             [
                 'marketplace_client_id' => $marketplaceClientId,
-                'customer_id' => $customerId,
+                'marketplace_customer_id' => $marketplaceCustomerId,
             ],
             [
                 'total_xp' => 0,
@@ -221,6 +227,7 @@ class CustomerExperience extends Model
             'tenant_id' => $this->tenant_id,
             'marketplace_client_id' => $this->marketplace_client_id,
             'customer_id' => $this->customer_id,
+            'marketplace_customer_id' => $this->marketplace_customer_id,
             'xp' => $xp,
             'xp_balance_after' => $this->total_xp,
             'level_after' => $this->current_level,

@@ -22,6 +22,7 @@ class CustomerPoints extends Model
         'marketplace_client_id',
         'tenant_id',
         'customer_id',
+        'marketplace_customer_id',
         'total_earned',
         'total_spent',
         'total_expired',

@@ -19,6 +19,7 @@ class RewardRedemption extends Model
         'marketplace_client_id',
         'reward_id',
         'customer_id',
+        'marketplace_customer_id',
         'points_spent',
         'points_transaction_id',
         'reward_snapshot',

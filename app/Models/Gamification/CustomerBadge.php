@@ -19,6 +19,7 @@ class CustomerBadge extends Model
         'marketplace_client_id',
         'badge_id',
         'customer_id',
+        'marketplace_customer_id',
         'xp_awarded',
         'experience_transaction_id',
         'points_awarded',

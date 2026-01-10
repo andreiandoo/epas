@@ -9,11 +9,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Spatie\Translatable\HasTranslations;
+use App\Support\Translatable;
 
 class PointsTransaction extends Model
 {
-    use HasFactory, HasTranslations;
+    use HasFactory, Translatable;
 
     public array $translatable = ['description'];
 
@@ -26,7 +26,9 @@ class PointsTransaction extends Model
 
     protected $fillable = [
         'tenant_id',
+        'marketplace_client_id',
         'customer_id',
+        'marketplace_customer_id',
         'type',
         'points',
         'balance_after',
