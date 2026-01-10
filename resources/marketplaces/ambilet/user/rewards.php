@@ -219,6 +219,17 @@ const RewardsPage = {
                 if (response.data.history) {
                     this.pointsHistory = response.data.history;
                 }
+
+                // Update header and sidebar points display
+                const headerPoints = document.getElementById('header-user-points');
+                const sidebarPoints = document.getElementById('sidebar-user-points');
+                if (headerPoints) headerPoints.textContent = this.points.toLocaleString();
+                if (sidebarPoints) sidebarPoints.textContent = this.points.toLocaleString();
+
+                // Update stored user data
+                if (typeof AmbiletAuth !== 'undefined') {
+                    AmbiletAuth.updateCustomerData({ points: this.points });
+                }
             }
         } catch (error) {
             console.log('Points API error:', error);

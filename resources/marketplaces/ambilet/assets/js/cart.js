@@ -76,6 +76,10 @@ const AmbiletCart = {
         }
 
         this.saveCart(cart);
+
+        // Start/reset reservation timer when adding items
+        this.startReservationTimer();
+
         this.showNotification(`${ticketTypeData.name} adăugat în coș!`);
 
         return cart;

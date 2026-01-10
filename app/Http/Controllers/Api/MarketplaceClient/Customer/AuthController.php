@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\MarketplaceClient\Customer;
 
 use App\Http\Controllers\Api\MarketplaceClient\BaseController;
 use App\Models\MarketplaceCustomer;
+use App\Models\Gamification\CustomerPoints;
 use App\Notifications\MarketplacePasswordResetNotification;
 use App\Notifications\MarketplaceEmailVerificationNotification;
 use Illuminate\Http\Request;
@@ -465,9 +466,15 @@ class AuthController extends BaseController
      */
     protected function formatCustomer(MarketplaceCustomer $customer): array
     {
+        // Get points and referral data
+        $customerPoints = CustomerPoints::where('marketplace_customer_id', $customer->id)->first();
+        $pointsBalance = $customerPoints ? $customerPoints->current_balance : 0;
+        $referralCode = $customerPoints ? $customerPoints->referral_code : null;
+
         return [
             'id' => $customer->id,
             'email' => $customer->email,
+            'name' => $customer->full_name,
             'first_name' => $customer->first_name,
             'last_name' => $customer->last_name,
             'full_name' => $customer->full_name,
@@ -484,6 +491,8 @@ class AuthController extends BaseController
             'settings' => $customer->settings,
             'is_guest' => $customer->isGuest(),
             'email_verified' => $customer->isEmailVerified(),
+            'points' => $pointsBalance,
+            'referral_code' => $referralCode,
             'stats' => [
                 'total_orders' => $customer->total_orders,
                 'total_spent' => (float) $customer->total_spent,
