@@ -285,7 +285,7 @@ switch ($action) {
         break;
 
     case 'categories':
-        $endpoint = '/categories';
+        $endpoint = '/events/categories';
         break;
 
     case 'event-categories':
