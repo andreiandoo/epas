@@ -326,6 +326,7 @@ const AmbiletAPI = {
         if (endpoint.includes('/customer/referrals/track-click')) return 'customer.referrals.track-click';
         if (endpoint.includes('/customer/referrals/leaderboard')) return 'customer.referrals.leaderboard';
         if (endpoint.includes('/customer/referrals/claim-rewards')) return 'customer.referrals.claim-rewards';
+        if (endpoint.includes('/customer/referrals/validate')) return 'customer.referrals.validate';
         if (endpoint === '/customer/referrals' || endpoint.includes('/customer/referrals?')) return 'customer.referrals';
 
         // Public endpoints
