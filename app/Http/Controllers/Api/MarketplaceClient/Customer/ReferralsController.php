@@ -138,32 +138,65 @@ class ReferralsController extends BaseController
             'code' => 'required|string|max:20',
         ]);
 
+        $code = $validated['code'];
+
+        // First check marketplace_referral_codes table
         $referralCode = DB::table('marketplace_referral_codes')
-            ->where('code', $validated['code'])
+            ->where('code', $code)
             ->where('marketplace_client_id', $client->id)
             ->where('is_active', true)
             ->first();
 
-        if (!$referralCode) {
-            return $this->error('Cod de referral invalid', 404);
+        $referrer = null;
+        $customerId = null;
+
+        if ($referralCode) {
+            $customerId = $referralCode->marketplace_customer_id;
+            // Increment clicks
+            DB::table('marketplace_referral_codes')
+                ->where('id', $referralCode->id)
+                ->increment('clicks');
+        } else {
+            // Fallback: check gamification_customer_points.referral_code
+            $gamificationPoints = DB::table('gamification_customer_points')
+                ->where('referral_code', $code)
+                ->where('marketplace_client_id', $client->id)
+                ->first();
+
+            if (!$gamificationPoints) {
+                return $this->error('Cod de referral invalid', 404);
+            }
+
+            $customerId = $gamificationPoints->marketplace_customer_id;
+
+            // Create a record in marketplace_referral_codes for future tracking
+            $referralCodeId = DB::table('marketplace_referral_codes')->insertGetId([
+                'marketplace_client_id' => $client->id,
+                'marketplace_customer_id' => $customerId,
+                'code' => $code,
+                'is_active' => true,
+                'clicks' => 1,
+                'signups' => 0,
+                'conversions' => 0,
+                'total_value' => 0,
+                'points_earned' => 0,
+                'pending_points' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
         }
 
         // Get referrer info
         $referrer = DB::table('marketplace_customers')
-            ->where('id', $referralCode->marketplace_customer_id)
+            ->where('id', $customerId)
             ->first();
 
         // Get referral settings
         $settings = $this->getReferralSettings($client->id);
 
-        // Increment clicks
-        DB::table('marketplace_referral_codes')
-            ->where('id', $referralCode->id)
-            ->increment('clicks');
-
         return $this->success([
             'valid' => true,
-            'code' => $referralCode->code,
+            'code' => $code,
             'referrer_name' => $referrer ? ($referrer->first_name ?? 'Un prieten') : 'Un prieten',
             'referred_reward' => $settings['referred_reward'],
             'reward_type' => $settings['reward_type'],
