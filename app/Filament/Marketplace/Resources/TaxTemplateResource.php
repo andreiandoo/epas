@@ -234,16 +234,24 @@ class TaxTemplateResource extends Resource
                                     );
                                 }
 
+                                // Escape the processed HTML for use in srcdoc attribute
+                                $escapedHtml = htmlspecialchars($processed, ENT_QUOTES, 'UTF-8');
+
+                                // Use iframe with srcdoc to completely isolate CSS styles
                                 return new HtmlString(
-                                    '<div class="border rounded-lg p-4 bg-white dark:bg-gray-900 overflow-auto max-h-96">' .
-                                    '<div class="mb-2 pb-2 border-b text-xs text-gray-500">Preview with sample data:</div>' .
-                                    '<div class="prose dark:prose-invert max-w-none">' . $processed . '</div>' .
+                                    '<div class="border rounded-lg bg-white dark:bg-gray-900">' .
+                                    '<div class="px-4 py-2 border-b text-xs text-gray-500">Preview with sample data (CSS isolated):</div>' .
+                                    '<iframe srcdoc="' . $escapedHtml . '" ' .
+                                    'style="width: 100%; height: 500px; border: none; background: white;" ' .
+                                    'sandbox="allow-same-origin" ' .
+                                    'title="Template Preview">' .
+                                    '</iframe>' .
                                     '</div>'
                                 );
                             }),
                     ])
                     ->collapsible(),
-            ]);
+            ]) ->columns(1);
     }
 
     public static function table(Table $table): Table
