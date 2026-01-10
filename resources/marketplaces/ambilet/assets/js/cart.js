@@ -125,6 +125,8 @@ const AmbiletCart = {
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(cart));
         localStorage.removeItem(this.PROMO_KEY);
         localStorage.removeItem(this.RESERVATION_KEY);
+        // Also clear cart_end_time used by cart.php
+        localStorage.removeItem('cart_end_time');
 
         window.dispatchEvent(new CustomEvent('ambilet:cart:clear'));
         window.dispatchEvent(new CustomEvent('ambilet:cart:update', {
@@ -488,10 +490,61 @@ const AmbiletCart = {
             this.updateCartBadge();
         });
 
-        // Check reservation expiry
+        // Check reservation expiry on load and clear if expired
         if (this.getItemCount() > 0 && this.isReservationExpired()) {
-            // Optionally clear cart or show warning
-            console.log('Cart reservation expired');
+            this.handleReservationExpired();
+        }
+
+        // Start periodic check for reservation expiry (every 5 seconds)
+        this.startExpiryCheck();
+    },
+
+    /**
+     * Handle cart reservation expiration
+     */
+    handleReservationExpired() {
+        const hadItems = this.getItemCount() > 0;
+
+        // Clear the cart
+        this.clearCart();
+
+        // Dispatch specific expiration event for UI updates
+        window.dispatchEvent(new CustomEvent('ambilet:cart:expired', {
+            detail: { hadItems }
+        }));
+
+        // Show notification to user
+        if (hadItems) {
+            this.showNotification('Timpul de rezervare a expirat. Coșul a fost golit.', 'warning');
+        }
+
+        console.log('Cart reservation expired - cart cleared');
+    },
+
+    /**
+     * Start periodic check for reservation expiry
+     */
+    startExpiryCheck() {
+        // Clear any existing interval
+        if (this._expiryCheckInterval) {
+            clearInterval(this._expiryCheckInterval);
+        }
+
+        // Check every 5 seconds
+        this._expiryCheckInterval = setInterval(() => {
+            if (this.getItemCount() > 0 && this.isReservationExpired()) {
+                this.handleReservationExpired();
+            }
+        }, 5000);
+    },
+
+    /**
+     * Stop periodic expiry check
+     */
+    stopExpiryCheck() {
+        if (this._expiryCheckInterval) {
+            clearInterval(this._expiryCheckInterval);
+            this._expiryCheckInterval = null;
         }
     },
 

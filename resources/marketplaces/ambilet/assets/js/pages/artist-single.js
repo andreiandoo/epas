@@ -158,7 +158,7 @@ const ArtistPage = {
                 { label: 'Gen muzical', value: (api.genres || []).map(function(g) { return g.name || g; }).join(', ') || '-' },
                 { label: 'Tip', value: (api.types || []).map(function(t) { return t.name || t; }).join(', ') || '-' },
                 { label: 'Concerte viitoare', value: (api.stats?.upcoming_events || events.length).toString() },
-                { label: 'Concerte anterioare', value: (api.stats?.past_events || 0).toString() }
+                //{ label: 'Concerte anterioare', value: (api.stats?.past_events || 0).toString() }
             ],
             spotifyId: api.external_ids?.spotify_id || api.spotify_id || null,
             events: events,

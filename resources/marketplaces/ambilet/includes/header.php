@@ -1322,6 +1322,18 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         updateCartUI();
     });
 
+    // Listen for cart expiration events - close drawer and update UI
+    window.addEventListener('ambilet:cart:expired', function(e) {
+        console.log('[CartDrawer] Cart expired, updating UI');
+        closeCartDrawer();
+        updateCartUI();
+    });
+
+    // Listen for cart clear events
+    window.addEventListener('ambilet:cart:clear', function() {
+        updateCartUI();
+    });
+
     // Extend existing AmbiletCart with drawer methods (don't overwrite cart.js)
     if (window.AmbiletCart) {
         // Cart.js already defines AmbiletCart - just add drawer methods

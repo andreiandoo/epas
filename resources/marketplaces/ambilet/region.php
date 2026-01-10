@@ -31,15 +31,6 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 
     <div class="relative z-10 px-4 mx-auto max-w-7xl">
-        <!-- Breadcrumb -->
-        <nav class="flex items-center gap-2 mb-6 text-sm">
-            <a href="/" class="transition-colors text-slate-400 hover:text-white">Acasa</a>
-            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            <a href="/orase" class="transition-colors text-slate-400 hover:text-white">Regiuni</a>
-            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            <span class="text-red-400" id="breadcrumbRegion">...</span>
-        </nav>
-
         <!-- Title -->
         <h1 class="mb-4 text-4xl font-extrabold leading-tight text-white md:text-5xl">
             Evenimente in <span class="text-red-400" id="heroRegionName">...</span>
