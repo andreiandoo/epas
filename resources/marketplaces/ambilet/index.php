@@ -307,34 +307,15 @@ function renderFeaturedEvents(events) {
         return;
     }
 
+    // Use AmbiletEventCard component for rendering
     container.innerHTML = events.map(event => {
-        const date = new Date(event.start_date);
-        const day = date.getDate();
-        const month = date.toLocaleDateString('ro-RO', { month: 'short' }).replace('.', '');
-
-        return `
-            <a href="/eveniment/${event.slug}" class="scroll-item event-card w-[280px] bg-white rounded-2xl border border-border overflow-hidden group">
-                <div class="relative h-40 overflow-hidden">
-                    <img src="${event.image || '/assets/images/placeholder-event.jpg'}" alt="${event.title}" class="object-cover w-full h-full event-image" loading="lazy">
-                    <div class="absolute top-3 left-3">
-                        <div class="date-badge text-white px-3 py-2 rounded-xl text-center min-w-[52px]">
-                            <span class="block text-xl font-bold leading-none">${day}</span>
-                            <span class="block text-[10px] uppercase font-medium opacity-90">${month}</span>
-                        </div>
-                    </div>
-                    ${event.is_exclusive ? '<div class="absolute top-3 right-3"><span class="exclusive-badge text-white text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide">Exclusiv</span></div>' : ''}
-                </div>
-                <div class="p-4">
-                    <h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">${event.title}</h3>
-                    <p class="text-sm text-muted mt-2 flex items-center gap-1.5">
-                        <svg class="flex-shrink-0 w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                        </svg>
-                        ${event.venue?.name || event.city?.name || 'Romania'}
-                    </p>
-                </div>
-            </a>
-        `;
+        const cardHtml = AmbiletEventCard.render(event, {
+            urlPrefix: '/eveniment/',
+            showCategory: false,
+            showPrice: false
+        });
+        // Wrap in scroll-item container
+        return '<div class="scroll-item w-[280px]">' + cardHtml + '</div>';
     }).join('');
 }
 
@@ -414,7 +395,7 @@ function renderCities(cities) {
 // Load latest events
 async function loadLatestEvents() {
     try {
-        const response = await AmbiletAPI.get('/marketplace-events?sort=latest&limit=8');
+        const response = await AmbiletAPI.get('/marketplace-events?sort=latest&limit=40');
         if (response.data) {
             renderLatestEvents(response.data);
         }
@@ -431,37 +412,13 @@ function renderLatestEvents(events) {
         return;
     }
 
-    container.innerHTML = events.map(event => {
-        const date = new Date(event.start_date);
-        const day = date.getDate();
-        const month = date.toLocaleDateString('ro-RO', { month: 'short' }).replace('.', '');
-
-        return `
-            <a href="/eveniment/${event.slug}" class="overflow-hidden bg-white border reveal event-card rounded-2xl border-border group">
-                <div class="relative overflow-hidden h-44">
-                    <img src="${event.image || '/assets/images/placeholder-event.jpg'}" alt="${event.title}" class="object-cover w-full h-full event-image" loading="lazy">
-                    <div class="absolute top-3 left-3">
-                        <div class="date-badge text-white px-3 py-2 rounded-xl text-center min-w-[48px]">
-                            <span class="block text-lg font-bold leading-none">${day}</span>
-                            <span class="block text-[10px] uppercase font-medium opacity-90">${month}</span>
-                        </div>
-                    </div>
-                    ${event.is_sold_out ? '<div class="absolute top-3 right-3"><span class="bg-secondary text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide">Sold Out</span></div>' : ''}
-                    ${event.is_exclusive && !event.is_sold_out ? '<div class="absolute top-3 right-3"><span class="exclusive-badge text-white text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide">Exclusiv</span></div>' : ''}
-                </div>
-                <div class="p-4">
-                    <span class="inline-block px-2 py-1 bg-primary/10 text-primary text-[11px] font-bold rounded uppercase tracking-wide mb-2">${event.category?.name || 'Eveniment'}</span>
-                    <h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">${event.title}</h3>
-                    <p class="text-sm text-muted mt-2 flex items-center gap-1.5">
-                        <svg class="flex-shrink-0 w-4 h-4 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                        </svg>
-                        ${event.venue?.name || event.city?.name || 'Romania'}
-                    </p>
-                </div>
-            </a>
-        `;
-    }).join('');
+    // Use AmbiletEventCard component for rendering
+    container.innerHTML = AmbiletEventCard.renderMany(events, {
+        urlPrefix: '/eveniment/',
+        showCategory: true,
+        showPrice: true,
+        showVenue: true
+    });
 
     // Trigger reveal animation
     setTimeout(() => {
