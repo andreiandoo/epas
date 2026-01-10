@@ -29,9 +29,9 @@ class RewardsController extends BaseController
 
         // Get points balance
         $customerPoints = CustomerPoints::where('marketplace_customer_id', $customer->id)->first();
-        $pointsBalance = $customerPoints ? $customerPoints->balance : 0;
-        $lifetimePoints = $customerPoints ? $customerPoints->lifetime_earned : 0;
-        $lifetimeSpent = $customerPoints ? $customerPoints->lifetime_spent : 0;
+        $pointsBalance = $customerPoints ? $customerPoints->current_balance : 0;
+        $lifetimePoints = $customerPoints ? $customerPoints->total_earned : 0;
+        $lifetimeSpent = $customerPoints ? $customerPoints->total_spent : 0;
 
         // Get experience/level info
         $customerExperience = CustomerExperience::where('marketplace_customer_id', $customer->id)->first();
@@ -122,12 +122,19 @@ class RewardsController extends BaseController
         $transactions = $query->paginate($perPage);
 
         $formatted = collect($transactions->items())->map(function ($tx) {
+            // Get translated description
+            $description = $tx->description;
+            if (is_array($description)) {
+                $locale = app()->getLocale();
+                $description = $description[$locale] ?? $description['ro'] ?? $description['en'] ?? '';
+            }
+
             return [
                 'id' => $tx->id,
                 'type' => $tx->type,
                 'points' => $tx->points,
                 'balance_after' => $tx->balance_after,
-                'description' => $tx->description,
+                'description' => $description,
                 'action_type' => $tx->action_type,
                 'reference_type' => $tx->reference_type,
                 'reference_id' => $tx->reference_id,
