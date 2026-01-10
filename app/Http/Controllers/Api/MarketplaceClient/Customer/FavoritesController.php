@@ -216,7 +216,7 @@ class FavoritesController extends BaseController
 
         $artistIds = $favorites->pluck('favoriteable_id');
         $artists = Artist::whereIn('id', $artistIds)
-            ->with('genres')
+            ->with('artistGenres')
             ->withCount(['events' => function ($query) {
                 $query->where('event_date', '>=', now());
             }])
@@ -233,7 +233,7 @@ class FavoritesController extends BaseController
                 'name' => $artist->name,
                 'slug' => $artist->slug,
                 'image' => $artist->main_image_full_url ?? $artist->image_url,
-                'genre' => $artist->genres->first()?->name ?? null,
+                'genre' => $artist->artistGenres->first()?->name ?? null,
                 'events' => $artist->events_count ?? 0,
                 'added_at' => $fav->created_at,
             ];

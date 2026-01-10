@@ -111,6 +111,16 @@ class WatchlistController extends BaseController
                     $genre = is_array($genreData) ? ($genreData['ro'] ?? $genreData['en'] ?? reset($genreData)) : $eventGenre->name;
                 }
 
+                // Calculate min price from ticket_types
+                $minPriceResult = DB::table('ticket_types')
+                    ->where('event_id', $event->id)
+                    ->where('status', 'active')
+                    ->selectRaw('MIN(COALESCE(sale_price_cents, price_cents)) as min_price_cents')
+                    ->first();
+                $minPrice = $minPriceResult && $minPriceResult->min_price_cents
+                    ? $minPriceResult->min_price_cents / 100
+                    : null;
+
                 $imagePath = $event->poster_url ?? $event->hero_image_url ?? null;
             } else {
                 // Marketplace events table uses starts_at
@@ -121,6 +131,7 @@ class WatchlistController extends BaseController
                 $imagePath = $event->image ?? null;
                 $category = $event->category ?? null;
                 $genre = $event->genre ?? null;
+                $minPrice = $event->min_price ?? null;
             }
 
             // Format image URL properly - use APP_URL for consistent domain
@@ -153,7 +164,7 @@ class WatchlistController extends BaseController
                     'image' => $image,
                     'category' => $category,
                     'genre' => $genre,
-                    'min_price' => $event->min_price ?? null,
+                    'min_price' => $minPrice,
                     'currency' => $event->currency ?? 'RON',
                     'is_upcoming' => $isUpcoming,
                     'days_until' => $daysUntil,

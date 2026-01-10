@@ -102,10 +102,11 @@ class StatsController extends BaseController
             // Table might not exist yet
         }
 
-        // Total spent
-        $totalSpent = Order::where('marketplace_customer_id', $customer->id)
+        // Total spent (stored in cents)
+        $totalSpentCents = Order::where('marketplace_customer_id', $customer->id)
             ->where('status', 'completed')
-            ->sum('total');
+            ->sum('total_cents');
+        $totalSpent = $totalSpentCents / 100;
 
         // Credit balance (if applicable)
         $creditBalance = $customer->credit_balance ?? 0;
