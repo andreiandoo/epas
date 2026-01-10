@@ -253,8 +253,8 @@ class ContactListResource extends Resource
                             }),
 
                         // Sync button for existing lists
-                        Forms\Components\Actions::make([
-                            Forms\Components\Actions\Action::make('sync_now')
+                        SC\Actions::make([
+                            \Filament\Actions\Action::make('sync_now')
                                 ->label('Sync Subscribers Now')
                                 ->icon('heroicon-o-arrow-path')
                                 ->color('primary')
