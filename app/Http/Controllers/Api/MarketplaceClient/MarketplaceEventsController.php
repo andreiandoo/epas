@@ -26,9 +26,10 @@ class MarketplaceEventsController extends BaseController
             ->whereNull('is_cancelled')
             ->orWhere('is_cancelled', false)
             ->with([
-                'marketplaceOrganizer:id,name,slug,logo,verified_at',
+                'marketplaceOrganizer:id,name,slug,logo,verified_at,commission_mode,commission_rate',
                 'marketplaceEventCategory',
                 'venue:id,name,city,address',
+                'ticketTypes:id,event_id,price',
             ]);
 
         // Filter upcoming only by default
@@ -127,8 +128,8 @@ class MarketplaceEventsController extends BaseController
         $perPage = min((int) $request->get('per_page', 20), 100);
         $events = $query->paginate($perPage);
 
-        return $this->paginated($events, function ($event) use ($language) {
-            return $this->formatEvent($event, $language);
+        return $this->paginated($events, function ($event) use ($language, $client) {
+            return $this->formatEvent($event, $language, $client);
         });
     }
 
@@ -149,12 +150,17 @@ class MarketplaceEventsController extends BaseController
                     ->orWhere('is_general_featured', true);
             })
             ->where('event_date', '>=', now()->toDateString())
-            ->with(['marketplaceOrganizer:id,name,slug,logo', 'venue:id,name,city', 'marketplaceEventCategory'])
+            ->with([
+                'marketplaceOrganizer:id,name,slug,logo,verified_at,commission_mode,commission_rate',
+                'venue:id,name,city',
+                'marketplaceEventCategory',
+                'ticketTypes:id,event_id,price',
+            ])
             ->orderBy('event_date')
             ->orderBy('start_time')
             ->limit(min((int) $request->get('limit', 10), 50))
             ->get()
-            ->map(fn ($event) => $this->formatEvent($event, $language));
+            ->map(fn ($event) => $this->formatEvent($event, $language, $client));
 
         return $this->success(['events' => $events]);
     }
@@ -525,10 +531,23 @@ class MarketplaceEventsController extends BaseController
     /**
      * Format event for API response
      */
-    protected function formatEvent(Event $event, string $language): array
+    protected function formatEvent(Event $event, string $language, $client = null): array
     {
         $venue = $event->venue;
         $category = $event->marketplaceEventCategory;
+        $organizer = $event->marketplaceOrganizer;
+
+        // Get commission settings (event > organizer > marketplace default)
+        $commissionMode = $event->commission_mode ?? $organizer?->commission_mode ?? $client?->commission_mode ?? 'included';
+        $commissionRate = (float) ($event->commission_rate ?? $organizer?->commission_rate ?? $client?->commission_rate ?? 5.0);
+
+        // Get minimum price from ticket types
+        $minPrice = null;
+        if ($event->relationLoaded('ticketTypes') && $event->ticketTypes->isNotEmpty()) {
+            $minPrice = $event->ticketTypes->min('price');
+        } elseif ($event->min_price !== null) {
+            $minPrice = $event->min_price;
+        }
 
         return [
             'id' => $event->id,
@@ -536,17 +555,25 @@ class MarketplaceEventsController extends BaseController
             'slug' => $event->slug,
             'short_description' => $event->getTranslation('short_description', $language),
             'image' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
-            'category' => $category?->getTranslation('name', $language),
+            'category' => $category ? [
+                'id' => $category->id,
+                'name' => $category->getTranslation('name', $language),
+                'slug' => $category->slug,
+            ] : null,
             'starts_at' => $event->event_date?->format('Y-m-d') . 'T' . ($event->start_time ?? '00:00:00'),
             'venue_name' => $venue?->getTranslation('name', $language),
             'venue_city' => $venue?->city,
             'is_featured' => $event->is_homepage_featured || $event->is_general_featured,
-            'organizer' => $event->marketplaceOrganizer ? [
-                'id' => $event->marketplaceOrganizer->id,
-                'name' => $event->marketplaceOrganizer->name,
-                'slug' => $event->marketplaceOrganizer->slug,
-                'logo' => $event->marketplaceOrganizer->logo,
-                'verified' => $event->marketplaceOrganizer->verified_at !== null,
+            'is_sold_out' => $event->is_sold_out ?? false,
+            'price_from' => $minPrice,
+            'commission_mode' => $commissionMode,
+            'commission_rate' => $commissionRate,
+            'organizer' => $organizer ? [
+                'id' => $organizer->id,
+                'name' => $organizer->name,
+                'slug' => $organizer->slug,
+                'logo' => $organizer->logo,
+                'verified' => $organizer->verified_at !== null,
             ] : null,
         ];
     }
