@@ -130,6 +130,7 @@ switch ($action) {
         }
         $method = 'POST';
         $endpoint = '/events/' . urlencode($slug) . '/toggle-interest';
+        $requiresAuth = true; // Forward auth token if available
         break;
 
     case 'event.check-interest':
@@ -140,6 +141,7 @@ switch ($action) {
             exit;
         }
         $endpoint = '/events/' . urlencode($slug) . '/check-interest';
+        $requiresAuth = true; // Forward auth token if available
         break;
 
     case 'venues':
@@ -220,6 +222,51 @@ switch ($action) {
         if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
         if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
         $endpoint = '/artists/' . urlencode($slug) . '/events' . ($params ? '?' . http_build_query($params) : '');
+        break;
+    case "artist.toggle-favorite":
+        $slug = $_GET["slug"] ?? "";
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(["error" => "Missing artist slug"]);
+            exit;
+        }
+        $method = "POST";
+        $endpoint = "/artists/" . urlencode($slug) . "/toggle-favorite";
+        $requiresAuth = true;
+        break;
+
+    case "artist.check-favorite":
+        $slug = $_GET["slug"] ?? "";
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(["error" => "Missing artist slug"]);
+            exit;
+        }
+        $endpoint = "/artists/" . urlencode($slug) . "/check-favorite";
+        $requiresAuth = true;
+        break;
+
+    case "venue.toggle-favorite":
+        $slug = $_GET["slug"] ?? "";
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(["error" => "Missing venue slug"]);
+            exit;
+        }
+        $method = "POST";
+        $endpoint = "/venues/" . urlencode($slug) . "/toggle-favorite";
+        $requiresAuth = true;
+        break;
+
+    case "venue.check-favorite":
+        $slug = $_GET["slug"] ?? "";
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(["error" => "Missing venue slug"]);
+            exit;
+        }
+        $endpoint = "/venues/" . urlencode($slug) . "/check-favorite";
+        $requiresAuth = true;
         break;
 
     case 'categories':

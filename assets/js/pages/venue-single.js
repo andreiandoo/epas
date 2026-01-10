@@ -9,6 +9,7 @@ const VenuePage = {
     // Configuration
     venueSlug: '',
     venue: null,
+    isFollowing: false,
 
     // Month names for date formatting
     monthNames: ['IAN', 'FEB', 'MAR', 'APR', 'MAI', 'IUN', 'IUL', 'AUG', 'SEP', 'OCT', 'NOI', 'DEC'],
@@ -32,7 +33,10 @@ const VenuePage = {
         venueAmenities: 'venueAmenities',
         venueGallery: 'venueGallery',
         eventsList: 'eventsList',
-        similarVenues: 'similarVenues'
+        similarVenues: 'similarVenues',
+        followBtn: 'follow-btn',
+        followIcon: 'follow-icon',
+        followText: 'follow-text'
     },
 
     /**
@@ -48,6 +52,7 @@ const VenuePage = {
         }
 
         await this.loadVenueData();
+        this.loadFollowStatus();
     },
 
     /**
@@ -551,6 +556,70 @@ const VenuePage = {
         var div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    },
+
+    /**
+     * Load follow status for venue
+     */
+    async loadFollowStatus() {
+        if (!this.venueSlug) return;
+
+        try {
+            var response = await AmbiletAPI.checkVenueFavorite(this.venueSlug);
+            if (response.success && response.data) {
+                this.isFollowing = response.data.is_favorite;
+                this.updateFollowButton();
+            }
+        } catch (e) {
+            // Silently ignore - user not logged in or error
+            console.log('[VenuePage] Follow status check skipped');
+        }
+    },
+
+    /**
+     * Toggle follow status for venue
+     */
+    async toggleFollow() {
+        if (!this.venueSlug) return;
+
+        // Check if user is logged in
+        if (!AmbiletAuth.isLoggedIn()) {
+            window.location.href = '/cont/autentificare?redirect=' + encodeURIComponent(window.location.pathname);
+            return;
+        }
+
+        try {
+            var response = await AmbiletAPI.toggleVenueFavorite(this.venueSlug);
+            console.log('[VenuePage] Toggle follow response:', response);
+            if (response.success && response.data) {
+                this.isFollowing = response.data.is_favorite;
+                this.updateFollowButton();
+            }
+        } catch (e) {
+            console.error('[VenuePage] Toggle follow failed:', e);
+            if (e.status === 401) {
+                window.location.href = '/cont/autentificare?redirect=' + encodeURIComponent(window.location.pathname);
+            }
+        }
+    },
+
+    /**
+     * Update follow button visual state
+     */
+    updateFollowButton() {
+        var btn = document.getElementById(this.elements.followBtn);
+        var text = document.getElementById(this.elements.followText);
+        if (!btn || !text) return;
+
+        if (this.isFollowing) {
+            btn.classList.remove('bg-white/20', 'hover:bg-white/30');
+            btn.classList.add('bg-primary', 'hover:bg-primary-dark');
+            text.textContent = 'Urmărești locația';
+        } else {
+            btn.classList.remove('bg-primary', 'hover:bg-primary-dark');
+            btn.classList.add('bg-white/20', 'hover:bg-white/30');
+            text.textContent = 'Urmărește locația';
+        }
     }
 };
 
