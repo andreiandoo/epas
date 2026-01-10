@@ -252,27 +252,17 @@ class ContactListResource extends Resource
                                 }
                             }),
 
-                        // Sync button for existing lists
-                        SC\Actions::make([
-                            \Filament\Actions\Action::make('sync_now')
-                                ->label('Sync Subscribers Now')
-                                ->icon('heroicon-o-arrow-path')
-                                ->color('primary')
-                                ->requiresConfirmation()
-                                ->modalHeading('Sync Subscribers')
-                                ->modalDescription('This will add all customers matching the current rules to this list. Existing subscribers will not be removed.')
-                                ->action(function ($record) {
-                                    if ($record && $record->isDynamic()) {
-                                        $added = $record->syncSubscribers();
-                                        \Filament\Notifications\Notification::make()
-                                            ->title('Sync Complete')
-                                            ->body("{$added} new subscribers added to the list.")
-                                            ->success()
-                                            ->send();
-                                    }
-                                })
-                                ->visible(fn ($record) => $record !== null),
-                        ])->columnSpanFull(),
+                        // Info about syncing
+                        Forms\Components\Placeholder::make('sync_info')
+                            ->label('')
+                            ->content(new HtmlString(
+                                '<div class="text-sm text-gray-500 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">' .
+                                '<strong>How syncing works:</strong> Save the list to apply rules. ' .
+                                'Use the "Sync Subscribers" button in the header to manually sync, ' .
+                                'or subscribers will be synced automatically when customers are created/updated.' .
+                                '</div>'
+                            ))
+                            ->visible(fn ($record) => $record !== null),
                     ])
                     ->visible(fn (SGet $get) => $get('list_type') === 'dynamic')
                     ->collapsible(),
