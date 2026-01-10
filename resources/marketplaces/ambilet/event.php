@@ -268,7 +268,7 @@ require_once __DIR__ . '/includes/head.php';
         <section class="mt-16" id="related-events-section" style="display:none;">
             <div class="flex items-center justify-between mb-8">
                 <div>
-                    <h2 class="text-2xl font-bold text-secondary">Alte evenimente care ti-ar putea placea</h2>
+                    <h2 class="text-2xl font-bold text-secondary">Alte evenimente recomandate</h2>
                     <p class="mt-1 text-muted" id="related-category-text">Evenimente similare</p>
                 </div>
                 <a href="/evenimente" id="see-all-link" class="items-center hidden gap-2 font-semibold md:flex text-primary">

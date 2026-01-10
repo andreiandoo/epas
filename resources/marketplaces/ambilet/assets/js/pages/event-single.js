@@ -484,7 +484,7 @@ const EventPage = {
         this.renderDate(e);
 
         // Time
-        document.getElementById(this.elements.eventTime).textContent = 'Ora inceperii: ' + (e.start_time || '20:00');
+        document.getElementById(this.elements.eventTime).textContent = 'Acces: ' + (e.start_time || '20:00');
         document.getElementById(this.elements.eventDoors).textContent = 'Deschidere usi: ' + (e.doors_time || '19:00');
 
         // Venue

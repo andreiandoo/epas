@@ -137,8 +137,10 @@ const WatchlistPage = {
             // Load favorite venues
             try {
                 const venuesResponse = await AmbiletAPI.getFavoriteVenues();
+                console.log('[WatchlistPage] Venues response:', venuesResponse);
                 if (venuesResponse.success && venuesResponse.data) {
                     this.venues = Array.isArray(venuesResponse.data) ? venuesResponse.data : [];
+                    console.log('[WatchlistPage] Venues loaded:', this.venues.length, 'venues');
                 }
             } catch (e) {
                 console.log('[WatchlistPage] Venues load error:', e);
@@ -259,7 +261,7 @@ const WatchlistPage = {
 
         grid.innerHTML = this.artists.map(artist => {
             const artistId = artist.id || 0;
-            const artistUrl = '/artisti/' + (artist.slug || artist.id);
+            const artistUrl = '/artist/' + (artist.slug || artist.id);
             return '<div class="relative p-5 text-center bg-white border event-card rounded-xl lg:rounded-2xl border-border">' +
                 '<button onclick="event.stopPropagation(); WatchlistPage.removeFromWatchlist(\'artist\', ' + artistId + ')" class="absolute flex items-center justify-center w-8 h-8 bg-white border rounded-full shadow-lg heart-btn active top-3 right-3 border-border z-10">' +
                     '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
@@ -289,7 +291,7 @@ const WatchlistPage = {
 
         grid.innerHTML = this.venues.map(venue => {
             const venueId = venue.id || 0;
-            const venueUrl = '/locatii/' + (venue.slug || venue.id);
+            const venueUrl = '/locatie/' + (venue.slug || venue.id);
             return '<div class="relative overflow-hidden bg-white border event-card rounded-xl lg:rounded-2xl border-border">' +
                 '<a href="' + venueUrl + '" class="block h-32">' +
                     '<img src="' + (venue.image || '/assets/images/default-venue.jpg') + '" class="object-cover w-full h-full" alt="' + (venue.name || '') + '">' +

@@ -276,6 +276,14 @@ class FavoritesController extends BaseController
             ->orderByDesc('created_at')
             ->get();
 
+        // Debug logging
+        \Log::info('[FavoritesController] listVenues', [
+            'customer_id' => $customer->id,
+            'client_id' => $client->id,
+            'favorites_count' => $favorites->count(),
+            'favorites' => $favorites->toArray(),
+        ]);
+
         $venueIds = $favorites->pluck('favoriteable_id');
 
         // If no favorites, return empty array
