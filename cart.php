@@ -672,6 +672,16 @@ const CartPage = {
 };
 
 document.addEventListener('DOMContentLoaded', () => CartPage.init());
+
+// Listen for cart expiration event from cart.js
+window.addEventListener('ambilet:cart:expired', () => {
+    console.log('[CartPage] Cart expired event received');
+    if (CartPage.timerInterval) {
+        clearInterval(CartPage.timerInterval);
+    }
+    localStorage.removeItem('cart_end_time');
+    CartPage.render();
+});
 </script>
 SCRIPTS;
 

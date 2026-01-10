@@ -1046,6 +1046,27 @@ const AmbiletAPI = {
             return AmbiletAPI.get('/customer/rewards/redemptions', params);
         },
 
+        /**
+         * Get points summary (alias for getRewardsOverview)
+         */
+        async getPoints() {
+            return AmbiletAPI.get('/customer/rewards');
+        },
+
+        /**
+         * Get XP/Level summary (alias for getRewardsOverview, XP data included)
+         */
+        async getXP() {
+            return AmbiletAPI.get('/customer/rewards');
+        },
+
+        /**
+         * Get available rewards (alias for getAvailableRewards)
+         */
+        async getRewards(params = {}) {
+            return AmbiletAPI.get('/customer/rewards/available', params);
+        },
+
         // ==================== NOTIFICATIONS ====================
 
         /**
