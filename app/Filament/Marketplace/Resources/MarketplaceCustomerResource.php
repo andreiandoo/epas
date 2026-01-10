@@ -389,6 +389,9 @@ class MarketplaceCustomerResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('created_at', 'desc')
+            ->recordUrl(
+                fn (MarketplaceCustomer $record): string => static::getUrl('edit', ['record' => $record]),
+            )
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
