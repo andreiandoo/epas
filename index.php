@@ -70,7 +70,7 @@ require_once __DIR__ . '/includes/header.php';
                     Nu rata biletele pentru
                 </h2>
             </div>
-            <a href="/evenimente?featured=true" class="items-center hidden gap-2 font-semibold md:flex text-primary hover:underline">
+            <a href="/evenimente?featured=true" class="items-center hidden gap-2 font-semibold md:flex text-primary">
                 Vezi toate
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -132,7 +132,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="px-4 mx-auto max-w-7xl">
         <div class="flex items-center justify-between mb-8">
             <h2 class="text-xl font-bold md:text-2xl text-secondary">Evenimente dupa oras</h2>
-            <a href="/orase" class="items-center hidden gap-2 font-semibold md:flex text-primary hover:underline">
+            <a href="/orase" class="items-center hidden gap-2 font-semibold md:flex text-primary">
                 Toate orasele
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -157,7 +157,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="px-4 mx-auto max-w-7xl">
         <div class="flex items-center justify-between mb-8">
             <h2 class="text-xl font-bold md:text-2xl text-secondary">Ultimele evenimente adaugate</h2>
-            <a href="/evenimente" class="items-center hidden gap-2 font-semibold md:flex text-primary hover:underline">
+            <a href="/evenimente" class="items-center hidden gap-2 font-semibold md:flex text-primary">
                 Vezi toate
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>

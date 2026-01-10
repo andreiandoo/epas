@@ -103,7 +103,7 @@ include 'includes/header.php'; ?>
         <section class="mb-12">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-2xl font-bold text-secondary">Recomandate luna aceasta</h2>
-                <a href="/evenimente" class="flex items-center gap-1.5 text-primary text-sm font-semibold hover:underline">
+                <a href="/evenimente" class="flex items-center gap-1.5 text-primary text-sm font-semibold">
                     Vezi toate
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -330,7 +330,7 @@ include 'includes/header.php'; ?>
                 });
 
                 if (dayEvents.length > 2) {
-                    html += '<div class="text-[11px] font-semibold text-primary px-2 cursor-pointer hover:underline" onclick="CalendarPage.showDayEvents(\'' + dateStr + '\')">+' + (dayEvents.length - 2) + ' mai multe</div>';
+                    html += '<div class="text-[11px] font-semibold text-primary px-2 cursor-pointer" onclick="CalendarPage.showDayEvents(\'' + dateStr + '\')">+' + (dayEvents.length - 2) + ' mai multe</div>';
                 }
 
                 html += '</div></div>';

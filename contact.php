@@ -137,7 +137,7 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="flex items-start gap-3 mt-6">
                     <input type="checkbox" name="privacy" id="privacy" class="w-5 h-5 border-2 border-gray-200 rounded-md cursor-pointer accent-primary flex-shrink-0 mt-0.5" required>
                     <label for="privacy" class="text-sm leading-relaxed text-gray-500">
-                        Sunt de acord cu <a href="/confidentialitate" class="text-primary hover:underline">Politica de confidențialitate</a> și înțeleg că datele mele vor fi procesate pentru a răspunde solicitării mele.
+                        Sunt de acord cu <a href="/confidentialitate" class="text-primary">Politica de confidențialitate</a> și înțeleg că datele mele vor fi procesate pentru a răspunde solicitării mele.
                     </label>
                 </div>
 
@@ -174,7 +174,7 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                         <div>
                             <div class="mb-1 text-xs tracking-wide text-gray-400 uppercase">Email general</div>
-                            <a href="mailto:contact@ambilet.ro" class="text-[15px] font-semibold text-primary hover:underline">contact@ambilet.ro</a>
+                            <a href="mailto:contact@ambilet.ro" class="text-[15px] font-semibold text-primary">contact@ambilet.ro</a>
                         </div>
                     </div>
 
@@ -186,7 +186,7 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                         <div>
                             <div class="mb-1 text-xs tracking-wide text-gray-400 uppercase">Telefon</div>
-                            <a href="tel:+40312345678" class="text-[15px] font-semibold text-primary hover:underline">+40 31 234 5678</a>
+                            <a href="tel:+40312345678" class="text-[15px] font-semibold text-primary">+40 31 234 5678</a>
                         </div>
                     </div>
 
@@ -199,7 +199,7 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                         <div>
                             <div class="mb-1 text-xs tracking-wide text-gray-400 uppercase">Pentru organizatori</div>
-                            <a href="mailto:organizatori@ambilet.ro" class="text-[15px] font-semibold text-primary hover:underline">organizatori@ambilet.ro</a>
+                            <a href="mailto:organizatori@ambilet.ro" class="text-[15px] font-semibold text-primary">organizatori@ambilet.ro</a>
                         </div>
                     </div>
 
@@ -212,7 +212,7 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
                         <div>
                             <div class="mb-1 text-xs tracking-wide text-gray-400 uppercase">Presă</div>
-                            <a href="mailto:press@ambilet.ro" class="text-[15px] font-semibold text-primary hover:underline">press@ambilet.ro</a>
+                            <a href="mailto:press@ambilet.ro" class="text-[15px] font-semibold text-primary">press@ambilet.ro</a>
                         </div>
                     </div>
                 </div>
@@ -297,7 +297,7 @@ require_once __DIR__ . '/includes/header.php';
                     </svg>
                     Cum pot solicita o rambursare?
                 </h3>
-                <p class="text-sm leading-relaxed text-gray-500 pl-[30px]">Pentru a solicita o rambursare, accesează secțiunea "Comenzile mele" din cont, selectează comanda și apasă pe "Solicită rambursare". Verifică <a href="/termeni" class="text-primary hover:underline">politica de rambursare</a> pentru detalii.</p>
+                <p class="text-sm leading-relaxed text-gray-500 pl-[30px]">Pentru a solicita o rambursare, accesează secțiunea "Comenzile mele" din cont, selectează comanda și apasă pe "Solicită rambursare". Verifică <a href="/termeni" class="text-primary">politica de rambursare</a> pentru detalii.</p>
             </div>
 
             <div class="bg-white rounded-[14px] p-6 border border-gray-200 hover:border-primary hover:shadow-md transition-all">
@@ -333,7 +333,7 @@ require_once __DIR__ . '/includes/header.php';
                     </svg>
                     Cum devin organizator pe Ambilet?
                 </h3>
-                <p class="text-sm leading-relaxed text-gray-500 pl-[30px]">Pentru a deveni organizator, creează un cont și accesează <a href="/organizer/register" class="text-primary hover:underline">"Devino organizator"</a>. Completează formularul și echipa noastră te va contacta pentru verificare.</p>
+                <p class="text-sm leading-relaxed text-gray-500 pl-[30px]">Pentru a deveni organizator, creează un cont și accesează <a href="/organizer/register" class="text-primary">"Devino organizator"</a>. Completează formularul și echipa noastră te va contacta pentru verificare.</p>
             </div>
         </div>
     </section>

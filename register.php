@@ -72,8 +72,8 @@ require_once __DIR__ . '/includes/auth-branding.php';
                     <div class="flex items-start">
                         <input type="checkbox" id="terms" name="terms" required class="w-4 h-4 mt-1 text-primary border-border rounded focus:ring-primary">
                         <label for="terms" class="ml-2 text-sm text-muted">
-                            Sunt de acord cu <a href="/terms" class="text-primary hover:underline">Termenii și condițiile</a>
-                            și <a href="/privacy" class="text-primary hover:underline">Politica de confidențialitate</a>
+                            Sunt de acord cu <a href="/terms" class="text-primary">Termenii și condițiile</a>
+                            și <a href="/privacy" class="text-primary">Politica de confidențialitate</a>
                         </label>
                     </div>
 
@@ -81,7 +81,7 @@ require_once __DIR__ . '/includes/auth-branding.php';
                 </form>
 
                 <p class="text-center text-muted mt-8">
-                    Ai deja cont? <a href="/autentificare" class="text-primary font-medium hover:underline">Conectează-te</a>
+                    Ai deja cont? <a href="/autentificare" class="text-primary font-medium">Conectează-te</a>
                 </p>
             </div>
         </div>

@@ -366,10 +366,10 @@ require_once __DIR__ . '/includes/header.php';
             <h3 class="mb-3 text-lg font-bold text-gray-900 mt-7">7.2 Prin setările browserului</h3>
             <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Majoritatea browserelor îți permit să controlezi cookie-urile prin setări. Iată linkuri pentru browserele populare:</p>
             <ul class="my-4 pl-6 list-disc space-y-2.5">
-                <li class="text-[15px] leading-[1.8] text-gray-600"><a href="https://support.google.com/chrome/answer/95647" target="_blank" class="font-medium text-primary hover:underline">Google Chrome</a></li>
-                <li class="text-[15px] leading-[1.8] text-gray-600"><a href="https://support.mozilla.org/ro/kb/activarea-si-dezactivarea-cookie-urilor" target="_blank" class="font-medium text-primary hover:underline">Mozilla Firefox</a></li>
-                <li class="text-[15px] leading-[1.8] text-gray-600"><a href="https://support.apple.com/ro-ro/guide/safari/sfri11471/mac" target="_blank" class="font-medium text-primary hover:underline">Safari</a></li>
-                <li class="text-[15px] leading-[1.8] text-gray-600"><a href="https://support.microsoft.com/ro-ro/microsoft-edge/ștergerea-modulelor-cookie-în-microsoft-edge" target="_blank" class="font-medium text-primary hover:underline">Microsoft Edge</a></li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><a href="https://support.google.com/chrome/answer/95647" target="_blank" class="font-medium text-primary">Google Chrome</a></li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><a href="https://support.mozilla.org/ro/kb/activarea-si-dezactivarea-cookie-urilor" target="_blank" class="font-medium text-primary">Mozilla Firefox</a></li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><a href="https://support.apple.com/ro-ro/guide/safari/sfri11471/mac" target="_blank" class="font-medium text-primary">Safari</a></li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><a href="https://support.microsoft.com/ro-ro/microsoft-edge/ștergerea-modulelor-cookie-în-microsoft-edge" target="_blank" class="font-medium text-primary">Microsoft Edge</a></li>
             </ul>
 
             <div class="p-5 my-6 border-l-4 bg-red-50 border-primary rounded-r-xl">
@@ -384,10 +384,10 @@ require_once __DIR__ . '/includes/header.php';
             </h2>
             <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Folosim servicii de la terți care pot seta propriile lor cookie-uri. Nu avem control asupra acestor cookie-uri, dar le selectăm cu grijă pe cei care respectă GDPR. Principalii noștri parteneri sunt:</p>
             <ul class="my-4 pl-6 list-disc space-y-2.5">
-                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Google (Analytics, Ads):</strong> <a href="https://policies.google.com/privacy" target="_blank" class="font-medium text-primary hover:underline">Politica de confidențialitate Google</a></li>
-                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Meta (Facebook, Instagram):</strong> <a href="https://www.facebook.com/privacy/policy/" target="_blank" class="font-medium text-primary hover:underline">Politica Meta</a></li>
-                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Stripe (plăți):</strong> <a href="https://stripe.com/privacy" target="_blank" class="font-medium text-primary hover:underline">Politica Stripe</a></li>
-                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Hotjar (analiză UX):</strong> <a href="https://www.hotjar.com/legal/policies/privacy/" target="_blank" class="font-medium text-primary hover:underline">Politica Hotjar</a></li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Google (Analytics, Ads):</strong> <a href="https://policies.google.com/privacy" target="_blank" class="font-medium text-primary">Politica de confidențialitate Google</a></li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Meta (Facebook, Instagram):</strong> <a href="https://www.facebook.com/privacy/policy/" target="_blank" class="font-medium text-primary">Politica Meta</a></li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Stripe (plăți):</strong> <a href="https://stripe.com/privacy" target="_blank" class="font-medium text-primary">Politica Stripe</a></li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Hotjar (analiză UX):</strong> <a href="https://www.hotjar.com/legal/policies/privacy/" target="_blank" class="font-medium text-primary">Politica Hotjar</a></li>
             </ul>
         </section>
 
@@ -398,8 +398,8 @@ require_once __DIR__ . '/includes/header.php';
             </h2>
             <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Pentru întrebări despre utilizarea cookie-urilor pe platforma Ambilet, ne poți contacta la:</p>
             <ul class="my-4 pl-6 list-disc space-y-2.5">
-                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Email:</strong> <a href="mailto:privacy@ambilet.ro" class="font-medium text-primary hover:underline">privacy@ambilet.ro</a></li>
-                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>DPO:</strong> <a href="mailto:dpo@ambilet.ro" class="font-medium text-primary hover:underline">dpo@ambilet.ro</a></li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Email:</strong> <a href="mailto:privacy@ambilet.ro" class="font-medium text-primary">privacy@ambilet.ro</a></li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>DPO:</strong> <a href="mailto:dpo@ambilet.ro" class="font-medium text-primary">dpo@ambilet.ro</a></li>
             </ul>
         </section>
 

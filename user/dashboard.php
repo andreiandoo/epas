@@ -97,7 +97,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             <div class="p-4 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="font-bold text-secondary">Evenimentele mele urmatoare</h2>
-                    <a href="/cont/bilete" class="text-sm font-medium text-primary hover:underline">Vezi toate</a>
+                    <a href="/cont/bilete" class="text-sm font-medium text-primary">Vezi toate</a>
                 </div>
                 <div id="upcoming-events" class="space-y-3">
                     <div class="flex gap-4 p-3 animate-pulse bg-surface rounded-xl">
@@ -115,7 +115,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             <div class="p-4 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="font-bold text-secondary">Recomandate pentru tine</h2>
-                    <a href="/" class="text-sm font-medium text-primary hover:underline">Vezi toate</a>
+                    <a href="/" class="text-sm font-medium text-primary">Vezi toate</a>
                 </div>
                 <div id="recommended-events" class="grid gap-4 sm:grid-cols-2">
                     <div class="overflow-hidden border animate-pulse rounded-xl border-border">
@@ -167,7 +167,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             <div class="p-4 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="font-bold text-secondary">Badge-uri recente</h2>
-                    <a href="/cont/puncte" class="text-sm font-medium text-primary hover:underline">Toate</a>
+                    <a href="/cont/puncte" class="text-sm font-medium text-primary">Toate</a>
                 </div>
                 <div id="recent-badges" class="space-y-3">
                     <div class="flex items-center gap-3 p-3 bg-surface rounded-xl">
@@ -189,12 +189,12 @@ require_once dirname(__DIR__) . '/includes/header.php';
 
             <!-- Favorite Artists -->
             <div class="p-4 bg-white border rounded-xl lg:rounded-2xl border-border lg:p-6">
-                <h2 class="mb-4 font-bold text-secondary">Artistii tai preferati</h2>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-bold text-secondary">Artistii tai preferati</h2>
+                    <a href="/cont/favorite" class="text-sm font-medium text-primary">Toti</a>
+                </div>
                 <div id="favorite-artists" class="flex flex-wrap gap-2">
-                    <a href="/artist/dirty-shirt" class="px-3 py-1.5 bg-primary/10 text-primary text-sm font-medium rounded-full hover:bg-primary hover:text-white transition-colors">Dirty Shirt</a>
-                    <a href="/artist/cargo" class="px-3 py-1.5 bg-primary/10 text-primary text-sm font-medium rounded-full hover:bg-primary hover:text-white transition-colors">Cargo</a>
-                    <a href="/artist/trooper" class="px-3 py-1.5 bg-primary/10 text-primary text-sm font-medium rounded-full hover:bg-primary hover:text-white transition-colors">Trooper</a>
-                    <span class="px-3 py-1.5 bg-surface text-muted text-sm font-medium rounded-full border border-border">+5 altii</span>
+                    <span class="px-3 py-1.5 bg-surface text-muted text-sm rounded-full animate-pulse">Se incarca...</span>
                 </div>
             </div>
         </div>
@@ -258,6 +258,7 @@ const UserDashboard = {
 
         await this.loadUpcomingEvents();
         await this.loadRecommendedEvents();
+        await this.loadFavoriteArtists();
     },
 
     renderUser() {
@@ -379,6 +380,57 @@ const UserDashboard = {
                 </div>
             </a>
         `).join('');
+    },
+
+    async loadFavoriteArtists() {
+        try {
+            const response = await AmbiletAPI.getFavoriteArtists();
+            if (response.success && response.data) {
+                this.renderFavoriteArtists(response.data);
+                // Also update the favorites count if we got it from here
+                if (this.stats) {
+                    const summaryResponse = await AmbiletAPI.getFavoritesSummary();
+                    if (summaryResponse.success && summaryResponse.data) {
+                        this.stats.favorites = summaryResponse.data.events_count || 0;
+                        document.getElementById('stat-favorites').textContent = this.stats.favorites;
+                    }
+                }
+                return;
+            }
+        } catch (e) {
+            console.warn('Failed to load favorite artists:', e.message);
+        }
+        this.renderFavoriteArtists([]);
+    },
+
+    renderFavoriteArtists(artists) {
+        const container = document.getElementById('favorite-artists');
+        if (!artists.length) {
+            container.innerHTML = '<span class="px-3 py-1.5 bg-surface text-muted text-sm rounded-full">Nu ai artisti preferati</span>';
+            return;
+        }
+
+        const maxDisplay = 5;
+        const displayArtists = artists.slice(0, maxDisplay);
+        const remaining = artists.length - maxDisplay;
+
+        let html = displayArtists.map(artist =>
+            '<a href="/artist/' + (artist.slug || artist.id) + '" class="px-3 py-1.5 bg-primary/10 text-primary text-sm font-medium rounded-full hover:bg-primary hover:text-white transition-colors">' +
+            this.escapeHtml(artist.name) + '</a>'
+        ).join('');
+
+        if (remaining > 0) {
+            html += '<a href="/cont/favorite" class="px-3 py-1.5 bg-surface text-muted text-sm font-medium rounded-full border border-border hover:bg-primary/10 hover:text-primary transition-colors">+' + remaining + ' altii</a>';
+        }
+
+        container.innerHTML = html;
+    },
+
+    escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     },
 
     getInitials(firstName, lastName) {

@@ -351,7 +351,7 @@ const VenuePage = {
             html += this.renderInfoRow(
                 '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/></svg>',
                 'Telefon',
-                '<a href="tel:' + this.escapeHtml(venue.phone) + '" class="text-primary hover:underline">' + this.escapeHtml(venue.phone) + '</a>',
+                '<a href="tel:' + this.escapeHtml(venue.phone) + '" class="text-primary">' + this.escapeHtml(venue.phone) + '</a>',
                 true
             );
         }
@@ -361,7 +361,7 @@ const VenuePage = {
             html += this.renderInfoRow(
                 '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
                 'Email',
-                '<a href="mailto:' + this.escapeHtml(venue.email) + '" class="text-primary hover:underline">' + this.escapeHtml(venue.email) + '</a>',
+                '<a href="mailto:' + this.escapeHtml(venue.email) + '" class="text-primary">' + this.escapeHtml(venue.email) + '</a>',
                 true
             );
         }
@@ -373,7 +373,7 @@ const VenuePage = {
             html += this.renderInfoRow(
                 '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
                 'Website',
-                '<a href="' + this.escapeHtml(websiteUrl) + '" target="_blank" class="text-primary hover:underline">' + this.escapeHtml(websiteDisplay) + '</a>',
+                '<a href="' + this.escapeHtml(websiteUrl) + '" target="_blank" class="text-primary">' + this.escapeHtml(websiteDisplay) + '</a>',
                 true,
                 false // no border for last item
             );

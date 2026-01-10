@@ -293,7 +293,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                     <h3 class="mb-2 text-lg font-bold text-white">Din contul tău</h3>
                     <p class="mb-4 text-sm text-white/70">Accesează setările contului pentru a-ți descărca, modifica sau șterge datele.</p>
-                    <a href="/cont/profil" class="inline-flex items-center gap-1.5 text-sm font-semibold text-red-400 hover:underline">
+                    <a href="/cont/profil" class="inline-flex items-center gap-1.5 text-sm font-semibold text-red-400">
                         Mergi la setări
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -309,7 +309,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                     <h3 class="mb-2 text-lg font-bold text-white">Prin email</h3>
                     <p class="mb-4 text-sm text-white/70">Trimite o cerere la DPO-ul nostru. Răspundem în maximum 30 de zile.</p>
-                    <a href="mailto:dpo@ambilet.ro" class="inline-flex items-center gap-1.5 text-sm font-semibold text-red-400 hover:underline">
+                    <a href="mailto:dpo@ambilet.ro" class="inline-flex items-center gap-1.5 text-sm font-semibold text-red-400">
                         dpo@ambilet.ro
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -327,7 +327,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                     <h3 class="mb-2 text-lg font-bold text-white">Formular dedicat</h3>
                     <p class="mb-4 text-sm text-white/70">Completează formularul nostru securizat pentru cereri GDPR.</p>
-                    <a href="/contact" class="inline-flex items-center gap-1.5 text-sm font-semibold text-red-400 hover:underline">
+                    <a href="/contact" class="inline-flex items-center gap-1.5 text-sm font-semibold text-red-400">
                         Completează formularul
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -429,13 +429,13 @@ require_once __DIR__ . '/includes/header.php';
                             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                             <polyline points="22,6 12,13 2,6"/>
                         </svg>
-                        <a href="mailto:dpo@ambilet.ro" class="text-primary hover:underline">dpo@ambilet.ro</a>
+                        <a href="mailto:dpo@ambilet.ro" class="text-primary">dpo@ambilet.ro</a>
                     </li>
                     <li class="flex items-center justify-center gap-2 text-sm text-gray-500 sm:justify-start">
                         <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
                         </svg>
-                        <a href="tel:+40312345679" class="text-primary hover:underline">+40 31 234 5679</a>
+                        <a href="tel:+40312345679" class="text-primary">+40 31 234 5679</a>
                     </li>
                     <li class="flex items-center justify-center gap-2 text-sm text-gray-500 sm:justify-start">
                         <svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

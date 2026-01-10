@@ -152,8 +152,8 @@ require_once 'includes/head.php';
     <!-- Footer -->
     <footer class="py-6 px-8 text-center text-slate-500 text-[0.8125rem]">
         <p>
-            Ai întrebări? <a href="/contact" class="text-primary no-underline hover:underline">Contactează-ne</a> |
-            <a href="/confidentialitate" class="text-primary no-underline hover:underline">Politica de confidențialitate</a>
+            Ai întrebări? <a href="/contact" class="text-primary no-underline">Contactează-ne</a> |
+            <a href="/confidentialitate" class="text-primary no-underline">Politica de confidențialitate</a>
         </p>
     </footer>
 

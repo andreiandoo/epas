@@ -64,7 +64,7 @@ $currentPage = $currentPage ?? 'dashboard';
                         <p class="font-bold text-secondary" id="sidebar-user-points">0</p>
                     </div>
                 </div>
-                <a href="/cont/puncte" class="text-xs font-medium text-primary hover:underline">Vezi</a>
+                <a href="/cont/puncte" class="text-xs font-medium text-primary">Vezi</a>
             </div>
         </div>
 

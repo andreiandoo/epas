@@ -120,7 +120,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 </div>
 
                 <div class="pt-4 mt-4 border-t border-border">
-                    <button onclick="downloadData()" class="text-sm text-primary hover:underline">
+                    <button onclick="downloadData()" class="text-sm text-primary">
                         Descarca datele mele personale
                     </button>
                 </div>
@@ -147,7 +147,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     </div>
                 </div>
 
-                <button onclick="logoutAllDevices()" class="mt-4 text-sm text-error hover:underline">
+                <button onclick="logoutAllDevices()" class="mt-4 text-sm text-error">
                     Deconecteaza-te de pe toate dispozitivele
                 </button>
             </div>

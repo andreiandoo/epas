@@ -54,7 +54,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                             <p class="font-semibold text-secondary">Notificari active pentru <span id="notification-count">0</span> evenimente</p>
                             <p class="text-sm text-muted">Vei fi notificat cand biletele devin disponibile sau se apropie de sold out.</p>
                         </div>
-                        <a href="/cont/setari" class="text-sm font-medium text-primary hover:underline whitespace-nowrap">Gestioneaza →</a>
+                        <a href="/cont/setari" class="text-sm font-medium text-primary whitespace-nowrap">Gestioneaza →</a>
                     </div>
                 </div>
 
@@ -101,13 +101,48 @@ const WatchlistPage = {
 
     async loadWatchlist() {
         try {
-            const response = await AmbiletAPI.customer.getWatchlist();
-            if (response.success && response.data) {
-                this.events = response.data.events || [];
-                this.artists = response.data.artists || [];
-                this.venues = response.data.venues || [];
-            } else {
-                this.loadDemoData();
+            // Load events from watchlist API
+            const eventsResponse = await AmbiletAPI.customer.getWatchlist();
+            console.log('[WatchlistPage] Events response:', eventsResponse);
+            if (eventsResponse.success && eventsResponse.data) {
+                // API returns array directly in data, not data.events
+                this.events = Array.isArray(eventsResponse.data) ? eventsResponse.data : [];
+                // Transform event data to expected format
+                this.events = this.events.map(item => ({
+                    id: item.event?.id || item.id,
+                    title: item.event?.name || item.title || 'Eveniment',
+                    slug: item.event?.slug || item.slug,
+                    image: item.event?.image || item.image,
+                    date: item.event?.date_formatted || item.date,
+                    venue: item.event?.venue || item.venue,
+                    city: item.event?.city || item.city,
+                    category: item.event?.category || item.category,
+                    genre: item.event?.genre || item.genre,
+                    price: item.event?.min_price || item.price,
+                    sold_out: item.event?.is_sold_out || item.sold_out
+                }));
+            }
+
+            // Load favorite artists
+            try {
+                const artistsResponse = await AmbiletAPI.getFavoriteArtists();
+                if (artistsResponse.success && artistsResponse.data) {
+                    this.artists = Array.isArray(artistsResponse.data) ? artistsResponse.data : [];
+                }
+            } catch (e) {
+                console.log('[WatchlistPage] Artists load error:', e);
+                this.artists = [];
+            }
+
+            // Load favorite venues
+            try {
+                const venuesResponse = await AmbiletAPI.getFavoriteVenues();
+                if (venuesResponse.success && venuesResponse.data) {
+                    this.venues = Array.isArray(venuesResponse.data) ? venuesResponse.data : [];
+                }
+            } catch (e) {
+                console.log('[WatchlistPage] Venues load error:', e);
+                this.venues = [];
             }
         } catch (error) {
             console.log('Watchlist API error:', error);
@@ -130,7 +165,7 @@ const WatchlistPage = {
         document.getElementById('events-count').textContent = this.events.length;
         document.getElementById('artists-count').textContent = this.artists.length;
         document.getElementById('venues-count').textContent = this.venues.length;
-        document.getElementById('notification-count').textContent = this.events.length + 2;
+        document.getElementById('notification-count').textContent = this.events.length;
 
         // Render all sections
         this.renderEvents();

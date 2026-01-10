@@ -147,7 +147,7 @@ require_once 'includes/head.php';
                 <!-- Help Section -->
                 <div class="mt-6 pt-6 border-t border-slate-200">
                     <p class="text-[0.8125rem] text-slate-500 mb-2">Ai nevoie de ajutor? Echipa noastră de suport îți stă la dispoziție.</p>
-                    <a href="/contact" class="text-primary font-semibold text-sm no-underline hover:underline">Contactează suport →</a>
+                    <a href="/contact" class="text-primary font-semibold text-sm no-underline">Contactează suport →</a>
                 </div>
             </div>
         </div>

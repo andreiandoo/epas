@@ -76,7 +76,7 @@ $pageTitle = 'Cos de cumparaturi';
             <section class="mb-12">
                 <div class="flex items-center justify-between mb-6">
                     <h2 class="text-xl font-bold text-secondary">Evenimente populare</h2>
-                    <a href="/evenimente/populare" class="text-primary font-semibold text-sm flex items-center gap-1 hover:underline">
+                    <a href="/evenimente/populare" class="text-primary font-semibold text-sm flex items-center gap-1">
                         Vezi toate
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                     </a>

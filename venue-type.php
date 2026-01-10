@@ -325,7 +325,7 @@ $typeEmoji = match($typeSlug) {
                 <span class="mr-2">🎫</span>
                 Evenimente în <?= htmlspecialchars($currentType['short_name']) ?>
             </h2>
-            <a href="/evenimente?venue_type=<?= urlencode($typeSlug) ?>" class="flex items-center gap-1 text-sm font-semibold transition-colors text-primary hover:underline">
+            <a href="/evenimente?venue_type=<?= urlencode($typeSlug) ?>" class="flex items-center gap-1 text-sm font-semibold transition-colors text-primary">
                 Vezi toate (<span id="totalEventsCount">0</span>)
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><?= getVenueIconPath('chevron-right') ?></svg>
             </a>

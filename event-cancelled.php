@@ -166,7 +166,7 @@ require_once 'includes/head.php';
 
                 <!-- Help Link -->
                 <p class="text-center mt-5 text-sm text-slate-500">
-                    Ai întrebări despre rambursare? <a href="/contact" class="text-primary font-medium no-underline hover:underline">Contactează suportul</a>
+                    Ai întrebări despre rambursare? <a href="/contact" class="text-primary font-medium no-underline">Contactează suportul</a>
                 </p>
             </div>
         </div>

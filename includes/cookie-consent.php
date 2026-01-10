@@ -30,7 +30,7 @@
             <h3 class="text-base font-bold text-secondary mb-1">Folosim cookie-uri</h3>
             <p class="text-sm text-muted leading-relaxed">
                 Utilizăm cookie-uri pentru a-ți oferi cea mai bună experiență pe site.
-                Află mai multe în <a href="/cookies" class="text-primary font-medium hover:underline">Politica de cookies</a>.
+                Află mai multe în <a href="/cookies" class="text-primary font-medium">Politica de cookies</a>.
             </p>
         </div>
         <div class="flex items-center gap-3 flex-shrink-0 flex-wrap justify-center">

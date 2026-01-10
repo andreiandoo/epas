@@ -306,8 +306,8 @@ require_once __DIR__ . '/includes/header.php';
 
             <p class="text-[15px] leading-[1.8] text-gray-600 mb-4">Pentru întrebări sau nelămuriri privind acești Termeni, ne puteți contacta la:</p>
             <ul class="my-4 pl-6 list-disc space-y-2.5">
-                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Email:</strong> <a href="mailto:legal@ambilet.ro" class="font-medium text-primary hover:underline">legal@ambilet.ro</a></li>
-                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Telefon:</strong> <a href="tel:+40312345678" class="font-medium text-primary hover:underline">+40 31 234 5678</a></li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Email:</strong> <a href="mailto:legal@ambilet.ro" class="font-medium text-primary">legal@ambilet.ro</a></li>
+                <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Telefon:</strong> <a href="tel:+40312345678" class="font-medium text-primary">+40 31 234 5678</a></li>
                 <li class="text-[15px] leading-[1.8] text-gray-600"><strong>Adresă:</strong> Str. Exemplu nr. 123, București, România</li>
             </ul>
 

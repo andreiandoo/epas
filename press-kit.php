@@ -239,7 +239,7 @@ require_once __DIR__ . '/includes/header.php';
                 <p class="text-base text-white/70 mb-8">Pentru interviuri, parteneriate media sau informatii suplimentare.</p>
                 <div class="inline-flex items-center gap-3 px-8 py-4 bg-white/10 border border-white/20 rounded-xl">
                     <svg class="w-6 h-6 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                    <a href="mailto:press@ambilet.ro" class="text-lg font-semibold text-white hover:underline">press@ambilet.ro</a>
+                    <a href="mailto:press@ambilet.ro" class="text-lg font-semibold text-white">press@ambilet.ro</a>
                 </div>
             </div>
         </section>

@@ -129,7 +129,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         <!-- Populated by JavaScript -->
                     </div>
                     <div class="p-4 text-center border-t border-border">
-                        <button class="text-sm font-medium text-primary hover:underline">Incarca mai mult</button>
+                        <button class="text-sm font-medium text-primary">Incarca mai mult</button>
                     </div>
                 </div>
             </div>

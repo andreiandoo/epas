@@ -54,7 +54,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <label class="label mb-0">Parola</label>
-                            <a href="/organizer/forgot-password" class="text-sm text-primary font-medium hover:underline">Ai uitat parola?</a>
+                            <a href="/organizer/forgot-password" class="text-sm text-primary font-medium">Ai uitat parola?</a>
                         </div>
                         <div class="relative">
                             <input type="password" name="password" required placeholder="********" class="input pr-12" id="password-input" autocomplete="current-password">
@@ -75,7 +75,7 @@ require_once dirname(__DIR__) . '/includes/head.php';
                     </button>
                 </form>
                 <div class="relative my-8"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-border"></div></div><div class="relative flex justify-center text-sm"><span class="px-4 bg-surface text-muted">sau</span></div></div>
-                <p class="text-center text-muted">Nu ai cont de organizator? <a href="/organizator/inregistrare" class="text-primary font-semibold hover:underline">Inregistreaza-te</a></p>
+                <p class="text-center text-muted">Nu ai cont de organizator? <a href="/organizator/inregistrare" class="text-primary font-semibold">Inregistreaza-te</a></p>
                 <div class="mt-8 text-center"><a href="/autentificare" class="text-sm text-muted hover:text-primary">&larr; Inapoi la autentificarea clienti</a></div>
             </div>
         </div>
