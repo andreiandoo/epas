@@ -334,17 +334,17 @@ const AmbiletAPI = {
         if (endpoint.match(/\/marketplace-events\/[a-z0-9-]+$/i)) return 'event';
         if (endpoint.includes('/marketplace-events')) return 'events';
 
+        // Customer favorites endpoints (MUST be before venues/artists to avoid false matches)
+        if (endpoint === '/customer/favorites/artists') return 'customer.favorites.artists';
+        if (endpoint === '/customer/favorites/venues') return 'customer.favorites.venues';
+        if (endpoint === '/customer/favorites/summary') return 'customer.favorites.summary';
+
         // Venues endpoints - specific patterns first, then fallback
         if (endpoint.includes('/venues/featured')) return 'venues.featured';
         if (endpoint.match(/\/venues\/[a-z0-9-]+\/toggle-favorite$/i)) return 'venue.toggle-favorite';
         if (endpoint.match(/\/venues\/[a-z0-9-]+\/check-favorite$/i)) return 'venue.check-favorite';
         if (endpoint.match(/\/venues\/[a-z0-9-]+$/i)) return 'venue';
         if (endpoint.includes('/venues')) return 'venues';
-
-        // Customer favorites endpoints (must be before artists/venues)
-        if (endpoint === '/customer/favorites/artists') return 'customer.favorites.artists';
-        if (endpoint === '/customer/favorites/venues') return 'customer.favorites.venues';
-        if (endpoint === '/customer/favorites/summary') return 'customer.favorites.summary';
 
         // Artists endpoints - specific patterns first, then fallback
         if (endpoint.includes('/artists/featured')) return 'artists.featured';
