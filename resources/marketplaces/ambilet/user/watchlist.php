@@ -205,8 +205,10 @@ const WatchlistPage = {
         grid.innerHTML = this.events.map(event => {
             const isSoldOut = event.sold_out === true;
             const eventId = event.id || 0;
+            const eventUrl = '/eveniment/' + (event.slug || event.id);
+            const hasPrice = event.price && event.price > 0;
             return '<div class="event-card bg-white rounded-xl lg:rounded-2xl border border-border overflow-hidden ' + (isSoldOut ? 'opacity-75' : '') + '">' +
-                '<div class="relative">' +
+                '<a href="' + eventUrl + '" class="block relative">' +
                     '<img src="' + (event.image || '/assets/images/default-event.jpg') + '" class="w-full h-40 object-cover ' + (isSoldOut ? 'grayscale' : '') + '" alt="' + (event.title || '') + '">' +
                     (isSoldOut ?
                         '<div class="absolute inset-0 flex items-center justify-center bg-black/50">' +
@@ -217,13 +219,13 @@ const WatchlistPage = {
                             '<span class="notification-badge px-2 py-1 ' + (event.badge_color || 'bg-primary') + ' text-white text-xs font-bold rounded-lg">' + event.badge + '</span>' +
                         '</div>'
                     : '')) +
-                    '<button onclick="WatchlistPage.removeFromWatchlist(\'event\', ' + eventId + ')" class="absolute flex items-center justify-center rounded-full shadow-lg heart-btn active top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur">' +
-                        '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
-                    '</button>' +
-                '</div>' +
-                '<div class="p-4">' +
+                '</a>' +
+                '<button onclick="event.stopPropagation(); WatchlistPage.removeFromWatchlist(\'event\', ' + eventId + ')" class="absolute flex items-center justify-center rounded-full shadow-lg heart-btn active top-3 right-3 w-9 h-9 bg-white/90 backdrop-blur z-10">' +
+                    '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>' +
+                '</button>' +
+                '<a href="' + eventUrl + '" class="block p-4">' +
                     '<div class="flex items-center gap-2 mb-2">' +
-                        '<span class="px-2 py-0.5 ' + (isSoldOut ? 'bg-muted/20 text-muted' : 'bg-primary/10 text-primary') + ' text-xs font-semibold rounded">' + (event.genre || event.category || '') + '</span>' +
+                        '<span class="px-2 py-0.5 ' + (isSoldOut ? 'bg-muted/20 text-muted' : 'bg-primary/10 text-primary') + ' text-xs font-semibold rounded">' + (event.genre || event.category || 'Eveniment') + '</span>' +
                         '<span class="text-xs text-muted">' + (event.date || '') + '</span>' +
                     '</div>' +
                     '<h3 class="mb-1 font-bold text-secondary">' + (event.title || '') + '</h3>' +
@@ -231,25 +233,19 @@ const WatchlistPage = {
                     '<div class="flex items-center justify-between">' +
                         (isSoldOut ?
                             '<div><span class="text-sm line-through text-muted">' + (event.price || 0) + ' lei</span></div>' +
-                            '<button class="flex items-center gap-1 px-4 py-2 text-sm font-semibold rounded-lg bg-surface text-muted">' +
-                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>' +
-                                'Alerta resale' +
-                            '</button>'
-                        : (event.price ?
+                            '<span class="px-4 py-2 text-sm font-semibold rounded-lg bg-surface text-muted">Sold out</span>'
+                        : (hasPrice ?
                             '<div>' +
                                 '<span class="text-lg font-bold text-primary">' + event.price + ' lei</span>' +
                                 '<span class="ml-1 text-xs text-muted">de la</span>' +
                             '</div>' +
-                            '<a href="/eveniment/' + (event.slug || event.id) + '" class="px-4 py-2 text-sm font-semibold text-white rounded-lg btn-primary">Cumpara</a>'
+                            '<span class="px-4 py-2 text-sm font-semibold text-white rounded-lg btn-primary">Cumpara</span>'
                         :
                             '<div><span class="text-sm text-muted">Bilete in curand</span></div>' +
-                            '<button class="flex items-center gap-1 px-4 py-2 text-sm font-semibold rounded-lg bg-surface text-secondary">' +
-                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>' +
-                                'Notifica-ma' +
-                            '</button>'
+                            '<span class="px-4 py-2 text-sm font-semibold rounded-lg bg-surface text-secondary">Vezi detalii</span>'
                         )) +
                     '</div>' +
-                '</div>' +
+                '</a>' +
             '</div>';
         }).join('');
     },

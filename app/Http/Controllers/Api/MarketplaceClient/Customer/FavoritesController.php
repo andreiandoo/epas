@@ -217,7 +217,7 @@ class FavoritesController extends BaseController
         $artistIds = $favorites->pluck('favoriteable_id');
         $artists = Artist::whereIn('id', $artistIds)
             ->withCount(['events' => function ($query) {
-                $query->where('start_date', '>=', now());
+                $query->where('event_date', '>=', now());
             }])
             ->get()
             ->keyBy('id');
@@ -263,7 +263,7 @@ class FavoritesController extends BaseController
         $venueIds = $favorites->pluck('favoriteable_id');
         $venues = Venue::whereIn('id', $venueIds)
             ->withCount(['events' => function ($query) {
-                $query->where('start_date', '>=', now());
+                $query->where('event_date', '>=', now());
             }])
             ->get()
             ->keyBy('id');
@@ -274,13 +274,13 @@ class FavoritesController extends BaseController
                 return null;
             }
 
-            // Handle image URL - check if already full URL or needs storage prefix
+            // Handle image URL - use APP_URL for consistent domain
             $imageUrl = null;
             if ($venue->image_url) {
                 if (str_starts_with($venue->image_url, 'http://') || str_starts_with($venue->image_url, 'https://')) {
                     $imageUrl = $venue->image_url;
                 } else {
-                    $imageUrl = url('storage/' . ltrim($venue->image_url, '/'));
+                    $imageUrl = rtrim(config('app.url'), '/') . '/storage/' . ltrim($venue->image_url, '/');
                 }
             }
 

@@ -123,13 +123,13 @@ class WatchlistController extends BaseController
                 $genre = $event->genre ?? null;
             }
 
-            // Format image URL properly
+            // Format image URL properly - use APP_URL for consistent domain
             $image = null;
             if ($imagePath) {
                 if (str_starts_with($imagePath, 'http://') || str_starts_with($imagePath, 'https://')) {
                     $image = $imagePath;
                 } else {
-                    $image = url('storage/' . ltrim($imagePath, '/'));
+                    $image = rtrim(config('app.url'), '/') . '/storage/' . ltrim($imagePath, '/');
                 }
             }
 
