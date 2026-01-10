@@ -387,14 +387,6 @@ const UserDashboard = {
             const response = await AmbiletAPI.getFavoriteArtists();
             if (response.success && response.data) {
                 this.renderFavoriteArtists(response.data);
-                // Also update the favorites count if we got it from here
-                if (this.stats) {
-                    const summaryResponse = await AmbiletAPI.getFavoritesSummary();
-                    if (summaryResponse.success && summaryResponse.data) {
-                        this.stats.favorites = summaryResponse.data.events_count || 0;
-                        document.getElementById('stat-favorites').textContent = this.stats.favorites;
-                    }
-                }
                 return;
             }
         } catch (e) {
