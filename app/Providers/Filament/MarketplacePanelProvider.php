@@ -71,6 +71,7 @@ class MarketplacePanelProvider extends PanelProvider
                 NavigationGroup::make('Services'),
                 NavigationGroup::make('Shop'),
                 NavigationGroup::make('Content'),
+                NavigationGroup::make('Reports'),
                 NavigationGroup::make('Settings')
                     ->collapsed(),
                 NavigationGroup::make('Help')
