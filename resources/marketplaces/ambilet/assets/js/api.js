@@ -275,6 +275,7 @@ const AmbiletAPI = {
         if (endpoint === '/customer/me') return 'customer.me';
         if (endpoint === '/customer/profile') return 'customer.profile';
         if (endpoint === '/customer/password') return 'customer.password';
+        if (endpoint === '/customer/account') return 'customer.account';
         if (endpoint === '/customer/settings') return 'customer.settings';
         if (endpoint === '/customer/forgot-password') return 'customer.forgot-password';
         if (endpoint === '/customer/reset-password') return 'customer.reset-password';
@@ -756,6 +757,16 @@ const AmbiletAPI = {
                 email,
                 password,
                 password_confirmation: confirmPassword
+            });
+        },
+
+        /**
+         * Delete account
+         */
+        async deleteAccount(password, reason = null) {
+            return AmbiletAPI.delete('/customer/account', {
+                password,
+                reason
             });
         },
 

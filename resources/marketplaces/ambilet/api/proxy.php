@@ -428,6 +428,13 @@ switch ($action) {
         $requiresAuth = true;
         break;
 
+    case 'customer.account':
+        $method = 'DELETE';
+        $body = file_get_contents('php://input');
+        $endpoint = '/customer/account';
+        $requiresAuth = true;
+        break;
+
     case 'customer.settings':
         $method = 'PUT';
         $body = file_get_contents('php://input');
