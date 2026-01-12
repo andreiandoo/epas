@@ -1169,11 +1169,27 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
         const cart = getCart();
         const items = cart.items || [];
         const itemCount = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
-        const subtotal = items.reduce((sum, item) => {
-            // Handle both formats: item.ticketType.price or item.price
+
+        // Get commission info from first item (same logic as cart.php and checkout.php)
+        const commissionRate = items[0]?.event?.commission_rate || 5;
+        const commissionMode = items[0]?.event?.commission_mode || 'included';
+
+        // Calculate base subtotal and commission
+        let baseSubtotal = 0;
+        let totalCommission = 0;
+
+        items.forEach(item => {
             const price = item.ticketType?.price || item.price || 0;
-            return sum + price * (item.quantity || 1);
-        }, 0);
+            const qty = item.quantity || 1;
+            baseSubtotal += price * qty;
+
+            // Add commission if mode is 'added_on_top'
+            if (commissionMode === 'added_on_top') {
+                totalCommission += (price * commissionRate / 100) * qty;
+            }
+        });
+
+        const subtotal = baseSubtotal + totalCommission;
 
         // Update badge
         if (itemCount > 0) {
@@ -1193,8 +1209,8 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
             cartDrawerCount.classList.add('hidden');
         }
 
-        // Update subtotal
-        cartSubtotal.textContent = subtotal.toLocaleString('ro-RO') + ' lei';
+        // Update subtotal (shows total including commission if on top)
+        cartSubtotal.textContent = subtotal.toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei';
 
         // Show/hide empty state vs items
         if (items.length === 0) {
@@ -1210,15 +1226,25 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
     }
 
     function renderCartItems(items) {
+        // Get commission info from first item
+        const commissionRate = items[0]?.event?.commission_rate || 5;
+        const commissionMode = items[0]?.event?.commission_mode || 'included';
+
         cartItems.innerHTML = items.map((item, index) => {
             // Handle both AmbiletCart format and legacy format
             const image = item.event?.image || item.image || '';
             const ticketName = item.ticketType?.name || item.name || 'Bilet';
             const eventName = item.event?.title || item.event?.name || item.eventName || '';
             const eventDate = item.event?.date || item.event?.time || item.date || '';
-            const price = item.ticketType?.price || item.price || 0;
+            const basePrice = item.ticketType?.price || item.price || 0;
             const quantity = item.quantity || 1;
             const itemKey = item.key || index;
+
+            // Calculate price with commission if on top
+            let displayPrice = basePrice;
+            if (commissionMode === 'added_on_top') {
+                displayPrice = basePrice + (basePrice * commissionRate / 100);
+            }
 
             return '<div class="p-3 bg-white border border-gray-200 rounded-xl" data-cart-item="' + index + '" data-item-key="' + escapeHtml(String(itemKey)) + '">' +
                 '<div class="flex gap-3">' +
@@ -1244,7 +1270,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                     '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>' +
                                 '</button>' +
                             '</div>' +
-                            '<span class="font-bold text-primary">' + (price * quantity).toLocaleString('ro-RO') + ' lei</span>' +
+                            '<span class="font-bold text-primary">' + (displayPrice * quantity).toLocaleString('ro-RO', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' lei</span>' +
                         '</div>' +
                     '</div>' +
                     '<button type="button" class="self-start p-1 text-gray-400 transition-colors hover:text-red-500 cart-remove-btn" data-index="' + index + '" aria-label="Șterge">' +

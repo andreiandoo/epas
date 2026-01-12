@@ -15,7 +15,8 @@ define('API_BASE_URL', 'https://core.tixello.com/api/marketplace-client');
 define('API_KEY', 'mpc_4qkv4pcuogusFM9234dwihfTrrkBNT2PzpHflnLLmKfSXgkef9BvefCISPFB'); // Replace with actual API key
 
 // Demo Mode - set to true to use mock data instead of API
-define('DEMO_MODE', false);
+// NOTE: Enable this when the backend API doesn't have real data yet
+define('DEMO_MODE', true);
 
 // Site Configuration
 define('SITE_NAME', 'AmBilet');
