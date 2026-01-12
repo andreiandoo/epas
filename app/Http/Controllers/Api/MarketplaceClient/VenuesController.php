@@ -131,15 +131,17 @@ class VenuesController extends BaseController
         $upcomingEvents = $venue->events()
             ->where('event_date', '>=', now()->toDateString())
             ->where('is_cancelled', false)
-            ->with('ticketTypes')
+            ->with(['ticketTypes', 'marketplaceOrganizer:id,default_commission_mode,commission_rate', 'marketplaceEventCategory'])
             ->orderBy('event_date')
             ->limit(10)
             ->get()
-            ->map(function ($event) use ($language) {
-                // Calculate min price from ticket types
-                $minPrice = $event->ticketTypes->map(function ($tt) {
-                    return ($tt->sale_price_cents ?? $tt->price_cents) / 100;
-                })->filter()->min();
+            ->map(function ($event) use ($language, $client) {
+                // Calculate min price from active ticket types
+                $minPrice = $event->ticketTypes
+                    ->filter(fn ($tt) => $tt->status === 'active')
+                    ->map(function ($tt) {
+                        return ($tt->sale_price_cents ?? $tt->price_cents) / 100;
+                    })->filter()->min();
 
                 // Get image URL - use APP_URL for consistent domain
                 $imageUrl = null;
@@ -152,16 +154,27 @@ class VenuesController extends BaseController
                     }
                 }
 
+                // Get commission settings (event > organizer > marketplace default)
+                $organizer = $event->marketplaceOrganizer;
+                $commissionMode = $event->commission_mode ?? $organizer?->default_commission_mode ?? $client?->commission_mode ?? 'included';
+                $commissionRate = (float) ($event->commission_rate ?? $organizer?->commission_rate ?? $client?->commission_rate ?? 5.0);
+
+                // Get category name
+                $categoryName = $event->marketplaceEventCategory?->getTranslation('name', $language);
+
                 return [
                     'id' => $event->id,
-                    'title' => $event->getTranslation('title', $language),
+                    'name' => $event->getTranslation('title', $language),
                     'slug' => $event->slug,
-                    'event_date' => $event->event_date,
+                    'starts_at' => $event->event_date?->format('Y-m-d') . 'T' . ($event->start_time ?? '00:00:00'),
                     'start_time' => $event->start_time,
-                    'min_price' => $minPrice,
+                    'price_from' => $minPrice,
                     'currency' => $event->currency ?? 'RON',
                     'image' => $imageUrl,
                     'is_sold_out' => $event->is_sold_out ?? false,
+                    'category' => $categoryName ? ['name' => $categoryName] : null,
+                    'commission_mode' => $commissionMode,
+                    'commission_rate' => $commissionRate,
                 ];
             });
 

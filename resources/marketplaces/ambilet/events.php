@@ -27,9 +27,10 @@ $filterDate = $_GET['data'] ?? $_GET['date'] ?? '';
 $filterSort = $_GET['sortare'] ?? $_GET['sort'] ?? 'date';
 $searchQuery = $_GET['q'] ?? $_GET['search'] ?? '';
 
-// Load categories for filter
+// Load filter options from API with caching
 $eventCategories = getEventCategories();
 $featuredCities = getFeaturedCities();
+$eventGenres = getEventGenres();
 
 $pageTitle = 'Evenimente';
 if ($searchQuery) {
@@ -97,13 +98,9 @@ require_once __DIR__ . '/includes/header.php';
             <!-- Genre Filter -->
             <select id="genreFilter" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary" onchange="EventsPage.applyFilters()">
                 <option value="">Toate genurile</option>
-                <option value="pop" <?= $filterGenre === 'pop' ? 'selected' : '' ?>>Pop</option>
-                <option value="rock" <?= $filterGenre === 'rock' ? 'selected' : '' ?>>Rock</option>
-                <option value="hip-hop" <?= $filterGenre === 'hip-hop' ? 'selected' : '' ?>>Hip-Hop</option>
-                <option value="electronic" <?= $filterGenre === 'electronic' ? 'selected' : '' ?>>Electronic</option>
-                <option value="jazz" <?= $filterGenre === 'jazz' ? 'selected' : '' ?>>Jazz</option>
-                <option value="clasic" <?= $filterGenre === 'clasic' ? 'selected' : '' ?>>Clasic</option>
-                <option value="folk" <?= $filterGenre === 'folk' ? 'selected' : '' ?>>Folk</option>
+                <?php foreach ($eventGenres as $genre): ?>
+                <option value="<?= htmlspecialchars($genre['slug']) ?>" <?= $filterGenre === $genre['slug'] ? 'selected' : '' ?>><?= htmlspecialchars($genre['name']) ?></option>
+                <?php endforeach; ?>
             </select>
 
             <!-- Date Filter -->

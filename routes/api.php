@@ -2007,6 +2007,11 @@ Route::prefix('marketplace-client/event-categories')->middleware(['throttle:120,
         ->name('api.marketplace-client.event-categories.show');
 });
 
+// Event Genres
+Route::get('/marketplace-client/event-genres', [MarketplaceEventsController::class, 'genres'])
+    ->middleware(['throttle:120,1', 'marketplace.auth'])
+    ->name('api.marketplace-client.event-genres');
+
 // Venue Categories
 use App\Http\Controllers\Api\MarketplaceClient\VenueCategoriesController as MarketplaceVenueCategoriesController;
 

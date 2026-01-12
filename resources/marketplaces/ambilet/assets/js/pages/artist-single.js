@@ -162,6 +162,8 @@ const ArtistPage = {
             ],
             spotifyId: api.external_ids?.spotify_id || api.spotify_id || null,
             events: events,
+            // Store raw events for AmbiletEventCard which handles commission
+            rawEvents: api.upcoming_events || [],
             gallery: api.youtube_videos?.length > 0 ?
                 api.youtube_videos.map(function(v) { return { url: v.thumbnail, isVideo: true }; }) :
                 [],
@@ -262,8 +264,8 @@ const ArtistPage = {
         // Spotify embed
         this.updateSpotifyEmbed(data.spotifyId, data.social?.spotify, data.stats?.spotifyListeners);
 
-        // Events
-        this.renderEvents(data.events);
+        // Events - use rawEvents for AmbiletEventCard which handles commission
+        this.renderEvents(data.rawEvents && data.rawEvents.length > 0 ? data.rawEvents : data.events);
 
         // About
         this.renderAbout(data.about);
@@ -388,43 +390,18 @@ const ArtistPage = {
     },
 
     /**
-     * Render events list
+     * Render events list using AmbiletEventCard for commission support
      */
     renderEvents(events) {
         var container = document.getElementById(this.elements.eventsList);
         if (!container) return;
 
-        var self = this;
-
-        if (events.length > 0) {
-            container.innerHTML = events.map(function(event) {
-                var priceSection = event.soldOut ?
-                    '<span class="px-5 py-2.5 bg-red-100 rounded-lg text-red-600 text-[13px] font-semibold">SOLD OUT</span>' :
-                    '<div class="text-[13px] text-gray-500">de la <strong class="text-xl font-bold text-emerald-500">' +
-                        (event.price || '-') + ' ' + event.currency + '</strong></div>' +
-                    '<button class="px-6 py-3 text-sm font-semibold text-white transition-colors bg-gray-900 rounded-lg hover:bg-gray-800">Cumpara bilete</button>';
-
-                return '<a href="/bilete/' + self.escapeHtml(event.slug) + '" class="flex flex-col md:flex-row bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all">' +
-                    '<div class="w-full md:w-[100px] p-5 bg-gradient-to-br from-primary to-primary-light flex md:flex-col items-center justify-center text-white gap-2.5 md:gap-0">' +
-                        '<div class="text-[32px] font-extrabold leading-none">' + event.day + '</div>' +
-                        '<div class="text-sm font-semibold uppercase opacity-90">' + event.month + '</div>' +
-                    '</div>' +
-                    '<div class="flex flex-col justify-center flex-1 p-5">' +
-                        '<h3 class="mb-2 text-lg font-bold text-gray-900">' + self.escapeHtml(event.title) + '</h3>' +
-                        '<div class="flex flex-wrap gap-4 text-sm text-gray-500">' +
-                            '<span class="flex items-center gap-1.5">' +
-                                '<svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
-                                self.escapeHtml(event.venue) +
-                            '</span>' +
-                            '<span class="flex items-center gap-1.5">' +
-                                '<svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
-                                event.time +
-                            '</span>' +
-                        '</div>' +
-                    '</div>' +
-                    '<div class="flex flex-row items-center justify-between gap-2 p-5 md:flex-col md:justify-center">' + priceSection + '</div>' +
-                '</a>';
-            }).join('');
+        if (events && events.length > 0) {
+            // Use AmbiletEventCard for consistent rendering with commission support
+            container.innerHTML = AmbiletEventCard.renderManyHorizontal(events, {
+                urlPrefix: '/bilete/',
+                showBuyButton: true
+            });
         } else {
             container.innerHTML =
                 '<div class="py-12 text-center bg-white border border-gray-200 rounded-2xl">' +

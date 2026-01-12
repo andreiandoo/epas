@@ -634,4 +634,44 @@ class MarketplaceEventsController extends BaseController
             ] : null,
         ];
     }
+
+    /**
+     * Get event genres with event counts
+     */
+    public function genres(Request $request): JsonResponse
+    {
+        $client = $this->requireClient($request);
+        $language = $client->language ?? 'ro';
+
+        // Get all event genres that have events in this marketplace
+        $genres = \App\Models\EventGenre::query()
+            ->whereHas('events', function ($query) use ($client) {
+                $query->where('marketplace_client_id', $client->id)
+                    ->where('event_date', '>=', now()->toDateString())
+                    ->where(function ($q) {
+                        $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+                    });
+            })
+            ->withCount(['events' => function ($query) use ($client) {
+                $query->where('marketplace_client_id', $client->id)
+                    ->where('event_date', '>=', now()->toDateString())
+                    ->where(function ($q) {
+                        $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+                    });
+            }])
+            ->orderBy('name')
+            ->get()
+            ->map(function ($genre) use ($language) {
+                return [
+                    'id' => $genre->id,
+                    'name' => $genre->getTranslation('name', $language),
+                    'slug' => $genre->slug,
+                    'event_count' => $genre->events_count,
+                ];
+            });
+
+        return $this->success([
+            'genres' => $genres,
+        ]);
+    }
 }

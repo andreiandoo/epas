@@ -169,6 +169,8 @@ const VenuePage = {
             amenities: apiData.amenities || [],
             gallery: apiData.gallery || apiData.images || [],
             events: events,
+            // Store raw events for AmbiletEventCard which handles commission
+            rawEvents: apiData.upcoming_events || [],
             similarVenues: similarVenues
         };
     },
@@ -304,8 +306,8 @@ const VenuePage = {
         // Gallery
         this.renderGallery(venue.gallery);
 
-        // Events
-        this.renderEvents(venue.events);
+        // Events - use rawEvents for AmbiletEventCard which handles commission
+        this.renderEvents(venue.rawEvents && venue.rawEvents.length > 0 ? venue.rawEvents : venue.events);
 
         // Similar venues
         this.renderSimilarVenues(venue.similarVenues);
@@ -518,7 +520,7 @@ const VenuePage = {
     },
 
     /**
-     * Render events list
+     * Render events list using AmbiletEventCard for commission support
      */
     renderEvents(events) {
         var container = document.getElementById(this.elements.eventsList);
@@ -538,39 +540,11 @@ const VenuePage = {
             return;
         }
 
-        var self = this;
-        var html = events.map(function(e) {
-            var priceHtml = e.is_sold_out
-                ? '<span class="text-sm font-bold text-red-500">SOLD OUT</span>'
-                : '<div class="text-xs text-muted">de la <strong class="text-lg font-bold text-success">' + e.price + ' lei</strong></div>';
-
-            var buttonHtml = e.is_sold_out
-                ? '<button class="py-2.5 px-5 bg-gray-400 rounded-lg text-white text-sm font-semibold cursor-not-allowed" disabled>Indisponibil</button>'
-                : '<button class="py-2.5 px-5 bg-secondary hover:bg-secondary/90 rounded-lg text-white text-sm font-semibold transition-all">Cumpără bilete</button>';
-
-            return '<a href="/bilete/' + self.escapeHtml(e.slug) + '" class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all">' +
-                '<div class="flex flex-col items-center justify-center flex-shrink-0 w-24 py-5 text-center bg-gradient-to-br from-primary to-primary-light">' +
-                    '<div class="text-3xl font-extrabold leading-none text-white">' + e.day + '</div>' +
-                    '<div class="mt-1 text-sm font-semibold uppercase text-white/90">' + e.month + '</div>' +
-                '</div>' +
-                '<div class="flex flex-col justify-center flex-1 px-5 py-4">' +
-                    '<div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">' + self.escapeHtml(e.category) + '</div>' +
-                    '<h3 class="mb-2 text-base font-bold leading-tight text-secondary">' + self.escapeHtml(e.title) + '</h3>' +
-                    '<div class="flex gap-4 text-sm text-muted">' +
-                        '<span class="flex items-center gap-1">' +
-                            '<svg class="w-3.5 h-3.5 text-muted/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
-                            e.time +
-                        '</span>' +
-                    '</div>' +
-                '</div>' +
-                '<div class="py-4 px-5 flex flex-col items-end justify-center gap-1.5">' +
-                    priceHtml +
-                    buttonHtml +
-                '</div>' +
-            '</a>';
-        }).join('');
-
-        container.innerHTML = html;
+        // Use AmbiletEventCard for consistent rendering with commission support
+        container.innerHTML = AmbiletEventCard.renderManyHorizontal(events, {
+            urlPrefix: '/bilete/',
+            showBuyButton: true
+        });
     },
 
     /**
