@@ -424,6 +424,175 @@ export class TrackingModule {
     }
 
     /**
+     * Track viewing event lineup
+     */
+    trackViewLineup(data: {
+        eventId: string;
+        eventName?: string;
+    }): void {
+        this.queueEvent({
+            eventType: 'view_lineup',
+            eventCategory: 'engagement',
+            timestamp: Date.now(),
+            pageUrl: window.location.href,
+            pageTitle: document.title,
+            referrer: document.referrer,
+            eventData: {
+                event_id: data.eventId,
+                event_name: data.eventName,
+            },
+            ...this.getAttributionParams(),
+        });
+    }
+
+    /**
+     * Track viewing event pricing/tickets
+     */
+    trackViewPricing(data: {
+        eventId: string;
+        eventName?: string;
+    }): void {
+        this.queueEvent({
+            eventType: 'view_pricing',
+            eventCategory: 'engagement',
+            timestamp: Date.now(),
+            pageUrl: window.location.href,
+            pageTitle: document.title,
+            referrer: document.referrer,
+            eventData: {
+                event_id: data.eventId,
+                event_name: data.eventName,
+            },
+            ...this.getAttributionParams(),
+        });
+    }
+
+    /**
+     * Track viewing event FAQ
+     */
+    trackViewFaq(data: {
+        eventId: string;
+        eventName?: string;
+    }): void {
+        this.queueEvent({
+            eventType: 'view_faq',
+            eventCategory: 'engagement',
+            timestamp: Date.now(),
+            pageUrl: window.location.href,
+            pageTitle: document.title,
+            referrer: document.referrer,
+            eventData: {
+                event_id: data.eventId,
+                event_name: data.eventName,
+            },
+            ...this.getAttributionParams(),
+        });
+    }
+
+    /**
+     * Track selecting tickets (before add to cart)
+     */
+    trackSelectTickets(data: {
+        eventId: string;
+        eventName?: string;
+        ticketTypeId: string;
+        ticketTypeName: string;
+        quantity: number;
+        price: number;
+        currency?: string;
+    }): void {
+        this.queueEvent({
+            eventType: 'select_tickets',
+            eventCategory: 'ecommerce',
+            timestamp: Date.now(),
+            pageUrl: window.location.href,
+            pageTitle: document.title,
+            referrer: document.referrer,
+            value: data.price * data.quantity,
+            currency: data.currency || 'RON',
+            eventData: {
+                event_id: data.eventId,
+                event_name: data.eventName,
+                ticket_type_id: data.ticketTypeId,
+                ticket_type_name: data.ticketTypeName,
+                quantity: data.quantity,
+                unit_price: data.price,
+            },
+            ...this.getAttributionParams(),
+        });
+    }
+
+    /**
+     * Track viewing event gallery
+     */
+    trackViewGallery(data: {
+        eventId: string;
+        eventName?: string;
+    }): void {
+        this.queueEvent({
+            eventType: 'view_gallery',
+            eventCategory: 'engagement',
+            timestamp: Date.now(),
+            pageUrl: window.location.href,
+            pageTitle: document.title,
+            referrer: document.referrer,
+            eventData: {
+                event_id: data.eventId,
+                event_name: data.eventName,
+            },
+            ...this.getAttributionParams(),
+        });
+    }
+
+    /**
+     * Track social share intent
+     */
+    trackShareEvent(data: {
+        eventId: string;
+        eventName?: string;
+        platform: string; // facebook, twitter, whatsapp, email, copy_link
+    }): void {
+        this.queueEvent({
+            eventType: 'share',
+            eventCategory: 'engagement',
+            timestamp: Date.now(),
+            pageUrl: window.location.href,
+            pageTitle: document.title,
+            referrer: document.referrer,
+            eventData: {
+                event_id: data.eventId,
+                event_name: data.eventName,
+                share_platform: data.platform,
+            },
+            ...this.getAttributionParams(),
+        });
+    }
+
+    /**
+     * Track interest/wishlist/reminder signup
+     */
+    trackEventInterest(data: {
+        eventId: string;
+        eventName?: string;
+        interestType: 'reminder' | 'wishlist' | 'notify';
+    }): void {
+        this.queueEvent({
+            eventType: 'event_interest',
+            eventCategory: 'engagement',
+            timestamp: Date.now(),
+            pageUrl: window.location.href,
+            pageTitle: document.title,
+            referrer: document.referrer,
+            eventData: {
+                event_id: data.eventId,
+                event_name: data.eventName,
+                interest_type: data.interestType,
+            },
+            ...this.getAttributionParams(),
+        });
+    }
+
+    /**
      * Track custom event
      */
     trackCustomEvent(eventName: string, data?: Record<string, any>): void {
