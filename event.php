@@ -70,6 +70,32 @@ require_once __DIR__ . '/includes/head.php';
         #ticketDrawer.open {
             transform: translateY(0);
         }
+
+        /* Related events horizontal scroll on mobile */
+        @media (max-width: 1023px) {
+            .related-events-scroll {
+                padding-left: 1rem;
+                padding-right: 1rem;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            .related-events-scroll::-webkit-scrollbar {
+                display: none;
+            }
+            .related-events-scroll > * {
+                flex: 0 0 70%;
+                min-width: 260px;
+                max-width: 300px;
+                scroll-snap-align: start;
+            }
+            .related-events-scroll > *:first-child {
+                margin-left: 0;
+            }
+            .related-events-scroll > *:last-child {
+                margin-right: 1rem;
+            }
+        }
     </style>
 
 <?php require_once __DIR__ . '/includes/header.php'; ?>
@@ -210,8 +236,8 @@ require_once __DIR__ . '/includes/head.php';
                 </div>
 
                 <!-- Venue Section -->
-                <div class="mb-8" id="venue" class="p-4">
-                    <div id="venue-content"></div>
+                <div class="mb-8" id="venue">
+                    <div id="venue-content" class="mobile:p-4"></div>
                 </div>
             </div>
 
@@ -293,7 +319,8 @@ require_once __DIR__ . '/includes/head.php';
                     <p class="mt-1 text-muted">Evenimente selectate special pentru tine</p>
                 </div>
             </div>
-            <div class="grid gap-5 grid-cols-2 lg:grid-cols-4" id="custom-related-events"></div>
+            <!-- Mobile: horizontal scroll snap, Desktop: grid -->
+            <div class="flex gap-4 pb-4 -mx-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 lg:mx-0 lg:pb-0 lg:overflow-visible lg:grid lg:grid-cols-4 lg:gap-5 lg:snap-none related-events-scroll" id="custom-related-events"></div>
         </section>
 
         <!-- Related Events -->
@@ -308,11 +335,12 @@ require_once __DIR__ . '/includes/head.php';
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 </a>
             </div>
-            <div class="grid gap-5 grid-cols-2 lg:grid-cols-4" id="related-events"></div>
+            <!-- Mobile: horizontal scroll snap, Desktop: grid -->
+            <div class="flex gap-4 pb-4 -mx-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 lg:mx-0 lg:pb-0 lg:overflow-visible lg:grid lg:grid-cols-4 lg:gap-5 lg:snap-none related-events-scroll" id="related-events"></div>
         </section>
 
         <!-- Mobile Fixed Bottom Button (shows on mobile only) -->
-        <div id="mobileTicketBtn" class="sticky bottom-0 left-0 right-0 z-40 p-4 bg-white border-t lg:hidden border-border safe-area-bottom" style="display: none;">
+        <div id="mobileTicketBtn" class="sticky bottom-0 left-0 right-0 z-[105] p-4 bg-white border-t lg:hidden border-border safe-area-bottom" style="display: none;">
             <button onclick="openTicketDrawer()" class="flex items-center justify-center w-full gap-3 py-4 text-lg font-bold text-white btn-primary rounded-xl">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                 <span>Cumpără bilete</span>
@@ -338,9 +366,28 @@ require_once __DIR__ . '/includes/head.php';
         <div id="drawerTicketTypes" class="p-4 space-y-2 overflow-y-auto max-h-[50vh]"></div>
         <!-- Drawer Footer with summary -->
         <div id="drawerCartSummary" class="p-4 border-t border-border bg-surface/50" style="display: none;">
-            <div class="flex items-center justify-between mb-3">
-                <span class="font-medium text-secondary">Total:</span>
-                <span id="drawerTotalPrice" class="text-xl font-bold text-primary">0 lei</span>
+            <!-- Points Earned -->
+            <div id="drawerPointsRow" class="flex items-center justify-between p-2 mb-3 rounded-lg bg-accent/10" style="display: none;">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-accent" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    <span class="text-sm font-medium text-secondary">Vei câștiga</span>
+                </div>
+                <span id="drawerPointsEarned" class="font-bold text-accent">0</span>
+            </div>
+            <!-- Summary Details -->
+            <div class="mb-3 space-y-2">
+                <div class="flex justify-between text-sm">
+                    <span class="text-muted">Subtotal:</span>
+                    <span id="drawerSubtotal" class="font-medium">0 lei</span>
+                </div>
+                <!-- Dynamic taxes container -->
+                <div id="drawerTaxesContainer" class="space-y-1 text-sm">
+                    <!-- Taxes will be synced here dynamically -->
+                </div>
+                <div class="flex justify-between pt-2 text-lg font-bold border-t border-border">
+                    <span>Total:</span>
+                    <span id="drawerTotalPrice" class="text-primary">0 lei</span>
+                </div>
             </div>
             <button onclick="EventPage.addToCart(); closeTicketDrawer();" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
@@ -391,12 +438,36 @@ require_once __DIR__ . '/includes/head.php';
             const drawerEmpty = document.getElementById('drawerEmptyCart');
             const mainTotal = document.getElementById('totalPrice');
             const drawerTotal = document.getElementById('drawerTotalPrice');
+            const mainSubtotal = document.getElementById('subtotal');
+            const drawerSubtotal = document.getElementById('drawerSubtotal');
+            const mainTaxes = document.getElementById('taxesContainer');
+            const drawerTaxes = document.getElementById('drawerTaxesContainer');
+            const mainPoints = document.getElementById('pointsEarned');
+            const drawerPoints = document.getElementById('drawerPointsEarned');
+            const drawerPointsRow = document.getElementById('drawerPointsRow');
 
             if (mainSummary && !mainSummary.classList.contains('hidden')) {
                 drawerSummary.style.display = 'block';
                 drawerEmpty.style.display = 'none';
                 if (mainTotal && drawerTotal) {
                     drawerTotal.textContent = mainTotal.textContent;
+                }
+                // Sync subtotal
+                if (mainSubtotal && drawerSubtotal) {
+                    drawerSubtotal.textContent = mainSubtotal.textContent;
+                }
+                // Sync taxes
+                if (mainTaxes && drawerTaxes) {
+                    drawerTaxes.innerHTML = mainTaxes.innerHTML;
+                }
+                // Sync points
+                if (mainPoints && drawerPoints) {
+                    drawerPoints.textContent = mainPoints.textContent;
+                    // Show points row if there are points
+                    const pointsValue = parseInt(mainPoints.textContent) || 0;
+                    if (drawerPointsRow) {
+                        drawerPointsRow.style.display = pointsValue > 0 ? 'flex' : 'none';
+                    }
                 }
             } else {
                 drawerSummary.style.display = 'none';
