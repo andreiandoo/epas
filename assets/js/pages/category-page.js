@@ -34,7 +34,9 @@ const CategoryPage = {
         filterCity: 'filterCity',
         filterDate: 'filterDate',
         filterPrice: 'filterPrice',
-        sortEvents: 'sortEvents'
+        sortEvents: 'sortEvents',
+        featuredSection: 'featuredSection',
+        featuredEvents: 'featuredEvents'
     },
 
     /**
@@ -54,6 +56,7 @@ const CategoryPage = {
             this.loadCategoryInfo(),
             this.loadGenres(),
             this.loadCities(),
+            this.loadFeaturedEvents(),
             this.loadEvents()
         ]);
 
@@ -141,6 +144,96 @@ const CategoryPage = {
         } catch (e) {
             console.warn('Failed to load cities:', e);
         }
+    },
+
+    /**
+     * Load featured events for category
+     */
+    async loadFeaturedEvents() {
+        const section = document.getElementById(this.elements.featuredSection);
+        const container = document.getElementById(this.elements.featuredEvents);
+        if (!section || !container) return;
+
+        try {
+            const params = new URLSearchParams({
+                type: 'general',
+                require_image: 'true',
+                limit: 6
+            });
+
+            // Add category filter if on category page
+            if (this.category) {
+                params.append('category', this.category);
+            }
+
+            const response = await AmbiletAPI.get('/featured?' + params.toString());
+            if (response.data?.events && response.data.events.length > 0) {
+                section.classList.remove('hidden');
+                container.innerHTML = response.data.events.map(event => this.renderFeaturedCard(event)).join('');
+            } else {
+                section.classList.add('hidden');
+            }
+        } catch (e) {
+            console.warn('Failed to load featured events:', e);
+            section.classList.add('hidden');
+        }
+    },
+
+    /**
+     * Render featured event card with large banner image
+     */
+    renderFeaturedCard(event) {
+        const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const dateStr = event.starts_at || event.date;
+        const date = dateStr ? new Date(dateStr) : new Date();
+        const day = date.getDate();
+        const month = months[date.getMonth()];
+
+        // Use featured_image if available, otherwise fall back to regular image
+        const image = event.featured_image || event.image || '/assets/images/default-event.png';
+        const title = event.name || event.title || 'Eveniment';
+        const venue = event.venue_name || (event.venue ? event.venue.name : '');
+        const city = event.venue_city || (event.venue ? event.venue.city : '');
+        const location = city ? (venue ? venue + ', ' + city : city) : venue;
+        const priceFrom = event.price_from ? 'de la ' + event.price_from + ' lei' : '';
+        const category = event.category?.name || event.category || '';
+
+        return '<a href="/bilete/' + (event.slug || '') + '" class="group relative overflow-hidden rounded-2xl bg-secondary aspect-[16/9] md:aspect-[21/9]">' +
+            '<img src="' + image + '" alt="' + this.escapeHtml(title) + '" class="absolute inset-0 object-cover w-full h-full transition-transform duration-500 group-hover:scale-105" loading="lazy">' +
+            '<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>' +
+            '<div class="absolute bottom-0 left-0 right-0 p-5">' +
+                '<div class="flex items-end justify-between">' +
+                    '<div class="flex-1">' +
+                        (category ? '<span class="inline-block px-3 py-1 mb-2 text-xs font-bold text-white uppercase rounded-full bg-primary">' + this.escapeHtml(category) + '</span>' : '') +
+                        '<h3 class="mb-2 text-xl font-bold text-white md:text-2xl line-clamp-2">' + this.escapeHtml(title) + '</h3>' +
+                        '<div class="flex flex-wrap items-center gap-3 text-sm text-white/80">' +
+                            '<span class="flex items-center gap-1">' +
+                                '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>' +
+                                day + ' ' + month +
+                            '</span>' +
+                            (location ? '<span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + this.escapeHtml(location) + '</span>' : '') +
+                        '</div>' +
+                    '</div>' +
+                    (priceFrom ? '<div class="flex-shrink-0 px-4 py-2 text-sm font-bold text-white rounded-xl bg-primary">' + priceFrom + '</div>' : '') +
+                '</div>' +
+            '</div>' +
+            '<div class="absolute top-4 right-4">' +
+                '<span class="flex items-center gap-1 px-3 py-1 text-xs font-bold text-white rounded-full bg-accent/90 backdrop-blur-sm">' +
+                    '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>' +
+                    'Recomandat' +
+                '</span>' +
+            '</div>' +
+        '</a>';
+    },
+
+    /**
+     * Escape HTML characters
+     */
+    escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     },
 
     /**

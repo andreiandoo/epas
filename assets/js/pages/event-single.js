@@ -714,15 +714,15 @@ const EventPage = {
                 '</a>' +
             '</div>' +
             '<div class="md:w-2/3">' +
-                '<div class="flex items-center gap-3 mb-4">' +
+                '<div class="flex items-center gap-3 mb-4 mobile:justify-between">' +
                     '<a href="' + artistLink + '" class="text-2xl font-bold text-secondary hover:text-primary">' + artist.name + '</a>' +
                     (artist.verified ? '<span class="px-3 py-1 text-xs font-bold rounded-full bg-primary/10 text-primary">Verified</span>' : '') +
                 '</div>' +
                 (artistDescription ? '<p class="mb-4 leading-relaxed text-muted">' + artistDescription + '</p>' : '<p class="mb-4 leading-relaxed text-muted">Detalii despre artist vor fi disponibile in curand.</p>') +
                 socialLinksHtml +
-                '<a href="' + artistLink + '" class="inline-flex items-center gap-2 font-semibold text-primary">' +
-                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>' +
+                '<a href="' + artistLink + '" class="inline-flex mobile:flex items-center gap-2 font-semibold text-primary border border-primary rounded-md py-2 px-6 mobile:justify-center">' +
                     'Vezi profilul artistului' +
+                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>' +
                 '</a>' +
             '</div>' +
         '</div>';
@@ -770,7 +770,7 @@ const EventPage = {
         }
 
         if (googleMapsUrl) {
-            html += '<a href="' + googleMapsUrl + '" target="_blank" class="inline-flex items-center gap-2 font-semibold text-primary">' +
+            html += '<a href="' + googleMapsUrl + '" target="_blank" class="inline-flex items-center gap-2 font-semibold text-primary border border-primary rounded-md py-2 px-6">' +
                 '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
                 'Deschide in Google Maps' +
             '</a>';
