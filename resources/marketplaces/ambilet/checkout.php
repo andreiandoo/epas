@@ -503,19 +503,30 @@ const CheckoutPage = {
         // Items summary
         const itemsSummary = document.getElementById('items-summary');
         let itemsHtml = '';
-        let subtotal = 0;
+        let baseSubtotal = 0;  // Subtotal without commission
+        let totalCommission = 0;  // Total commission
         let savings = 0;
         let totalQty = 0;
 
+        // Get commission info from first item
+        const commissionRate = this.items[0]?.event?.commission_rate || 5;
+        const commissionMode = this.items[0]?.event?.commission_mode || 'included';
+
         this.items.forEach(item => {
-            // Handle both AmbiletCart format and legacy format
             const price = item.ticketType?.price || item.price || 0;
             const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
             const ticketTypeName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
             const qty = item.quantity || 1;
 
+            // Calculate commission for this item
+            let itemCommission = 0;
+            if (commissionMode === 'added_on_top') {
+                itemCommission = price * commissionRate / 100;
+            }
+
             const itemTotal = price * qty;
-            subtotal += itemTotal;
+            baseSubtotal += itemTotal;
+            totalCommission += itemCommission * qty;
             totalQty += qty;
 
             const hasDiscount = originalPrice && originalPrice > price;
@@ -536,40 +547,25 @@ const CheckoutPage = {
 
         itemsSummary.innerHTML = itemsHtml;
 
-        // Calculate taxes dynamically
-        let totalTax = 0;
-        const taxBreakdown = [];
-        this.taxes.forEach(tax => {
-            let taxAmount = 0;
-            if (tax.value_type === 'percent') {
-                taxAmount = subtotal * (tax.value / 100);
-            } else if (tax.value_type === 'fixed') {
-                taxAmount = tax.value * totalQty;
-            }
-            totalTax += taxAmount;
-            taxBreakdown.push({ name: tax.name, amount: taxAmount, value: tax.value, value_type: tax.value_type });
-        });
-
-        const total = subtotal + totalTax;
+        // Total = base prices + commission (no other taxes)
+        const subtotalWithCommission = baseSubtotal + totalCommission;
+        const total = subtotalWithCommission;
         const points = Math.floor(total / 10);
 
-        this.totals = { subtotal, tax: totalTax, discount: 0, total, savings };
+        this.totals = { subtotal: subtotalWithCommission, tax: 0, discount: 0, total, savings };
 
         // Update DOM
         document.getElementById('summary-items').textContent = totalQty;
-        document.getElementById('summary-subtotal').textContent = AmbiletUtils.formatCurrency(subtotal);
+        document.getElementById('summary-subtotal').textContent = AmbiletUtils.formatCurrency(subtotalWithCommission);
 
-        // Render taxes dynamically
+        // Render commission as "Taxe procesare" in taxes container
         const taxesContainer = document.getElementById('taxes-container');
         if (taxesContainer) {
-            if (taxBreakdown.length > 0) {
-                taxesContainer.innerHTML = taxBreakdown.map(function(tax) {
-                    const rateLabel = tax.value_type === 'percent' ? '(' + tax.value + '%)' : '';
-                    return '<div class="flex justify-between text-sm">' +
-                        '<span class="text-muted">' + tax.name + ' ' + rateLabel + '</span>' +
-                        '<span class="font-medium">' + AmbiletUtils.formatCurrency(tax.amount) + '</span>' +
-                    '</div>';
-                }).join('');
+            if (commissionMode === 'added_on_top' && totalCommission > 0) {
+                taxesContainer.innerHTML = '<div class="flex justify-between text-sm">' +
+                    '<span class="text-muted">Taxe procesare (' + commissionRate + '%)</span>' +
+                    '<span class="font-medium">' + AmbiletUtils.formatCurrency(totalCommission) + '</span>' +
+                '</div>';
             } else {
                 taxesContainer.innerHTML = '';
             }

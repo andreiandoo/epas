@@ -377,51 +377,26 @@ const CartPage = {
         // Get commission info from event data
         const commissionRate = item.event?.commission_rate || 5;
         const commissionMode = item.event?.commission_mode || 'included';
-        const taxes = item.event?.taxes || [];
 
         const hasDiscount = originalPrice && originalPrice > price;
         const discountPercent = hasDiscount ? Math.round((1 - price / originalPrice) * 100) : 0;
         const formattedDate = eventDate ? AmbiletUtils.formatDate(eventDate, 'medium') : '';
 
-        // Calculate price breakdown for tooltip
-        let basePrice, commissionAmount;
-        if (commissionMode === 'included') {
-            basePrice = price / (1 + commissionRate / 100);
-            commissionAmount = price - basePrice;
-        } else {
-            basePrice = price / (1 + commissionRate / 100);
-            commissionAmount = price - basePrice;
+        // Calculate commission - price is always base price
+        let commissionAmount = 0;
+        if (commissionMode === 'added_on_top') {
+            commissionAmount = price * commissionRate / 100;
         }
+        const totalWithCommission = price + commissionAmount;
 
         // Build tooltip HTML with price breakdown
         let tooltipHtml = '<p class="font-semibold mb-3 text-sm border-b border-white/20 pb-2">Detalii preț bilet ' + ticketTypeName + '</p>' +
             '<div class="space-y-2 text-xs">' +
-                '<div class="flex justify-between"><span class="text-white/70">Preț bilet (net):</span><span>' + basePrice.toFixed(2) + ' lei</span></div>' +
-                '<div class="flex justify-between"><span class="text-white/70">Comision platformă (' + commissionRate + '%):</span><span>' + commissionAmount.toFixed(2) + ' lei</span></div>' +
-                '<div class="flex justify-between border-t border-white/20 pt-2 mt-2"><span class="font-semibold">Preț bilet:</span><span class="font-semibold">' + price.toFixed(2) + ' lei</span></div>';
+                '<div class="flex justify-between"><span class="text-white/70">Preț bilet:</span><span>' + price.toFixed(2) + ' lei</span></div>';
 
-        // Add taxes breakdown
-        const taxesAddedOnTop = taxes.filter(t => t.is_added_to_price);
-        const taxesIncluded = taxes.filter(t => !t.is_added_to_price);
-
-        if (taxesAddedOnTop.length > 0) {
-            tooltipHtml += '<div class="mt-3 pt-2 border-t border-white/10"><p class="text-white/50 text-[10px] mb-1">Taxe suplimentare (adăugate la total):</p>';
-            taxesAddedOnTop.forEach(function(tax) {
-                const taxLabel = tax.value_type === 'percent' ? '(' + tax.value + '%)' : '';
-                const taxAmount = tax.value_type === 'percent' ? price * tax.value / 100 : tax.value;
-                tooltipHtml += '<div class="flex justify-between text-white/60"><span>' + tax.name + ' ' + taxLabel + ':</span><span>+' + taxAmount.toFixed(2) + ' lei/bilet</span></div>';
-            });
-            tooltipHtml += '</div>';
-        }
-
-        if (taxesIncluded.length > 0) {
-            tooltipHtml += '<div class="mt-2 pt-2 border-t border-white/10"><p class="text-white/50 text-[10px] mb-1">Taxe incluse în preț:</p>';
-            taxesIncluded.forEach(function(tax) {
-                const taxLabel = tax.value_type === 'percent' ? '(' + tax.value + '% din net)' : '';
-                const taxAmount = tax.value_type === 'percent' ? basePrice * tax.value / 100 : tax.value;
-                tooltipHtml += '<div class="flex justify-between text-white/60"><span>' + tax.name + ' ' + taxLabel + ':</span><span>' + taxAmount.toFixed(2) + ' lei</span></div>';
-            });
-            tooltipHtml += '</div>';
+        if (commissionMode === 'added_on_top' && commissionAmount > 0) {
+            tooltipHtml += '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionRate + '%):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                '<div class="flex justify-between border-t border-white/20 pt-2 mt-2"><span class="font-semibold">Total la plată:</span><span class="font-semibold">' + totalWithCommission.toFixed(2) + ' lei</span></div>';
         }
 
         tooltipHtml += '</div>';
@@ -521,20 +496,39 @@ const CartPage = {
 
     updateSummary() {
         const items = AmbiletCart.getItems();
-        let subtotal = 0;
+        let baseSubtotal = 0;  // Subtotal without commission
+        let totalCommission = 0;  // Total commission
         let totalItems = 0;
         let savings = 0;
-        const savingsTickets = []; // Track which tickets have discounts
+        const savingsTickets = [];
+        const ticketBreakdown = [];
+
+        // Get commission info from first item
+        const commissionRate = items[0]?.event?.commission_rate || 5;
+        const commissionMode = items[0]?.event?.commission_mode || 'included';
 
         items.forEach(item => {
-            // Handle both AmbiletCart format and legacy format
             const price = item.ticketType?.price || item.price || 0;
             const originalPrice = item.ticketType?.originalPrice || item.original_price || 0;
             const ticketName = item.ticketType?.name || item.ticket_type_name || 'Bilet';
             const quantity = item.quantity || 1;
 
-            subtotal += price * quantity;
+            // Calculate commission for this item
+            let itemCommission = 0;
+            if (commissionMode === 'added_on_top') {
+                itemCommission = price * commissionRate / 100;
+            }
+
+            baseSubtotal += price * quantity;
+            totalCommission += itemCommission * quantity;
             totalItems += quantity;
+
+            ticketBreakdown.push({
+                name: ticketName,
+                qty: quantity,
+                basePrice: price,
+                lineTotal: price * quantity
+            });
 
             // Calculate savings for discounted items
             if (originalPrice && originalPrice > price) {
@@ -544,52 +538,38 @@ const CartPage = {
             }
         });
 
-        // Calculate taxes dynamically
-        let totalTaxes = 0;
-        const taxBreakdown = [];
-
-        this.taxes.forEach(tax => {
-            if (!tax.is_active) return;
-            let taxAmount = 0;
-            if (tax.value_type === 'percent') {
-                taxAmount = subtotal * (tax.value / 100);
-            } else if (tax.value_type === 'fixed') {
-                taxAmount = tax.value * totalItems;
-            }
-            totalTaxes += taxAmount;
-            taxBreakdown.push({ name: tax.name, amount: taxAmount, value: tax.value, value_type: tax.value_type });
-        });
-
-        let total = subtotal + totalTaxes - this.discount;
+        // Total = base prices + commission (no other taxes)
+        const subtotalWithCommission = baseSubtotal + totalCommission;
+        let total = subtotalWithCommission - this.discount;
         const points = Math.floor(total / 10);
 
         // Update DOM
         document.getElementById('totalItems').textContent = totalItems;
         document.getElementById('summaryItems').textContent = totalItems;
-        document.getElementById('subtotal').textContent = AmbiletUtils.formatCurrency(subtotal);
+        document.getElementById('subtotal').textContent = AmbiletUtils.formatCurrency(subtotalWithCommission);
 
-        // Render taxes dynamically
+        // Render breakdown in taxes container
         const taxesContainer = document.getElementById('taxesContainer');
         if (taxesContainer) {
-            if (taxBreakdown.length > 0) {
-                taxesContainer.innerHTML = taxBreakdown.map(function(tax) {
-                    const rateLabel = tax.value_type === 'percent' ? '(' + tax.value + '%)' : '';
-                    return '<div class="flex justify-between text-sm">' +
-                        '<div class="flex items-center gap-1">' +
-                            '<span class="text-muted">' + tax.name + ' ' + rateLabel + '</span>' +
-                            '<div class="relative tooltip-trigger">' +
-                                '<svg class="w-4 h-4 text-muted cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
-                                '<div class="absolute right-0 z-10 w-56 p-3 mt-2 text-xs text-white shadow-xl tooltip top-full bg-secondary rounded-xl">' +
-                                    'Această taxă este obligatorie conform legislației în vigoare și se adaugă la prețul biletelor.' +
-                                '</div>' +
-                            '</div>' +
-                        '</div>' +
-                        '<span class="font-medium">' + AmbiletUtils.formatCurrency(tax.amount) + '</span>' +
-                    '</div>';
-                }).join('');
-            } else {
-                taxesContainer.innerHTML = '';
+            let breakdownHtml = '';
+
+            // Show each ticket type with base price
+            ticketBreakdown.forEach(function(item) {
+                breakdownHtml += '<div class="flex justify-between text-sm">' +
+                    '<span class="text-muted">' + item.qty + 'x ' + item.name + '</span>' +
+                    '<span class="font-medium">' + AmbiletUtils.formatCurrency(item.lineTotal) + '</span>' +
+                '</div>';
+            });
+
+            // Show commission as "Taxe procesare" only if on top
+            if (commissionMode === 'added_on_top' && totalCommission > 0) {
+                breakdownHtml += '<div class="flex justify-between text-sm pt-2 mt-2 border-t border-border">' +
+                    '<span class="text-muted">Taxe procesare (' + commissionRate + '%)</span>' +
+                    '<span class="font-medium">' + AmbiletUtils.formatCurrency(totalCommission) + '</span>' +
+                '</div>';
             }
+
+            taxesContainer.innerHTML = breakdownHtml;
         }
 
         document.getElementById('totalPrice').textContent = AmbiletUtils.formatCurrency(total);
