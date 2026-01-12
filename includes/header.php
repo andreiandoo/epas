@@ -78,9 +78,10 @@ $navPopularSearches = $navPopularSearches ?? [
 ];
 
 // ==================== APPLY CACHED COUNTS ====================
-// Update counts from cache (refreshes every 6 hours)
-// Note: $navCities already has counts from API, no need to apply cache
-$navCategories = applyNavCounts($navCategories, 'categories');
+// Note: Categories and cities already have counts from their respective API caches
+// Only apply nav counts to items that don't already have count from API
+// $navCategories - already has 'count' from getEventCategories() API
+// $navCities - already has 'count' from getFeaturedCities() API
 $navVenues = applyNavCounts($navVenues, 'venues');
 $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
 ?>
@@ -259,7 +260,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     </button>
                     <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
                         <div class="w-[700px] bg-white border border-gray-200 rounded-2xl shadow-xl py-3 px-2">
-                            <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center justify-between mb-2 px-1">
                                 <span class="text-[13px] font-semibold text-gray-400 uppercase tracking-wider">Alege orașul</span>
                                 <a href="/orase" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
                                     Toate orașele
@@ -391,7 +392,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                     </button>
                     <div class="absolute invisible pt-3 transition-all duration-200 -translate-x-1/2 opacity-0 pointer-events-none top-full left-1/2 group-hover:opacity-100 group-hover:visible group-hover:pointer-events-auto">
                         <div class="w-[780px] bg-white border border-gray-200 rounded-2xl shadow-xl py-3 px-2">
-                            <div class="flex items-center justify-between mb-5">
+                            <div class="flex items-center justify-between mb-2 px-1">
                                 <span class="text-[13px] font-semibold text-gray-400 uppercase tracking-wider">Locații populare</span>
                                 <a href="/locatii" class="flex items-center gap-1 text-sm font-semibold transition-all text-primary hover:gap-2">
                                     Toate locațiile

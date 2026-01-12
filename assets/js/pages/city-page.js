@@ -10,9 +10,15 @@ const CityPage = {
     city: '',
     cityData: null,
     page: 1,
-    perPage: 12,
+    perPage: 24,
     totalPages: 1,
     filters: {},
+
+    // Month names in Romanian
+    monthNames: [
+        'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+        'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
+    ],
 
     // DOM element IDs
     elements: {
@@ -135,8 +141,18 @@ const CityPage = {
             const response = await AmbiletAPI.get('/events?' + params.toString());
 
             if (response.data && response.data.length > 0) {
-                // Render events using the component
-                container.innerHTML = AmbiletEventCard.renderMany(response.data);
+                // Group events by month
+                const monthGroups = this.groupEventsByMonth(response.data);
+
+                // Render grouped events
+                let html = '';
+                monthGroups.forEach(group => {
+                    html += this.renderMonthGroup(group);
+                });
+
+                container.innerHTML = html;
+                container.classList.remove('grid');
+                container.classList.add('flex', 'flex-col', 'gap-8');
 
                 // Update count and pagination
                 if (response.meta) {
@@ -197,6 +213,53 @@ const CityPage = {
                 onButtonClick: () => this.clearFilters()
             });
         }
+    },
+
+    /**
+     * Group events by month
+     */
+    groupEventsByMonth(events) {
+        const groups = {};
+
+        events.forEach(event => {
+            const dateStr = event.date || event.starts_at || event.event_date;
+            if (\!dateStr) return;
+
+            const date = new Date(dateStr);
+            const monthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+            const monthLabel = this.monthNames[date.getMonth()] + ' ' + date.getFullYear();
+
+            if (\!groups[monthKey]) {
+                groups[monthKey] = {
+                    key: monthKey,
+                    label: monthLabel,
+                    events: []
+                };
+            }
+
+            groups[monthKey].events.push(event);
+        });
+
+        // Sort by month key and return as array
+        return Object.values(groups).sort((a, b) => a.key.localeCompare(b.key));
+    },
+
+    /**
+     * Render a month group with header and events grid
+     */
+    renderMonthGroup(group) {
+        const eventsHtml = AmbiletEventCard.renderMany(group.events);
+
+        return '<div class="month-group">' +
+            '<div class="flex items-center gap-4 mb-6">' +
+                '<h2 class="text-2xl font-bold text-gray-900">' + group.label + '</h2>' +
+                '<span class="px-3 py-1 text-sm font-medium text-gray-600 bg-gray-100 rounded-full">' +
+                    group.events.length + ' ' + (group.events.length === 1 ? 'eveniment' : 'evenimente') +
+                '</span>' +
+                '<div class="flex-1 h-px bg-gray-200"></div>' +
+            '</div>' +
+            '<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">' + eventsHtml + '</div>' +
+        '</div>';
 
         // Clear pagination
         const paginationEl = document.getElementById(this.elements.pagination);

@@ -350,6 +350,31 @@ const AmbiletEventCard = {
             categoryName = apiEvent.category.name || '';
         }
 
+        // Extract date range for festivals
+        const durationMode = apiEvent.duration_mode || 'single_day';
+        const isDateRange = durationMode === 'range' || durationMode === 'date_range';
+        let dateRangeFormatted = '';
+        if (isDateRange && apiEvent.range_start_date && apiEvent.range_end_date) {
+            const startDate = new Date(apiEvent.range_start_date);
+            const endDate = new Date(apiEvent.range_end_date);
+            const startDay = startDate.getDate();
+            const startMonth = this.MONTHS[startDate.getMonth()];
+            const endDay = endDate.getDate();
+            const endMonth = this.MONTHS[endDate.getMonth()];
+            const startYear = startDate.getFullYear();
+            const endYear = endDate.getFullYear();
+
+            if (startYear === endYear) {
+                if (startMonth === endMonth) {
+                    dateRangeFormatted = startDay + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;
+                } else {
+                    dateRangeFormatted = startDay + ' ' + startMonth + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;
+                }
+            } else {
+                dateRangeFormatted = startDay + ' ' + startMonth + ' ' + startYear + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;
+            }
+        }
+
         return {
             id: apiEvent.id,
             slug: apiEvent.slug || '',
@@ -366,6 +391,8 @@ const AmbiletEventCard = {
             priceFormatted: minPrice > 0 ? 'de la ' + minPrice + ' lei' : 'Gratuit',
             categoryName: categoryName,
             isSoldOut: apiEvent.is_sold_out || false,
+            isDateRange: isDateRange,
+            dateRangeFormatted: dateRangeFormatted,
             _raw: apiEvent
         };
     },

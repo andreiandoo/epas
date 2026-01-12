@@ -358,13 +358,25 @@ include 'includes/header.php'; ?>
 
             var html = '';
             this.allEvents.forEach(function(event) {
-                // API returns: starts_at or event_date; name; venue (string) and city; price_from
+                // API returns: starts_at, name, venue_name, venue_city, category (object), price_from
                 var eventDate = event.starts_at || event.event_date;
                 var date = new Date(eventDate);
                 var dayNum = date.getDate();
                 var monthName = CalendarPage.monthNamesShort[date.getMonth()];
-                var colorClass = CalendarPage.typeColors[event.category] || CalendarPage.typeColors['default'];
-                var eventVenue = (typeof event.venue === 'string' ? event.venue : event.venue?.name) || '';
+
+                // Extract category name from object or string
+                var categoryName = 'Eveniment';
+                if (typeof event.category === 'string') {
+                    categoryName = event.category;
+                } else if (event.category && event.category.name) {
+                    categoryName = event.category.name;
+                }
+                var colorClass = CalendarPage.typeColors[categoryName] || CalendarPage.typeColors['default'];
+
+                // Extract venue - API returns venue_name and venue_city as flat fields
+                var eventVenue = event.venue_name || (typeof event.venue === 'string' ? event.venue : event.venue?.name) || '';
+                var eventCity = event.venue_city || event.city || '';
+                var locationStr = eventVenue + (eventCity ? ', ' + eventCity : '');
 
                 html += '<a href="/bilete/' + CalendarPage.escapeHtml(event.slug) + '" class="flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-2xl hover:border-primary hover:shadow-md transition-all">' +
                     '<div class="flex flex-col items-center justify-center w-16 h-16 text-center bg-gradient-to-br from-primary to-primary-light rounded-xl">' +
@@ -372,12 +384,16 @@ include 'includes/header.php'; ?>
                         '<div class="text-[10px] font-semibold text-white/80 uppercase">' + monthName + '</div>' +
                     '</div>' +
                     '<div class="flex-1">' +
-                        '<span class="inline-block px-2.5 py-1 rounded-md text-[11px] font-semibold mb-1 ' + colorClass + '">' + CalendarPage.escapeHtml(event.category || 'Eveniment') + '</span>' +
+                        '<span class="inline-block px-2.5 py-1 rounded-md text-[11px] font-semibold mb-1 ' + colorClass + '">' + CalendarPage.escapeHtml(categoryName) + '</span>' +
                         '<h3 class="text-base font-bold text-secondary">' + CalendarPage.escapeHtml(event.name) + '</h3>' +
-                        '<p class="text-sm text-muted">' + CalendarPage.escapeHtml(eventVenue) + (event.city ? ', ' + CalendarPage.escapeHtml(event.city) : '') + '</p>' +
+                        '<p class="flex items-center gap-1.5 text-sm text-muted">' +
+                            '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+                            CalendarPage.escapeHtml(locationStr || 'Romania') +
+                        '</p>' +
                     '</div>' +
-                    '<div class="text-right">' +
-                        (event.price_from ? '<div class="text-lg font-bold text-primary">de la ' + event.price_from + ' lei</div>' : '') +
+                    '<div class="flex flex-col items-end gap-2">' +
+                        (event.price_from ? '<div class="text-lg font-bold text-primary">de la ' + event.price_from + ' lei</div>' : '<div class="text-sm text-muted">Gratuit</div>') +
+                        '<button class="px-4 py-2 text-sm font-semibold text-white transition-all rounded-lg bg-secondary hover:bg-secondary/90">Bilete</button>' +
                     '</div>' +
                 '</a>';
             });
@@ -389,37 +405,69 @@ include 'includes/header.php'; ?>
             var container = document.getElementById('featuredEvents');
             if (!container || !events.length) return;
 
-            var html = events.map(function(event) {
-                // API returns: starts_at or event_date; name; venue (string) and city; image_url or image
+            // Filter to only show events from current month
+            var currentMonth = this.currentMonth;
+            var currentYear = this.currentYear;
+            var filteredEvents = events.filter(function(event) {
                 var eventDate = event.starts_at || event.event_date;
+                if (!eventDate) return false;
                 var date = new Date(eventDate);
-                var dayNum = date.getDate();
-                var monthName = CalendarPage.monthNamesShort[date.getMonth()];
-                var imageUrl = event.image_url || event.image || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=200&fit=crop';
-                var eventVenue = (typeof event.venue === 'string' ? event.venue : event.venue?.name) || '';
+                return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+            });
 
-                return '<a href="/bilete/' + CalendarPage.escapeHtml(event.slug) + '" class="overflow-hidden transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-lg group">' +
-                    '<div class="relative bg-center bg-cover h-36" style="background-image: url(\'' + CalendarPage.escapeHtml(imageUrl) + '\')">' +
-                        '<div class="absolute px-3 py-2 text-center bg-white shadow-md top-3 left-3 rounded-xl">' +
-                            '<div class="text-xl font-extrabold leading-none text-primary">' + dayNum + '</div>' +
-                            '<div class="text-[10px] font-semibold text-muted uppercase">' + monthName + '</div>' +
+            // If no events in current month, show first 4 from any month
+            if (filteredEvents.length === 0) {
+                filteredEvents = events.slice(0, 4);
+            }
+
+            // Use AmbiletEventCard component for consistent rendering
+            if (typeof AmbiletEventCard !== 'undefined') {
+                container.innerHTML = AmbiletEventCard.renderMany(filteredEvents.slice(0, 4));
+            } else {
+                // Fallback rendering
+                var html = filteredEvents.slice(0, 4).map(function(event) {
+                    var eventDate = event.starts_at || event.event_date;
+                    var date = new Date(eventDate);
+                    var dayNum = date.getDate();
+                    var monthName = CalendarPage.monthNamesShort[date.getMonth()];
+                    var imageUrl = event.image || event.image_url || 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=200&fit=crop';
+
+                    // Extract category name
+                    var categoryName = 'Eveniment';
+                    if (typeof event.category === 'string') {
+                        categoryName = event.category;
+                    } else if (event.category && event.category.name) {
+                        categoryName = event.category.name;
+                    }
+
+                    // Extract venue
+                    var eventVenue = event.venue_name || (typeof event.venue === 'string' ? event.venue : event.venue?.name) || '';
+                    var eventCity = event.venue_city || event.city || '';
+                    var locationStr = eventVenue + (eventCity ? ', ' + eventCity : '');
+
+                    return '<a href="/bilete/' + CalendarPage.escapeHtml(event.slug) + '" class="overflow-hidden transition-all bg-white border border-gray-200 rounded-2xl hover:-translate-y-1 hover:shadow-lg group">' +
+                        '<div class="relative bg-center bg-cover h-36" style="background-image: url(\'' + CalendarPage.escapeHtml(imageUrl) + '\')">' +
+                            '<div class="absolute px-3 py-2 text-center bg-white shadow-md top-3 left-3 rounded-xl">' +
+                                '<div class="text-xl font-extrabold leading-none text-primary">' + dayNum + '</div>' +
+                                '<div class="text-[10px] font-semibold text-muted uppercase">' + monthName + '</div>' +
+                            '</div>' +
                         '</div>' +
-                    '</div>' +
-                    '<div class="p-4">' +
-                        '<span class="inline-block px-2.5 py-1 bg-red-50 rounded-md text-[11px] font-semibold text-primary mb-2">' + CalendarPage.escapeHtml(event.category || 'Eveniment') + '</span>' +
-                        '<h3 class="mb-2 text-base font-bold text-secondary line-clamp-2">' + CalendarPage.escapeHtml(event.name) + '</h3>' +
-                        '<p class="flex items-center gap-1.5 text-[13px] text-muted">' +
-                            '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-                                '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>' +
-                                '<circle cx="12" cy="10" r="3"/>' +
-                            '</svg>' +
-                            CalendarPage.escapeHtml(eventVenue + (event.city ? ', ' + event.city : '')) +
-                        '</p>' +
-                    '</div>' +
-                '</a>';
-            }).join('');
+                        '<div class="p-4">' +
+                            '<span class="inline-block px-2.5 py-1 bg-red-50 rounded-md text-[11px] font-semibold text-primary mb-2">' + CalendarPage.escapeHtml(categoryName) + '</span>' +
+                            '<h3 class="mb-2 text-base font-bold text-secondary line-clamp-2">' + CalendarPage.escapeHtml(event.name) + '</h3>' +
+                            '<p class="flex items-center gap-1.5 text-[13px] text-muted">' +
+                                '<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                                    '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>' +
+                                    '<circle cx="12" cy="10" r="3"/>' +
+                                '</svg>' +
+                                CalendarPage.escapeHtml(locationStr || 'Romania') +
+                            '</p>' +
+                        '</div>' +
+                    '</a>';
+                }).join('');
 
-            container.innerHTML = html;
+                container.innerHTML = html;
+            }
         },
 
         renderLegend() {
