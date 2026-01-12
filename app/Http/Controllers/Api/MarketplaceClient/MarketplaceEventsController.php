@@ -153,16 +153,41 @@ class MarketplaceEventsController extends BaseController
         $client = $this->requireClient($request);
         $language = $client->language ?? 'ro';
 
-        $events = Event::where('marketplace_client_id', $client->id)
+        $query = Event::where('marketplace_client_id', $client->id)
             ->where(function ($q) {
                 $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
             })
-            ->where(function ($q) {
+            ->where('event_date', '>=', now()->toDateString());
+
+        // Featured type filter: homepage, general, or any
+        $featuredType = $request->get('type', 'any');
+        if ($featuredType === 'homepage') {
+            $query->where('is_homepage_featured', true);
+        } elseif ($featuredType === 'general') {
+            $query->where('is_general_featured', true);
+        } else {
+            $query->where(function ($q) {
                 $q->where('is_homepage_featured', true)
                     ->orWhere('is_general_featured', true);
-            })
-            ->where('event_date', '>=', now()->toDateString())
-            ->with([
+            });
+        }
+
+        // Require featured_image to be set (for category pages with banner display)
+        if ($request->boolean('require_image')) {
+            $query->whereNotNull('featured_image');
+        }
+
+        // Filter by category
+        if ($request->has('category')) {
+            $categorySlug = $request->category;
+            $query->whereHas('marketplaceEventCategory', function ($q) use ($categorySlug) {
+                $q->where('slug', $categorySlug)
+                    ->orWhere('name->ro', 'like', "%{$categorySlug}%")
+                    ->orWhere('name->en', 'like', "%{$categorySlug}%");
+            });
+        }
+
+        $events = $query->with([
                 'marketplaceOrganizer:id,name,slug,logo,verified_at,default_commission_mode,commission_rate',
                 'venue:id,name,city',
                 'marketplaceEventCategory',
@@ -175,9 +200,24 @@ class MarketplaceEventsController extends BaseController
             ->orderBy('start_time')
             ->limit(min((int) $request->get('limit', 10), 50))
             ->get()
-            ->map(fn ($event) => $this->formatEvent($event, $language, $client));
+            ->map(fn ($event) => $this->formatEventWithFeaturedImage($event, $language, $client));
 
         return $this->success(['events' => $events]);
+    }
+
+    /**
+     * Format event for API response with featured_image
+     */
+    protected function formatEventWithFeaturedImage(Event $event, string $language, $client = null): array
+    {
+        $formatted = $this->formatEvent($event, $language, $client);
+
+        // Add featured_image for featured events display
+        $formatted['featured_image'] = $event->featured_image
+            ? Storage::disk('public')->url($event->featured_image)
+            : null;
+
+        return $formatted;
     }
 
     /**
@@ -305,6 +345,9 @@ class MarketplaceEventsController extends BaseController
                 'target_price' => $targetPrice,
                 'views_count' => (int) ($event->views_count ?? 0),
                 'interested_count' => (int) ($event->interested_count ?? 0),
+                // Custom related events flags
+                'has_custom_related' => (bool) $event->has_custom_related,
+                'custom_related_event_ids' => $event->custom_related_event_ids ?? [],
             ],
             'venue' => $venueData,
             'organizer' => $organizer ? [
@@ -380,7 +423,41 @@ class MarketplaceEventsController extends BaseController
             'commission_mode' => $commissionMode,
             'commission_rate' => (float) $commissionRate,
             'taxes' => $taxes,
+            // Custom related events (array at root level for frontend)
+            'custom_related_events' => $this->getCustomRelatedEvents($event, $language, $client),
         ]);
+    }
+
+    /**
+     * Get formatted custom related events
+     */
+    protected function getCustomRelatedEvents(Event $event, string $language, $client = null): array
+    {
+        if (!$event->has_custom_related || empty($event->custom_related_event_ids)) {
+            return [];
+        }
+
+        $relatedEvents = Event::whereIn('id', $event->custom_related_event_ids)
+            ->where('id', '!=', $event->id)
+            ->where('marketplace_client_id', $client->id)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->where('event_date', '>=', now()->toDateString())
+            ->with([
+                'marketplaceOrganizer:id,name,slug,logo,verified_at,default_commission_mode,commission_rate',
+                'venue:id,name,city',
+                'marketplaceEventCategory',
+                'ticketTypes' => function ($query) {
+                    $query->select('id', 'event_id', 'price_cents', 'sale_price_cents')
+                        ->where('status', 'active');
+                },
+            ])
+            ->orderBy('event_date')
+            ->orderBy('start_time')
+            ->get();
+
+        return $relatedEvents->map(fn ($e) => $this->formatEvent($e, $language, $client))->values()->toArray();
     }
 
     /**

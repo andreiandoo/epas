@@ -166,8 +166,8 @@ require_once __DIR__ . '/includes/header.php';
 </section>
 
 <!-- Mobile Filters Drawer -->
-<div id="filtersDrawerBackdrop" class="fixed inset-0 z-50 transition-opacity duration-300 bg-black/50 backdrop-blur-sm lg:hidden" style="opacity: 0; visibility: hidden;" onclick="closeFiltersDrawer()"></div>
-<div id="filtersDrawer" class="fixed bottom-0 left-0 right-0 z-50 overflow-hidden transition-transform duration-300 bg-white lg:hidden rounded-t-3xl max-h-[85vh]" style="transform: translateY(100%);">
+<div id="filtersDrawerBackdrop" class="fixed inset-0 z-[105] transition-opacity duration-300 bg-black/50 backdrop-blur-sm lg:hidden" style="opacity: 0; visibility: hidden;" onclick="closeFiltersDrawer()"></div>
+<div id="filtersDrawer" class="fixed bottom-0 left-0 right-0 z-[110] overflow-hidden transition-transform duration-300 bg-white lg:hidden rounded-t-3xl max-h-[85vh]" style="transform: translateY(100%);">
     <!-- Drawer Header -->
     <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-200">
         <h2 class="text-lg font-bold text-gray-900">Filtre</h2>
