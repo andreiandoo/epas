@@ -1280,7 +1280,7 @@ Route::post('/tenant-client/checkout/callback/{provider}', [CheckoutController::
 */
 
 use App\Http\Controllers\Api\MarketplaceClient\ConfigController as MarketplaceConfigController;
-use App\Http\Controllers\Api\MarketplaceClient\EventsController as MarketplaceEventsController;
+use App\Http\Controllers\Api\MarketplaceClient\MarketplaceEventsController;
 use App\Http\Controllers\Api\MarketplaceClient\OrdersController as MarketplaceOrdersController;
 use App\Http\Controllers\Api\MarketplaceClient\PaymentController as MarketplacePaymentController;
 use App\Http\Controllers\Api\MarketplaceClient\TicketsController as MarketplaceTicketsController;
