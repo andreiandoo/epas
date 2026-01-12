@@ -236,6 +236,30 @@ class MarketplaceEventsController extends BaseController
             'is_active' => $tax->is_active,
         ])->values()->toArray();
 
+        // Build venue object
+        $venueData = null;
+        if ($venue) {
+            $venueData = [
+                'id' => $venue->id,
+                'name' => $venue->getTranslation('name', $language),
+                'slug' => $venue->slug,
+                'description' => $venue->getTranslation('description', $language) ?? '',
+                'address' => $venue->address ?? $event->address,
+                'city' => $venue->city,
+                'state' => $venue->state,
+                'country' => $venue->country,
+                'latitude' => $venue->latitude,
+                'longitude' => $venue->longitude,
+                'google_maps_url' => $venue->google_maps_url,
+                'image' => $venue->image_url ? Storage::disk('public')->url($venue->image_url) : null,
+                'capacity' => $venue->capacity,
+            ];
+        }
+
+        // Get image URLs
+        $posterImage = $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null;
+        $coverImage = $event->hero_image_url ? Storage::disk('public')->url($event->hero_image_url) : null;
+
         return $this->success([
             'event' => [
                 'id' => $event->id,
@@ -243,12 +267,16 @@ class MarketplaceEventsController extends BaseController
                 'slug' => $event->slug,
                 'description' => $event->getTranslation('description', $language),
                 'short_description' => $event->getTranslation('short_description', $language),
-                'image' => $event->poster_url ? Storage::disk('public')->url($event->poster_url) : null,
-                'cover_image' => $event->hero_image_url ? Storage::disk('public')->url($event->hero_image_url) : null,
+                // Image fields - provide both naming conventions for compatibility
+                'image' => $posterImage,
+                'image_url' => $posterImage,
+                'cover_image' => $coverImage,
+                'cover_image_url' => $coverImage ?? $posterImage,
                 'category' => $event->marketplaceEventCategory?->getTranslation('name', $language),
                 'starts_at' => $event->event_date?->format('Y-m-d') . 'T' . ($event->start_time ?? '00:00:00'),
                 'ends_at' => $event->end_time ? $event->event_date?->format('Y-m-d') . 'T' . $event->end_time : null,
                 'doors_open_at' => $event->door_time ? $event->event_date?->format('Y-m-d') . 'T' . $event->door_time : null,
+                // Keep flat venue fields for backwards compatibility
                 'venue_name' => $venue?->getTranslation('name', $language),
                 'venue_address' => $venue?->address ?? $event->address,
                 'venue_city' => $venue?->city,
@@ -258,6 +286,7 @@ class MarketplaceEventsController extends BaseController
                 'views_count' => (int) ($event->views_count ?? 0),
                 'interested_count' => (int) ($event->interested_count ?? 0),
             ],
+            'venue' => $venueData,
             'organizer' => $organizer ? [
                 'id' => $organizer->id,
                 'name' => $organizer->name,
