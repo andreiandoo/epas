@@ -223,13 +223,13 @@ const CityPage = {
 
         events.forEach(event => {
             const dateStr = event.date || event.starts_at || event.event_date;
-            if (\!dateStr) return;
+            if (!dateStr) return;
 
             const date = new Date(dateStr);
             const monthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
             const monthLabel = this.monthNames[date.getMonth()] + ' ' + date.getFullYear();
 
-            if (\!groups[monthKey]) {
+            if (!groups[monthKey]) {
                 groups[monthKey] = {
                     key: monthKey,
                     label: monthLabel,
@@ -260,12 +260,6 @@ const CityPage = {
             '</div>' +
             '<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">' + eventsHtml + '</div>' +
         '</div>';
-
-        // Clear pagination
-        const paginationEl = document.getElementById(this.elements.pagination);
-        if (paginationEl) {
-            paginationEl.innerHTML = '';
-        }
     },
 
     /**
