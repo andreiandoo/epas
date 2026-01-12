@@ -40,8 +40,8 @@ const AMBILET_CONFIG = {
     DEFAULT_PAGE_SIZE: 12,
 
     // Image Placeholders
-    PLACEHOLDER_EVENT: '/assets/images/placeholder-event.jpg',
-    PLACEHOLDER_ARTIST: '/assets/images/placeholder-artist.jpg',
+    PLACEHOLDER_EVENT: '/assets/images/default-event.png',
+    PLACEHOLDER_ARTIST: '/assets/images/default-artist.png',
     PLACEHOLDER_ORGANIZER: '/assets/images/placeholder-organizer.jpg',
 
     // Social Links

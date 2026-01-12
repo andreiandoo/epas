@@ -493,7 +493,7 @@ const CheckoutPage = {
         const firstItem = this.items[0];
 
         // Handle both AmbiletCart format and legacy format
-        const eventImage = firstItem.event?.image || firstItem.event_image || '/assets/images/placeholder-event.jpg';
+        const eventImage = firstItem.event?.image || firstItem.event_image || '/assets/images/default-event.png';
         const eventTitle = firstItem.event?.title || firstItem.event_title || 'Eveniment';
         const eventDate = firstItem.event?.date || firstItem.event_date || '';
         const venueName = firstItem.event?.venue?.name || (typeof firstItem.event?.venue === 'string' ? firstItem.event.venue : '') || firstItem.venue_name || '';

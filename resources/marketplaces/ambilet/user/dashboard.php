@@ -323,7 +323,7 @@ const UserDashboard = {
 
             return '<a href="/bilete/' + (e.slug || '') + '" class="flex gap-4 p-3 card-hover bg-surface rounded-xl">' +
                 '<div class="flex-shrink-0 w-20 h-20 overflow-hidden rounded-xl">' +
-                '<img src="' + (e.image || '/assets/images/placeholder-event.jpg') + '" class="object-cover w-full h-full" alt="">' +
+                '<img src="' + (e.image || '/assets/images/default-event.png') + '" class="object-cover w-full h-full" alt="">' +
                 '</div>' +
                 '<div class="flex-1 min-w-0">' +
                 '<span class="px-2 py-0.5 ' + daysClass + ' text-xs font-semibold rounded">' + daysText + '</span>' +
@@ -367,7 +367,7 @@ const UserDashboard = {
         container.innerHTML = events.map(e => `
             <a href="/bilete/${e.slug}" class="overflow-hidden border card-hover group rounded-xl border-border">
                 <div class="relative h-32">
-                    <img src="${e.image || '/assets/images/placeholder-event.jpg'}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" alt="">
+                    <img src="${e.image || '/assets/images/default-event.png'}" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" alt="">
                     <div class="absolute px-2 py-1 text-xs font-bold text-white rounded top-2 left-2 bg-primary">${e.match || 90}% MATCH</div>
                 </div>
                 <div class="p-3">

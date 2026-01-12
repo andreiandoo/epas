@@ -207,13 +207,25 @@ class Event extends Model
 
     public function artists(): BelongsToMany
     {
-        return $this->belongsToMany(
+        $relation = $this->belongsToMany(
             Artist::class,
             'event_artist',
             'event_id',
             'artist_id'
-        )->withPivot(['sort_order', 'is_headliner', 'is_co_headliner'])
-         ->orderByPivot('sort_order');
+        );
+
+        // Only add pivot columns and ordering if the migration has been run
+        // Check if sort_order column exists in event_artist table
+        try {
+            if (\Schema::hasColumn('event_artist', 'sort_order')) {
+                $relation->withPivot(['sort_order', 'is_headliner', 'is_co_headliner'])
+                         ->orderByPivot('sort_order');
+            }
+        } catch (\Exception $e) {
+            // Silently ignore if schema check fails
+        }
+
+        return $relation;
     }
 
     /**

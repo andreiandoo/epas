@@ -479,7 +479,7 @@ const EventPage = {
         document.getElementById(this.elements.eventContent).classList.remove('hidden');
 
         // Main image
-        const mainImg = e.image || e.images?.[0] || '/assets/images/placeholder-event.jpg';
+        const mainImg = e.image || e.images?.[0] || '/assets/images/default-event.png';
         document.getElementById(this.elements.mainImage).src = mainImg;
         document.getElementById(this.elements.mainImage).alt = e.title;
 
@@ -669,7 +669,7 @@ const EventPage = {
         if (!artist) return;
         document.getElementById(this.elements.artistSection).style.display = 'block';
 
-        var artistImage = artist.image_url || artist.image || '/assets/images/placeholder-artist.jpg';
+        var artistImage = artist.image_url || artist.image || '/assets/images/default-artist.png';
         var artistLink = artist.slug ? '/artist/' + artist.slug : '#';
         var artistDescription = artist.description || artist.bio || '';
 
@@ -714,7 +714,7 @@ const EventPage = {
 
         var html = '<div class="flex flex-col gap-6 md:flex-row">' +
             '<div class="md:w-1/3">' +
-                '<img src="' + (venue.image || '/assets/images/placeholder-venue.jpg') + '" alt="' + venue.name + '" class="object-cover w-full h-64 mb-4 rounded-2xl">' +
+                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-64 mb-4 rounded-2xl">' +
             '</div>' +
             '<div class="md:w-2/3">' +
                 '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +

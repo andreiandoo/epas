@@ -350,7 +350,7 @@ const OrgDashboard = {
                 <tr class="event-row">
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-3">
-                            <img src="${e.image || '/assets/images/placeholder-event.jpg'}" class="w-12 h-12 rounded-xl object-cover" alt="">
+                            <img src="${e.image || '/assets/images/default-event.png'}" class="w-12 h-12 rounded-xl object-cover" alt="">
                             <div>
                                 <p class="font-semibold text-secondary">${e.title}</p>
                                 <p class="text-xs text-muted">${e.artist || ''} • ${e.venue || ''}</p>
@@ -390,7 +390,7 @@ const OrgDashboard = {
 
         container.innerHTML = `
             <div class="relative mb-4">
-                <img src="${event.image || '/assets/images/placeholder-event.jpg'}" class="w-full h-32 object-cover rounded-xl" alt="">
+                <img src="${event.image || '/assets/images/default-event.png'}" class="w-full h-32 object-cover rounded-xl" alt="">
                 <div class="absolute top-3 left-3 px-3 py-1 bg-primary text-white text-xs font-bold rounded-lg">In 3 zile</div>
             </div>
             <h3 class="font-bold text-secondary mb-1">${event.title}</h3>
