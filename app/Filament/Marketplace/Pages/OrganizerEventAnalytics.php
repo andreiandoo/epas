@@ -3,10 +3,14 @@
 namespace App\Filament\Marketplace\Pages;
 
 use App\Models\Event;
+use App\Models\EventGoal;
 use App\Models\EventMilestone;
+use App\Models\EventReportSchedule;
 use App\Services\Analytics\EventAnalyticsService;
+use App\Services\Analytics\EventExportService;
 use App\Services\Analytics\MilestoneAttributionService;
 use App\Services\Analytics\BuyerJourneyService;
+use App\Services\Analytics\ScheduledReportService;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -37,31 +41,69 @@ class OrganizerEventAnalytics extends Page implements HasForms
     public array $dashboardData = [];
     public array $milestones = [];
     public array $recentSales = [];
+    public array $goals = [];
+    public array $reportSchedules = [];
 
     // Modals
     public bool $showMilestoneModal = false;
     public bool $showMilestoneDetailModal = false;
     public bool $showBuyerJourneyModal = false;
     public bool $showGlobeModal = false;
+    public bool $showGoalModal = false;
+    public bool $showExportModal = false;
+    public bool $showScheduleModal = false;
 
     public ?array $selectedMilestone = null;
     public ?array $selectedBuyer = null;
+    public ?int $editingGoalId = null;
+    public ?int $editingScheduleId = null;
 
     // Milestone form
     public ?array $milestoneData = [];
 
+    // Goal form
+    public ?array $goalData = [
+        'type' => 'tickets',
+        'target_value' => null,
+        'alert_thresholds' => [25, 50, 75, 90, 100],
+        'email_alerts' => true,
+        'in_app_alerts' => true,
+    ];
+
+    // Export form
+    public string $exportFormat = 'csv';
+    public array $exportSections = ['overview', 'traffic', 'milestones', 'goals'];
+
+    // Schedule form
+    public ?array $scheduleData = [
+        'frequency' => 'weekly',
+        'day_of_week' => 1,
+        'day_of_month' => 1,
+        'send_at' => '09:00',
+        'recipients' => [],
+        'sections' => ['overview', 'chart', 'traffic', 'milestones', 'goals'],
+        'format' => 'email',
+        'include_comparison' => true,
+    ];
+
     protected EventAnalyticsService $analyticsService;
+    protected EventExportService $exportService;
     protected MilestoneAttributionService $attributionService;
     protected BuyerJourneyService $journeyService;
+    protected ScheduledReportService $scheduledReportService;
 
     public function boot(
         EventAnalyticsService $analyticsService,
+        EventExportService $exportService,
         MilestoneAttributionService $attributionService,
-        BuyerJourneyService $journeyService
+        BuyerJourneyService $journeyService,
+        ScheduledReportService $scheduledReportService
     ): void {
         $this->analyticsService = $analyticsService;
+        $this->exportService = $exportService;
         $this->attributionService = $attributionService;
         $this->journeyService = $journeyService;
+        $this->scheduledReportService = $scheduledReportService;
     }
 
     public function mount(?int $event = null): void
@@ -124,6 +166,12 @@ class OrganizerEventAnalytics extends Page implements HasForms
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('addGoal')
+                ->label('Add Goal')
+                ->icon('heroicon-o-flag')
+                ->color('success')
+                ->action(fn () => $this->openGoalModal()),
+
             Action::make('addMilestone')
                 ->label('Add Milestone')
                 ->icon('heroicon-o-plus')
@@ -132,11 +180,16 @@ class OrganizerEventAnalytics extends Page implements HasForms
                 ->action(fn () => $this->showMilestoneModal = true),
 
             Action::make('exportReport')
-                ->label('Export Report')
+                ->label('Export')
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('gray')
-                ->visible(fn () => $this->eventMode === 'past')
-                ->action(fn () => $this->exportReport()),
+                ->action(fn () => $this->showExportModal = true),
+
+            Action::make('scheduleReports')
+                ->label('Schedule Reports')
+                ->icon('heroicon-o-clock')
+                ->color('gray')
+                ->action(fn () => $this->openScheduleModal()),
 
             Action::make('refreshData')
                 ->label('Refresh')
@@ -153,6 +206,54 @@ class OrganizerEventAnalytics extends Page implements HasForms
         $this->dashboardData = $this->analyticsService->getDashboardData($this->event, $this->period);
         $this->milestones = $this->analyticsService->getMilestonesWithMetrics($this->event);
         $this->recentSales = $this->analyticsService->getRecentSales($this->event, 10);
+        $this->loadGoals();
+        $this->loadReportSchedules();
+    }
+
+    protected function loadGoals(): void
+    {
+        $this->goals = EventGoal::where('event_id', $this->event->id)
+            ->orderBy('type')
+            ->get()
+            ->map(fn ($goal) => [
+                'id' => $goal->id,
+                'type' => $goal->type,
+                'type_label' => $goal->type_label,
+                'name' => $goal->name,
+                'target_value' => $goal->target_value,
+                'current_value' => $goal->current_value,
+                'formatted_target' => $goal->formatted_target,
+                'formatted_current' => $goal->formatted_current,
+                'progress_percent' => $goal->progress_percent,
+                'status' => $goal->status,
+                'progress_status' => $goal->progress_status,
+                'deadline' => $goal->deadline?->format('Y-m-d'),
+                'days_remaining' => $goal->days_remaining,
+                'email_alerts' => $goal->email_alerts,
+                'in_app_alerts' => $goal->in_app_alerts,
+                'alert_thresholds' => $goal->alert_thresholds,
+            ])
+            ->toArray();
+    }
+
+    protected function loadReportSchedules(): void
+    {
+        $this->reportSchedules = EventReportSchedule::where('event_id', $this->event->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn ($schedule) => [
+                'id' => $schedule->id,
+                'frequency' => $schedule->frequency,
+                'frequency_label' => $schedule->frequency_label,
+                'recipients' => $schedule->recipients,
+                'sections' => $schedule->sections,
+                'format' => $schedule->format,
+                'include_comparison' => $schedule->include_comparison,
+                'is_active' => $schedule->is_active,
+                'next_send_at' => $schedule->next_send_at?->format('M d, Y H:i'),
+                'last_sent_at' => $schedule->last_sent_at?->format('M d, Y H:i'),
+            ])
+            ->toArray();
     }
 
     public function updatedPeriod(): void
@@ -297,16 +398,454 @@ class OrganizerEventAnalytics extends Page implements HasForms
         return $data['count'] ?? 0;
     }
 
-    /* Export */
+    /* Goals methods */
 
-    public function exportReport(): void
+    public function openGoalModal(?int $goalId = null): void
     {
-        // TODO: Implement PDF/Excel export
+        $this->editingGoalId = $goalId;
+
+        if ($goalId) {
+            $goal = EventGoal::find($goalId);
+            if ($goal) {
+                $this->goalData = [
+                    'type' => $goal->type,
+                    'name' => $goal->name,
+                    'target_value' => $goal->type === EventGoal::TYPE_REVENUE
+                        ? $goal->target_value / 100
+                        : ($goal->type === EventGoal::TYPE_CONVERSION ? $goal->target_value / 100 : $goal->target_value),
+                    'deadline' => $goal->deadline?->format('Y-m-d'),
+                    'alert_thresholds' => $goal->alert_thresholds,
+                    'email_alerts' => $goal->email_alerts,
+                    'in_app_alerts' => $goal->in_app_alerts,
+                    'alert_email' => $goal->alert_email,
+                ];
+            }
+        } else {
+            $this->goalData = [
+                'type' => 'tickets',
+                'name' => null,
+                'target_value' => null,
+                'deadline' => null,
+                'alert_thresholds' => [25, 50, 75, 90, 100],
+                'email_alerts' => true,
+                'in_app_alerts' => true,
+                'alert_email' => null,
+            ];
+        }
+
+        $this->showGoalModal = true;
+    }
+
+    public function saveGoal(): void
+    {
+        $data = $this->goalData;
+
+        // Convert target value for storage
+        $targetValue = match ($data['type']) {
+            EventGoal::TYPE_REVENUE => (int) ($data['target_value'] * 100), // cents
+            EventGoal::TYPE_CONVERSION => (int) ($data['target_value'] * 100), // basis points
+            default => (int) $data['target_value'],
+        };
+
+        $goalData = [
+            'type' => $data['type'],
+            'name' => $data['name'] ?? null,
+            'target_value' => $targetValue,
+            'deadline' => $data['deadline'] ?? null,
+            'alert_thresholds' => $data['alert_thresholds'] ?? EventGoal::DEFAULT_THRESHOLDS,
+            'email_alerts' => $data['email_alerts'] ?? true,
+            'in_app_alerts' => $data['in_app_alerts'] ?? true,
+            'alert_email' => $data['alert_email'] ?? null,
+        ];
+
+        if ($this->editingGoalId) {
+            $goal = EventGoal::find($this->editingGoalId);
+            if ($goal) {
+                $goal->update($goalData);
+                $goal->updateProgress();
+            }
+            $message = 'Goal updated successfully';
+        } else {
+            $goal = EventGoal::create(array_merge($goalData, [
+                'event_id' => $this->event->id,
+            ]));
+            $goal->updateProgress();
+            $message = 'Goal created successfully';
+        }
+
+        $this->showGoalModal = false;
+        $this->editingGoalId = null;
+        $this->loadGoals();
+
         Notification::make()
-            ->info()
-            ->title('Export Started')
-            ->body('Your report is being generated.')
+            ->success()
+            ->title($message)
             ->send();
+    }
+
+    public function deleteGoal(int $goalId): void
+    {
+        EventGoal::where('id', $goalId)
+            ->where('event_id', $this->event->id)
+            ->delete();
+
+        $this->loadGoals();
+
+        Notification::make()
+            ->success()
+            ->title('Goal deleted')
+            ->send();
+    }
+
+    public function refreshGoalProgress(int $goalId): void
+    {
+        $goal = EventGoal::find($goalId);
+        if ($goal) {
+            $goal->updateProgress();
+            $this->loadGoals();
+        }
+    }
+
+    protected function getGoalFormSchema(): array
+    {
+        return [
+            Forms\Components\Select::make('type')
+                ->label('Goal Type')
+                ->options([
+                    EventGoal::TYPE_REVENUE => 'Revenue Target',
+                    EventGoal::TYPE_TICKETS => 'Tickets Target',
+                    EventGoal::TYPE_VISITORS => 'Visitors Target',
+                    EventGoal::TYPE_CONVERSION => 'Conversion Rate Target',
+                ])
+                ->required()
+                ->live()
+                ->columnSpanFull(),
+
+            Forms\Components\TextInput::make('name')
+                ->label('Goal Name (Optional)')
+                ->maxLength(255)
+                ->columnSpanFull(),
+
+            Forms\Components\TextInput::make('target_value')
+                ->label(fn (Forms\Get $get) => match ($get('type')) {
+                    'revenue' => 'Target Revenue (RON)',
+                    'tickets' => 'Target Tickets',
+                    'visitors' => 'Target Visitors',
+                    'conversion_rate' => 'Target Conversion Rate (%)',
+                    default => 'Target Value',
+                })
+                ->numeric()
+                ->required()
+                ->minValue(0),
+
+            Forms\Components\DatePicker::make('deadline')
+                ->label('Deadline (Optional)'),
+
+            Forms\Components\Section::make('Alerts')
+                ->schema([
+                    Forms\Components\CheckboxList::make('alert_thresholds')
+                        ->label('Alert at milestones')
+                        ->options([
+                            25 => '25%',
+                            50 => '50%',
+                            75 => '75%',
+                            90 => '90%',
+                            100 => '100% (Goal achieved!)',
+                        ])
+                        ->columns(5),
+
+                    Forms\Components\Grid::make(2)
+                        ->schema([
+                            Forms\Components\Toggle::make('email_alerts')
+                                ->label('Email Alerts'),
+                            Forms\Components\Toggle::make('in_app_alerts')
+                                ->label('In-App Alerts'),
+                        ]),
+
+                    Forms\Components\TextInput::make('alert_email')
+                        ->label('Alert Email (Optional)')
+                        ->email()
+                        ->helperText('Leave empty to use organizer email'),
+                ]),
+        ];
+    }
+
+    /* Export methods */
+
+    public function exportToCsv(): void
+    {
+        try {
+            $filepath = $this->exportService->exportToCsv($this->event, [
+                'period' => $this->period,
+                'sections' => $this->exportSections,
+            ]);
+
+            Notification::make()
+                ->success()
+                ->title('CSV Export Ready')
+                ->body('Your export has been generated.')
+                ->send();
+
+            $this->showExportModal = false;
+            $this->redirect($this->exportService->getDownloadUrl($filepath));
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Export Failed')
+                ->body($e->getMessage())
+                ->send();
+        }
+    }
+
+    public function exportToPdf(): void
+    {
+        try {
+            $filepath = $this->exportService->exportToPdf($this->event, [
+                'period' => $this->period,
+                'sections' => $this->exportSections,
+                'include_comparison' => true,
+            ]);
+
+            Notification::make()
+                ->success()
+                ->title('PDF Export Ready')
+                ->body('Your export has been generated.')
+                ->send();
+
+            $this->showExportModal = false;
+            $this->redirect($this->exportService->getDownloadUrl($filepath));
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Export Failed')
+                ->body($e->getMessage())
+                ->send();
+        }
+    }
+
+    public function exportSales(): void
+    {
+        try {
+            $dateRange = $this->analyticsService->getDateRange($this->period);
+            $filepath = $this->exportService->exportSalesToCsv($this->event, $dateRange);
+
+            Notification::make()
+                ->success()
+                ->title('Sales Export Ready')
+                ->send();
+
+            $this->showExportModal = false;
+            $this->redirect($this->exportService->getDownloadUrl($filepath));
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Export Failed')
+                ->body($e->getMessage())
+                ->send();
+        }
+    }
+
+    /* Report Schedule methods */
+
+    public function openScheduleModal(?int $scheduleId = null): void
+    {
+        $this->editingScheduleId = $scheduleId;
+
+        if ($scheduleId) {
+            $schedule = EventReportSchedule::find($scheduleId);
+            if ($schedule) {
+                $this->scheduleData = [
+                    'frequency' => $schedule->frequency,
+                    'day_of_week' => $schedule->day_of_week,
+                    'day_of_month' => $schedule->day_of_month,
+                    'send_at' => $schedule->send_at?->format('H:i'),
+                    'recipients' => $schedule->recipients,
+                    'sections' => $schedule->sections,
+                    'format' => $schedule->format,
+                    'include_comparison' => $schedule->include_comparison,
+                    'is_active' => $schedule->is_active,
+                ];
+            }
+        } else {
+            $organizer = $this->event->marketplaceOrganizer;
+            $this->scheduleData = [
+                'frequency' => 'weekly',
+                'day_of_week' => 1,
+                'day_of_month' => 1,
+                'send_at' => '09:00',
+                'recipients' => [$organizer?->email ?? auth()->user()->email],
+                'sections' => EventReportSchedule::DEFAULT_SECTIONS,
+                'format' => 'email',
+                'include_comparison' => true,
+                'is_active' => true,
+            ];
+        }
+
+        $this->showScheduleModal = true;
+    }
+
+    public function saveSchedule(): void
+    {
+        $data = $this->scheduleData;
+
+        $scheduleData = [
+            'frequency' => $data['frequency'],
+            'day_of_week' => $data['frequency'] === 'weekly' ? ($data['day_of_week'] ?? 1) : null,
+            'day_of_month' => $data['frequency'] === 'monthly' ? ($data['day_of_month'] ?? 1) : null,
+            'send_at' => $data['send_at'] ?? '09:00:00',
+            'timezone' => 'Europe/Bucharest',
+            'recipients' => array_filter(array_map('trim', (array) $data['recipients'])),
+            'sections' => $data['sections'] ?? EventReportSchedule::DEFAULT_SECTIONS,
+            'format' => $data['format'] ?? 'email',
+            'include_comparison' => $data['include_comparison'] ?? true,
+            'is_active' => $data['is_active'] ?? true,
+        ];
+
+        if ($this->editingScheduleId) {
+            $schedule = EventReportSchedule::find($this->editingScheduleId);
+            if ($schedule) {
+                $schedule->update($scheduleData);
+                $schedule->calculateNextSendAt();
+                $schedule->save();
+            }
+            $message = 'Report schedule updated';
+        } else {
+            $schedule = EventReportSchedule::create(array_merge($scheduleData, [
+                'event_id' => $this->event->id,
+                'marketplace_organizer_id' => $this->event->marketplace_organizer_id,
+            ]));
+            $schedule->calculateNextSendAt();
+            $schedule->save();
+            $message = 'Report schedule created';
+        }
+
+        $this->showScheduleModal = false;
+        $this->editingScheduleId = null;
+        $this->loadReportSchedules();
+
+        Notification::make()
+            ->success()
+            ->title($message)
+            ->send();
+    }
+
+    public function deleteSchedule(int $scheduleId): void
+    {
+        EventReportSchedule::where('id', $scheduleId)
+            ->where('event_id', $this->event->id)
+            ->delete();
+
+        $this->loadReportSchedules();
+
+        Notification::make()
+            ->success()
+            ->title('Report schedule deleted')
+            ->send();
+    }
+
+    public function toggleScheduleActive(int $scheduleId): void
+    {
+        $schedule = EventReportSchedule::find($scheduleId);
+        if ($schedule && $schedule->event_id === $this->event->id) {
+            $schedule->update(['is_active' => !$schedule->is_active]);
+            $this->loadReportSchedules();
+        }
+    }
+
+    public function sendTestReport(int $scheduleId): void
+    {
+        try {
+            $schedule = EventReportSchedule::find($scheduleId);
+            if ($schedule && $schedule->event_id === $this->event->id) {
+                $this->scheduledReportService->sendScheduledReport($schedule);
+
+                Notification::make()
+                    ->success()
+                    ->title('Test report sent')
+                    ->body('Check your email for the report.')
+                    ->send();
+            }
+        } catch (\Exception $e) {
+            Notification::make()
+                ->danger()
+                ->title('Failed to send report')
+                ->body($e->getMessage())
+                ->send();
+        }
+    }
+
+    protected function getScheduleFormSchema(): array
+    {
+        return [
+            Forms\Components\Select::make('frequency')
+                ->label('Frequency')
+                ->options([
+                    'daily' => 'Daily',
+                    'weekly' => 'Weekly',
+                    'monthly' => 'Monthly',
+                ])
+                ->required()
+                ->live()
+                ->columnSpanFull(),
+
+            Forms\Components\Select::make('day_of_week')
+                ->label('Day of Week')
+                ->options([
+                    0 => 'Sunday',
+                    1 => 'Monday',
+                    2 => 'Tuesday',
+                    3 => 'Wednesday',
+                    4 => 'Thursday',
+                    5 => 'Friday',
+                    6 => 'Saturday',
+                ])
+                ->visible(fn (Forms\Get $get) => $get('frequency') === 'weekly'),
+
+            Forms\Components\Select::make('day_of_month')
+                ->label('Day of Month')
+                ->options(array_combine(range(1, 28), range(1, 28)))
+                ->visible(fn (Forms\Get $get) => $get('frequency') === 'monthly'),
+
+            Forms\Components\TimePicker::make('send_at')
+                ->label('Send At')
+                ->seconds(false)
+                ->required(),
+
+            Forms\Components\TagsInput::make('recipients')
+                ->label('Recipients')
+                ->placeholder('Add email...')
+                ->required()
+                ->columnSpanFull(),
+
+            Forms\Components\CheckboxList::make('sections')
+                ->label('Report Sections')
+                ->options([
+                    'overview' => 'Overview Stats',
+                    'chart' => 'Performance Chart',
+                    'traffic' => 'Traffic Sources',
+                    'milestones' => 'Campaigns & Milestones',
+                    'goals' => 'Goals Progress',
+                    'top_locations' => 'Top Locations',
+                    'funnel' => 'Conversion Funnel',
+                ])
+                ->columns(3)
+                ->columnSpanFull(),
+
+            Forms\Components\Select::make('format')
+                ->label('Attachment Format')
+                ->options([
+                    'email' => 'Email Only',
+                    'pdf' => 'Include PDF',
+                    'csv' => 'Include CSV',
+                ])
+                ->required(),
+
+            Forms\Components\Toggle::make('include_comparison')
+                ->label('Include Period Comparison'),
+
+            Forms\Components\Toggle::make('is_active')
+                ->label('Active'),
+        ];
     }
 
     /* View data methods */

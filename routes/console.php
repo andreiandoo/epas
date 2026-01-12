@@ -567,3 +567,44 @@ Schedule::call(function () {
 
     \Log::info('Milestone metrics recalculated', ['events_processed' => $events->count()]);
 })->everyThirtyMinutes();
+
+/*
+|--------------------------------------------------------------------------
+| Event Analytics Reports & Goals Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Process scheduled analytics reports (every 5 minutes)
+// Checks for due report schedules and sends them to recipients
+Schedule::command('analytics:process-reports --type=reports')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::info('Scheduled analytics reports processed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to process scheduled analytics reports');
+    });
+
+// Process goal alerts (every 15 minutes)
+// Checks goal progress and sends threshold notifications
+Schedule::command('analytics:process-reports --type=goals')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::info('Goal alerts processed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to process goal alerts');
+    });
+
+// Cleanup old export files (daily at 4:00 AM)
+Schedule::command('analytics:process-reports --type=cleanup')
+    ->dailyAt('04:00')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('Old analytics export files cleaned up');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to cleanup analytics export files');
+    });

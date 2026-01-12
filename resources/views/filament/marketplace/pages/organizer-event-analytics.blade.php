@@ -422,6 +422,384 @@
             </div>
         </div>
 
+        {{-- Goals Section --}}
+        @if(count($this->goals) > 0 || true)
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Goals Progress</h2>
+                    <p class="text-xs text-gray-500">Track your event targets</p>
+                </div>
+                <button wire:click="openGoalModal" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors">
+                    <x-heroicon-o-plus class="w-4 h-4" />
+                    Add Goal
+                </button>
+            </div>
+            @if(count($this->goals) > 0)
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                @foreach($this->goals as $goal)
+                <div class="p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-primary-200 transition-colors">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center
+                                @if($goal['type'] === 'revenue') bg-emerald-100 text-emerald-600
+                                @elseif($goal['type'] === 'tickets') bg-blue-100 text-blue-600
+                                @elseif($goal['type'] === 'visitors') bg-cyan-100 text-cyan-600
+                                @else bg-amber-100 text-amber-600 @endif">
+                                @if($goal['type'] === 'revenue')
+                                    <x-heroicon-o-currency-dollar class="w-4 h-4" />
+                                @elseif($goal['type'] === 'tickets')
+                                    <x-heroicon-o-ticket class="w-4 h-4" />
+                                @elseif($goal['type'] === 'visitors')
+                                    <x-heroicon-o-users class="w-4 h-4" />
+                                @else
+                                    <x-heroicon-o-chart-bar class="w-4 h-4" />
+                                @endif
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-900 dark:text-white">{{ $goal['type_label'] }}</div>
+                                @if($goal['name'])
+                                <div class="text-xs text-gray-500">{{ $goal['name'] }}</div>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button wire:click="openGoalModal({{ $goal['id'] }})" class="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+                                <x-heroicon-o-pencil class="w-3.5 h-3.5" />
+                            </button>
+                            <button wire:click="deleteGoal({{ $goal['id'] }})" wire:confirm="Are you sure you want to delete this goal?" class="p-1 text-gray-400 hover:text-red-500 transition-colors">
+                                <x-heroicon-o-trash class="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="flex items-baseline gap-1">
+                            <span class="text-xl font-bold text-gray-900 dark:text-white">{{ $goal['formatted_current'] }}</span>
+                            <span class="text-xs text-gray-400">/ {{ $goal['formatted_target'] }}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="flex-1 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-500
+                                @if($goal['progress_percent'] >= 100) bg-emerald-500
+                                @elseif($goal['progress_percent'] >= 75) bg-blue-500
+                                @elseif($goal['progress_percent'] >= 50) bg-amber-500
+                                @else bg-red-400 @endif"
+                                style="width: {{ min($goal['progress_percent'], 100) }}%"></div>
+                        </div>
+                        <span class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ number_format($goal['progress_percent'], 1) }}%</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] px-2 py-0.5 rounded-full font-medium
+                            @if($goal['status'] === 'achieved') bg-emerald-100 text-emerald-700
+                            @elseif($goal['status'] === 'on_track') bg-blue-100 text-blue-700
+                            @elseif($goal['status'] === 'at_risk') bg-amber-100 text-amber-700
+                            @elseif($goal['status'] === 'missed') bg-red-100 text-red-700
+                            @else bg-gray-100 text-gray-600 @endif">
+                            {{ ucfirst(str_replace('_', ' ', $goal['status'])) }}
+                        </span>
+                        @if($goal['days_remaining'] !== null && $goal['days_remaining'] > 0)
+                        <span class="text-[10px] text-gray-400">{{ $goal['days_remaining'] }} days left</span>
+                        @endif
+                    </div>
+                </div>
+                @endforeach
+            </div>
+            @else
+            <div class="text-center py-8">
+                <x-heroicon-o-flag class="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                <p class="text-gray-500 text-sm">No goals set yet</p>
+                <p class="text-gray-400 text-xs">Set targets to track your event's success</p>
+            </div>
+            @endif
+        </div>
+        @endif
+
+        {{-- Report Schedules Section --}}
+        @if(count($this->reportSchedules) > 0)
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Scheduled Reports</h2>
+                    <p class="text-xs text-gray-500">Automated analytics reports</p>
+                </div>
+                <button wire:click="openScheduleModal" class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors">
+                    <x-heroicon-o-plus class="w-4 h-4" />
+                    Add Schedule
+                </button>
+            </div>
+            <div class="space-y-3">
+                @foreach($this->reportSchedules as $schedule)
+                <div class="flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center">
+                            <x-heroicon-o-clock class="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $schedule['frequency_label'] }} Report</span>
+                                <span class="text-[10px] px-2 py-0.5 rounded-full {{ $schedule['is_active'] ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600' }}">
+                                    {{ $schedule['is_active'] ? 'Active' : 'Paused' }}
+                                </span>
+                            </div>
+                            <div class="text-xs text-gray-500">
+                                {{ implode(', ', $schedule['recipients']) }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-400">Next: {{ $schedule['next_send_at'] ?? 'Not scheduled' }}</span>
+                        <button wire:click="sendTestReport({{ $schedule['id'] }})" class="p-1.5 text-gray-400 hover:text-primary-600 transition-colors" title="Send Test">
+                            <x-heroicon-o-paper-airplane class="w-4 h-4" />
+                        </button>
+                        <button wire:click="toggleScheduleActive({{ $schedule['id'] }})" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors" title="Toggle Active">
+                            @if($schedule['is_active'])
+                            <x-heroicon-o-pause class="w-4 h-4" />
+                            @else
+                            <x-heroicon-o-play class="w-4 h-4" />
+                            @endif
+                        </button>
+                        <button wire:click="openScheduleModal({{ $schedule['id'] }})" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors" title="Edit">
+                            <x-heroicon-o-pencil class="w-4 h-4" />
+                        </button>
+                        <button wire:click="deleteSchedule({{ $schedule['id'] }})" wire:confirm="Delete this report schedule?" class="p-1.5 text-gray-400 hover:text-red-500 transition-colors" title="Delete">
+                            <x-heroicon-o-trash class="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+        {{-- Goal Modal --}}
+        <div x-show="$wire.showGoalModal" x-transition class="fixed inset-0 z-50" x-cloak>
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" wire:click="$set('showGoalModal', false)"></div>
+            <div class="fixed inset-0 flex items-center justify-center p-4">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" @click.stop>
+                    <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                {{ $this->editingGoalId ? 'Edit Goal' : 'Create Goal' }}
+                            </h2>
+                            <button wire:click="$set('showGoalModal', false)" class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                                <x-heroicon-o-x-mark class="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <form wire:submit="saveGoal" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Goal Type</label>
+                                <select wire:model.live="goalData.type" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
+                                    <option value="revenue">Revenue Target</option>
+                                    <option value="tickets">Tickets Target</option>
+                                    <option value="visitors">Visitors Target</option>
+                                    <option value="conversion_rate">Conversion Rate Target</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name (Optional)</label>
+                                <input type="text" wire:model="goalData.name" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" placeholder="e.g., Q1 Revenue Goal">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                    Target Value
+                                    @if($this->goalData['type'] === 'revenue')
+                                    (RON)
+                                    @elseif($this->goalData['type'] === 'conversion_rate')
+                                    (%)
+                                    @endif
+                                </label>
+                                <input type="number" wire:model="goalData.target_value" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" required min="0" step="any">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Deadline (Optional)</label>
+                                <input type="date" wire:model="goalData.deadline" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Alert at milestones</label>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach([25, 50, 75, 90, 100] as $threshold)
+                                    <label class="inline-flex items-center gap-1.5">
+                                        <input type="checkbox" wire:model="goalData.alert_thresholds" value="{{ $threshold }}" class="rounded border-gray-300 text-primary-600">
+                                        <span class="text-sm text-gray-600 dark:text-gray-400">{{ $threshold }}%</span>
+                                    </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="checkbox" wire:model="goalData.email_alerts" class="rounded border-gray-300 text-primary-600">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">Email Alerts</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="checkbox" wire:model="goalData.in_app_alerts" class="rounded border-gray-300 text-primary-600">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">In-App Alerts</span>
+                                </label>
+                            </div>
+                            <div class="pt-4 flex justify-end gap-3">
+                                <button type="button" wire:click="$set('showGoalModal', false)" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
+                                    {{ $this->editingGoalId ? 'Update Goal' : 'Create Goal' }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Export Modal --}}
+        <div x-show="$wire.showExportModal" x-transition class="fixed inset-0 z-50" x-cloak>
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" wire:click="$set('showExportModal', false)"></div>
+            <div class="fixed inset-0 flex items-center justify-center p-4">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md" @click.stop>
+                    <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Export Analytics</h2>
+                            <button wire:click="$set('showExportModal', false)" class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                                <x-heroicon-o-x-mark class="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <p class="text-sm text-gray-500">Export your event analytics for the selected period ({{ $this->period }}).</p>
+
+                        <div class="grid grid-cols-3 gap-3">
+                            <button wire:click="exportToCsv" class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:bg-primary-50/50 transition-colors">
+                                <x-heroicon-o-table-cells class="w-8 h-8 text-emerald-600" />
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">CSV</span>
+                            </button>
+                            <button wire:click="exportToPdf" class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:bg-primary-50/50 transition-colors">
+                                <x-heroicon-o-document class="w-8 h-8 text-red-600" />
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">PDF</span>
+                            </button>
+                            <button wire:click="exportSales" class="flex flex-col items-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:bg-primary-50/50 transition-colors">
+                                <x-heroicon-o-banknotes class="w-8 h-8 text-blue-600" />
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Sales</span>
+                            </button>
+                        </div>
+
+                        <div class="pt-2">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Include sections:</label>
+                            <div class="flex flex-wrap gap-2">
+                                @foreach(['overview' => 'Overview', 'traffic' => 'Traffic', 'milestones' => 'Milestones', 'goals' => 'Goals', 'funnel' => 'Funnel'] as $key => $label)
+                                <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                                    <input type="checkbox" wire:model="exportSections" value="{{ $key }}" class="rounded border-gray-300 text-primary-600">
+                                    <span class="text-xs text-gray-600 dark:text-gray-400">{{ $label }}</span>
+                                </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Schedule Modal --}}
+        <div x-show="$wire.showScheduleModal" x-transition class="fixed inset-0 z-50" x-cloak>
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" wire:click="$set('showScheduleModal', false)"></div>
+            <div class="fixed inset-0 flex items-center justify-center p-4">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" @click.stop>
+                    <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+                                {{ $this->editingScheduleId ? 'Edit Report Schedule' : 'Create Report Schedule' }}
+                            </h2>
+                            <button wire:click="$set('showScheduleModal', false)" class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                                <x-heroicon-o-x-mark class="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <form wire:submit="saveSchedule" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Frequency</label>
+                                <select wire:model.live="scheduleData.frequency" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                </select>
+                            </div>
+                            @if($this->scheduleData['frequency'] === 'weekly')
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day of Week</label>
+                                <select wire:model="scheduleData.day_of_week" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
+                                    <option value="0">Sunday</option>
+                                    <option value="1">Monday</option>
+                                    <option value="2">Tuesday</option>
+                                    <option value="3">Wednesday</option>
+                                    <option value="4">Thursday</option>
+                                    <option value="5">Friday</option>
+                                    <option value="6">Saturday</option>
+                                </select>
+                            </div>
+                            @endif
+                            @if($this->scheduleData['frequency'] === 'monthly')
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day of Month</label>
+                                <select wire:model="scheduleData.day_of_month" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
+                                    @for($i = 1; $i <= 28; $i++)
+                                    <option value="{{ $i }}">{{ $i }}</option>
+                                    @endfor
+                                </select>
+                            </div>
+                            @endif
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Send At</label>
+                                <input type="time" wire:model="scheduleData.send_at" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Recipients (one per line)</label>
+                                <textarea wire:model="scheduleData.recipients" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" rows="2" placeholder="email@example.com"></textarea>
+                                <p class="text-xs text-gray-400 mt-1">Separate multiple emails with commas or new lines</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Report Sections</label>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach(['overview' => 'Overview', 'chart' => 'Chart', 'traffic' => 'Traffic', 'milestones' => 'Milestones', 'goals' => 'Goals', 'top_locations' => 'Locations', 'funnel' => 'Funnel'] as $key => $label)
+                                    <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 transition-colors cursor-pointer">
+                                        <input type="checkbox" wire:model="scheduleData.sections" value="{{ $key }}" class="rounded border-gray-300 text-primary-600">
+                                        <span class="text-xs text-gray-600 dark:text-gray-400">{{ $label }}</span>
+                                    </label>
+                                    @endforeach
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Attachment Format</label>
+                                <select wire:model="scheduleData.format" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
+                                    <option value="email">Email Only</option>
+                                    <option value="pdf">Include PDF</option>
+                                    <option value="csv">Include CSV</option>
+                                </select>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="checkbox" wire:model="scheduleData.include_comparison" class="rounded border-gray-300 text-primary-600">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">Include Period Comparison</span>
+                                </label>
+                                <label class="inline-flex items-center gap-2">
+                                    <input type="checkbox" wire:model="scheduleData.is_active" class="rounded border-gray-300 text-primary-600">
+                                    <span class="text-sm text-gray-600 dark:text-gray-400">Active</span>
+                                </label>
+                            </div>
+                            <div class="pt-4 flex justify-end gap-3">
+                                <button type="button" wire:click="$set('showScheduleModal', false)" class="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 rounded-lg transition-colors">
+                                    {{ $this->editingScheduleId ? 'Update Schedule' : 'Create Schedule' }}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {{-- Globe Modal --}}
         <div x-show="showGlobeModal" x-transition class="fixed inset-0 z-50" x-cloak>
             <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" @click="showGlobeModal = false"></div>

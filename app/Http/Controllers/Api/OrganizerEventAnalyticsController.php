@@ -5,13 +5,18 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventMilestone;
+use App\Models\EventGoal;
+use App\Models\EventReportSchedule;
 use App\Models\Order;
 use App\Services\Analytics\EventAnalyticsService;
 use App\Services\Analytics\MilestoneAttributionService;
 use App\Services\Analytics\BuyerJourneyService;
+use App\Services\Analytics\EventExportService;
+use App\Services\Analytics\ScheduledReportService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 class OrganizerEventAnalyticsController extends Controller
 {
@@ -451,7 +456,468 @@ class OrganizerEventAnalyticsController extends Controller
         ]);
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Export Endpoints
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Export analytics to CSV
+     *
+     * GET /api/organizer/events/{event}/analytics/export/csv
+     */
+    public function exportCsv(Event $event, Request $request, EventExportService $exportService): JsonResponse
+    {
+        $this->authorizeEvent($event);
+
+        $period = $request->input('period', '30d');
+        $sections = $request->input('sections', ['daily', 'traffic', 'milestones', 'sales']);
+
+        $filepath = $exportService->exportToCsv($event, [
+            'period' => $period,
+            'sections' => $sections,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'download_url' => $exportService->getDownloadUrl($filepath),
+            'filename' => basename($filepath),
+        ]);
+    }
+
+    /**
+     * Export analytics to PDF
+     *
+     * GET /api/organizer/events/{event}/analytics/export/pdf
+     */
+    public function exportPdf(Event $event, Request $request, EventExportService $exportService): JsonResponse
+    {
+        $this->authorizeEvent($event);
+
+        $period = $request->input('period', '30d');
+        $sections = $request->input('sections', ['overview', 'chart', 'traffic', 'milestones', 'goals']);
+
+        $filepath = $exportService->exportToPdf($event, [
+            'period' => $period,
+            'sections' => $sections,
+            'include_comparison' => $request->boolean('include_comparison', true),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'download_url' => $exportService->getDownloadUrl($filepath),
+            'filename' => basename($filepath),
+        ]);
+    }
+
+    /**
+     * Export sales to CSV
+     *
+     * GET /api/organizer/events/{event}/analytics/export/sales
+     */
+    public function exportSales(Event $event, Request $request, EventExportService $exportService): JsonResponse
+    {
+        $this->authorizeEvent($event);
+
+        $dateRange = null;
+        if ($request->has('start_date') && $request->has('end_date')) {
+            $dateRange = [
+                'start' => now()->parse($request->input('start_date'))->startOfDay(),
+                'end' => now()->parse($request->input('end_date'))->endOfDay(),
+            ];
+        }
+
+        $filepath = $exportService->exportSalesToCsv($event, $dateRange);
+
+        return response()->json([
+            'success' => true,
+            'download_url' => $exportService->getDownloadUrl($filepath),
+            'filename' => basename($filepath),
+        ]);
+    }
+
+    /**
+     * Download export file
+     *
+     * GET /api/organizer/analytics/download/{filename}
+     */
+    public function download(string $filename)
+    {
+        $filepath = "exports/{$filename}";
+
+        if (!Storage::disk('local')->exists($filepath)) {
+            abort(404, 'File not found');
+        }
+
+        return response()->download(
+            Storage::disk('local')->path($filepath),
+            $filename,
+            ['Content-Type' => $this->getContentType($filename)]
+        )->deleteFileAfterSend(true);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Goals Endpoints
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Get all goals for an event
+     *
+     * GET /api/organizer/events/{event}/goals
+     */
+    public function goals(Event $event): JsonResponse
+    {
+        $this->authorizeEvent($event);
+
+        $goals = EventGoal::forEvent($event->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn ($goal) => $this->formatGoal($goal));
+
+        return response()->json([
+            'success' => true,
+            'data' => $goals,
+        ]);
+    }
+
+    /**
+     * Create a new goal
+     *
+     * POST /api/organizer/events/{event}/goals
+     */
+    public function createGoal(Event $event, Request $request): JsonResponse
+    {
+        $this->authorizeEvent($event);
+
+        $validated = $request->validate([
+            'type' => 'required|in:revenue,tickets,visitors,conversion_rate',
+            'name' => 'nullable|string|max:255',
+            'target_value' => 'required|numeric|min:1',
+            'deadline' => 'nullable|date|after:today',
+            'alert_thresholds' => 'nullable|array',
+            'alert_thresholds.*' => 'integer|min:1|max:100',
+            'email_alerts' => 'boolean',
+            'in_app_alerts' => 'boolean',
+            'alert_email' => 'nullable|email',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        // Convert target value to cents for revenue type
+        if ($validated['type'] === EventGoal::TYPE_REVENUE) {
+            $validated['target_value'] = (int) ($validated['target_value'] * 100);
+        }
+
+        // Convert conversion rate to basis points (x100)
+        if ($validated['type'] === EventGoal::TYPE_CONVERSION) {
+            $validated['target_value'] = (int) ($validated['target_value'] * 100);
+        }
+
+        $goal = EventGoal::create([
+            'event_id' => $event->id,
+            ...$validated,
+            'alert_thresholds' => $validated['alert_thresholds'] ?? EventGoal::DEFAULT_THRESHOLDS,
+        ]);
+
+        // Update progress immediately
+        $goal->updateProgress();
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->formatGoal($goal),
+            'message' => 'Goal created successfully',
+        ], 201);
+    }
+
+    /**
+     * Update a goal
+     *
+     * PUT /api/organizer/events/{event}/goals/{goal}
+     */
+    public function updateGoal(Event $event, EventGoal $goal, Request $request): JsonResponse
+    {
+        $this->authorizeEvent($event);
+
+        if ($goal->event_id !== $event->id) {
+            return response()->json(['error' => 'Goal not found for this event'], 404);
+        }
+
+        $validated = $request->validate([
+            'name' => 'nullable|string|max:255',
+            'target_value' => 'nullable|numeric|min:1',
+            'deadline' => 'nullable|date',
+            'alert_thresholds' => 'nullable|array',
+            'email_alerts' => 'boolean',
+            'in_app_alerts' => 'boolean',
+            'alert_email' => 'nullable|email',
+            'notes' => 'nullable|string|max:1000',
+            'status' => 'nullable|in:active,cancelled',
+        ]);
+
+        // Convert target value if provided
+        if (isset($validated['target_value'])) {
+            if ($goal->type === EventGoal::TYPE_REVENUE) {
+                $validated['target_value'] = (int) ($validated['target_value'] * 100);
+            } elseif ($goal->type === EventGoal::TYPE_CONVERSION) {
+                $validated['target_value'] = (int) ($validated['target_value'] * 100);
+            }
+        }
+
+        $goal->update($validated);
+        $goal->updateProgress();
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->formatGoal($goal),
+            'message' => 'Goal updated successfully',
+        ]);
+    }
+
+    /**
+     * Delete a goal
+     *
+     * DELETE /api/organizer/events/{event}/goals/{goal}
+     */
+    public function deleteGoal(Event $event, EventGoal $goal): JsonResponse
+    {
+        $this->authorizeEvent($event);
+
+        if ($goal->event_id !== $event->id) {
+            return response()->json(['error' => 'Goal not found for this event'], 404);
+        }
+
+        $goal->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Goal deleted successfully',
+        ]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Report Schedule Endpoints
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Get report schedules for an event
+     *
+     * GET /api/organizer/events/{event}/report-schedules
+     */
+    public function reportSchedules(Event $event): JsonResponse
+    {
+        $this->authorizeEvent($event);
+
+        $schedules = EventReportSchedule::forEvent($event->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn ($schedule) => $this->formatSchedule($schedule));
+
+        return response()->json([
+            'success' => true,
+            'data' => $schedules,
+        ]);
+    }
+
+    /**
+     * Create a report schedule
+     *
+     * POST /api/organizer/events/{event}/report-schedules
+     */
+    public function createReportSchedule(Event $event, Request $request, ScheduledReportService $reportService): JsonResponse
+    {
+        $this->authorizeEvent($event);
+
+        $validated = $request->validate([
+            'frequency' => 'required|in:daily,weekly,monthly',
+            'day_of_week' => 'nullable|integer|min:0|max:6',
+            'day_of_month' => 'nullable|integer|min:1|max:31',
+            'send_at' => 'required|date_format:H:i',
+            'timezone' => 'nullable|string|max:50',
+            'recipients' => 'required|array|min:1',
+            'recipients.*' => 'email',
+            'sections' => 'nullable|array',
+            'format' => 'nullable|in:email,pdf,csv',
+            'include_comparison' => 'boolean',
+        ]);
+
+        $schedule = EventReportSchedule::create([
+            'event_id' => $event->id,
+            'marketplace_organizer_id' => $event->marketplace_organizer_id,
+            ...$validated,
+            'timezone' => $validated['timezone'] ?? 'Europe/Bucharest',
+            'sections' => $validated['sections'] ?? EventReportSchedule::DEFAULT_SECTIONS,
+            'format' => $validated['format'] ?? EventReportSchedule::FORMAT_EMAIL,
+            'is_active' => true,
+        ]);
+
+        $schedule->scheduleNext();
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->formatSchedule($schedule),
+            'message' => 'Report schedule created successfully',
+        ], 201);
+    }
+
+    /**
+     * Update a report schedule
+     *
+     * PUT /api/organizer/events/{event}/report-schedules/{schedule}
+     */
+    public function updateReportSchedule(Event $event, EventReportSchedule $schedule, Request $request): JsonResponse
+    {
+        $this->authorizeEvent($event);
+
+        if ($schedule->event_id !== $event->id) {
+            return response()->json(['error' => 'Schedule not found for this event'], 404);
+        }
+
+        $validated = $request->validate([
+            'frequency' => 'nullable|in:daily,weekly,monthly',
+            'day_of_week' => 'nullable|integer|min:0|max:6',
+            'day_of_month' => 'nullable|integer|min:1|max:31',
+            'send_at' => 'nullable|date_format:H:i',
+            'timezone' => 'nullable|string|max:50',
+            'recipients' => 'nullable|array|min:1',
+            'recipients.*' => 'email',
+            'sections' => 'nullable|array',
+            'format' => 'nullable|in:email,pdf,csv',
+            'include_comparison' => 'boolean',
+            'is_active' => 'boolean',
+        ]);
+
+        $schedule->update($validated);
+
+        if (isset($validated['frequency']) || isset($validated['day_of_week']) || isset($validated['day_of_month']) || isset($validated['send_at'])) {
+            $schedule->scheduleNext();
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->formatSchedule($schedule),
+            'message' => 'Schedule updated successfully',
+        ]);
+    }
+
+    /**
+     * Delete a report schedule
+     *
+     * DELETE /api/organizer/events/{event}/report-schedules/{schedule}
+     */
+    public function deleteReportSchedule(Event $event, EventReportSchedule $schedule): JsonResponse
+    {
+        $this->authorizeEvent($event);
+
+        if ($schedule->event_id !== $event->id) {
+            return response()->json(['error' => 'Schedule not found for this event'], 404);
+        }
+
+        $schedule->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Schedule deleted successfully',
+        ]);
+    }
+
+    /**
+     * Send a test report
+     *
+     * POST /api/organizer/events/{event}/report-schedules/{schedule}/test
+     */
+    public function sendTestReport(Event $event, EventReportSchedule $schedule, ScheduledReportService $reportService): JsonResponse
+    {
+        $this->authorizeEvent($event);
+
+        if ($schedule->event_id !== $event->id) {
+            return response()->json(['error' => 'Schedule not found for this event'], 404);
+        }
+
+        try {
+            $reportService->sendScheduledReport($schedule);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Test report sent successfully',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to send test report: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     /* Helper methods */
+
+    protected function formatGoal(EventGoal $goal): array
+    {
+        return [
+            'id' => $goal->id,
+            'type' => $goal->type,
+            'type_label' => $goal->type_label,
+            'type_icon' => $goal->type_icon,
+            'type_color' => $goal->type_color,
+            'name' => $goal->name,
+            'target_value' => $goal->type === EventGoal::TYPE_REVENUE
+                ? $goal->target_value / 100
+                : ($goal->type === EventGoal::TYPE_CONVERSION ? $goal->target_value / 100 : $goal->target_value),
+            'current_value' => $goal->type === EventGoal::TYPE_REVENUE
+                ? $goal->current_value / 100
+                : ($goal->type === EventGoal::TYPE_CONVERSION ? $goal->current_value / 100 : $goal->current_value),
+            'formatted_target' => $goal->formatted_target,
+            'formatted_current' => $goal->formatted_current,
+            'progress_percent' => $goal->progress_percent,
+            'progress_status' => $goal->progress_status,
+            'remaining' => $goal->remaining,
+            'deadline' => $goal->deadline?->format('Y-m-d'),
+            'days_remaining' => $goal->days_remaining,
+            'alert_thresholds' => $goal->alert_thresholds,
+            'alerts_sent' => $goal->alerts_sent,
+            'email_alerts' => $goal->email_alerts,
+            'in_app_alerts' => $goal->in_app_alerts,
+            'status' => $goal->status,
+            'is_achieved' => $goal->isAchieved(),
+            'is_overdue' => $goal->isOverdue(),
+            'achieved_at' => $goal->achieved_at?->format('Y-m-d H:i'),
+            'notes' => $goal->notes,
+        ];
+    }
+
+    protected function formatSchedule(EventReportSchedule $schedule): array
+    {
+        return [
+            'id' => $schedule->id,
+            'frequency' => $schedule->frequency,
+            'frequency_label' => $schedule->frequency_label,
+            'schedule_description' => $schedule->schedule_description,
+            'day_of_week' => $schedule->day_of_week,
+            'day_of_month' => $schedule->day_of_month,
+            'send_at' => $schedule->send_at,
+            'timezone' => $schedule->timezone,
+            'recipients' => $schedule->recipients,
+            'sections' => $schedule->sections,
+            'format' => $schedule->format,
+            'include_comparison' => $schedule->include_comparison,
+            'is_active' => $schedule->is_active,
+            'last_sent_at' => $schedule->last_sent_at?->format('Y-m-d H:i'),
+            'next_send_at' => $schedule->next_send_at?->format('Y-m-d H:i'),
+        ];
+    }
+
+    protected function getContentType(string $filename): string
+    {
+        $extension = pathinfo($filename, PATHINFO_EXTENSION);
+        return match ($extension) {
+            'csv' => 'text/csv',
+            'pdf' => 'application/pdf',
+            default => 'application/octet-stream',
+        };
+    }
 
     protected function authorizeEvent(Event $event): void
     {
