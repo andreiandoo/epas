@@ -506,7 +506,6 @@ require_once __DIR__ . '/includes/head.php';
                 const mobileBtn = document.getElementById('mobileTicketBtn');
                 const minPriceEl = document.getElementById('mobileMinPrice');
                 if (mobileBtn) {
-                    mobileBtn.style.display = 'block';
                     // Find minimum price
                     const prices = EventPage.ticketTypes
                         .filter(t => !t.is_sold_out && t.available > 0)
