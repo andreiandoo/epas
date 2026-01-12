@@ -11,12 +11,13 @@ return new class extends Migration
         Schema::table('events', function (Blueprint $table) {
             // Parent event reference for child events (multi-day, recurring)
             if (!Schema::hasColumn('events', 'parent_id')) {
-                $table->foreignId('parent_id')
-                    ->nullable()
-                    ->after('id')
-                    ->constrained('events')
+                $table->unsignedBigInteger('parent_id')->nullable()->after('id');
+                $table->foreign('parent_id')
+                    ->references('id')
+                    ->on('events')
                     ->cascadeOnUpdate()
                     ->nullOnDelete();
+                $table->index('parent_id');
             }
 
             // Is this a template event (parent for recurring/multi-day)
@@ -29,23 +30,15 @@ return new class extends Migration
                 $table->unsignedInteger('occurrence_number')->nullable()->after('is_template');
             }
         });
-
-        // Add index for parent_id queries
-        Schema::table('events', function (Blueprint $table) {
-            $sm = Schema::getConnection()->getDoctrineSchemaManager();
-            $indexes = $sm->listTableIndexes('events');
-
-            if (!isset($indexes['events_parent_id_index'])) {
-                $table->index('parent_id');
-            }
-        });
     }
 
     public function down(): void
     {
         Schema::table('events', function (Blueprint $table) {
             if (Schema::hasColumn('events', 'parent_id')) {
-                $table->dropConstrainedForeignId('parent_id');
+                $table->dropForeign(['parent_id']);
+                $table->dropIndex(['parent_id']);
+                $table->dropColumn('parent_id');
             }
             if (Schema::hasColumn('events', 'is_template')) {
                 $table->dropColumn('is_template');
