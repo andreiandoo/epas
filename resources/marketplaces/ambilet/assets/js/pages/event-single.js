@@ -1055,11 +1055,17 @@ const EventPage = {
     },
 
     /**
-     * Load related events
+     * Load related events from the same category
      */
     async loadRelatedEvents() {
         try {
-            const response = await AmbiletAPI.get('/events', { limit: 8 });
+            // Build params - filter by category if available
+            const params = new URLSearchParams({ limit: 8 });
+            if (this.event.category_slug) {
+                params.append('category', this.event.category_slug);
+            }
+
+            const response = await AmbiletAPI.get('/events?' + params.toString());
             if (response.success && response.data?.length) {
                 const currentId = this.event.id;
                 const currentSlug = this.event.slug;

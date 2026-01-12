@@ -45,6 +45,13 @@ class EditEvent extends EditRecord
             ->color('info')
             ->url(fn () => EventResource::getUrl('statistics', ['record' => $this->record]));
 
+        // Activity Log button - always visible
+        $actions[] = Actions\Action::make('activity_log')
+            ->label('Activity Log')
+            ->icon('heroicon-o-clock')
+            ->color('gray')
+            ->url(fn () => EventResource::getUrl('activity-log', ['record' => $this->record]));
+
         if ($hasInvitations) {
             $actions[] = Actions\Action::make('invitations')
                 ->label('Create Invitations')

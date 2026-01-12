@@ -1455,6 +1455,7 @@ class EventResource extends Resource
             'create' => Pages\CreateEvent::route('/create'),
             'edit' => Pages\EditEvent::route('/{record}/edit'),
             'statistics' => Pages\EventStatistics::route('/{record}/statistics'),
+            'activity-log' => Pages\EventActivityLog::route('/{record}/activity-log'),
             'view-guest' => Pages\ViewGuestEvent::route('/{record}/view'),
         ];
     }
