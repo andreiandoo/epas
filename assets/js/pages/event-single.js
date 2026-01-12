@@ -414,7 +414,11 @@ const EventPage = {
             artist: artistsData.length ? {
                 name: artistsData[0].name,
                 image: artistsData[0].image_url,
-                slug: artistsData[0].slug
+                image_url: artistsData[0].image_url,
+                slug: artistsData[0].slug,
+                bio: artistsData[0].bio,
+                social_links: artistsData[0].social_links,
+                verified: artistsData[0].verified
             } : null,
             artists: artistsData,
             ticket_types: ticketTypesData.map(function(tt) {
