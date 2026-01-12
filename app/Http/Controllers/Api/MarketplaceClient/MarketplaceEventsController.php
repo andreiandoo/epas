@@ -201,6 +201,7 @@ class MarketplaceEventsController extends BaseController
             'venue',
             'marketplaceEventCategory',
             'ticketTypes',
+            'artists',
         ])->first();
 
         if (!$event) {
@@ -342,6 +343,16 @@ class MarketplaceEventsController extends BaseController
                     'max_per_order' => $tt->max_per_order ?? 10,
                     'status' => $tt->status,
                     'is_sold_out' => $available <= 0,
+                ];
+            })->values(),
+            'artists' => $event->artists->map(function ($artist) {
+                return [
+                    'id' => $artist->id,
+                    'name' => $artist->name,
+                    'slug' => $artist->slug,
+                    'image_url' => $artist->main_image_full_url ?? $artist->image_url,
+                    'is_headliner' => $artist->pivot->is_headliner ?? false,
+                    'is_co_headliner' => $artist->pivot->is_co_headliner ?? false,
                 ];
             })->values(),
             'commission_mode' => $commissionMode,
