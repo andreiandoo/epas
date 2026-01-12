@@ -238,16 +238,24 @@ const CategoryPage = {
             priceDisplay = '<span class="font-bold text-primary">' + normalized.priceFormatted + '</span><span class="text-xs text-muted">Disponibil</span>';
         }
 
+        // Date badge - show range for festivals, single date otherwise
+        let dateBadgeHtml;
+        if (normalized.isDateRange && normalized.dateRangeFormatted) {
+            dateBadgeHtml = '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
+                '<span class="block text-xs font-semibold leading-tight">' + AmbiletEventCard.escapeHtml(normalized.dateRangeFormatted) + '</span>' +
+            '</div>';
+        } else {
+            dateBadgeHtml = '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
+                '<span class="block text-xl font-bold leading-none">' + normalized.day + '</span>' +
+                '<span class="block text-[10px] uppercase tracking-wide mt-0.5">' + normalized.month + '</span>' +
+            '</div>';
+        }
+
         return '<a href="/bilete/' + normalized.slug + '" class="overflow-hidden bg-white border event-card rounded-2xl border-border group hover:-translate-y-1 hover:shadow-xl hover:border-primary transition-all">' +
             '<div class="relative h-48 overflow-hidden">' +
                 (normalized.isSoldOut ? '<div class="absolute inset-0 z-10 bg-black/30"></div>' : '') +
                 '<img src="' + (normalized.image || AmbiletEventCard.PLACEHOLDER) + '" alt="' + AmbiletEventCard.escapeHtml(normalized.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105" loading="lazy" onerror="this.src=\'' + AmbiletEventCard.PLACEHOLDER + '\'">' +
-                '<div class="absolute top-3 left-3">' +
-                    '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
-                        '<span class="block text-xl font-bold leading-none">' + normalized.day + '</span>' +
-                        '<span class="block text-[10px] uppercase tracking-wide mt-0.5">' + normalized.month + '</span>' +
-                    '</div>' +
-                '</div>' +
+                '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>' +
                 (statusBadge ? '<div class="absolute top-3 right-3 z-20">' + statusBadge + '</div>' : '') +
             '</div>' +
             '<div class="p-4">' +

@@ -99,6 +99,15 @@ class MarketplaceEventsController extends BaseController
             });
         }
 
+        // Filter by artist (slug or name)
+        if ($request->has('artist')) {
+            $artistSlug = $request->artist;
+            $query->whereHas('artists', function ($q) use ($artistSlug) {
+                $q->where('slug', $artistSlug)
+                    ->orWhere('name', 'like', "%{$artistSlug}%");
+            });
+        }
+
         // Featured only
         if ($request->boolean('featured_only') || $request->boolean('featured')) {
             $query->where('is_homepage_featured', true)
@@ -618,6 +627,9 @@ class MarketplaceEventsController extends BaseController
                 'slug' => $category->slug,
             ] : null,
             'starts_at' => $event->event_date?->format('Y-m-d') . 'T' . ($event->start_time ?? '00:00:00'),
+            'duration_mode' => $event->duration_mode ?? 'single_day',
+            'range_start_date' => $event->range_start_date?->format('Y-m-d'),
+            'range_end_date' => $event->range_end_date?->format('Y-m-d'),
             'venue_name' => $venue?->getTranslation('name', $language),
             'venue_city' => $venue?->city,
             'is_featured' => $event->is_homepage_featured || $event->is_general_featured,

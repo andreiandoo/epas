@@ -42,15 +42,23 @@ const AmbiletEventCard = {
             ? '<span class="absolute px-2 py-1 text-xs font-semibold text-white uppercase rounded-lg top-3 right-3 bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>'
             : '';
 
+        // Date badge - show range for festivals, single date otherwise
+        let dateBadgeHtml;
+        if (event.isDateRange && event.dateRangeFormatted) {
+            dateBadgeHtml = '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
+                '<span class="block text-xs font-semibold leading-tight">' + this.escapeHtml(event.dateRangeFormatted) + '</span>' +
+            '</div>';
+        } else {
+            dateBadgeHtml = '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
+                '<span class="block text-lg font-bold leading-none">' + event.day + '</span>' +
+                '<span class="block text-[10px] uppercase tracking-wide mt-0.5">' + event.month + '</span>' +
+            '</div>';
+        }
+
         return '<a href="' + eventUrl + '" class="overflow-hidden transition-all bg-white border group rounded-2xl border-border hover:-translate-y-1 hover:shadow-xl hover:border-primary ' + linkClass + '">' +
             '<div class="relative h-48 overflow-hidden">' +
                 '<img src="' + (event.image || this.PLACEHOLDER) + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-2xl rounded-tr-2xl" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
-                '<div class="absolute top-3 left-3">' +
-                    '<div class="px-3 py-2 text-center text-white shadow-lg bg-primary rounded-xl">' +
-                        '<span class="block text-lg font-bold leading-none">' + event.day + '</span>' +
-                        '<span class="block text-[10px] uppercase tracking-wide mt-0.5">' + event.month + '</span>' +
-                    '</div>' +
-                '</div>' +
+                '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>' +
                 categoryBadge +
             '</div>' +
             '<div class="px-3 py-2">' +
@@ -109,11 +117,21 @@ const AmbiletEventCard = {
             buttonHtml = showBuyButton ? '<button class="py-2.5 px-5 bg-secondary hover:bg-secondary/90 rounded-lg text-white text-sm font-semibold transition-all">Cumpără bilete</button>' : '';
         }
 
-        return '<a href="' + eventUrl + '" class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all">' +
-            '<div class="flex flex-col items-center justify-center flex-shrink-0 w-24 py-5 text-center bg-gradient-to-br from-primary to-primary-light">' +
+        // Date section - show range for festivals
+        let dateHtml;
+        if (event.isDateRange && event.dateRangeFormatted) {
+            dateHtml = '<div class="flex flex-col items-center justify-center flex-shrink-0 w-28 py-5 text-center bg-gradient-to-br from-primary to-primary-light">' +
+                '<div class="px-2 text-xs font-semibold leading-tight text-white">' + this.escapeHtml(event.dateRangeFormatted) + '</div>' +
+            '</div>';
+        } else {
+            dateHtml = '<div class="flex flex-col items-center justify-center flex-shrink-0 w-24 py-5 text-center bg-gradient-to-br from-primary to-primary-light">' +
                 '<div class="text-3xl font-extrabold leading-none text-white">' + event.day + '</div>' +
                 '<div class="mt-1 text-sm font-semibold uppercase text-white/90">' + event.month + '</div>' +
-            '</div>' +
+            '</div>';
+        }
+
+        return '<a href="' + eventUrl + '" class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all">' +
+            dateHtml +
             '<div class="flex flex-col justify-center flex-1 px-5 py-4">' +
                 (event.categoryName ? '<div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">' + this.escapeHtml(event.categoryName) + '</div>' : '') +
                 '<h3 class="mb-2 text-base font-bold leading-tight text-secondary">' + this.escapeHtml(event.title) + '</h3>' +
