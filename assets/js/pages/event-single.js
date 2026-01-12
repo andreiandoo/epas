@@ -1023,27 +1023,21 @@ const EventPage = {
                     };
                     console.log('[EventPage] eventData for cart:', eventData);
 
-                    // Calculate final price including commission when added_on_top
-                    var finalPrice = tt.price;
-                    var finalOriginalPrice = tt.original_price;
-                    if (commissionMode === 'added_on_top') {
-                        finalPrice = tt.price + (tt.price * commissionRate / 100);
-                        if (tt.original_price) {
-                            finalOriginalPrice = tt.original_price + (tt.original_price * commissionRate / 100);
-                        }
-                    }
+                    // Store BASE price in cart (without commission)
+                    // Commission will be calculated at display time in cart/checkout
+                    var basePrice = tt.price;
+                    var baseOriginalPrice = tt.original_price;
 
                     // Use target_price as original_price if applicable
-                    // (when target_price exists and is greater than the display price)
-                    if (targetPrice && finalPrice < targetPrice) {
-                        finalOriginalPrice = targetPrice;
+                    if (targetPrice && basePrice < targetPrice) {
+                        baseOriginalPrice = targetPrice;
                     }
 
                     var ticketTypeData = {
                         id: tt.id,
                         name: tt.name,
-                        price: finalPrice,
-                        original_price: finalOriginalPrice,
+                        price: basePrice,
+                        original_price: baseOriginalPrice,
                         description: tt.description
                     };
                     AmbiletCart.addItem(self.event.id, eventData, tt.id, ticketTypeData, qty);
