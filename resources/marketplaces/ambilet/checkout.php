@@ -54,17 +54,21 @@ require_once __DIR__ . '/includes/header.php';
                         </h2>
 
                         <div class="grid gap-4 md:grid-cols-2">
-                            <div class="md:col-span-2">
-                                <label class="block mb-2 text-sm font-medium text-secondary">Nume complet *</label>
-                                <input type="text" id="buyer-name" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
+                            <div>
+                                <label class="block mb-2 text-sm font-medium text-secondary">Nume *</label>
+                                <input type="text" id="buyer-last-name" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" placeholder="Ex: Popescu" required>
+                            </div>
+                            <div>
+                                <label class="block mb-2 text-sm font-medium text-secondary">Prenume *</label>
+                                <input type="text" id="buyer-first-name" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" placeholder="Ex: Ion" required>
                             </div>
                             <div>
                                 <label class="block mb-2 text-sm font-medium text-secondary">Email *</label>
-                                <input type="email" id="buyer-email" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
+                                <input type="email" id="buyer-email" autocomplete="off" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
                             </div>
                             <div>
                                 <label class="block mb-2 text-sm font-medium text-secondary">Confirmă email *</label>
-                                <input type="email" id="buyer-email-confirm" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
+                                <input type="email" id="buyer-email-confirm" autocomplete="off" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
                                 <p id="email-mismatch-error" class="hidden mt-1 text-sm text-primary">Adresele de email nu coincid</p>
                             </div>
                             <div class="md:col-span-2">
@@ -394,7 +398,8 @@ const CheckoutPage = {
     prefillBuyerInfo() {
         const user = typeof AmbiletAuth !== 'undefined' ? AmbiletAuth.getUser() : null;
         if (user) {
-            document.getElementById('buyer-name').value = user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim();
+            document.getElementById('buyer-first-name').value = user.first_name || '';
+            document.getElementById('buyer-last-name').value = user.last_name || user.name || '';
             document.getElementById('buyer-email').value = user.email || '';
             document.getElementById('buyer-email-confirm').value = user.email || '';
             document.getElementById('buyer-phone').value = user.phone || '';
@@ -587,12 +592,13 @@ const CheckoutPage = {
     },
 
     validateForm() {
-        const buyerName = document.getElementById('buyer-name').value.trim();
+        const buyerFirstName = document.getElementById('buyer-first-name').value.trim();
+        const buyerLastName = document.getElementById('buyer-last-name').value.trim();
         const buyerEmail = document.getElementById('buyer-email').value.trim();
         const buyerEmailConfirm = document.getElementById('buyer-email-confirm').value.trim();
         const buyerPhone = document.getElementById('buyer-phone').value.trim();
 
-        if (!buyerName || !buyerEmail || !buyerEmailConfirm || !buyerPhone) {
+        if (!buyerFirstName || !buyerLastName || !buyerEmail || !buyerEmailConfirm || !buyerPhone) {
             if (typeof AmbiletNotifications !== 'undefined') {
                 AmbiletNotifications.error('Completează toate câmpurile obligatorii');
             }
@@ -621,7 +627,9 @@ const CheckoutPage = {
     getBeneficiaries() {
         const beneficiaries = [];
         const useDifferentBeneficiaries = document.getElementById('differentBeneficiaries').checked;
-        const buyerName = document.getElementById('buyer-name').value.trim();
+        const buyerFirstName = document.getElementById('buyer-first-name').value.trim();
+        const buyerLastName = document.getElementById('buyer-last-name').value.trim();
+        const buyerName = `${buyerLastName} ${buyerFirstName}`.trim();
         const buyerEmail = document.getElementById('buyer-email').value.trim();
 
         // Count total tickets
@@ -671,7 +679,9 @@ const CheckoutPage = {
         `;
 
         const buyer = {
-            name: document.getElementById('buyer-name').value.trim(),
+            first_name: document.getElementById('buyer-first-name').value.trim(),
+            last_name: document.getElementById('buyer-last-name').value.trim(),
+            name: `${document.getElementById('buyer-last-name').value.trim()} ${document.getElementById('buyer-first-name').value.trim()}`.trim(),
             email: document.getElementById('buyer-email').value.trim(),
             phone: document.getElementById('buyer-phone').value.trim()
         };
