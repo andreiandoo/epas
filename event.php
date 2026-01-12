@@ -331,7 +331,7 @@ require_once __DIR__ . '/includes/head.php';
         <div class="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
         <div class="absolute bottom-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
 
-        <div class="relative px-4 py-12 md:px-8 lg:px-12 md:py-16">
+        <div class="relative px-4 py-12 md:px-8 lg:px-12 md:py-16 max-w-[90%] mx-auto">
             <!-- Section header -->
             <div class="flex flex-col items-center mb-10 text-center">
                 <h2 class="mb-3 text-3xl font-extrabold text-white md:text-4xl">Îți recomandăm</h2>
@@ -339,7 +339,7 @@ require_once __DIR__ . '/includes/head.php';
             </div>
 
             <!-- Premium events grid -->
-            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" id="custom-related-events">
+            <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5" id="custom-related-events">
                 <!-- Premium event cards loaded dynamically -->
             </div>
         </div>
