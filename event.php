@@ -49,6 +49,27 @@ require_once __DIR__ . '/includes/head.php';
 
         .gallery-thumb { transition: all 0.2s ease; }
         .gallery-thumb:hover, .gallery-thumb.active { border-color: #A51C30; opacity: 1; }
+
+        /* Mobile ticket drawer */
+        @media (max-width: 1023px) {
+            .sticky-cart-wrapper { display: none; }
+        }
+        #ticketDrawerBackdrop {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #ticketDrawerBackdrop.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        #ticketDrawer {
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #ticketDrawer.open {
+            transform: translateY(0);
+        }
     </style>
 
 <?php require_once __DIR__ . '/includes/header.php'; ?>
@@ -194,8 +215,8 @@ require_once __DIR__ . '/includes/head.php';
                 </div>
             </div>
 
-            <!-- Right Column - Ticket Selection -->
-            <div class="lg:w-1/3">
+            <!-- Right Column - Ticket Selection (Hidden on mobile, shown in drawer) -->
+            <div class="lg:w-1/3 sticky-cart-wrapper">
                 <div class="sticky-cart">
                     <div class="bg-white border rounded-3xl border-border">
                         <div class="p-6 border-b border-border">
