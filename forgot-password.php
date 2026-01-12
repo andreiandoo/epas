@@ -211,6 +211,3 @@ const ForgotPage = {
 SCRIPTS;
 
 require_once __DIR__ . '/includes/scripts.php';
-?>
-</body>
-</html>

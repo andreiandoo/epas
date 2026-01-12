@@ -187,6 +187,3 @@ $scriptsExtra = '<script src="' . asset('assets/js/pages/genre-page.js') . '"></
 <script>document.addEventListener(\'DOMContentLoaded\', () => GenrePage.init(' . $genreSlugJS . '));</script>';
 
 require_once __DIR__ . '/includes/scripts.php';
-?>
-</body>
-</html>

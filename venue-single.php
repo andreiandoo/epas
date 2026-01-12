@@ -318,6 +318,3 @@ $scriptsExtra = '<script src="' . asset('assets/js/pages/venue-single.js') . '">
 <script>document.addEventListener(\'DOMContentLoaded\', () => VenuePage.init());</script>';
 
 include __DIR__ . '/includes/scripts.php';
-?>
-</body>
-</html>

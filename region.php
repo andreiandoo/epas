@@ -596,6 +596,3 @@ document.addEventListener('DOMContentLoaded', () => RegionPage.init());
 $scriptsExtra = ob_get_clean();
 
 require_once __DIR__ . '/includes/scripts.php';
-?>
-</body>
-</html>
