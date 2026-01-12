@@ -301,6 +301,144 @@ require_once __DIR__ . '/includes/head.php';
         </section>
     </main>
 
+    <!-- Mobile Fixed Bottom Button (shows on mobile only) -->
+    <div id="mobileTicketBtn" class="fixed bottom-0 left-0 right-0 z-40 p-4 bg-white border-t lg:hidden border-border safe-area-bottom" style="display: none;">
+        <button onclick="openTicketDrawer()" class="flex items-center justify-center w-full gap-3 py-4 text-lg font-bold text-white btn-primary rounded-xl">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+            <span>Cumpără bilete</span>
+            <span id="mobileMinPrice" class="px-2 py-1 text-sm font-semibold rounded-lg bg-white/20">de la -- lei</span>
+        </button>
+    </div>
+
+    <!-- Mobile Ticket Drawer -->
+    <div id="ticketDrawerBackdrop" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden" onclick="closeTicketDrawer()"></div>
+    <div id="ticketDrawer" class="fixed bottom-0 left-0 right-0 z-50 overflow-hidden bg-white lg:hidden rounded-t-3xl max-h-[85vh]">
+        <!-- Drawer Header -->
+        <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-border">
+            <div>
+                <h2 class="text-lg font-bold text-secondary">Selectează bilete</h2>
+                <p class="text-sm text-muted">Alege tipul și cantitatea</p>
+            </div>
+            <button onclick="closeTicketDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors rounded-full bg-surface hover:bg-gray-200">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <!-- Drawer Content (will be populated by JS) -->
+        <div id="drawerTicketTypes" class="p-4 space-y-2 overflow-y-auto max-h-[50vh]"></div>
+        <!-- Drawer Footer with summary -->
+        <div id="drawerCartSummary" class="p-4 border-t border-border bg-surface/50" style="display: none;">
+            <div class="flex items-center justify-between mb-3">
+                <span class="font-medium text-secondary">Total:</span>
+                <span id="drawerTotalPrice" class="text-xl font-bold text-primary">0 lei</span>
+            </div>
+            <button onclick="EventPage.addToCart(); closeTicketDrawer();" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                Adaugă în coș
+            </button>
+        </div>
+        <div id="drawerEmptyCart" class="p-4 text-center border-t border-border">
+            <p class="text-sm text-muted">Selectează cel puțin un bilet pentru a continua</p>
+        </div>
+    </div>
+
+    <script>
+    // Mobile ticket drawer functions
+    function openTicketDrawer() {
+        document.getElementById('ticketDrawerBackdrop').classList.add('open');
+        document.getElementById('ticketDrawer').classList.add('open');
+        document.body.style.overflow = 'hidden';
+        syncDrawerContent();
+    }
+
+    function closeTicketDrawer() {
+        document.getElementById('ticketDrawerBackdrop').classList.remove('open');
+        document.getElementById('ticketDrawer').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    // Sync drawer content with main ticket selection
+    function syncDrawerContent() {
+        const mainContent = document.getElementById('ticket-types');
+        const drawerContent = document.getElementById('drawerTicketTypes');
+        if (mainContent && drawerContent) {
+            // Clone the ticket cards for the drawer
+            drawerContent.innerHTML = mainContent.innerHTML;
+            // Update onclick handlers to work in drawer context
+            drawerContent.querySelectorAll('[onclick*="EventPage.updateQuantity"]').forEach(btn => {
+                const originalOnclick = btn.getAttribute('onclick');
+                btn.setAttribute('onclick', originalOnclick + '; syncDrawerSummary();');
+            });
+        }
+        syncDrawerSummary();
+    }
+
+    function syncDrawerSummary() {
+        setTimeout(() => {
+            const mainSummary = document.getElementById('cartSummary');
+            const mainEmpty = document.getElementById('emptyCart');
+            const drawerSummary = document.getElementById('drawerCartSummary');
+            const drawerEmpty = document.getElementById('drawerEmptyCart');
+            const mainTotal = document.getElementById('totalPrice');
+            const drawerTotal = document.getElementById('drawerTotalPrice');
+
+            if (mainSummary && !mainSummary.classList.contains('hidden')) {
+                drawerSummary.style.display = 'block';
+                drawerEmpty.style.display = 'none';
+                if (mainTotal && drawerTotal) {
+                    drawerTotal.textContent = mainTotal.textContent;
+                }
+            } else {
+                drawerSummary.style.display = 'none';
+                drawerEmpty.style.display = 'block';
+            }
+
+            // Also sync qty values from main to drawer
+            document.querySelectorAll('#ticket-types [id^="qty-"]').forEach(qtyEl => {
+                const drawerQty = document.querySelector('#drawerTicketTypes [id="' + qtyEl.id + '"]');
+                if (drawerQty) {
+                    drawerQty.textContent = qtyEl.textContent;
+                }
+            });
+
+            // Sync selected state
+            document.querySelectorAll('#ticket-types .ticket-card').forEach(card => {
+                const ticketId = card.dataset.ticket;
+                const drawerCard = document.querySelector('#drawerTicketTypes [data-ticket="' + ticketId + '"]');
+                if (drawerCard) {
+                    if (card.classList.contains('selected')) {
+                        drawerCard.classList.add('selected');
+                    } else {
+                        drawerCard.classList.remove('selected');
+                    }
+                }
+            });
+        }, 50);
+    }
+
+    // Show mobile button after event loads and update min price
+    document.addEventListener('DOMContentLoaded', () => {
+        // Poll for event load
+        const checkLoaded = setInterval(() => {
+            if (typeof EventPage !== 'undefined' && EventPage.event && EventPage.ticketTypes?.length) {
+                clearInterval(checkLoaded);
+                const mobileBtn = document.getElementById('mobileTicketBtn');
+                const minPriceEl = document.getElementById('mobileMinPrice');
+                if (mobileBtn) {
+                    mobileBtn.style.display = 'block';
+                    // Find minimum price
+                    const prices = EventPage.ticketTypes
+                        .filter(t => !t.is_sold_out && t.available > 0)
+                        .map(t => t.price);
+                    if (prices.length && minPriceEl) {
+                        const minPrice = Math.min(...prices);
+                        minPriceEl.textContent = 'de la ' + minPrice.toFixed(0) + ' lei';
+                    }
+                }
+            }
+        }, 100);
+    });
+    </script>
+
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
 <?php

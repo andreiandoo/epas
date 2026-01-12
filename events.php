@@ -69,22 +69,40 @@ require_once __DIR__ . '/includes/header.php';
                 Găsește și cumpără bilete pentru cele mai tari concerte, festivaluri, spectacole de teatru și multe altele.
             </p>
         </div>
-        <div id="categoryFilters" class="flex items-center justify-center gap-3 overflow-x-auto scrollbar-hide snap-x pb-2 mobile:px-4">
-            <button onclick="EventsPage.setCategory('')" data-category="" class="category-btn flex-shrink-0 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer <?= !$filterCategory ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>">
+        <div id="categoryFilters" class="flex items-center gap-3 pb-2 overflow-x-auto lg:justify-center scrollbar-hide snap-x snap-mandatory mobile:pl-4 mobile:-mr-4">
+            <button onclick="EventsPage.setCategory('')" data-category="" class="category-btn flex-shrink-0 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer snap-start <?= !$filterCategory ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>">
                 Toate
             </button>
             <?php foreach ($eventCategories as $category): ?>
-            <button onclick="EventsPage.setCategory('<?= addslashes($category['slug']) ?>')" data-category="<?= htmlspecialchars($category['slug']) ?>" class="category-btn flex-shrink-0 flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer <?= $filterCategory === $category['slug'] ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>">
+            <button onclick="EventsPage.setCategory('<?= addslashes($category['slug']) ?>')" data-category="<?= htmlspecialchars($category['slug']) ?>" class="category-btn flex-shrink-0 flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer snap-start <?= $filterCategory === $category['slug'] ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>">
                 <span class="text-base"><?= $category['icon_emoji'] ?? '🎫' ?></span>
                 <?= htmlspecialchars($category['name']) ?>
             </button>
             <?php endforeach; ?>
+            <div class="flex-shrink-0 w-4 lg:hidden"></div><!-- Spacer for last item -->
         </div>
     </div>
 </section>
 
-<!-- Filters Bar -->
-<section class="sticky top-[72px] z-20 py-4 bg-white border-b border-gray-200 shadow-sm">
+<!-- Mobile Filters Button -->
+<section class="sticky top-[72px] z-20 py-3 bg-white border-b border-gray-200 shadow-sm lg:hidden">
+    <div class="flex items-center justify-between gap-3 px-4">
+        <button onclick="openFiltersDrawer()" class="flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+            Filtre
+            <span id="mobileFilterCount" class="hidden px-2 py-0.5 text-xs font-bold text-white rounded-full bg-primary">0</span>
+        </button>
+        <select id="sortFilterMobile" class="px-4 py-2.5 pr-10 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="EventsPage.applyFilters()">
+            <option value="date" <?= $filterSort === 'date' ? 'selected' : '' ?>>Data</option>
+            <option value="popular" <?= $filterSort === 'popular' ? 'selected' : '' ?>>Popular</option>
+            <option value="price_asc" <?= $filterSort === 'price_asc' ? 'selected' : '' ?>>Preț ↑</option>
+            <option value="price_desc" <?= $filterSort === 'price_desc' ? 'selected' : '' ?>>Preț ↓</option>
+        </select>
+    </div>
+</section>
+
+<!-- Desktop Filters Bar -->
+<section class="sticky top-[72px] z-20 py-4 bg-white border-b border-gray-200 shadow-sm hidden lg:block">
     <div class="px-4 mx-auto max-w-7xl">
         <div class="flex flex-wrap items-center gap-3">
             <!-- City Filter -->
@@ -146,6 +164,154 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 </section>
+
+<!-- Mobile Filters Drawer -->
+<div id="filtersDrawerBackdrop" class="fixed inset-0 z-50 transition-opacity duration-300 bg-black/50 backdrop-blur-sm lg:hidden" style="opacity: 0; visibility: hidden;" onclick="closeFiltersDrawer()"></div>
+<div id="filtersDrawer" class="fixed bottom-0 left-0 right-0 z-50 overflow-hidden transition-transform duration-300 bg-white lg:hidden rounded-t-3xl max-h-[85vh]" style="transform: translateY(100%);">
+    <!-- Drawer Header -->
+    <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-gray-200">
+        <h2 class="text-lg font-bold text-gray-900">Filtre</h2>
+        <button onclick="closeFiltersDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors rounded-full bg-gray-100 hover:bg-gray-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+    </div>
+    <!-- Drawer Content -->
+    <div class="p-4 space-y-4 overflow-y-auto max-h-[60vh]">
+        <!-- City Filter -->
+        <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700">Oraș</label>
+            <select id="cityFilterMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="syncFilters('city')">
+                <option value="">Toate orașele</option>
+                <?php foreach ($featuredCities as $city): ?>
+                <option value="<?= htmlspecialchars($city['slug']) ?>" <?= $filterCity === $city['slug'] ? 'selected' : '' ?>><?= htmlspecialchars($city['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <!-- Genre Filter -->
+        <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700">Gen muzical</label>
+            <select id="genreFilterMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="syncFilters('genre')">
+                <option value="">Toate genurile</option>
+                <?php foreach ($eventGenres as $genre): ?>
+                <option value="<?= htmlspecialchars($genre['slug']) ?>" <?= $filterGenre === $genre['slug'] ? 'selected' : '' ?>><?= htmlspecialchars($genre['name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <!-- Date Filter -->
+        <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700">Dată</label>
+            <select id="dateFilterMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="syncFilters('date')">
+                <option value="" <?= !$filterDate ? 'selected' : '' ?>>Oricând</option>
+                <option value="today" <?= $filterDate === 'today' ? 'selected' : '' ?>>Astăzi</option>
+                <option value="tomorrow" <?= $filterDate === 'tomorrow' ? 'selected' : '' ?>>Mâine</option>
+                <option value="weekend" <?= $filterDate === 'weekend' ? 'selected' : '' ?>>Weekend</option>
+                <option value="week" <?= $filterDate === 'week' ? 'selected' : '' ?>>Săptămâna asta</option>
+                <option value="month" <?= $filterDate === 'month' ? 'selected' : '' ?>>Luna asta</option>
+                <option value="next-month" <?= $filterDate === 'next-month' ? 'selected' : '' ?>>Luna viitoare</option>
+            </select>
+        </div>
+
+        <!-- Price Filter -->
+        <div>
+            <label class="block mb-2 text-sm font-medium text-gray-700">Preț</label>
+            <select id="priceFilterMobile" class="w-full px-4 py-3 text-sm font-medium bg-gray-50 border border-gray-200 rounded-xl" onchange="syncFilters('price')">
+                <option value="" <?= !$filterPrice ? 'selected' : '' ?>>Orice preț</option>
+                <option value="free" <?= $filterPrice === 'free' ? 'selected' : '' ?>>Gratuit</option>
+                <option value="0-50" <?= $filterPrice === '0-50' ? 'selected' : '' ?>>Sub 50 lei</option>
+                <option value="50-100" <?= $filterPrice === '50-100' ? 'selected' : '' ?>>50 - 100 lei</option>
+                <option value="100-200" <?= $filterPrice === '100-200' ? 'selected' : '' ?>>100 - 200 lei</option>
+                <option value="200-500" <?= $filterPrice === '200-500' ? 'selected' : '' ?>>200 - 500 lei</option>
+                <option value="500+" <?= $filterPrice === '500+' ? 'selected' : '' ?>>Peste 500 lei</option>
+            </select>
+        </div>
+    </div>
+    <!-- Drawer Footer -->
+    <div class="flex gap-3 p-4 border-t border-gray-200 bg-gray-50">
+        <button onclick="EventsPage.clearFilters(); closeFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-medium text-gray-700 transition-colors bg-white border border-gray-200 rounded-xl hover:bg-gray-50">
+            Șterge filtre
+        </button>
+        <button onclick="EventsPage.applyFilters(); closeFiltersDrawer();" class="flex-1 px-4 py-3 text-sm font-bold text-white transition-colors rounded-xl bg-primary hover:bg-primary-dark">
+            Aplică filtre
+        </button>
+    </div>
+</div>
+
+<script>
+// Mobile filters drawer functions
+function openFiltersDrawer() {
+    const backdrop = document.getElementById('filtersDrawerBackdrop');
+    const drawer = document.getElementById('filtersDrawer');
+    backdrop.style.opacity = '1';
+    backdrop.style.visibility = 'visible';
+    drawer.style.transform = 'translateY(0)';
+    document.body.style.overflow = 'hidden';
+}
+
+function closeFiltersDrawer() {
+    const backdrop = document.getElementById('filtersDrawerBackdrop');
+    const drawer = document.getElementById('filtersDrawer');
+    backdrop.style.opacity = '0';
+    backdrop.style.visibility = 'hidden';
+    drawer.style.transform = 'translateY(100%)';
+    document.body.style.overflow = '';
+}
+
+// Sync filters between mobile and desktop
+function syncFilters(type) {
+    const mappings = {
+        city: ['cityFilter', 'cityFilterMobile'],
+        genre: ['genreFilter', 'genreFilterMobile'],
+        date: ['dateFilter', 'dateFilterMobile'],
+        price: ['priceFilter', 'priceFilterMobile'],
+        sort: ['sortFilter', 'sortFilterMobile']
+    };
+
+    if (mappings[type]) {
+        const [desktop, mobile] = mappings[type];
+        const desktopEl = document.getElementById(desktop);
+        const mobileEl = document.getElementById(mobile);
+        if (desktopEl && mobileEl) {
+            // Sync from mobile to desktop
+            desktopEl.value = mobileEl.value;
+        }
+    }
+    updateMobileFilterCount();
+}
+
+// Update mobile filter count badge
+function updateMobileFilterCount() {
+    let count = 0;
+    const filters = ['cityFilterMobile', 'genreFilterMobile', 'dateFilterMobile', 'priceFilterMobile'];
+    filters.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.value) count++;
+    });
+
+    const badge = document.getElementById('mobileFilterCount');
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    }
+}
+
+// Sync sort filter on mobile change
+document.addEventListener('DOMContentLoaded', () => {
+    const sortMobile = document.getElementById('sortFilterMobile');
+    const sortDesktop = document.getElementById('sortFilter');
+    if (sortMobile && sortDesktop) {
+        sortMobile.addEventListener('change', () => {
+            sortDesktop.value = sortMobile.value;
+        });
+    }
+    updateMobileFilterCount();
+});
+</script>
 
 <!-- Results Info -->
 <section class="py-4 bg-gray-50">
