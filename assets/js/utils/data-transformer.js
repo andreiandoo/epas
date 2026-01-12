@@ -50,15 +50,8 @@ const AmbiletDataTransformer = {
             venueCity = apiEvent.city;
         }
 
-        // Extract price - handle variations
+        // Extract price - always show base ticket price (without commission on top)
         let minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
-
-        // Apply commission if mode is 'added_on_top'
-        const commissionMode = apiEvent.commission_mode || 'included';
-        const commissionRate = parseFloat(apiEvent.commission_rate) || 0;
-        if (commissionMode === 'added_on_top' && commissionRate > 0 && minPrice > 0) {
-            minPrice = parseFloat((minPrice + (minPrice * commissionRate / 100)).toFixed(2));
-        }
 
         // Extract date range for multi-day events (festivals)
         const durationMode = apiEvent.duration_mode || 'single_day';

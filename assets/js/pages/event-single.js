@@ -766,11 +766,8 @@ const EventPage = {
             self.quantities[tt.id] = 0;
             const isSoldOut = tt.is_sold_out || tt.available <= 0;
 
-            // Calculate display price based on commission mode
+            // Always show base ticket price (without commission on top)
             var displayPrice = tt.price;
-            if (commissionMode === 'added_on_top') {
-                displayPrice = tt.price + (tt.price * commissionRate / 100);
-            }
 
             // Determine discount: use target_price if available and greater than displayPrice
             // Otherwise fall back to original_price from ticket type
@@ -787,11 +784,9 @@ const EventPage = {
                 crossedOutPrice = targetPrice;
                 discountPercent = Math.round((1 - displayPrice / targetPrice) * 100);
             } else if (hasTicketDiscount) {
-                // Fall back to original_price from ticket type
+                // Fall back to original_price from ticket type (base price)
                 hasDiscount = true;
-                crossedOutPrice = commissionMode === 'added_on_top'
-                    ? tt.original_price + (tt.original_price * commissionRate / 100)
-                    : tt.original_price;
+                crossedOutPrice = tt.original_price;
                 discountPercent = Math.round((1 - displayPrice / crossedOutPrice) * 100);
             }
 
@@ -827,16 +822,18 @@ const EventPage = {
                 commissionAmount = tt.price * (commissionRate / 100);
             }
 
-            // Tooltip HTML
+            // Tooltip HTML - show commission as "Taxe procesare"
             var tooltipHtml = '<p class="mb-2 text-sm font-semibold">Detalii pret bilet:</p><div class="space-y-1 text-xs">';
             if (commissionMode === 'included') {
                 tooltipHtml += '<div class="flex justify-between"><span class="text-white/70">Pret bilet:</span><span>' + basePrice.toFixed(2) + ' lei</span></div>' +
-                    '<div class="flex justify-between"><span class="text-white/70">Comision (' + commissionRate + '%):</span><span>' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                    '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionRate + '%):</span><span>' + commissionAmount.toFixed(2) + ' lei</span></div>' +
                     '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total:</span><span class="font-semibold">' + tt.price.toFixed(2) + ' lei</span></div>';
             } else {
+                // Commission added on top - show base price first, then processing fees
+                var totalWithCommission = tt.price + commissionAmount;
                 tooltipHtml += '<div class="flex justify-between"><span class="text-white/70">Pret bilet:</span><span>' + tt.price.toFixed(2) + ' lei</span></div>' +
-                    '<div class="flex justify-between"><span class="text-white/70">Comision (' + commissionRate + '%):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
-                    '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total:</span><span class="font-semibold">' + displayPrice.toFixed(2) + ' lei</span></div>';
+                    '<div class="flex justify-between"><span class="text-white/70">Taxe procesare (' + commissionRate + '%):</span><span>+' + commissionAmount.toFixed(2) + ' lei</span></div>' +
+                    '<div class="flex justify-between pt-1 mt-1 border-t border-white/20"><span class="font-semibold">Total la plata:</span><span class="font-semibold">' + totalWithCommission.toFixed(2) + ' lei</span></div>';
             }
             tooltipHtml += '</div>';
 
@@ -906,41 +903,42 @@ const EventPage = {
      */
     updateCart() {
         const totalTickets = Object.values(this.quantities).reduce(function(a, b) { return a + b; }, 0);
-        let subtotal = 0;
+        let baseSubtotal = 0;  // Subtotal without commission
+        let totalCommission = 0;  // Total commission amount
         var commissionRate = this.event.commission_rate || 5;
         var commissionMode = this.event.commission_mode || 'included';
         var self = this;
+        var ticketBreakdown = [];  // For showing individual ticket lines
 
         for (var ticketId in this.quantities) {
             var qty = this.quantities[ticketId];
+            if (qty <= 0) continue;
+
             var tt = this.ticketTypes.find(function(t) { return String(t.id) === String(ticketId); });
             if (tt) {
-                var ticketPrice = tt.price;
+                var ticketBasePrice = tt.price;
+                var ticketCommission = 0;
+
                 if (commissionMode === 'added_on_top') {
-                    ticketPrice = tt.price + (tt.price * commissionRate / 100);
+                    ticketCommission = ticketBasePrice * commissionRate / 100;
                 }
-                subtotal += qty * ticketPrice;
+
+                baseSubtotal += qty * ticketBasePrice;
+                totalCommission += qty * ticketCommission;
+
+                ticketBreakdown.push({
+                    name: tt.name,
+                    qty: qty,
+                    basePrice: ticketBasePrice,
+                    lineTotal: qty * ticketBasePrice
+                });
             }
         }
 
-        // Calculate taxes
-        var totalTaxes = 0;
-        var taxBreakdown = [];
-        var taxes = this.event.taxes || [];
-
-        taxes.forEach(function(tax) {
-            var taxAmount = 0;
-            if (tax.value_type === 'percent') {
-                taxAmount = subtotal * (tax.value / 100);
-            } else if (tax.value_type === 'fixed') {
-                taxAmount = tax.value;
-            }
-            totalTaxes += taxAmount;
-            taxBreakdown.push({ name: tax.name, amount: taxAmount, value: tax.value, value_type: tax.value_type });
-        });
-
-        const total = subtotal + totalTaxes;
-        const points = Math.floor(subtotal / 10);
+        // Calculate final total (subtotal = base price + commission if on top)
+        const subtotalWithCommission = baseSubtotal + totalCommission;
+        const total = subtotalWithCommission;  // No other taxes
+        const points = Math.floor(total / 10);
 
         this.updateHeaderCart();
 
@@ -951,24 +949,37 @@ const EventPage = {
             cartSummary.classList.remove('hidden');
             emptyCart.classList.add('hidden');
 
-            document.getElementById(this.elements.subtotal).textContent = subtotal.toFixed(2) + ' lei';
+            // Show total with commission as Subtotal
+            document.getElementById(this.elements.subtotal).textContent = subtotalWithCommission.toFixed(2) + ' lei';
 
-            // Render taxes
+            // Render breakdown in taxes container
             var taxesContainer = document.getElementById(this.elements.taxesContainer);
             if (taxesContainer) {
-                var taxesHtml = '';
-                taxBreakdown.forEach(function(tax) {
-                    var rateLabel = tax.value_type === 'percent' ? '(' + tax.value + '%)' : '';
-                    taxesHtml += '<div class="flex justify-between text-sm"><span class="text-muted">' + tax.name + ' ' + rateLabel + ':</span><span class="font-medium">' + tax.amount.toFixed(2) + ' lei</span></div>';
+                var breakdownHtml = '';
+
+                // Show each ticket type with base price
+                ticketBreakdown.forEach(function(item) {
+                    breakdownHtml += '<div class="flex justify-between text-sm">' +
+                        '<span class="text-muted">' + item.qty + 'x ' + item.name + '</span>' +
+                        '<span class="font-medium">' + item.lineTotal.toFixed(2) + ' lei</span>' +
+                    '</div>';
                 });
-                taxesContainer.innerHTML = taxesHtml;
+
+                // Show commission as "Taxe procesare" only if on top
+                if (commissionMode === 'added_on_top' && totalCommission > 0) {
+                    breakdownHtml += '<div class="flex justify-between text-sm pt-2 mt-2 border-t border-border">' +
+                        '<span class="text-muted">Taxe procesare (' + commissionRate + '%)</span>' +
+                        '<span class="font-medium">' + totalCommission.toFixed(2) + ' lei</span>' +
+                    '</div>';
+                }
+
+                taxesContainer.innerHTML = breakdownHtml;
             }
 
             document.getElementById(this.elements.totalPrice).textContent = total.toFixed(2) + ' lei';
 
             const pointsEl = document.getElementById(this.elements.pointsEarned);
             pointsEl.innerHTML = points + ' puncte';
-            //pointsEl.textContent = points;
             pointsEl.classList.remove('points-counter');
             void pointsEl.offsetWidth;
             pointsEl.classList.add('points-counter');
@@ -1055,11 +1066,17 @@ const EventPage = {
     },
 
     /**
-     * Load related events
+     * Load related events from the same category
      */
     async loadRelatedEvents() {
         try {
-            const response = await AmbiletAPI.get('/events', { limit: 8 });
+            // Build params - filter by category if available
+            const params = new URLSearchParams({ limit: 8 });
+            if (this.event.category_slug) {
+                params.append('category', this.event.category_slug);
+            }
+
+            const response = await AmbiletAPI.get('/events?' + params.toString());
             if (response.success && response.data?.length) {
                 const currentId = this.event.id;
                 const currentSlug = this.event.slug;
