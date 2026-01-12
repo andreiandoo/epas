@@ -115,6 +115,9 @@ const EventsPage = {
                 this.renderEvents();
                 this.renderPagination();
             } else {
+                // Update results count to 0 when no events found
+                const resultsEl = document.getElementById(this.elements.resultsCount);
+                if (resultsEl) resultsEl.textContent = '0';
                 this.showEmpty();
             }
         } catch (error) {
