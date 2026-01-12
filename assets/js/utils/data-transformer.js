@@ -47,11 +47,23 @@ const AmbiletDataTransformer = {
         // Extract price - handle variations
         let minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
 
+        // Debug: log commission data received from API
+        console.log('[DataTransformer] Event:', title, {
+            price_from: apiEvent.price_from,
+            min_price: apiEvent.min_price,
+            price: apiEvent.price,
+            minPrice_extracted: minPrice,
+            commission_mode: apiEvent.commission_mode,
+            commission_rate: apiEvent.commission_rate
+        });
+
         // Apply commission if mode is 'added_on_top'
         const commissionMode = apiEvent.commission_mode || 'included';
-        const commissionRate = apiEvent.commission_rate || 0;
+        const commissionRate = parseFloat(apiEvent.commission_rate) || 0;
         if (commissionMode === 'added_on_top' && commissionRate > 0 && minPrice > 0) {
-            minPrice = minPrice + (minPrice * commissionRate / 100);
+            const oldPrice = minPrice;
+            minPrice = parseFloat((minPrice + (minPrice * commissionRate / 100)).toFixed(2));
+            console.log('[DataTransformer] Commission applied:', oldPrice, '+', commissionRate + '%', '=', minPrice);
         }
 
         // Extract category
