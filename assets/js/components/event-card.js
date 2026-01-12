@@ -11,7 +11,7 @@
 
 const AmbiletEventCard = {
     // Default placeholder image
-    PLACEHOLDER: '/assets/images/placeholder-event.jpg',
+    PLACEHOLDER: '/assets/images/default-event.png',
 
     // Romanian month abbreviations
     MONTHS: ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],

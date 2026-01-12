@@ -126,11 +126,11 @@ const GenrePage = {
      */
     renderArtistCard(artist) {
         const name = AmbiletEventCard.escapeHtml(artist.name || 'Artist');
-        const image = artist.image || artist.portrait || '/assets/images/placeholder-artist.jpg';
+        const image = artist.image || artist.portrait || '/assets/images/default-artist.png';
         const eventsCount = artist.events_count || 0;
 
         return '<a href="/artist/' + (artist.slug || '') + '" class="flex flex-col items-center flex-shrink-0 gap-3 p-4 artist-card bg-surface rounded-2xl hover:bg-primary/5">' +
-            '<img src="' + image + '" alt="' + name + '" class="object-cover w-20 h-20 rounded-full ring-4 ring-primary/20" loading="lazy" onerror="this.src=\'/assets/images/placeholder-artist.jpg\'">' +
+            '<img src="' + image + '" alt="' + name + '" class="object-cover w-20 h-20 rounded-full ring-4 ring-primary/20" loading="lazy" onerror="this.src=\'/assets/images/default-artist.png\'">' +
             '<span class="text-sm font-semibold text-secondary">' + name + '</span>' +
             '<span class="text-xs text-muted">' + eventsCount + ' evenimente</span>' +
         '</a>';

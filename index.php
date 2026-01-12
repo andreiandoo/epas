@@ -382,7 +382,7 @@ function renderCities(cities) {
 
     container.innerHTML = cities.map(city => `
         <a href="/orase/${city.slug}" class="relative overflow-hidden city-card group h-36 md:h-44 rounded-2xl">
-            <img src="${city.image || '/assets/images/placeholder-city.jpg'}" alt="${city.name}" class="absolute inset-0 object-cover w-full h-full city-image" loading="lazy">
+            <img src="${city.image || '/assets/images/default-city.png'}" alt="${city.name}" class="absolute inset-0 object-cover w-full h-full city-image" loading="lazy">
             <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
             <div class="absolute bottom-3 left-3 right-3">
                 <h3 class="text-base font-bold text-white md:text-lg">${city.name}</h3>

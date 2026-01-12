@@ -285,6 +285,17 @@ require_once __DIR__ . '/includes/head.php';
             </div>
         </div>
 
+        <!-- Custom Recommended Events (Îți recomandăm) -->
+        <section class="mt-16 mobile:px-4" id="custom-related-section" style="display:none;">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-secondary">Îți recomandăm</h2>
+                    <p class="mt-1 text-muted">Evenimente selectate special pentru tine</p>
+                </div>
+            </div>
+            <div class="grid gap-5 grid-cols-2 lg:grid-cols-4" id="custom-related-events"></div>
+        </section>
+
         <!-- Related Events -->
         <section class="mt-16 mobile:px-4 mobile:mb-8" id="related-events-section" style="display:none;">
             <div class="flex items-center justify-between mb-8">

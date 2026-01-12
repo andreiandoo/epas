@@ -52,6 +52,8 @@ const EventPage = {
         totalPrice: 'totalPrice',
         pointsEarned: 'pointsEarned',
         checkoutBtn: 'checkoutBtn',
+        customRelatedSection: 'custom-related-section',
+        customRelatedEvents: 'custom-related-events',
         relatedEventsSection: 'related-events-section',
         relatedCategoryText: 'related-category-text',
         seeAllLink: 'see-all-link',
@@ -437,7 +439,11 @@ const EventPage = {
             target_price: eventData.target_price || null,
             commission_rate: apiData.commission_rate || 5,
             commission_mode: apiData.commission_mode || 'included',
-            taxes: apiData.taxes || []
+            taxes: apiData.taxes || [],
+            // Custom related events
+            has_custom_related: eventData.has_custom_related || false,
+            custom_related_event_ids: eventData.custom_related_event_ids || [],
+            custom_related_events: apiData.custom_related_events || []
         };
     },
 
@@ -473,7 +479,7 @@ const EventPage = {
         document.getElementById(this.elements.eventContent).classList.remove('hidden');
 
         // Main image
-        const mainImg = e.image || e.images?.[0] || '/assets/images/placeholder-event.jpg';
+        const mainImg = e.image || e.images?.[0] || '/assets/images/default-event.png';
         document.getElementById(this.elements.mainImage).src = mainImg;
         document.getElementById(this.elements.mainImage).alt = e.title;
 
@@ -663,7 +669,7 @@ const EventPage = {
         if (!artist) return;
         document.getElementById(this.elements.artistSection).style.display = 'block';
 
-        var artistImage = artist.image_url || artist.image || '/assets/images/placeholder-artist.jpg';
+        var artistImage = artist.image_url || artist.image || '/assets/images/default-artist.png';
         var artistLink = artist.slug ? '/artist/' + artist.slug : '#';
         var artistDescription = artist.description || artist.bio || '';
 
@@ -708,7 +714,7 @@ const EventPage = {
 
         var html = '<div class="flex flex-col gap-6 md:flex-row">' +
             '<div class="md:w-1/3">' +
-                '<img src="' + (venue.image || '/assets/images/placeholder-venue.jpg') + '" alt="' + venue.name + '" class="object-cover w-full h-64 mb-4 rounded-2xl">' +
+                '<img src="' + (venue.image || '/assets/images/default-venue.png') + '" alt="' + venue.name + '" class="object-cover w-full h-64 mb-4 rounded-2xl">' +
             '</div>' +
             '<div class="md:w-2/3">' +
                 '<h3 class="mb-2 text-xl font-bold text-secondary">' + venue.name + '</h3>' +
@@ -1064,7 +1070,12 @@ const EventPage = {
      */
     async loadRelatedEvents() {
         try {
-            // Build params - filter by category if available
+            // First, check for custom related events
+            if (this.event.has_custom_related && this.event.custom_related_events?.length) {
+                this.renderCustomRelatedEvents(this.event.custom_related_events);
+            }
+
+            // Then load regular related events from the same category
             const params = new URLSearchParams({ limit: 8 });
             if (this.event.category_slug) {
                 params.append('category', this.event.category_slug);
@@ -1074,8 +1085,10 @@ const EventPage = {
             if (response.success && response.data?.length) {
                 const currentId = this.event.id;
                 const currentSlug = this.event.slug;
+                // Also exclude custom related events from regular related
+                const customIds = (this.event.custom_related_event_ids || []).map(id => parseInt(id));
                 const filtered = response.data.filter(function(e) {
-                    return e.id !== currentId && e.slug !== currentSlug;
+                    return e.id !== currentId && e.slug !== currentSlug && !customIds.includes(e.id);
                 }).slice(0, 4);
 
                 if (filtered.length > 0) {
@@ -1085,6 +1098,28 @@ const EventPage = {
         } catch (e) {
             console.error('Failed to load related events:', e);
         }
+    },
+
+    /**
+     * Render custom related events (Îți recomandăm section)
+     */
+    renderCustomRelatedEvents(events) {
+        if (!events || events.length === 0) return;
+
+        const section = document.getElementById(this.elements.customRelatedSection);
+        const container = document.getElementById(this.elements.customRelatedEvents);
+
+        if (!section || !container) return;
+
+        section.style.display = 'block';
+
+        // Use AmbiletEventCard component for consistent rendering
+        container.innerHTML = AmbiletEventCard.renderMany(events, {
+            showCategory: true,
+            showPrice: true,
+            showVenue: true,
+            urlPrefix: '/bilete/'
+        });
     },
 
     /**

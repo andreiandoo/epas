@@ -177,7 +177,7 @@ const ArtistsPage = {
         const genre = artist.genres?.[0]?.name || 'Artist';
         const followers = this.formatFollowers(this.calculateTotalFollowers(artist));
         const eventsCount = artist.upcoming_events_count || 0;
-        const artistImage = artist.portrait || artist.logo || artist.image || '/assets/images/placeholder-artist.jpg';
+        const artistImage = artist.portrait || artist.logo || artist.image || '/assets/images/default-artist.png';
 
         return '<a href="/artist/' + this.escapeHtml(artist.slug) + '" class="relative overflow-hidden group rounded-2xl aspect-[3/4]">' +
             '<img src="' + this.escapeHtml(artistImage) + '" alt="' + this.escapeHtml(artist.name) + '" ' +
@@ -230,7 +230,7 @@ const ArtistsPage = {
             '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>';
 
         const changeText = ((artist.change || 0) >= 0 ? '+' : '') + (artist.change || 0) + '%';
-        const artistImage = artist.portrait || artist.logo || artist.image || '/assets/images/placeholder-artist.jpg';
+        const artistImage = artist.portrait || artist.logo || artist.image || '/assets/images/default-artist.png';
 
         return '<a href="/artist/' + this.escapeHtml(artist.slug) + '" class="flex items-center gap-4 p-4 transition-colors rounded-2xl bg-surface hover:bg-border/50">' +
             '<div class="flex items-center justify-center flex-shrink-0 w-8 h-8 text-sm font-bold text-white rounded-lg ' + rankClass + '">' + rank + '</div>' +
@@ -261,7 +261,7 @@ const ArtistsPage = {
         const genre = artist.genres?.[0]?.name || 'Artist';
         const followers = this.formatFollowers(this.calculateTotalFollowers(artist));
         const eventsCount = artist.upcoming_events_count || 0;
-        const artistImage = artist.portrait || artist.logo || artist.image || '/assets/images/placeholder-artist.jpg';
+        const artistImage = artist.portrait || artist.logo || artist.image || '/assets/images/default-artist.png';
 
         const eventsInfo = eventsCount > 0 ?
             '<span class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg bg-primary/10 text-primary">' +
