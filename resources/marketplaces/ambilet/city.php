@@ -129,6 +129,3 @@ $scriptsExtra = '<script src="' . asset('assets/js/pages/city-page.js') . '"></s
 <script>document.addEventListener(\'DOMContentLoaded\', () => CityPage.init(' . $citySlugJS . '));</script>';
 
 require_once __DIR__ . '/includes/scripts.php';
-?>
-</body>
-</html>

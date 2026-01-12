@@ -429,6 +429,3 @@ function renderLatestEvents(events) {
 SCRIPTS;
 
 require_once __DIR__ . '/includes/scripts.php';
-?>
-</body>
-</html>

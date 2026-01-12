@@ -169,6 +169,3 @@ $scriptsExtra = '<script src="' . asset('assets/js/pages/category-page.js') . '"
 <script>document.addEventListener(\'DOMContentLoaded\', () => CategoryPage.init(' . $categorySlugJS . '));</script>';
 
 require_once __DIR__ . '/includes/scripts.php';
-?>
-</body>
-</html>

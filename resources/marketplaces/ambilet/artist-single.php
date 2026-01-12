@@ -294,6 +294,3 @@ $scriptsExtra = '<script src="' . asset('assets/js/pages/artist-single.js') . '"
 <script>document.addEventListener(\'DOMContentLoaded\', () => ArtistPage.init());</script>';
 
 require_once __DIR__ . '/includes/scripts.php';
-?>
-</body>
-</html>

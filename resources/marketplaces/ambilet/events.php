@@ -383,6 +383,3 @@ $scriptsExtra = '<script src="' . asset('assets/js/pages/events-page.js') . '"><
 <script>document.addEventListener(\'DOMContentLoaded\', () => EventsPage.init(' . $initialFilters . '));</script>';
 
 require_once __DIR__ . '/includes/scripts.php';
-?>
-</body>
-</html>
