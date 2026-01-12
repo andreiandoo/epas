@@ -311,16 +311,34 @@ require_once __DIR__ . '/includes/head.php';
             </div>
         </div>
 
-        <!-- Custom Recommended Events (Îți recomandăm) -->
-        <section class="mt-16 mobile:px-4" id="custom-related-section" style="display:none;">
-            <div class="flex items-center justify-between mb-8">
-                <div>
-                    <h2 class="text-2xl font-bold text-secondary">Îți recomandăm</h2>
-                    <p class="mt-1 text-muted">Evenimente selectate special pentru tine</p>
+        <!-- Custom Recommended Events (Îți recomandăm) - Premium Section -->
+        <section class="relative mt-16 -mx-4 md:-mx-8 lg:-mx-12 overflow-hidden" id="custom-related-section" style="display:none;">
+            <!-- Premium gradient background -->
+            <div class="absolute inset-0 bg-gradient-to-br from-secondary via-secondary/95 to-primary/20"></div>
+            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent"></div>
+
+            <!-- Decorative elements -->
+            <div class="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+            <div class="absolute bottom-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+
+            <div class="relative px-4 py-12 md:px-8 lg:px-12 md:py-16">
+                <!-- Section header -->
+                <div class="flex flex-col items-center mb-10 text-center">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 mb-4 text-xs font-bold tracking-wider text-white uppercase rounded-full bg-gradient-to-r from-primary to-accent">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                        </svg>
+                        Selecție Premium
+                    </div>
+                    <h2 class="mb-3 text-3xl font-extrabold text-white md:text-4xl">Îți recomandăm</h2>
+                    <p class="max-w-md text-white/70">Evenimente selectate special pentru tine, care nu trebuie ratate</p>
+                </div>
+
+                <!-- Premium events grid -->
+                <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" id="custom-related-events">
+                    <!-- Premium event cards loaded dynamically -->
                 </div>
             </div>
-            <!-- Mobile: horizontal scroll snap, Desktop: grid -->
-            <div class="flex gap-4 pb-4 -mx-4 overflow-x-auto snap-x snap-mandatory scroll-px-4 lg:mx-0 lg:pb-0 lg:overflow-visible lg:grid lg:grid-cols-4 lg:gap-5 lg:snap-none related-events-scroll" id="custom-related-events"></div>
         </section>
 
         <!-- Related Events -->

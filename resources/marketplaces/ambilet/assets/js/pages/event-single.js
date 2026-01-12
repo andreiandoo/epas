@@ -1136,7 +1136,7 @@ const EventPage = {
     },
 
     /**
-     * Render custom related events (Îți recomandăm section)
+     * Render custom related events (Îți recomandăm section) - Premium style
      */
     renderCustomRelatedEvents(events) {
         if (!events || events.length === 0) return;
@@ -1148,13 +1148,101 @@ const EventPage = {
 
         section.style.display = 'block';
 
-        // Use AmbiletEventCard component for consistent rendering
-        container.innerHTML = AmbiletEventCard.renderMany(events, {
-            showCategory: true,
-            showPrice: true,
-            showVenue: true,
-            urlPrefix: '/bilete/'
-        });
+        // Render premium cards
+        var self = this;
+        container.innerHTML = events.map(function(event) {
+            return self.renderPremiumEventCard(event);
+        }).join('');
+    },
+
+    /**
+     * Render a premium event card for recommended events
+     */
+    renderPremiumEventCard(event) {
+        var months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var weekdays = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm'];
+
+        var dateStr = event.starts_at || event.date;
+        var date = dateStr ? new Date(dateStr) : new Date();
+        var day = date.getDate();
+        var month = months[date.getMonth()];
+        var weekday = weekdays[date.getDay()];
+        var year = date.getFullYear();
+
+        var image = event.image || event.image_url || '/assets/images/default-event.png';
+        var title = event.name || event.title || 'Eveniment';
+        var slug = event.slug || '';
+        var venue = event.venue_name || (event.venue ? event.venue.name : '');
+        var city = event.venue_city || (event.venue ? event.venue.city : '');
+        var location = city ? (venue ? venue + ', ' + city : city) : venue;
+        var category = event.category?.name || event.category || '';
+        var priceFrom = event.price_from ? event.price_from : null;
+
+        // Escape HTML helper
+        function esc(str) {
+            if (!str) return '';
+            var div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        return '<a href="/bilete/' + slug + '" class="group relative block overflow-hidden bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">' +
+            // Glow effect on hover
+            '<div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-t from-primary/20 via-transparent to-transparent pointer-events-none"></div>' +
+
+            // Image container with overlay
+            '<div class="relative h-52 overflow-hidden">' +
+                '<img src="' + image + '" alt="' + esc(title) + '" class="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110" loading="lazy">' +
+
+                // Gradient overlay
+                '<div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>' +
+
+                // Premium badge
+                '<div class="absolute top-3 left-3">' +
+                    '<span class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-white uppercase tracking-wider rounded-full bg-gradient-to-r from-primary to-accent shadow-lg">' +
+                        '<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>' +
+                        'Premium' +
+                    '</span>' +
+                '</div>' +
+
+                // Date badge - floating style
+                '<div class="absolute bottom-3 right-3">' +
+                    '<div class="px-3 py-2 text-center bg-white/95 backdrop-blur-sm rounded-xl shadow-lg">' +
+                        '<span class="block text-2xl font-black text-secondary leading-none">' + day + '</span>' +
+                        '<span class="block text-[10px] font-bold text-primary uppercase tracking-wide">' + month + '</span>' +
+                    '</div>' +
+                '</div>' +
+
+                // Category badge on image
+                (category ? '<div class="absolute bottom-3 left-3"><span class="px-3 py-1 text-[10px] font-bold text-white uppercase bg-secondary/80 backdrop-blur-sm rounded-full">' + esc(category) + '</span></div>' : '') +
+            '</div>' +
+
+            // Content
+            '<div class="relative p-5">' +
+                // Title
+                '<h3 class="mb-2 text-lg font-bold leading-tight text-secondary line-clamp-2 group-hover:text-primary transition-colors">' + esc(title) + '</h3>' +
+
+                // Location
+                (location ? '<p class="flex items-center gap-2 mb-3 text-sm text-muted">' +
+                    '<svg class="flex-shrink-0 w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
+                    '<span class="truncate">' + esc(location) + '</span>' +
+                '</p>' : '') +
+
+                // Footer with price and CTA
+                '<div class="flex items-center justify-between pt-3 mt-auto border-t border-border/50">' +
+                    (priceFrom ?
+                        '<div>' +
+                            '<span class="block text-xs text-muted">de la</span>' +
+                            '<span class="text-xl font-black text-primary">' + priceFrom + ' <span class="text-sm font-semibold">lei</span></span>' +
+                        '</div>' :
+                        '<span class="text-sm font-medium text-muted">Vezi detalii</span>'
+                    ) +
+                    '<div class="flex items-center justify-center w-10 h-10 transition-all duration-300 rounded-full bg-primary/10 group-hover:bg-primary group-hover:scale-110">' +
+                        '<svg class="w-5 h-5 text-primary group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>' +
+                    '</div>' +
+                '</div>' +
+            '</div>' +
+        '</a>';
     },
 
     /**

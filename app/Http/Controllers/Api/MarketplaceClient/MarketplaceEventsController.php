@@ -396,8 +396,8 @@ class MarketplaceEventsController extends BaseController
                 }
                 $bioText = strip_tags($bio);
                 $words = preg_split('/\s+/', $bioText, -1, PREG_SPLIT_NO_EMPTY);
-                $truncatedBio = count($words) > 80
-                    ? implode(' ', array_slice($words, 0, 80)) . '...'
+                $truncatedBio = count($words) > 32
+                    ? implode(' ', array_slice($words, 0, 32)) . '...'
                     : $bioText;
 
                 // Build social links array (only include those that exist)
