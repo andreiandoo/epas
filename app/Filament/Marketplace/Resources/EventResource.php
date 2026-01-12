@@ -301,17 +301,77 @@ class EventResource extends Resource
                             ->label('Homepage Featured')
                             ->helperText('Show on homepage hero/featured section')
                             ->onIcon('heroicon-m-home')
-                            ->offIcon('heroicon-m-home'),
+                            ->offIcon('heroicon-m-home')
+                            ->live(),
                         Forms\Components\Toggle::make('is_general_featured')
                             ->label('General Featured')
                             ->helperText('Show in general featured events lists')
                             ->onIcon('heroicon-m-star')
-                            ->offIcon('heroicon-m-star'),
+                            ->offIcon('heroicon-m-star')
+                            ->live(),
                         Forms\Components\Toggle::make('is_category_featured')
                             ->label('Category Featured')
                             ->helperText('Show as featured in its category page')
                             ->onIcon('heroicon-m-tag')
-                            ->offIcon('heroicon-m-tag'),
+                            ->offIcon('heroicon-m-tag')
+                            ->live(),
+                    ]),
+
+                    // Homepage Featured Image
+                    Forms\Components\FileUpload::make('homepage_featured_image')
+                        ->label('Homepage Featured Image')
+                        ->helperText('Special image for homepage featured section (recommended: 1920x600px)')
+                        ->image()
+                        ->directory('events/featured/homepage')
+                        ->disk('public')
+                        ->imageResizeMode('cover')
+                        ->imagePreviewHeight('150')
+                        ->visible(fn (SGet $get) => (bool) $get('is_homepage_featured'))
+                        ->columnSpanFull(),
+
+                    // General/Category Featured Image (shared)
+                    Forms\Components\FileUpload::make('featured_image')
+                        ->label('Featured Image (General/Category)')
+                        ->helperText('Image for general and category featured sections (recommended: 800x450px)')
+                        ->image()
+                        ->directory('events/featured')
+                        ->disk('public')
+                        ->imageResizeMode('cover')
+                        ->imagePreviewHeight('150')
+                        ->visible(fn (SGet $get) => (bool) $get('is_general_featured') || (bool) $get('is_category_featured'))
+                        ->columnSpanFull(),
+
+                    // Custom Related Events
+                    SC\Grid::make(1)->schema([
+                        Forms\Components\Toggle::make('has_custom_related')
+                            ->label('Custom Related Events')
+                            ->helperText('Manually select which events to show in the "Îți recomandăm" section')
+                            ->onIcon('heroicon-m-queue-list')
+                            ->offIcon('heroicon-m-queue-list')
+                            ->live(),
+
+                        Forms\Components\Select::make('custom_related_event_ids')
+                            ->label('Select Related Events')
+                            ->helperText('Choose events to display in the "Îți recomandăm" section (max 8)')
+                            ->multiple()
+                            ->searchable()
+                            ->preload()
+                            ->maxItems(8)
+                            ->options(function (?Event $record) use ($marketplace) {
+                                return Event::query()
+                                    ->where('marketplace_client_id', $marketplace?->id)
+                                    ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
+                                    ->where('is_cancelled', false)
+                                    ->orderBy('event_date', 'desc')
+                                    ->limit(100)
+                                    ->get()
+                                    ->mapWithKeys(fn ($event) => [
+                                        $event->id => ($event->title['ro'] ?? $event->title['en'] ?? 'Unnamed')
+                                            . ' (' . ($event->event_date?->format('d.m.Y') ?? 'No date') . ')'
+                                    ]);
+                            })
+                            ->visible(fn (SGet $get) => (bool) $get('has_custom_related'))
+                            ->columnSpanFull(),
                     ]),
                 ])->columns(1),
 
@@ -687,6 +747,7 @@ class EventResource extends Resource
                         ->multiple()
                         ->preload()
                         ->searchable()
+                        ->live()
                         ->suffixAction(
                             Action::make('create_artist')
                                 ->icon('heroicon-o-plus-circle')
@@ -694,6 +755,64 @@ class EventResource extends Resource
                                 ->url(fn () => ArtistResource::getUrl('create'))
                                 ->openUrlInNewTab()
                         ),
+
+                    // Artist ordering and headliner settings (visible when >2 artists)
+                    SC\Section::make('Artist Display Settings')
+                        ->description('Configure display order and headliner status for artists')
+                        ->visible(fn (SGet $get) => count($get('artists') ?? []) > 2)
+                        ->collapsed()
+                        ->schema([
+                            Forms\Components\Repeater::make('artist_settings')
+                                ->label('Artist Order & Status')
+                                ->hiddenLabel()
+                                ->default([])
+                                ->reorderable()
+                                ->reorderableWithButtons()
+                                ->columns(12)
+                                ->addable(false)
+                                ->deletable(false)
+                                ->schema([
+                                    Forms\Components\Select::make('artist_id')
+                                        ->label('Artist')
+                                        ->options(function () use ($marketplace) {
+                                            return \App\Models\Artist::query()
+                                                ->orderBy('name')
+                                                ->pluck('name', 'id');
+                                        })
+                                        ->disabled()
+                                        ->columnSpan(5),
+                                    Forms\Components\Toggle::make('is_headliner')
+                                        ->label('Headliner')
+                                        ->inline(false)
+                                        ->columnSpan(3),
+                                    Forms\Components\Toggle::make('is_co_headliner')
+                                        ->label('Co-Headliner')
+                                        ->inline(false)
+                                        ->columnSpan(3),
+                                    Forms\Components\Hidden::make('sort_order'),
+                                ])
+                                ->afterStateHydrated(function (SSet $set, SGet $get, ?Event $record) {
+                                    if (!$record) return;
+
+                                    $artists = $record->artists()->orderByPivot('sort_order')->get();
+                                    $settings = $artists->map(function ($artist, $index) {
+                                        return [
+                                            'artist_id' => $artist->id,
+                                            'is_headliner' => (bool) $artist->pivot->is_headliner,
+                                            'is_co_headliner' => (bool) $artist->pivot->is_co_headliner,
+                                            'sort_order' => $index,
+                                        ];
+                                    })->toArray();
+
+                                    $set('artist_settings', $settings);
+                                })
+                                ->dehydrated(false)
+                                ->columnSpanFull(),
+
+                            Forms\Components\Placeholder::make('artist_settings_help')
+                                ->content('Drag and drop to reorder artists. The order here determines how they appear on the event page. Headliners will be displayed prominently.')
+                                ->columnSpanFull(),
+                        ]),
 
                     Forms\Components\Select::make('tags')
                         ->label('Event tags')

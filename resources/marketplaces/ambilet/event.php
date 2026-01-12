@@ -49,12 +49,33 @@ require_once __DIR__ . '/includes/head.php';
 
         .gallery-thumb { transition: all 0.2s ease; }
         .gallery-thumb:hover, .gallery-thumb.active { border-color: #A51C30; opacity: 1; }
+
+        /* Mobile ticket drawer */
+        @media (max-width: 1023px) {
+            .sticky-cart-wrapper { display: none; }
+        }
+        #ticketDrawerBackdrop {
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        #ticketDrawerBackdrop.open {
+            opacity: 1;
+            visibility: visible;
+        }
+        #ticketDrawer {
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #ticketDrawer.open {
+            transform: translateY(0);
+        }
     </style>
 
 <?php require_once __DIR__ . '/includes/header.php'; ?>
 
     <!-- Breadcrumb -->
-    <div class="bg-white border-b border-border mt-28 mobile:mt-22">
+    <div class="bg-white border-b border-border mt-28 mobile:hidden">
         <div class="px-4 py-3 mx-auto max-w-7xl">
             <nav class="flex items-center gap-2 text-sm" id="breadcrumb">
                 <a href="/" class="transition-colors text-muted hover:text-primary">Acasa</a>
@@ -65,7 +86,7 @@ require_once __DIR__ . '/includes/head.php';
     </div>
 
     <!-- Main Content -->
-    <main class="px-4 py-8 mx-auto max-w-7xl" id="main-content">
+    <main class="px-4 py-8 mx-auto max-w-7xl mobile:p-0 mobile:mt-18" id="main-content">
         <!-- Loading State -->
         <div id="loading-state" class="flex flex-col gap-8 lg:flex-row">
             <div class="lg:w-2/3">
@@ -90,7 +111,7 @@ require_once __DIR__ . '/includes/head.php';
             <!-- Left Column - Event Details -->
             <div class="lg:w-2/3">
                 <!-- Event Header -->
-                <div class="mb-8 bg-white border rounded-3xl border-border">
+                <div class="mb-8 bg-white border rounded-3xl border-border mobile:border-0 mobile:rounded-none">
                     <!-- Main Image -->
                     <div class="relative overflow-hidden rounded-t-3xl h-72 md:h-96">
                         <img id="mainImage" src="" alt="" class="object-cover w-full h-full">
@@ -103,11 +124,11 @@ require_once __DIR__ . '/includes/head.php';
 
                     <!-- Event Info -->
                     <div class="p-6 md:p-8">
-                        <h1 id="event-title" class="mb-4 text-3xl font-extrabold md:text-4xl text-secondary"></h1>
+                        <h1 id="event-title" class="mb-4 text-2xl font-extrabold md:text-4xl text-secondary"></h1>
 
                         <!-- Key Details -->
-                        <div class="grid gap-4 mb-6 sm:grid-cols-2">
-                            <div class="flex items-start gap-3 p-4 bg-surface rounded-xl">
+                        <div class="grid gap-4 mb-6 grid-cols-2">
+                            <div class="flex items-start gap-3 p-4 bg-surface rounded-xl mobile:rounded-none mobile:p-0 mobile:bg-transparent">
                                 <div class="flex-shrink-0 px-3 py-2 text-center text-white date-badge rounded-xl">
                                     <span id="event-day" class="block text-xl font-bold leading-none">--</span>
                                     <span id="event-month" class="block text-[10px] uppercase tracking-wide mt-0.5">---</span>
@@ -117,7 +138,7 @@ require_once __DIR__ . '/includes/head.php';
                                     <p id="event-date-full" class="text-sm text-muted"></p>
                                 </div>
                             </div>
-                            <div class="flex items-start gap-3 p-4 bg-surface rounded-xl">
+                            <div class="flex items-start gap-3 p-4 bg-surface rounded-xl mobile:rounded-none mobile:p-0 mobile:bg-transparent">
                                 <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-primary/10 rounded-xl">
                                     <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                 </div>
@@ -129,7 +150,7 @@ require_once __DIR__ . '/includes/head.php';
                         </div>
 
                         <!-- Location -->
-                        <div class="flex items-center gap-3 p-4 mb-6 bg-surface rounded-xl">
+                        <div class="flex items-center gap-3 p-4 mb-6 bg-surface rounded-xl mobile:rounded-none mobile:p-0 mobile:bg-transparent">
                             <div class="flex items-center justify-center flex-shrink-0 w-12 h-12 bg-primary/10 rounded-xl">
                                 <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             </div>
@@ -156,7 +177,7 @@ require_once __DIR__ . '/includes/head.php';
                             <div class="relative" id="share-dropdown">
                                 <button onclick="EventPage.toggleShareMenu()" class="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-colors rounded-full border border-border hover:border-primary hover:text-primary">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
-                                    <span>Distribuie</span>
+                                    <span class="mobile:hidden">Distribuie</span>
                                 </button>
                                 <div id="share-menu" class="absolute right-0 z-50 hidden w-48 py-2 mt-2 bg-white border shadow-lg rounded-xl border-border">
                                     <a href="#" onclick="EventPage.shareOn('facebook'); return false;" class="flex items-center gap-3 px-4 py-2 text-sm transition-colors hover:bg-surface">
@@ -189,13 +210,13 @@ require_once __DIR__ . '/includes/head.php';
                 </div>
 
                 <!-- Venue Section -->
-                <div class="mb-8" id="venue">
+                <div class="mb-8" id="venue" class="p-4">
                     <div id="venue-content"></div>
                 </div>
             </div>
 
-            <!-- Right Column - Ticket Selection -->
-            <div class="lg:w-1/3">
+            <!-- Right Column - Ticket Selection (Hidden on mobile, shown in drawer) -->
+            <div class="lg:w-1/3 sticky-cart-wrapper">
                 <div class="sticky-cart">
                     <div class="bg-white border rounded-3xl border-border">
                         <div class="p-6 border-b border-border">
@@ -264,8 +285,19 @@ require_once __DIR__ . '/includes/head.php';
             </div>
         </div>
 
+        <!-- Custom Recommended Events (Îți recomandăm) -->
+        <section class="mt-16 mobile:px-4" id="custom-related-section" style="display:none;">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-secondary">Îți recomandăm</h2>
+                    <p class="mt-1 text-muted">Evenimente selectate special pentru tine</p>
+                </div>
+            </div>
+            <div class="grid gap-5 grid-cols-2 lg:grid-cols-4" id="custom-related-events"></div>
+        </section>
+
         <!-- Related Events -->
-        <section class="mt-16" id="related-events-section" style="display:none;">
+        <section class="mt-16 mobile:px-4 mobile:mb-8" id="related-events-section" style="display:none;">
             <div class="flex items-center justify-between mb-8">
                 <div>
                     <h2 class="text-2xl font-bold text-secondary">Alte evenimente recomandate</h2>
@@ -276,18 +308,154 @@ require_once __DIR__ . '/includes/head.php';
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 </a>
             </div>
-            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4" id="related-events"></div>
+            <div class="grid gap-5 grid-cols-2 lg:grid-cols-4" id="related-events"></div>
         </section>
     </main>
+
+    <!-- Mobile Fixed Bottom Button (shows on mobile only) -->
+    <div id="mobileTicketBtn" class="fixed bottom-0 left-0 right-0 z-40 p-4 bg-white border-t lg:hidden border-border safe-area-bottom" style="display: none;">
+        <button onclick="openTicketDrawer()" class="flex items-center justify-center w-full gap-3 py-4 text-lg font-bold text-white btn-primary rounded-xl">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
+            <span>Cumpără bilete</span>
+            <span id="mobileMinPrice" class="px-2 py-1 text-sm font-semibold rounded-lg bg-white/20">de la -- lei</span>
+        </button>
+    </div>
+
+    <!-- Mobile Ticket Drawer -->
+    <div id="ticketDrawerBackdrop" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden" onclick="closeTicketDrawer()"></div>
+    <div id="ticketDrawer" class="fixed bottom-0 left-0 right-0 z-50 overflow-hidden bg-white lg:hidden rounded-t-3xl max-h-[85vh]">
+        <!-- Drawer Header -->
+        <div class="sticky top-0 z-10 flex items-center justify-between p-4 bg-white border-b border-border">
+            <div>
+                <h2 class="text-lg font-bold text-secondary">Selectează bilete</h2>
+                <p class="text-sm text-muted">Alege tipul și cantitatea</p>
+            </div>
+            <button onclick="closeTicketDrawer()" class="flex items-center justify-center w-10 h-10 transition-colors rounded-full bg-surface hover:bg-gray-200">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <!-- Drawer Content (will be populated by JS) -->
+        <div id="drawerTicketTypes" class="p-4 space-y-2 overflow-y-auto max-h-[50vh]"></div>
+        <!-- Drawer Footer with summary -->
+        <div id="drawerCartSummary" class="p-4 border-t border-border bg-surface/50" style="display: none;">
+            <div class="flex items-center justify-between mb-3">
+                <span class="font-medium text-secondary">Total:</span>
+                <span id="drawerTotalPrice" class="text-xl font-bold text-primary">0 lei</span>
+            </div>
+            <button onclick="EventPage.addToCart(); closeTicketDrawer();" class="flex items-center justify-center w-full gap-2 py-4 text-lg font-bold text-white btn-primary rounded-xl">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                Adaugă în coș
+            </button>
+        </div>
+        <div id="drawerEmptyCart" class="p-4 text-center border-t border-border">
+            <p class="text-sm text-muted">Selectează cel puțin un bilet pentru a continua</p>
+        </div>
+    </div>
+
+    <script>
+    // Mobile ticket drawer functions
+    function openTicketDrawer() {
+        document.getElementById('ticketDrawerBackdrop').classList.add('open');
+        document.getElementById('ticketDrawer').classList.add('open');
+        document.body.style.overflow = 'hidden';
+        syncDrawerContent();
+    }
+
+    function closeTicketDrawer() {
+        document.getElementById('ticketDrawerBackdrop').classList.remove('open');
+        document.getElementById('ticketDrawer').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    // Sync drawer content with main ticket selection
+    function syncDrawerContent() {
+        const mainContent = document.getElementById('ticket-types');
+        const drawerContent = document.getElementById('drawerTicketTypes');
+        if (mainContent && drawerContent) {
+            // Clone the ticket cards for the drawer
+            drawerContent.innerHTML = mainContent.innerHTML;
+            // Update onclick handlers to work in drawer context
+            drawerContent.querySelectorAll('[onclick*="EventPage.updateQuantity"]').forEach(btn => {
+                const originalOnclick = btn.getAttribute('onclick');
+                btn.setAttribute('onclick', originalOnclick + '; syncDrawerSummary();');
+            });
+        }
+        syncDrawerSummary();
+    }
+
+    function syncDrawerSummary() {
+        setTimeout(() => {
+            const mainSummary = document.getElementById('cartSummary');
+            const mainEmpty = document.getElementById('emptyCart');
+            const drawerSummary = document.getElementById('drawerCartSummary');
+            const drawerEmpty = document.getElementById('drawerEmptyCart');
+            const mainTotal = document.getElementById('totalPrice');
+            const drawerTotal = document.getElementById('drawerTotalPrice');
+
+            if (mainSummary && !mainSummary.classList.contains('hidden')) {
+                drawerSummary.style.display = 'block';
+                drawerEmpty.style.display = 'none';
+                if (mainTotal && drawerTotal) {
+                    drawerTotal.textContent = mainTotal.textContent;
+                }
+            } else {
+                drawerSummary.style.display = 'none';
+                drawerEmpty.style.display = 'block';
+            }
+
+            // Also sync qty values from main to drawer
+            document.querySelectorAll('#ticket-types [id^="qty-"]').forEach(qtyEl => {
+                const drawerQty = document.querySelector('#drawerTicketTypes [id="' + qtyEl.id + '"]');
+                if (drawerQty) {
+                    drawerQty.textContent = qtyEl.textContent;
+                }
+            });
+
+            // Sync selected state
+            document.querySelectorAll('#ticket-types .ticket-card').forEach(card => {
+                const ticketId = card.dataset.ticket;
+                const drawerCard = document.querySelector('#drawerTicketTypes [data-ticket="' + ticketId + '"]');
+                if (drawerCard) {
+                    if (card.classList.contains('selected')) {
+                        drawerCard.classList.add('selected');
+                    } else {
+                        drawerCard.classList.remove('selected');
+                    }
+                }
+            });
+        }, 50);
+    }
+
+    // Show mobile button after event loads and update min price
+    document.addEventListener('DOMContentLoaded', () => {
+        // Poll for event load
+        const checkLoaded = setInterval(() => {
+            if (typeof EventPage !== 'undefined' && EventPage.event && EventPage.ticketTypes?.length) {
+                clearInterval(checkLoaded);
+                const mobileBtn = document.getElementById('mobileTicketBtn');
+                const minPriceEl = document.getElementById('mobileMinPrice');
+                if (mobileBtn) {
+                    mobileBtn.style.display = 'block';
+                    // Find minimum price
+                    const prices = EventPage.ticketTypes
+                        .filter(t => !t.is_sold_out && t.available > 0)
+                        .map(t => t.price);
+                    if (prices.length && minPriceEl) {
+                        const minPrice = Math.min(...prices);
+                        minPriceEl.textContent = 'de la ' + minPrice.toFixed(0) + ' lei';
+                    }
+                }
+            }
+        }, 100);
+    });
+    </script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
 <?php
 // Page controller script
-$scriptsExtra = <<<SCRIPTS
-<script src="/assets/js/pages/event-single.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => EventPage.init());</script>
-SCRIPTS;
+$scriptsExtra = '<script src="' . asset('assets/js/pages/event-single.js') . '"></script>
+<script>document.addEventListener(\'DOMContentLoaded\', () => EventPage.init());</script>';
 
 require_once __DIR__ . '/includes/scripts.php';
 ?>

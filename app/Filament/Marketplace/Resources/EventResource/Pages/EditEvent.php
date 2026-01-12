@@ -71,5 +71,24 @@ class EditEvent extends EditRecord
         if (!$this->record->isChild()) {
             app(EventSchedulingService::class)->syncChildEvents($this->record);
         }
+
+        // Sync artist pivot data (sort_order, is_headliner, is_co_headliner)
+        $artistSettings = $this->data['artist_settings'] ?? [];
+        if (!empty($artistSettings)) {
+            $syncData = [];
+            foreach ($artistSettings as $index => $setting) {
+                if (!empty($setting['artist_id'])) {
+                    $syncData[$setting['artist_id']] = [
+                        'sort_order' => $index,
+                        'is_headliner' => $setting['is_headliner'] ?? false,
+                        'is_co_headliner' => $setting['is_co_headliner'] ?? false,
+                    ];
+                }
+            }
+
+            if (!empty($syncData)) {
+                $this->record->artists()->sync($syncData);
+            }
+        }
     }
 }

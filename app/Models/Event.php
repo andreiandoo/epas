@@ -42,6 +42,8 @@ class Event extends Model
         'is_postponed', 'postponed_date', 'postponed_start_time', 'postponed_door_time', 'postponed_end_time', 'postponed_reason',
         'door_sales_only', 'is_promoted', 'promoted_until', 'is_featured',
         'is_homepage_featured', 'is_general_featured', 'is_category_featured',
+        'has_custom_related', 'custom_related_event_ids',
+        'homepage_featured_image', 'featured_image',
 
         // single day
         'event_date', 'start_time', 'door_time', 'end_time',
@@ -102,6 +104,8 @@ class Event extends Model
         'is_homepage_featured'  => 'bool',
         'is_general_featured'   => 'bool',
         'is_category_featured'  => 'bool',
+        'has_custom_related'    => 'bool',
+        'custom_related_event_ids' => 'array',
         'is_template'       => 'bool',
 
         // commission
@@ -208,7 +212,31 @@ class Event extends Model
             'event_artist',
             'event_id',
             'artist_id'
-        );
+        )->withPivot(['sort_order', 'is_headliner', 'is_co_headliner'])
+         ->orderByPivot('sort_order');
+    }
+
+    /**
+     * Get custom related events
+     */
+    public function customRelatedEvents(): HasMany
+    {
+        return $this->hasMany(Event::class, 'id')
+            ->whereIn('id', $this->custom_related_event_ids ?? []);
+    }
+
+    /**
+     * Get the custom related events as a collection
+     */
+    public function getCustomRelatedEventsAttribute()
+    {
+        if (!$this->has_custom_related || empty($this->custom_related_event_ids)) {
+            return collect();
+        }
+
+        return Event::whereIn('id', $this->custom_related_event_ids)
+            ->where('id', '!=', $this->id)
+            ->get();
     }
 
     /* Tickets */

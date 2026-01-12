@@ -1566,6 +1566,9 @@ select.pr-10 {
     .mobile-menu-btn {
         display: flex;
     }
+    .mobile\:mt-18 {
+        margin-top: 4.5rem;
+    }
 }
 
 @media (max-width: 768px) {
@@ -1718,3 +1721,4 @@ select.pr-10 {
     background: radial-gradient(circle, rgba(165, 28, 48, 0.1) 0%, transparent 70%);
     border-radius: 50%;
 }
+

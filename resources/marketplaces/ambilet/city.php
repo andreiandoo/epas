@@ -125,10 +125,8 @@ require_once __DIR__ . '/includes/header.php'; ?>
 <?php
 // Page controller script
 $citySlugJS = json_encode($citySlug);
-$scriptsExtra = <<<SCRIPTS
-<script src="/assets/js/pages/city-page.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => CityPage.init({$citySlugJS}));</script>
-SCRIPTS;
+$scriptsExtra = '<script src="' . asset('assets/js/pages/city-page.js') . '"></script>
+<script>document.addEventListener(\'DOMContentLoaded\', () => CityPage.init(' . $citySlugJS . '));</script>';
 
 require_once __DIR__ . '/includes/scripts.php';
 ?>
