@@ -310,11 +310,23 @@ const AmbiletEventCard = {
         // Extract price
         let minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
 
+        // Debug: log commission data
+        console.log('[EventCard] Event:', apiEvent.name || apiEvent.title, {
+            price_from: apiEvent.price_from,
+            min_price: apiEvent.min_price,
+            price: apiEvent.price,
+            minPrice_before: minPrice,
+            commission_mode: apiEvent.commission_mode,
+            commission_rate: apiEvent.commission_rate
+        });
+
         // Apply commission if mode is 'added_on_top'
         const commissionMode = apiEvent.commission_mode || 'included';
         const commissionRate = apiEvent.commission_rate || 0;
         if (commissionMode === 'added_on_top' && commissionRate > 0 && minPrice > 0) {
+            const oldPrice = minPrice;
             minPrice = parseFloat((minPrice + (minPrice * commissionRate / 100)).toFixed(2));
+            console.log('[EventCard] Commission applied:', oldPrice, '+', commissionRate + '%', '=', minPrice);
         }
 
         // Extract category
