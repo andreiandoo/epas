@@ -131,8 +131,9 @@ const AmbiletEventCard = {
         }
 
         return '<a href="' + eventUrl + '" class="flex bg-white rounded-2xl overflow-hidden border border-border hover:shadow-lg hover:-translate-y-0.5 hover:border-primary transition-all">' +
+            '<div class="mobile:flex mobile:gap-4">' +
             dateHtml +
-            '<div class="flex flex-col justify-center flex-1 px-5 py-4">' +
+            '<div class="flex flex-col justify-center flex-1 px-5 py-4 mobile:py-2 mobile:px-4">' +
                 (event.categoryName ? '<div class="mb-1 text-xs font-semibold tracking-wide uppercase text-primary">' + this.escapeHtml(event.categoryName) + '</div>' : '') +
                 '<h3 class="mb-2 text-base font-bold leading-tight text-secondary">' + this.escapeHtml(event.title) + '</h3>' +
                 '<div class="flex gap-4 text-sm text-muted">' +
@@ -143,7 +144,8 @@ const AmbiletEventCard = {
                     (event.venueName ? '<span class="flex items-center gap-1"><svg class="w-3.5 h-3.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + this.escapeHtml(event.venueName) + '</span>' : '') +
                 '</div>' +
             '</div>' +
-            '<div class="py-4 px-5 flex flex-col items-end justify-center gap-1.5">' +
+            '</div>' +
+            '<div class="py-4 px-5 flex flex-col items-end justify-center gap-1.5 mobile:flex-row mobile:items-start mobile:justify-between mobile:py-2 mobile:px-4">' +
                 priceHtml +
                 buttonHtml +
             '</div>' +

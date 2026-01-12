@@ -54,8 +54,8 @@ require_once __DIR__ . '/includes/header.php';
     <div class="absolute inset-0 opacity-10">
         <div class="absolute inset-0"></div>
     </div>
-    <div class="relative px-4 mx-auto max-w-7xl">
-        <div class="flex flex-col items-center text-center">
+    <div class="relative px-4 mx-auto max-w-7xl mobile:px-0">
+        <div class="flex flex-col items-center text-center mobile:px-4">
             <h1 class="mb-4 text-4xl font-extrabold text-white md:text-5xl">
                 <?php if ($searchQuery): ?>
                     Rezultate pentru "<?= htmlspecialchars($searchQuery) ?>"
@@ -69,7 +69,7 @@ require_once __DIR__ . '/includes/header.php';
                 Găsește și cumpără bilete pentru cele mai tari concerte, festivaluri, spectacole de teatru și multe altele.
             </p>
         </div>
-        <div id="categoryFilters" class="flex items-center justify-center gap-3 overflow-x-auto scrollbar-hide">
+        <div id="categoryFilters" class="flex items-center justify-center gap-3 overflow-x-auto scrollbar-hide snap-x pb-2 mobile:px-4">
             <button onclick="EventsPage.setCategory('')" data-category="" class="category-btn flex-shrink-0 px-5 py-2.5 text-sm font-semibold rounded-full transition-all cursor-pointer <?= !$filterCategory ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200' ?>">
                 Toate
             </button>
