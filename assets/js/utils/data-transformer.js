@@ -39,7 +39,13 @@ const AmbiletDataTransformer = {
             venueCity = apiEvent.venue.city || '';
             venueSlug = apiEvent.venue.slug || '';
         }
-        // Fallback to separate fields
+        // Fallback to flat venue_name/venue_city fields (from list API)
+        if (!venueName && apiEvent.venue_name) {
+            venueName = apiEvent.venue_name;
+        }
+        if (!venueCity && apiEvent.venue_city) {
+            venueCity = apiEvent.venue_city;
+        }
         if (!venueCity && apiEvent.city) {
             venueCity = apiEvent.city;
         }
@@ -47,23 +53,20 @@ const AmbiletDataTransformer = {
         // Extract price - handle variations
         let minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
 
-        // Debug: log commission data received from API
-        console.log('[DataTransformer] Event:', title, {
-            price_from: apiEvent.price_from,
-            min_price: apiEvent.min_price,
-            price: apiEvent.price,
-            minPrice_extracted: minPrice,
-            commission_mode: apiEvent.commission_mode,
-            commission_rate: apiEvent.commission_rate
-        });
-
         // Apply commission if mode is 'added_on_top'
         const commissionMode = apiEvent.commission_mode || 'included';
         const commissionRate = parseFloat(apiEvent.commission_rate) || 0;
         if (commissionMode === 'added_on_top' && commissionRate > 0 && minPrice > 0) {
-            const oldPrice = minPrice;
             minPrice = parseFloat((minPrice + (minPrice * commissionRate / 100)).toFixed(2));
-            console.log('[DataTransformer] Commission applied:', oldPrice, '+', commissionRate + '%', '=', minPrice);
+        }
+
+        // Extract date range for multi-day events (festivals)
+        const durationMode = apiEvent.duration_mode || 'single_day';
+        let rangeStartDate = null;
+        let rangeEndDate = null;
+        if (durationMode === 'range' || durationMode === 'date_range') {
+            rangeStartDate = apiEvent.range_start_date ? new Date(apiEvent.range_start_date) : null;
+            rangeEndDate = apiEvent.range_end_date ? new Date(apiEvent.range_end_date) : null;
         }
 
         // Extract category
@@ -99,6 +102,13 @@ const AmbiletDataTransformer = {
             month: eventDate ? this.MONTHS_SHORT[eventDate.getMonth()] : '',
             weekday: eventDate ? this.WEEKDAYS[eventDate.getDay()] : '',
             time: apiEvent.start_time || (eventDate ? this.formatTime(eventDate) : ''),
+
+            // Date range for multi-day events (festivals)
+            durationMode: durationMode,
+            rangeStartDate: rangeStartDate,
+            rangeEndDate: rangeEndDate,
+            isDateRange: durationMode === 'range' || durationMode === 'date_range',
+            dateRangeFormatted: this.formatDateRange(rangeStartDate, rangeEndDate),
 
             // Venue information
             venueName: venueName,
@@ -223,6 +233,36 @@ const AmbiletDataTransformer = {
         if (!date) return '';
         const d = new Date(date);
         return d.getDate() + ' ' + this.MONTHS_SHORT[d.getMonth()] + ' ' + d.getFullYear();
+    },
+
+    /**
+     * Format date range as "15 Ian - 18 Ian 2024" or "15 Ian 2024 - 2 Feb 2025"
+     */
+    formatDateRange(startDate, endDate) {
+        if (!startDate || !endDate) return '';
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        const startDay = start.getDate();
+        const startMonth = this.MONTHS_SHORT[start.getMonth()];
+        const startYear = start.getFullYear();
+
+        const endDay = end.getDate();
+        const endMonth = this.MONTHS_SHORT[end.getMonth()];
+        const endYear = end.getFullYear();
+
+        // Same year
+        if (startYear === endYear) {
+            // Same month
+            if (start.getMonth() === end.getMonth()) {
+                return startDay + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;
+            }
+            // Different month, same year
+            return startDay + ' ' + startMonth + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;
+        }
+
+        // Different year
+        return startDay + ' ' + startMonth + ' ' + startYear + ' - ' + endDay + ' ' + endMonth + ' ' + endYear;
     },
 
     /**
