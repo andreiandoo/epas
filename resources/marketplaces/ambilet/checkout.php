@@ -54,7 +54,7 @@ require_once __DIR__ . '/includes/header.php';
                         </h2>
 
                         <div class="grid gap-4 md:grid-cols-2">
-                            <div>
+                            <div class="md:col-span-2">
                                 <label class="block mb-2 text-sm font-medium text-secondary">Nume complet *</label>
                                 <input type="text" id="buyer-name" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
                             </div>
@@ -63,12 +63,13 @@ require_once __DIR__ . '/includes/header.php';
                                 <input type="email" id="buyer-email" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
                             </div>
                             <div>
+                                <label class="block mb-2 text-sm font-medium text-secondary">Confirmă email *</label>
+                                <input type="email" id="buyer-email-confirm" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
+                                <p id="email-mismatch-error" class="hidden mt-1 text-sm text-primary">Adresele de email nu coincid</p>
+                            </div>
+                            <div class="md:col-span-2">
                                 <label class="block mb-2 text-sm font-medium text-secondary">Telefon *</label>
                                 <input type="tel" id="buyer-phone" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none" required>
-                            </div>
-                            <div>
-                                <label class="block mb-2 text-sm font-medium text-secondary">CNP (opțional)</label>
-                                <input type="text" id="buyer-cnp" placeholder="Pentru facturare" class="w-full px-4 py-3 border-2 input-field border-border rounded-xl focus:outline-none">
                             </div>
                         </div>
                     </div>
@@ -84,21 +85,20 @@ require_once __DIR__ . '/includes/header.php';
                         </div>
 
                         <div class="flex items-start gap-3 p-4 mb-4 bg-surface rounded-xl">
-                            <svg class="w-5 h-5 text-accent flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <svg class="w-5 h-5 text-success flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             <div class="text-sm text-muted">
-                                <p class="mb-1 font-medium text-secondary">Poți adăuga beneficiari diferiți pentru fiecare bilet</p>
-                                <p>Fiecare beneficiar va primi biletul pe email. Dacă nu adaugi beneficiari, toate biletele vor fi trimise pe emailul tău.</p>
+                                <p class="font-medium text-secondary">Toate biletele vor fi trimise pe emailul tău</p>
                             </div>
                         </div>
 
-                        <!-- Same beneficiary toggle -->
-                        <label class="flex items-center gap-3 mb-6 cursor-pointer">
-                            <input type="checkbox" id="sameBeneficiary" class="checkbox-custom" onchange="CheckoutPage.toggleBeneficiaries()">
-                            <span class="text-sm font-medium text-secondary">Folosește datele mele pentru toate biletele</span>
+                        <!-- Different beneficiaries toggle -->
+                        <label class="flex items-center gap-3 cursor-pointer">
+                            <input type="checkbox" id="differentBeneficiaries" class="checkbox-custom" onchange="CheckoutPage.toggleBeneficiaries()">
+                            <span class="text-sm font-medium text-secondary">Folosește date diferite pentru fiecare bilet</span>
                         </label>
 
-                        <!-- Beneficiaries List -->
-                        <div id="beneficiariesList" class="space-y-4"></div>
+                        <!-- Beneficiaries List (hidden by default) -->
+                        <div id="beneficiariesList" class="hidden mt-6 space-y-4"></div>
                     </div>
 
                     <!-- Payment Method -->
@@ -396,7 +396,30 @@ const CheckoutPage = {
         if (user) {
             document.getElementById('buyer-name').value = user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim();
             document.getElementById('buyer-email').value = user.email || '';
+            document.getElementById('buyer-email-confirm').value = user.email || '';
             document.getElementById('buyer-phone').value = user.phone || '';
+        }
+
+        // Add email confirmation validation on blur
+        const emailConfirm = document.getElementById('buyer-email-confirm');
+        emailConfirm.addEventListener('blur', () => this.validateEmailMatch());
+        document.getElementById('buyer-email').addEventListener('blur', () => this.validateEmailMatch());
+    },
+
+    validateEmailMatch() {
+        const email = document.getElementById('buyer-email').value.trim();
+        const emailConfirm = document.getElementById('buyer-email-confirm').value.trim();
+        const errorEl = document.getElementById('email-mismatch-error');
+        const confirmInput = document.getElementById('buyer-email-confirm');
+
+        if (emailConfirm && email !== emailConfirm) {
+            errorEl.classList.remove('hidden');
+            confirmInput.classList.add('border-primary');
+            return false;
+        } else {
+            errorEl.classList.add('hidden');
+            confirmInput.classList.remove('border-primary');
+            return true;
         }
     },
 
@@ -448,34 +471,15 @@ const CheckoutPage = {
     },
 
     toggleBeneficiaries() {
-        const checkbox = document.getElementById('sameBeneficiary');
-        const nameInputs = document.querySelectorAll('.beneficiary-name');
-        const emailInputs = document.querySelectorAll('.beneficiary-email');
-        const buyerName = document.getElementById('buyer-name').value;
-        const buyerEmail = document.getElementById('buyer-email').value;
+        const checkbox = document.getElementById('differentBeneficiaries');
+        const beneficiariesList = document.getElementById('beneficiariesList');
 
         if (checkbox.checked) {
-            nameInputs.forEach(input => {
-                input.disabled = true;
-                input.classList.add('bg-surface', 'text-muted');
-                input.value = buyerName;
-            });
-            emailInputs.forEach(input => {
-                input.disabled = true;
-                input.classList.add('bg-surface', 'text-muted');
-                input.value = buyerEmail;
-            });
+            // Show beneficiaries form
+            beneficiariesList.classList.remove('hidden');
         } else {
-            nameInputs.forEach(input => {
-                input.disabled = false;
-                input.classList.remove('bg-surface', 'text-muted');
-                input.value = '';
-            });
-            emailInputs.forEach(input => {
-                input.disabled = false;
-                input.classList.remove('bg-surface', 'text-muted');
-                input.value = '';
-            });
+            // Hide beneficiaries form - use buyer data for all
+            beneficiariesList.classList.add('hidden');
         }
     },
 
@@ -585,12 +589,22 @@ const CheckoutPage = {
     validateForm() {
         const buyerName = document.getElementById('buyer-name').value.trim();
         const buyerEmail = document.getElementById('buyer-email').value.trim();
+        const buyerEmailConfirm = document.getElementById('buyer-email-confirm').value.trim();
         const buyerPhone = document.getElementById('buyer-phone').value.trim();
 
-        if (!buyerName || !buyerEmail || !buyerPhone) {
+        if (!buyerName || !buyerEmail || !buyerEmailConfirm || !buyerPhone) {
             if (typeof AmbiletNotifications !== 'undefined') {
                 AmbiletNotifications.error('Completează toate câmpurile obligatorii');
             }
+            return false;
+        }
+
+        // Validate email match
+        if (buyerEmail !== buyerEmailConfirm) {
+            if (typeof AmbiletNotifications !== 'undefined') {
+                AmbiletNotifications.error('Adresele de email nu coincid');
+            }
+            document.getElementById('buyer-email-confirm').focus();
             return false;
         }
 
@@ -606,20 +620,36 @@ const CheckoutPage = {
 
     getBeneficiaries() {
         const beneficiaries = [];
-        const sameBeneficiary = document.getElementById('sameBeneficiary').checked;
+        const useDifferentBeneficiaries = document.getElementById('differentBeneficiaries').checked;
         const buyerName = document.getElementById('buyer-name').value.trim();
         const buyerEmail = document.getElementById('buyer-email').value.trim();
 
-        const nameInputs = document.querySelectorAll('.beneficiary-name');
-        const emailInputs = document.querySelectorAll('.beneficiary-email');
-
-        nameInputs.forEach((input, idx) => {
-            beneficiaries.push({
-                name: sameBeneficiary ? buyerName : (input.value.trim() || buyerName),
-                email: sameBeneficiary ? buyerEmail : (emailInputs[idx]?.value.trim() || buyerEmail),
-                item_index: parseInt(input.dataset.item),
-                ticket_index: parseInt(input.dataset.index)
-            });
+        // Count total tickets
+        let ticketIndex = 0;
+        this.items.forEach((item, itemIndex) => {
+            const qty = item.quantity || 1;
+            for (let i = 0; i < qty; i++) {
+                if (useDifferentBeneficiaries) {
+                    // Get values from beneficiary form
+                    const nameInput = document.querySelector(`.beneficiary-name[data-item="${itemIndex}"][data-index="${i}"]`);
+                    const emailInput = document.querySelector(`.beneficiary-email[data-item="${itemIndex}"][data-index="${i}"]`);
+                    beneficiaries.push({
+                        name: nameInput?.value.trim() || buyerName,
+                        email: emailInput?.value.trim() || buyerEmail,
+                        item_index: itemIndex,
+                        ticket_index: i
+                    });
+                } else {
+                    // Use buyer data for all tickets
+                    beneficiaries.push({
+                        name: buyerName,
+                        email: buyerEmail,
+                        item_index: itemIndex,
+                        ticket_index: i
+                    });
+                }
+                ticketIndex++;
+            }
         });
 
         return beneficiaries;
@@ -643,8 +673,7 @@ const CheckoutPage = {
         const buyer = {
             name: document.getElementById('buyer-name').value.trim(),
             email: document.getElementById('buyer-email').value.trim(),
-            phone: document.getElementById('buyer-phone').value.trim(),
-            cnp: document.getElementById('buyer-cnp').value.trim()
+            phone: document.getElementById('buyer-phone').value.trim()
         };
 
         const beneficiaries = this.getBeneficiaries();
