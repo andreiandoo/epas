@@ -378,9 +378,16 @@ const EventPage = {
             category: eventData.category,
             category_slug: eventData.category_slug || (eventData.category ? eventData.category.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : null),
             tags: eventData.tags,
+            // Schedule mode and dates
+            duration_mode: eventData.duration_mode || 'single_day',
             start_date: eventData.starts_at,
             date: eventData.starts_at,
             end_date: eventData.ends_at,
+            range_start_date: eventData.range_start_date,
+            range_end_date: eventData.range_end_date,
+            range_start_time: eventData.range_start_time,
+            range_end_time: eventData.range_end_time,
+            multi_slots: eventData.multi_slots,
             start_time: formatTime(startsAt),
             doors_time: formatTime(doorsAt),
             is_popular: eventData.is_featured,
@@ -539,18 +546,65 @@ const EventPage = {
     },
 
     /**
-     * Render event date
+     * Render event date based on duration_mode
      */
     renderDate(e) {
-        const eventDate = new Date(e.start_date || e.date);
         const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const weekdays = ['Duminica', 'Luni', 'Marti', 'Miercuri', 'Joi', 'Vineri', 'Sambata'];
+        const durationMode = e.duration_mode || 'single_day';
 
-        document.getElementById(this.elements.eventDay).textContent = eventDate.getDate();
-        document.getElementById(this.elements.eventMonth).textContent = months[eventDate.getMonth()];
-        document.getElementById(this.elements.eventWeekday).textContent = weekdays[eventDate.getDay()];
-        document.getElementById(this.elements.eventDateFull).textContent =
-            eventDate.getDate() + ' ' + months[eventDate.getMonth()] + ' ' + eventDate.getFullYear();
+        if (durationMode === 'range' && e.range_start_date && e.range_end_date) {
+            // Festival/Range mode - show start and end dates
+            const startDate = new Date(e.range_start_date);
+            const endDate = new Date(e.range_end_date);
+
+            document.getElementById(this.elements.eventDay).textContent = startDate.getDate() + '-' + endDate.getDate();
+            document.getElementById(this.elements.eventMonth).textContent = months[startDate.getMonth()];
+            document.getElementById(this.elements.eventWeekday).textContent = 'Festival';
+
+            // Full date range text
+            let dateFullText = startDate.getDate() + ' ' + months[startDate.getMonth()];
+            if (startDate.getMonth() !== endDate.getMonth()) {
+                dateFullText += ' - ' + endDate.getDate() + ' ' + months[endDate.getMonth()] + ' ' + endDate.getFullYear();
+            } else {
+                dateFullText += ' - ' + endDate.getDate() + ' ' + months[endDate.getMonth()] + ' ' + endDate.getFullYear();
+            }
+            document.getElementById(this.elements.eventDateFull).textContent = dateFullText;
+
+        } else if (durationMode === 'multi_day' && e.multi_slots && e.multi_slots.length > 0) {
+            // Multi-day mode - show dates from slots
+            const firstSlot = e.multi_slots[0];
+            const firstDate = new Date(firstSlot.date);
+
+            if (e.multi_slots.length === 1) {
+                // Single slot
+                document.getElementById(this.elements.eventDay).textContent = firstDate.getDate();
+                document.getElementById(this.elements.eventMonth).textContent = months[firstDate.getMonth()];
+                document.getElementById(this.elements.eventWeekday).textContent = weekdays[firstDate.getDay()];
+                document.getElementById(this.elements.eventDateFull).textContent =
+                    firstDate.getDate() + ' ' + months[firstDate.getMonth()] + ' ' + firstDate.getFullYear();
+            } else {
+                // Multiple slots
+                document.getElementById(this.elements.eventDay).textContent = e.multi_slots.length;
+                document.getElementById(this.elements.eventMonth).textContent = 'zile';
+                document.getElementById(this.elements.eventWeekday).textContent = 'Mai multe date';
+
+                const dates = e.multi_slots.map(function(slot) {
+                    const d = new Date(slot.date);
+                    return d.getDate() + ' ' + months[d.getMonth()];
+                }).join(', ');
+                document.getElementById(this.elements.eventDateFull).textContent = dates;
+            }
+
+        } else {
+            // Single day mode (default)
+            const eventDate = new Date(e.start_date || e.date);
+            document.getElementById(this.elements.eventDay).textContent = eventDate.getDate();
+            document.getElementById(this.elements.eventMonth).textContent = months[eventDate.getMonth()];
+            document.getElementById(this.elements.eventWeekday).textContent = weekdays[eventDate.getDay()];
+            document.getElementById(this.elements.eventDateFull).textContent =
+                eventDate.getDate() + ' ' + months[eventDate.getMonth()] + ' ' + eventDate.getFullYear();
+        }
     },
 
     /**

@@ -273,9 +273,19 @@ class MarketplaceEventsController extends BaseController
                 'cover_image' => $coverImage,
                 'cover_image_url' => $coverImage ?? $posterImage,
                 'category' => $event->marketplaceEventCategory?->getTranslation('name', $language),
+                // Schedule info
+                'duration_mode' => $event->duration_mode ?? 'single_day',
+                // Single day fields
                 'starts_at' => $event->event_date?->format('Y-m-d') . 'T' . ($event->start_time ?? '00:00:00'),
                 'ends_at' => $event->end_time ? $event->event_date?->format('Y-m-d') . 'T' . $event->end_time : null,
                 'doors_open_at' => $event->door_time ? $event->event_date?->format('Y-m-d') . 'T' . $event->door_time : null,
+                // Range/festival fields
+                'range_start_date' => $event->range_start_date?->format('Y-m-d'),
+                'range_end_date' => $event->range_end_date?->format('Y-m-d'),
+                'range_start_time' => $event->range_start_time,
+                'range_end_time' => $event->range_end_time,
+                // Multi-day slots
+                'multi_slots' => $event->multi_slots,
                 // Keep flat venue fields for backwards compatibility
                 'venue_name' => $venue?->getTranslation('name', $language),
                 'venue_address' => $venue?->address ?? $event->address,
