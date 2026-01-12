@@ -295,13 +295,20 @@ const AmbiletEventCard = {
         const rawDate = apiEvent.starts_at || apiEvent.event_date || apiEvent.start_date || apiEvent.date;
         const date = rawDate ? new Date(rawDate) : null;
 
-        // Extract venue
+        // Extract venue - handle both object format and flat fields
         let venueName = '', venueCity = '';
         if (typeof apiEvent.venue === 'string') {
             venueName = apiEvent.venue;
         } else if (apiEvent.venue && typeof apiEvent.venue === 'object') {
             venueName = apiEvent.venue.name || '';
             venueCity = apiEvent.venue.city || '';
+        }
+        // Fallback to flat venue_name/venue_city fields (from list API)
+        if (!venueName && apiEvent.venue_name) {
+            venueName = apiEvent.venue_name;
+        }
+        if (!venueCity && apiEvent.venue_city) {
+            venueCity = apiEvent.venue_city;
         }
         if (!venueCity && apiEvent.city) {
             venueCity = apiEvent.city;
@@ -310,23 +317,11 @@ const AmbiletEventCard = {
         // Extract price
         let minPrice = apiEvent.price_from || apiEvent.min_price || apiEvent.price || 0;
 
-        // Debug: log commission data
-        console.log('[EventCard] Event:', apiEvent.name || apiEvent.title, {
-            price_from: apiEvent.price_from,
-            min_price: apiEvent.min_price,
-            price: apiEvent.price,
-            minPrice_before: minPrice,
-            commission_mode: apiEvent.commission_mode,
-            commission_rate: apiEvent.commission_rate
-        });
-
         // Apply commission if mode is 'added_on_top'
         const commissionMode = apiEvent.commission_mode || 'included';
         const commissionRate = apiEvent.commission_rate || 0;
         if (commissionMode === 'added_on_top' && commissionRate > 0 && minPrice > 0) {
-            const oldPrice = minPrice;
             minPrice = parseFloat((minPrice + (minPrice * commissionRate / 100)).toFixed(2));
-            console.log('[EventCard] Commission applied:', oldPrice, '+', commissionRate + '%', '=', minPrice);
         }
 
         // Extract category

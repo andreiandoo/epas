@@ -378,9 +378,16 @@ const EventPage = {
             category: eventData.category,
             category_slug: eventData.category_slug || (eventData.category ? eventData.category.toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-') : null),
             tags: eventData.tags,
+            // Schedule mode and dates
+            duration_mode: eventData.duration_mode || 'single_day',
             start_date: eventData.starts_at,
             date: eventData.starts_at,
             end_date: eventData.ends_at,
+            range_start_date: eventData.range_start_date,
+            range_end_date: eventData.range_end_date,
+            range_start_time: eventData.range_start_time,
+            range_end_time: eventData.range_end_time,
+            multi_slots: eventData.multi_slots,
             start_time: formatTime(startsAt),
             doors_time: formatTime(doorsAt),
             is_popular: eventData.is_featured,
@@ -539,18 +546,65 @@ const EventPage = {
     },
 
     /**
-     * Render event date
+     * Render event date based on duration_mode
      */
     renderDate(e) {
-        const eventDate = new Date(e.start_date || e.date);
         const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const weekdays = ['Duminica', 'Luni', 'Marti', 'Miercuri', 'Joi', 'Vineri', 'Sambata'];
+        const durationMode = e.duration_mode || 'single_day';
 
-        document.getElementById(this.elements.eventDay).textContent = eventDate.getDate();
-        document.getElementById(this.elements.eventMonth).textContent = months[eventDate.getMonth()];
-        document.getElementById(this.elements.eventWeekday).textContent = weekdays[eventDate.getDay()];
-        document.getElementById(this.elements.eventDateFull).textContent =
-            eventDate.getDate() + ' ' + months[eventDate.getMonth()] + ' ' + eventDate.getFullYear();
+        if (durationMode === 'range' && e.range_start_date && e.range_end_date) {
+            // Festival/Range mode - show start and end dates
+            const startDate = new Date(e.range_start_date);
+            const endDate = new Date(e.range_end_date);
+
+            document.getElementById(this.elements.eventDay).textContent = startDate.getDate() + '-' + endDate.getDate();
+            document.getElementById(this.elements.eventMonth).textContent = months[startDate.getMonth()];
+            document.getElementById(this.elements.eventWeekday).textContent = 'Festival';
+
+            // Full date range text
+            let dateFullText = startDate.getDate() + ' ' + months[startDate.getMonth()];
+            if (startDate.getMonth() !== endDate.getMonth()) {
+                dateFullText += ' - ' + endDate.getDate() + ' ' + months[endDate.getMonth()] + ' ' + endDate.getFullYear();
+            } else {
+                dateFullText += ' - ' + endDate.getDate() + ' ' + months[endDate.getMonth()] + ' ' + endDate.getFullYear();
+            }
+            document.getElementById(this.elements.eventDateFull).textContent = dateFullText;
+
+        } else if (durationMode === 'multi_day' && e.multi_slots && e.multi_slots.length > 0) {
+            // Multi-day mode - show dates from slots
+            const firstSlot = e.multi_slots[0];
+            const firstDate = new Date(firstSlot.date);
+
+            if (e.multi_slots.length === 1) {
+                // Single slot
+                document.getElementById(this.elements.eventDay).textContent = firstDate.getDate();
+                document.getElementById(this.elements.eventMonth).textContent = months[firstDate.getMonth()];
+                document.getElementById(this.elements.eventWeekday).textContent = weekdays[firstDate.getDay()];
+                document.getElementById(this.elements.eventDateFull).textContent =
+                    firstDate.getDate() + ' ' + months[firstDate.getMonth()] + ' ' + firstDate.getFullYear();
+            } else {
+                // Multiple slots
+                document.getElementById(this.elements.eventDay).textContent = e.multi_slots.length;
+                document.getElementById(this.elements.eventMonth).textContent = 'zile';
+                document.getElementById(this.elements.eventWeekday).textContent = 'Mai multe date';
+
+                const dates = e.multi_slots.map(function(slot) {
+                    const d = new Date(slot.date);
+                    return d.getDate() + ' ' + months[d.getMonth()];
+                }).join(', ');
+                document.getElementById(this.elements.eventDateFull).textContent = dates;
+            }
+
+        } else {
+            // Single day mode (default)
+            const eventDate = new Date(e.start_date || e.date);
+            document.getElementById(this.elements.eventDay).textContent = eventDate.getDate();
+            document.getElementById(this.elements.eventMonth).textContent = months[eventDate.getMonth()];
+            document.getElementById(this.elements.eventWeekday).textContent = weekdays[eventDate.getDay()];
+            document.getElementById(this.elements.eventDateFull).textContent =
+                eventDate.getDate() + ' ' + months[eventDate.getMonth()] + ' ' + eventDate.getFullYear();
+        }
     },
 
     /**
@@ -1023,7 +1077,7 @@ const EventPage = {
     },
 
     /**
-     * Render related events grid
+     * Render related events grid using AmbiletEventCard component
      */
     renderRelatedEvents(events) {
         document.getElementById(this.elements.relatedEventsSection).style.display = 'block';
@@ -1044,39 +1098,13 @@ const EventPage = {
             seeAllLink.href = '/evenimente';
         }
 
-        const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-        document.getElementById(this.elements.relatedEvents).innerHTML = events.map(function(e) {
-            const eventDate = e.starts_at || e.event_date || e.start_date || e.date;
-            const date = eventDate ? new Date(eventDate) : new Date();
-            const title = e.name || e.title || 'Eveniment';
-            const image = e.image_url || e.image || '/assets/images/placeholder-event.jpg';
-            const venue = e.venue || e.location || 'Locatie TBA';
-            const city = e.city ? ', ' + e.city : '';
-            const price = e.price_from || e.price || e.min_price || 50;
-
-            return '<a href="/bilete/' + e.slug + '" class="overflow-hidden bg-white border event-card rounded-2xl border-border group">' +
-                '<div class="relative overflow-hidden h-80">' +
-                    '<img src="' + image + '" alt="' + title + '" class="object-cover w-full h-full event-image">' +
-                    '<div class="absolute top-3 left-3">' +
-                        '<div class="px-3 py-2 text-center text-white shadow-lg date-badge rounded-xl">' +
-                            '<span class="block text-lg font-bold leading-none">' + date.getDate() + '</span>' +
-                            '<span class="block text-[10px] uppercase tracking-wide mt-0.5">' + months[date.getMonth()] + '</span>' +
-                        '</div>' +
-                    '</div>' +
-                '</div>' +
-                '<div class="p-4">' +
-                    '<h3 class="font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2">' + title + '</h3>' +
-                    '<p class="text-sm text-muted mt-2 flex items-center gap-1.5">' +
-                        '<svg class="flex-shrink-0 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
-                        venue + city +
-                    '</p>' +
-                    '<div class="flex items-center justify-between pt-3 mt-3 border-t border-border">' +
-                        '<span class="font-bold text-primary">de la ' + price + ' lei</span>' +
-                    '</div>' +
-                '</div>' +
-            '</a>';
-        }).join('');
+        // Use AmbiletEventCard component for consistent rendering
+        document.getElementById(this.elements.relatedEvents).innerHTML = AmbiletEventCard.renderMany(events, {
+            showCategory: true,
+            showPrice: true,
+            showVenue: true,
+            urlPrefix: '/bilete/'
+        });
     },
 
     /**

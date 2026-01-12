@@ -943,6 +943,148 @@ function getHeroiconPath(string $heroiconName): ?string {
 }
 
 
+// ==================== EVENT GENRES CACHE ====================
+
+define('EVENT_GENRES_CACHE_FILE', __DIR__ . '/cache/event-genres.json');
+define('EVENT_GENRES_CACHE_TTL', 30 * 60); // 30 minutes
+
+/**
+ * Get event genres for filters with caching
+ *
+ * @return array Event genres array
+ */
+function getEventGenres(): array {
+    // Check if cache exists and is valid
+    if (isEventGenresCacheValid()) {
+        return loadEventGenresCache();
+    }
+
+    // Fetch fresh data from API
+    $freshData = fetchEventGenresFromAPI();
+
+    // Save to cache
+    saveEventGenresCache($freshData);
+
+    return $freshData;
+}
+
+/**
+ * Check if event genres cache is still valid
+ */
+function isEventGenresCacheValid(): bool {
+    if (!file_exists(EVENT_GENRES_CACHE_FILE)) {
+        return false;
+    }
+
+    $cacheTime = filemtime(EVENT_GENRES_CACHE_FILE);
+    return (time() - $cacheTime) < EVENT_GENRES_CACHE_TTL;
+}
+
+/**
+ * Load event genres from cache file
+ */
+function loadEventGenresCache(): array {
+    $content = file_get_contents(EVENT_GENRES_CACHE_FILE);
+
+    // Detect corrupted files
+    if (isContentCorrupted($content)) {
+        @unlink(EVENT_GENRES_CACHE_FILE);
+        return getDefaultEventGenres();
+    }
+
+    // Strip UTF-8 BOM if present
+    $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+    $data = json_decode($content, true);
+
+    if (!$data) {
+        return getDefaultEventGenres();
+    }
+
+    // Filter out items with invalid slugs
+    return array_values(array_filter($data, fn($item) => isValidSlug($item['slug'] ?? null)));
+}
+
+/**
+ * Save event genres to cache file
+ */
+function saveEventGenresCache(array $data): void {
+    $cacheDir = dirname(EVENT_GENRES_CACHE_FILE);
+
+    if (!is_dir($cacheDir)) {
+        mkdir($cacheDir, 0755, true);
+    }
+
+    file_put_contents(EVENT_GENRES_CACHE_FILE, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+}
+
+/**
+ * Fetch event genres from API directly
+ */
+function fetchEventGenresFromAPI(): array {
+    require_once __DIR__ . '/../includes/config.php';
+
+    // Call API directly (not through proxy) for server-side requests
+    $apiUrl = API_BASE_URL . '/event-genres';
+
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => [
+                'X-API-Key: ' . API_KEY,
+                'Accept: application/json',
+            ],
+            'timeout' => 5,
+            'ignore_errors' => true
+        ],
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false
+        ]
+    ]);
+
+    $response = @file_get_contents($apiUrl, false, $context);
+
+    if ($response === false) {
+        error_log('[nav-cache] Failed to fetch event genres from API: ' . $apiUrl);
+        return getDefaultEventGenres();
+    }
+
+    $data = json_decode($response, true);
+
+    if (!$data || !isset($data['success']) || !$data['success'] || !isset($data['data']['genres'])) {
+        error_log('[nav-cache] Invalid API response for event genres: ' . substr($response, 0, 500));
+        return getDefaultEventGenres();
+    }
+
+    // Transform API response to nav format
+    $genres = [];
+    foreach ($data['data']['genres'] as $genre) {
+        $genres[] = [
+            'name' => $genre['name'],
+            'slug' => $genre['slug'],
+            'count' => $genre['event_count'] ?? 0,
+        ];
+    }
+
+    return $genres;
+}
+
+/**
+ * Get default event genres (fallback)
+ */
+function getDefaultEventGenres(): array {
+    return [
+        ['name' => 'Pop', 'slug' => 'pop', 'count' => 0],
+        ['name' => 'Rock', 'slug' => 'rock', 'count' => 0],
+        ['name' => 'Hip-Hop', 'slug' => 'hip-hop', 'count' => 0],
+        ['name' => 'Electronic', 'slug' => 'electronic', 'count' => 0],
+        ['name' => 'Jazz', 'slug' => 'jazz', 'count' => 0],
+        ['name' => 'Clasic', 'slug' => 'clasic', 'count' => 0],
+        ['name' => 'Folk', 'slug' => 'folk', 'count' => 0],
+    ];
+}
+
 /**
  * Get default event categories (fallback)
  */
