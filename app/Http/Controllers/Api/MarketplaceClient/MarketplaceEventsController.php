@@ -29,7 +29,10 @@ class MarketplaceEventsController extends BaseController
                 'marketplaceOrganizer:id,name,slug,logo,verified_at,default_commission_mode,commission_rate',
                 'marketplaceEventCategory',
                 'venue:id,name,city,address',
-                'ticketTypes:id,event_id,price_cents',
+                'ticketTypes' => function ($query) {
+                    $query->select('id', 'event_id', 'price_cents', 'sale_price_cents')
+                        ->where('status', 'active');
+                },
             ]);
 
         // Filter upcoming only by default
@@ -154,7 +157,10 @@ class MarketplaceEventsController extends BaseController
                 'marketplaceOrganizer:id,name,slug,logo,verified_at,default_commission_mode,commission_rate',
                 'venue:id,name,city',
                 'marketplaceEventCategory',
-                'ticketTypes:id,event_id,price_cents',
+                'ticketTypes' => function ($query) {
+                    $query->select('id', 'event_id', 'price_cents', 'sale_price_cents')
+                        ->where('status', 'active');
+                },
             ])
             ->orderBy('event_date')
             ->orderBy('start_time')
@@ -542,9 +548,17 @@ class MarketplaceEventsController extends BaseController
         $commissionRate = (float) ($event->commission_rate ?? $organizer?->commission_rate ?? $client?->commission_rate ?? 5.0);
 
         // Get minimum price from ticket types (price stored in cents)
+        // Use sale_price_cents if set, otherwise price_cents
         $minPrice = null;
         if ($event->relationLoaded('ticketTypes') && $event->ticketTypes->isNotEmpty()) {
-            $minPriceCents = $event->ticketTypes->min('price_cents');
+            $minPriceCents = $event->ticketTypes->map(function ($ticket) {
+                // Use sale price if set and greater than 0, otherwise regular price
+                if ($ticket->sale_price_cents !== null && $ticket->sale_price_cents > 0) {
+                    return $ticket->sale_price_cents;
+                }
+                return $ticket->price_cents;
+            })->min();
+
             if ($minPriceCents !== null) {
                 $minPrice = $minPriceCents / 100;
             }
