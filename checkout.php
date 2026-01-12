@@ -7,7 +7,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
     <!-- Progress Steps -->
-    <div class="bg-white border-b border-gray-200 mt-28 mobile:mt-20">
+    <div class="bg-white border-b border-gray-200 mt-28 mobile:mt-18">
         <div class="px-4 py-4 mx-auto max-w-7xl">
             <div class="flex items-center justify-center gap-4">
                 <div class="flex items-center gap-2">
