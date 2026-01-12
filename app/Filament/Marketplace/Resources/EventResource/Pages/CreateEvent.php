@@ -3,6 +3,7 @@
 namespace App\Filament\Marketplace\Resources\EventResource\Pages;
 
 use App\Filament\Marketplace\Resources\EventResource;
+use App\Services\EventSchedulingService;
 use Filament\Resources\Pages\CreateRecord;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 
@@ -29,6 +30,13 @@ class CreateEvent extends CreateRecord
         }
 
         return $data;
+    }
+
+    protected function afterCreate(): void
+    {
+        // Process multi-day and recurring event scheduling
+        // Creates child events for each occurrence
+        app(EventSchedulingService::class)->processEventScheduling($this->record);
     }
 
     protected function getRedirectUrl(): string

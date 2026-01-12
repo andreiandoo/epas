@@ -32,6 +32,11 @@ class Event extends Model
         'slug',
         'duration_mode',
 
+        // Parent/child event relationships
+        'parent_id',
+        'is_template',
+        'occurrence_number',
+
         // flags
         'is_sold_out', 'is_cancelled', 'cancel_reason',
         'is_postponed', 'postponed_date', 'postponed_start_time', 'postponed_door_time', 'postponed_end_time', 'postponed_reason',
@@ -46,6 +51,11 @@ class Event extends Model
 
         // multi-day json
         'multi_slots',
+
+        // recurring
+        'recurring_frequency', 'recurring_start_date', 'recurring_start_time',
+        'recurring_door_time', 'recurring_end_time', 'recurring_weekday',
+        'recurring_week_of_month', 'recurring_count',
 
         // media
         'poster_url', 'hero_image_url',
@@ -75,11 +85,12 @@ class Event extends Model
         'ticket_terms'      => 'array',
 
         // date-only
-        'event_date'        => 'date',
-        'range_start_date'  => 'date',
-        'range_end_date'    => 'date',
-        'postponed_date'    => 'date',
-        'promoted_until'    => 'date',
+        'event_date'           => 'date',
+        'range_start_date'     => 'date',
+        'range_end_date'       => 'date',
+        'recurring_start_date' => 'date',
+        'postponed_date'       => 'date',
+        'promoted_until'       => 'date',
 
         // flags
         'is_sold_out'       => 'bool',
@@ -91,6 +102,7 @@ class Event extends Model
         'is_homepage_featured'  => 'bool',
         'is_general_featured'   => 'bool',
         'is_category_featured'  => 'bool',
+        'is_template'       => 'bool',
 
         // commission
         'commission_rate'   => 'decimal:2',
@@ -104,6 +116,33 @@ class Event extends Model
         'views_count'       => 'integer',
         'interested_count'  => 'integer',
     ];
+
+    /* Parent/Child Event Relations */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Event::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(Event::class, 'parent_id')->orderBy('occurrence_number');
+    }
+
+    /**
+     * Check if this event has child events
+     */
+    public function hasChildren(): bool
+    {
+        return $this->children()->exists();
+    }
+
+    /**
+     * Check if this event is a child of another event
+     */
+    public function isChild(): bool
+    {
+        return $this->parent_id !== null;
+    }
 
     /* Core Relations */
     public function tenant(): BelongsTo

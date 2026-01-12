@@ -3,6 +3,7 @@
 namespace App\Filament\Marketplace\Resources\EventResource\Pages;
 
 use App\Filament\Marketplace\Resources\EventResource;
+use App\Services\EventSchedulingService;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
@@ -55,5 +56,13 @@ class EditEvent extends EditRecord
         $actions[] = Actions\DeleteAction::make();
 
         return $actions;
+    }
+
+    protected function afterSave(): void
+    {
+        // Only sync child events if this is a parent event (not a child)
+        if (!$this->record->isChild()) {
+            app(EventSchedulingService::class)->syncChildEvents($this->record);
+        }
     }
 }
