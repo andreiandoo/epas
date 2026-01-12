@@ -345,12 +345,34 @@ class MarketplaceEventsController extends BaseController
                     'is_sold_out' => $available <= 0,
                 ];
             })->values(),
-            'artists' => $event->artists->map(function ($artist) {
+            'artists' => $event->artists->map(function ($artist) use ($language) {
+                // Get bio and truncate to first 80 words
+                $bio = $artist->getTranslation('bio_html', $language) ?? '';
+                if (is_array($bio)) {
+                    $bio = $bio[$language] ?? $bio['ro'] ?? $bio['en'] ?? '';
+                }
+                $bioText = strip_tags($bio);
+                $words = preg_split('/\s+/', $bioText, -1, PREG_SPLIT_NO_EMPTY);
+                $truncatedBio = count($words) > 80
+                    ? implode(' ', array_slice($words, 0, 80)) . '...'
+                    : $bioText;
+
+                // Build social links array (only include those that exist)
+                $socialLinks = [];
+                if ($artist->facebook_url) $socialLinks['facebook'] = $artist->facebook_url;
+                if ($artist->instagram_url) $socialLinks['instagram'] = $artist->instagram_url;
+                if ($artist->tiktok_url) $socialLinks['tiktok'] = $artist->tiktok_url;
+                if ($artist->youtube_url) $socialLinks['youtube'] = $artist->youtube_url;
+                if ($artist->spotify_url) $socialLinks['spotify'] = $artist->spotify_url;
+                if ($artist->website) $socialLinks['website'] = $artist->website;
+
                 return [
                     'id' => $artist->id,
                     'name' => $artist->name,
                     'slug' => $artist->slug,
                     'image_url' => $artist->main_image_full_url ?? $artist->image_url,
+                    'bio' => $truncatedBio,
+                    'social_links' => $socialLinks,
                     'is_headliner' => $artist->pivot->is_headliner ?? false,
                     'is_co_headliner' => $artist->pivot->is_co_headliner ?? false,
                 ];
