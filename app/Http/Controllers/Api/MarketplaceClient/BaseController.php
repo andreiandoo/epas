@@ -72,12 +72,24 @@ abstract class BaseController extends Controller
 
     /**
      * Paginated response
+     *
+     * @param mixed $paginator Laravel paginator instance
+     * @param callable|array $callbackOrMeta Either a callback to transform items, or meta array
+     * @param array $meta Additional meta data (only used when callback is provided)
      */
-    protected function paginated($paginator, array $meta = []): JsonResponse
+    protected function paginated($paginator, callable|array $callbackOrMeta = [], array $meta = []): JsonResponse
     {
+        // Determine if second param is callback or meta array
+        if (is_callable($callbackOrMeta)) {
+            $items = array_map($callbackOrMeta, $paginator->items());
+        } else {
+            $items = $paginator->items();
+            $meta = $callbackOrMeta;
+        }
+
         return response()->json([
             'success' => true,
-            'data' => $paginator->items(),
+            'data' => $items,
             'meta' => array_merge([
                 'current_page' => $paginator->currentPage(),
                 'last_page' => $paginator->lastPage(),
