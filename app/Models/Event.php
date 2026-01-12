@@ -405,6 +405,30 @@ class Event extends Model
     }
 
     /**
+     * Get hourly analytics records for this event
+     */
+    public function analyticsHourly(): HasMany
+    {
+        return $this->hasMany(EventAnalyticsHourly::class)->orderBy('date', 'desc')->orderBy('hour', 'desc');
+    }
+
+    /**
+     * Get weekly analytics records for this event
+     */
+    public function analyticsWeekly(): HasMany
+    {
+        return $this->hasMany(EventAnalyticsWeekly::class)->orderBy('week_start', 'desc');
+    }
+
+    /**
+     * Get monthly analytics records for this event
+     */
+    public function analyticsMonthly(): HasMany
+    {
+        return $this->hasMany(EventAnalyticsMonthly::class)->orderBy('month_start', 'desc');
+    }
+
+    /**
      * Get active ad campaigns for this event
      */
     public function activeAdCampaigns(): HasMany

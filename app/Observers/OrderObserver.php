@@ -5,15 +5,24 @@ namespace App\Observers;
 use App\Models\Order;
 use App\Models\Platform\CoreCustomer;
 use App\Services\Platform\PlatformTrackingService;
+use App\Services\Analytics\MilestoneAttributionService;
+use App\Services\Analytics\RealTimeAnalyticsService;
 use Illuminate\Support\Facades\Log;
 
 class OrderObserver
 {
     protected PlatformTrackingService $trackingService;
+    protected MilestoneAttributionService $attributionService;
+    protected RealTimeAnalyticsService $realTimeService;
 
-    public function __construct(PlatformTrackingService $trackingService)
-    {
+    public function __construct(
+        PlatformTrackingService $trackingService,
+        MilestoneAttributionService $attributionService,
+        RealTimeAnalyticsService $realTimeService
+    ) {
         $this->trackingService = $trackingService;
+        $this->attributionService = $attributionService;
+        $this->realTimeService = $realTimeService;
     }
 
     /**
@@ -68,9 +77,47 @@ class OrderObserver
                 'core_customer_id' => $coreCustomer?->id,
             ]);
 
+            // Track for organizer analytics (milestone attribution + real-time)
+            $this->trackOrganizerAnalytics($order, $coreCustomer);
+
         } catch (\Exception $e) {
             Log::error('Failed to track order conversion', [
                 'order_id' => $order->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Track purchase for organizer analytics (milestone attribution + real-time updates)
+     */
+    protected function trackOrganizerAnalytics(Order $order, ?CoreCustomer $coreCustomer): void
+    {
+        // Only process marketplace orders with event association
+        if (!$order->marketplace_event_id) {
+            return;
+        }
+
+        try {
+            // 1. Attribute purchase to milestone (if matching campaign/milestone found)
+            $attributedMilestone = $this->attributionService->attributePurchase($order);
+
+            if ($attributedMilestone) {
+                Log::info('Order attributed to milestone', [
+                    'order_id' => $order->id,
+                    'event_id' => $order->marketplace_event_id,
+                    'milestone_id' => $attributedMilestone->id,
+                    'milestone_type' => $attributedMilestone->type,
+                ]);
+            }
+
+            // 2. Update real-time analytics for the event
+            $this->realTimeService->trackPurchaseCompleted($order, $attributedMilestone);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to track organizer analytics', [
+                'order_id' => $order->id,
+                'event_id' => $order->marketplace_event_id,
                 'error' => $e->getMessage(),
             ]);
         }

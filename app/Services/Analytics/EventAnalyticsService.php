@@ -5,6 +5,9 @@ namespace App\Services\Analytics;
 use App\Models\Event;
 use App\Models\EventMilestone;
 use App\Models\EventAnalyticsDaily;
+use App\Models\EventAnalyticsHourly;
+use App\Models\EventAnalyticsWeekly;
+use App\Models\EventAnalyticsMonthly;
 use App\Models\Order;
 use App\Models\Ticket;
 use App\Models\TicketType;
@@ -739,6 +742,274 @@ class EventAnalyticsService
         Cache::forget("event_analytics_{$eventId}_7d");
         Cache::forget("event_analytics_{$eventId}_30d");
         Cache::forget("event_analytics_{$eventId}_all");
+        Cache::forget("event_analytics_realtime_{$eventId}");
+        Cache::forget("event_analytics_overview_{$eventId}");
+    }
+
+    /**
+     * Get real-time dashboard data (uses aggregated hourly data for performance)
+     */
+    public function getRealTimeDashboardData(Event $event): array
+    {
+        $cacheKey = "event_analytics_realtime_{$event->id}";
+
+        return Cache::remember($cacheKey, 60, function () use ($event) {
+            $realTimeService = app(RealTimeAnalyticsService::class);
+
+            return [
+                'realtime' => $realTimeService->getRealtimeStats($event->id),
+                'live_visitors' => $realTimeService->getLiveVisitorsCount($event->id),
+                'hourly_chart' => $this->getTodayHourlyChart($event),
+            ];
+        });
+    }
+
+    /**
+     * Get today's hourly chart data from aggregated hourly table
+     */
+    public function getTodayHourlyChart(Event $event): array
+    {
+        $today = now()->toDateString();
+        $currentHour = now()->hour;
+
+        $hourlyData = EventAnalyticsHourly::where('event_id', $event->id)
+            ->where('date', $today)
+            ->orderBy('hour')
+            ->get()
+            ->keyBy('hour');
+
+        $chart = [];
+        for ($hour = 0; $hour <= $currentHour; $hour++) {
+            $data = $hourlyData->get($hour);
+            $chart[] = [
+                'hour' => sprintf('%02d:00', $hour),
+                'page_views' => $data?->page_views ?? 0,
+                'unique_visitors' => $data?->unique_visitors ?? 0,
+                'purchases' => $data?->purchases ?? 0,
+                'revenue' => ($data?->revenue_cents ?? 0) / 100,
+                'tickets_sold' => $data?->tickets_sold ?? 0,
+            ];
+        }
+
+        return $chart;
+    }
+
+    /**
+     * Get chart data optimized with aggregated data (falls back to raw if not available)
+     */
+    public function getOptimizedChartData(Event $event, array $dateRange, string $granularity = 'daily'): array
+    {
+        return match ($granularity) {
+            'hourly' => $this->getHourlyChartData($event, $dateRange),
+            'weekly' => $this->getWeeklyChartData($event, $dateRange),
+            'monthly' => $this->getMonthlyChartData($event, $dateRange),
+            default => $this->getDailyChartData($event, $dateRange),
+        };
+    }
+
+    /**
+     * Get hourly chart data for a specific date range
+     */
+    protected function getHourlyChartData(Event $event, array $dateRange): array
+    {
+        return EventAnalyticsHourly::where('event_id', $event->id)
+            ->whereBetween('date', [$dateRange['start']->toDateString(), $dateRange['end']->toDateString()])
+            ->orderBy('date')
+            ->orderBy('hour')
+            ->get()
+            ->map(fn ($h) => [
+                'datetime' => Carbon::parse($h->date)->setHour($h->hour)->format('Y-m-d H:i'),
+                'label' => Carbon::parse($h->date)->format('d M') . ' ' . sprintf('%02d:00', $h->hour),
+                'page_views' => $h->page_views,
+                'unique_visitors' => $h->unique_visitors,
+                'purchases' => $h->purchases,
+                'revenue' => $h->revenue_cents / 100,
+                'tickets_sold' => $h->tickets_sold,
+            ])
+            ->toArray();
+    }
+
+    /**
+     * Get daily chart data from aggregated table
+     */
+    protected function getDailyChartData(Event $event, array $dateRange): array
+    {
+        $dailyData = EventAnalyticsDaily::where('event_id', $event->id)
+            ->whereBetween('date', [$dateRange['start']->toDateString(), $dateRange['end']->toDateString()])
+            ->orderBy('date')
+            ->get()
+            ->keyBy(fn ($d) => $d->date->format('Y-m-d'));
+
+        // Fill in any missing days
+        $days = [];
+        $current = $dateRange['start']->copy();
+
+        while ($current->lte($dateRange['end'])) {
+            $dateKey = $current->format('Y-m-d');
+            $data = $dailyData->get($dateKey);
+
+            $days[] = [
+                'date' => $current->format('d M'),
+                'full_date' => $current->format('l, F d'),
+                'raw_date' => $dateKey,
+                'page_views' => $data?->page_views ?? 0,
+                'unique_visitors' => $data?->unique_visitors ?? 0,
+                'purchases' => $data?->purchases_count ?? $data?->purchases ?? 0,
+                'revenue' => $data?->revenue ?? ($data?->revenue_cents ?? 0) / 100,
+                'tickets_sold' => $data?->tickets_sold ?? 0,
+                'conversion_rate' => $data?->conversion_rate ?? 0,
+            ];
+
+            $current->addDay();
+        }
+
+        return $days;
+    }
+
+    /**
+     * Get weekly chart data from aggregated table
+     */
+    protected function getWeeklyChartData(Event $event, array $dateRange): array
+    {
+        return EventAnalyticsWeekly::where('event_id', $event->id)
+            ->whereBetween('week_start', [$dateRange['start']->startOfWeek()->toDateString(), $dateRange['end']->toDateString()])
+            ->orderBy('week_start')
+            ->get()
+            ->map(fn ($w) => [
+                'week' => $w->week_range,
+                'week_start' => $w->week_start->format('Y-m-d'),
+                'page_views' => $w->page_views,
+                'unique_visitors' => $w->unique_visitors,
+                'purchases' => $w->purchases,
+                'revenue' => $w->revenue_cents / 100,
+                'tickets_sold' => $w->tickets_sold,
+                'conversion_rate' => $w->conversion_rate,
+                'revenue_change' => $w->revenue_change_pct,
+            ])
+            ->toArray();
+    }
+
+    /**
+     * Get monthly chart data from aggregated table
+     */
+    protected function getMonthlyChartData(Event $event, array $dateRange): array
+    {
+        return EventAnalyticsMonthly::where('event_id', $event->id)
+            ->whereBetween('month_start', [$dateRange['start']->startOfMonth()->toDateString(), $dateRange['end']->toDateString()])
+            ->orderBy('month_start')
+            ->get()
+            ->map(fn ($m) => [
+                'month' => $m->month_name,
+                'month_start' => $m->month_start->format('Y-m-d'),
+                'page_views' => $m->page_views,
+                'unique_visitors' => $m->unique_visitors,
+                'purchases' => $m->purchases,
+                'revenue' => $m->revenue_cents / 100,
+                'tickets_sold' => $m->tickets_sold,
+                'conversion_rate' => $m->conversion_rate,
+                'revenue_change' => $m->revenue_change_pct,
+            ])
+            ->toArray();
+    }
+
+    /**
+     * Get aggregated traffic sources from daily data
+     */
+    public function getAggregatedTrafficSources(Event $event, array $dateRange): array
+    {
+        $dailyData = EventAnalyticsDaily::where('event_id', $event->id)
+            ->whereBetween('date', [$dateRange['start']->toDateString(), $dateRange['end']->toDateString()])
+            ->get();
+
+        if ($dailyData->isEmpty()) {
+            // Fall back to raw calculation
+            return $this->getTrafficSources($event, $dateRange);
+        }
+
+        // Merge traffic sources from all daily records
+        $merged = [];
+        foreach ($dailyData as $day) {
+            $sources = $day->traffic_sources ?? [];
+            foreach ($sources as $source) {
+                $name = $source['name'] ?? 'Unknown';
+                if (!isset($merged[$name])) {
+                    $merged[$name] = [
+                        'name' => $name,
+                        'icon' => $source['icon'] ?? '🔗',
+                        'color' => $source['color'] ?? '#6b7280',
+                        'visitors' => 0,
+                        'conversions' => 0,
+                        'revenue' => 0,
+                    ];
+                }
+                $merged[$name]['visitors'] += $source['visitors'] ?? 0;
+                $merged[$name]['conversions'] += $source['conversions'] ?? 0;
+                $merged[$name]['revenue'] += $source['revenue'] ?? 0;
+            }
+        }
+
+        // Calculate percentages
+        $totalVisitors = array_sum(array_column($merged, 'visitors'));
+        foreach ($merged as &$source) {
+            $source['percent'] = $totalVisitors > 0 ? round(($source['visitors'] / $totalVisitors) * 100, 0) : 0;
+        }
+
+        // Sort by visitors
+        usort($merged, fn ($a, $b) => $b['visitors'] <=> $a['visitors']);
+
+        return array_values($merged);
+    }
+
+    /**
+     * Get period comparison stats (useful for trend analysis)
+     */
+    public function getPeriodComparison(Event $event, string $period = '7d'): array
+    {
+        $currentRange = $this->getDateRange($period);
+        $periodDays = $currentRange['start']->diffInDays($currentRange['end']);
+
+        $previousRange = [
+            'start' => $currentRange['start']->copy()->subDays($periodDays),
+            'end' => $currentRange['start']->copy()->subDay(),
+        ];
+
+        // Get aggregated data for both periods
+        $currentDaily = EventAnalyticsDaily::where('event_id', $event->id)
+            ->whereBetween('date', [$currentRange['start']->toDateString(), $currentRange['end']->toDateString()])
+            ->get();
+
+        $previousDaily = EventAnalyticsDaily::where('event_id', $event->id)
+            ->whereBetween('date', [$previousRange['start']->toDateString(), $previousRange['end']->toDateString()])
+            ->get();
+
+        $currentRevenue = $currentDaily->sum('revenue') ?: $currentDaily->sum(fn($d) => ($d->revenue_cents ?? 0) / 100);
+        $previousRevenue = $previousDaily->sum('revenue') ?: $previousDaily->sum(fn($d) => ($d->revenue_cents ?? 0) / 100);
+
+        $currentVisitors = $currentDaily->sum('unique_visitors');
+        $previousVisitors = $previousDaily->sum('unique_visitors');
+
+        $currentPurchases = $currentDaily->sum('purchases') ?: $currentDaily->sum('purchases_count');
+        $previousPurchases = $previousDaily->sum('purchases') ?: $previousDaily->sum('purchases_count');
+
+        return [
+            'current' => [
+                'revenue' => $currentRevenue,
+                'visitors' => $currentVisitors,
+                'purchases' => $currentPurchases,
+                'conversion_rate' => $currentVisitors > 0 ? round(($currentPurchases / $currentVisitors) * 100, 2) : 0,
+            ],
+            'previous' => [
+                'revenue' => $previousRevenue,
+                'visitors' => $previousVisitors,
+                'purchases' => $previousPurchases,
+                'conversion_rate' => $previousVisitors > 0 ? round(($previousPurchases / $previousVisitors) * 100, 2) : 0,
+            ],
+            'changes' => [
+                'revenue' => $previousRevenue > 0 ? round((($currentRevenue - $previousRevenue) / $previousRevenue) * 100, 1) : 0,
+                'visitors' => $previousVisitors > 0 ? round((($currentVisitors - $previousVisitors) / $previousVisitors) * 100, 1) : 0,
+                'purchases' => $previousPurchases > 0 ? round((($currentPurchases - $previousPurchases) / $previousPurchases) * 100, 1) : 0,
+            ],
+        ];
     }
 
     /* Helper methods */
