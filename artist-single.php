@@ -290,10 +290,8 @@ require_once __DIR__ . '/includes/footer.php';
 echo '<script>window.ARTIST_SLUG = ' . json_encode($artistSlug) . ';</script>';
 
 // Load external artist page controller
-$scriptsExtra = <<<SCRIPTS
-<script src="/assets/js/pages/artist-single.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => ArtistPage.init());</script>
-SCRIPTS;
+$scriptsExtra = '<script src="' . asset('assets/js/pages/artist-single.js') . '"></script>
+<script>document.addEventListener(\'DOMContentLoaded\', () => ArtistPage.init());</script>';
 
 require_once __DIR__ . '/includes/scripts.php';
 ?>

@@ -165,10 +165,8 @@ require_once __DIR__ . '/includes/header.php'; ?>
 <?php
 // Page controller script
 $categorySlugJS = json_encode($categorySlug);
-$scriptsExtra = <<<SCRIPTS
-<script src="/assets/js/pages/category-page.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => CategoryPage.init({$categorySlugJS}));</script>
-SCRIPTS;
+$scriptsExtra = '<script src="' . asset('assets/js/pages/category-page.js') . '"></script>
+<script>document.addEventListener(\'DOMContentLoaded\', () => CategoryPage.init(' . $categorySlugJS . '));</script>';
 
 require_once __DIR__ . '/includes/scripts.php';
 ?>

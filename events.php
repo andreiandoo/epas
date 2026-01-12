@@ -213,10 +213,8 @@ $initialFilters = json_encode([
     'search' => $searchQuery
 ]);
 
-$scriptsExtra = <<<SCRIPTS
-<script src="/assets/js/pages/events-page.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => EventsPage.init({$initialFilters}));</script>
-SCRIPTS;
+$scriptsExtra = '<script src="' . asset('assets/js/pages/events-page.js') . '"></script>
+<script>document.addEventListener(\'DOMContentLoaded\', () => EventsPage.init(' . $initialFilters . '));</script>';
 
 require_once __DIR__ . '/includes/scripts.php';
 ?>

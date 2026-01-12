@@ -314,10 +314,8 @@ include __DIR__ . '/includes/header.php';
 // Pass slug to JavaScript (htaccess rewrites URL, so query params not visible in browser)
 echo '<script>window.VENUE_SLUG = ' . json_encode($venueSlug) . ';</script>';
 
-$scriptsExtra = <<<SCRIPTS
-<script src="/assets/js/pages/venue-single.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => VenuePage.init());</script>
-SCRIPTS;
+$scriptsExtra = '<script src="' . asset('assets/js/pages/venue-single.js') . '"></script>
+<script>document.addEventListener(\'DOMContentLoaded\', () => VenuePage.init());</script>';
 
 include __DIR__ . '/includes/scripts.php';
 ?>

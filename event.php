@@ -284,10 +284,8 @@ require_once __DIR__ . '/includes/head.php';
 
 <?php
 // Page controller script
-$scriptsExtra = <<<SCRIPTS
-<script src="/assets/js/pages/event-single.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => EventPage.init());</script>
-SCRIPTS;
+$scriptsExtra = '<script src="' . asset('assets/js/pages/event-single.js') . '"></script>
+<script>document.addEventListener(\'DOMContentLoaded\', () => EventPage.init());</script>';
 
 require_once __DIR__ . '/includes/scripts.php';
 ?>

@@ -208,10 +208,8 @@ $initialFilters = json_encode([
 ]);
 
 // Load external artists page controller
-$scriptsExtra = <<<SCRIPTS
-<script src="/assets/js/pages/artists-page.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => ArtistsPage.init({$initialFilters}));</script>
-SCRIPTS;
+$scriptsExtra = '<script src="' . asset('assets/js/pages/artists-page.js') . '"></script>
+<script>document.addEventListener(\'DOMContentLoaded\', () => ArtistsPage.init(' . $initialFilters . '));</script>';
 
 require_once __DIR__ . '/includes/scripts.php';
 ?>
