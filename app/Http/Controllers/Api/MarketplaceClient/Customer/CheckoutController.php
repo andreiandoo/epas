@@ -87,6 +87,11 @@ class CheckoutController extends BaseController
         // Validate cart items are still available
         $validationErrors = $this->validateCartItemsForCheckout($cartItems);
         if (!empty($validationErrors)) {
+            Log::channel('marketplace')->warning('Checkout validation failed', [
+                'client_id' => $client->id,
+                'cart_items' => $cartItems,
+                'errors' => $validationErrors,
+            ]);
             return $this->error('Some items are no longer available', 400, [
                 'errors' => $validationErrors,
             ]);
@@ -377,6 +382,7 @@ class CheckoutController extends BaseController
         foreach ($items as $key => $item) {
             $ticketTypeId = $item['ticket_type_id'] ?? null;
             if (!$ticketTypeId) {
+                Log::channel('marketplace')->debug('Validation: missing ticket_type_id', ['item' => $item]);
                 $errors[$key] = 'Invalid item: missing ticket type';
                 continue;
             }
@@ -384,17 +390,27 @@ class CheckoutController extends BaseController
             $ticketType = MarketplaceTicketType::with('event')->find($ticketTypeId);
 
             if (!$ticketType) {
+                Log::channel('marketplace')->debug('Validation: ticket type not found', ['ticket_type_id' => $ticketTypeId]);
                 $errors[$key] = 'Ticket type no longer exists';
                 continue;
             }
 
             if ($ticketType->status !== 'on_sale') {
-                $errors[$key] = 'Ticket type is no longer on sale';
+                Log::channel('marketplace')->debug('Validation: ticket not on sale', [
+                    'ticket_type_id' => $ticketTypeId,
+                    'status' => $ticketType->status,
+                ]);
+                $errors[$key] = "Ticket type is no longer on sale (status: {$ticketType->status})";
                 continue;
             }
 
             if (!$ticketType->event || $ticketType->event->status !== 'published') {
-                $errors[$key] = 'Event is no longer available';
+                Log::channel('marketplace')->debug('Validation: event not published', [
+                    'ticket_type_id' => $ticketTypeId,
+                    'event_id' => $ticketType->marketplace_event_id,
+                    'event_status' => $ticketType->event?->status,
+                ]);
+                $errors[$key] = "Event is no longer available (status: " . ($ticketType->event?->status ?? 'null') . ")";
                 continue;
             }
 
