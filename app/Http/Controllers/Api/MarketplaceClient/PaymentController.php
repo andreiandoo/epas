@@ -56,10 +56,10 @@ class PaymentController extends BaseController
 
         // Determine processor type from microservice slug
         $processorType = match ($defaultPaymentMethod->slug) {
-            'netopia', 'netopia-payments' => 'netopia',
-            'stripe', 'stripe-payments' => 'stripe',
-            'euplatesc' => 'euplatesc',
-            'payu' => 'payu',
+            'netopia', 'netopia-payments', 'payment-netopia' => 'netopia',
+            'stripe', 'stripe-payments', 'payment-stripe' => 'stripe',
+            'euplatesc', 'payment-euplatesc' => 'euplatesc',
+            'payu', 'payment-payu' => 'payu',
             default => $defaultPaymentMethod->slug,
         };
 
@@ -156,17 +156,18 @@ class PaymentController extends BaseController
                 // Fallback to default payment method
                 $defaultPaymentMethod = $client->getDefaultPaymentMethod();
                 $processorType = match ($defaultPaymentMethod?->slug) {
-                    'netopia', 'netopia-payments' => 'netopia',
-                    'stripe', 'stripe-payments' => 'stripe',
-                    'euplatesc' => 'euplatesc',
-                    'payu' => 'payu',
+                    'netopia', 'netopia-payments', 'payment-netopia' => 'netopia',
+                    'stripe', 'stripe-payments', 'payment-stripe' => 'stripe',
+                    'euplatesc', 'payment-euplatesc' => 'euplatesc',
+                    'payu', 'payment-payu' => 'payu',
                     default => $defaultPaymentMethod?->slug ?? 'netopia',
                 };
             }
 
             $paymentConfig = $client->getPaymentMethodSettings($processorType)
                 ?? $client->getPaymentMethodSettings('netopia')
-                ?? $client->getPaymentMethodSettings('netopia-payments');
+                ?? $client->getPaymentMethodSettings('netopia-payments')
+                ?? $client->getPaymentMethodSettings('payment-netopia');
 
             if (!$paymentConfig) {
                 throw new \Exception('Payment configuration not found for callback');
