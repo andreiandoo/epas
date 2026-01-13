@@ -167,7 +167,9 @@ switch ($action) {
     case 'events.cities':
         $params = [];
         if (isset($_GET['category'])) $params['category'] = $_GET['category'];
-        $endpoint = '/events/cities?' . http_build_query($params);
+        if (isset($_GET['genre'])) $params['genre'] = $_GET['genre'];
+        if (isset($_GET['city'])) $params['city'] = $_GET['city'];
+        $endpoint = '/events/cities' . ($params ? '?' . http_build_query($params) : '');
         break;
 
     case 'venues':
@@ -327,6 +329,22 @@ switch ($action) {
         $endpoint = '/event-genres' . ($params ? '?' . http_build_query($params) : '');
         break;
 
+    case 'genre':
+        $slug = $_GET['slug'] ?? '';
+        if (!$slug) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing genre slug']);
+            exit;
+        }
+        $endpoint = '/event-genres/' . urlencode($slug);
+        break;
+
+    case 'subgenres':
+        $params = [];
+        if (isset($_GET['genre'])) $params['parent'] = $_GET['genre'];
+        $endpoint = '/event-genres' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
     case 'event-category':
         $slug = $_GET['slug'] ?? '';
         if (!$slug) {
@@ -338,7 +356,10 @@ switch ($action) {
         break;
 
     case 'cities':
-        $endpoint = '/cities';
+        $params = [];
+        if (isset($_GET['genre'])) $params['genre'] = $_GET['genre'];
+        if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        $endpoint = '/cities' . ($params ? '?' . http_build_query($params) : '');
         break;
 
     // ==================== LOCATIONS ====================
@@ -1212,12 +1233,10 @@ function getMockData($action, $params) {
             ];
 
         case 'events':
+            // Demo mode - return empty, real API handles this
             return [
-                'data' => [
-                    ['id' => 1, 'name' => 'Concert Demo', 'slug' => 'concert-demo', 'date' => '2025-01-15', 'venue' => 'Sala Palatului', 'price' => 150],
-                    ['id' => 2, 'name' => 'Festival Demo', 'slug' => 'festival-demo', 'date' => '2025-02-20', 'venue' => 'Cluj-Napoca', 'price' => 299]
-                ],
-                'meta' => ['total' => 2, 'page' => 1, 'per_page' => 12]
+                'data' => [],
+                'meta' => ['total' => 0, 'current_page' => 1, 'last_page' => 1, 'per_page' => 12]
             ];
 
         case 'event.track-view':

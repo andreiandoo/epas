@@ -1,6 +1,7 @@
 /**
  * Ambilet.ro - Featured Events Carousel Component
  * Displays general featured events in an infinite auto-scrolling carousel
+ * Supports drag/swipe interaction
  *
  * Usage: FeaturedCarousel.init({ category: 'concerte' }) // optional category filter
  */
@@ -10,6 +11,14 @@ const FeaturedCarousel = {
         section: 'featuredCarouselSection',
         track: 'featuredCarouselTrack'
     },
+
+    // Drag state
+    isDragging: false,
+    startX: 0,
+    scrollLeft: 0,
+    track: null,
+    container: null,
+    animationPaused: false,
 
     /**
      * Initialize the carousel
@@ -23,6 +32,9 @@ const FeaturedCarousel = {
         const track = document.getElementById(this.elements.track);
 
         if (!section || !track) return;
+
+        this.track = track;
+        this.container = track.parentElement;
 
         try {
             const params = new URLSearchParams({
@@ -55,10 +67,113 @@ const FeaturedCarousel = {
                 const cardCount = shuffledEvents.length;
                 const duration = Math.max(20, cardCount * 4); // 4 seconds per card, minimum 20s
                 track.style.animationDuration = duration + 's';
+
+                // Initialize drag functionality
+                this.initDrag();
             }
         } catch (e) {
             console.warn('Failed to load featured carousel:', e);
         }
+    },
+
+    /**
+     * Initialize drag/swipe functionality
+     */
+    initDrag() {
+        const track = this.track;
+        const container = this.container;
+        if (!track || !container) return;
+
+        // Mouse events
+        container.addEventListener('mousedown', (e) => this.handleDragStart(e));
+        container.addEventListener('mousemove', (e) => this.handleDragMove(e));
+        container.addEventListener('mouseup', () => this.handleDragEnd());
+        container.addEventListener('mouseleave', () => this.handleDragEnd());
+
+        // Touch events
+        container.addEventListener('touchstart', (e) => this.handleDragStart(e), { passive: true });
+        container.addEventListener('touchmove', (e) => this.handleDragMove(e), { passive: true });
+        container.addEventListener('touchend', () => this.handleDragEnd());
+
+        // Prevent default drag behavior on links
+        track.querySelectorAll('a').forEach(link => {
+            link.addEventListener('dragstart', (e) => e.preventDefault());
+        });
+
+        // Add cursor styles
+        container.style.cursor = 'grab';
+    },
+
+    /**
+     * Handle drag start
+     */
+    handleDragStart(e) {
+        this.isDragging = true;
+        this.startX = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+
+        // Get current transform position
+        const style = window.getComputedStyle(this.track);
+        const matrix = new DOMMatrix(style.transform);
+        this.scrollLeft = matrix.m41; // translateX value
+
+        // Pause animation
+        this.track.style.animationPlayState = 'paused';
+        this.animationPaused = true;
+
+        // Update cursor
+        this.container.style.cursor = 'grabbing';
+
+        // Prevent text selection
+        document.body.style.userSelect = 'none';
+    },
+
+    /**
+     * Handle drag move
+     */
+    handleDragMove(e) {
+        if (!this.isDragging) return;
+
+        const x = e.type.includes('mouse') ? e.pageX : e.touches[0].pageX;
+        const walk = (x - this.startX) * 1.5; // Multiplier for drag speed
+
+        // Apply transform
+        this.track.style.animation = 'none';
+        this.track.style.transform = `translateX(${this.scrollLeft + walk}px)`;
+    },
+
+    /**
+     * Handle drag end
+     */
+    handleDragEnd() {
+        if (!this.isDragging) return;
+
+        this.isDragging = false;
+        this.container.style.cursor = 'grab';
+        document.body.style.userSelect = '';
+
+        // Get current position
+        const style = window.getComputedStyle(this.track);
+        const matrix = new DOMMatrix(style.transform);
+        const currentX = matrix.m41;
+
+        // Get track width (half since we duplicated)
+        const trackWidth = this.track.scrollWidth / 2;
+
+        // Normalize position to be within bounds
+        let normalizedX = currentX % trackWidth;
+        if (normalizedX > 0) normalizedX -= trackWidth;
+
+        // Resume animation from current position
+        this.track.style.transform = '';
+        this.track.style.animation = '';
+
+        // Calculate animation offset percentage
+        const offsetPercent = (Math.abs(normalizedX) / trackWidth) * 50;
+
+        // Apply offset to animation
+        this.track.style.animationDelay = `-${offsetPercent / 50 * parseFloat(this.track.style.animationDuration || 30)}s`;
+        this.track.style.animationPlayState = 'running';
+        this.animationPaused = false;
     },
 
     /**

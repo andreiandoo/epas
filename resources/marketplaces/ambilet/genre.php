@@ -124,14 +124,7 @@ require_once __DIR__ . '/includes/header.php'; ?>
             </div>
         </div>
 
-        <!-- Featured Event -->
-        <div class="mb-8" id="featuredEventSection" style="display: none;">
-            <a href="#" id="featuredEvent" class="block overflow-hidden transition-shadow bg-white border rounded-3xl border-border hover:shadow-xl">
-                <!-- Featured event will be loaded dynamically -->
-            </a>
-        </div>
-
-        <!-- Events Grid -->
+        <!-- Events Grid (grouped by month) -->
         <div id="eventsGrid" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <!-- Events will be loaded dynamically -->
             <div class="overflow-hidden bg-white border rounded-2xl border-border">

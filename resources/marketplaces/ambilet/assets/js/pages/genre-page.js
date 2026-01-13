@@ -1,6 +1,6 @@
 /**
  * Ambilet.ro - Genre Page Controller
- * Handles genre listing page with subgenre filtering, featured artists, and events
+ * Handles genre listing page with subgenre filtering, featured artists, and events grouped by month
  *
  * Dependencies: AmbiletAPI, AmbiletEventCard, AmbiletPagination, AmbiletEmptyState, AmbiletDataTransformer
  */
@@ -9,10 +9,16 @@ const GenrePage = {
     // Configuration
     genre: '',
     currentPage: 1,
-    perPage: 12,
+    perPage: 50, // Load more events at once for monthly grouping
     totalEvents: 0,
     hasMore: false,
     filters: {},
+
+    // Month names in Romanian
+    monthNames: [
+        'Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie',
+        'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'
+    ],
 
     // DOM element IDs
     elements: {
@@ -33,8 +39,6 @@ const GenrePage = {
         artistsScroll: 'artistsScroll',
         subgenresSection: 'subgenresSection',
         subgenresPills: 'subgenresPills',
-        featuredEventSection: 'featuredEventSection',
-        featuredEvent: 'featuredEvent',
         filterCity: 'filterCity',
         filterDate: 'filterDate',
         sortEvents: 'sortEvents'
@@ -167,18 +171,20 @@ const GenrePage = {
      */
     async loadCities() {
         try {
-            const response = await AmbiletAPI.get('/cities?genre=' + this.genre);
-            if (response.data) {
+            // Use events/cities endpoint which supports genre filtering
+            const response = await AmbiletAPI.get('/events/cities?genre=' + this.genre);
+            const cities = response.data?.cities || response.data || [];
+            if (cities.length > 0) {
                 const select = document.getElementById(this.elements.filterCity);
                 if (select) {
                     select.innerHTML = '<option value="">Toate orasele</option>';
-                    response.data.forEach(city => {
-                        select.innerHTML += '<option value="' + city.slug + '">' + AmbiletEventCard.escapeHtml(city.name) + '</option>';
+                    cities.forEach(city => {
+                        select.innerHTML += '<option value="' + (city.slug || city.name) + '">' + AmbiletEventCard.escapeHtml(city.name) + '</option>';
                     });
                 }
 
                 const countEl = document.getElementById(this.elements.citiesCount);
-                if (countEl) countEl.textContent = response.data.length + ' orase';
+                if (countEl) countEl.textContent = cities.length + ' orase';
             }
         } catch (e) {
             console.warn('Failed to load cities:', e);
@@ -225,18 +231,25 @@ const GenrePage = {
                 if (eventsCountEl) eventsCountEl.textContent = this.totalEvents + ' evenimente';
                 if (resultsCountEl) resultsCountEl.textContent = this.totalEvents + ' rezultate';
 
-                // Render featured event (first one) if first page
-                if (!append && events.length > 0) {
-                    this.renderFeaturedEvent(events[0]);
-                    if (events.length > 1) {
-                        container.innerHTML = AmbiletEventCard.renderMany(events.slice(1));
+                if (events.length > 0) {
+                    // Group events by month
+                    const monthGroups = this.groupEventsByMonth(events);
+
+                    // Render grouped events
+                    let html = '';
+                    monthGroups.forEach(group => {
+                        html += this.renderMonthGroup(group);
+                    });
+
+                    if (append) {
+                        container.innerHTML += html;
                     } else {
-                        container.innerHTML = '';
+                        container.innerHTML = html;
+                        // Update container classes for flex layout
+                        container.classList.remove('grid', 'sm:grid-cols-2', 'lg:grid-cols-3', 'xl:grid-cols-4', 'gap-5');
+                        container.classList.add('flex', 'flex-col', 'gap-10');
                     }
-                } else if (append) {
-                    container.innerHTML += AmbiletEventCard.renderMany(events);
-                } else if (events.length === 0) {
-                    document.getElementById(this.elements.featuredEventSection).style.display = 'none';
+                } else {
                     container.innerHTML = AmbiletEmptyState.noEvents({
                         onButtonClick: () => this.clearFilters()
                     });
@@ -257,62 +270,50 @@ const GenrePage = {
     },
 
     /**
-     * Render featured event (large card)
+     * Group events by month
      */
-    renderFeaturedEvent(event) {
-        const section = document.getElementById(this.elements.featuredEventSection);
-        const container = document.getElementById(this.elements.featuredEvent);
-        if (!section || !container) return;
+    groupEventsByMonth(events) {
+        const groups = {};
 
-        const normalized = AmbiletDataTransformer.normalizeEvent(event);
-        if (!normalized) return;
+        events.forEach(event => {
+            const dateStr = event.date || event.starts_at || event.event_date;
+            if (!dateStr) return;
 
-        const dateObj = new Date(normalized.dateRaw);
-        const day = dateObj.getDate();
-        const month = dateObj.toLocaleDateString('ro-RO', { month: 'long' });
-        const dayName = dateObj.toLocaleDateString('ro-RO', { weekday: 'long' });
+            const date = new Date(dateStr);
+            const monthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+            const monthLabel = this.monthNames[date.getMonth()] + ' ' + date.getFullYear();
 
-        container.href = '/bilete/' + normalized.slug;
-        container.innerHTML =
-            '<div class="flex flex-col lg:flex-row">' +
-                '<div class="relative h-64 overflow-hidden lg:w-2/5 lg:h-auto">' +
-                    '<img src="' + (normalized.image || AmbiletEventCard.PLACEHOLDER) + '" alt="' + AmbiletEventCard.escapeHtml(normalized.title) + '" class="object-cover w-full h-full">' +
-                    '<div class="absolute top-4 left-4">' +
-                        '<span class="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg uppercase">Recomandat</span>' +
-                    '</div>' +
-                '</div>' +
-                '<div class="flex flex-col justify-center p-6 lg:w-3/5 lg:p-8">' +
-                    '<div class="flex items-center gap-3 mb-4">' +
-                        '<div class="px-4 py-3 text-center text-white bg-primary rounded-xl">' +
-                            '<span class="block text-2xl font-bold leading-none">' + day + '</span>' +
-                            '<span class="block mt-1 text-xs tracking-wide uppercase">' + month + '</span>' +
-                        '</div>' +
-                        '<div>' +
-                            '<span class="text-sm capitalize text-muted">' + dayName + '</span>' +
-                            '<p class="text-sm text-muted">' + (normalized.time || '20:00') + '</p>' +
-                        '</div>' +
-                    '</div>' +
-                    '<h2 class="mb-3 text-2xl font-bold transition-colors lg:text-3xl text-secondary hover:text-primary">' + AmbiletEventCard.escapeHtml(normalized.title) + '</h2>' +
-                    '<p class="mb-4 text-muted line-clamp-2">' + AmbiletEventCard.escapeHtml(event.description || '') + '</p>' +
-                    '<div class="flex items-center gap-4 mb-6">' +
-                        '<span class="flex items-center gap-1.5 text-sm text-muted">' +
-                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' +
-                            AmbiletEventCard.escapeHtml(normalized.location || 'Romania') +
-                        '</span>' +
-                    '</div>' +
-                    '<div class="flex items-center justify-between">' +
-                        '<div>' +
-                            '<span class="text-sm text-muted">de la</span>' +
-                            '<span class="ml-1 text-2xl font-bold text-primary">' + normalized.priceFormatted + '</span>' +
-                        '</div>' +
-                        '<span class="px-6 py-3 font-bold text-white transition-all bg-primary rounded-xl hover:bg-primary-dark">' +
-                            'Cumpara bilete &rarr;' +
-                        '</span>' +
-                    '</div>' +
-                '</div>' +
-            '</div>';
+            if (!groups[monthKey]) {
+                groups[monthKey] = {
+                    key: monthKey,
+                    label: monthLabel,
+                    events: []
+                };
+            }
 
-        section.style.display = 'block';
+            groups[monthKey].events.push(event);
+        });
+
+        // Sort by month key and return as array
+        return Object.values(groups).sort((a, b) => a.key.localeCompare(b.key));
+    },
+
+    /**
+     * Render a month group with header and events grid
+     */
+    renderMonthGroup(group) {
+        const eventsHtml = AmbiletEventCard.renderMany(group.events);
+
+        return '<div class="month-group">' +
+            '<div class="flex items-center gap-4 mb-6">' +
+                '<h2 class="text-2xl font-bold text-gray-900">' + group.label + '</h2>' +
+                '<span class="px-3 py-1 text-sm font-medium text-gray-600 bg-gray-100 rounded-full">' +
+                    group.events.length + ' ' + (group.events.length === 1 ? 'eveniment' : 'evenimente') +
+                '</span>' +
+                '<div class="flex-1 h-px bg-gray-200"></div>' +
+            '</div>' +
+            '<div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">' + eventsHtml + '</div>' +
+        '</div>';
     },
 
     /**

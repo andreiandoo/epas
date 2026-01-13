@@ -3,6 +3,7 @@
 namespace App\Filament\Marketplace\Pages;
 
 use App\Models\MarketplaceClient;
+use App\Models\MarketplaceClientMicroservice;
 use App\Models\Microservice;
 use BackedEnum;
 use Filament\Forms;
@@ -47,16 +48,22 @@ class PaymentConfig extends Page implements HasForms
             ->orderByPivot('sort_order')
             ->get()
             ->map(function ($ms) {
+                // Handle settings that might be stored as JSON string (legacy data)
+                $settings = $ms->pivot->settings ?? [];
+                if (is_string($settings)) {
+                    $settings = json_decode($settings, true) ?? [];
+                }
+
                 return [
                     'id' => $ms->id,
                     'name' => $ms->getTranslation('name', app()->getLocale()),
                     'slug' => $ms->slug,
                     'icon' => $ms->icon_image,
                     'description' => $ms->getTranslation('short_description', app()->getLocale()),
-                    'is_active' => $ms->pivot->is_active,
-                    'is_default' => $ms->pivot->is_default,
+                    'is_active' => (bool) $ms->pivot->is_active,
+                    'is_default' => (bool) $ms->pivot->is_default,
                     'status' => $ms->pivot->status,
-                    'settings' => $ms->pivot->settings ?? [],
+                    'settings' => $settings,
                     'settings_schema' => $ms->metadata['settings_schema'] ?? [],
                     'settings_sections' => $ms->metadata['settings_sections'] ?? [],
                     'is_configured' => $this->isPaymentMethodConfigured($ms),
@@ -69,6 +76,11 @@ class PaymentConfig extends Page implements HasForms
     {
         $schema = $ms->metadata['settings_schema'] ?? [];
         $settings = $ms->pivot->settings ?? [];
+
+        // Handle settings that might be stored as JSON string (legacy data)
+        if (is_string($settings)) {
+            $settings = json_decode($settings, true) ?? [];
+        }
 
         foreach ($schema as $field) {
             if (($field['required'] ?? false) && empty($settings[$field['key']] ?? null)) {
@@ -106,24 +118,26 @@ class PaymentConfig extends Page implements HasForms
 
         $data = $this->formData;
 
-        // Update pivot
-        $this->marketplace->microservices()->updateExistingPivot($this->editingPaymentMethodId, [
-            'is_active' => $data['is_active'] ?? false,
-            'is_default' => $data['is_default'] ?? false,
-            'status' => ($data['is_active'] ?? false) ? 'active' : 'inactive',
-            'settings' => $data['settings'] ?? [],
-        ]);
+        // Use the MarketplaceClientMicroservice model directly for proper JSON casting
+        $pivotRecord = MarketplaceClientMicroservice::where('marketplace_client_id', $this->marketplace->id)
+            ->where('microservice_id', $this->editingPaymentMethodId)
+            ->first();
+
+        if ($pivotRecord) {
+            $pivotRecord->update([
+                'is_active' => $data['is_active'] ?? false,
+                'is_default' => $data['is_default'] ?? false,
+                'status' => ($data['is_active'] ?? false) ? 'active' : 'inactive',
+                'settings' => $data['settings'] ?? [],
+            ]);
+        }
 
         // If this is set as default, unset others
         if ($data['is_default'] ?? false) {
-            $this->marketplace->microservices()
-                ->where('category', 'payment')
-                ->where('microservices.id', '!=', $this->editingPaymentMethodId)
-                ->get()
-                ->each(function ($ms) {
-                    $this->marketplace->microservices()
-                        ->updateExistingPivot($ms->id, ['is_default' => false]);
-                });
+            MarketplaceClientMicroservice::where('marketplace_client_id', $this->marketplace->id)
+                ->where('microservice_id', '!=', $this->editingPaymentMethodId)
+                ->whereHas('microservice', fn($q) => $q->where('category', 'payment'))
+                ->update(['is_default' => false]);
         }
 
         Notification::make()

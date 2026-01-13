@@ -76,6 +76,7 @@ class MarketplaceClient extends Model
     public function microservices(): BelongsToMany
     {
         return $this->belongsToMany(Microservice::class, 'marketplace_client_microservices')
+            ->using(MarketplaceClientMicroservicePivot::class)
             ->withPivot(['status', 'is_active', 'activated_at', 'expires_at', 'settings', 'usage_stats', 'is_default', 'sort_order'])
             ->withTimestamps();
     }
