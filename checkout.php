@@ -678,10 +678,10 @@ const CheckoutPage = {
             Se procesează...
         `;
 
-        const buyer = {
+        // Build customer data (backend expects 'customer' not 'buyer')
+        const customer = {
             first_name: document.getElementById('buyer-first-name').value.trim(),
             last_name: document.getElementById('buyer-last-name').value.trim(),
-            name: `${document.getElementById('buyer-last-name').value.trim()} ${document.getElementById('buyer-first-name').value.trim()}`.trim(),
             email: document.getElementById('buyer-email').value.trim(),
             phone: document.getElementById('buyer-phone').value.trim()
         };
@@ -689,14 +689,16 @@ const CheckoutPage = {
         const beneficiaries = this.getBeneficiaries();
         const paymentMethod = document.querySelector('input[name="payment"]:checked')?.value || 'card';
         const newsletter = document.getElementById('newsletterCheckbox').checked;
+        const acceptTerms = document.getElementById('termsCheckbox').checked;
 
         try {
             const response = await AmbiletAPI.post('/checkout', {
-                buyer,
+                customer,
                 beneficiaries,
                 items: this.items,
                 payment_method: paymentMethod,
-                newsletter
+                newsletter,
+                accept_terms: acceptTerms
             });
 
             if (response.success && response.data.payment_url) {

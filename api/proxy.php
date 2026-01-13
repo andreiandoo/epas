@@ -425,13 +425,13 @@ switch ($action) {
     case 'cart':
         $method = 'POST';
         $body = file_get_contents('php://input');
-        $endpoint = '/cart';
+        $endpoint = '/customer/cart';
         break;
 
     case 'checkout':
         $method = 'POST';
         $body = file_get_contents('php://input');
-        $endpoint = '/checkout';
+        $endpoint = '/customer/checkout';
         break;
 
     // ==================== CUSTOMER AUTH ====================
