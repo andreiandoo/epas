@@ -165,7 +165,7 @@ const CategoryPage = {
                 limit: 6
             });
 
-            const response = await AmbiletAPI.get('/featured?' + params.toString());
+            const response = await AmbiletAPI.get('/events/featured?' + params.toString());
             if (response.data?.events && response.data.events.length > 0) {
                 section.classList.remove('hidden');
                 container.innerHTML = response.data.events.map(event => this.renderCategoryFeaturedCard(event)).join('');
@@ -252,7 +252,7 @@ const CategoryPage = {
                 params.append('category', this.category);
             }
 
-            const response = await AmbiletAPI.get('/featured?' + params.toString());
+            const response = await AmbiletAPI.get('/events/featured?' + params.toString());
             if (response.data?.events && response.data.events.length > 0) {
                 section.classList.remove('hidden');
                 container.innerHTML = response.data.events.map(event => this.renderFeaturedCard(event)).join('');
