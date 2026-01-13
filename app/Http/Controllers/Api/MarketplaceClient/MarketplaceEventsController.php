@@ -159,16 +159,19 @@ class MarketplaceEventsController extends BaseController
             })
             ->where('event_date', '>=', now()->toDateString());
 
-        // Featured type filter: homepage, general, or any
+        // Featured type filter: homepage, general, category, or any
         $featuredType = $request->get('type', 'any');
         if ($featuredType === 'homepage') {
             $query->where('is_homepage_featured', true);
         } elseif ($featuredType === 'general') {
             $query->where('is_general_featured', true);
+        } elseif ($featuredType === 'category') {
+            $query->where('is_category_featured', true);
         } else {
             $query->where(function ($q) {
                 $q->where('is_homepage_featured', true)
-                    ->orWhere('is_general_featured', true);
+                    ->orWhere('is_general_featured', true)
+                    ->orWhere('is_category_featured', true);
             });
         }
 
