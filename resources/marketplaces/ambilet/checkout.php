@@ -692,6 +692,7 @@ const CheckoutPage = {
         const acceptTerms = document.getElementById('termsCheckbox').checked;
 
         try {
+            // Step 1: Create order via checkout
             const response = await AmbiletAPI.post('/checkout', {
                 customer,
                 beneficiaries,
@@ -701,25 +702,49 @@ const CheckoutPage = {
                 accept_terms: acceptTerms
             });
 
-            if (response.success && response.data.payment_url) {
-                AmbiletCart.clear();
-                localStorage.removeItem('cart_end_time');
-                window.location.href = response.data.payment_url;
-            } else if (response.success) {
-                AmbiletCart.clear();
-                localStorage.removeItem('cart_end_time');
-                window.location.href = '/thank-you?order=' + response.data.reference;
-            } else {
-                if (typeof AmbiletNotifications !== 'undefined') {
-                    AmbiletNotifications.error(response.message || 'Eroare la procesarea comenzii');
+            if (!response.success) {
+                throw new Error(response.message || 'Eroare la procesarea comenzii');
+            }
+
+            // Get order from response
+            const order = response.data.orders?.[0];
+            if (!order) {
+                throw new Error('Nu s-a putut crea comanda');
+            }
+
+            // Step 2: Check if payment is required
+            if (response.data.payment_required && order.total > 0) {
+                // Initiate payment
+                payBtnText.innerHTML = `
+                    <svg class="inline w-5 h-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Se redirecționează către plată...
+                `;
+
+                const payResponse = await AmbiletAPI.post(`/orders/${order.id}/pay`, {
+                    return_url: window.location.origin + '/thank-you?order=' + order.order_number,
+                    cancel_url: window.location.origin + '/checkout'
+                });
+
+                if (payResponse.success && payResponse.data.payment_url) {
+                    AmbiletCart.clear();
+                    localStorage.removeItem('cart_end_time');
+                    window.location.href = payResponse.data.payment_url;
+                } else {
+                    throw new Error(payResponse.message || 'Nu s-a putut iniția plata');
                 }
-                payBtn.disabled = false;
-                payBtnText.textContent = `Plătește ${AmbiletUtils.formatCurrency(this.totals.total)}`;
+            } else {
+                // No payment required (free tickets or zero total)
+                AmbiletCart.clear();
+                localStorage.removeItem('cart_end_time');
+                window.location.href = '/thank-you?order=' + order.order_number;
             }
         } catch (error) {
             console.error('Checkout error:', error);
             if (typeof AmbiletNotifications !== 'undefined') {
-                AmbiletNotifications.error('Eroare la procesare. Încearcă din nou.');
+                AmbiletNotifications.error(error.message || 'Eroare la procesare. Încearcă din nou.');
             }
             payBtn.disabled = false;
             payBtnText.textContent = `Plătește ${AmbiletUtils.formatCurrency(this.totals.total)}`;
