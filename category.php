@@ -94,25 +94,6 @@ require_once __DIR__ . '/includes/header.php'; ?>
     </div>
 </section>
 
-<!-- Featured Events Section (is_general_featured) -->
-<section id="featuredSection" class="hidden py-8 md:py-12 bg-gradient-to-b from-gray-50 to-white">
-    <div class="px-4 mx-auto max-w-7xl">
-        <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center gap-3">
-                <span class="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
-                    <svg class="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                    </svg>
-                </span>
-                <h2 class="text-2xl font-bold text-secondary">Evenimente Recomandate</h2>
-            </div>
-        </div>
-        <div id="featuredEvents" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <!-- Featured events loaded dynamically -->
-        </div>
-    </div>
-</section>
-
 <!-- Filters & Content -->
 <section class="py-8 md:py-12">
     <div class="px-4 mx-auto max-w-7xl">
@@ -197,6 +178,25 @@ require_once __DIR__ . '/includes/header.php'; ?>
 
         <!-- Pagination -->
         <div id="pagination" class="flex items-center justify-center gap-2 mt-12"></div>
+    </div>
+</section>
+
+<!-- Featured Events Section (is_general_featured) -->
+<section id="featuredSection" class="hidden py-8 md:py-12 bg-gradient-to-b from-gray-50 to-white">
+    <div class="px-4 mx-auto max-w-7xl">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-3">
+                <span class="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10">
+                    <svg class="w-5 h-5 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    </svg>
+                </span>
+                <h2 class="text-2xl font-bold text-secondary">Evenimente Recomandate</h2>
+            </div>
+        </div>
+        <div id="featuredEvents" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <!-- Featured events loaded dynamically -->
+        </div>
     </div>
 </section>
 

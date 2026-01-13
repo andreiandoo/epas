@@ -212,6 +212,8 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </section>
 
+<?php require_once __DIR__ . '/includes/featured-carousel.php'; ?>
+
 <!-- Organizers CTA -->
 <section class="py-12 bg-white md:py-16">
     <div class="px-4 mx-auto max-w-7xl">
@@ -253,7 +255,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         loadFeaturedEvents(),
         loadCategories(),
         loadCities(),
-        loadLatestEvents()
+        loadLatestEvents(),
+        FeaturedCarousel.init()
     ]);
 });
 

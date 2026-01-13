@@ -191,6 +191,8 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </main>
 
+<?php require_once __DIR__ . '/includes/featured-carousel.php'; ?>
+
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
 <?php
@@ -662,6 +664,9 @@ window.addEventListener('ambilet:cart:expired', () => {
     localStorage.removeItem('cart_end_time');
     CartPage.render();
 });
+
+// Initialize featured carousel
+document.addEventListener('DOMContentLoaded', () => FeaturedCarousel.init());
 </script>
 SCRIPTS;
 

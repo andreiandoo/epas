@@ -120,12 +120,14 @@ require_once __DIR__ . '/includes/header.php'; ?>
     <div class="flex items-center justify-center gap-2 mt-12" id="pagination"></div>
 </main>
 
+<?php require_once __DIR__ . '/includes/featured-carousel.php'; ?>
+
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
 <?php
 // Page controller script
 $citySlugJS = json_encode($citySlug);
 $scriptsExtra = '<script src="' . asset('assets/js/pages/city-page.js') . '"></script>
-<script>document.addEventListener(\'DOMContentLoaded\', () => CityPage.init(' . $citySlugJS . '));</script>';
+<script>document.addEventListener(\'DOMContentLoaded\', () => { CityPage.init(' . $citySlugJS . '); FeaturedCarousel.init({ city: ' . $citySlugJS . ' }); });</script>';
 
 require_once __DIR__ . '/includes/scripts.php';

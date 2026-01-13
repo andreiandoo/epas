@@ -178,12 +178,14 @@ require_once __DIR__ . '/includes/header.php'; ?>
     </div>
 </section>
 
+<?php require_once __DIR__ . '/includes/featured-carousel.php'; ?>
+
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
 <?php
 // Page controller script
 $genreSlugJS = json_encode($genreSlug);
 $scriptsExtra = '<script src="' . asset('assets/js/pages/genre-page.js') . '"></script>
-<script>document.addEventListener(\'DOMContentLoaded\', () => GenrePage.init(' . $genreSlugJS . '));</script>';
+<script>document.addEventListener(\'DOMContentLoaded\', () => { GenrePage.init(' . $genreSlugJS . '); FeaturedCarousel.init({ genre: ' . $genreSlugJS . ' }); });</script>';
 
 require_once __DIR__ . '/includes/scripts.php';

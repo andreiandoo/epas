@@ -187,6 +187,8 @@ require_once __DIR__ . '/includes/header.php';
     </section>
 </main>
 
+<?php require_once __DIR__ . '/includes/featured-carousel.php'; ?>
+
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
 <?php
@@ -590,7 +592,7 @@ const RegionPage = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => RegionPage.init());
+document.addEventListener('DOMContentLoaded', () => { RegionPage.init(); FeaturedCarousel.init(); });
 </script>
 <?php
 $scriptsExtra = ob_get_clean();

@@ -363,6 +363,8 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 </section>
 
+<?php require_once __DIR__ . '/includes/featured-carousel.php'; ?>
+
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
 <?php
@@ -380,6 +382,6 @@ $initialFilters = json_encode([
 ]);
 
 $scriptsExtra = '<script src="' . asset('assets/js/pages/events-page.js') . '"></script>
-<script>document.addEventListener(\'DOMContentLoaded\', () => EventsPage.init(' . $initialFilters . '));</script>';
+<script>document.addEventListener(\'DOMContentLoaded\', () => { EventsPage.init(' . $initialFilters . '); FeaturedCarousel.init(); });</script>';
 
 require_once __DIR__ . '/includes/scripts.php';
