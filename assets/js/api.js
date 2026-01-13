@@ -376,6 +376,11 @@ const AmbiletAPI = {
         if (endpoint.match(/\/events\/[a-z0-9-]+\/toggle-interest$/i)) return 'event.toggle-interest';
         if (endpoint.match(/\/events\/[a-z0-9-]+\/check-interest$/i)) return 'event.check-interest';
 
+        // Events featured endpoint (must be before general /events)
+        if (endpoint.includes('/events/featured')) return 'events.featured';
+        // Events cities endpoint
+        if (endpoint.includes('/events/cities')) return 'events.cities';
+
         // Events endpoints (match /events but not /marketplace-events which is handled above)
         if (endpoint.match(/^\/events\/[a-z0-9-]+$/i)) return 'event';
         if (endpoint.startsWith('/events')) return 'events';
@@ -383,8 +388,8 @@ const AmbiletAPI = {
         // Event categories endpoint
         if (endpoint.includes('event-categories')) return 'event-categories';
 
-        // Genres - not implemented, will return error
-        if (endpoint.includes('/genres')) return 'genres';
+        // Event genres endpoint
+        if (endpoint.includes('/event-genres')) return 'event-genres';
 
         // Cities endpoint
         if (endpoint.startsWith('/cities')) return 'cities';
