@@ -68,41 +68,51 @@ class LocationsController extends BaseController
         $client = $this->requireClient($request);
         $lang = $client->language ?? $client->locale ?? 'ro';
 
-        // Get event counts per city (by marketplace_city_id) using Event model
-        $eventCounts = Event::where('marketplace_client_id', $client->id)
-            ->where(function ($q) {
-                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
-            })
-            ->where('event_date', '>=', now()->toDateString())
-            ->whereNotNull('marketplace_city_id')
-            ->selectRaw('marketplace_city_id, COUNT(*) as event_count')
-            ->groupBy('marketplace_city_id')
-            ->pluck('event_count', 'marketplace_city_id');
-
-        // Get featured cities
+        // Get featured cities first
         $cities = MarketplaceCity::where('marketplace_client_id', $client->id)
             ->where('is_featured', true)
             ->where('is_visible', true)
             ->with(['region:id,name', 'county:id,name,code'])
             ->orderBy('sort_order')
-            ->get()
-            ->map(function ($city) use ($eventCounts, $lang) {
-                return [
-                    'id' => $city->id,
-                    'name' => $city->name[$lang] ?? $city->name['ro'] ?? array_values((array)$city->name)[0] ?? '',
-                    'slug' => $city->slug,
-                    'image' => $city->image_full_url,
-                    'region' => $city->region ? ($city->region->name[$lang] ?? $city->region->name['ro'] ?? '') : null,
-                    'county' => $city->county ? [
-                        'name' => $city->county->name[$lang] ?? $city->county->name['ro'] ?? '',
-                        'code' => $city->county->code,
-                    ] : null,
-                    'events_count' => $eventCounts[$city->id] ?? 0,
-                    'is_capital' => $city->slug === 'bucuresti',
-                ];
-            });
+            ->get();
 
-        return $this->success(['cities' => $cities]);
+        // Get event counts with diacritics-aware matching
+        $eventCounts = $this->getCityEventCounts($client->id, $cities);
+
+        // Transform cities for response
+        $result = $cities->map(function ($city) use ($eventCounts, $lang) {
+            return [
+                'id' => $city->id,
+                'name' => $city->name[$lang] ?? $city->name['ro'] ?? array_values((array)$city->name)[0] ?? '',
+                'slug' => $city->slug,
+                'image' => $city->image_full_url,
+                'region' => $city->region ? ($city->region->name[$lang] ?? $city->region->name['ro'] ?? '') : null,
+                'county' => $city->county ? [
+                    'name' => $city->county->name[$lang] ?? $city->county->name['ro'] ?? '',
+                    'code' => $city->county->code,
+                ] : null,
+                'events_count' => $eventCounts[$city->id] ?? 0,
+                'is_capital' => $city->slug === 'bucuresti',
+            ];
+        });
+
+        return $this->success(['cities' => $result]);
+    }
+
+    /**
+     * Normalize string to ASCII (remove diacritics)
+     */
+    private function normalizeToAscii(string $str): string
+    {
+        // Romanian diacritics mapping
+        $map = [
+            'ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ț' => 't',
+            'Ă' => 'A', 'Â' => 'A', 'Î' => 'I', 'Ș' => 'S', 'Ț' => 'T',
+            // Alternative characters sometimes used
+            'ş' => 's', 'ţ' => 't', 'Ş' => 'S', 'Ţ' => 'T',
+        ];
+        $normalized = strtr($str, $map);
+        return mb_strtolower(trim($normalized));
     }
 
     /**
@@ -112,16 +122,6 @@ class LocationsController extends BaseController
     {
         $client = $this->requireClient($request);
         $lang = $client->language ?? $client->locale ?? 'ro';
-
-        // Get event counts per city
-        $eventCounts = MarketplaceEvent::where('marketplace_client_id', $client->id)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->where('starts_at', '>=', now())
-            ->whereNotNull('marketplace_city_id')
-            ->selectRaw('marketplace_city_id, COUNT(*) as event_count')
-            ->groupBy('marketplace_city_id')
-            ->pluck('event_count', 'marketplace_city_id');
 
         $query = MarketplaceCity::where('marketplace_client_id', $client->id)
             ->where('is_visible', true)
@@ -145,6 +145,9 @@ class LocationsController extends BaseController
         // Pagination
         $perPage = min((int) $request->get('per_page', 8), 50);
         $cities = $query->paginate($perPage);
+
+        // Build event counts with diacritics-aware matching
+        $eventCounts = $this->getCityEventCounts($client->id, $cities->getCollection());
 
         // Transform results
         $transformedData = $cities->getCollection()->map(function ($city) use ($eventCounts, $lang) {
@@ -182,6 +185,74 @@ class LocationsController extends BaseController
     }
 
     /**
+     * Get event counts for cities with diacritics-aware matching
+     */
+    private function getCityEventCounts(int $clientId, $cities): array
+    {
+        // Build city name variants for matching (handles diacritics)
+        $cityNameMap = [];
+        $eventCounts = [];
+        foreach ($cities as $city) {
+            $eventCounts[$city->id] = 0;
+            $names = is_array($city->name) ? $city->name : [$city->name];
+            foreach ($names as $name) {
+                if ($name) {
+                    $normalized = mb_strtolower(trim($name));
+                    $cityNameMap[$normalized] = $city->id;
+                    $ascii = $this->normalizeToAscii($name);
+                    if ($ascii !== $normalized) {
+                        $cityNameMap[$ascii] = $city->id;
+                    }
+                }
+            }
+            $cityNameMap[$city->slug] = $city->id;
+        }
+
+        // Count events by marketplace_city_id (direct link)
+        $directCounts = Event::where('marketplace_client_id', $clientId)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->where('event_date', '>=', now()->toDateString())
+            ->whereNotNull('marketplace_city_id')
+            ->whereIn('marketplace_city_id', $cities->pluck('id'))
+            ->selectRaw('marketplace_city_id, COUNT(*) as event_count')
+            ->groupBy('marketplace_city_id')
+            ->pluck('event_count', 'marketplace_city_id');
+
+        foreach ($directCounts as $cityId => $count) {
+            $eventCounts[$cityId] = ($eventCounts[$cityId] ?? 0) + $count;
+        }
+
+        // Also count events by venue city name (for events without marketplace_city_id)
+        $eventsByVenueCity = Event::where('marketplace_client_id', $clientId)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->where('event_date', '>=', now()->toDateString())
+            ->whereNull('marketplace_city_id')
+            ->whereHas('venue', function ($q) {
+                $q->whereNotNull('city');
+            })
+            ->with('venue:id,city')
+            ->get();
+
+        foreach ($eventsByVenueCity as $event) {
+            if ($event->venue && $event->venue->city) {
+                $venueCityNormalized = mb_strtolower(trim($event->venue->city));
+                $venueCityAscii = $this->normalizeToAscii($event->venue->city);
+
+                $matchedCityId = $cityNameMap[$venueCityNormalized] ?? $cityNameMap[$venueCityAscii] ?? null;
+                if ($matchedCityId) {
+                    $eventCounts[$matchedCityId] = ($eventCounts[$matchedCityId] ?? 0) + 1;
+                }
+            }
+        }
+
+        return $eventCounts;
+    }
+
+    /**
      * Get alphabet letters that have cities
      */
     public function alphabet(Request $request): JsonResponse
@@ -209,16 +280,6 @@ class LocationsController extends BaseController
         $client = $this->requireClient($request);
         $lang = $client->language ?? $client->locale ?? 'ro';
 
-        // Get event counts per city
-        $eventCounts = MarketplaceEvent::where('marketplace_client_id', $client->id)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->where('starts_at', '>=', now())
-            ->whereNotNull('marketplace_city_id')
-            ->selectRaw('marketplace_city_id, COUNT(*) as event_count')
-            ->groupBy('marketplace_city_id')
-            ->pluck('event_count', 'marketplace_city_id');
-
         // Get regions with cities
         $regions = MarketplaceRegion::where('marketplace_client_id', $client->id)
             ->where('is_visible', true)
@@ -226,42 +287,49 @@ class LocationsController extends BaseController
                 $q->where('is_visible', true)->orderBy('sort_order');
             }])
             ->orderBy('sort_order')
-            ->get()
-            ->map(function ($region) use ($eventCounts, $lang) {
-                $regionCities = $region->cities;
+            ->get();
 
-                // Calculate total events in region
-                $totalEvents = $regionCities->sum(function ($city) use ($eventCounts) {
-                    return $eventCounts[$city->id] ?? 0;
-                });
+        // Collect all cities from all regions
+        $allCities = $regions->flatMap(fn($r) => $r->cities);
 
-                // Sort cities by event count and take top 5
-                $topCities = $regionCities
-                    ->map(function ($city) use ($eventCounts, $lang) {
-                        return [
-                            'id' => $city->id,
-                            'name' => $city->name[$lang] ?? $city->name['ro'] ?? array_values((array)$city->name)[0] ?? '',
-                            'slug' => $city->slug,
-                            'events_count' => $eventCounts[$city->id] ?? 0,
-                        ];
-                    })
-                    ->sortByDesc('events_count')
-                    ->take(5)
-                    ->values();
+        // Get event counts with diacritics-aware matching
+        $eventCounts = $this->getCityEventCounts($client->id, $allCities);
 
-                return [
-                    'id' => $region->id,
-                    'name' => $region->name[$lang] ?? $region->name['ro'] ?? array_values((array)$region->name)[0] ?? '',
-                    'slug' => $region->slug,
-                    'description' => isset($region->description[$lang]) ? $region->description[$lang] : ($region->description['ro'] ?? null),
-                    'image' => $region->image_url,
-                    'cities_count' => $regionCities->count(),
-                    'events_count' => $totalEvents,
-                    'top_cities' => $topCities,
-                ];
+        $result = $regions->map(function ($region) use ($eventCounts, $lang) {
+            $regionCities = $region->cities;
+
+            // Calculate total events in region
+            $totalEvents = $regionCities->sum(function ($city) use ($eventCounts) {
+                return $eventCounts[$city->id] ?? 0;
             });
 
-        return $this->success(['regions' => $regions]);
+            // Sort cities by event count and take top 5
+            $topCities = $regionCities
+                ->map(function ($city) use ($eventCounts, $lang) {
+                    return [
+                        'id' => $city->id,
+                        'name' => $city->name[$lang] ?? $city->name['ro'] ?? array_values((array)$city->name)[0] ?? '',
+                        'slug' => $city->slug,
+                        'events_count' => $eventCounts[$city->id] ?? 0,
+                    ];
+                })
+                ->sortByDesc('events_count')
+                ->take(5)
+                ->values();
+
+            return [
+                'id' => $region->id,
+                'name' => $region->name[$lang] ?? $region->name['ro'] ?? array_values((array)$region->name)[0] ?? '',
+                'slug' => $region->slug,
+                'description' => isset($region->description[$lang]) ? $region->description[$lang] : ($region->description['ro'] ?? null),
+                'image' => $region->image_url,
+                'cities_count' => $regionCities->count(),
+                'events_count' => $totalEvents,
+                'top_cities' => $topCities,
+            ];
+        });
+
+        return $this->success(['regions' => $result]);
     }
 
     /**
@@ -287,13 +355,53 @@ class LocationsController extends BaseController
             return $this->error('City not found', 404);
         }
 
-        // Get event count for this city
-        $eventCount = MarketplaceEvent::where('marketplace_client_id', $client->id)
+        // Get event count for this city - count both by marketplace_city_id AND venue city name
+        $eventCount = 0;
+
+        // Count events with direct marketplace_city_id link
+        $eventCount += Event::where('marketplace_client_id', $client->id)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->where('event_date', '>=', now()->toDateString())
             ->where('marketplace_city_id', $city->id)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->where('starts_at', '>=', now())
             ->count();
+
+        // Build city name variants for matching
+        $cityNames = [];
+        $names = is_array($city->name) ? $city->name : [$city->name];
+        foreach ($names as $name) {
+            if ($name) {
+                $cityNames[] = mb_strtolower(trim($name));
+                $cityNames[] = $this->normalizeToAscii($name);
+            }
+        }
+        $cityNames[] = $city->slug;
+        $cityNames = array_unique($cityNames);
+
+        // Count events by venue city name (for events without marketplace_city_id)
+        $venueEvents = Event::where('marketplace_client_id', $client->id)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->where('event_date', '>=', now()->toDateString())
+            ->whereNull('marketplace_city_id')
+            ->whereHas('venue', function ($q) {
+                $q->whereNotNull('city');
+            })
+            ->with('venue:id,city')
+            ->get();
+
+        foreach ($venueEvents as $event) {
+            if ($event->venue && $event->venue->city) {
+                $venueCityNormalized = mb_strtolower(trim($event->venue->city));
+                $venueCityAscii = $this->normalizeToAscii($event->venue->city);
+
+                if (in_array($venueCityNormalized, $cityNames) || in_array($venueCityAscii, $cityNames)) {
+                    $eventCount++;
+                }
+            }
+        }
 
         return $this->success([
             'city' => [
@@ -345,15 +453,8 @@ class LocationsController extends BaseController
             return $this->error('Region not found', 404);
         }
 
-        // Get event counts per city
-        $eventCounts = MarketplaceEvent::where('marketplace_client_id', $client->id)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->where('starts_at', '>=', now())
-            ->whereNotNull('marketplace_city_id')
-            ->selectRaw('marketplace_city_id, COUNT(*) as event_count')
-            ->groupBy('marketplace_city_id')
-            ->pluck('event_count', 'marketplace_city_id');
+        // Get event counts with diacritics-aware matching
+        $eventCounts = $this->getCityEventCounts($client->id, $region->cities);
 
         $cities = $region->cities->map(function ($city) use ($eventCounts, $lang) {
             return [
