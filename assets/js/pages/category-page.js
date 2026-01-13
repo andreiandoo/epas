@@ -36,7 +36,9 @@ const CategoryPage = {
         filterPrice: 'filterPrice',
         sortEvents: 'sortEvents',
         featuredSection: 'featuredSection',
-        featuredEvents: 'featuredEvents'
+        featuredEvents: 'featuredEvents',
+        categoryFeaturedSection: 'categoryFeaturedSection',
+        categoryFeaturedEvents: 'categoryFeaturedEvents'
     },
 
     /**
@@ -56,6 +58,7 @@ const CategoryPage = {
             this.loadCategoryInfo(),
             this.loadGenres(),
             this.loadCities(),
+            this.loadCategoryFeaturedEvents(),
             this.loadFeaturedEvents(),
             this.loadEvents()
         ]);
@@ -147,7 +150,90 @@ const CategoryPage = {
     },
 
     /**
-     * Load featured events for category
+     * Load category featured events (is_category_featured checkbox)
+     */
+    async loadCategoryFeaturedEvents() {
+        const section = document.getElementById(this.elements.categoryFeaturedSection);
+        const container = document.getElementById(this.elements.categoryFeaturedEvents);
+        if (!section || !container || !this.category) return;
+
+        try {
+            const params = new URLSearchParams({
+                type: 'category',
+                require_image: 'true',
+                category: this.category,
+                limit: 6
+            });
+
+            const response = await AmbiletAPI.get('/featured?' + params.toString());
+            if (response.data?.events && response.data.events.length > 0) {
+                section.classList.remove('hidden');
+                container.innerHTML = response.data.events.map(event => this.renderCategoryFeaturedCard(event)).join('');
+            } else {
+                section.classList.add('hidden');
+            }
+        } catch (e) {
+            console.warn('Failed to load category featured events:', e);
+            section.classList.add('hidden');
+        }
+    },
+
+    /**
+     * Render premium card for category featured events
+     */
+    renderCategoryFeaturedCard(event) {
+        const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const days = ['Dum', 'Lun', 'Mar', 'Mie', 'Joi', 'Vin', 'Sâm'];
+        const dateStr = event.starts_at || event.date;
+        const date = dateStr ? new Date(dateStr) : new Date();
+        const day = date.getDate();
+        const month = months[date.getMonth()];
+        const weekday = days[date.getDay()];
+
+        // Use featured_image if available, otherwise fall back to regular image
+        const image = event.featured_image || event.image || '/assets/images/default-event.png';
+        const title = event.name || event.title || 'Eveniment';
+        const venue = event.venue_name || (event.venue ? event.venue.name : '');
+        const city = event.venue_city || (event.venue ? event.venue.city : '');
+        const location = city ? (venue ? venue + ', ' + city : city) : venue;
+        const priceFrom = event.price_from ? event.price_from + ' lei' : '';
+
+        return '<a href="/bilete/' + (event.slug || '') + '" class="group relative block overflow-hidden transition-all duration-500 bg-white rounded-2xl hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1">' +
+            // Image container with premium badge
+            '<div class="relative overflow-hidden aspect-[16/10]">' +
+                '<img src="' + image + '" alt="' + this.escapeHtml(title) + '" class="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110" loading="lazy">' +
+                '<div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>' +
+                // Premium badge
+                '<div class="absolute top-3 left-3">' +
+                    '<span class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white uppercase rounded-full bg-gradient-to-r from-primary to-accent shadow-lg">' +
+                        '<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>' +
+                        'Premium' +
+                    '</span>' +
+                '</div>' +
+                // Date badge
+                '<div class="absolute bottom-3 right-3 bg-white/95 backdrop-blur-sm rounded-xl px-3 py-2 text-center shadow-lg transform transition-transform duration-300 group-hover:scale-105">' +
+                    '<div class="text-xs font-medium text-primary uppercase">' + weekday + '</div>' +
+                    '<div class="text-xl font-extrabold text-secondary leading-none">' + day + '</div>' +
+                    '<div class="text-xs font-semibold text-muted uppercase">' + month + '</div>' +
+                '</div>' +
+            '</div>' +
+            // Content
+            '<div class="p-5">' +
+                '<h3 class="mb-2 text-lg font-bold text-secondary line-clamp-2 group-hover:text-primary transition-colors">' + this.escapeHtml(title) + '</h3>' +
+                (location ? '<p class="flex items-center gap-1.5 mb-3 text-sm text-muted"><svg class="w-4 h-4 text-primary/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>' + this.escapeHtml(location) + '</p>' : '') +
+                '<div class="flex items-center justify-between pt-3 border-t border-border">' +
+                    (priceFrom ? '<div class="text-sm text-muted">de la <span class="text-lg font-bold text-primary">' + priceFrom + '</span></div>' : '<div></div>') +
+                    '<span class="inline-flex items-center gap-1 px-4 py-2 text-sm font-semibold text-white transition-all rounded-full bg-secondary group-hover:bg-primary group-hover:shadow-lg">' +
+                        'Cumpără' +
+                        '<svg class="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>' +
+                    '</span>' +
+                '</div>' +
+            '</div>' +
+        '</a>';
+    },
+
+    /**
+     * Load featured events for category (is_general_featured)
      */
     async loadFeaturedEvents() {
         const section = document.getElementById(this.elements.featuredSection);
