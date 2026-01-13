@@ -40,14 +40,34 @@ class PaymentController extends BaseController
             return $this->error('Order has expired', 400);
         }
 
-        $tenant = $order->event->tenant;
+        // For marketplace orders, use the marketplace client's payment config
+        // The marketplace client processes payments for tenant events they sell
+        $defaultPaymentMethod = $client->getDefaultPaymentMethod();
 
-        if (!$tenant->payment_processor) {
-            return $this->error('Payment not configured for this event organizer', 400);
+        if (!$defaultPaymentMethod) {
+            return $this->error('No payment method configured for this marketplace', 400);
         }
 
+        $paymentConfig = $client->getPaymentMethodSettings($defaultPaymentMethod->slug);
+
+        if (!$paymentConfig) {
+            return $this->error('Payment configuration not found', 400);
+        }
+
+        // Determine processor type from microservice slug
+        $processorType = match ($defaultPaymentMethod->slug) {
+            'netopia', 'netopia-payments' => 'netopia',
+            'stripe', 'stripe-payments' => 'stripe',
+            'euplatesc' => 'euplatesc',
+            'payu' => 'payu',
+            default => $defaultPaymentMethod->slug,
+        };
+
         try {
-            $processor = PaymentProcessorFactory::make($tenant);
+            $processor = PaymentProcessorFactory::makeFromArray($processorType, $paymentConfig);
+
+            // Get event title for description
+            $eventTitle = $order->event?->title ?? 'Event';
 
             $paymentData = $processor->createPayment([
                 'order_id' => $order->id,
@@ -56,7 +76,8 @@ class PaymentController extends BaseController
                 'currency' => $order->currency,
                 'customer_email' => $order->customer_email,
                 'customer_name' => $order->customer_name,
-                'description' => "Tickets for {$order->event->title}",
+                'description' => "Tickets for {$eventTitle}",
+                'success_url' => $request->input('return_url', $client->domain . '/order-complete'),
                 'return_url' => $request->input('return_url', $client->domain . '/order-complete'),
                 'cancel_url' => $request->input('cancel_url', $client->domain . '/order-cancelled'),
                 'callback_url' => route('api.marketplace-client.payment.callback', [
@@ -71,20 +92,20 @@ class PaymentController extends BaseController
 
             // Update order with payment reference
             $order->update([
-                'payment_reference' => $paymentData['reference'] ?? null,
-                'payment_processor' => $tenant->payment_processor,
+                'payment_reference' => $paymentData['reference'] ?? $paymentData['payment_id'] ?? null,
+                'payment_processor' => $processorType,
             ]);
 
             Log::channel('marketplace')->info('Payment initiated for marketplace order', [
                 'order_id' => $order->id,
                 'client_id' => $client->id,
-                'processor' => $tenant->payment_processor,
+                'processor' => $processorType,
             ]);
 
             return $this->success([
                 'payment_url' => $paymentData['redirect_url'] ?? $paymentData['payment_url'],
-                'payment_reference' => $paymentData['reference'] ?? null,
-                'processor' => $tenant->payment_processor,
+                'payment_reference' => $paymentData['reference'] ?? $paymentData['payment_id'] ?? null,
+                'processor' => $processorType,
             ], 'Payment initiated');
 
         } catch (\Exception $e) {
@@ -127,8 +148,31 @@ class PaymentController extends BaseController
         }
 
         try {
-            $tenant = $order->event->tenant;
-            $processor = PaymentProcessorFactory::make($tenant);
+            // For marketplace orders, use the marketplace client's payment config
+            $client = $order->marketplaceClient;
+            $processorType = $order->payment_processor;
+
+            if (!$processorType) {
+                // Fallback to default payment method
+                $defaultPaymentMethod = $client->getDefaultPaymentMethod();
+                $processorType = match ($defaultPaymentMethod?->slug) {
+                    'netopia', 'netopia-payments' => 'netopia',
+                    'stripe', 'stripe-payments' => 'stripe',
+                    'euplatesc' => 'euplatesc',
+                    'payu' => 'payu',
+                    default => $defaultPaymentMethod?->slug ?? 'netopia',
+                };
+            }
+
+            $paymentConfig = $client->getPaymentMethodSettings($processorType)
+                ?? $client->getPaymentMethodSettings('netopia')
+                ?? $client->getPaymentMethodSettings('netopia-payments');
+
+            if (!$paymentConfig) {
+                throw new \Exception('Payment configuration not found for callback');
+            }
+
+            $processor = PaymentProcessorFactory::makeFromArray($processorType, $paymentConfig);
 
             // Verify and process the callback
             $result = $processor->handleCallback($request->all());

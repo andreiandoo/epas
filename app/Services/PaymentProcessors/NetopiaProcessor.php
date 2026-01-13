@@ -6,17 +6,37 @@ use App\Models\TenantPaymentConfig;
 
 class NetopiaProcessor implements PaymentProcessorInterface
 {
-    protected TenantPaymentConfig $config;
+    protected ?TenantPaymentConfig $config = null;
     protected array $keys;
     protected string $baseUrl;
 
-    public function __construct(TenantPaymentConfig $config)
+    /**
+     * Create processor from TenantPaymentConfig or array config
+     *
+     * @param TenantPaymentConfig|null $config For tenant-based payments
+     * @param array|null $arrayConfig For marketplace-based payments
+     */
+    public function __construct(?TenantPaymentConfig $config = null, ?array $arrayConfig = null)
     {
-        $this->config = $config;
-        $this->keys = $config->getActiveKeys();
+        if ($config) {
+            // Tenant-based config
+            $this->config = $config;
+            $this->keys = $config->getActiveKeys();
+            $mode = $config->mode ?? 'sandbox';
+        } elseif ($arrayConfig) {
+            // Array-based config (marketplace client)
+            $this->keys = [
+                'signature' => $arrayConfig['netopia_signature'] ?? $arrayConfig['signature'] ?? null,
+                'private_key' => $arrayConfig['netopia_api_key'] ?? $arrayConfig['private_key'] ?? null,
+                'public_key' => $arrayConfig['netopia_public_key'] ?? $arrayConfig['public_key'] ?? null,
+            ];
+            $mode = $arrayConfig['mode'] ?? 'sandbox';
+        } else {
+            throw new \Exception('Either config or arrayConfig must be provided');
+        }
 
         // Set base URL based on mode
-        $this->baseUrl = $config->mode === 'live'
+        $this->baseUrl = $mode === 'live'
             ? 'https://secure.mobilpay.ro'
             : 'https://sandboxsecure.mobilpay.ro';
     }

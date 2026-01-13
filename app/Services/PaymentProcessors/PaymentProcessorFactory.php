@@ -87,6 +87,25 @@ class PaymentProcessorFactory
     }
 
     /**
+     * Create a payment processor instance from array config (for marketplace clients)
+     *
+     * @param string $processor The processor type (netopia, stripe, etc.)
+     * @param array $config The processor configuration
+     * @return PaymentProcessorInterface
+     * @throws \Exception
+     */
+    public static function makeFromArray(string $processor, array $config): PaymentProcessorInterface
+    {
+        return match ($processor) {
+            'stripe' => new StripeProcessor(null, $config),
+            'netopia' => new NetopiaProcessor(null, $config),
+            'euplatesc' => new EuplatescProcessor(null, $config),
+            'payu' => new PayUProcessor(null, $config),
+            default => throw new \Exception("Unsupported payment processor: {$processor}"),
+        };
+    }
+
+    /**
      * Get required configuration fields for a processor
      *
      * @param string $processor
