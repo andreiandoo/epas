@@ -32,6 +32,7 @@
     <script src="<?= asset('assets/js/components/event-card.js') ?>"></script>
     <script src="<?= asset('assets/js/components/pagination.js') ?>"></script>
     <script src="<?= asset('assets/js/components/empty-state.js') ?>"></script>
+    <script src="<?= asset('assets/js/components/featured-carousel.js') ?>"></script>
 
     <!-- Page-specific scripts -->
     <?php if (isset($scriptsExtra)) echo $scriptsExtra; ?>

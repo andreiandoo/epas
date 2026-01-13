@@ -188,6 +188,8 @@ include __DIR__ . '/includes/header.php';
     </div>
 </main>
 
+<?php include __DIR__ . '/includes/featured-carousel.php'; ?>
+
 <?php
 include __DIR__ . '/includes/footer.php';
 
@@ -397,7 +399,7 @@ const VenuesPage = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => VenuesPage.init());
+document.addEventListener('DOMContentLoaded', () => { VenuesPage.init(); FeaturedCarousel.init(); });
 </script>
 SCRIPTS;
 

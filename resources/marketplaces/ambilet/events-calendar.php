@@ -117,8 +117,11 @@ include 'includes/header.php'; ?>
 
     </main>
 
+    <?php include 'includes/featured-carousel.php'; ?>
+
     <?php include 'includes/footer.php'; ?>
     <?php include 'includes/scripts.php'; ?>
+    <script>document.addEventListener('DOMContentLoaded', () => FeaturedCarousel.init());</script>
 
     <script>
     var CalendarPage = {
