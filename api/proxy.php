@@ -1212,12 +1212,10 @@ function getMockData($action, $params) {
             ];
 
         case 'events':
+            // Demo mode - return empty, real API handles this
             return [
-                'data' => [
-                    ['id' => 1, 'name' => 'Concert Demo', 'slug' => 'concert-demo', 'date' => '2025-01-15', 'venue' => 'Sala Palatului', 'price' => 150],
-                    ['id' => 2, 'name' => 'Festival Demo', 'slug' => 'festival-demo', 'date' => '2025-02-20', 'venue' => 'Cluj-Napoca', 'price' => 299]
-                ],
-                'meta' => ['total' => 2, 'page' => 1, 'per_page' => 12]
+                'data' => [],
+                'meta' => ['total' => 0, 'current_page' => 1, 'last_page' => 1, 'per_page' => 12]
             ];
 
         case 'event.track-view':
