@@ -171,18 +171,20 @@ const GenrePage = {
      */
     async loadCities() {
         try {
-            const response = await AmbiletAPI.get('/cities?genre=' + this.genre);
-            if (response.data) {
+            // Use events/cities endpoint which supports genre filtering
+            const response = await AmbiletAPI.get('/events/cities?genre=' + this.genre);
+            const cities = response.data?.cities || response.data || [];
+            if (cities.length > 0) {
                 const select = document.getElementById(this.elements.filterCity);
                 if (select) {
                     select.innerHTML = '<option value="">Toate orasele</option>';
-                    response.data.forEach(city => {
-                        select.innerHTML += '<option value="' + city.slug + '">' + AmbiletEventCard.escapeHtml(city.name) + '</option>';
+                    cities.forEach(city => {
+                        select.innerHTML += '<option value="' + (city.slug || city.name) + '">' + AmbiletEventCard.escapeHtml(city.name) + '</option>';
                     });
                 }
 
                 const countEl = document.getElementById(this.elements.citiesCount);
-                if (countEl) countEl.textContent = response.data.length + ' orase';
+                if (countEl) countEl.textContent = cities.length + ' orase';
             }
         } catch (e) {
             console.warn('Failed to load cities:', e);
