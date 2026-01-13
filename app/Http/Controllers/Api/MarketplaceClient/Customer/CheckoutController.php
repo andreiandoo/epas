@@ -36,18 +36,56 @@ class CheckoutController extends BaseController
             'beneficiaries' => 'nullable|array',
             'beneficiaries.*.name' => 'required_with:beneficiaries|string|max:255',
             'beneficiaries.*.email' => 'nullable|email|max:255',
+            'items' => 'nullable|array', // Accept items directly from frontend
+            'items.*.quantity' => 'required_with:items|integer|min:1',
+            'payment_method' => 'nullable|string|in:card,cash,transfer',
             'accept_terms' => 'required|accepted',
         ]);
 
-        $sessionId = $this->getSessionId($request);
-        $cart = MarketplaceCart::bySession($sessionId, $client->id)->first();
+        // Try to get items from request body first (frontend sends localStorage cart)
+        $requestItems = $request->input('items', []);
+        $cartItems = [];
 
-        if (!$cart || $cart->isEmpty()) {
+        if (!empty($requestItems)) {
+            // Convert frontend items format to cart format
+            foreach ($requestItems as $item) {
+                // Support both new AmbiletCart format and legacy format
+                $eventId = $item['event']['id'] ?? $item['event_id'] ?? null;
+                $ticketTypeId = $item['ticketType']['id'] ?? $item['ticket_type_id'] ?? null;
+                $quantity = $item['quantity'] ?? 1;
+                $price = $item['ticketType']['price'] ?? $item['price'] ?? 0;
+                $ticketTypeName = $item['ticketType']['name'] ?? $item['ticket_type_name'] ?? 'Bilet';
+
+                if ($eventId && $ticketTypeId) {
+                    $cartItems[] = [
+                        'event_id' => $eventId,
+                        'ticket_type_id' => $ticketTypeId,
+                        'quantity' => $quantity,
+                        'price' => $price,
+                        'ticket_type_name' => $ticketTypeName,
+                    ];
+                }
+            }
+        }
+
+        // Fall back to database cart if no items in request
+        if (empty($cartItems)) {
+            $sessionId = $this->getSessionId($request);
+            $cart = MarketplaceCart::bySession($sessionId, $client->id)->first();
+
+            if (!$cart || $cart->isEmpty()) {
+                return $this->error('Cart is empty', 400);
+            }
+
+            $cartItems = $cart->items ?? [];
+        }
+
+        if (empty($cartItems)) {
             return $this->error('Cart is empty', 400);
         }
 
         // Validate cart items are still available
-        $validationErrors = $this->validateCartForCheckout($cart);
+        $validationErrors = $this->validateCartItemsForCheckout($cartItems);
         if (!empty($validationErrors)) {
             return $this->error('Some items are no longer available', 400, [
                 'errors' => $validationErrors,
@@ -84,7 +122,7 @@ class CheckoutController extends BaseController
             }
 
             // Group items by event/organizer
-            $itemsByEvent = collect($cart->items)->groupBy('event_id');
+            $itemsByEvent = collect($cartItems)->groupBy('event_id');
             $orders = [];
 
             foreach ($itemsByEvent as $eventId => $eventItems) {
@@ -133,17 +171,23 @@ class CheckoutController extends BaseController
                     ];
                 }
 
-                // Apply discount proportionally if promo code exists
+                // Apply discount proportionally if promo code exists (cart may be null if items from request)
                 $discount = 0;
-                if ($cart->promo_code && $cart->subtotal > 0) {
-                    $ratio = $subtotal / $cart->subtotal;
-                    $discount = round($cart->discount * $ratio, 2);
+                $promoCode = isset($cart) ? $cart->promo_code : null;
+                $cartSubtotal = isset($cart) ? $cart->subtotal : 0;
+                $cartDiscount = isset($cart) ? $cart->discount : 0;
+                if ($promoCode && $cartSubtotal > 0) {
+                    $ratio = $subtotal / $cartSubtotal;
+                    $discount = round($cartDiscount * $ratio, 2);
                 }
 
                 // Calculate commission
                 $commissionRate = $event->organizer?->getEffectiveCommissionRate() ?? $client->commission_rate;
                 $netAmount = $subtotal - $discount;
                 $commissionAmount = round($netAmount * ($commissionRate / 100), 2);
+
+                // Get currency from cart or default to client's currency
+                $currency = isset($cart) ? $cart->currency : ($client->currency ?? 'RON');
 
                 // Create order
                 $order = Order::create([
@@ -159,15 +203,15 @@ class CheckoutController extends BaseController
                     'commission_rate' => $commissionRate,
                     'commission_amount' => $commissionAmount,
                     'total' => $netAmount,
-                    'currency' => $cart->currency,
+                    'currency' => $currency,
                     'source' => 'marketplace',
                     'customer_email' => $customer->email,
                     'customer_name' => $customer->first_name . ' ' . $customer->last_name,
                     'customer_phone' => $customer->phone,
                     'expires_at' => now()->addMinutes(15),
                     'meta' => [
-                        'cart_id' => $cart->id,
-                        'promo_code' => $cart->promo_code,
+                        'cart_id' => isset($cart) ? $cart->id : null,
+                        'promo_code' => $promoCode,
                         'beneficiaries' => $validated['beneficiaries'] ?? [],
                         'ip_address' => $request->ip(),
                         'user_agent' => $request->userAgent(),
@@ -208,8 +252,8 @@ class CheckoutController extends BaseController
                 }
 
                 // Increment promo code usage
-                if ($cart->promo_code) {
-                    MarketplacePromoCode::where('code', $cart->promo_code['code'])->increment('times_used');
+                if ($promoCode && isset($promoCode['code'])) {
+                    MarketplacePromoCode::where('code', $promoCode['code'])->increment('times_used');
                 }
 
                 $orders[] = [
@@ -227,9 +271,11 @@ class CheckoutController extends BaseController
                 ];
             }
 
-            // Clear the cart
-            $cart->clearItems();
-            $cart->save();
+            // Clear the cart if it exists in database
+            if (isset($cart)) {
+                $cart->clearItems();
+                $cart->save();
+            }
 
             DB::commit();
 
@@ -322,15 +368,20 @@ class CheckoutController extends BaseController
     }
 
     /**
-     * Validate cart items for checkout
+     * Validate cart items for checkout (accepts array of items)
      */
-    protected function validateCartForCheckout(MarketplaceCart $cart): array
+    protected function validateCartItemsForCheckout(array $items): array
     {
         $errors = [];
-        $items = $cart->items ?? [];
 
         foreach ($items as $key => $item) {
-            $ticketType = MarketplaceTicketType::with('event')->find($item['ticket_type_id']);
+            $ticketTypeId = $item['ticket_type_id'] ?? null;
+            if (!$ticketTypeId) {
+                $errors[$key] = 'Invalid item: missing ticket type';
+                continue;
+            }
+
+            $ticketType = MarketplaceTicketType::with('event')->find($ticketTypeId);
 
             if (!$ticketType) {
                 $errors[$key] = 'Ticket type no longer exists';
@@ -351,12 +402,22 @@ class CheckoutController extends BaseController
                 ? PHP_INT_MAX
                 : $ticketType->quantity - $ticketType->quantity_sold - $ticketType->quantity_reserved;
 
-            if ($item['quantity'] > $available) {
+            $quantity = $item['quantity'] ?? 1;
+            if ($quantity > $available) {
                 $errors[$key] = "Only {$available} tickets available";
             }
         }
 
         return $errors;
+    }
+
+    /**
+     * Validate cart items for checkout (accepts MarketplaceCart object)
+     * @deprecated Use validateCartItemsForCheckout instead
+     */
+    protected function validateCartForCheckout(MarketplaceCart $cart): array
+    {
+        return $this->validateCartItemsForCheckout($cart->items ?? []);
     }
 
     /**
