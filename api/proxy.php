@@ -205,6 +205,8 @@ switch ($action) {
         if (isset($_GET['order'])) $params['order'] = $_GET['order'];
         if (isset($_GET['page'])) $params['page'] = (int)$_GET['page'];
         if (isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['per_page'], 50);
+        // Support 'limit' as alias for 'per_page'
+        if (isset($_GET['limit']) && !isset($_GET['per_page'])) $params['per_page'] = min((int)$_GET['limit'], 50);
         $endpoint = '/artists' . ($params ? '?' . http_build_query($params) : '');
         break;
 
@@ -327,16 +329,6 @@ switch ($action) {
         $params = [];
         if (isset($_GET['category'])) $params['category'] = $_GET['category'];
         $endpoint = '/event-genres' . ($params ? '?' . http_build_query($params) : '');
-        break;
-
-    case 'genre':
-        $slug = $_GET['slug'] ?? '';
-        if (!$slug) {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing genre slug']);
-            exit;
-        }
-        $endpoint = '/event-genres/' . urlencode($slug);
         break;
 
     case 'subgenres':
