@@ -110,48 +110,6 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </section>
 
-<!-- Categories -->
-<section class="py-10 md:py-14 bg-surface">
-    <div class="px-4 mx-auto max-w-7xl">
-        <h2 class="mb-8 text-xl font-bold md:text-2xl text-secondary">Exploreaza dupa categorie</h2>
-
-        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 md:gap-4" id="categoriesGrid">
-            <!-- Categories will be loaded dynamically -->
-            <div class="skeleton rounded-2xl" style="height: 120px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 120px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 120px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 120px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 120px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 120px;"></div>
-        </div>
-    </div>
-</section>
-
-<!-- Cities -->
-<section class="py-10 bg-white md:py-14">
-    <div class="px-4 mx-auto max-w-7xl">
-        <div class="flex items-center justify-between mb-8">
-            <h2 class="text-xl font-bold md:text-2xl text-secondary">Evenimente dupa oras</h2>
-            <a href="/orase" class="items-center hidden gap-2 font-semibold md:flex text-primary">
-                Toate orasele
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
-            </a>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6 md:gap-4" id="citiesGrid">
-            <!-- Cities will be loaded dynamically -->
-            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
-            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
-        </div>
-    </div>
-</section>
-
 <!-- Latest Events -->
 <section class="py-10 md:py-14 bg-surface">
     <div class="px-4 mx-auto max-w-7xl">
@@ -211,6 +169,50 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 </section>
+
+<!-- Categories -->
+<section class="py-10 md:py-14 bg-surface">
+    <div class="px-4 mx-auto max-w-7xl">
+        <h2 class="mb-8 text-xl font-bold md:text-2xl text-secondary">Exploreaza dupa categorie</h2>
+
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6 md:gap-4" id="categoriesGrid">
+            <!-- Categories will be loaded dynamically -->
+            <div class="skeleton rounded-2xl" style="height: 120px;"></div>
+            <div class="skeleton rounded-2xl" style="height: 120px;"></div>
+            <div class="skeleton rounded-2xl" style="height: 120px;"></div>
+            <div class="skeleton rounded-2xl" style="height: 120px;"></div>
+            <div class="skeleton rounded-2xl" style="height: 120px;"></div>
+            <div class="skeleton rounded-2xl" style="height: 120px;"></div>
+        </div>
+    </div>
+</section>
+
+<!-- Cities -->
+<section class="py-10 bg-white md:py-14">
+    <div class="px-4 mx-auto max-w-7xl">
+        <div class="flex items-center justify-between mb-8">
+            <h2 class="text-xl font-bold md:text-2xl text-secondary">Evenimente dupa oras</h2>
+            <a href="/orase" class="items-center hidden gap-2 font-semibold md:flex text-primary">
+                Toate orasele
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </a>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6 md:gap-4" id="citiesGrid">
+            <!-- Cities will be loaded dynamically -->
+            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
+            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
+            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
+            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
+            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
+            <div class="skeleton rounded-2xl" style="height: 176px;"></div>
+        </div>
+    </div>
+</section>
+
+
 
 <?php require_once __DIR__ . '/includes/featured-carousel.php'; ?>
 
