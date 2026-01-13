@@ -155,6 +155,21 @@ switch ($action) {
         $requiresAuth = true; // Forward auth token if available
         break;
 
+    case 'events.featured':
+        $params = [];
+        if (isset($_GET['type'])) $params['type'] = $_GET['type'];
+        if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        if (isset($_GET['require_image'])) $params['require_image'] = $_GET['require_image'];
+        if (isset($_GET['limit'])) $params['limit'] = min((int)$_GET['limit'], 50);
+        $endpoint = '/events/featured?' . http_build_query($params);
+        break;
+
+    case 'events.cities':
+        $params = [];
+        if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        $endpoint = '/events/cities?' . http_build_query($params);
+        break;
+
     case 'venues':
         $params = [];
         if (isset($_GET['city'])) $params['city'] = $_GET['city'];
@@ -304,6 +319,12 @@ switch ($action) {
         $params = [];
         if (isset($_GET['featured'])) $params['featured'] = $_GET['featured'];
         $endpoint = '/event-categories' . ($params ? '?' . http_build_query($params) : '');
+        break;
+
+    case 'event-genres':
+        $params = [];
+        if (isset($_GET['category'])) $params['category'] = $_GET['category'];
+        $endpoint = '/event-genres' . ($params ? '?' . http_build_query($params) : '');
         break;
 
     case 'event-category':
