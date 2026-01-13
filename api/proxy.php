@@ -434,6 +434,29 @@ switch ($action) {
         $endpoint = '/customer/checkout';
         break;
 
+    case 'orders.pay':
+        $orderId = $_GET['id'] ?? '';
+        if (!$orderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order ID']);
+            exit;
+        }
+        $method = 'POST';
+        $body = file_get_contents('php://input');
+        $endpoint = '/orders/' . urlencode($orderId) . '/pay';
+        break;
+
+    case 'orders.status':
+        $orderId = $_GET['id'] ?? '';
+        if (!$orderId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing order ID']);
+            exit;
+        }
+        $method = 'GET';
+        $endpoint = '/orders/' . urlencode($orderId) . '/payment-status';
+        break;
+
     // ==================== CUSTOMER AUTH ====================
 
     case 'customer.register':

@@ -371,6 +371,10 @@ const AmbiletAPI = {
         if (endpoint.includes('/cart')) return 'cart';
         if (endpoint.includes('/checkout')) return 'checkout';
 
+        // Orders endpoints (payment)
+        if (endpoint.match(/\/orders\/\d+\/pay$/)) return 'orders.pay';
+        if (endpoint.match(/\/orders\/\d+\/payment-status$/)) return 'orders.status';
+
         // Event tracking endpoints (must be before general /events routes)
         if (endpoint.match(/\/events\/[a-z0-9-]+\/track-view$/i)) return 'event.track-view';
         if (endpoint.match(/\/events\/[a-z0-9-]+\/toggle-interest$/i)) return 'event.toggle-interest';
@@ -471,6 +475,12 @@ const AmbiletAPI = {
         const notificationMatch = endpoint.match(/\/customer\/notifications\/(\d+)/);
         if (notificationMatch) {
             return `id=${encodeURIComponent(notificationMatch[1])}`;
+        }
+
+        // Extract order ID from /orders/{id}/pay or /orders/{id}/payment-status
+        const ordersPayMatch = endpoint.match(/\/orders\/(\d+)\/(pay|payment-status)$/);
+        if (ordersPayMatch) {
+            return `id=${encodeURIComponent(ordersPayMatch[1])}`;
         }
 
         // Extract slug from endpoints like /marketplace-events/event-slug
