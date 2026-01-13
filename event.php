@@ -324,12 +324,7 @@ require_once __DIR__ . '/includes/head.php';
     <!-- Custom Recommended Events (Îți recomandăm) - Premium Section -->
     <section class="relative mt-16 -mx-4 md:-mx-8 lg:-mx-12 overflow-hidden" id="custom-related-section" style="display:none;">
         <!-- Premium gradient background -->
-        <div class="absolute inset-0 bg-gradient-to-br from-secondary via-secondary/95 to-primary/20"></div>
-        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-transparent to-transparent"></div>
-
-        <!-- Decorative elements -->
-        <div class="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-        <div class="absolute bottom-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-primary to-primary/80"></div>
 
         <div class="relative px-4 py-12 md:px-8 lg:px-12 md:py-16 max-w-[90%] mx-auto">
             <!-- Section header -->
@@ -347,7 +342,7 @@ require_once __DIR__ . '/includes/head.php';
 
     <div class="px-4 py-8 mx-auto max-w-7xl mobile:p-0 mobile:mt-18">
         <!-- Related Events -->
-        <section class="mt-16 mobile:px-4 mobile:mb-8" id="related-events-section" style="display:none;">
+        <section class="mt-8 mobile:px-4 mobile:mb-8" id="related-events-section" style="display:none;">
             <div class="flex items-center justify-between mb-8">
                 <div>
                     <h2 class="text-2xl font-bold text-secondary">Alte evenimente recomandate</h2>
