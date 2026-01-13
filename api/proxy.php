@@ -30,7 +30,7 @@
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Session-ID');
 
 // Handle preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -1139,7 +1139,8 @@ $headers = [
     'Content-Type: application/json',
     'X-API-Key: ' . API_KEY,
     'Accept: application/json',
-    'User-Agent: Ambilet Marketplace/1.0'
+    'User-Agent: Ambilet Marketplace/1.0',
+    'X-Session-ID: ' . session_id()  // Pass session ID for cart/checkout functionality
 ];
 
 // Forward Authorization header for authenticated requests
