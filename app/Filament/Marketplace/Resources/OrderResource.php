@@ -188,7 +188,7 @@ class OrderResource extends Resource
                     ->formatStateUsing(fn ($state) => '#' . str_pad($state, 6, '0', STR_PAD_LEFT))
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('customer.email')
+                Tables\Columns\TextColumn::make('customer_email')
                     ->label('Client')
                     ->searchable()
                     ->sortable(),
