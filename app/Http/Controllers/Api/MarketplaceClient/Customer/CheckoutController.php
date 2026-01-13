@@ -258,6 +258,7 @@ class CheckoutController extends BaseController
                             'event_id' => $event->id,  // Use event_id for tenant events
                             'ticket_type_id' => $item['ticket_type']->id,  // Use ticket_type_id for tenant ticket types
                             'marketplace_customer_id' => $customer->id,
+                            'code' => strtoupper(Str::random(8)),  // Short alphanumeric code
                             'barcode' => Str::uuid()->toString(),
                             'status' => 'pending',
                             'price' => $item['unit_price'],
