@@ -167,13 +167,12 @@ const CategoryPage = {
             });
 
             const response = await AmbiletAPI.get('/events/featured?' + params.toString());
-            console.log('Category Featured API Response:', response);
-            console.log('Category Featured Events:', response.data?.events);
-            if (response.data?.events && response.data.events.length > 0) {
+            // Events can be in response.data.events or directly in response.data (array)
+            const events = response.data?.events || (Array.isArray(response.data) ? response.data : []);
+            if (events.length > 0) {
                 section.classList.remove('hidden');
-                container.innerHTML = response.data.events.map(event => this.renderCategoryFeaturedCard(event)).join('');
+                container.innerHTML = events.map(event => this.renderCategoryFeaturedCard(event)).join('');
             } else {
-                console.log('No category featured events found - hiding section');
                 section.classList.add('hidden');
             }
         } catch (e) {
@@ -257,13 +256,12 @@ const CategoryPage = {
             }
 
             const response = await AmbiletAPI.get('/events/featured?' + params.toString());
-            console.log('General Featured API Response:', response);
-            console.log('General Featured Events:', response.data?.events);
-            if (response.data?.events && response.data.events.length > 0) {
+            // Events can be in response.data.events or directly in response.data (array)
+            const events = response.data?.events || (Array.isArray(response.data) ? response.data : []);
+            if (events.length > 0) {
                 section.classList.remove('hidden');
-                container.innerHTML = response.data.events.map(event => this.renderFeaturedCard(event)).join('');
+                container.innerHTML = events.map(event => this.renderFeaturedCard(event)).join('');
             } else {
-                console.log('No general featured events found - hiding section');
                 section.classList.add('hidden');
             }
         } catch (e) {
