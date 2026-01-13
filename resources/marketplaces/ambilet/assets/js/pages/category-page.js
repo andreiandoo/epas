@@ -104,13 +104,14 @@ const CategoryPage = {
         }
 
         try {
-            const response = await AmbiletAPI.get('/genres?category=' + this.category);
-            if (response.data && response.data.length > 0) {
+            const response = await AmbiletAPI.get('/event-genres?category=' + this.category);
+            const genres = response.data?.genres || response.data || [];
+            if (genres.length > 0) {
                 const container = document.getElementById(this.elements.genresPills);
                 if (container) {
                     container.innerHTML = '<button class="genre-pill active px-5 py-2.5 bg-white border border-border rounded-full font-medium text-sm transition-all" data-genre="">Toate</button>';
 
-                    response.data.forEach(genre => {
+                    genres.forEach(genre => {
                         container.innerHTML += '<a href="/gen/' + genre.slug + '" class="genre-pill px-5 py-2.5 bg-white border border-border rounded-full font-medium text-sm transition-all hover:border-primary">' + genre.name + '</a>';
                     });
                 }
@@ -128,7 +129,7 @@ const CategoryPage = {
     async loadCities() {
         try {
             const params = this.category ? '?category=' + this.category : '';
-            const response = await AmbiletAPI.get('/cities' + params);
+            const response = await AmbiletAPI.get('/events/cities' + params);
             if (response.data) {
                 const select = document.getElementById(this.elements.filterCity);
                 if (select) {
