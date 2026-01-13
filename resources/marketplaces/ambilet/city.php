@@ -13,14 +13,43 @@ if (!$citySlug) {
     exit;
 }
 
-// Default city config (will be overwritten by API data via JavaScript)
-// This provides fallback data for SEO and initial render
-$cityConfig = [
-    'name' => ucwords(str_replace('-', ' ', $citySlug)),
-    'description' => 'Descopera cele mai bune evenimente din acest oras.',
-    'hero_image' => 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=1920&q=80',
-    'count' => 0
-];
+// Validate city exists via API
+$cityConfig = null;
+try {
+    $apiUrl = API_BASE_URL . '/locations/cities/' . urlencode($citySlug);
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'GET',
+            'header' => "X-Marketplace-Domain: " . ($_SERVER['HTTP_HOST'] ?? 'bilete.online') . "\r\n" .
+                       "Accept: application/json\r\n",
+            'timeout' => 5,
+            'ignore_errors' => true
+        ]
+    ]);
+    $response = @file_get_contents($apiUrl, false, $context);
+
+    if ($response) {
+        $data = json_decode($response, true);
+        if (isset($data['success']) && $data['success'] && isset($data['data']['city'])) {
+            $city = $data['data']['city'];
+            $cityConfig = [
+                'name' => $city['name'] ?? ucwords(str_replace('-', ' ', $citySlug)),
+                'description' => $city['description'] ?? 'Descopera cele mai bune evenimente din acest oras.',
+                'hero_image' => $city['cover_image'] ?? $city['image'] ?? 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=1920&q=80',
+                'count' => $city['events_count'] ?? 0
+            ];
+        }
+    }
+} catch (Exception $e) {
+    // If API fails, fall through to 404
+}
+
+// If city not found, show 404
+if (!$cityConfig) {
+    http_response_code(404);
+    require_once __DIR__ . '/404.php';
+    exit;
+}
 
 $pageTitle = 'Evenimente în ' . $cityConfig['name'];
 $pageDescription = $cityConfig['description'];

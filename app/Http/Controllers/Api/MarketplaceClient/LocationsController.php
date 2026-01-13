@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\MarketplaceClient;
 
+use App\Models\Event;
 use App\Models\MarketplaceCity;
 use App\Models\MarketplaceCounty;
 use App\Models\MarketplaceRegion;
@@ -67,11 +68,12 @@ class LocationsController extends BaseController
         $client = $this->requireClient($request);
         $lang = $client->language ?? $client->locale ?? 'ro';
 
-        // Get event counts per city (by marketplace_city_id)
-        $eventCounts = MarketplaceEvent::where('marketplace_client_id', $client->id)
-            ->where('status', 'published')
-            ->where('is_public', true)
-            ->where('starts_at', '>=', now())
+        // Get event counts per city (by marketplace_city_id) using Event model
+        $eventCounts = Event::where('marketplace_client_id', $client->id)
+            ->where(function ($q) {
+                $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
+            })
+            ->where('event_date', '>=', now()->toDateString())
             ->whereNotNull('marketplace_city_id')
             ->selectRaw('marketplace_city_id, COUNT(*) as event_count')
             ->groupBy('marketplace_city_id')

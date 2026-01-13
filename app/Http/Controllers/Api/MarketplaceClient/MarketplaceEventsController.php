@@ -108,6 +108,14 @@ class MarketplaceEventsController extends BaseController
             });
         }
 
+        // Filter by event genre (slug)
+        if ($request->has('genre')) {
+            $genreSlug = $request->genre;
+            $query->whereHas('eventGenres', function ($q) use ($genreSlug) {
+                $q->where('slug', $genreSlug);
+            });
+        }
+
         // Featured only
         if ($request->boolean('featured_only') || $request->boolean('featured')) {
             $query->where('is_homepage_featured', true)
