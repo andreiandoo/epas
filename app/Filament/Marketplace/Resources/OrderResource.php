@@ -55,9 +55,9 @@ class OrderResource extends Resource
                                 'refunded' => 'Rambursată',
                                 default => ucfirst($record->status),
                             } . '</span>')),
-                        Forms\Components\Placeholder::make('total_cents')
+                        Forms\Components\Placeholder::make('total')
                             ->label('Total')
-                            ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold">' . number_format($record->total_cents / 100, 2) . ' ' . ($record->tickets->first()?->ticketType?->currency ?? 'RON') . '</span>')),
+                            ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold">' . number_format($record->total ?? ($record->total_cents / 100), 2) . ' ' . ($record->currency ?? 'RON') . '</span>')),
                         Forms\Components\Placeholder::make('created_at')
                             ->label('Data comenzii')
                             ->content(fn ($record) => $record->created_at?->format('d M Y H:i')),
@@ -108,13 +108,13 @@ class OrderResource extends Resource
                     ->schema([
                         Forms\Components\Placeholder::make('customer_name')
                             ->label('Nume')
-                            ->content(fn ($record) => $record->meta['customer_name'] ?? 'N/A'),
+                            ->content(fn ($record) => $record->customer_name ?? $record->meta['customer_name'] ?? 'N/A'),
                         Forms\Components\Placeholder::make('customer_email')
                             ->label('Email')
                             ->content(fn ($record) => new HtmlString('<a href="mailto:' . $record->customer_email . '" class="text-primary-600 hover:underline">' . $record->customer_email . '</a>')),
                         Forms\Components\Placeholder::make('customer_phone')
                             ->label('Telefon')
-                            ->content(fn ($record) => $record->meta['customer_phone'] ?? 'N/A'),
+                            ->content(fn ($record) => $record->customer_phone ?? $record->meta['customer_phone'] ?? 'N/A'),
                     ]),
 
                 SC\Section::make('Bilete comandate')
@@ -192,12 +192,12 @@ class OrderResource extends Resource
                     ->label('Client')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('meta.customer_name')
+                Tables\Columns\TextColumn::make('customer_name')
                     ->label('Nume')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('total_cents')
+                Tables\Columns\TextColumn::make('total')
                     ->label('Total')
-                    ->formatStateUsing(fn ($state, $record) => number_format($state / 100, 2) . ' ' . ($record->tickets->first()?->ticketType?->currency ?? 'RON'))
+                    ->formatStateUsing(fn ($state, $record) => number_format($state ?? ($record->total_cents / 100), 2) . ' ' . ($record->currency ?? 'RON'))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('promo_code')
                     ->label('Cod discount')
