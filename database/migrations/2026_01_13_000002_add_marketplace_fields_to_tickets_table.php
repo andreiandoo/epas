@@ -35,8 +35,8 @@ return new class extends Migration
                     ->constrained('events')->nullOnDelete();
             }
             if (!Schema::hasColumn('tickets', 'order_item_id')) {
-                $table->foreignId('order_item_id')->nullable()->after('order_id')
-                    ->constrained('order_items')->nullOnDelete();
+                // Don't use foreign key - order_items table may not exist
+                $table->unsignedBigInteger('order_item_id')->nullable()->after('order_id');
             }
 
             // Ticket details
