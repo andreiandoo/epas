@@ -391,9 +391,6 @@ const AmbiletAPI = {
         // Event genres endpoint
         if (endpoint.includes('/event-genres')) return 'event-genres';
 
-        // Genre single endpoint (for genre page)
-        if (endpoint.match(/^\/genres\/[a-z0-9-]+$/i)) return 'genre';
-
         // Subgenres endpoint
         if (endpoint.startsWith('/subgenres')) return 'subgenres';
 
@@ -531,12 +528,6 @@ const AmbiletAPI = {
         const regionMatch = endpoint.match(/\/locations\/regions\/([a-z0-9-]+)$/i);
         if (regionMatch) {
             return `slug=${encodeURIComponent(regionMatch[1])}`;
-        }
-
-        // Genre endpoint - extract slug
-        const genreMatch = endpoint.match(/\/genres\/([a-z0-9-]+)$/i);
-        if (genreMatch) {
-            return `slug=${encodeURIComponent(genreMatch[1])}`;
         }
 
         // Organizer event endpoints - extract event ID

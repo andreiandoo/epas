@@ -72,32 +72,12 @@ const GenrePage = {
 
     /**
      * Load genre info from API
+     * Note: Genre info is already rendered server-side by PHP, so this method
+     * only updates dynamic counts that may change
      */
     async loadGenreInfo() {
-        try {
-            const response = await AmbiletAPI.get('/genres/' + this.genre);
-            if (response.data) {
-                const genre = response.data;
-                const titleEl = document.getElementById(this.elements.pageTitle);
-                const breadcrumbEl = document.getElementById(this.elements.genreBreadcrumb);
-                const descEl = document.getElementById(this.elements.pageDescription);
-                const iconEl = document.getElementById(this.elements.genreIcon);
-                const bannerEl = document.getElementById(this.elements.genreBanner);
-                const categoryLink = document.getElementById(this.elements.parentCategoryLink);
-
-                if (titleEl) titleEl.textContent = genre.name;
-                if (breadcrumbEl) breadcrumbEl.textContent = genre.name;
-                if (descEl && genre.description) descEl.textContent = genre.description;
-                if (iconEl && genre.icon) iconEl.textContent = genre.icon;
-                if (bannerEl && genre.image) bannerEl.src = genre.image;
-                if (categoryLink && genre.category) {
-                    categoryLink.textContent = genre.category.name;
-                    categoryLink.href = '/categorie/' + genre.category.slug;
-                }
-            }
-        } catch (e) {
-            console.warn('Failed to load genre info:', e);
-        }
+        // Genre static info (name, description, icon, banner) is rendered server-side
+        // No API call needed - the data comes from category-config.php
     },
 
     /**
@@ -131,7 +111,7 @@ const GenrePage = {
     renderArtistCard(artist) {
         const name = AmbiletEventCard.escapeHtml(artist.name || 'Artist');
         const image = artist.image || artist.portrait || '/assets/images/default-artist.png';
-        const eventsCount = artist.events_count || 0;
+        const eventsCount = artist.upcoming_events_count || artist.events_count || 0;
 
         return '<a href="/artist/' + (artist.slug || '') + '" class="flex flex-col items-center flex-shrink-0 gap-3 p-4 artist-card bg-surface rounded-2xl hover:bg-primary/5">' +
             '<img src="' + image + '" alt="' + name + '" class="object-cover w-20 h-20 rounded-full ring-4 ring-primary/20" loading="lazy" onerror="this.src=\'/assets/images/default-artist.png\'">' +
