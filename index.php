@@ -15,7 +15,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- Hero Slider Section -->
-<section class="relative overflow-hidden bg-secondary" id="heroSlider">
+<section class="relative overflow-hidden bg-secondary mt-28 mobile:mt-18" id="heroSlider">
     <div class="relative h-[480px] md:h-[560px]" id="heroSection">
         <!-- Slides container -->
         <div id="heroSlides" class="relative w-full h-full">
