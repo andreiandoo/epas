@@ -14,99 +14,71 @@ require_once __DIR__ . '/includes/head.php';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
-<!-- Hero Section -->
-<section class="relative overflow-hidden bg-secondary">
+<!-- Hero Slider Section -->
+<section class="relative overflow-hidden bg-secondary" id="heroSlider">
     <div class="relative h-[480px] md:h-[560px]" id="heroSection">
-        <img id="heroImage" src="/assets/images/hero-default.jpg" alt="Festival" class="absolute inset-0 object-cover w-full h-full">
-        <div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/20"></div>
-        <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-        <div class="relative flex items-center h-full px-4 mx-auto max-w-7xl">
-            <div class="max-w-xl text-white fade-in">
-                <span class="inline-flex items-center gap-2 px-4 py-2 mb-5 text-sm font-bold rounded-full bg-primary">
-                    <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
-                    <span id="heroLabel">Trending</span>
-                </span>
-                <h1 id="heroTitle" class="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 leading-[1.1]">
-                    Descopera evenimente
-                </h1>
-                <p id="heroMeta" class="flex flex-wrap items-center gap-3 mb-8 text-lg md:text-xl text-white/80">
-                    <span class="flex items-center gap-1.5">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                        </svg>
-                        <span id="heroDate">Eveniment nou</span>
+        <!-- Slides container -->
+        <div id="heroSlides" class="relative w-full h-full">
+            <!-- Default slide (will be replaced by JS) -->
+            <div class="hero-slide active">
+                <img src="/assets/images/hero-default.jpg" alt="Festival" class="absolute inset-0 object-cover w-full h-full">
+                <div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/20"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+            </div>
+        </div>
+
+        <!-- Content overlay -->
+        <div class="absolute inset-0 flex items-center">
+            <div class="px-4 mx-auto max-w-7xl w-full">
+                <div class="max-w-xl text-white fade-in">
+                    <span class="inline-flex items-center gap-2 px-4 py-2 mb-5 text-sm font-bold rounded-full bg-primary">
+                        <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+                        <span id="heroLabel">Featured</span>
                     </span>
-                    <span class="w-1.5 h-1.5 bg-white/40 rounded-full"></span>
-                    <span class="flex items-center gap-1.5">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        <span id="heroLocation">Romania</span>
-                    </span>
-                </p>
-                <div class="flex flex-wrap gap-4">
-                    <a href="/evenimente" id="heroCta" class="inline-flex items-center gap-2 px-8 py-4 font-bold text-white btn-primary rounded-xl">
-                        Cumpara Bilete
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
-                        </svg>
-                    </a>
-                    <a href="/evenimente" id="heroDetails" class="px-8 py-4 font-bold text-white transition-colors border bg-white/15 backdrop-blur-sm rounded-xl hover:bg-white/25 border-white/20">
-                        Vezi Detalii
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Featured Events -->
-<section class="py-10 bg-white md:py-14">
-    <div class="px-4 mx-auto max-w-7xl">
-        <div class="flex items-center justify-between mb-8">
-            <div>
-                <h2 class="flex items-center gap-2 text-xl font-bold md:text-2xl text-secondary">
-                    Nu rata biletele pentru
-                </h2>
-            </div>
-            <a href="/evenimente?featured=true" class="items-center hidden gap-2 font-semibold md:flex text-primary">
-                Vezi toate
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                </svg>
-            </a>
-        </div>
-
-        <div class="flex gap-4 px-4 pb-4 -mx-4 horizontal-scroll" id="featuredEventsScroll">
-            <!-- Featured events will be loaded dynamically -->
-            <div class="scroll-item w-[280px] bg-white rounded-2xl border border-border overflow-hidden">
-                <div class="h-40 skeleton"></div>
-                <div class="p-4">
-                    <div class="skeleton skeleton-title"></div>
-                    <div class="w-2/3 skeleton skeleton-text"></div>
-                </div>
-            </div>
-            <div class="scroll-item w-[280px] bg-white rounded-2xl border border-border overflow-hidden">
-                <div class="h-40 skeleton"></div>
-                <div class="p-4">
-                    <div class="skeleton skeleton-title"></div>
-                    <div class="w-2/3 skeleton skeleton-text"></div>
-                </div>
-            </div>
-            <div class="scroll-item w-[280px] bg-white rounded-2xl border border-border overflow-hidden">
-                <div class="h-40 skeleton"></div>
-                <div class="p-4">
-                    <div class="skeleton skeleton-title"></div>
-                    <div class="w-2/3 skeleton skeleton-text"></div>
+                    <h1 id="heroTitle" class="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 leading-[1.1]">
+                        Descopera evenimente
+                    </h1>
+                    <p id="heroMeta" class="flex flex-wrap items-center gap-3 mb-8 text-lg md:text-xl text-white/80">
+                        <span class="flex items-center gap-1.5">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <span id="heroDate">Eveniment nou</span>
+                        </span>
+                        <span class="w-1.5 h-1.5 bg-white/40 rounded-full"></span>
+                        <span class="flex items-center gap-1.5">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span id="heroLocation">Romania</span>
+                        </span>
+                    </p>
+                    <div class="flex flex-wrap gap-4">
+                        <a href="/evenimente" id="heroCta" class="inline-flex items-center gap-2 px-8 py-4 font-bold text-white btn-primary rounded-xl">
+                            Cumpara Bilete
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                            </svg>
+                        </a>
+                        <a href="/evenimente" id="heroDetails" class="px-8 py-4 font-bold text-white transition-colors border bg-white/15 backdrop-blur-sm rounded-xl hover:bg-white/25 border-white/20">
+                            Vezi Detalii
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Mobile link -->
-        <div class="mt-4 text-center md:hidden">
-            <a href="/evenimente?featured=true" class="font-semibold text-primary">Vezi toate evenimentele</a>
-        </div>
+        <!-- Slider Navigation Arrows -->
+        <button id="heroPrev" class="absolute hidden md:flex left-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors text-white z-10">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <button id="heroNext" class="absolute hidden md:flex right-4 top-1/2 -translate-y-1/2 w-12 h-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors text-white z-10">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </button>
+
+        <!-- Slider Dots -->
+        <div id="heroDots" class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10"></div>
     </div>
 </section>
 
@@ -248,81 +220,218 @@ require_once __DIR__ . '/includes/header.php';
 
 <?php
 $scriptsExtra = <<<'SCRIPTS'
+<style>
+/* Hero Slider Styles */
+.hero-slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.8s ease-in-out;
+}
+.hero-slide.active {
+    opacity: 1;
+}
+.hero-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+#heroDots button {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+#heroDots button.active {
+    background: white;
+    width: 24px;
+    border-radius: 5px;
+}
+</style>
 <script>
+// Hero Slider Module
+const HeroSlider = {
+    events: [],
+    currentIndex: 0,
+    autoplayInterval: null,
+    autoplayDelay: 5000, // 5 seconds
+
+    async init() {
+        try {
+            // Load homepage featured events using type=homepage
+            const response = await AmbiletAPI.get('/events/featured?type=homepage&limit=10');
+            if (response.data && response.data.events && response.data.events.length > 0) {
+                this.events = response.data.events;
+                this.render();
+                this.bindEvents();
+                this.startAutoplay();
+            }
+        } catch (error) {
+            console.warn('Failed to load hero slider events:', error);
+        }
+    },
+
+    render() {
+        const slidesContainer = document.getElementById('heroSlides');
+        const dotsContainer = document.getElementById('heroDots');
+
+        if (!slidesContainer || this.events.length === 0) return;
+
+        // Create slides
+        slidesContainer.innerHTML = this.events.map((event, index) => {
+            // Use homepage_featured_image if available, fallback to featured_image or image
+            const image = event.homepage_featured_image || event.featured_image || event.image || '/assets/images/hero-default.jpg';
+            return `
+                <div class="hero-slide ${index === 0 ? 'active' : ''}" data-index="${index}">
+                    <img src="${image}" alt="${this.escapeHtml(event.title || 'Event')}" loading="${index === 0 ? 'eager' : 'lazy'}">
+                    <div class="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/20"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                </div>
+            `;
+        }).join('');
+
+        // Create dots
+        dotsContainer.innerHTML = this.events.map((_, index) =>
+            `<button data-index="${index}" class="${index === 0 ? 'active' : ''}" aria-label="Go to slide ${index + 1}"></button>`
+        ).join('');
+
+        // Update content for first slide
+        this.updateContent(0);
+    },
+
+    updateContent(index) {
+        const event = this.events[index];
+        if (!event) return;
+
+        const date = new Date(event.starts_at || event.start_date || event.event_date);
+        const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        document.getElementById('heroLabel').textContent = 'Featured';
+        document.getElementById('heroTitle').textContent = event.title || event.name || 'Eveniment';
+        document.getElementById('heroDate').textContent = formattedDate;
+        document.getElementById('heroLocation').textContent = event.venue_name || event.venue?.name || event.city?.name || 'Romania';
+        document.getElementById('heroCta').href = '/bilete/' + (event.slug || '');
+        document.getElementById('heroDetails').href = '/bilete/' + (event.slug || '');
+    },
+
+    goTo(index) {
+        if (index < 0) index = this.events.length - 1;
+        if (index >= this.events.length) index = 0;
+
+        const slides = document.querySelectorAll('.hero-slide');
+        const dots = document.querySelectorAll('#heroDots button');
+
+        slides.forEach((slide, i) => {
+            slide.classList.toggle('active', i === index);
+        });
+
+        dots.forEach((dot, i) => {
+            dot.classList.toggle('active', i === index);
+        });
+
+        this.currentIndex = index;
+        this.updateContent(index);
+    },
+
+    next() {
+        this.goTo(this.currentIndex + 1);
+    },
+
+    prev() {
+        this.goTo(this.currentIndex - 1);
+    },
+
+    startAutoplay() {
+        this.stopAutoplay();
+        if (this.events.length > 1) {
+            this.autoplayInterval = setInterval(() => this.next(), this.autoplayDelay);
+        }
+    },
+
+    stopAutoplay() {
+        if (this.autoplayInterval) {
+            clearInterval(this.autoplayInterval);
+            this.autoplayInterval = null;
+        }
+    },
+
+    bindEvents() {
+        const prevBtn = document.getElementById('heroPrev');
+        const nextBtn = document.getElementById('heroNext');
+        const dotsContainer = document.getElementById('heroDots');
+        const heroSection = document.getElementById('heroSlider');
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                this.prev();
+                this.startAutoplay();
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                this.next();
+                this.startAutoplay();
+            });
+        }
+
+        if (dotsContainer) {
+            dotsContainer.addEventListener('click', (e) => {
+                if (e.target.tagName === 'BUTTON') {
+                    const index = parseInt(e.target.dataset.index, 10);
+                    this.goTo(index);
+                    this.startAutoplay();
+                }
+            });
+        }
+
+        // Pause on hover
+        if (heroSection) {
+            heroSection.addEventListener('mouseenter', () => this.stopAutoplay());
+            heroSection.addEventListener('mouseleave', () => this.startAutoplay());
+        }
+
+        // Touch/swipe support
+        let touchStartX = 0;
+        if (heroSection) {
+            heroSection.addEventListener('touchstart', (e) => {
+                touchStartX = e.touches[0].clientX;
+            }, { passive: true });
+
+            heroSection.addEventListener('touchend', (e) => {
+                const touchEndX = e.changedTouches[0].clientX;
+                const diff = touchStartX - touchEndX;
+                if (Math.abs(diff) > 50) {
+                    if (diff > 0) this.next();
+                    else this.prev();
+                    this.startAutoplay();
+                }
+            }, { passive: true });
+        }
+    },
+
+    escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>"']/g, m => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[m]));
+    }
+};
+
 // Homepage initialization
 document.addEventListener('DOMContentLoaded', async function() {
     // Load homepage data
     await Promise.all([
-        loadHeroEvent(),
-        loadFeaturedEvents(),
+        HeroSlider.init(),
         loadCategories(),
         loadCities(),
         loadLatestEvents(),
         FeaturedCarousel.init()
     ]);
 });
-
-// Load hero featured event
-async function loadHeroEvent() {
-    try {
-        const response = await AmbiletAPI.get('/marketplace-events?featured=true&limit=1');
-        if (response.data && response.data.length > 0) {
-            const event = response.data[0];
-            renderHero(event);
-        }
-    } catch (error) {
-        console.warn('Failed to load hero event:', error);
-    }
-}
-
-function renderHero(event) {
-    const heroImage = document.getElementById('heroImage');
-    const date = new Date(event.start_date);
-    const formattedDate = date.toLocaleDateString('ro-RO', { day: 'numeric', month: 'short' });
-
-    if (event.image) {
-        heroImage.src = event.image;
-        heroImage.alt = event.title;
-    }
-
-    document.getElementById('heroLabel').textContent = event.is_exclusive ? 'Exclusiv' : 'Trending';
-    document.getElementById('heroTitle').textContent = event.title;
-    document.getElementById('heroDate').textContent = formattedDate;
-    document.getElementById('heroLocation').textContent = event.venue?.name || event.city?.name || 'Romania';
-    document.getElementById('heroCta').href = '/eveniment/' + event.slug;
-    document.getElementById('heroDetails').href = '/eveniment/' + event.slug;
-}
-
-// Load featured events
-async function loadFeaturedEvents() {
-    try {
-        const response = await AmbiletAPI.get('/marketplace-events?featured=true&limit=6');
-        if (response.data) {
-            renderFeaturedEvents(response.data);
-        }
-    } catch (error) {
-        console.warn('Failed to load featured events:', error);
-    }
-}
-
-function renderFeaturedEvents(events) {
-    const container = document.getElementById('featuredEventsScroll');
-    if (!events || events.length === 0) {
-        container.innerHTML = '<p class="p-4 text-muted">Nu sunt evenimente disponibile.</p>';
-        return;
-    }
-
-    // Use AmbiletEventCard component for rendering
-    container.innerHTML = events.map(event => {
-        const cardHtml = AmbiletEventCard.render(event, {
-            urlPrefix: '/eveniment/',
-            showCategory: false,
-            showPrice: false
-        });
-        // Wrap in scroll-item container
-        return '<div class="scroll-item w-[280px]">' + cardHtml + '</div>';
-    }).join('');
-}
 
 // Load categories
 async function loadCategories() {
@@ -386,7 +495,7 @@ function renderCities(cities) {
     }
 
     container.innerHTML = cities.map(city => `
-        <a href="/orase/${city.slug}" class="relative overflow-hidden city-card group h-36 md:h-44 rounded-2xl">
+        <a href="/${city.slug}" class="relative overflow-hidden city-card group h-36 md:h-44 rounded-2xl">
             <img src="${city.image || '/assets/images/default-city.png'}" alt="${city.name}" class="absolute inset-0 object-cover w-full h-full city-image" loading="lazy">
             <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
             <div class="absolute bottom-3 left-3 right-3">
