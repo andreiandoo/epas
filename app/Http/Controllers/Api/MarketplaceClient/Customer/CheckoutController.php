@@ -364,9 +364,26 @@ class CheckoutController extends BaseController
      */
     protected function getSessionId(Request $request): string
     {
-        return $request->header('X-Session-ID')
-            ?? $request->cookie('session_id')
-            ?? $request->session()->getId()
-            ?? md5($request->ip() . $request->userAgent());
+        // Try header first
+        if ($sessionId = $request->header('X-Session-ID')) {
+            return $sessionId;
+        }
+
+        // Try cookie
+        if ($sessionId = $request->cookie('session_id')) {
+            return $sessionId;
+        }
+
+        // Try Laravel session (may not be available on API routes)
+        try {
+            if ($request->hasSession() && ($sessionId = $request->session()->getId())) {
+                return $sessionId;
+            }
+        } catch (\Exception $e) {
+            // Session not available, fall through to fallback
+        }
+
+        // Fallback: generate deterministic ID from IP and user agent
+        return md5($request->ip() . $request->userAgent());
     }
 }
