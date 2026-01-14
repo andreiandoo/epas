@@ -29,6 +29,9 @@ class MarketplaceTicketType extends Model
         'status',
         'is_visible',
         'sort_order',
+        'series_start',
+        'series_end',
+        'event_series',
     ];
 
     protected $casts = [

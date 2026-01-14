@@ -1245,7 +1245,19 @@ class EventResource extends Resource
                                     ->placeholder('Leave empty for unlimited')
                                     ->numeric()
                                     ->minValue(0)
-                                    ->nullable(),
+                                    ->nullable()
+                                    ->live(debounce: 300)
+                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                        // Auto-fill series fields when capacity is set
+                                        if ($state && (int) $state > 0) {
+                                            // Only set if series_start is empty
+                                            if (!$get('series_start')) {
+                                                $set('series_start', 1);
+                                            }
+                                            // Always update series_end to match capacity
+                                            $set('series_end', (int) $state);
+                                        }
+                                    }),
                                 Forms\Components\DateTimePicker::make('sales_start_at')
                                     ->label('Sale starts')
                                     ->native(false)
@@ -1276,6 +1288,27 @@ class EventResource extends Resource
                                     ->native(false)
                                     ->seconds(false)
                                     ->displayFormat('Y-m-d H:i'),
+                            ])->columnSpan(12),
+
+                            // Series fields for ticket numbering
+                            SC\Grid::make(3)->schema([
+                                Forms\Components\TextInput::make('event_series')
+                                    ->label('Event series')
+                                    ->placeholder('e.g. A, VIP, S1')
+                                    ->maxLength(10)
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Identifier prefix for this ticket series'),
+                                Forms\Components\TextInput::make('series_start')
+                                    ->label('Series start')
+                                    ->placeholder('e.g. 1')
+                                    ->numeric()
+                                    ->minValue(1)
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Starting number for ticket serial numbers'),
+                                Forms\Components\TextInput::make('series_end')
+                                    ->label('Series end')
+                                    ->placeholder('e.g. 500')
+                                    ->numeric()
+                                    ->minValue(1)
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Ending number for ticket serial numbers (usually equals capacity)'),
                             ])->columnSpan(12),
 
                             Forms\Components\Toggle::make('is_active')

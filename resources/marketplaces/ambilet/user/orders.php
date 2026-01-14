@@ -135,12 +135,12 @@ const UserOrders = {
     },
 
     updateStats() {
-        const confirmed = this.orders.filter(o => o.status !== 'refunded' && o.status !== 'cancelled');
+        // Only count confirmed/paid orders for stats
+        const confirmed = this.orders.filter(o => ['confirmed', 'paid', 'completed'].includes(o.status));
         const totalSpent = confirmed.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
-        // Look for savings in various fields: discount, promo_discount, savings, meta.discount_amount
+        // Use the calculated savings field from API (includes promo discount + target price savings)
         const totalSaved = confirmed.reduce((sum, o) => {
-            const discount = o.discount || o.promo_discount || o.savings || o.meta?.discount_amount || 0;
-            return sum + (parseFloat(discount) || 0);
+            return sum + (parseFloat(o.savings) || 0);
         }, 0);
 
         document.getElementById('stat-total').textContent = this.orders.length;

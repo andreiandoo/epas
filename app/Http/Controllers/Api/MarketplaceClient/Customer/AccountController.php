@@ -20,9 +20,9 @@ class AccountController extends BaseController
         // Load both marketplace events and tenant events relationships
         $query = Order::where('marketplace_customer_id', $customer->id)
             ->with([
-                'marketplaceEvent:id,name,slug,starts_at,venue_name,venue_city,image,marketplace_organizer_id',
+                'marketplaceEvent:id,name,slug,starts_at,venue_name,venue_city,image,marketplace_organizer_id,target_price',
                 'marketplaceEvent.marketplaceOrganizer:id,default_commission_mode,commission_rate',
-                'event:id,title,slug,event_date,featured_image,poster_url,commission_mode,commission_rate,marketplace_organizer_id',
+                'event:id,title,slug,event_date,featured_image,poster_url,commission_mode,commission_rate,marketplace_organizer_id,target_price',
                 'event.venue:id,name,city',
                 'event.marketplaceOrganizer:id,default_commission_mode,commission_rate',
                 'marketplaceClient:id,commission_mode',
@@ -140,6 +140,29 @@ class AccountController extends BaseController
                 $eventCommissionAmount = $ticketsValue * ($eventCommissionRate / 100);
             }
 
+            // Calculate savings (promo discount + target price savings)
+            $savings = 0;
+            // Add promo discount
+            $discount = (float) ($order->discount_amount ?? $order->meta['discount_amount'] ?? $order->meta['discount'] ?? 0);
+            $savings += $discount;
+
+            // Add target price savings
+            $targetPrice = 0;
+            if ($order->event) {
+                $targetPrice = (float) ($order->event->target_price ?? 0);
+            } elseif ($order->marketplaceEvent) {
+                $targetPrice = (float) ($order->marketplaceEvent->target_price ?? 0);
+            }
+
+            if ($targetPrice > 0) {
+                foreach ($order->tickets as $ticket) {
+                    $ticketPrice = (float) ($ticket->price ?? 0);
+                    if ($targetPrice > $ticketPrice && $ticketPrice > 0) {
+                        $savings += ($targetPrice - $ticketPrice);
+                    }
+                }
+            }
+
             return [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
@@ -156,6 +179,8 @@ class AccountController extends BaseController
                 'commission_rate' => $eventCommissionRate,
                 'commission_amount' => round($eventCommissionAmount, 2),
                 'commission_mode' => $commissionMode, // 'included' or 'on_top'
+                // Savings info (promo discount + target price savings)
+                'savings' => round($savings, 2),
                 // Payment info
                 'payment_method' => $paymentMethod,
                 'payment_processor' => $order->payment_processor,

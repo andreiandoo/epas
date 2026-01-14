@@ -907,9 +907,16 @@ const EventPage = {
         var commissionMode = this.event.commission_mode || 'included';
         var targetPrice = this.event.target_price ? parseFloat(this.event.target_price) : null;
 
+        // Check if event is cancelled, postponed, or sold out - disable all ticket purchasing
+        var eventIsCancelled = this.event.is_cancelled || false;
+        var eventIsPostponed = this.event.is_postponed || false;
+        var eventIsSoldOut = this.event.is_sold_out || false;
+        var eventDisabled = eventIsCancelled || eventIsPostponed || eventIsSoldOut;
+
         container.innerHTML = this.ticketTypes.map(function(tt) {
             self.quantities[tt.id] = 0;
-            const isSoldOut = tt.is_sold_out || tt.available <= 0;
+            // Force all tickets as unavailable if event is disabled (cancelled/postponed/sold out)
+            const isSoldOut = eventDisabled || tt.is_sold_out || tt.available <= 0;
 
             // Always show base ticket price (without commission on top)
             var displayPrice = tt.price;
@@ -943,9 +950,15 @@ const EventPage = {
                 'crossedOutPrice:', crossedOutPrice,
                 'discountPercent:', discountPercent + '%');
 
-            // Availability display
+            // Availability display - different messages for event-level vs ticket-level status
             let availabilityHtml = '';
-            if (isSoldOut) {
+            if (eventIsCancelled) {
+                availabilityHtml = '<span class="text-xs font-semibold text-red-500">Eveniment anulat</span>';
+            } else if (eventIsPostponed) {
+                availabilityHtml = '<span class="text-xs font-semibold text-orange-500">Eveniment amânat</span>';
+            } else if (eventIsSoldOut) {
+                availabilityHtml = '<span class="text-xs font-semibold text-gray-500">Sold Out</span>';
+            } else if (isSoldOut) {
                 availabilityHtml = '<span class="text-xs font-semibold text-gray-400">Indisponibil</span>';
             } else if (tt.available <= 5) {
                 availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Ultimele ' + tt.available + ' disponibile</span>';
@@ -990,9 +1003,15 @@ const EventPage = {
             var priceClasses = isSoldOut ? 'text-gray-400 line-through' : 'text-primary';
             var descClasses = isSoldOut ? 'text-gray-400' : 'text-muted';
 
-            // Controls HTML
+            // Controls HTML - different messages based on event status
             var controlsHtml = '';
-            if (isSoldOut) {
+            if (eventIsCancelled) {
+                controlsHtml = '<span class="text-sm font-medium text-red-400">Indisponibil</span>';
+            } else if (eventIsPostponed) {
+                controlsHtml = '<span class="text-sm font-medium text-orange-400">În așteptare</span>';
+            } else if (eventIsSoldOut) {
+                controlsHtml = '<span class="text-sm font-medium text-gray-500">Sold Out</span>';
+            } else if (isSoldOut) {
                 controlsHtml = '<span class="text-sm font-medium text-gray-400">Epuizat</span>';
             } else {
                 controlsHtml = '<div class="flex items-center gap-2">' +
