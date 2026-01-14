@@ -1519,28 +1519,36 @@ class EventResource extends Resource
                     ->label('Organizer')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('venue.name')
+                Tables\Columns\TextColumn::make('venue_id')
                     ->label('Venue')
-                    ->formatStateUsing(fn ($record) => $record->venue?->getTranslation('name', app()->getLocale()) ?? '-')
+                    ->formatStateUsing(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()) ?? '-')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('event_date')
                     ->label('Event Date')
                     ->formatStateUsing(function ($state, $record) {
                         // Handle different duration modes
-                        if ($record->duration_mode === 'range' && $record->range_start_date && $record->range_end_date) {
+                        if ($record->duration_mode === 'range') {
                             $start = $record->range_start_date;
                             $end = $record->range_end_date;
 
-                            // Same month and year: "15-20 Ian 2025"
-                            if ($start->format('m Y') === $end->format('m Y')) {
-                                return $start->format('d') . '-' . $end->format('d M Y');
+                            // If we have both start and end dates
+                            if ($start && $end) {
+                                // Same month and year: "15-20 Ian 2025"
+                                if ($start->format('m Y') === $end->format('m Y')) {
+                                    return $start->format('d') . '-' . $end->format('d M Y');
+                                }
+                                // Same year, different months: "15 Ian - 20 Feb 2025"
+                                if ($start->format('Y') === $end->format('Y')) {
+                                    return $start->format('d M') . ' - ' . $end->format('d M Y');
+                                }
+                                // Different years: "15 Dec 2024 - 5 Ian 2025"
+                                return $start->format('d M Y') . ' - ' . $end->format('d M Y');
                             }
-                            // Same year, different months: "15 Ian - 20 Feb 2025"
-                            if ($start->format('Y') === $end->format('Y')) {
-                                return $start->format('d M') . ' - ' . $end->format('d M Y');
+
+                            // If only start date, show "from X"
+                            if ($start) {
+                                return 'from ' . $start->format('d M Y');
                             }
-                            // Different years: "15 Dec 2024 - 5 Ian 2025"
-                            return $start->format('d M Y') . ' - ' . $end->format('d M Y');
                         }
 
                         // For multi_day, show first and last slot dates
@@ -1553,11 +1561,13 @@ class EventResource extends Resource
                                     return $first->format('d') . '-' . $last->format('d M Y');
                                 }
                                 return $first->format('d M') . ' - ' . $last->format('d M Y');
+                            } elseif ($slots->count() === 1) {
+                                return Carbon::parse($slots->first())->format('d M Y');
                             }
                         }
 
-                        // Default: single day
-                        return $state?->format('d M Y') ?? '-';
+                        // Default: single day - try event_date, then range_start_date as fallback
+                        return $state?->format('d M Y') ?? $record->range_start_date?->format('d M Y') ?? '-';
                     })
                     ->sortable(),
                 Tables\Columns\IconColumn::make('is_cancelled')

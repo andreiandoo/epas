@@ -244,22 +244,46 @@ class OrderResource extends Resource
                 Tables\Columns\TextColumn::make('event_names')
                     ->label('Eveniment')
                     ->getStateUsing(function ($record) {
-                        // Get unique event names from tickets
-                        $eventNames = $record->tickets
+                        // Get unique events from tickets with names and dates
+                        $events = $record->tickets
                             ->pluck('event')
                             ->filter()
                             ->unique('id')
-                            ->map(fn ($event) => $event->getTranslation('title', app()->getLocale()) ?? $event->title)
-                            ->filter()
                             ->take(2)
+                            ->map(function ($event) {
+                                $name = $event->getTranslation('title', app()->getLocale()) ?? $event->title;
+
+                                // Format date based on duration mode
+                                $dateStr = '';
+                                if ($event->duration_mode === 'range' && $event->range_start_date) {
+                                    $start = $event->range_start_date;
+                                    $end = $event->range_end_date;
+                                    if ($start && $end) {
+                                        if ($start->format('m Y') === $end->format('m Y')) {
+                                            $dateStr = $start->format('d') . '-' . $end->format('d M');
+                                        } else {
+                                            $dateStr = $start->format('d M') . ' - ' . $end->format('d M');
+                                        }
+                                    } else {
+                                        $dateStr = $start->format('d M');
+                                    }
+                                } elseif ($event->event_date) {
+                                    $dateStr = $event->event_date->format('d M');
+                                } elseif ($event->range_start_date) {
+                                    $dateStr = $event->range_start_date->format('d M');
+                                }
+
+                                return $name . ($dateStr ? " ({$dateStr})" : '');
+                            })
+                            ->filter()
                             ->implode(', ');
 
                         $totalEvents = $record->tickets->pluck('event_id')->unique()->count();
                         if ($totalEvents > 2) {
-                            $eventNames .= ' +' . ($totalEvents - 2);
+                            $events .= ' +' . ($totalEvents - 2);
                         }
 
-                        return $eventNames ?: '-';
+                        return $events ?: '-';
                     })
                     ->wrap()
                     ->limit(40),

@@ -21,7 +21,7 @@ class AccountController extends BaseController
         $query = Order::where('marketplace_customer_id', $customer->id)
             ->with([
                 'marketplaceEvent:id,name,slug,starts_at,venue_name,venue_city,image',
-                'event:id,title,slug,event_date,featured_image',
+                'event:id,title,slug,event_date,featured_image,poster_url',
                 'event.venue:id,name,city',
                 'tickets',
             ]);
@@ -63,6 +63,14 @@ class AccountController extends BaseController
                     'is_upcoming' => $order->marketplaceEvent->starts_at >= now(),
                 ];
             } elseif ($order->event) {
+                // Get full URL for featured image
+                $imageUrl = null;
+                if ($order->event->featured_image) {
+                    $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($order->event->featured_image);
+                } elseif ($order->event->poster_url) {
+                    $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($order->event->poster_url);
+                }
+
                 $eventData = [
                     'id' => $order->event->id,
                     'title' => is_array($order->event->title)
@@ -75,7 +83,8 @@ class AccountController extends BaseController
                     'date' => $order->event->event_date?->toIso8601String(),
                     'venue' => $order->event->venue?->name ?? null,
                     'city' => $order->event->venue?->city ?? null,
-                    'image' => $order->event->featured_image ?? null,
+                    'image' => $imageUrl,
+                    'featured_image' => $imageUrl,
                     'is_upcoming' => $order->event->event_date ? $order->event->event_date >= now() : false,
                 ];
             }

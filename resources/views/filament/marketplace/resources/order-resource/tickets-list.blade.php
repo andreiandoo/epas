@@ -55,15 +55,24 @@
                         default => ucfirst($ticket->status),
                     } }}
                 </span>
-                @if($ticket->barcode)
-                    <a href="#" onclick="navigator.clipboard.writeText('{{ $ticket->barcode }}'); alert('Barcode copiat!'); return false;"
+                <div class="flex items-center gap-2">
+                    @if($ticket->barcode)
+                        <a href="#" onclick="navigator.clipboard.writeText('{{ $ticket->barcode }}'); alert('Barcode copiat!'); return false;"
+                           class="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 hover:underline inline-flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                            Barcode
+                        </a>
+                    @endif
+                    <a href="{{ \App\Filament\Marketplace\Resources\TicketResource::getUrl('view', ['record' => $ticket->id]) }}"
                        class="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 hover:underline inline-flex items-center gap-1">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
                         </svg>
-                        Copiază barcode
+                        Vezi bilet
                     </a>
-                @endif
+                </div>
             </div>
         </div>
     @empty

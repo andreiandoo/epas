@@ -55,23 +55,44 @@ const FeaturedCarousel = {
             const response = await AmbiletAPI.get('/events/featured?' + params.toString());
             let events = response.data?.events || (Array.isArray(response.data) ? response.data : []);
 
-            // Deduplicate events by id
+            // Deduplicate events by id AND slug (to catch any duplicates)
             const seenIds = new Set();
+            const seenSlugs = new Set();
             events = events.filter(event => {
-                if (seenIds.has(event.id)) return false;
-                seenIds.add(event.id);
+                const id = event.id;
+                const slug = event.slug || '';
+                // Skip if we've already seen this ID or slug
+                if (seenIds.has(id) || (slug && seenSlugs.has(slug))) {
+                    console.warn('[FeaturedCarousel] Duplicate event filtered:', { id, slug, name: event.name });
+                    return false;
+                }
+                seenIds.add(id);
+                if (slug) seenSlugs.add(slug);
                 return true;
             });
 
+            console.log('[FeaturedCarousel] Loaded', events.length, 'unique events');
+
             if (events.length > 0) {
+                // Clear track first to ensure no stale content
+                track.innerHTML = '';
+
                 // Shuffle events for random order
                 const shuffledEvents = this.shuffleArray([...events]);
 
-                // Render cards and duplicate for infinite scroll
+                // Render cards
                 const cardsHtml = shuffledEvents.map(event => this.renderCard(event)).join('');
 
-                // Duplicate the content for seamless infinite scroll
-                track.innerHTML = cardsHtml + cardsHtml;
+                // Only duplicate for infinite scroll if we have enough events
+                // With few events, duplication is too obvious
+                if (shuffledEvents.length >= 4) {
+                    // Duplicate the content for seamless infinite scroll
+                    track.innerHTML = cardsHtml + cardsHtml;
+                } else {
+                    // For few events, duplicate more times to fill the screen
+                    const duplications = Math.ceil(8 / shuffledEvents.length);
+                    track.innerHTML = cardsHtml.repeat(duplications);
+                }
 
                 // Show section
                 section.classList.remove('hidden');
