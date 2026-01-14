@@ -1560,7 +1560,7 @@ class EventResource extends Resource
                         ])
                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Add custom SEO meta tags. Use templates above to quickly add common sets.'),
                 ]),
-                    ]);
+                    ]),
                 // ========== COLOANA DREAPTĂ - SIDEBAR (1/4) ==========
                 SC\Group::make()
                     ->columnSpan(1)
