@@ -1566,18 +1566,10 @@ class EventResource extends Resource
                     ->columnSpan(1)
                     ->schema([
                         // 1. Quick Stats Card - Vânzări LIVE
-                        SC\Section::make('Vânzări')
+                        SC\Section::make(fn () => new HtmlString('Vânzări <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 ring-1 ring-inset ring-green-500/30">LIVE</span>'))
                             ->icon('heroicon-o-chart-bar')
                             ->compact()
                             ->extraAttributes(['class' => 'fi-section-sales-live'])
-                            ->headerActions([
-                                Forms\Components\Actions\Action::make('live_badge')
-                                    ->label('LIVE')
-                                    ->badge()
-                                    ->color('success')
-                                    ->size('xs')
-                                    ->disabled(),
-                            ])
                             ->schema([
                                 Forms\Components\Placeholder::make('stats_overview')
                                     ->hiddenLabel()
