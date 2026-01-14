@@ -20,13 +20,14 @@ class AccountController extends BaseController
         // Load both marketplace events and tenant events relationships
         $query = Order::where('marketplace_customer_id', $customer->id)
             ->with([
-                'marketplaceEvent:id,name,slug,starts_at,venue_name,venue_city,image',
-                'marketplaceEvent.marketplaceOrganizer:id,default_commission_mode',
-                'event:id,title,slug,event_date,featured_image,poster_url,commission_mode',
+                'marketplaceEvent:id,name,slug,starts_at,venue_name,venue_city,image,marketplace_organizer_id',
+                'marketplaceEvent.marketplaceOrganizer:id,default_commission_mode,commission_rate',
+                'event:id,title,slug,event_date,featured_image,poster_url,commission_mode,commission_rate,marketplace_organizer_id',
                 'event.venue:id,name,city',
-                'event.marketplaceOrganizer:id,default_commission_mode',
+                'event.marketplaceOrganizer:id,default_commission_mode,commission_rate',
                 'marketplaceClient:id,commission_mode',
                 'tickets.ticketType:id,name',
+                'tickets:id,order_id,ticket_type_id,price',
             ]);
 
         // Filters

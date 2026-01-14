@@ -315,12 +315,8 @@ class EventResource extends Resource
                                 if (!$marketplace) {
                                     return 'Niciun marketplace configurat';
                                 }
-                                $domains = $marketplace->domains;
-                                if (!$domains || $domains->isEmpty()) {
-                                    return 'Niciun domeniu configurat';
-                                }
-                                $domain = $domains->where('is_primary', true)->first()?->domain
-                                    ?? $domains->first()?->domain;
+                                // MarketplaceClient has a single 'domain' field, not a 'domains' relationship
+                                $domain = $marketplace->domain;
                                 if (!$domain) {
                                     return 'Niciun domeniu configurat';
                                 }
@@ -1661,12 +1657,8 @@ class EventResource extends Resource
                         if (!$marketplace) {
                             return null;
                         }
-                        $domains = $marketplace->domains;
-                        if (!$domains || $domains->isEmpty()) {
-                            return null;
-                        }
-                        $domain = $domains->where('is_primary', true)->first()?->domain
-                            ?? $domains->first()?->domain;
+                        // MarketplaceClient has a single 'domain' field, not a 'domains' relationship
+                        $domain = $marketplace->domain;
                         if (!$domain) {
                             return null;
                         }

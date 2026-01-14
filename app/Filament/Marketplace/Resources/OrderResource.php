@@ -113,8 +113,8 @@ class OrderResource extends Resource
                                 $total = $record->total;
                                 $discount = $record->discount_amount ?? $record->promo_discount ?? 0;
 
-                                // Get commission from EVENT (marketplace commission for organizer)
-                                $event = $record->tickets->first()?->event;
+                                // Get commission from EVENT (use Order's direct event relationship)
+                                $event = $record->event;
                                 $commissionRate = $event?->commission_rate
                                     ?? $event?->marketplaceOrganizer?->commission_rate
                                     ?? 0;
@@ -154,8 +154,8 @@ class OrderResource extends Resource
                             ->content(function ($record) {
                                 $currency = $record->currency ?? 'RON';
 
-                                // Get commission from EVENT (marketplace commission for organizer)
-                                $event = $record->tickets->first()?->event;
+                                // Get commission from EVENT (use Order's direct event relationship)
+                                $event = $record->event;
                                 $commissionRate = $event?->commission_rate
                                     ?? $event?->marketplaceOrganizer?->commission_rate
                                     ?? 0;
