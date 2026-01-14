@@ -134,7 +134,9 @@ class OrderResource extends Resource
                                 $html .= '<div class="flex justify-between"><span class="text-gray-500">Valoare bilete:</span><span class="font-medium">' . number_format($ticketsValue, 2) . ' ' . $currency . '</span></div>';
 
                                 if ($commission > 0) {
-                                    $modeLabel = $commissionMode === 'on_top' ? '(peste preț)' : '(inclus în preț)';
+                                    // Handle all variations: on_top, add_on_top, added_on_top
+                                    $isOnTop = in_array($commissionMode, ['on_top', 'add_on_top', 'added_on_top']);
+                                    $modeLabel = $isOnTop ? '(peste preț)' : '(inclus în preț)';
                                     $html .= '<div class="flex justify-between"><span class="text-gray-500">Comision ' . number_format($commissionRate, 1) . '% ' . $modeLabel . ':</span><span class="font-medium">' . number_format($commission, 2) . ' ' . $currency . '</span></div>';
                                 }
 
@@ -172,13 +174,16 @@ class OrderResource extends Resource
                                     return new HtmlString('<span class="text-gray-500">Fără comision</span>');
                                 }
 
+                                // Handle all variations: on_top, add_on_top, added_on_top
+                                $isOnTop = in_array($commissionMode, ['on_top', 'add_on_top', 'added_on_top']);
+
                                 $html = '<div class="space-y-2 text-sm">';
                                 $html .= '<div class="flex justify-between"><span class="text-gray-500">Rată comision:</span><span class="font-medium">' . number_format($commissionRate, 2) . '%</span></div>';
                                 $html .= '<div class="flex justify-between"><span class="text-gray-500">Valoare comision:</span><span class="font-medium">' . number_format($commission, 2) . ' ' . $currency . '</span></div>';
-                                $html .= '<div class="flex justify-between"><span class="text-gray-500">Mod:</span><span class="font-medium">' . ($commissionMode === 'on_top' ? 'Adăugat peste preț' : 'Inclus în preț') . '</span></div>';
+                                $html .= '<div class="flex justify-between"><span class="text-gray-500">Mod:</span><span class="font-medium">' . ($isOnTop ? 'Adăugat peste preț' : 'Inclus în preț') . '</span></div>';
 
                                 // Calculate organizer revenue
-                                $organizerRevenue = $ticketsValue - ($commissionMode === 'included' ? $commission : 0);
+                                $organizerRevenue = $ticketsValue - (!$isOnTop ? $commission : 0);
 
                                 $html .= '<hr class="my-2 border-gray-200">';
                                 $html .= '<div class="flex justify-between"><span class="text-gray-500">Organizator primește:</span><span class="font-semibold text-success-600">' . number_format($organizerRevenue, 2) . ' ' . $currency . '</span></div>';

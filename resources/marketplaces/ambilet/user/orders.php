@@ -243,18 +243,18 @@ const UserOrders = {
             ${order.status === 'confirmed' ? `
             <div class="mb-6">
                 <h4 class="mb-3 text-sm font-semibold text-secondary">Status comanda</h4>
-                <div class="flex items-center gap-2">
-                    <div class="flex items-center">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1 flex items-center">
                         <div class="flex items-center justify-center w-8 h-8 rounded-full bg-success">
                             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         </div>
-                        <div class="w-12 h-1 bg-success"></div>
+                        <div class="w-full h-1 bg-success"></div>
                     </div>
-                    <div class="flex items-center">
+                    <div class="flex-1 flex items-center">
                         <div class="flex items-center justify-center w-8 h-8 rounded-full bg-success">
                             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         </div>
-                        <div class="w-12 h-1 bg-success"></div>
+                        <div class="w-full h-1 bg-success"></div>
                     </div>
                     <div class="flex items-center">
                         <div class="flex items-center justify-center w-8 h-8 rounded-full bg-success">
@@ -289,7 +289,7 @@ const UserOrders = {
                             <span class="text-secondary">${(item.quantity * item.price).toFixed(2)} lei</span>
                         </div>
                         `).join('')}
-                        ${order.commission_amount > 0 && order.commission_mode === 'on_top' ? `
+                        ${order.commission_amount > 0 && ['on_top', 'add_on_top', 'added_on_top'].includes(order.commission_mode) ? `
                         <div class="flex justify-between text-sm">
                             <span class="text-muted">Comision servicii ${order.commission_rate ? `(${order.commission_rate}%)` : ''}</span>
                             <span class="text-secondary">${parseFloat(order.commission_amount).toFixed(2)} lei</span>
@@ -304,7 +304,7 @@ const UserOrders = {
                         <hr class="border-border">
                         <div class="flex justify-between font-semibold">
                             <span class="text-secondary">Total platit</span>
-                            <span class="text-secondary">${(order.commission_mode === 'on_top' ? parseFloat(order.total) + parseFloat(order.commission_amount || 0) : parseFloat(order.total)).toFixed(2)} lei</span>
+                            <span class="text-secondary">${(['on_top', 'add_on_top', 'added_on_top'].includes(order.commission_mode) ? parseFloat(order.total) + parseFloat(order.commission_amount || 0) : parseFloat(order.total)).toFixed(2)} lei</span>
                         </div>
                         ${order.commission_amount > 0 && order.commission_mode === 'included' ? `
                         <div class="flex justify-between text-xs text-muted">
@@ -328,12 +328,10 @@ const UserOrders = {
                             <span class="text-secondary">-</span>
                         </div>
                         `}
-                        ${order.payment_status ? `
                         <div class="flex justify-between">
                             <span class="text-muted">Status</span>
-                            <span class="${order.payment_status === 'paid' ? 'text-success' : 'text-warning'}">${order.payment_status === 'paid' ? 'Platit' : order.payment_status === 'pending' ? 'In asteptare' : order.payment_status}</span>
+                            <span class="${(order.payment_status === 'paid' || order.status === 'paid' || order.status === 'confirmed') ? 'text-success' : 'text-warning'}">${(order.payment_status === 'paid' || order.status === 'paid' || order.status === 'confirmed') ? 'Platit' : order.payment_status === 'pending' ? 'In asteptare' : (order.payment_status || order.status)}</span>
                         </div>
-                        ` : ''}
                         ${order.paid_at ? `
                         <div class="flex justify-between">
                             <span class="text-muted">Data platii</span>

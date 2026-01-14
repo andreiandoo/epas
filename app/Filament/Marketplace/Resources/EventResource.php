@@ -320,6 +320,8 @@ class EventResource extends Resource
                                 if (!$domain) {
                                     return 'Niciun domeniu configurat';
                                 }
+                                // Strip any existing protocol from domain
+                                $domain = preg_replace('#^https?://|^https?//#i', '', $domain);
                                 $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
                                 $eventUrl = $protocol . '://' . $domain . '/bilete/' . $record->slug;
                                 $previewUrl = $eventUrl . '?preview=1';
@@ -1662,6 +1664,8 @@ class EventResource extends Resource
                         if (!$domain) {
                             return null;
                         }
+                        // Strip any existing protocol from domain
+                        $domain = preg_replace('#^https?://|^https?//#i', '', $domain);
                         $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
                         $url = $protocol . '://' . $domain . '/bilete/' . $record->slug;
                         // Add preview param if not published
