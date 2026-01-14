@@ -110,23 +110,26 @@ class OrderResource extends Resource
                             ->label('Detalii preț')
                             ->content(function ($record) {
                                 $currency = $record->currency ?? 'RON';
-                                $subtotal = $record->subtotal ?? $record->total;
-                                $commission = $record->commission_amount ?? 0;
-                                $commissionRate = $record->commission_rate ?? 0;
                                 $total = $record->total;
                                 $discount = $record->discount_amount ?? $record->promo_discount ?? 0;
 
-                                // Get commission mode
+                                // Get commission from EVENT (marketplace commission for organizer)
                                 $event = $record->tickets->first()?->event;
+                                $commissionRate = $event?->commission_rate
+                                    ?? $event?->marketplaceOrganizer?->commission_rate
+                                    ?? 0;
                                 $commissionMode = $event?->commission_mode
                                     ?? $event?->marketplaceOrganizer?->default_commission_mode
                                     ?? $record->marketplaceClient?->commission_mode
                                     ?? 'included';
 
-                                $html = '<div class="space-y-2 text-sm">';
-
                                 // Calculate base tickets value
                                 $ticketsValue = $record->tickets->sum('price');
+
+                                // Calculate commission amount from event's rate
+                                $commission = $ticketsValue * ($commissionRate / 100);
+
+                                $html = '<div class="space-y-2 text-sm">';
 
                                 $html .= '<div class="flex justify-between"><span class="text-gray-500">Valoare bilete:</span><span class="font-medium">' . number_format($ticketsValue, 2) . ' ' . $currency . '</span></div>';
 
@@ -149,16 +152,21 @@ class OrderResource extends Resource
                         Forms\Components\Placeholder::make('commission_details')
                             ->label('Detalii comision')
                             ->content(function ($record) {
-                                $commission = $record->commission_amount ?? 0;
-                                $commissionRate = $record->commission_rate ?? 0;
                                 $currency = $record->currency ?? 'RON';
 
-                                // Get commission mode
+                                // Get commission from EVENT (marketplace commission for organizer)
                                 $event = $record->tickets->first()?->event;
+                                $commissionRate = $event?->commission_rate
+                                    ?? $event?->marketplaceOrganizer?->commission_rate
+                                    ?? 0;
                                 $commissionMode = $event?->commission_mode
                                     ?? $event?->marketplaceOrganizer?->default_commission_mode
                                     ?? $record->marketplaceClient?->commission_mode
                                     ?? 'included';
+
+                                // Calculate base tickets value and commission
+                                $ticketsValue = $record->tickets->sum('price');
+                                $commission = $ticketsValue * ($commissionRate / 100);
 
                                 if ($commission <= 0 && $commissionRate <= 0) {
                                     return new HtmlString('<span class="text-gray-500">Fără comision</span>');
@@ -170,7 +178,6 @@ class OrderResource extends Resource
                                 $html .= '<div class="flex justify-between"><span class="text-gray-500">Mod:</span><span class="font-medium">' . ($commissionMode === 'on_top' ? 'Adăugat peste preț' : 'Inclus în preț') . '</span></div>';
 
                                 // Calculate organizer revenue
-                                $ticketsValue = $record->tickets->sum('price');
                                 $organizerRevenue = $ticketsValue - ($commissionMode === 'included' ? $commission : 0);
 
                                 $html .= '<hr class="my-2 border-gray-200">';

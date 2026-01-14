@@ -105,7 +105,7 @@ class AccountController extends BaseController
                     ?? 'included';
             }
 
-            // Format payment method for display
+            // Format payment method for display - check payment_processor first, then meta, then default
             $paymentMethod = null;
             if ($order->payment_processor) {
                 $paymentMethod = match ($order->payment_processor) {
@@ -116,6 +116,27 @@ class AccountController extends BaseController
                     'bank_transfer' => 'Transfer bancar',
                     default => ucfirst(str_replace(['_', '-'], ' ', $order->payment_processor)),
                 };
+            } elseif (!empty($order->meta['payment_method'])) {
+                $paymentMethod = $order->meta['payment_method'];
+            } elseif ($order->status === 'paid' || $order->status === 'confirmed') {
+                // If order is paid but no payment method recorded, default to Card
+                $paymentMethod = 'Card';
+            }
+
+            // Get commission from EVENT (marketplace commission for organizer), not from Order
+            $eventCommissionRate = 0;
+            $eventCommissionAmount = 0;
+            if ($order->event) {
+                $eventCommissionRate = (float) ($order->event->commission_rate
+                    ?? $order->event->marketplaceOrganizer?->commission_rate
+                    ?? 0);
+                // Calculate commission amount from tickets value
+                $ticketsValue = $order->tickets->sum('price');
+                $eventCommissionAmount = $ticketsValue * ($eventCommissionRate / 100);
+            } elseif ($order->marketplaceEvent) {
+                $eventCommissionRate = (float) ($order->marketplaceEvent->marketplaceOrganizer?->commission_rate ?? 0);
+                $ticketsValue = $order->tickets->sum('price');
+                $eventCommissionAmount = $ticketsValue * ($eventCommissionRate / 100);
             }
 
             return [
@@ -130,9 +151,9 @@ class AccountController extends BaseController
                 'promo_discount' => (float) ($order->discount_amount ?? 0),
                 'discount' => (float) ($order->discount_amount ?? 0),
                 'promo_code' => $order->meta['promo_code'] ?? $order->promo_code ?? null,
-                // Commission info
-                'commission_rate' => (float) ($order->commission_rate ?? 0),
-                'commission_amount' => (float) ($order->commission_amount ?? 0),
+                // Commission info - using EVENT's commission (marketplace -> organizer)
+                'commission_rate' => $eventCommissionRate,
+                'commission_amount' => round($eventCommissionAmount, 2),
                 'commission_mode' => $commissionMode, // 'included' or 'on_top'
                 // Payment info
                 'payment_method' => $paymentMethod,
@@ -140,15 +161,15 @@ class AccountController extends BaseController
                 'payment_status' => $order->payment_status,
                 'paid_at' => $order->paid_at?->toIso8601String(),
                 'event' => $eventData,
-                'items' => $order->tickets->groupBy('ticket_type_id')->map(function ($tickets, $typeId) use ($order) {
+                'items' => $order->tickets->groupBy('ticket_type_id')->map(function ($tickets, $typeId) use ($order, $eventCommissionAmount) {
                     $first = $tickets->first();
                     $basePrice = (float) ($first->price ?? 0);
                     $quantity = $tickets->count();
 
-                    // Calculate commission per ticket if on_top
+                    // Calculate commission per ticket using EVENT's commission
                     $commissionPerTicket = 0;
-                    if ($order->commission_amount && $order->tickets->count() > 0) {
-                        $commissionPerTicket = (float) $order->commission_amount / $order->tickets->count();
+                    if ($eventCommissionAmount > 0 && $order->tickets->count() > 0) {
+                        $commissionPerTicket = $eventCommissionAmount / $order->tickets->count();
                     }
 
                     return [

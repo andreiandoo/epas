@@ -312,8 +312,15 @@ class EventResource extends Resource
                                     return 'Salvați evenimentul pentru a genera link-ul de previzualizare';
                                 }
                                 $marketplace = $record->marketplaceClient;
-                                $domain = $marketplace?->domains->where('is_primary', true)->first()?->domain
-                                    ?? $marketplace?->domains->first()?->domain;
+                                if (!$marketplace) {
+                                    return 'Niciun marketplace configurat';
+                                }
+                                $domains = $marketplace->domains;
+                                if (!$domains || $domains->isEmpty()) {
+                                    return 'Niciun domeniu configurat';
+                                }
+                                $domain = $domains->where('is_primary', true)->first()?->domain
+                                    ?? $domains->first()?->domain;
                                 if (!$domain) {
                                     return 'Niciun domeniu configurat';
                                 }
@@ -1651,8 +1658,15 @@ class EventResource extends Resource
                     ->color('gray')
                     ->url(function (Event $record) {
                         $marketplace = $record->marketplaceClient;
-                        $domain = $marketplace?->domains->where('is_primary', true)->first()?->domain
-                            ?? $marketplace?->domains->first()?->domain;
+                        if (!$marketplace) {
+                            return null;
+                        }
+                        $domains = $marketplace->domains;
+                        if (!$domains || $domains->isEmpty()) {
+                            return null;
+                        }
+                        $domain = $domains->where('is_primary', true)->first()?->domain
+                            ?? $domains->first()?->domain;
                         if (!$domain) {
                             return null;
                         }
