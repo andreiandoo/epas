@@ -7,13 +7,22 @@ require_once dirname(__DIR__) . '/includes/header.php';
 ?>
 
 <style>
-    .ticket-qr { transition: transform 0.2s ease; }
-    .ticket-qr:hover { transform: scale(1.02); }
+    .ticket-qr { transition: transform 0.2s ease; cursor: pointer; }
+    .ticket-qr:hover { transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
     @media print {
         .no-print { display: none !important; }
         .ticket-card { break-inside: avoid; page-break-inside: avoid; }
     }
+    /* QR Modal styles */
+    .qr-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 50; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all 0.3s ease; }
+    .qr-modal-backdrop.active { opacity: 1; visibility: visible; }
+    .qr-modal { background: white; border-radius: 1.5rem; padding: 2rem; max-width: 90vw; max-height: 90vh; transform: scale(0.9); transition: transform 0.3s ease; text-align: center; }
+    .qr-modal-backdrop.active .qr-modal { transform: scale(1); }
+    .qr-modal-qr { width: 280px; height: 280px; margin: 1rem auto; background: white; padding: 1rem; border-radius: 1rem; }
+    .qr-modal-qr canvas { width: 100% !important; height: 100% !important; }
 </style>
+<!-- QRCode.js library for local QR generation -->
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
 <?php require_once dirname(__DIR__) . '/includes/user-wrap.php'; ?>
         <!-- Page Header -->
@@ -61,9 +70,23 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 Descopera evenimente
             </a>
         </div>
-<?php 
+
+        <!-- QR Modal -->
+        <div id="qr-modal-backdrop" class="qr-modal-backdrop no-print" onclick="UserTickets.hideQRModal(event)">
+            <div class="qr-modal" onclick="event.stopPropagation()">
+                <button onclick="UserTickets.hideQRModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+                <h3 id="qr-modal-title" class="text-lg font-bold text-secondary mb-1"></h3>
+                <p id="qr-modal-attendee" class="text-sm text-muted mb-2"></p>
+                <div id="qr-modal-qr" class="qr-modal-qr"></div>
+                <p id="qr-modal-code" class="text-sm font-mono text-muted mt-2"></p>
+                <p id="qr-modal-type" class="text-sm font-medium text-secondary mt-1"></p>
+            </div>
+        </div>
+<?php
 require_once dirname(__DIR__) . '/includes/user-wrap-end.php';
-require_once dirname(__DIR__) . '/includes/user-footer.php'; 
+require_once dirname(__DIR__) . '/includes/user-footer.php';
 ?>
 
 <?php
@@ -71,6 +94,7 @@ $scriptsExtra = <<<'JS'
 <script>
 const UserTickets = {
     tickets: { upcoming: [], past: [] },
+    qrCodes: {}, // Cache generated QR codes
 
     async init() {
         if (!AmbiletAuth.isAuthenticated()) {
@@ -134,6 +158,52 @@ const UserTickets = {
         }
     },
 
+    // Generate QR code using QRCode.js library
+    async generateQRCode(code, elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        // Check cache first
+        if (this.qrCodes[code]) {
+            element.innerHTML = '';
+            element.appendChild(this.qrCodes[code].cloneNode(true));
+            return;
+        }
+
+        try {
+            const canvas = document.createElement('canvas');
+            await QRCode.toCanvas(canvas, code, {
+                width: 120,
+                margin: 0,
+                color: { dark: '#181622', light: '#ffffff' }
+            });
+            this.qrCodes[code] = canvas;
+            element.innerHTML = '';
+            element.appendChild(canvas);
+        } catch (error) {
+            console.error('QR generation error:', error);
+            // Fallback to external API
+            element.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(code)}&color=181622&margin=0" alt="QR" class="w-full h-full">`;
+        }
+    },
+
+    // Format time display with doors
+    formatTimeDisplay(event) {
+        let timeStr = '';
+        if (event.time) {
+            timeStr = event.time;
+            if (event.doors_time) {
+                timeStr += ` (Porti: ${event.doors_time})`;
+            }
+            if (event.end_time) {
+                timeStr += ` - ${event.end_time}`;
+            }
+        } else if (event.doors_time) {
+            timeStr = `Porti: ${event.doors_time}`;
+        }
+        return timeStr;
+    },
+
     renderUpcoming() {
         const container = document.getElementById('tab-upcoming');
         if (this.tickets.upcoming.length === 0) {
@@ -155,11 +225,13 @@ const UserTickets = {
         });
 
         const eventGroups = Object.values(groupedByEvent);
+        const self = this;
 
         container.innerHTML = eventGroups.map((group, idx) => {
             const event = group.event || {};
             const tickets = group.tickets || [];
             const daysUntil = event.date ? Math.ceil((new Date(event.date) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+            const timeDisplay = self.formatTimeDisplay(event);
 
             return `
             <div class="overflow-hidden bg-white border ticket-card rounded-2xl border-border">
@@ -179,12 +251,12 @@ const UserTickets = {
                             <div class="flex flex-wrap mt-3 text-sm gap-x-4 gap-y-1">
                                 <span class="flex items-center gap-1.5 text-secondary">
                                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                    ${event.date_formatted || this.formatDateShort(event.date)}
+                                    ${event.date_formatted || self.formatDateShort(event.date)}
                                 </span>
-                                ${event.time ? `
+                                ${timeDisplay ? `
                                 <span class="flex items-center gap-1.5 text-secondary">
                                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                    ${event.time}
+                                    ${timeDisplay}
                                 </span>` : ''}
                                 ${event.venue ? `
                                 <span class="flex items-center gap-1.5 text-secondary">
@@ -201,7 +273,7 @@ const UserTickets = {
                     <div class="flex items-center justify-between mb-4">
                         <p class="text-sm font-semibold text-secondary">${tickets.length > 1 ? 'Biletele tale' : 'Biletul tau'}</p>
                         <div class="flex gap-2 no-print">
-                            <button onclick="UserTickets.addToCalendar(${idx})" class="flex items-center gap-1.5 px-3 py-1.5 bg-white text-secondary text-xs font-medium rounded-lg border border-border hover:border-primary hover:text-primary transition-colors">
+                            <button onclick="UserTickets.showCalendarOptions(${idx})" class="flex items-center gap-1.5 px-3 py-1.5 bg-white text-secondary text-xs font-medium rounded-lg border border-border hover:border-primary hover:text-primary transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 Calendar
                             </button>
@@ -209,14 +281,15 @@ const UserTickets = {
                     </div>
                     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-${Math.min(tickets.length, 4)} gap-3">
                         ${tickets.map((t, i) => `
-                        <div class="p-3 text-center bg-white border ticket-qr rounded-xl border-border">
+                        <div class="p-3 text-center bg-white border ticket-qr rounded-xl border-border" onclick="UserTickets.showQRModal('${t.code}', '${(t.type || 'Bilet').replace(/'/g, "\\'")}', '${(t.attendee_name || '').replace(/'/g, "\\'")}', '${(event.name || 'Eveniment').replace(/'/g, "\\'")}')">
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-xs text-muted">#${i + 1}</span>
                                 <span class="px-1.5 py-0.5 ${t.status === 'valid' ? 'bg-success/10 text-success' : t.status === 'used' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'} text-[10px] font-bold rounded uppercase">${t.status === 'valid' ? 'VALID' : t.status === 'used' ? 'FOLOSIT' : t.status?.toUpperCase()}</span>
                             </div>
-                            <div class="w-full aspect-square bg-white rounded-lg flex items-center justify-center border border-border mb-2 mx-auto max-w-[120px]">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(t.code)}&color=181622&margin=0" alt="QR" class="w-full h-full">
+                            <div id="qr-${t.code.replace(/[^a-zA-Z0-9]/g, '')}" class="w-full aspect-square bg-white rounded-lg flex items-center justify-center border border-border mb-2 mx-auto max-w-[120px]">
+                                <div class="w-6 h-6 border-2 rounded-full animate-spin border-primary border-t-transparent"></div>
                             </div>
+                            ${t.attendee_name ? `<p class="text-[10px] text-secondary font-medium truncate">${t.attendee_name}</p>` : ''}
                             <p class="text-[10px] text-muted font-mono truncate">${t.code}</p>
                             <p class="mt-1 text-xs font-medium text-secondary">${t.type}</p>
                         </div>
@@ -228,6 +301,16 @@ const UserTickets = {
 
         // Store grouped data for calendar function
         this.eventGroups = eventGroups;
+
+        // Generate QR codes after rendering
+        setTimeout(() => {
+            eventGroups.forEach(group => {
+                group.tickets.forEach(t => {
+                    const elementId = 'qr-' + t.code.replace(/[^a-zA-Z0-9]/g, '');
+                    this.generateQRCode(t.code, elementId);
+                });
+            });
+        }, 100);
     },
 
     renderPast() {
@@ -292,6 +375,41 @@ const UserTickets = {
         document.querySelector(`[data-tab="${tabName}"]`).classList.remove('text-muted', 'bg-surface');
     },
 
+    // Show QR Modal
+    async showQRModal(code, type, attendeeName, eventName) {
+        const backdrop = document.getElementById('qr-modal-backdrop');
+        document.getElementById('qr-modal-title').textContent = eventName;
+        document.getElementById('qr-modal-attendee').textContent = attendeeName || '';
+        document.getElementById('qr-modal-code').textContent = code;
+        document.getElementById('qr-modal-type').textContent = type;
+
+        const qrContainer = document.getElementById('qr-modal-qr');
+        qrContainer.innerHTML = '<div class="flex items-center justify-center h-full"><div class="w-8 h-8 border-4 rounded-full animate-spin border-primary border-t-transparent"></div></div>';
+
+        backdrop.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        // Generate larger QR code for modal
+        try {
+            const canvas = document.createElement('canvas');
+            await QRCode.toCanvas(canvas, code, {
+                width: 280,
+                margin: 1,
+                color: { dark: '#181622', light: '#ffffff' }
+            });
+            qrContainer.innerHTML = '';
+            qrContainer.appendChild(canvas);
+        } catch (error) {
+            qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(code)}&color=181622&margin=0" alt="QR" class="w-full h-full">`;
+        }
+    },
+
+    hideQRModal(event) {
+        if (event && event.target !== event.currentTarget) return;
+        document.getElementById('qr-modal-backdrop').classList.remove('active');
+        document.body.style.overflow = '';
+    },
+
     formatDate(dateStr) {
         const date = new Date(dateStr);
         const days = ['Duminica', 'Luni', 'Marti', 'Miercuri', 'Joi', 'Vineri', 'Sambata'];
@@ -303,6 +421,96 @@ const UserTickets = {
         const date = new Date(dateStr);
         const months = ['Ian', 'Feb', 'Mar', 'Apr', 'Mai', 'Iun', 'Iul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+    },
+
+    // Show calendar options (Google Calendar or .ics download)
+    showCalendarOptions(idx) {
+        const group = this.eventGroups?.[idx];
+        if (!group) return;
+
+        const event = group.event;
+        const tickets = group.tickets;
+
+        // Create a simple dropdown menu
+        const existingMenu = document.getElementById('calendar-dropdown');
+        if (existingMenu) existingMenu.remove();
+
+        const menu = document.createElement('div');
+        menu.id = 'calendar-dropdown';
+        menu.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50';
+        menu.onclick = (e) => { if (e.target === menu) menu.remove(); };
+
+        menu.innerHTML = `
+            <div class="bg-white rounded-2xl p-4 w-72 shadow-xl">
+                <h3 class="text-lg font-bold text-secondary mb-4">Adauga in calendar</h3>
+                <div class="space-y-2">
+                    <button onclick="UserTickets.addToGoogleCalendar(${idx}); document.getElementById('calendar-dropdown').remove();" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                        <span class="font-medium text-secondary">Google Calendar</span>
+                    </button>
+                    <button onclick="UserTickets.addToCalendar(${idx}); document.getElementById('calendar-dropdown').remove();" class="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-surface transition-colors">
+                        <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                        <span class="font-medium text-secondary">Descarca .ics</span>
+                    </button>
+                </div>
+                <button onclick="document.getElementById('calendar-dropdown').remove();" class="mt-4 w-full py-2 text-sm text-muted hover:text-secondary transition-colors">Anuleaza</button>
+            </div>
+        `;
+
+        document.body.appendChild(menu);
+    },
+
+    // Add to Google Calendar
+    addToGoogleCalendar(idx) {
+        const group = this.eventGroups?.[idx];
+        if (!group) return;
+
+        const event = group.event;
+        const tickets = group.tickets;
+
+        // Parse date
+        let startDate;
+        if (event.date) {
+            startDate = new Date(event.date);
+            if (event.time && !event.date.includes('T')) {
+                const [hours, minutes] = event.time.split(':');
+                startDate.setHours(parseInt(hours) || 19, parseInt(minutes) || 0);
+            }
+        } else {
+            startDate = new Date();
+        }
+
+        // Calculate end time (use end_time if available, otherwise +3 hours)
+        let endDate;
+        if (event.end_time) {
+            endDate = new Date(startDate);
+            const [hours, minutes] = event.end_time.split(':');
+            endDate.setHours(parseInt(hours), parseInt(minutes) || 0);
+            // If end time is before start time, it's next day
+            if (endDate < startDate) {
+                endDate.setDate(endDate.getDate() + 1);
+            }
+        } else {
+            endDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
+        }
+
+        // Format for Google Calendar
+        const formatGoogleDate = (d) => {
+            return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+        };
+
+        const googleUrl = new URL('https://calendar.google.com/calendar/render');
+        googleUrl.searchParams.set('action', 'TEMPLATE');
+        googleUrl.searchParams.set('text', event.name || 'Eveniment');
+        googleUrl.searchParams.set('dates', `${formatGoogleDate(startDate)}/${formatGoogleDate(endDate)}`);
+        googleUrl.searchParams.set('details', `${tickets.length}x ${tickets[0]?.type || 'Bilet'}\n\nBilete achizitionate de pe AmBilet.ro`);
+        googleUrl.searchParams.set('location', `${event.venue || ''}${event.city ? ', ' + event.city : ''}`);
+
+        window.open(googleUrl.toString(), '_blank');
+
+        if (typeof AmbiletNotifications !== 'undefined') {
+            AmbiletNotifications.success('Se deschide Google Calendar...');
+        }
     },
 
     addToCalendar(idx) {
@@ -325,7 +533,19 @@ const UserTickets = {
         } else {
             startDate = new Date();
         }
-        const endDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000); // +3 hours
+
+        // Calculate end time
+        let endDate;
+        if (event.end_time) {
+            endDate = new Date(startDate);
+            const [hours, minutes] = event.end_time.split(':');
+            endDate.setHours(parseInt(hours), parseInt(minutes) || 0);
+            if (endDate < startDate) {
+                endDate.setDate(endDate.getDate() + 1);
+            }
+        } else {
+            endDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
+        }
 
         const formatICSDate = (d) => {
             return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
@@ -371,6 +591,11 @@ const UserTickets = {
         window.print();
     }
 };
+
+// Close QR modal with Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') UserTickets.hideQRModal();
+});
 
 document.addEventListener('DOMContentLoaded', () => UserTickets.init());
 </script>

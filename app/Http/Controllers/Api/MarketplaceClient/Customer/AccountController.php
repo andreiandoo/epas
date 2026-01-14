@@ -441,7 +441,8 @@ class AccountController extends BaseController
         $orders = $query->orderByDesc('created_at')->get();
 
         $tickets = $orders->flatMap(function ($order) {
-            return $order->tickets->map(function ($ticket) use ($order) {
+            $customer = $order->marketplaceCustomer;
+            return $order->tickets->map(function ($ticket) use ($order, $customer) {
                 // Handle both marketplace events and tenant events
                 if ($order->marketplaceEvent) {
                     $event = $order->marketplaceEvent;
@@ -452,6 +453,7 @@ class AccountController extends BaseController
                         'status' => $ticket->status,
                         'order_number' => $order->order_number,
                         'checked_in' => $ticket->checked_in_at !== null,
+                        'attendee_name' => $ticket->attendee_name ?? $customer?->full_name ?? null,
                         'event' => [
                             'id' => $event->id,
                             'name' => $event->name,
@@ -459,6 +461,8 @@ class AccountController extends BaseController
                             'date' => $event->starts_at->toIso8601String(),
                             'date_formatted' => $event->starts_at->format('d M Y'),
                             'time' => $event->starts_at->format('H:i'),
+                            'doors_time' => $event->doors_open_at?->format('H:i'),
+                            'end_time' => $event->ends_at?->format('H:i'),
                             'venue' => $event->venue_name,
                             'city' => $event->venue_city,
                             'image' => $event->image_url,
@@ -486,13 +490,16 @@ class AccountController extends BaseController
                         'status' => $ticket->status,
                         'order_number' => $order->order_number,
                         'checked_in' => $ticket->checked_in_at !== null,
+                        'attendee_name' => $ticket->attendee_name ?? $customer?->full_name ?? null,
                         'event' => [
                             'id' => $event->id,
                             'name' => $eventTitle,
                             'slug' => $event->slug,
                             'date' => $event->event_date?->toIso8601String(),
                             'date_formatted' => $event->event_date?->format('d M Y'),
-                            'time' => $event->event_date?->format('H:i'),
+                            'time' => $event->start_time,
+                            'doors_time' => $event->door_time,
+                            'end_time' => $event->end_time,
                             'venue' => $event->venue?->name ?? null,
                             'city' => $event->venue?->city ?? null,
                             'image' => $imageUrl,

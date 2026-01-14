@@ -97,1300 +97,1272 @@ class EventResource extends Resource
             Forms\Components\Hidden::make('marketplace_client_id')
                 ->default($marketplace?->id),
 
-            // Organizer selector - marketplace selects which organizer owns this event
-            SC\Section::make('Organizer')
-                ->description('Select the organizer who will own this event')
-                ->schema([
-                    Forms\Components\Select::make('marketplace_organizer_id')
-                        ->label('Organizer')
-                        ->options(function () use ($marketplace) {
-                            return MarketplaceOrganizer::query()
-                                ->where('marketplace_client_id', $marketplace?->id)
-                                ->where('status', 'active')
-                                ->orderBy('name')
-                                ->pluck('name', 'id');
-                        })
-                        ->required()
-                        ->searchable()
-                        ->preload()
-                        ->live()
-                        ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
-                            // When organizer changes, update commission info and ticket terms
-                            if ($state) {
-                                $organizer = MarketplaceOrganizer::find($state);
-                                if ($organizer) {
-                                    // Pre-fill commission rate with organizer's rate if set
-                                    $rate = $organizer->commission_rate ?? $marketplace?->commission_rate;
-                                    $set('commission_rate', $rate);
-
-                                    // Pre-fill commission mode with organizer's default if set
-                                    if ($organizer->default_commission_mode) {
-                                        $set('commission_mode', $organizer->default_commission_mode);
-                                    }
-
-                                    // Pre-fill ticket terms from organizer if available
-                                    if ($organizer->ticket_terms) {
-                                        $set("ticket_terms.{$marketplaceLanguage}", $organizer->ticket_terms);
-                                    }
-                                }
-                            }
-                        })
-                        ->hintIcon('heroicon-o-information-circle', tooltip: 'The selected organizer will receive payouts for this event')
-                        ->prefixIcon('heroicon-m-building-office-2'),
-
-                    Forms\Components\Placeholder::make('organizer_info')
-                        ->label('Organizer Details')
-                        ->visible(fn (SGet $get) => (bool) $get('marketplace_organizer_id'))
-                        ->content(function (SGet $get) use ($marketplace) {
-                            $organizerId = $get('marketplace_organizer_id');
-                            if (!$organizerId) return '';
-
-                            $organizer = MarketplaceOrganizer::find($organizerId);
-                            if (!$organizer) return '';
-
-                            $status = match($organizer->status) {
-                                'active' => '<span class="text-green-600">Active</span>',
-                                'pending' => '<span class="text-yellow-600">Pending</span>',
-                                'suspended' => '<span class="text-red-600">Suspended</span>',
-                                default => $organizer->status,
-                            };
-
-                            $verified = $organizer->verified_at
-                                ? '<span class="text-green-600">✓ Verified</span>'
-                                : '<span class="text-gray-500">Not verified</span>';
-
-                            $commissionRate = $organizer->commission_rate ?? $marketplace?->commission_rate ?? 5;
-                            $commissionMode = $organizer->default_commission_mode ?? $marketplace->commission_mode ?? 'included';
-                            $commissionModeLabel = $commissionMode === 'included' ? 'Included in price' : 'Added on top';
-
-                            return new HtmlString("
-                                <div class='space-y-1 text-sm'>
-                                    <div><strong>Email:</strong> {$organizer->email}</div>
-                                    <div><strong>Status:</strong> {$status} | {$verified}</div>
-                                    <div><strong>Default Commission:</strong> {$commissionRate}% ({$commissionModeLabel})</div>
-                                    <div><strong>Events:</strong> {$organizer->total_events} | <strong>Revenue:</strong> " . number_format($organizer->total_revenue, 2) . " RON</div>
-                                </div>
-                            ");
-                        }),
-                ])->columns(2),
-
-            // BASICS - Single Language based on Tenant setting
-            SC\Section::make('Event Details')
-                ->schema([
-                    SC\Group::make()
-                        ->schema([
-                            Forms\Components\TextInput::make("title.{$marketplaceLanguage}")
-                                ->label($marketplaceLanguage === 'ro' ? 'Titlu eveniment' : 'Event title')
-                                ->required()
-                                ->maxLength(190)
-                                ->live(onBlur: true)
-                                ->afterStateUpdated(function ($state, SSet $set) {
-                                    // Slug is NOT translatable - it's a plain string field
-                                    if ($state) $set('slug', Str::slug($state));
-                                }),
-                            Forms\Components\TextInput::make('slug')
-                                ->label('Slug')
-                                ->maxLength(190)
-                                ->rule('alpha_dash'),
-                        ])->columns(2)->columnSpanFull(),
-                ]),
-
-            // FLAGS
-            SC\Section::make('Status Flags')
-                ->schema([
-                    SC\Grid::make(5)->schema([
-                        Forms\Components\Toggle::make('is_sold_out')
-                            ->label('Sold out')
-                            ->onIcon('heroicon-m-lock-closed')
-                            ->offIcon('heroicon-m-lock-open')
-                            ->live()
-                            ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                if ($state) {
-                                    if ($get('is_cancelled')) $set('is_cancelled', false);
-                                }
-                            })
-                            ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
-                        Forms\Components\Toggle::make('door_sales_only')
-                            ->label('Door sales only')
-                            ->onIcon('heroicon-m-key')
-                            ->offIcon('heroicon-m-key')
-                            ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
-                        Forms\Components\Toggle::make('is_cancelled')
-                            ->label('Cancelled')
-                            ->onIcon('heroicon-m-x-circle')
-                            ->offIcon('heroicon-m-x-circle')
-                            ->live()
-                            ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                if ($state) {
-                                    if ($get('is_postponed')) $set('is_postponed', false);
-                                    if ($get('is_sold_out'))  $set('is_sold_out', false);
-                                    if ($get('is_promoted'))  $set('is_promoted', false);
-                                    $set('promoted_until', null);
-                                }
-                            }),
-                        Forms\Components\Toggle::make('is_postponed')
-                            ->label('Postponed')
-                            ->onIcon('heroicon-m-clock')
-                            ->offIcon('heroicon-m-clock')
-                            ->live()
-                            ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                if ($state) {
-                                    if ($get('is_cancelled')) $set('is_cancelled', false);
-                                } else {
-                                    $set('postponed_date', null);
-                                    $set('postponed_start_time', null);
-                                    $set('postponed_door_time', null);
-                                    $set('postponed_end_time', null);
-                                    $set('postponed_reason', null);
-                                }
-                            })
-                            ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
-                        Forms\Components\Toggle::make('is_promoted')
-                            ->label('Promoted')
-                            ->onIcon('heroicon-m-sparkles')
-                            ->offIcon('heroicon-m-sparkles')
-                            ->live()
-                            ->afterStateUpdated(function ($state, SSet $set) {
-                                if (!$state) $set('promoted_until', null);
-                            })
-                            ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
-                    ]),
-
-                    Forms\Components\Textarea::make('cancel_reason')
-                        ->label('Cancellation reason')
-                        ->rows(2)
-                        ->visible(fn (SGet $get) => (bool) $get('is_cancelled')),
-
-                    SC\Grid::make(4)->schema([
-                        Forms\Components\DatePicker::make('postponed_date')
-                            ->label('New date')
-                            ->minDate($today)
-                            ->native(false),
-                        Forms\Components\TimePicker::make('postponed_start_time')
-                            ->label('Start time')
-                            ->seconds(false)
-                            ->native(true),
-                        Forms\Components\TimePicker::make('postponed_door_time')
-                            ->label('Door time')
-                            ->seconds(false)
-                            ->native(true),
-                        Forms\Components\TimePicker::make('postponed_end_time')
-                            ->label('End time')
-                            ->seconds(false)
-                            ->native(true),
-                    ])->visible(fn (SGet $get) => (bool) $get('is_postponed')),
-
-                    Forms\Components\Textarea::make('postponed_reason')
-                        ->label('Postponement reason')
-                        ->rows(2)
-                        ->visible(fn (SGet $get) => (bool) $get('is_postponed')),
-
-                    Forms\Components\DatePicker::make('promoted_until')
-                        ->label('Promoted until')
-                        ->minDate($today)
-                        ->native(false)
-                        ->visible(fn (SGet $get) => (bool) $get('is_promoted')),
-                ])->columns(1),
-
-            // PUBLICATION STATUS
-            SC\Section::make('Publicare')
-                ->icon('heroicon-o-eye')
-                ->description('Controlează vizibilitatea evenimentului pe site-ul marketplace')
-                ->schema([
-                    SC\Grid::make(2)->schema([
-                        Forms\Components\Toggle::make('is_published')
-                            ->label('Publicat')
-                            ->helperText('Când este activat, evenimentul va fi vizibil pe site-ul marketplace. Când este dezactivat, evenimentul nu va apărea nicăieri.')
-                            ->onIcon('heroicon-m-eye')
-                            ->offIcon('heroicon-m-eye-slash')
-                            ->default(true)
-                            ->live(),
-                        Forms\Components\Placeholder::make('preview_link')
-                            ->label('Link previzualizare')
-                            ->content(function ($record) {
-                                if (!$record) {
-                                    return 'Salvați evenimentul pentru a genera link-ul de previzualizare';
-                                }
-                                $marketplace = $record->marketplaceClient;
-                                if (!$marketplace) {
-                                    return 'Niciun marketplace configurat';
-                                }
-                                // MarketplaceClient has a single 'domain' field, not a 'domains' relationship
-                                $domain = $marketplace->domain;
-                                if (!$domain) {
-                                    return 'Niciun domeniu configurat';
-                                }
-                                // Strip any existing protocol from domain
-                                $domain = preg_replace('#^https?://|^https?//#i', '', $domain);
-                                $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
-                                $eventUrl = $protocol . '://' . $domain . '/bilete/' . $record->slug;
-                                $previewUrl = $eventUrl . '?preview=1';
-
-                                return new \Illuminate\Support\HtmlString(
-                                    '<div class="space-y-2">' .
-                                    '<a href="' . e($eventUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-primary-600 hover:underline">' .
-                                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>' .
-                                        'Vezi pe site' .
-                                    '</a>' .
-                                    (!$record->is_published ? '<br><a href="' . e($previewUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-warning-600 hover:underline text-sm">' .
-                                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>' .
-                                        'Previzualizare (doar admin)' .
-                                    '</a>' : '') .
-                                    '</div>'
-                                );
-                            })
-                            ->visible(fn ($record) => $record !== null),
-                    ]),
-                ])
-                ->collapsible(),
-
-            // FEATURED SETTINGS (Marketplace only)
-            SC\Section::make('Featured Settings')
-                ->description('Control where this event appears as featured on the marketplace website')
-                ->schema([
-                    SC\Grid::make(3)->schema([
-                        Forms\Components\Toggle::make('is_homepage_featured')
-                            ->label('Homepage Featured')
-                            ->helperText('Show on homepage hero/featured section')
-                            ->onIcon('heroicon-m-home')
-                            ->offIcon('heroicon-m-home')
-                            ->live(),
-                        Forms\Components\Toggle::make('is_general_featured')
-                            ->label('General Featured')
-                            ->helperText('Show in general featured events lists')
-                            ->onIcon('heroicon-m-star')
-                            ->offIcon('heroicon-m-star')
-                            ->live(),
-                        Forms\Components\Toggle::make('is_category_featured')
-                            ->label('Category Featured')
-                            ->helperText('Show as featured in its category page')
-                            ->onIcon('heroicon-m-tag')
-                            ->offIcon('heroicon-m-tag')
-                            ->live(),
-                    ]),
-
-                    // Homepage Featured Image
-                    Forms\Components\FileUpload::make('homepage_featured_image')
-                        ->label('Homepage Featured Image')
-                        ->helperText('Special image for homepage featured section (recommended: 1920x600px)')
-                        ->image()
-                        ->directory('events/featured/homepage')
-                        ->disk('public')
-                        ->imageResizeMode('cover')
-                        ->imagePreviewHeight('150')
-                        ->visible(fn (SGet $get) => (bool) $get('is_homepage_featured'))
-                        ->columnSpanFull(),
-
-                    // General/Category Featured Image (shared)
-                    Forms\Components\FileUpload::make('featured_image')
-                        ->label('Featured Image (General/Category)')
-                        ->helperText('Image for general and category featured sections (recommended: 800x450px)')
-                        ->image()
-                        ->directory('events/featured')
-                        ->disk('public')
-                        ->imageResizeMode('cover')
-                        ->imagePreviewHeight('150')
-                        ->visible(fn (SGet $get) => (bool) $get('is_general_featured') || (bool) $get('is_category_featured'))
-                        ->columnSpanFull(),
-
-                    // Custom Related Events
-                    SC\Grid::make(1)->schema([
-                        Forms\Components\Toggle::make('has_custom_related')
-                            ->label('Custom Related Events')
-                            ->helperText('Manually select which events to show in the "Îți recomandăm" section')
-                            ->onIcon('heroicon-m-queue-list')
-                            ->offIcon('heroicon-m-queue-list')
-                            ->live(),
-
-                        Forms\Components\Select::make('custom_related_event_ids')
-                            ->label('Select Related Events')
-                            ->helperText('Choose events to display in the "Îți recomandăm" section (max 8)')
-                            ->multiple()
-                            ->searchable()
-                            ->preload()
-                            ->maxItems(8)
-                            ->options(function (?Event $record) use ($marketplace) {
-                                return Event::query()
-                                    ->where('marketplace_client_id', $marketplace?->id)
-                                    ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
-                                    ->where('is_cancelled', false)
-                                    ->orderBy('event_date', 'desc')
-                                    ->limit(100)
-                                    ->get()
-                                    ->mapWithKeys(fn ($event) => [
-                                        $event->id => ($event->title['ro'] ?? $event->title['en'] ?? 'Unnamed')
-                                            . ' (' . ($event->event_date?->format('d.m.Y') ?? 'No date') . ')'
-                                    ]);
-                            })
-                            ->visible(fn (SGet $get) => (bool) $get('has_custom_related'))
-                            ->columnSpanFull(),
-                    ]),
-                ])->columns(1),
-
-            // SCHEDULE
-            SC\Section::make('Schedule')
-                ->schema([
-                    Forms\Components\Radio::make('duration_mode')
-                        ->label('Duration')
-                        ->options([
-                            'single_day' => 'Single day',
-                            'range' => 'Range',
-                            'multi_day' => 'Multiple days',
-                            'recurring' => 'Recurring',
-                        ])
-                        ->inline()
-                        ->default('single_day')
-                        ->required()
-                        ->live(),
-
-                    // Single day
-                    SC\Grid::make(4)->schema([
-                        Forms\Components\DatePicker::make('event_date')
-                            ->label('Date')
-                            ->minDate($today)
-                            ->native(false),
-                        Forms\Components\TimePicker::make('start_time')
-                            ->label('Start time')
-                            ->seconds(false)
-                            ->native(true)
-                            ->required(fn (SGet $get) => $get('duration_mode') === 'single_day'),
-                        Forms\Components\TimePicker::make('door_time')
-                            ->label('Door time')
-                            ->seconds(false)
-                            ->native(true),
-                        Forms\Components\TimePicker::make('end_time')
-                            ->label('End time')
-                            ->seconds(false)
-                            ->native(true),
-                    ])->visible(fn (SGet $get) => $get('duration_mode') === 'single_day'),
-
-                    // Range
-                    SC\Grid::make(4)->schema([
-                        Forms\Components\DatePicker::make('range_start_date')
-                            ->label('Start date')
-                            ->minDate($today)
-                            ->native(false),
-                        Forms\Components\DatePicker::make('range_end_date')
-                            ->label('End date')
-                            ->native(false),
-                        Forms\Components\TimePicker::make('range_start_time')
-                            ->label('Start time')
-                            ->seconds(false)
-                            ->native(true),
-                        Forms\Components\TimePicker::make('range_end_time')
-                            ->label('End time')
-                            ->seconds(false)
-                            ->native(true),
-                    ])->visible(fn (SGet $get) => $get('duration_mode') === 'range'),
-
-                    // Multi day
-                    Forms\Components\Repeater::make('multi_slots')
-                        ->label('Days & times')
-                        ->schema([
-                            Forms\Components\DatePicker::make('date')
-                                ->label('Date')
-                                ->minDate($today)
-                                ->native(false)
-                                ->required(),
-                            Forms\Components\TimePicker::make('start_time')
-                                ->label('Start')
-                                ->seconds(false)
-                                ->native(true),
-                            Forms\Components\TimePicker::make('door_time')
-                                ->label('Door')
-                                ->seconds(false)
-                                ->native(true),
-                            Forms\Components\TimePicker::make('end_time')
-                                ->label('End')
-                                ->seconds(false)
-                                ->native(true),
-                        ])
-                        ->addActionLabel('Add another date')
-                        ->default([])
-                        ->visible(fn (SGet $get) => $get('duration_mode') === 'multi_day')
-                        ->columns(4),
-
-                    // Recurring
-                    SC\Group::make()
-                        ->visible(fn (SGet $get) => $get('duration_mode') === 'recurring')
-                        ->schema([
-                            SC\Grid::make(4)->schema([
-                                Forms\Components\DatePicker::make('recurring_start_date')
-                                    ->label('Initial date')
-                                    ->minDate(now()->startOfDay())
-                                    ->native(false)
+            SC\Grid::make(4)->schema([
+                // ========== COLOANA STÂNGĂ (3/4) ==========
+                SC\Group::make()
+                    ->columnSpan(3)
+                    ->schema([
+                        // Organizer selector - marketplace selects which organizer owns this event
+                        SC\Section::make('Organizer')
+                            ->description('Select the organizer who will own this event')
+                            ->schema([
+                                Forms\Components\Select::make('marketplace_organizer_id')
+                                    ->label('Organizer')
+                                    ->options(function () use ($marketplace) {
+                                        return MarketplaceOrganizer::query()
+                                            ->where('marketplace_client_id', $marketplace?->id)
+                                            ->where('status', 'active')
+                                            ->orderBy('name')
+                                            ->pluck('name', 'id');
+                                    })
+                                    ->required()
+                                    ->searchable()
+                                    ->preload()
                                     ->live()
-                                    ->afterStateUpdated(function ($state, SSet $set) {
-                                        if (!$state) { $set('recurring_weekday', null); return; }
-                                        $w = Carbon::parse($state)->dayOfWeekIso;
-                                        $set('recurring_weekday', $w);
+                                    ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
+                                        // When organizer changes, update commission info and ticket terms
+                                        if ($state) {
+                                            $organizer = MarketplaceOrganizer::find($state);
+                                            if ($organizer) {
+                                                // Pre-fill commission rate with organizer's rate if set
+                                                $rate = $organizer->commission_rate ?? $marketplace?->commission_rate;
+                                                $set('commission_rate', $rate);
+
+                                                // Pre-fill commission mode with organizer's default if set
+                                                if ($organizer->default_commission_mode) {
+                                                    $set('commission_mode', $organizer->default_commission_mode);
+                                                }
+
+                                                // Pre-fill ticket terms from organizer if available
+                                                if ($organizer->ticket_terms) {
+                                                    $set("ticket_terms.{$marketplaceLanguage}", $organizer->ticket_terms);
+                                                }
+                                            }
+                                        }
+                                    })
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'The selected organizer will receive payouts for this event')
+                                    ->prefixIcon('heroicon-m-building-office-2'),
+
+                                Forms\Components\Placeholder::make('organizer_info')
+                                    ->label('Organizer Details')
+                                    ->visible(fn (SGet $get) => (bool) $get('marketplace_organizer_id'))
+                                    ->content(function (SGet $get) use ($marketplace) {
+                                        $organizerId = $get('marketplace_organizer_id');
+                                        if (!$organizerId) return '';
+
+                                        $organizer = MarketplaceOrganizer::find($organizerId);
+                                        if (!$organizer) return '';
+
+                                        $status = match($organizer->status) {
+                                            'active' => '<span class="text-green-600">Active</span>',
+                                            'pending' => '<span class="text-yellow-600">Pending</span>',
+                                            'suspended' => '<span class="text-red-600">Suspended</span>',
+                                            default => $organizer->status,
+                                        };
+
+                                        $verified = $organizer->verified_at
+                                            ? '<span class="text-green-600">✓ Verified</span>'
+                                            : '<span class="text-gray-500">Not verified</span>';
+
+                                        $commissionRate = $organizer->commission_rate ?? $marketplace?->commission_rate ?? 5;
+                                        $commissionMode = $organizer->default_commission_mode ?? $marketplace->commission_mode ?? 'included';
+                                        $commissionModeLabel = $commissionMode === 'included' ? 'Included in price' : 'Added on top';
+
+                                        return new HtmlString("
+                                            <div class='space-y-1 text-sm'>
+                                                <div><strong>Email:</strong> {$organizer->email}</div>
+                                                <div><strong>Status:</strong> {$status} | {$verified}</div>
+                                                <div><strong>Default Commission:</strong> {$commissionRate}% ({$commissionModeLabel})</div>
+                                                <div><strong>Events:</strong> {$organizer->total_events} | <strong>Revenue:</strong> " . number_format($organizer->total_revenue, 2) . " RON</div>
+                                            </div>
+                                        ");
                                     }),
-                                Forms\Components\TextInput::make('recurring_weekday')
-                                    ->label('Weekday')
-                                    ->disabled()
-                                    ->dehydrated(false)
-                                    ->formatStateUsing(function (SGet $get) {
-                                        $map = [1=>'Mon',2=>'Tue',3=>'Wed',4=>'Thu',5=>'Fri',6=>'Sat',7=>'Sun'];
-                                        return $map[$get('recurring_weekday')] ?? '';
-                                    }),
-                                Forms\Components\Select::make('recurring_frequency')
-                                    ->label('Recurrence')
+                            ])->columns(2),
+
+                        // BASICS - Single Language based on Tenant setting
+                        SC\Section::make('Event Details')
+                            ->schema([
+                                SC\Group::make()
+                                    ->schema([
+                                        Forms\Components\TextInput::make("title.{$marketplaceLanguage}")
+                                            ->label($marketplaceLanguage === 'ro' ? 'Titlu eveniment' : 'Event title')
+                                            ->required()
+                                            ->maxLength(190)
+                                            ->live(onBlur: true)
+                                            ->afterStateUpdated(function ($state, SSet $set) {
+                                                // Slug is NOT translatable - it's a plain string field
+                                                if ($state) $set('slug', Str::slug($state));
+                                            }),
+                                        Forms\Components\TextInput::make('slug')
+                                            ->label('Slug')
+                                            ->maxLength(190)
+                                            ->rule('alpha_dash'),
+                                    ])->columns(2)->columnSpanFull(),
+                            ]),
+
+                        // FLAGS
+                        SC\Section::make('Status Flags')
+                            ->schema([
+                                SC\Grid::make(5)->schema([
+                                    Forms\Components\Toggle::make('is_sold_out')
+                                        ->label('Sold out')
+                                        ->onIcon('heroicon-m-lock-closed')
+                                        ->offIcon('heroicon-m-lock-open')
+                                        ->live()
+                                        ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                            if ($state) {
+                                                if ($get('is_cancelled')) $set('is_cancelled', false);
+                                            }
+                                        })
+                                        ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
+                                    Forms\Components\Toggle::make('door_sales_only')
+                                        ->label('Door sales only')
+                                        ->onIcon('heroicon-m-key')
+                                        ->offIcon('heroicon-m-key')
+                                        ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
+                                    Forms\Components\Toggle::make('is_cancelled')
+                                        ->label('Cancelled')
+                                        ->onIcon('heroicon-m-x-circle')
+                                        ->offIcon('heroicon-m-x-circle')
+                                        ->live()
+                                        ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                            if ($state) {
+                                                if ($get('is_postponed')) $set('is_postponed', false);
+                                                if ($get('is_sold_out'))  $set('is_sold_out', false);
+                                                if ($get('is_promoted'))  $set('is_promoted', false);
+                                                $set('promoted_until', null);
+                                            }
+                                        }),
+                                    Forms\Components\Toggle::make('is_postponed')
+                                        ->label('Postponed')
+                                        ->onIcon('heroicon-m-clock')
+                                        ->offIcon('heroicon-m-clock')
+                                        ->live()
+                                        ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                            if ($state) {
+                                                if ($get('is_cancelled')) $set('is_cancelled', false);
+                                            } else {
+                                                $set('postponed_date', null);
+                                                $set('postponed_start_time', null);
+                                                $set('postponed_door_time', null);
+                                                $set('postponed_end_time', null);
+                                                $set('postponed_reason', null);
+                                            }
+                                        })
+                                        ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
+                                    Forms\Components\Toggle::make('is_promoted')
+                                        ->label('Promoted')
+                                        ->onIcon('heroicon-m-sparkles')
+                                        ->offIcon('heroicon-m-sparkles')
+                                        ->live()
+                                        ->afterStateUpdated(function ($state, SSet $set) {
+                                            if (!$state) $set('promoted_until', null);
+                                        })
+                                        ->disabled(fn (SGet $get) => (bool) $get('is_cancelled')),
+                                ]),
+
+                                Forms\Components\Textarea::make('cancel_reason')
+                                    ->label('Cancellation reason')
+                                    ->rows(2)
+                                    ->visible(fn (SGet $get) => (bool) $get('is_cancelled')),
+
+                                SC\Grid::make(4)->schema([
+                                    Forms\Components\DatePicker::make('postponed_date')
+                                        ->label('New date')
+                                        ->minDate($today)
+                                        ->native(false),
+                                    Forms\Components\TimePicker::make('postponed_start_time')
+                                        ->label('Start time')
+                                        ->seconds(false)
+                                        ->native(true),
+                                    Forms\Components\TimePicker::make('postponed_door_time')
+                                        ->label('Door time')
+                                        ->seconds(false)
+                                        ->native(true),
+                                    Forms\Components\TimePicker::make('postponed_end_time')
+                                        ->label('End time')
+                                        ->seconds(false)
+                                        ->native(true),
+                                ])->visible(fn (SGet $get) => (bool) $get('is_postponed')),
+
+                                Forms\Components\Textarea::make('postponed_reason')
+                                    ->label('Postponement reason')
+                                    ->rows(2)
+                                    ->visible(fn (SGet $get) => (bool) $get('is_postponed')),
+
+                                Forms\Components\DatePicker::make('promoted_until')
+                                    ->label('Promoted until')
+                                    ->minDate($today)
+                                    ->native(false)
+                                    ->visible(fn (SGet $get) => (bool) $get('is_promoted')),
+                            ])->columns(1),
+
+                        // PUBLICATION STATUS
+                        SC\Section::make('Publicare')
+                            ->icon('heroicon-o-eye')
+                            ->description('Controlează vizibilitatea evenimentului pe site-ul marketplace')
+                            ->schema([
+                                SC\Grid::make(2)->schema([
+                                    Forms\Components\Toggle::make('is_published')
+                                        ->label('Publicat')
+                                        ->helperText('Când este activat, evenimentul va fi vizibil pe site-ul marketplace. Când este dezactivat, evenimentul nu va apărea nicăieri.')
+                                        ->onIcon('heroicon-m-eye')
+                                        ->offIcon('heroicon-m-eye-slash')
+                                        ->default(true)
+                                        ->live(),
+                                    Forms\Components\Placeholder::make('preview_link')
+                                        ->label('Link previzualizare')
+                                        ->content(function ($record) {
+                                            if (!$record) {
+                                                return 'Salvați evenimentul pentru a genera link-ul de previzualizare';
+                                            }
+                                            $marketplace = $record->marketplaceClient;
+                                            if (!$marketplace) {
+                                                return 'Niciun marketplace configurat';
+                                            }
+                                            // MarketplaceClient has a single 'domain' field, not a 'domains' relationship
+                                            $domain = $marketplace->domain;
+                                            if (!$domain) {
+                                                return 'Niciun domeniu configurat';
+                                            }
+                                            // Strip any existing protocol from domain
+                                            $domain = preg_replace('#^https?://|^https?//#i', '', $domain);
+                                            $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
+                                            $eventUrl = $protocol . '://' . $domain . '/bilete/' . $record->slug;
+                                            $previewUrl = $eventUrl . '?preview=1';
+
+                                            return new \Illuminate\Support\HtmlString(
+                                                '<div class="space-y-2">' .
+                                                '<a href="' . e($eventUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-primary-600 hover:underline">' .
+                                                    '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>' .
+                                                    'Vezi pe site' .
+                                                '</a>' .
+                                                (!$record->is_published ? '<br><a href="' . e($previewUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-warning-600 hover:underline text-sm">' .
+                                                    '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>' .
+                                                    'Previzualizare (doar admin)' .
+                                                '</a>' : '') .
+                                                '</div>'
+                                            );
+                                        })
+                                        ->visible(fn ($record) => $record !== null),
+                                ]),
+                            ])
+                            ->collapsible(),
+
+                        // FEATURED SETTINGS (Marketplace only)
+                        SC\Section::make('Featured Settings')
+                            ->description('Control where this event appears as featured on the marketplace website')
+                            ->schema([
+                                SC\Grid::make(3)->schema([
+                                    Forms\Components\Toggle::make('is_homepage_featured')
+                                        ->label('Homepage Featured')
+                                        ->helperText('Show on homepage hero/featured section')
+                                        ->onIcon('heroicon-m-home')
+                                        ->offIcon('heroicon-m-home')
+                                        ->live(),
+                                    Forms\Components\Toggle::make('is_general_featured')
+                                        ->label('General Featured')
+                                        ->helperText('Show in general featured events lists')
+                                        ->onIcon('heroicon-m-star')
+                                        ->offIcon('heroicon-m-star')
+                                        ->live(),
+                                    Forms\Components\Toggle::make('is_category_featured')
+                                        ->label('Category Featured')
+                                        ->helperText('Show as featured in its category page')
+                                        ->onIcon('heroicon-m-tag')
+                                        ->offIcon('heroicon-m-tag')
+                                        ->live(),
+                                ]),
+
+                                // Homepage Featured Image
+                                Forms\Components\FileUpload::make('homepage_featured_image')
+                                    ->label('Homepage Featured Image')
+                                    ->helperText('Special image for homepage featured section (recommended: 1920x600px)')
+                                    ->image()
+                                    ->directory('events/featured/homepage')
+                                    ->disk('public')
+                                    ->imageResizeMode('cover')
+                                    ->imagePreviewHeight('150')
+                                    ->visible(fn (SGet $get) => (bool) $get('is_homepage_featured'))
+                                    ->columnSpanFull(),
+
+                                // General/Category Featured Image (shared)
+                                Forms\Components\FileUpload::make('featured_image')
+                                    ->label('Featured Image (General/Category)')
+                                    ->helperText('Image for general and category featured sections (recommended: 800x450px)')
+                                    ->image()
+                                    ->directory('events/featured')
+                                    ->disk('public')
+                                    ->imageResizeMode('cover')
+                                    ->imagePreviewHeight('150')
+                                    ->visible(fn (SGet $get) => (bool) $get('is_general_featured') || (bool) $get('is_category_featured'))
+                                    ->columnSpanFull(),
+
+                                // Custom Related Events
+                                SC\Grid::make(1)->schema([
+                                    Forms\Components\Toggle::make('has_custom_related')
+                                        ->label('Custom Related Events')
+                                        ->helperText('Manually select which events to show in the "Îți recomandăm" section')
+                                        ->onIcon('heroicon-m-queue-list')
+                                        ->offIcon('heroicon-m-queue-list')
+                                        ->live(),
+
+                                    Forms\Components\Select::make('custom_related_event_ids')
+                                        ->label('Select Related Events')
+                                        ->helperText('Choose events to display in the "Îți recomandăm" section (max 8)')
+                                        ->multiple()
+                                        ->searchable()
+                                        ->preload()
+                                        ->maxItems(8)
+                                        ->options(function (?Event $record) use ($marketplace) {
+                                            return Event::query()
+                                                ->where('marketplace_client_id', $marketplace?->id)
+                                                ->when($record, fn ($q) => $q->where('id', '!=', $record->id))
+                                                ->where('is_cancelled', false)
+                                                ->orderBy('event_date', 'desc')
+                                                ->limit(100)
+                                                ->get()
+                                                ->mapWithKeys(fn ($event) => [
+                                                    $event->id => ($event->title['ro'] ?? $event->title['en'] ?? 'Unnamed')
+                                                        . ' (' . ($event->event_date?->format('d.m.Y') ?? 'No date') . ')'
+                                                ]);
+                                        })
+                                        ->visible(fn (SGet $get) => (bool) $get('has_custom_related'))
+                                        ->columnSpanFull(),
+                                ]),
+                            ])->columns(1),
+
+                        // SCHEDULE
+                        SC\Section::make('Schedule')
+                            ->schema([
+                                Forms\Components\Radio::make('duration_mode')
+                                    ->label('Duration')
                                     ->options([
-                                        'weekly' => 'Weekly',
-                                        'monthly_nth' => 'Monthly (Nth weekday)',
+                                        'single_day' => 'Single day',
+                                        'range' => 'Range',
+                                        'multi_day' => 'Multiple days',
+                                        'recurring' => 'Recurring',
                                     ])
+                                    ->inline()
+                                    ->default('single_day')
                                     ->required()
                                     ->live(),
-                                Forms\Components\TextInput::make('recurring_count')
-                                    ->label('Occurrences')
-                                    ->numeric()
-                                    ->minValue(1),
-                            ]),
-                            SC\Grid::make(2)
-                                ->visible(fn (SGet $get) => $get('recurring_frequency') === 'monthly_nth')
-                                ->schema([
-                                    Forms\Components\Select::make('recurring_week_of_month')
-                                        ->label('Week of month')
-                                        ->options([
-                                            1 => 'First', 2 => 'Second', 3 => 'Third', 4 => 'Fourth', -1 => 'Last',
-                                        ])
-                                        ->required(),
-                                ]),
-                            SC\Grid::make(3)->schema([
-                                Forms\Components\TimePicker::make('recurring_start_time')
-                                    ->label('Start time')
-                                    ->seconds(false)->native(true)
-                                    ->required(),
-                                Forms\Components\TimePicker::make('recurring_door_time')
-                                    ->label('Door time')
-                                    ->seconds(false)->native(true),
-                                Forms\Components\TimePicker::make('recurring_end_time')
-                                    ->label('End time')
-                                    ->seconds(false)->native(true),
-                            ]),
-                        ]),
-                ])->columns(1),
 
-            // LOCATION & LINKS
-            SC\Section::make('Location & Links')
-                ->schema([
-                    Forms\Components\Select::make('venue_id')
-                        ->label('Venue')
-                        ->searchable()
-                        ->preload()
-                        ->live()
-                        ->options(function () use ($marketplace) {
-                            return Venue::query()
-                                ->where(fn($q) => $q
-                                    ->whereNull('marketplace_client_id')
-                                    ->orWhere('marketplace_client_id', $marketplace?->id))
-                                ->orderBy('name')
-                                ->get()
-                                ->mapWithKeys(fn ($venue) => [
-                                    $venue->id => $venue->getTranslation('name', app()->getLocale())
-                                        . ($venue->city ? ' (' . $venue->city . ')' : '')
-                                ]);
-                        })
-                        ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
-                            if ($state) {
-                                $venue = Venue::find($state);
-                                if ($venue) {
-                                    $set('address', $venue->address ?? $venue->full_address ?? '');
-                                    $set('website_url', $venue->website_url ?? '');
+                                // Single day
+                                SC\Grid::make(4)->schema([
+                                    Forms\Components\DatePicker::make('event_date')
+                                        ->label('Date')
+                                        ->minDate($today)
+                                        ->native(false),
+                                    Forms\Components\TimePicker::make('start_time')
+                                        ->label('Start time')
+                                        ->seconds(false)
+                                        ->native(true)
+                                        ->required(fn (SGet $get) => $get('duration_mode') === 'single_day'),
+                                    Forms\Components\TimePicker::make('door_time')
+                                        ->label('Door time')
+                                        ->seconds(false)
+                                        ->native(true),
+                                    Forms\Components\TimePicker::make('end_time')
+                                        ->label('End time')
+                                        ->seconds(false)
+                                        ->native(true),
+                                ])->visible(fn (SGet $get) => $get('duration_mode') === 'single_day'),
 
-                                    // Auto-fill marketplace_city_id by matching venue city name
-                                    if ($venue->city) {
-                                        $cityName = strtolower(trim($venue->city));
-                                        $matchedCity = MarketplaceCity::where('marketplace_client_id', $marketplace?->id)
-                                            ->where('is_visible', true)
+                                // Range
+                                SC\Grid::make(4)->schema([
+                                    Forms\Components\DatePicker::make('range_start_date')
+                                        ->label('Start date')
+                                        ->minDate($today)
+                                        ->native(false),
+                                    Forms\Components\DatePicker::make('range_end_date')
+                                        ->label('End date')
+                                        ->native(false),
+                                    Forms\Components\TimePicker::make('range_start_time')
+                                        ->label('Start time')
+                                        ->seconds(false)
+                                        ->native(true),
+                                    Forms\Components\TimePicker::make('range_end_time')
+                                        ->label('End time')
+                                        ->seconds(false)
+                                        ->native(true),
+                                ])->visible(fn (SGet $get) => $get('duration_mode') === 'range'),
+
+                                // Multi day
+                                Forms\Components\Repeater::make('multi_slots')
+                                    ->label('Days & times')
+                                    ->schema([
+                                        Forms\Components\DatePicker::make('date')
+                                            ->label('Date')
+                                            ->minDate($today)
+                                            ->native(false)
+                                            ->required(),
+                                        Forms\Components\TimePicker::make('start_time')
+                                            ->label('Start')
+                                            ->seconds(false)
+                                            ->native(true),
+                                        Forms\Components\TimePicker::make('door_time')
+                                            ->label('Door')
+                                            ->seconds(false)
+                                            ->native(true),
+                                        Forms\Components\TimePicker::make('end_time')
+                                            ->label('End')
+                                            ->seconds(false)
+                                            ->native(true),
+                                    ])
+                                    ->addActionLabel('Add another date')
+                                    ->default([])
+                                    ->visible(fn (SGet $get) => $get('duration_mode') === 'multi_day')
+                                    ->columns(4),
+
+                                // Recurring
+                                SC\Group::make()
+                                    ->visible(fn (SGet $get) => $get('duration_mode') === 'recurring')
+                                    ->schema([
+                                        SC\Grid::make(4)->schema([
+                                            Forms\Components\DatePicker::make('recurring_start_date')
+                                                ->label('Initial date')
+                                                ->minDate(now()->startOfDay())
+                                                ->native(false)
+                                                ->live()
+                                                ->afterStateUpdated(function ($state, SSet $set) {
+                                                    if (!$state) { $set('recurring_weekday', null); return; }
+                                                    $w = Carbon::parse($state)->dayOfWeekIso;
+                                                    $set('recurring_weekday', $w);
+                                                }),
+                                            Forms\Components\TextInput::make('recurring_weekday')
+                                                ->label('Weekday')
+                                                ->disabled()
+                                                ->dehydrated(false)
+                                                ->formatStateUsing(function (SGet $get) {
+                                                    $map = [1=>'Mon',2=>'Tue',3=>'Wed',4=>'Thu',5=>'Fri',6=>'Sat',7=>'Sun'];
+                                                    return $map[$get('recurring_weekday')] ?? '';
+                                                }),
+                                            Forms\Components\Select::make('recurring_frequency')
+                                                ->label('Recurrence')
+                                                ->options([
+                                                    'weekly' => 'Weekly',
+                                                    'monthly_nth' => 'Monthly (Nth weekday)',
+                                                ])
+                                                ->required()
+                                                ->live(),
+                                            Forms\Components\TextInput::make('recurring_count')
+                                                ->label('Occurrences')
+                                                ->numeric()
+                                                ->minValue(1),
+                                        ]),
+                                        SC\Grid::make(2)
+                                            ->visible(fn (SGet $get) => $get('recurring_frequency') === 'monthly_nth')
+                                            ->schema([
+                                                Forms\Components\Select::make('recurring_week_of_month')
+                                                    ->label('Week of month')
+                                                    ->options([
+                                                        1 => 'First', 2 => 'Second', 3 => 'Third', 4 => 'Fourth', -1 => 'Last',
+                                                    ])
+                                                    ->required(),
+                                            ]),
+                                        SC\Grid::make(3)->schema([
+                                            Forms\Components\TimePicker::make('recurring_start_time')
+                                                ->label('Start time')
+                                                ->seconds(false)->native(true)
+                                                ->required(),
+                                            Forms\Components\TimePicker::make('recurring_door_time')
+                                                ->label('Door time')
+                                                ->seconds(false)->native(true),
+                                            Forms\Components\TimePicker::make('recurring_end_time')
+                                                ->label('End time')
+                                                ->seconds(false)->native(true),
+                                        ]),
+                                    ]),
+                            ])->columns(1),
+
+                        // LOCATION & LINKS
+                        SC\Section::make('Location & Links')
+                            ->schema([
+                                Forms\Components\Select::make('venue_id')
+                                    ->label('Venue')
+                                    ->searchable()
+                                    ->preload()
+                                    ->live()
+                                    ->options(function () use ($marketplace) {
+                                        return Venue::query()
+                                            ->where(fn($q) => $q
+                                                ->whereNull('marketplace_client_id')
+                                                ->orWhere('marketplace_client_id', $marketplace?->id))
+                                            ->orderBy('name')
                                             ->get()
-                                            ->first(function ($city) use ($cityName) {
-                                                // Check all language variants of the city name
-                                                $nameVariants = is_array($city->name) ? $city->name : [];
-                                                foreach ($nameVariants as $lang => $name) {
-                                                    if (strtolower(trim($name)) === $cityName) {
-                                                        return true;
+                                            ->mapWithKeys(fn ($venue) => [
+                                                $venue->id => $venue->getTranslation('name', app()->getLocale())
+                                                    . ($venue->city ? ' (' . $venue->city . ')' : '')
+                                            ]);
+                                    })
+                                    ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
+                                        if ($state) {
+                                            $venue = Venue::find($state);
+                                            if ($venue) {
+                                                $set('address', $venue->address ?? $venue->full_address ?? '');
+                                                $set('website_url', $venue->website_url ?? '');
+
+                                                // Auto-fill marketplace_city_id by matching venue city name
+                                                if ($venue->city) {
+                                                    $cityName = strtolower(trim($venue->city));
+                                                    $matchedCity = MarketplaceCity::where('marketplace_client_id', $marketplace?->id)
+                                                        ->where('is_visible', true)
+                                                        ->get()
+                                                        ->first(function ($city) use ($cityName) {
+                                                            // Check all language variants of the city name
+                                                            $nameVariants = is_array($city->name) ? $city->name : [];
+                                                            foreach ($nameVariants as $lang => $name) {
+                                                                if (strtolower(trim($name)) === $cityName) {
+                                                                    return true;
+                                                                }
+                                                            }
+                                                            return false;
+                                                        });
+
+                                                    if ($matchedCity) {
+                                                        $set('marketplace_city_id', $matchedCity->id);
                                                     }
                                                 }
-                                                return false;
-                                            });
-
-                                        if ($matchedCity) {
-                                            $set('marketplace_city_id', $matchedCity->id);
+                                            }
                                         }
-                                    }
-                                }
-                            }
-                        })
-                        ->suffixAction(
-                            Action::make('create_venue')
-                                ->icon('heroicon-o-plus-circle')
-                                ->tooltip('Adaugă locație nouă')
-                                ->url(fn () => VenueResource::getUrl('create'))
-                                ->openUrlInNewTab()
-                        )
-                        ->nullable(),
-                    Forms\Components\Select::make('marketplace_city_id')
-                        ->label('City')
-                        ->options(function () use ($marketplace, $marketplaceLanguage) {
-                            return MarketplaceCity::query()
-                                ->where('marketplace_client_id', $marketplace?->id)
-                                ->where('is_visible', true)
-                                ->with('region')
-                                ->orderBy('sort_order')
-                                ->get()
-                                ->mapWithKeys(fn ($city) => [
-                                    $city->id => ($city->region ? ($city->region->name[$marketplaceLanguage] ?? $city->region->name['ro'] ?? '') . ' > ' : '')
-                                        . ($city->name[$marketplaceLanguage] ?? $city->name['ro'] ?? 'Unnamed')
-                                ]);
-                        })
-                        ->searchable()
-                        ->preload()
-                        ->placeholder('Select a city')
-                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Filter events by city on the website')
-                        ->nullable(),
-                    Forms\Components\TextInput::make('address')
-                        ->label('Address')
-                        ->maxLength(255),
-                    Forms\Components\TextInput::make('website_url')
-                        ->label('Website')
-                        ->url()
-                        ->maxLength(255),
-                    Forms\Components\TextInput::make('facebook_url')
-                        ->label('Facebook Event')
-                        ->url()
-                        ->maxLength(255),
-                    Forms\Components\TextInput::make('event_website_url')
-                        ->label('Event Website')
-                        ->url()
-                        ->maxLength(255),
-                ])->columns(2),
-
-            // MEDIA
-            SC\Section::make('Media')
-                ->schema([
-                    Forms\Components\FileUpload::make('poster_url')
-                        ->label('Poster (vertical)')
-                        ->image()
-                        ->directory('events/posters')
-                        ->disk('public'),
-                    Forms\Components\FileUpload::make('hero_image_url')
-                        ->label('Hero image (horizontal)')
-                        ->image()
-                        ->directory('events/hero')
-                        ->disk('public'),
-                ])->columns(2),
-
-            // CONTENT - Single Language
-            SC\Section::make('Content')
-                ->schema([
-                    Forms\Components\Textarea::make("short_description.{$marketplaceLanguage}")
-                        ->label($marketplaceLanguage === 'ro' ? 'Descriere scurtă' : 'Short description')
-                        ->rows(3)
-                        ->columnSpanFull(),
-                    Forms\Components\RichEditor::make("description.{$marketplaceLanguage}")
-                        ->label($marketplaceLanguage === 'ro' ? 'Descriere' : 'Description')
-                        ->columnSpanFull()
-                        ->fileAttachmentsDisk('public')
-                        ->fileAttachmentsDirectory('event-descriptions')
-                        ->fileAttachmentsVisibility('public'),
-                    Forms\Components\RichEditor::make("ticket_terms.{$marketplaceLanguage}")
-                        ->label($marketplaceLanguage === 'ro' ? 'Termeni bilete' : 'Ticket terms')
-                        ->columnSpanFull()
-                        ->default($marketplace?->ticket_terms ?? null),
-                ])->columns(1),
-
-            // TAXONOMIES
-            SC\Section::make('Taxonomies & Relations')
-                ->schema([
-                    Forms\Components\Select::make('marketplace_event_category_id')
-                        ->label('Event Category')
-                        ->options(function () use ($marketplace, $marketplaceLanguage) {
-                            return MarketplaceEventCategory::query()
-                                ->where('marketplace_client_id', $marketplace?->id)
-                                ->where('is_visible', true)
-                                ->with('parent')
-                                ->orderBy('sort_order')
-                                ->get()
-                                ->mapWithKeys(fn ($cat) => [
-                                    $cat->id => ($cat->icon_emoji ? $cat->icon_emoji . ' ' : '')
-                                        . ($cat->parent ? ($cat->parent->name[$marketplaceLanguage] ?? $cat->parent->name['ro'] ?? '') . ' > ' : '')
-                                        . ($cat->name[$marketplaceLanguage] ?? $cat->name['ro'] ?? 'Unnamed')
-                                ]);
-                        })
-                        ->searchable()
-                        ->preload()
-                        ->placeholder('Select a category')
-                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Custom marketplace event category')
-                        ->live()
-                        ->afterStateUpdated(function ($state, SSet $set) {
-                            // Auto-fill eventTypes from the category's linked event types
-                            if ($state) {
-                                $category = MarketplaceEventCategory::find($state);
-                                if ($category && !empty($category->event_type_ids)) {
-                                    $set('eventTypes', $category->event_type_ids);
-                                }
-                            }
-                        })
-                        ->nullable(),
-
-                    Forms\Components\Select::make('eventTypes')
-                        ->label('Event types')
-                        ->relationship(
-                            name: 'eventTypes',
-                            modifyQueryUsing: fn (Builder $query) => $query->whereNotNull('parent_id')->orderBy('name')
-                        )
-                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
-                        ->multiple()
-                        ->preload()
-                        ->searchable()
-                        ->maxItems(2)
-                        ->live()
-                        ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                            $typeIds = (array) ($get('eventTypes') ?? []);
-                            if (!$typeIds) {
-                                $set('eventGenres', []);
-                                return;
-                            }
-                            $allowed = EventGenre::query()
-                                ->whereExists(function ($sub) use ($typeIds) {
-                                    $sub->selectRaw('1')
-                                        ->from('event_type_event_genre as eteg')
-                                        ->whereColumn('eteg.event_genre_id', 'event_genres.id')
-                                        ->whereIn('eteg.event_type_id', $typeIds);
-                                })
-                                ->pluck('id')
-                                ->all();
-                            $current = (array) ($get('eventGenres') ?? []);
-                            $filtered = array_values(array_intersect($current, $allowed));
-                            if (count($filtered) !== count($current)) {
-                                $set('eventGenres', $filtered);
-                            }
-                        }),
-
-                    Forms\Components\Select::make('eventGenres')
-                        ->label('Event genres')
-                        ->relationship(
-                            name: 'eventGenres',
-                            modifyQueryUsing: function (Builder $query, SGet $get) {
-                                $typeIds = (array) ($get('eventTypes') ?? []);
-                                if (!$typeIds) {
-                                    $query->whereRaw('1=0');
-                                    return;
-                                }
-                                $query->whereExists(function ($sub) use ($typeIds) {
-                                    $sub->selectRaw('1')
-                                        ->from('event_type_event_genre as eteg')
-                                        ->whereColumn('eteg.event_genre_id', 'event_genres.id')
-                                        ->whereIn('eteg.event_type_id', $typeIds);
-                                })->orderBy('name');
-                            }
-                        )
-                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
-                        ->multiple()
-                        ->preload()
-                        ->searchable()
-                        ->disabled(fn (SGet $get) => empty($get('eventTypes')))
-                        ->maxItems(5),
-
-                    Forms\Components\Select::make('artists')
-                        ->label('Artists')
-                        ->relationship('artists', 'name')
-                        ->multiple()
-                        ->preload()
-                        ->searchable()
-                        ->live()
-                        ->suffixAction(
-                            Action::make('create_artist')
-                                ->icon('heroicon-o-plus-circle')
-                                ->tooltip('Adaugă artist nou')
-                                ->url(fn () => ArtistResource::getUrl('create'))
-                                ->openUrlInNewTab()
-                        ),
-
-                    // Artist ordering and headliner settings (visible when >2 artists)
-                    SC\Section::make('Artist Display Settings')
-                        ->description('Configure display order and headliner status for artists')
-                        ->visible(fn (SGet $get) => count($get('artists') ?? []) > 2)
-                        ->collapsed()
-                        ->schema([
-                            Forms\Components\Repeater::make('artist_settings')
-                                ->label('Artist Order & Status')
-                                ->hiddenLabel()
-                                ->default([])
-                                ->reorderable()
-                                ->reorderableWithButtons()
-                                ->columns(12)
-                                ->addable(false)
-                                ->deletable(false)
-                                ->schema([
-                                    Forms\Components\Select::make('artist_id')
-                                        ->label('Artist')
-                                        ->options(function () use ($marketplace) {
-                                            return \App\Models\Artist::query()
-                                                ->orderBy('name')
-                                                ->pluck('name', 'id');
-                                        })
-                                        ->disabled()
-                                        ->columnSpan(5),
-                                    Forms\Components\Toggle::make('is_headliner')
-                                        ->label('Headliner')
-                                        ->inline(false)
-                                        ->columnSpan(3),
-                                    Forms\Components\Toggle::make('is_co_headliner')
-                                        ->label('Co-Headliner')
-                                        ->inline(false)
-                                        ->columnSpan(3),
-                                    Forms\Components\Hidden::make('sort_order'),
-                                ])
-                                ->afterStateHydrated(function (SSet $set, SGet $get, ?Event $record) {
-                                    if (!$record) return;
-
-                                    $artists = $record->artists()->orderByPivot('sort_order')->get();
-                                    $settings = $artists->map(function ($artist, $index) {
-                                        return [
-                                            'artist_id' => $artist->id,
-                                            'is_headliner' => (bool) $artist->pivot->is_headliner,
-                                            'is_co_headliner' => (bool) $artist->pivot->is_co_headliner,
-                                            'sort_order' => $index,
-                                        ];
-                                    })->toArray();
-
-                                    $set('artist_settings', $settings);
-                                })
-                                ->dehydrated(false)
-                                ->columnSpanFull(),
-
-                            Forms\Components\Placeholder::make('artist_settings_help')
-                                ->content('Drag and drop to reorder artists. The order here determines how they appear on the event page. Headliners will be displayed prominently.')
-                                ->columnSpanFull(),
-                        ]),
-
-                    Forms\Components\Select::make('tags')
-                        ->label('Event tags')
-                        ->relationship('tags', 'name')
-                        ->multiple()
-                        ->preload()
-                        ->searchable()
-                        ->createOptionForm([
-                            Forms\Components\TextInput::make('name')
-                                ->label('Tag name')
-                                ->required()
-                                ->maxLength(100)
-                                ->live(onBlur: true)
-                                ->afterStateUpdated(function ($state, SSet $set) {
-                                    if ($state) {
-                                        $set('slug', Str::slug($state));
-                                    }
-                                }),
-                            Forms\Components\TextInput::make('slug')
-                                ->label('Slug')
-                                ->maxLength(100)
-                                ->rule('alpha_dash'),
-                        ])
-                        ->createOptionUsing(function (array $data) use ($marketplace): int {
-                            $tag = EventTag::create([
-                                'marketplace_client_id' => $marketplace?->id,
-                                'name' => $data['name'],
-                                'slug' => $data['slug'] ?: Str::slug($data['name']),
-                            ]);
-                            return $tag->id;
-                        }),
-
-                    // Dynamic tax display based on selected event types
-                    Forms\Components\Placeholder::make('applicable_taxes')
-                        ->label('Taxe aplicabile')
-                        ->columnSpanFull()
-                        ->visible(fn (SGet $get) => !empty($get('eventTypes')))
-                        ->content(function (SGet $get) use ($marketplace) {
-                            $eventTypeIds = (array) ($get('eventTypes') ?? []);
-                            if (empty($eventTypeIds)) {
-                                return '';
-                            }
-
-                            $isVatPayer = $marketplace?->vat_payer ?? false;
-                            $taxDisplayMode = $marketplace?->tax_display_mode ?? 'included';
-
-                            // Get applicable taxes using the new forEventTypes scope
-                            $allTaxes = GeneralTax::query()
-                                ->whereNull('tenant_id') // Global taxes only (not tenant-specific)
-                                ->active()
-                                ->validOn(\Carbon\Carbon::today())
-                                ->forEventTypes($eventTypeIds)
-                                ->orderByDesc('priority')
-                                ->get()
-                                ->unique('id');
-
-                            if ($allTaxes->isEmpty()) {
-                                return new HtmlString('<div class="text-sm italic text-gray-500">Nu există taxe configurate pentru tipul de eveniment selectat.</div>');
-                            }
-
-                            $html = '<div class="space-y-2">';
-
-                            // VAT payer status and tax display mode
-                            $vatBadge = $isVatPayer
-                                ? '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full dark:bg-green-900 dark:text-green-200">Plătitor TVA</span>'
-                                : '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full dark:bg-gray-700 dark:text-gray-300">Neplătitor TVA</span>';
-
-                            $modeBadge = $taxDisplayMode === 'added'
-                                ? '<span class="inline-flex items-center px-2 py-1 ml-2 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">Taxe adăugate la preț</span>'
-                                : '<span class="inline-flex items-center px-2 py-1 ml-2 text-xs font-medium text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-200">Taxe incluse în preț</span>';
-
-                            $html .= '<div class="flex flex-wrap items-center gap-2 mb-3">' . $vatBadge . $modeBadge . '</div>';
-
-                            $html .= '<div class="grid grid-cols-1 gap-2 md:grid-cols-2">';
-
-                            foreach ($allTaxes as $tax) {
-                                $isVatTax = str_contains(strtolower($tax->name ?? ''), 'tva') ||
-                                            str_contains(strtolower($tax->name ?? ''), 'vat');
-
-                                // Skip VAT if tenant is not a VAT payer
-                                if ($isVatTax && !$isVatPayer) {
-                                    continue;
-                                }
-
-                                $rateDisplay = $tax->value_type === 'percent'
-                                    ? number_format($tax->value, 2) . '%'
-                                    : number_format($tax->value, 2) . ' ' . ($tax->currency ?? 'RON');
-
-                                $includedBadge = $tax->is_added_to_price
-                                    ? '<span class="text-xs text-amber-600 dark:text-amber-400">(se adaugă la preț)</span>'
-                                    : '<span class="text-xs text-gray-500">(inclus în preț)</span>';
-
-                                $vatBadgeSmall = $isVatTax
-                                    ? '<span class="ml-1 px-1.5 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">TVA</span>'
-                                    : '';
-
-                                // Custom SVG icon
-                                $iconHtml = $tax->icon_svg ? '<span class="inline-flex items-center mr-1">' . $tax->icon_svg . '</span>' : '';
-
-                                $html .= '<div class="flex items-center justify-between p-2 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-700">';
-                                $html .= '<div class="flex items-center gap-2">';
-                                $html .= $iconHtml;
-                                $html .= '<span class="text-sm font-medium text-gray-900 dark:text-white">' . e($tax->name) . '</span>';
-                                $html .= $vatBadgeSmall;
-                                $html .= '</div>';
-                                $html .= '<div class="text-right">';
-                                $html .= '<span class="font-semibold text-primary">' . $rateDisplay . '</span>';
-                                $html .= '<br>' . $includedBadge;
-                                $html .= '</div>';
-                                $html .= '</div>';
-                            }
-
-                            $html .= '</div></div>';
-
-                            return new HtmlString($html);
-                        }),
-                ])->columns(3),
-
-            // TICKETS
-            SC\Section::make('Tickets')
-                ->schema([
-                    // Ticket Template selector
-                    Forms\Components\Select::make('ticket_template_id')
-                        ->label('Ticket Template')
-                        ->relationship(
-                            name: 'ticketTemplate',
-                            modifyQueryUsing: fn (Builder $query) => $query
-                                ->where('marketplace_client_id', static::getMarketplaceClient()?->id)
-                                ->where('status', 'active')
-                                ->orderBy('name')
-                        )
-                        ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ($record->is_default ? ' (Default)' : ''))
-                        ->placeholder('Use default template')
-                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Select a template for tickets generated for this event. Leave empty to use the default template.')
-                        ->searchable()
-                        ->preload()
-                        ->nullable()
-                        ->visible(fn () => static::getMarketplaceClient()?->microservices()
-                            ->where('slug', 'ticket-customizer')
-                            ->wherePivot('is_active', true)
-                            ->exists() ?? false),
-
-                    // Commission Mode and Rate for event
-                    SC\Grid::make(4)->schema([
-                        Forms\Components\Select::make('commission_mode')
-                            ->label('Commission Mode')
-                            ->options([
-                                'included' => 'Include in price (organizer receives less)',
-                                'added_on_top' => 'Add on top (customer pays more)',
-                            ])
-                            ->placeholder(function (SGet $get) use ($marketplace) {
-                                $organizerId = $get('marketplace_organizer_id');
-                                if ($organizerId) {
-                                    $organizer = MarketplaceOrganizer::find($organizerId);
-                                    if ($organizer && $organizer->default_commission_mode) {
-                                        $modeText = $organizer->default_commission_mode === 'included' ? 'Included' : 'Added on top';
-                                        return "{$modeText} (organizer default)";
-                                    }
-                                }
-                                $mode = $marketplace->commission_mode ?? 'included';
-                                $modeText = $mode === 'included' ? 'Included' : 'Added on top';
-                                return "{$modeText} (marketplace default)";
-                            })
-                            ->helperText('Leave empty to use organizer\'s or marketplace default mode')
-                            ->live()
-                            ->nullable(),
-
-                        Forms\Components\TextInput::make('commission_rate')
-                            ->label('Custom Commission Rate (%)')
-                            ->numeric()
-                            ->minValue(0)
-                            ->maxValue(50)
-                            ->step(0.5)
-                            ->suffix('%')
-                            ->placeholder(function (SGet $get) use ($marketplace) {
-                                $organizerId = $get('marketplace_organizer_id');
-                                if ($organizerId) {
-                                    $organizer = MarketplaceOrganizer::find($organizerId);
-                                    if ($organizer && $organizer->commission_rate !== null) {
-                                        return $organizer->commission_rate . '% (organizer default)';
-                                    }
-                                }
-                                return ($marketplace->commission_rate ?? 5) . '% (marketplace default)';
-                            })
-                            ->helperText('Leave empty to use organizer\'s or marketplace default rate')
-                            ->live()
-                            ->nullable(),
-
-                        Forms\Components\TextInput::make('target_price')
-                            ->label('Target Price')
-                            ->numeric()
-                            ->minValue(0)
-                            ->step(0.01)
-                            ->suffix($marketplace?->currency ?? 'RON')
-                            ->placeholder('e.g. 100.00')
-                            ->helperText('Reference price for planning and negotiations. Not displayed publicly.'),
-
-                        Forms\Components\Placeholder::make('commission_example')
-                            ->label('Example (100 RON ticket)')
-                            ->live()
-                            ->content(function (SGet $get) use ($marketplace) {
-                                $eventMode = $get('commission_mode');
-                                $mode = $eventMode ?: ($marketplace->commission_mode ?? 'included');
-
-                                // Get effective commission rate: event custom > organizer > marketplace
-                                $eventRate = $get('commission_rate');
-                                if ($eventRate !== null && $eventRate !== '') {
-                                    $rate = (float) $eventRate;
-                                } else {
-                                    $organizerId = $get('marketplace_organizer_id');
-                                    if ($organizerId) {
-                                        $organizer = MarketplaceOrganizer::find($organizerId);
-                                        $rate = $organizer?->commission_rate ?? $marketplace->commission_rate ?? 5.00;
-                                    } else {
-                                        $rate = $marketplace->commission_rate ?? 5.00;
-                                    }
-                                }
-
-                                $ticketPrice = 100;
-                                $commission = round($ticketPrice * ($rate / 100), 2);
-
-                                if ($mode === 'included') {
-                                    $revenue = $ticketPrice - $commission;
-                                    return "Customer pays: **{$ticketPrice} RON** → Organizer receives: **{$revenue} RON** (commission: {$commission} RON @ {$rate}%)";
-                                } else {
-                                    $total = $ticketPrice + $commission;
-                                    return "Customer pays: **{$total} RON** → Organizer receives: **{$ticketPrice} RON** (commission: {$commission} RON @ {$rate}%)";
-                                }
-                            }),
-                    ]),
-
-                    Forms\Components\Repeater::make('ticketTypes')
-                        ->relationship()
-                        ->label('Ticket types')
-                        ->collapsed()
-                        ->addActionLabel('Add ticket type')
-                        ->itemLabel(fn (array $state) => ($state['is_active'] ?? true)
-                            ? '✓ ' . ($state['name'] ?? 'Ticket')
-                            : '○ ' . ($state['name'] ?? 'Ticket'))
-                        ->columns(12)
-                        ->schema([
-                            Forms\Components\TextInput::make('name')
-                                ->label('Name')
-                                ->placeholder('e.g. Early Bird, Standard, VIP')
-                                ->datalist(['Early Bird','Standard','VIP','Backstage','Student','Senior','Child'])
-                                ->required()
-                                ->columnSpan(6)
-                                ->live(debounce: 400)
-                                ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                    if ($get('sku')) return;
-                                    $set('sku', Str::upper(Str::slug($state, '-')));
-                                }),
-                            Forms\Components\TextInput::make('sku')
-                                ->label('SKU')
-                                ->placeholder('AUTO-GEN if left empty')
-                                ->columnSpan(6),
-
-                            Forms\Components\Textarea::make('description')
-                                ->label('Description')
-                                ->placeholder('Optional ticket type description (e.g. "Includes backstage access and meet & greet")')
-                                ->rows(2)
-                                ->columnSpan(12),
-
-                            SC\Grid::make(4)->schema([
-                                Forms\Components\TextInput::make('currency')
-                                    ->label('Currency')
-                                    ->default($marketplace?->currency ?? 'RON')
-                                    ->disabled()
-                                    ->dehydrated(true),
-                                Forms\Components\TextInput::make('price_max')
-                                    ->label('Price')
-                                    ->placeholder('e.g. 120.00')
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->required()
-                                    ->live(debounce: 300)
-                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                        $price = (float) $state;
-                                        $sale = $get('price');
-                                        $disc = $get('discount_percent');
-                                        if ($price > 0 && !$sale && is_numeric($disc)) {
-                                            $disc = max(0, min(100, (float)$disc));
-                                            $set('price', round($price * (1 - $disc/100), 2));
-                                        }
-                                        if ($price > 0 && $sale) {
-                                            $d = round((1 - ((float)$sale / $price)) * 100, 2);
-                                            $set('discount_percent', max(0, min(100, $d)));
-                                        }
-                                    }),
-                                Forms\Components\TextInput::make('price')
-                                    ->label('Sale price')
-                                    ->placeholder('leave empty if no sale')
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->live(debounce: 300)
-                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                        $price = (float) ($get('price_max') ?: 0);
-                                        $sale = $state !== null && $state !== '' ? (float)$state : null;
-                                        if ($price > 0 && $sale) {
-                                            $d = round((1 - ($sale / $price)) * 100, 2);
-                                            $set('discount_percent', max(0, min(100, $d)));
-                                        } else {
-                                            $set('discount_percent', null);
-                                        }
-                                    }),
-                                Forms\Components\TextInput::make('discount_percent')
-                                    ->label('Discount %')
-                                    ->placeholder('e.g. 20')
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->maxValue(100)
-                                    ->live(debounce: 300)
-                                    ->formatStateUsing(function ($state, SGet $get) {
-                                        // Calculate discount % on form load based on price_max and price
-                                        if ($state !== null && $state !== '') {
-                                            return $state;
-                                        }
-                                        $priceMax = (float) ($get('price_max') ?: 0);
-                                        $salePrice = $get('price');
-                                        if ($priceMax > 0 && $salePrice !== null && $salePrice !== '') {
-                                            $sale = (float) $salePrice;
-                                            return round((1 - ($sale / $priceMax)) * 100, 2);
-                                        }
-                                        return null;
                                     })
+                                    ->suffixAction(
+                                        Action::make('create_venue')
+                                            ->icon('heroicon-o-plus-circle')
+                                            ->tooltip('Adaugă locație nouă')
+                                            ->url(fn () => VenueResource::getUrl('create'))
+                                            ->openUrlInNewTab()
+                                    )
+                                    ->nullable(),
+                                Forms\Components\Select::make('marketplace_city_id')
+                                    ->label('City')
+                                    ->options(function () use ($marketplace, $marketplaceLanguage) {
+                                        return MarketplaceCity::query()
+                                            ->where('marketplace_client_id', $marketplace?->id)
+                                            ->where('is_visible', true)
+                                            ->with('region')
+                                            ->orderBy('sort_order')
+                                            ->get()
+                                            ->mapWithKeys(fn ($city) => [
+                                                $city->id => ($city->region ? ($city->region->name[$marketplaceLanguage] ?? $city->region->name['ro'] ?? '') . ' > ' : '')
+                                                    . ($city->name[$marketplaceLanguage] ?? $city->name['ro'] ?? 'Unnamed')
+                                            ]);
+                                    })
+                                    ->searchable()
+                                    ->preload()
+                                    ->placeholder('Select a city')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Filter events by city on the website')
+                                    ->nullable(),
+                                Forms\Components\TextInput::make('address')
+                                    ->label('Address')
+                                    ->maxLength(255),
+                                Forms\Components\TextInput::make('website_url')
+                                    ->label('Website')
+                                    ->url()
+                                    ->maxLength(255),
+                                Forms\Components\TextInput::make('facebook_url')
+                                    ->label('Facebook Event')
+                                    ->url()
+                                    ->maxLength(255),
+                                Forms\Components\TextInput::make('event_website_url')
+                                    ->label('Event Website')
+                                    ->url()
+                                    ->maxLength(255),
+                            ])->columns(2),
+
+                        // MEDIA
+                        SC\Section::make('Media')
+                            ->schema([
+                                Forms\Components\FileUpload::make('poster_url')
+                                    ->label('Poster (vertical)')
+                                    ->image()
+                                    ->directory('events/posters')
+                                    ->disk('public'),
+                                Forms\Components\FileUpload::make('hero_image_url')
+                                    ->label('Hero image (horizontal)')
+                                    ->image()
+                                    ->directory('events/hero')
+                                    ->disk('public'),
+                            ])->columns(2),
+
+                        // CONTENT - Single Language
+                        SC\Section::make('Content')
+                            ->schema([
+                                Forms\Components\Textarea::make("short_description.{$marketplaceLanguage}")
+                                    ->label($marketplaceLanguage === 'ro' ? 'Descriere scurtă' : 'Short description')
+                                    ->rows(3)
+                                    ->columnSpanFull(),
+                                Forms\Components\RichEditor::make("description.{$marketplaceLanguage}")
+                                    ->label($marketplaceLanguage === 'ro' ? 'Descriere' : 'Description')
+                                    ->columnSpanFull()
+                                    ->fileAttachmentsDisk('public')
+                                    ->fileAttachmentsDirectory('event-descriptions')
+                                    ->fileAttachmentsVisibility('public'),
+                                Forms\Components\RichEditor::make("ticket_terms.{$marketplaceLanguage}")
+                                    ->label($marketplaceLanguage === 'ro' ? 'Termeni bilete' : 'Ticket terms')
+                                    ->columnSpanFull()
+                                    ->default($marketplace?->ticket_terms ?? null),
+                            ])->columns(1),
+
+                        // TAXONOMIES
+                        SC\Section::make('Taxonomies & Relations')
+                            ->schema([
+                                Forms\Components\Select::make('marketplace_event_category_id')
+                                    ->label('Event Category')
+                                    ->options(function () use ($marketplace, $marketplaceLanguage) {
+                                        return MarketplaceEventCategory::query()
+                                            ->where('marketplace_client_id', $marketplace?->id)
+                                            ->where('is_visible', true)
+                                            ->with('parent')
+                                            ->orderBy('sort_order')
+                                            ->get()
+                                            ->mapWithKeys(fn ($cat) => [
+                                                $cat->id => ($cat->icon_emoji ? $cat->icon_emoji . ' ' : '')
+                                                    . ($cat->parent ? ($cat->parent->name[$marketplaceLanguage] ?? $cat->parent->name['ro'] ?? '') . ' > ' : '')
+                                                    . ($cat->name[$marketplaceLanguage] ?? $cat->name['ro'] ?? 'Unnamed')
+                                            ]);
+                                    })
+                                    ->searchable()
+                                    ->preload()
+                                    ->placeholder('Select a category')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Custom marketplace event category')
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, SSet $set) {
+                                        // Auto-fill eventTypes from the category's linked event types
+                                        if ($state) {
+                                            $category = MarketplaceEventCategory::find($state);
+                                            if ($category && !empty($category->event_type_ids)) {
+                                                $set('eventTypes', $category->event_type_ids);
+                                            }
+                                        }
+                                    })
+                                    ->nullable(),
+
+                                Forms\Components\Select::make('eventTypes')
+                                    ->label('Event types')
+                                    ->relationship(
+                                        name: 'eventTypes',
+                                        modifyQueryUsing: fn (Builder $query) => $query->whereNotNull('parent_id')->orderBy('name')
+                                    )
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
+                                    ->multiple()
+                                    ->preload()
+                                    ->searchable()
+                                    ->maxItems(2)
+                                    ->live()
                                     ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                        $price = (float) ($get('price_max') ?: 0);
-                                        if ($price <= 0) return;
-                                        if ($state === null || $state === '') {
-                                            $set('price', null);
+                                        $typeIds = (array) ($get('eventTypes') ?? []);
+                                        if (!$typeIds) {
+                                            $set('eventGenres', []);
                                             return;
                                         }
-                                        $disc = max(0, min(100, (float)$state));
-                                        $set('price', round($price * (1 - $disc/100), 2));
-                                    }),
-                            ])->columnSpan(12),
-
-                            // Commission calculation for this ticket
-                            Forms\Components\Placeholder::make('ticket_commission_calc')
-                                ->live()
-                                ->content(function (SGet $get) use ($marketplace) {
-                                    $price = (float) ($get('price') ?: $get('price_max') ?: 0);
-
-                                    $eventMode = $get('../../commission_mode');
-                                    $mode = $eventMode ?: ($marketplace->commission_mode ?? 'included');
-
-                                    // Get effective commission rate: event custom > organizer > marketplace
-                                    $eventRate = $get('../../commission_rate');
-                                    if ($eventRate !== null && $eventRate !== '') {
-                                        $rate = (float) $eventRate;
-                                    } else {
-                                        $organizerId = $get('../../marketplace_organizer_id');
-                                        if ($organizerId) {
-                                            $organizer = MarketplaceOrganizer::find($organizerId);
-                                            $rate = $organizer?->commission_rate ?? $marketplace->commission_rate ?? 5.00;
-                                        } else {
-                                            $rate = $marketplace->commission_rate ?? 5.00;
+                                        $allowed = EventGenre::query()
+                                            ->whereExists(function ($sub) use ($typeIds) {
+                                                $sub->selectRaw('1')
+                                                    ->from('event_type_event_genre as eteg')
+                                                    ->whereColumn('eteg.event_genre_id', 'event_genres.id')
+                                                    ->whereIn('eteg.event_type_id', $typeIds);
+                                            })
+                                            ->pluck('id')
+                                            ->all();
+                                        $current = (array) ($get('eventGenres') ?? []);
+                                        $filtered = array_values(array_intersect($current, $allowed));
+                                        if (count($filtered) !== count($current)) {
+                                            $set('eventGenres', $filtered);
                                         }
-                                    }
+                                    }),
 
-                                    $commission = round($price * ($rate / 100), 2);
-                                    $currency = $get('currency') ?: 'RON';
-                                    $marketplaceName = $marketplace->name ?? 'Marketplace';
-
-                                    if ($mode === 'included') {
-                                        $revenue = round($price - $commission, 2);
-                                        return "Customer pays: **{$price} {$currency}** → Organizer receives: **{$revenue} {$currency}** → {$marketplaceName} receives: **{$commission} {$currency}** @ {$rate}%";
-                                    } else {
-                                        $total = round($price + $commission, 2);
-                                        return "Customer pays: **{$total} {$currency}** → Organizer receives: **{$price} {$currency}** → {$marketplaceName} receives: **{$commission} {$currency}** @ {$rate}%";
-                                    }
-                                })
-                                ->columnSpan(12),
-
-                            SC\Grid::make(3)->schema([
-                                Forms\Components\TextInput::make('capacity')
-                                    ->label('Capacity')
-                                    ->placeholder('Leave empty for unlimited')
-                                    ->numeric()
-                                    ->minValue(0)
-                                    ->nullable()
-                                    ->live(debounce: 300)
-                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                        // Auto-fill series fields when capacity is set
-                                        if ($state && (int) $state > 0) {
-                                            // Only set if series_start is empty
-                                            if (!$get('series_start')) {
-                                                $set('series_start', 1);
+                                Forms\Components\Select::make('eventGenres')
+                                    ->label('Event genres')
+                                    ->relationship(
+                                        name: 'eventGenres',
+                                        modifyQueryUsing: function (Builder $query, SGet $get) {
+                                            $typeIds = (array) ($get('eventTypes') ?? []);
+                                            if (!$typeIds) {
+                                                $query->whereRaw('1=0');
+                                                return;
                                             }
-                                            // Always update series_end to match capacity
-                                            $set('series_end', (int) $state);
+                                            $query->whereExists(function ($sub) use ($typeIds) {
+                                                $sub->selectRaw('1')
+                                                    ->from('event_type_event_genre as eteg')
+                                                    ->whereColumn('eteg.event_genre_id', 'event_genres.id')
+                                                    ->whereIn('eteg.event_type_id', $typeIds);
+                                            })->orderBy('name');
                                         }
+                                    )
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()))
+                                    ->multiple()
+                                    ->preload()
+                                    ->searchable()
+                                    ->disabled(fn (SGet $get) => empty($get('eventTypes')))
+                                    ->maxItems(5),
+
+                                Forms\Components\Select::make('artists')
+                                    ->label('Artists')
+                                    ->relationship('artists', 'name')
+                                    ->multiple()
+                                    ->preload()
+                                    ->searchable()
+                                    ->live()
+                                    ->suffixAction(
+                                        Action::make('create_artist')
+                                            ->icon('heroicon-o-plus-circle')
+                                            ->tooltip('Adaugă artist nou')
+                                            ->url(fn () => ArtistResource::getUrl('create'))
+                                            ->openUrlInNewTab()
+                                    ),
+
+                                // Artist ordering and headliner settings (visible when >2 artists)
+                                SC\Section::make('Artist Display Settings')
+                                    ->description('Configure display order and headliner status for artists')
+                                    ->visible(fn (SGet $get) => count($get('artists') ?? []) > 2)
+                                    ->collapsed()
+                                    ->schema([
+                                        Forms\Components\Repeater::make('artist_settings')
+                                            ->label('Artist Order & Status')
+                                            ->hiddenLabel()
+                                            ->default([])
+                                            ->reorderable()
+                                            ->reorderableWithButtons()
+                                            ->columns(12)
+                                            ->addable(false)
+                                            ->deletable(false)
+                                            ->schema([
+                                                Forms\Components\Select::make('artist_id')
+                                                    ->label('Artist')
+                                                    ->options(function () use ($marketplace) {
+                                                        return \App\Models\Artist::query()
+                                                            ->orderBy('name')
+                                                            ->pluck('name', 'id');
+                                                    })
+                                                    ->disabled()
+                                                    ->columnSpan(5),
+                                                Forms\Components\Toggle::make('is_headliner')
+                                                    ->label('Headliner')
+                                                    ->inline(false)
+                                                    ->columnSpan(3),
+                                                Forms\Components\Toggle::make('is_co_headliner')
+                                                    ->label('Co-Headliner')
+                                                    ->inline(false)
+                                                    ->columnSpan(3),
+                                                Forms\Components\Hidden::make('sort_order'),
+                                            ])
+                                            ->afterStateHydrated(function (SSet $set, SGet $get, ?Event $record) {
+                                                if (!$record) return;
+
+                                                $artists = $record->artists()->orderByPivot('sort_order')->get();
+                                                $settings = $artists->map(function ($artist, $index) {
+                                                    return [
+                                                        'artist_id' => $artist->id,
+                                                        'is_headliner' => (bool) $artist->pivot->is_headliner,
+                                                        'is_co_headliner' => (bool) $artist->pivot->is_co_headliner,
+                                                        'sort_order' => $index,
+                                                    ];
+                                                })->toArray();
+
+                                                $set('artist_settings', $settings);
+                                            })
+                                            ->dehydrated(false)
+                                            ->columnSpanFull(),
+
+                                        Forms\Components\Placeholder::make('artist_settings_help')
+                                            ->content('Drag and drop to reorder artists. The order here determines how they appear on the event page. Headliners will be displayed prominently.')
+                                            ->columnSpanFull(),
+                                    ]),
+
+                                Forms\Components\Select::make('tags')
+                                    ->label('Event tags')
+                                    ->relationship('tags', 'name')
+                                    ->multiple()
+                                    ->preload()
+                                    ->searchable()
+                                    ->createOptionForm([
+                                        Forms\Components\TextInput::make('name')
+                                            ->label('Tag name')
+                                            ->required()
+                                            ->maxLength(100)
+                                            ->live(onBlur: true)
+                                            ->afterStateUpdated(function ($state, SSet $set) {
+                                                if ($state) {
+                                                    $set('slug', Str::slug($state));
+                                                }
+                                            }),
+                                        Forms\Components\TextInput::make('slug')
+                                            ->label('Slug')
+                                            ->maxLength(100)
+                                            ->rule('alpha_dash'),
+                                    ])
+                                    ->createOptionUsing(function (array $data) use ($marketplace): int {
+                                        $tag = EventTag::create([
+                                            'marketplace_client_id' => $marketplace?->id,
+                                            'name' => $data['name'],
+                                            'slug' => $data['slug'] ?: Str::slug($data['name']),
+                                        ]);
+                                        return $tag->id;
                                     }),
-                                Forms\Components\DateTimePicker::make('sales_start_at')
-                                    ->label('Sale starts')
-                                    ->native(false)
-                                    ->seconds(false)
-                                    ->displayFormat('Y-m-d H:i')
-                                    ->minDate(now())
-                                    ->live(debounce: 500)
-                                    ->afterStateUpdated(function ($state, SSet $set, SGet $get, string $statePath) {
-                                        if (!$state) return;
 
-                                        $selectedDate = Carbon::parse($state);
-                                        $now = Carbon::now();
+                                // Dynamic tax display based on selected event types
+                                Forms\Components\Placeholder::make('applicable_taxes')
+                                    ->label('Taxe aplicabile')
+                                    ->columnSpanFull()
+                                    ->visible(fn (SGet $get) => !empty($get('eventTypes')))
+                                    ->content(function (SGet $get) use ($marketplace) {
+                                        $eventTypeIds = (array) ($get('eventTypes') ?? []);
+                                        if (empty($eventTypeIds)) {
+                                            return '';
+                                        }
 
-                                        // If the selected date is today and time is midnight (default), set current time
-                                        if ($selectedDate->isToday() && $selectedDate->format('H:i') === '00:00') {
-                                            // Set to current time, rounded up to next 5 minutes
-                                            $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
-                                            $set($statePath, $newTime->format('Y-m-d H:i'));
+                                        $isVatPayer = $marketplace?->vat_payer ?? false;
+                                        $taxDisplayMode = $marketplace?->tax_display_mode ?? 'included';
+
+                                        // Get applicable taxes using the new forEventTypes scope
+                                        $allTaxes = GeneralTax::query()
+                                            ->whereNull('tenant_id') // Global taxes only (not tenant-specific)
+                                            ->active()
+                                            ->validOn(\Carbon\Carbon::today())
+                                            ->forEventTypes($eventTypeIds)
+                                            ->orderByDesc('priority')
+                                            ->get()
+                                            ->unique('id');
+
+                                        if ($allTaxes->isEmpty()) {
+                                            return new HtmlString('<div class="text-sm italic text-gray-500">Nu există taxe configurate pentru tipul de eveniment selectat.</div>');
                                         }
-                                        // Ensure the datetime is not in the past
-                                        elseif ($selectedDate->lt($now)) {
-                                            $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
-                                            $set($statePath, $newTime->format('Y-m-d H:i'));
+
+                                        $html = '<div class="space-y-2">';
+
+                                        // VAT payer status and tax display mode
+                                        $vatBadge = $isVatPayer
+                                            ? '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-green-800 bg-green-100 rounded-full dark:bg-green-900 dark:text-green-200">Plătitor TVA</span>'
+                                            : '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-full dark:bg-gray-700 dark:text-gray-300">Neplătitor TVA</span>';
+
+                                        $modeBadge = $taxDisplayMode === 'added'
+                                            ? '<span class="inline-flex items-center px-2 py-1 ml-2 text-xs font-medium rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">Taxe adăugate la preț</span>'
+                                            : '<span class="inline-flex items-center px-2 py-1 ml-2 text-xs font-medium text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-200">Taxe incluse în preț</span>';
+
+                                        $html .= '<div class="flex flex-wrap items-center gap-2 mb-3">' . $vatBadge . $modeBadge . '</div>';
+
+                                        $html .= '<div class="grid grid-cols-1 gap-2 md:grid-cols-2">';
+
+                                        foreach ($allTaxes as $tax) {
+                                            $isVatTax = str_contains(strtolower($tax->name ?? ''), 'tva') ||
+                                                        str_contains(strtolower($tax->name ?? ''), 'vat');
+
+                                            // Skip VAT if tenant is not a VAT payer
+                                            if ($isVatTax && !$isVatPayer) {
+                                                continue;
+                                            }
+
+                                            $rateDisplay = $tax->value_type === 'percent'
+                                                ? number_format($tax->value, 2) . '%'
+                                                : number_format($tax->value, 2) . ' ' . ($tax->currency ?? 'RON');
+
+                                            $includedBadge = $tax->is_added_to_price
+                                                ? '<span class="text-xs text-amber-600 dark:text-amber-400">(se adaugă la preț)</span>'
+                                                : '<span class="text-xs text-gray-500">(inclus în preț)</span>';
+
+                                            $vatBadgeSmall = $isVatTax
+                                                ? '<span class="ml-1 px-1.5 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">TVA</span>'
+                                                : '';
+
+                                            // Custom SVG icon
+                                            $iconHtml = $tax->icon_svg ? '<span class="inline-flex items-center mr-1">' . $tax->icon_svg . '</span>' : '';
+
+                                            $html .= '<div class="flex items-center justify-between p-2 border border-gray-200 rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-700">';
+                                            $html .= '<div class="flex items-center gap-2">';
+                                            $html .= $iconHtml;
+                                            $html .= '<span class="text-sm font-medium text-gray-900 dark:text-white">' . e($tax->name) . '</span>';
+                                            $html .= $vatBadgeSmall;
+                                            $html .= '</div>';
+                                            $html .= '<div class="text-right">';
+                                            $html .= '<span class="font-semibold text-primary">' . $rateDisplay . '</span>';
+                                            $html .= '<br>' . $includedBadge;
+                                            $html .= '</div>';
+                                            $html .= '</div>';
                                         }
+
+                                        $html .= '</div></div>';
+
+                                        return new HtmlString($html);
                                     }),
-                                Forms\Components\DateTimePicker::make('sales_end_at')
-                                    ->label('Sale ends')
-                                    ->native(false)
-                                    ->seconds(false)
-                                    ->displayFormat('Y-m-d H:i'),
-                            ])->columnSpan(12),
+                            ])->columns(3),
 
-                            // Series fields for ticket numbering
-                            SC\Grid::make(3)->schema([
-                                Forms\Components\TextInput::make('event_series')
-                                    ->label('Event series')
-                                    ->placeholder('e.g. A, VIP, S1')
-                                    ->maxLength(10)
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Identifier prefix for this ticket series'),
-                                Forms\Components\TextInput::make('series_start')
-                                    ->label('Series start')
-                                    ->placeholder('e.g. 1')
-                                    ->numeric()
-                                    ->minValue(1)
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Starting number for ticket serial numbers'),
-                                Forms\Components\TextInput::make('series_end')
-                                    ->label('Series end')
-                                    ->placeholder('e.g. 500')
-                                    ->numeric()
-                                    ->minValue(1)
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Ending number for ticket serial numbers (usually equals capacity)'),
-                            ])->columnSpan(12),
+                        // TICKETS
+                        SC\Section::make('Tickets')
+                            ->schema([
+                                // Ticket Template selector
+                                Forms\Components\Select::make('ticket_template_id')
+                                    ->label('Ticket Template')
+                                    ->relationship(
+                                        name: 'ticketTemplate',
+                                        modifyQueryUsing: fn (Builder $query) => $query
+                                            ->where('marketplace_client_id', static::getMarketplaceClient()?->id)
+                                            ->where('status', 'active')
+                                            ->orderBy('name')
+                                    )
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ($record->is_default ? ' (Default)' : ''))
+                                    ->placeholder('Use default template')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Select a template for tickets generated for this event. Leave empty to use the default template.')
+                                    ->searchable()
+                                    ->preload()
+                                    ->nullable()
+                                    ->visible(fn () => static::getMarketplaceClient()?->microservices()
+                                        ->where('slug', 'ticket-customizer')
+                                        ->wherePivot('is_active', true)
+                                        ->exists() ?? false),
 
-                            Forms\Components\Toggle::make('is_active')
-                                ->label('Active?')
-                                ->default(true)
-                                ->live()
-                                ->columnSpan(4),
-
-                            // Scheduling fields - shown when ticket is NOT active
-                            Forms\Components\DateTimePicker::make('scheduled_at')
-                                ->label('Schedule Activation')
-                                ->hintIcon('heroicon-o-information-circle', tooltip: 'When this ticket type should automatically become active')
-                                ->native(false)
-                                ->seconds(false)
-                                ->displayFormat('Y-m-d H:i')
-                                ->minDate(now())
-                                ->visible(fn (SGet $get) => !$get('is_active'))
-                                ->columnSpan(4),
-
-                            Forms\Components\Toggle::make('autostart_when_previous_sold_out')
-                                ->label('Autostart when previous sold out')
-                                ->hintIcon('heroicon-o-information-circle', tooltip: 'Activate automatically when previous ticket types reach 0 capacity')
-                                ->visible(fn (SGet $get) => !$get('is_active'))
-                                ->columnSpan(4),
-
-                            // Bulk discounts
-                            Forms\Components\Repeater::make('bulk_discounts')
-                                ->label('Bulk discounts')
-                                ->collapsed()
-                                ->default([])
-                                ->addActionLabel('Add bulk rule')
-                                ->itemLabel(fn (array $state) => $state['rule_type'] ?? 'Rule')
-                                ->columns(12)
-                                ->schema([
-                                    Forms\Components\Select::make('rule_type')
-                                        ->label('Rule type')
+                                // Commission Mode and Rate for event
+                                SC\Grid::make(4)->schema([
+                                    Forms\Components\Select::make('commission_mode')
+                                        ->label('Commission Mode')
                                         ->options([
-                                            'buy_x_get_y' => 'Buy X get Y free',
-                                            'buy_x_percent_off' => 'Buy X tickets → % off',
-                                            'amount_off_per_ticket' => 'Amount off per ticket (min qty)',
-                                            'bundle_price' => 'Bundle price (X tickets for total)',
+                                            'included' => 'Include in price (organizer receives less)',
+                                            'added_on_top' => 'Add on top (customer pays more)',
                                         ])
-                                        ->required()
-                                        ->columnSpan(3)
-                                        ->live(),
-                                    Forms\Components\TextInput::make('buy_qty')
-                                        ->label('Buy X')
-                                        ->numeric()->minValue(1)
-                                        ->visible(fn ($get) => $get('rule_type') === 'buy_x_get_y')
-                                        ->columnSpan(3),
-                                    Forms\Components\TextInput::make('get_qty')
-                                        ->label('Get Y free')
-                                        ->numeric()->minValue(1)
-                                        ->visible(fn ($get) => $get('rule_type') === 'buy_x_get_y')
-                                        ->columnSpan(3),
-                                    Forms\Components\TextInput::make('min_qty')
-                                        ->label('Min qty')
-                                        ->numeric()->minValue(1)
-                                        ->visible(fn ($get) => in_array($get('rule_type'), ['buy_x_percent_off','amount_off_per_ticket','bundle_price']))
-                                        ->columnSpan(3),
-                                    Forms\Components\TextInput::make('percent_off')
-                                        ->label('% off')
-                                        ->numeric()->minValue(1)->maxValue(100)
-                                        ->visible(fn ($get) => $get('rule_type') === 'buy_x_percent_off')
-                                        ->columnSpan(3),
-                                    Forms\Components\TextInput::make('amount_off')
-                                        ->label('Amount off')
-                                        ->numeric()->minValue(0.01)
-                                        ->visible(fn ($get) => $get('rule_type') === 'amount_off_per_ticket')
-                                        ->columnSpan(3),
-                                    Forms\Components\TextInput::make('bundle_total_price')
-                                        ->label('Bundle total')
-                                        ->numeric()->minValue(0.01)
-                                        ->visible(fn ($get) => $get('rule_type') === 'bundle_price')
-                                        ->columnSpan(3),
-                                ])
-                                ->columnSpan(12),
-                        ]),
-                ])->collapsible(),
+                                        ->placeholder(function (SGet $get) use ($marketplace) {
+                                            $organizerId = $get('marketplace_organizer_id');
+                                            if ($organizerId) {
+                                                $organizer = MarketplaceOrganizer::find($organizerId);
+                                                if ($organizer && $organizer->default_commission_mode) {
+                                                    $modeText = $organizer->default_commission_mode === 'included' ? 'Included' : 'Added on top';
+                                                    return "{$modeText} (organizer default)";
+                                                }
+                                            }
+                                            $mode = $marketplace->commission_mode ?? 'included';
+                                            $modeText = $mode === 'included' ? 'Included' : 'Added on top';
+                                            return "{$modeText} (marketplace default)";
+                                        })
+                                        ->helperText('Leave empty to use organizer\'s or marketplace default mode')
+                                        ->live()
+                                        ->nullable(),
 
-            // SEO Section
-            SC\Section::make('SEO')
+                                    Forms\Components\TextInput::make('commission_rate')
+                                        ->label('Custom Commission Rate (%)')
+                                        ->numeric()
+                                        ->minValue(0)
+                                        ->maxValue(50)
+                                        ->step(0.5)
+                                        ->suffix('%')
+                                        ->placeholder(function (SGet $get) use ($marketplace) {
+                                            $organizerId = $get('marketplace_organizer_id');
+                                            if ($organizerId) {
+                                                $organizer = MarketplaceOrganizer::find($organizerId);
+                                                if ($organizer && $organizer->commission_rate !== null) {
+                                                    return $organizer->commission_rate . '% (organizer default)';
+                                                }
+                                            }
+                                            return ($marketplace->commission_rate ?? 5) . '% (marketplace default)';
+                                        })
+                                        ->helperText('Leave empty to use organizer\'s or marketplace default rate')
+                                        ->live()
+                                        ->nullable(),
+
+                                    Forms\Components\TextInput::make('target_price')
+                                        ->label('Target Price')
+                                        ->numeric()
+                                        ->minValue(0)
+                                        ->step(0.01)
+                                        ->suffix($marketplace?->currency ?? 'RON')
+                                        ->placeholder('e.g. 100.00')
+                                        ->helperText('Reference price for planning and negotiations. Not displayed publicly.'),
+
+                                    Forms\Components\Placeholder::make('commission_example')
+                                        ->label('Example (100 RON ticket)')
+                                        ->live()
+                                        ->content(function (SGet $get) use ($marketplace) {
+                                            $eventMode = $get('commission_mode');
+                                            $mode = $eventMode ?: ($marketplace->commission_mode ?? 'included');
+
+                                            // Get effective commission rate: event custom > organizer > marketplace
+                                            $eventRate = $get('commission_rate');
+                                            if ($eventRate !== null && $eventRate !== '') {
+                                                $rate = (float) $eventRate;
+                                            } else {
+                                                $organizerId = $get('marketplace_organizer_id');
+                                                if ($organizerId) {
+                                                    $organizer = MarketplaceOrganizer::find($organizerId);
+                                                    $rate = $organizer?->commission_rate ?? $marketplace->commission_rate ?? 5.00;
+                                                } else {
+                                                    $rate = $marketplace->commission_rate ?? 5.00;
+                                                }
+                                            }
+
+                                            $ticketPrice = 100;
+                                            $commission = round($ticketPrice * ($rate / 100), 2);
+
+                                            if ($mode === 'included') {
+                                                $revenue = $ticketPrice - $commission;
+                                                return "Customer pays: **{$ticketPrice} RON** → Organizer receives: **{$revenue} RON** (commission: {$commission} RON @ {$rate}%)";
+                                            } else {
+                                                $total = $ticketPrice + $commission;
+                                                return "Customer pays: **{$total} RON** → Organizer receives: **{$ticketPrice} RON** (commission: {$commission} RON @ {$rate}%)";
+                                            }
+                                        }),
+                                ]),
+
+                                Forms\Components\Repeater::make('ticketTypes')
+                                    ->relationship()
+                                    ->label('Ticket types')
+                                    ->collapsed()
+                                    ->addActionLabel('Add ticket type')
+                                    ->itemLabel(fn (array $state) => ($state['is_active'] ?? true)
+                                        ? '✓ ' . ($state['name'] ?? 'Ticket')
+                                        : '○ ' . ($state['name'] ?? 'Ticket'))
+                                    ->columns(12)
+                                    ->schema([
+                                        Forms\Components\TextInput::make('name')
+                                            ->label('Name')
+                                            ->placeholder('e.g. Early Bird, Standard, VIP')
+                                            ->datalist(['Early Bird','Standard','VIP','Backstage','Student','Senior','Child'])
+                                            ->required()
+                                            ->columnSpan(6)
+                                            ->live(debounce: 400)
+                                            ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                if ($get('sku')) return;
+                                                $set('sku', Str::upper(Str::slug($state, '-')));
+                                            }),
+                                        Forms\Components\TextInput::make('sku')
+                                            ->label('SKU')
+                                            ->placeholder('AUTO-GEN if left empty')
+                                            ->columnSpan(6),
+
+                                        Forms\Components\Textarea::make('description')
+                                            ->label('Description')
+                                            ->placeholder('Optional ticket type description (e.g. "Includes backstage access and meet & greet")')
+                                            ->rows(2)
+                                            ->columnSpan(12),
+
+                                        SC\Grid::make(4)->schema([
+                                            Forms\Components\TextInput::make('currency')
+                                                ->label('Currency')
+                                                ->default($marketplace?->currency ?? 'RON')
+                                                ->disabled()
+                                                ->dehydrated(true),
+                                            Forms\Components\TextInput::make('price_max')
+                                                ->label('Price')
+                                                ->placeholder('e.g. 120.00')
+                                                ->numeric()
+                                                ->minValue(0)
+                                                ->required()
+                                                ->live(debounce: 300)
+                                                ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                    $price = (float) $state;
+                                                    $sale = $get('price');
+                                                    $disc = $get('discount_percent');
+                                                    if ($price > 0 && !$sale && is_numeric($disc)) {
+                                                        $disc = max(0, min(100, (float)$disc));
+                                                        $set('price', round($price * (1 - $disc/100), 2));
+                                                    }
+                                                    if ($price > 0 && $sale) {
+                                                        $d = round((1 - ((float)$sale / $price)) * 100, 2);
+                                                        $set('discount_percent', max(0, min(100, $d)));
+                                                    }
+                                                }),
+                                            Forms\Components\TextInput::make('price')
+                                                ->label('Sale price')
+                                                ->placeholder('leave empty if no sale')
+                                                ->numeric()
+                                                ->minValue(0)
+                                                ->live(debounce: 300)
+                                                ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                    $price = (float) ($get('price_max') ?: 0);
+                                                    $sale = $state !== null && $state !== '' ? (float)$state : null;
+                                                    if ($price > 0 && $sale) {
+                                                        $d = round((1 - ($sale / $price)) * 100, 2);
+                                                        $set('discount_percent', max(0, min(100, $d)));
+                                                    } else {
+                                                        $set('discount_percent', null);
+                                                    }
+                                                }),
+                                            Forms\Components\TextInput::make('discount_percent')
+                                                ->label('Discount %')
+                                                ->placeholder('e.g. 20')
+                                                ->numeric()
+                                                ->minValue(0)
+                                                ->maxValue(100)
+                                                ->live(debounce: 300)
+                                                ->formatStateUsing(function ($state, SGet $get) {
+                                                    // Calculate discount % on form load based on price_max and price
+                                                    if ($state !== null && $state !== '') {
+                                                        return $state;
+                                                    }
+                                                    $priceMax = (float) ($get('price_max') ?: 0);
+                                                    $salePrice = $get('price');
+                                                    if ($priceMax > 0 && $salePrice !== null && $salePrice !== '') {
+                                                        $sale = (float) $salePrice;
+                                                        return round((1 - ($sale / $priceMax)) * 100, 2);
+                                                    }
+                                                    return null;
+                                                })
+                                                ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                    $price = (float) ($get('price_max') ?: 0);
+                                                    if ($price <= 0) return;
+                                                    if ($state === null || $state === '') {
+                                                        $set('price', null);
+                                                        return;
+                                                    }
+                                                    $disc = max(0, min(100, (float)$state));
+                                                    $set('price', round($price * (1 - $disc/100), 2));
+                                                }),
+                                        ])->columnSpan(12),
+
+                                        // Commission calculation for this ticket
+                                        Forms\Components\Placeholder::make('ticket_commission_calc')
+                                            ->live()
+                                            ->content(function (SGet $get) use ($marketplace) {
+                                                $price = (float) ($get('price') ?: $get('price_max') ?: 0);
+
+                                                $eventMode = $get('../../commission_mode');
+                                                $mode = $eventMode ?: ($marketplace->commission_mode ?? 'included');
+
+                                                // Get effective commission rate: event custom > organizer > marketplace
+                                                $eventRate = $get('../../commission_rate');
+                                                if ($eventRate !== null && $eventRate !== '') {
+                                                    $rate = (float) $eventRate;
+                                                } else {
+                                                    $organizerId = $get('../../marketplace_organizer_id');
+                                                    if ($organizerId) {
+                                                        $organizer = MarketplaceOrganizer::find($organizerId);
+                                                        $rate = $organizer?->commission_rate ?? $marketplace->commission_rate ?? 5.00;
+                                                    } else {
+                                                        $rate = $marketplace->commission_rate ?? 5.00;
+                                                    }
+                                                }
+
+                                                $commission = round($price * ($rate / 100), 2);
+                                                $currency = $get('currency') ?: 'RON';
+                                                $marketplaceName = $marketplace->name ?? 'Marketplace';
+
+                                                if ($mode === 'included') {
+                                                    $revenue = round($price - $commission, 2);
+                                                    return "Customer pays: **{$price} {$currency}** → Organizer receives: **{$revenue} {$currency}** → {$marketplaceName} receives: **{$commission} {$currency}** @ {$rate}%";
+                                                } else {
+                                                    $total = round($price + $commission, 2);
+                                                    return "Customer pays: **{$total} {$currency}** → Organizer receives: **{$price} {$currency}** → {$marketplaceName} receives: **{$commission} {$currency}** @ {$rate}%";
+                                                }
+                                            })
+                                            ->columnSpan(12),
+
+                                        SC\Grid::make(3)->schema([
+                                            Forms\Components\TextInput::make('capacity')
+                                                ->label('Capacity')
+                                                ->placeholder('Leave empty for unlimited')
+                                                ->numeric()
+                                                ->minValue(0)
+                                                ->nullable(),
+                                            Forms\Components\DateTimePicker::make('sales_start_at')
+                                                ->label('Sale starts')
+                                                ->native(false)
+                                                ->seconds(false)
+                                                ->displayFormat('Y-m-d H:i')
+                                                ->minDate(now())
+                                                ->live(debounce: 500)
+                                                ->afterStateUpdated(function ($state, SSet $set, SGet $get, string $statePath) {
+                                                    if (!$state) return;
+
+                                                    $selectedDate = Carbon::parse($state);
+                                                    $now = Carbon::now();
+
+                                                    // If the selected date is today and time is midnight (default), set current time
+                                                    if ($selectedDate->isToday() && $selectedDate->format('H:i') === '00:00') {
+                                                        // Set to current time, rounded up to next 5 minutes
+                                                        $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
+                                                        $set($statePath, $newTime->format('Y-m-d H:i'));
+                                                    }
+                                                    // Ensure the datetime is not in the past
+                                                    elseif ($selectedDate->lt($now)) {
+                                                        $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
+                                                        $set($statePath, $newTime->format('Y-m-d H:i'));
+                                                    }
+                                                }),
+                                            Forms\Components\DateTimePicker::make('sales_end_at')
+                                                ->label('Sale ends')
+                                                ->native(false)
+                                                ->seconds(false)
+                                                ->displayFormat('Y-m-d H:i'),
+                                        ])->columnSpan(12),
+
+                                        Forms\Components\Toggle::make('is_active')
+                                            ->label('Active?')
+                                            ->default(true)
+                                            ->live()
+                                            ->columnSpan(4),
+
+                                        // Scheduling fields - shown when ticket is NOT active
+                                        Forms\Components\DateTimePicker::make('scheduled_at')
+                                            ->label('Schedule Activation')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'When this ticket type should automatically become active')
+                                            ->native(false)
+                                            ->seconds(false)
+                                            ->displayFormat('Y-m-d H:i')
+                                            ->minDate(now())
+                                            ->visible(fn (SGet $get) => !$get('is_active'))
+                                            ->columnSpan(4),
+
+                                        Forms\Components\Toggle::make('autostart_when_previous_sold_out')
+                                            ->label('Autostart when previous sold out')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Activate automatically when previous ticket types reach 0 capacity')
+                                            ->visible(fn (SGet $get) => !$get('is_active'))
+                                            ->columnSpan(4),
+
+                                        // Bulk discounts
+                                        Forms\Components\Repeater::make('bulk_discounts')
+                                            ->label('Bulk discounts')
+                                            ->collapsed()
+                                            ->default([])
+                                            ->addActionLabel('Add bulk rule')
+                                            ->itemLabel(fn (array $state) => $state['rule_type'] ?? 'Rule')
+                                            ->columns(12)
+                                            ->schema([
+                                                Forms\Components\Select::make('rule_type')
+                                                    ->label('Rule type')
+                                                    ->options([
+                                                        'buy_x_get_y' => 'Buy X get Y free',
+                                                        'buy_x_percent_off' => 'Buy X tickets → % off',
+                                                        'amount_off_per_ticket' => 'Amount off per ticket (min qty)',
+                                                        'bundle_price' => 'Bundle price (X tickets for total)',
+                                                    ])
+                                                    ->required()
+                                                    ->columnSpan(3)
+                                                    ->live(),
+                                                Forms\Components\TextInput::make('buy_qty')
+                                                    ->label('Buy X')
+                                                    ->numeric()->minValue(1)
+                                                    ->visible(fn ($get) => $get('rule_type') === 'buy_x_get_y')
+                                                    ->columnSpan(3),
+                                                Forms\Components\TextInput::make('get_qty')
+                                                    ->label('Get Y free')
+                                                    ->numeric()->minValue(1)
+                                                    ->visible(fn ($get) => $get('rule_type') === 'buy_x_get_y')
+                                                    ->columnSpan(3),
+                                                Forms\Components\TextInput::make('min_qty')
+                                                    ->label('Min qty')
+                                                    ->numeric()->minValue(1)
+                                                    ->visible(fn ($get) => in_array($get('rule_type'), ['buy_x_percent_off','amount_off_per_ticket','bundle_price']))
+                                                    ->columnSpan(3),
+                                                Forms\Components\TextInput::make('percent_off')
+                                                    ->label('% off')
+                                                    ->numeric()->minValue(1)->maxValue(100)
+                                                    ->visible(fn ($get) => $get('rule_type') === 'buy_x_percent_off')
+                                                    ->columnSpan(3),
+                                                Forms\Components\TextInput::make('amount_off')
+                                                    ->label('Amount off')
+                                                    ->numeric()->minValue(0.01)
+                                                    ->visible(fn ($get) => $get('rule_type') === 'amount_off_per_ticket')
+                                                    ->columnSpan(3),
+                                                Forms\Components\TextInput::make('bundle_total_price')
+                                                    ->label('Bundle total')
+                                                    ->numeric()->minValue(0.01)
+                                                    ->visible(fn ($get) => $get('rule_type') === 'bundle_price')
+                                                    ->columnSpan(3),
+                                            ])
+                                            ->columnSpan(12),
+                                    ]),
+                            ])->collapsible(),
+
+                        // SEO Section
+                        SC\Section::make('SEO')
                 ->collapsed()
                 ->schema([
                     Forms\Components\Select::make('seo_presets')
@@ -1588,7 +1560,379 @@ class EventResource extends Resource
                         ])
                         ->hintIcon('heroicon-o-information-circle', tooltip: 'Add custom SEO meta tags. Use templates above to quickly add common sets.'),
                 ]),
-        ])->columns(1);
+                    ]);
+                // ========== COLOANA DREAPTĂ - SIDEBAR (1/4) ==========
+                SC\Group::make()
+                    ->columnSpan(1)
+                    ->schema([
+                        // 1. Quick Stats Card - Vânzări LIVE
+                        SC\Section::make('Vânzări')
+                            ->icon('heroicon-o-chart-bar')
+                            ->compact()
+                            ->extraAttributes(['class' => 'fi-section-sales-live'])
+                            ->headerActions([
+                                Forms\Components\Actions\Action::make('live_badge')
+                                    ->label('LIVE')
+                                    ->badge()
+                                    ->color('success')
+                                    ->size('xs')
+                                    ->disabled(),
+                            ])
+                            ->schema([
+                                Forms\Components\Placeholder::make('stats_overview')
+                                    ->hiddenLabel()
+                                    ->content(function (?Event $record) {
+                                        if (!$record || !$record->exists) {
+                                            return new HtmlString('<div class="text-sm text-gray-500">Salvează evenimentul pentru a vedea statisticile.</div>');
+                                        }
+
+                                        // Get stats from the event or calculate from ticket types
+                                        $ticketsSold = $record->tickets_sold ?? $record->ticketTypes->sum('quantity_sold') ?? 0;
+                                        $totalRevenue = $record->revenue ?? $record->orders()->whereIn('status', ['completed', 'paid', 'confirmed'])->sum('total') ?? 0;
+                                        $totalCapacity = $record->capacity ?? $record->ticketTypes->sum('quantity') ?? 0;
+                                        $views = $record->views ?? 0;
+
+                                        $percentSold = $totalCapacity > 0 ? round(($ticketsSold / $totalCapacity) * 100) : 0;
+                                        $conversion = $views > 0 ? round(($ticketsSold / $views) * 100, 1) : 0;
+
+                                        $revenueFormatted = $totalRevenue >= 1000
+                                            ? number_format($totalRevenue / 1000, 1) . 'K'
+                                            : number_format($totalRevenue, 0);
+
+                                        return new HtmlString("
+                                            <div class='grid grid-cols-2 gap-3'>
+                                                <div class='bg-gray-800 rounded-lg p-3 text-center'>
+                                                    <div class='text-2xl font-bold text-white'>" . number_format($ticketsSold) . "</div>
+                                                    <div class='text-xs text-gray-400'>Bilete</div>
+                                                </div>
+                                                <div class='bg-gray-800 rounded-lg p-3 text-center'>
+                                                    <div class='text-2xl font-bold text-emerald-400'>{$revenueFormatted}</div>
+                                                    <div class='text-xs text-gray-400'>Venituri (RON)</div>
+                                                </div>
+                                            </div>
+                                            <div class='mt-3'>
+                                                <div class='flex justify-between text-xs text-gray-400 mb-1'>
+                                                    <span>Capacitate totală</span>
+                                                    <span>" . number_format($ticketsSold) . " / " . number_format($totalCapacity) . " ({$percentSold}%)</span>
+                                                </div>
+                                                <div class='h-2 bg-gray-700 rounded-full overflow-hidden'>
+                                                    <div class='h-full bg-gradient-to-r from-primary-500 to-primary-400 rounded-full transition-all' style='width: {$percentSold}%'></div>
+                                                </div>
+                                            </div>
+                                            <div class='mt-3 flex justify-between text-xs'>
+                                                <span class='text-gray-400'>Conversie</span>
+                                                <span class='text-primary-400 font-semibold'>{$conversion}%</span>
+                                            </div>
+                                            <div class='flex justify-between text-xs mt-1'>
+                                                <span class='text-gray-400'>Vizualizări</span>
+                                                <span class='text-white'>" . number_format($views) . "</span>
+                                            </div>
+                                        ");
+                                    }),
+                            ]),
+
+                        // 2. Organizer Quick Info
+                        SC\Section::make('Organizator')
+                            ->icon('heroicon-o-building-office-2')
+                            ->compact()
+                            ->collapsed()
+                            ->schema([
+                                Forms\Components\Placeholder::make('organizer_quick_info')
+                                    ->hiddenLabel()
+                                    ->visible(fn (SGet $get) => (bool) $get('marketplace_organizer_id'))
+                                    ->content(function (SGet $get) use ($marketplace) {
+                                        $organizerId = $get('marketplace_organizer_id');
+                                        if (!$organizerId) return '';
+                                        
+                                        $organizer = MarketplaceOrganizer::find($organizerId);
+                                        if (!$organizer) return '';
+                                        
+                                        $commissionRate = $organizer->commission_rate ?? $marketplace?->commission_rate ?? 5;
+                                        
+                                        return new HtmlString("
+                                            <div class='space-y-2 text-sm'>
+                                                <div class='flex items-center gap-2'>
+                                                    <div class='w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-xs font-bold'>
+                                                        " . strtoupper(substr($organizer->name, 0, 2)) . "
+                                                    </div>
+                                                    <div>
+                                                        <div class='font-semibold text-white'>{$organizer->name}</div>
+                                                        <div class='text-xs text-gray-400'>{$organizer->email}</div>
+                                                    </div>
+                                                </div>
+                                                <div class='flex justify-between py-1 border-t border-gray-700'>
+                                                    <span class='text-gray-400'>Comision</span>
+                                                    <span class='text-white font-medium'>{$commissionRate}%</span>
+                                                </div>
+                                            </div>
+                                        ");
+                                    }),
+                            ]),
+
+                        // 3. Publish Checklist
+                        SC\Section::make('Checklist publicare')
+                            ->icon('heroicon-o-clipboard-document-check')
+                            ->compact()
+                            ->collapsed()
+                            ->schema([
+                                Forms\Components\Placeholder::make('publish_checklist')
+                                    ->hiddenLabel()
+                                    ->live()
+                                    ->content(function (SGet $get, ?Event $record) use ($marketplaceLanguage) {
+                                        // Check ticket types from form state or database
+                                        $ticketTypesData = $get('ticketTypes') ?? [];
+                                        $hasTicketTypes = false;
+
+                                        if (!empty($ticketTypesData)) {
+                                            // Check if any ticket type has a name set
+                                            foreach ($ticketTypesData as $tt) {
+                                                if (!empty($tt['name'])) {
+                                                    $hasTicketTypes = true;
+                                                    break;
+                                                }
+                                            }
+                                        } elseif ($record && $record->exists) {
+                                            // Fallback to database
+                                            $hasTicketTypes = $record->ticketTypes()->count() > 0;
+                                        }
+
+                                        $checks = [
+                                            ['done' => !empty($get("title.{$marketplaceLanguage}")), 'label' => 'Titlu eveniment', 'icon' => 'text'],
+                                            ['done' => !empty($get('poster_url')) || !empty($get('hero_image_url')), 'label' => 'Imagini încărcate', 'icon' => 'image'],
+                                            ['done' => !empty($get('venue_id')) || !empty($get('venue_name')), 'label' => 'Locație setată', 'icon' => 'location'],
+                                            ['done' => !empty($get('event_date')) || !empty($get('range_start_date')), 'label' => 'Date setate', 'icon' => 'calendar'],
+                                            ['done' => !empty($get('marketplace_organizer_id')), 'label' => 'Organizator selectat', 'icon' => 'user'],
+                                            ['done' => $hasTicketTypes, 'label' => 'Tipuri de bilete', 'icon' => 'ticket'],
+                                        ];
+
+                                        $completed = collect($checks)->where('done', true)->count();
+                                        $total = count($checks);
+                                        $isReady = $completed === $total;
+
+                                        $html = "<div class='space-y-1.5'>";
+                                        foreach ($checks as $check) {
+                                            $icon = $check['done']
+                                                ? '<svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>'
+                                                : '<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/></svg>';
+                                            $textClass = $check['done'] ? 'text-gray-400 line-through' : 'text-white';
+                                            $html .= "<div class='flex items-center gap-2'>{$icon}<span class='text-sm {$textClass}'>{$check['label']}</span></div>";
+                                        }
+                                        $html .= "</div>";
+
+                                        // Status badge
+                                        $statusColor = $isReady ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400';
+                                        $statusText = $isReady ? 'Gata pentru publicare' : 'Incomplet';
+                                        $html .= "<div class='mt-3 flex items-center justify-between'>";
+                                        $html .= "<span class='text-xs text-gray-400'>{$completed}/{$total} completate</span>";
+                                        $html .= "<span class='px-2 py-0.5 text-[10px] font-bold rounded {$statusColor}'>{$statusText}</span>";
+                                        $html .= "</div>";
+
+                                        return new HtmlString($html);
+                                    }),
+                            ]),
+
+                        // 4. Quick Actions
+                        SC\Section::make('Acțiuni rapide')
+                            ->icon('heroicon-o-bolt')
+                            ->compact()
+                            ->collapsed()
+                            ->schema([
+                                Forms\Components\Actions::make([
+                                    Forms\Components\Actions\Action::make('duplicate')
+                                        ->label('Duplică')
+                                        ->icon('heroicon-o-document-duplicate')
+                                        ->color('gray')
+                                        ->size('sm')
+                                        ->visible(fn (?Event $record) => $record && $record->exists)
+                                        ->requiresConfirmation()
+                                        ->modalHeading('Duplică evenimentul')
+                                        ->modalDescription('Sigur vrei să duplici acest eveniment? Se va crea o copie draft fără bilete vândute.')
+                                        ->modalSubmitActionLabel('Duplică')
+                                        ->action(function (?Event $record) {
+                                            if (!$record) return;
+
+                                            $newEvent = $record->replicate();
+                                            $newEvent->name = $record->name . ' (Copie)';
+                                            $newEvent->slug = null; // Will be auto-generated
+                                            $newEvent->status = 'draft';
+                                            $newEvent->is_public = false;
+                                            $newEvent->is_featured = false;
+                                            $newEvent->tickets_sold = 0;
+                                            $newEvent->revenue = 0;
+                                            $newEvent->views = 0;
+                                            $newEvent->submitted_at = null;
+                                            $newEvent->approved_at = null;
+                                            $newEvent->approved_by = null;
+                                            $newEvent->save();
+
+                                            // Duplicate ticket types
+                                            foreach ($record->ticketTypes as $ticketType) {
+                                                $newTicketType = $ticketType->replicate();
+                                                $newTicketType->marketplace_event_id = $newEvent->id;
+                                                $newTicketType->quantity_sold = 0;
+                                                $newTicketType->quantity_reserved = 0;
+                                                $newTicketType->save();
+                                            }
+
+                                            \Filament\Notifications\Notification::make()
+                                                ->title('Eveniment duplicat')
+                                                ->body("Evenimentul \"{$newEvent->name}\" a fost creat.")
+                                                ->success()
+                                                ->send();
+
+                                            return redirect(static::getUrl('edit', ['record' => $newEvent]));
+                                        }),
+                                    Forms\Components\Actions\Action::make('preview')
+                                        ->label('Preview')
+                                        ->icon('heroicon-o-eye')
+                                        ->color('gray')
+                                        ->size('sm')
+                                        ->visible(fn (?Event $record) => $record && $record->exists)
+                                        ->url(function (?Event $record) use ($marketplace) {
+                                            if (!$record) return null;
+                                            $domain = $marketplace?->domain;
+                                            if (!$domain) return null;
+                                            $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
+                                            return "{$protocol}://{$domain}/bilete/{$record->slug}?preview=1";
+                                        })
+                                        ->openUrlInNewTab(),
+                                ])->fullWidth(),
+                                Forms\Components\Actions::make([
+                                    Forms\Components\Actions\Action::make('export')
+                                        ->label('Export')
+                                        ->icon('heroicon-o-arrow-down-tray')
+                                        ->color('gray')
+                                        ->size('sm')
+                                        ->visible(fn (?Event $record) => $record && $record->exists)
+                                        ->action(function (?Event $record) {
+                                            if (!$record) return;
+
+                                            // Export event data as JSON
+                                            $data = [
+                                                'event' => $record->only(['name', 'slug', 'description', 'short_description', 'starts_at', 'ends_at', 'doors_open_at', 'venue_name', 'venue_address', 'venue_city', 'status', 'capacity', 'tickets_sold', 'revenue', 'views']),
+                                                'ticket_types' => $record->ticketTypes->map(fn ($tt) => $tt->only(['name', 'price', 'quantity', 'quantity_sold', 'status']))->toArray(),
+                                                'exported_at' => now()->toIso8601String(),
+                                            ];
+
+                                            return response()->streamDownload(function () use ($data) {
+                                                echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                                            }, "event-{$record->slug}-export.json", [
+                                                'Content-Type' => 'application/json',
+                                            ]);
+                                        }),
+                                    Forms\Components\Actions\Action::make('report')
+                                        ->label('Raport')
+                                        ->icon('heroicon-o-document-chart-bar')
+                                        ->color('gray')
+                                        ->size('sm')
+                                        ->visible(fn (?Event $record) => $record && $record->exists)
+                                        ->url(fn (?Event $record) => $record ? static::getUrl('statistics', ['record' => $record]) : null),
+                                ])->fullWidth(),
+                            ]),
+
+                        // 5. Activity Log (doar pentru edit)
+                        SC\Section::make('Activitate recentă')
+                            ->icon('heroicon-o-clock')
+                            ->compact()
+                            ->collapsed()
+                            ->visible(fn (?Event $record) => $record && $record->exists)
+                            ->schema([
+                                Forms\Components\Placeholder::make('recent_activity')
+                                    ->hiddenLabel()
+                                    ->content(function (?Event $record) {
+                                        if (!$record) return '';
+
+                                        $html = "<div class='space-y-3 text-sm'>";
+
+                                        // Try to get activity log from spatie/laravel-activitylog
+                                        try {
+                                            $activities = \Spatie\Activitylog\Models\Activity::query()
+                                                ->where('subject_type', Event::class)
+                                                ->where('subject_id', $record->id)
+                                                ->orderByDesc('created_at')
+                                                ->limit(3)
+                                                ->get();
+
+                                            if ($activities->isNotEmpty()) {
+                                                foreach ($activities as $activity) {
+                                                    $eventName = match ($activity->event ?? $activity->description) {
+                                                        'created' => 'Creat',
+                                                        'updated' => 'Modificat',
+                                                        'deleted' => 'Șters',
+                                                        'published' => 'Publicat',
+                                                        'unpublished' => 'Nepublicat',
+                                                        default => ucfirst($activity->event ?? $activity->description ?? 'Acțiune'),
+                                                    };
+
+                                                    $iconBg = match ($activity->event ?? $activity->description) {
+                                                        'created' => 'bg-emerald-900',
+                                                        'updated' => 'bg-blue-900',
+                                                        'deleted' => 'bg-red-900',
+                                                        'published' => 'bg-green-900',
+                                                        default => 'bg-gray-700',
+                                                    };
+
+                                                    $iconColor = match ($activity->event ?? $activity->description) {
+                                                        'created' => 'text-emerald-400',
+                                                        'updated' => 'text-blue-400',
+                                                        'deleted' => 'text-red-400',
+                                                        'published' => 'text-green-400',
+                                                        default => 'text-gray-400',
+                                                    };
+
+                                                    $causer = $activity->causer?->name ?? 'Sistem';
+                                                    $time = $activity->created_at->diffForHumans();
+
+                                                    $html .= "
+                                                        <div class='flex gap-2'>
+                                                            <div class='w-6 h-6 {$iconBg} rounded-full flex items-center justify-center flex-shrink-0'>
+                                                                <svg class='w-3 h-3 {$iconColor}' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'/></svg>
+                                                            </div>
+                                                            <div class='flex-1 min-w-0'>
+                                                                <div class='text-gray-300'>{$eventName}</div>
+                                                                <div class='text-xs text-gray-500'>{$causer} · {$time}</div>
+                                                            </div>
+                                                        </div>
+                                                    ";
+                                                }
+                                            } else {
+                                                throw new \Exception('No activities found');
+                                            }
+                                        } catch (\Exception $e) {
+                                            // Fallback to basic info from timestamps
+                                            $html .= "
+                                                <div class='flex gap-2'>
+                                                    <div class='w-6 h-6 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0'>
+                                                        <svg class='w-3 h-3 text-gray-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'/></svg>
+                                                    </div>
+                                                    <div>
+                                                        <div class='text-gray-300'>Ultima modificare</div>
+                                                        <div class='text-xs text-gray-500'>" . $record->updated_at->diffForHumans() . "</div>
+                                                    </div>
+                                                </div>
+                                                <div class='flex gap-2'>
+                                                    <div class='w-6 h-6 bg-emerald-900 rounded-full flex items-center justify-center flex-shrink-0'>
+                                                        <svg class='w-3 h-3 text-emerald-400' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M12 6v6m0 0v6m0-6h6m-6 0H6'/></svg>
+                                                    </div>
+                                                    <div>
+                                                        <div class='text-gray-300'>Creat</div>
+                                                        <div class='text-xs text-gray-500'>" . $record->created_at->format('d M Y, H:i') . "</div>
+                                                    </div>
+                                                </div>
+                                            ";
+                                        }
+
+                                        $html .= "</div>";
+
+                                        // Link to full activity log page
+                                        $html .= "<a href='" . static::getUrl('activity-log', ['record' => $record]) . "' class='mt-3 block text-xs text-primary-400 hover:text-primary-300 transition-colors'>Vezi tot istoricul →</a>";
+
+                                        return new HtmlString($html);
+                                    }),
+                            ]),
+                    ]),
+            ]),
+        ]);
     }
 
     public static function table(Table $table): Table
@@ -1697,8 +2041,6 @@ class EventResource extends Resource
                         if (!$domain) {
                             return null;
                         }
-                        // Strip any existing protocol from domain
-                        $domain = preg_replace('#^https?://|^https?//#i', '', $domain);
                         $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
                         $url = $protocol . '://' . $domain . '/bilete/' . $record->slug;
                         // Add preview param if not published
