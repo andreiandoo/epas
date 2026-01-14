@@ -38,9 +38,18 @@ const AmbiletEventCard = {
         } = options;
 
         const eventUrl = urlPrefix + event.slug;
-        const categoryBadge = (showCategory && event.categoryName)
-            ? '<span class="absolute px-2 py-1 text-xs font-semibold text-white uppercase rounded-lg top-3 right-3 bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>'
-            : '';
+
+        // Status badges (cancelled, postponed, sold out take priority)
+        let statusBadge = '';
+        if (event.isCancelled) {
+            statusBadge = '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 right-3 bg-red-600">ANULAT</span>';
+        } else if (event.isPostponed) {
+            statusBadge = '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 right-3 bg-orange-500">AMÂNAT</span>';
+        } else if (event.isSoldOut) {
+            statusBadge = '<span class="absolute px-2 py-1 text-xs font-bold text-white uppercase rounded-lg top-3 right-3 bg-gray-600">SOLD OUT</span>';
+        } else if (showCategory && event.categoryName) {
+            statusBadge = '<span class="absolute px-2 py-1 text-xs font-semibold text-white uppercase rounded-lg top-3 right-3 bg-black/60 backdrop-blur-sm">' + this.escapeHtml(event.categoryName) + '</span>';
+        }
 
         // Date badge - show range for festivals, single date otherwise
         let dateBadgeHtml;
@@ -59,7 +68,7 @@ const AmbiletEventCard = {
             '<div class="relative h-48 overflow-hidden">' +
                 '<img src="' + (event.image || this.PLACEHOLDER) + '" alt="' + this.escapeHtml(event.title) + '" class="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105 rounded-tl-2xl rounded-tr-2xl" loading="lazy" onerror="this.src=\'' + this.PLACEHOLDER + '\'">' +
                 '<div class="absolute top-3 left-3">' + dateBadgeHtml + '</div>' +
-                categoryBadge +
+                statusBadge +
             '</div>' +
             '<div class="px-3 py-2">' +
                 '<h3 class="mb-2 font-bold leading-snug transition-colors text-secondary group-hover:text-primary line-clamp-2 truncate">' + this.escapeHtml(event.title) + '</h3>' +
@@ -70,8 +79,10 @@ const AmbiletEventCard = {
                     '</p>' : '') +
                 (showPrice ?
                     '<div class="flex items-center justify-between pt-2 border-t border-border">' +
-                        '<span class="font-bold text-primary">' + event.priceFormatted + '</span>' +
-                        '<span class="text-xs text-muted">' + (event.isSoldOut ? 'Sold Out' : 'Disponibil') + '</span>' +
+                        '<span class="font-bold ' + (event.isCancelled || event.isPostponed || event.isSoldOut ? 'text-gray-400 line-through' : 'text-primary') + '">' + event.priceFormatted + '</span>' +
+                        '<span class="text-xs ' + (event.isCancelled ? 'text-red-600 font-semibold' : event.isPostponed ? 'text-orange-600 font-semibold' : event.isSoldOut ? 'text-gray-600 font-semibold' : 'text-muted') + '">' +
+                            (event.isCancelled ? 'Anulat' : event.isPostponed ? 'Amânat' : event.isSoldOut ? 'Sold Out' : 'Disponibil') +
+                        '</span>' +
                     '</div>' : '') +
             '</div>' +
         '</a>';
@@ -386,6 +397,9 @@ const AmbiletEventCard = {
             priceFormatted: minPrice > 0 ? 'de la ' + minPrice + ' lei' : 'Gratuit',
             categoryName: categoryName,
             isSoldOut: apiEvent.is_sold_out || false,
+            isCancelled: apiEvent.is_cancelled || false,
+            isPostponed: apiEvent.is_postponed || false,
+            postponedDate: apiEvent.postponed_date || null,
             isDateRange: isDateRange,
             dateRangeFormatted: dateRangeFormatted,
             _raw: apiEvent
