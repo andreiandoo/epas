@@ -289,7 +289,7 @@ const UserOrders = {
                             <span class="text-secondary">${(item.quantity * item.price).toFixed(2)} lei</span>
                         </div>
                         `).join('')}
-                        ${order.commission_amount && order.commission_mode === 'on_top' ? `
+                        ${order.commission_amount > 0 && order.commission_mode === 'on_top' ? `
                         <div class="flex justify-between text-sm">
                             <span class="text-muted">Comision servicii ${order.commission_rate ? `(${order.commission_rate}%)` : ''}</span>
                             <span class="text-secondary">${parseFloat(order.commission_amount).toFixed(2)} lei</span>
@@ -304,9 +304,9 @@ const UserOrders = {
                         <hr class="border-border">
                         <div class="flex justify-between font-semibold">
                             <span class="text-secondary">Total platit</span>
-                            <span class="text-secondary">${parseFloat(order.total).toFixed(2)} lei</span>
+                            <span class="text-secondary">${(order.commission_mode === 'on_top' ? parseFloat(order.total) + parseFloat(order.commission_amount || 0) : parseFloat(order.total)).toFixed(2)} lei</span>
                         </div>
-                        ${order.commission_amount && order.commission_mode === 'included' ? `
+                        ${order.commission_amount > 0 && order.commission_mode === 'included' ? `
                         <div class="flex justify-between text-xs text-muted">
                             <span>din care comision inclus</span>
                             <span>${parseFloat(order.commission_amount).toFixed(2)} lei</span>
