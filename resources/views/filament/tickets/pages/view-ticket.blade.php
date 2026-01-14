@@ -63,7 +63,7 @@
                     <div>
                         <span class="text-xs font-medium text-gray-500 dark:text-gray-400">Preț</span>
                         <p class="text-base font-semibold text-gray-900 dark:text-white">
-                            {{ number_format(($ticket->ticketType?->price_cents ?? 0) / 100, 2) }} {{ $ticket->ticketType?->currency ?? 'RON' }}
+                            {{ number_format($ticket->price ?? (($ticket->ticketType?->price_cents ?? 0) / 100), 2) }} {{ $ticket->order?->currency ?? $ticket->ticketType?->currency ?? 'RON' }}
                         </p>
                     </div>
                     <div>

@@ -240,7 +240,7 @@ class AccountController extends BaseController
                         'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
                     ];
                 }),
-                'can_download_tickets' => $order->status === 'completed' && $order->payment_status === 'paid',
+                'can_download_tickets' => in_array($order->status, ['completed', 'paid', 'confirmed']) || $order->payment_status === 'paid',
                 'created_at' => $order->created_at->toIso8601String(),
                 'paid_at' => $order->paid_at?->toIso8601String(),
             ],
@@ -255,7 +255,7 @@ class AccountController extends BaseController
         $customer = $this->requireCustomer($request);
 
         $orders = Order::where('marketplace_customer_id', $customer->id)
-            ->where('status', 'completed')
+            ->whereIn('status', ['completed', 'paid', 'confirmed'])
             ->whereHas('marketplaceEvent', function ($q) {
                 $q->where('starts_at', '>=', now());
             })
@@ -306,7 +306,7 @@ class AccountController extends BaseController
         $order = null;
 
         $orders = Order::where('marketplace_customer_id', $customer->id)
-            ->where('status', 'completed')
+            ->whereIn('status', ['completed', 'paid', 'confirmed'])
             ->with([
                 'marketplaceEvent',
                 'tickets.marketplaceTicketType',
@@ -386,19 +386,30 @@ class AccountController extends BaseController
         $filter = $request->get('filter', 'upcoming'); // upcoming, past, all
 
         $query = Order::where('marketplace_customer_id', $customer->id)
-            ->where('status', 'completed')
+            ->whereIn('status', ['completed', 'paid', 'confirmed'])
             ->with([
                 'marketplaceEvent:id,name,slug,starts_at,venue_name,venue_city,image',
+                'event:id,title,slug,event_date,featured_image,poster_url',
+                'event.venue:id,name,city',
                 'tickets.marketplaceTicketType:id,name',
+                'tickets.ticketType:id,name',
             ]);
 
         if ($filter === 'upcoming') {
-            $query->whereHas('marketplaceEvent', function ($q) {
-                $q->where('starts_at', '>=', now());
+            $query->where(function ($q) {
+                $q->whereHas('marketplaceEvent', function ($sub) {
+                    $sub->where('starts_at', '>=', now());
+                })->orWhereHas('event', function ($sub) {
+                    $sub->where('event_date', '>=', now());
+                });
             });
         } elseif ($filter === 'past') {
-            $query->whereHas('marketplaceEvent', function ($q) {
-                $q->where('starts_at', '<', now());
+            $query->where(function ($q) {
+                $q->whereHas('marketplaceEvent', function ($sub) {
+                    $sub->where('starts_at', '<', now());
+                })->orWhereHas('event', function ($sub) {
+                    $sub->where('event_date', '<', now());
+                });
             });
         }
 
@@ -406,28 +417,67 @@ class AccountController extends BaseController
 
         $tickets = $orders->flatMap(function ($order) {
             return $order->tickets->map(function ($ticket) use ($order) {
-                $event = $order->marketplaceEvent;
-                return [
-                    'id' => $ticket->id,
-                    'code' => $ticket->barcode,
-                    'type' => $ticket->marketplaceTicketType?->name ?? 'Standard',
-                    'status' => $ticket->status,
-                    'order_number' => $order->order_number,
-                    'checked_in' => $ticket->checked_in_at !== null,
-                    'event' => [
-                        'id' => $event->id,
-                        'name' => $event->name,
-                        'slug' => $event->slug,
-                        'date' => $event->starts_at->toIso8601String(),
-                        'date_formatted' => $event->starts_at->format('d M Y'),
-                        'time' => $event->starts_at->format('H:i'),
-                        'venue' => $event->venue_name,
-                        'city' => $event->venue_city,
-                        'image' => $event->image_url,
-                        'is_upcoming' => $event->starts_at >= now(),
-                    ],
-                ];
-            });
+                // Handle both marketplace events and tenant events
+                if ($order->marketplaceEvent) {
+                    $event = $order->marketplaceEvent;
+                    return [
+                        'id' => $ticket->id,
+                        'code' => $ticket->barcode,
+                        'type' => $ticket->marketplaceTicketType?->name ?? 'Standard',
+                        'status' => $ticket->status,
+                        'order_number' => $order->order_number,
+                        'checked_in' => $ticket->checked_in_at !== null,
+                        'event' => [
+                            'id' => $event->id,
+                            'name' => $event->name,
+                            'slug' => $event->slug,
+                            'date' => $event->starts_at->toIso8601String(),
+                            'date_formatted' => $event->starts_at->format('d M Y'),
+                            'time' => $event->starts_at->format('H:i'),
+                            'venue' => $event->venue_name,
+                            'city' => $event->venue_city,
+                            'image' => $event->image_url,
+                            'is_upcoming' => $event->starts_at >= now(),
+                        ],
+                    ];
+                } elseif ($order->event) {
+                    $event = $order->event;
+                    // Get full URL for featured image
+                    $imageUrl = null;
+                    if ($event->featured_image) {
+                        $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($event->featured_image);
+                    } elseif ($event->poster_url) {
+                        $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($event->poster_url);
+                    }
+
+                    $eventTitle = is_array($event->title)
+                        ? ($event->title['ro'] ?? $event->title['en'] ?? reset($event->title))
+                        : $event->title;
+
+                    return [
+                        'id' => $ticket->id,
+                        'code' => $ticket->barcode,
+                        'type' => $ticket->ticketType?->name ?? 'Standard',
+                        'status' => $ticket->status,
+                        'order_number' => $order->order_number,
+                        'checked_in' => $ticket->checked_in_at !== null,
+                        'event' => [
+                            'id' => $event->id,
+                            'name' => $eventTitle,
+                            'slug' => $event->slug,
+                            'date' => $event->event_date?->toIso8601String(),
+                            'date_formatted' => $event->event_date?->format('d M Y'),
+                            'time' => $event->event_date?->format('H:i'),
+                            'venue' => $event->venue?->name ?? null,
+                            'city' => $event->venue?->city ?? null,
+                            'image' => $imageUrl,
+                            'is_upcoming' => $event->event_date ? $event->event_date >= now() : false,
+                        ],
+                    ];
+                }
+
+                return null;
+            })->filter();
         });
 
         // Sort by event date
@@ -455,7 +505,7 @@ class AccountController extends BaseController
         $customer = $this->requireCustomer($request);
 
         $orders = Order::where('marketplace_customer_id', $customer->id)
-            ->where('status', 'completed')
+            ->whereIn('status', ['completed', 'paid', 'confirmed'])
             ->whereHas('marketplaceEvent', function ($q) {
                 $q->where('starts_at', '<', now());
             })
@@ -505,9 +555,13 @@ class AccountController extends BaseController
 
         // Check for upcoming events
         $hasUpcoming = Order::where('marketplace_customer_id', $customer->id)
-            ->where('status', 'completed')
-            ->whereHas('marketplaceEvent', function ($q) {
-                $q->where('starts_at', '>=', now());
+            ->whereIn('status', ['completed', 'paid', 'confirmed'])
+            ->where(function ($query) {
+                $query->whereHas('marketplaceEvent', function ($q) {
+                    $q->where('starts_at', '>=', now());
+                })->orWhereHas('event', function ($q) {
+                    $q->where('event_date', '>=', now());
+                });
             })
             ->exists();
 
