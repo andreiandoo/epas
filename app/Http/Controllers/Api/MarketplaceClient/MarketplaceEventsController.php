@@ -550,19 +550,39 @@ class MarketplaceEventsController extends BaseController
         $language = $client->language ?? 'ro';
 
         // Get cities from venues of events
-        $cities = Event::where('marketplace_client_id', $client->id)
+        $query = Event::where('marketplace_client_id', $client->id)
             ->where(function ($q) {
                 $q->whereNull('is_cancelled')->orWhere('is_cancelled', false);
             })
-            ->where('event_date', '>=', now()->toDateString())
-            ->with('venue:id,city')
+            ->where('event_date', '>=', now()->toDateString());
+
+        // Filter by genre if provided
+        if ($request->has('genre')) {
+            $genreSlug = $request->genre;
+            $query->whereHas('eventGenres', function ($q) use ($genreSlug) {
+                $q->where('slug', $genreSlug);
+            });
+        }
+
+        // Filter by category if provided
+        if ($request->has('category')) {
+            $categorySlug = $request->category;
+            $query->whereHas('marketplaceEventCategory', function ($q) use ($categorySlug) {
+                $q->where('slug', $categorySlug);
+            });
+        }
+
+        $cities = $query->with('venue:id,city')
             ->get()
             ->filter(fn ($e) => $e->venue?->city)
-            ->groupBy(fn ($e) => $e->venue->city)
-            ->map(fn ($group, $city) => [
-                'name' => $city,
-                'event_count' => $group->count(),
-            ])
+            ->groupBy(fn ($e) => strtolower(trim($e->venue->city))) // Normalize city names
+            ->map(function ($group, $cityKey) {
+                // Use the first occurrence's original city name for display
+                return [
+                    'name' => $group->first()->venue->city,
+                    'event_count' => $group->count(),
+                ];
+            })
             ->sortByDesc('event_count')
             ->values();
 

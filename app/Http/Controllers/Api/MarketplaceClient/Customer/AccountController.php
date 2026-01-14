@@ -17,8 +17,14 @@ class AccountController extends BaseController
     {
         $customer = $this->requireCustomer($request);
 
+        // Load both marketplace events and tenant events relationships
         $query = Order::where('marketplace_customer_id', $customer->id)
-            ->with(['marketplaceEvent:id,name,slug,starts_at,venue_name,venue_city,image']);
+            ->with([
+                'marketplaceEvent:id,name,slug,starts_at,venue_name,venue_city,image',
+                'event:id,title,slug,event_date,featured_image',
+                'event.venue:id,name,city',
+                'tickets',
+            ]);
 
         // Filters
         if ($request->has('status')) {
@@ -26,8 +32,12 @@ class AccountController extends BaseController
         }
 
         if ($request->has('upcoming')) {
-            $query->whereHas('marketplaceEvent', function ($q) {
-                $q->where('starts_at', '>=', now());
+            $query->where(function ($q) {
+                $q->whereHas('marketplaceEvent', function ($sub) {
+                    $sub->where('starts_at', '>=', now());
+                })->orWhereHas('event', function ($sub) {
+                    $sub->where('event_date', '>=', now());
+                });
             });
         }
 
@@ -37,23 +47,59 @@ class AccountController extends BaseController
         $orders = $query->paginate($perPage);
 
         return $this->paginated($orders, function ($order) {
-            return [
-                'id' => $order->id,
-                'order_number' => $order->order_number,
-                'status' => $order->status,
-                'total' => (float) $order->total,
-                'currency' => $order->currency,
-                'tickets_count' => $order->tickets_count ?? $order->tickets()->count(),
-                'event' => $order->marketplaceEvent ? [
+            // Handle both marketplace events and tenant events
+            $eventData = null;
+
+            if ($order->marketplaceEvent) {
+                $eventData = [
                     'id' => $order->marketplaceEvent->id,
+                    'title' => $order->marketplaceEvent->name,
                     'name' => $order->marketplaceEvent->name,
                     'slug' => $order->marketplaceEvent->slug,
-                    'date' => $order->marketplaceEvent->starts_at->toIso8601String(),
+                    'date' => $order->marketplaceEvent->starts_at?->toIso8601String(),
                     'venue' => $order->marketplaceEvent->venue_name,
                     'city' => $order->marketplaceEvent->venue_city,
                     'image' => $order->marketplaceEvent->image_url,
                     'is_upcoming' => $order->marketplaceEvent->starts_at >= now(),
-                ] : null,
+                ];
+            } elseif ($order->event) {
+                $eventData = [
+                    'id' => $order->event->id,
+                    'title' => is_array($order->event->title)
+                        ? ($order->event->title['ro'] ?? $order->event->title['en'] ?? reset($order->event->title))
+                        : $order->event->title,
+                    'name' => is_array($order->event->title)
+                        ? ($order->event->title['ro'] ?? $order->event->title['en'] ?? reset($order->event->title))
+                        : $order->event->title,
+                    'slug' => $order->event->slug,
+                    'date' => $order->event->event_date?->toIso8601String(),
+                    'venue' => $order->event->venue?->name ?? null,
+                    'city' => $order->event->venue?->city ?? null,
+                    'image' => $order->event->featured_image ?? null,
+                    'is_upcoming' => $order->event->event_date ? $order->event->event_date >= now() : false,
+                ];
+            }
+
+            return [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'reference' => $order->order_number,
+                'status' => $order->status,
+                'total' => (float) $order->total,
+                'currency' => $order->currency,
+                'tickets_count' => $order->tickets->count(),
+                'promo_discount' => (float) ($order->discount_amount ?? 0),
+                'discount' => (float) ($order->discount_amount ?? 0),
+                'promo_code' => $order->meta['promo_code'] ?? $order->promo_code ?? null,
+                'event' => $eventData,
+                'items' => $order->tickets->groupBy('ticket_type_id')->map(function ($tickets, $typeId) {
+                    $first = $tickets->first();
+                    return [
+                        'name' => $first->ticketType?->name ?? 'Bilet',
+                        'quantity' => $tickets->count(),
+                        'price' => (float) ($first->price ?? 0),
+                    ];
+                })->values()->toArray(),
                 'created_at' => $order->created_at->toIso8601String(),
             ];
         });

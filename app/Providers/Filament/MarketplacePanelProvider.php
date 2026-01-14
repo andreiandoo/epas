@@ -52,6 +52,7 @@ class MarketplacePanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Emerald,
             ])
+            ->darkMode(condition: true)
 
             // Discover marketplace-specific resources, pages, and widgets
             ->discoverResources(in: app_path('Filament/Marketplace/Resources'), for: 'App\\Filament\\Marketplace\\Resources')
@@ -110,6 +111,9 @@ class MarketplacePanelProvider extends PanelProvider
             ->userMenu(false)
 
             ->renderHook('panels::topbar.end', fn (): string => view('filament.components.custom-topbar')->render())
-            ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.marketplace-support-card')->render());
+            ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.marketplace-support-card')->render())
+
+            // Set dark mode as default if not already set
+            ->renderHook('panels::head.end', fn () => '<script>if(!localStorage.getItem("theme")){localStorage.setItem("theme","dark");document.documentElement.classList.add("dark");}</script>');
     }
 }

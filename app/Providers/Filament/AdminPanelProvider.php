@@ -38,6 +38,7 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->darkMode(condition: true)
 
             // Auto-discover resources, pages, and widgets
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
@@ -86,6 +87,9 @@ class AdminPanelProvider extends PanelProvider
                 }
                 return '';
             })
+
+            // Set dark mode as default if not already set
+            ->renderHook('panels::head.end', fn () => '<script>if(!localStorage.getItem("theme")){localStorage.setItem("theme","dark");document.documentElement.classList.add("dark");}</script>')
             ;
     }
 

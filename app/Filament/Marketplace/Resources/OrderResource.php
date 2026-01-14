@@ -117,6 +117,52 @@ class OrderResource extends Resource
                             ->content(fn ($record) => $record->customer_phone ?? $record->meta['customer_phone'] ?? 'N/A'),
                     ]),
 
+                SC\Section::make('Eveniment')
+                    ->icon('heroicon-o-calendar')
+                    ->columns(2)
+                    ->collapsible()
+                    ->schema([
+                        Forms\Components\Placeholder::make('event_name')
+                            ->label('Eveniment')
+                            ->content(function ($record) {
+                                $events = $record->tickets
+                                    ->pluck('event')
+                                    ->filter()
+                                    ->unique('id');
+
+                                if ($events->isEmpty()) {
+                                    return 'N/A';
+                                }
+
+                                $html = '<div class="space-y-1">';
+                                foreach ($events as $event) {
+                                    $title = $event->getTranslation('title', app()->getLocale()) ?? $event->title ?? 'Eveniment';
+                                    $date = $event->event_date?->format('d M Y') ?? '';
+                                    $html .= '<div class="font-medium">' . e($title) . '</div>';
+                                    if ($date) {
+                                        $html .= '<div class="text-sm text-gray-500">' . $date . '</div>';
+                                    }
+                                }
+                                $html .= '</div>';
+
+                                return new HtmlString($html);
+                            }),
+                        Forms\Components\Placeholder::make('venue_info')
+                            ->label('Locație')
+                            ->content(function ($record) {
+                                $event = $record->tickets->first()?->event;
+                                if (!$event || !$event->venue) {
+                                    return 'N/A';
+                                }
+
+                                $venue = $event->venue;
+                                $venueName = $venue->getTranslation('name', app()->getLocale()) ?? $venue->name ?? '';
+                                $city = $venue->city ?? '';
+
+                                return $venueName . ($city ? ', ' . $city : '');
+                            }),
+                    ]),
+
                 SC\Section::make('Bilete comandate')
                     ->icon('heroicon-o-ticket')
                     ->collapsible()
@@ -195,6 +241,33 @@ class OrderResource extends Resource
                 Tables\Columns\TextColumn::make('customer_name')
                     ->label('Nume')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('event_names')
+                    ->label('Eveniment')
+                    ->getStateUsing(function ($record) {
+                        // Get unique event names from tickets
+                        $eventNames = $record->tickets
+                            ->pluck('event')
+                            ->filter()
+                            ->unique('id')
+                            ->map(fn ($event) => $event->getTranslation('title', app()->getLocale()) ?? $event->title)
+                            ->filter()
+                            ->take(2)
+                            ->implode(', ');
+
+                        $totalEvents = $record->tickets->pluck('event_id')->unique()->count();
+                        if ($totalEvents > 2) {
+                            $eventNames .= ' +' . ($totalEvents - 2);
+                        }
+
+                        return $eventNames ?: '-';
+                    })
+                    ->wrap()
+                    ->limit(40),
+                Tables\Columns\TextColumn::make('tickets_count')
+                    ->label('Bilete')
+                    ->getStateUsing(fn ($record) => $record->tickets->count())
+                    ->badge()
+                    ->color('info'),
                 Tables\Columns\TextColumn::make('total')
                     ->label('Total')
                     ->formatStateUsing(fn ($state, $record) => number_format($state ?? ($record->total_cents / 100), 2) . ' ' . ($record->currency ?? 'RON'))

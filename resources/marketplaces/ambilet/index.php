@@ -95,8 +95,9 @@ require_once __DIR__ . '/includes/header.php';
             </a>
         </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 md:gap-5" id="latestEventsGrid">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 md:gap-5" id="latestEventsGrid">
             <!-- Latest events will be loaded dynamically -->
+            <?php for ($i = 0; $i < 20; $i++): ?>
             <div class="overflow-hidden bg-white border rounded-2xl border-border">
                 <div class="skeleton h-44"></div>
                 <div class="p-4">
@@ -105,30 +106,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="w-2/3 mt-2 skeleton skeleton-text"></div>
                 </div>
             </div>
-            <div class="overflow-hidden bg-white border rounded-2xl border-border">
-                <div class="skeleton h-44"></div>
-                <div class="p-4">
-                    <div class="w-1/3 mb-2 skeleton skeleton-text"></div>
-                    <div class="skeleton skeleton-title"></div>
-                    <div class="w-2/3 mt-2 skeleton skeleton-text"></div>
-                </div>
-            </div>
-            <div class="overflow-hidden bg-white border rounded-2xl border-border">
-                <div class="skeleton h-44"></div>
-                <div class="p-4">
-                    <div class="w-1/3 mb-2 skeleton skeleton-text"></div>
-                    <div class="skeleton skeleton-title"></div>
-                    <div class="w-2/3 mt-2 skeleton skeleton-text"></div>
-                </div>
-            </div>
-            <div class="overflow-hidden bg-white border rounded-2xl border-border">
-                <div class="skeleton h-44"></div>
-                <div class="p-4">
-                    <div class="w-1/3 mb-2 skeleton skeleton-text"></div>
-                    <div class="skeleton skeleton-title"></div>
-                    <div class="w-2/3 mt-2 skeleton skeleton-text"></div>
-                </div>
-            </div>
+            <?php endfor; ?>
         </div>
 
         <div class="mt-10 text-center">
@@ -465,7 +443,7 @@ function renderCategories(categories) {
     }
 
     container.innerHTML = categories.slice(0, 6).map(cat => `
-        <a href="/categorie/${cat.slug}" class="flex flex-col items-center gap-3 p-5 bg-white border category-pill md:p-6 rounded-2xl border-border group">
+        <a href="/${cat.slug}" class="flex flex-col items-center gap-3 p-5 bg-white border category-pill md:p-6 rounded-2xl border-border group">
             <div class="flex items-center justify-center w-12 h-12 transition-colors md:w-14 md:h-14 bg-primary/10 rounded-xl group-hover:bg-white/20">
                 <span class="text-2xl md:text-3xl">${icons[cat.slug] || '🎫'}</span>
             </div>
@@ -509,7 +487,7 @@ function renderCities(cities) {
 // Load latest events
 async function loadLatestEvents() {
     try {
-        const response = await AmbiletAPI.get('/marketplace-events?sort=latest&limit=40');
+        const response = await AmbiletAPI.get('/marketplace-events?sort=latest&limit=20');
         if (response.data) {
             renderLatestEvents(response.data);
         }

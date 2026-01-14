@@ -51,6 +51,7 @@ class TenantPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Indigo,
             ])
+            ->darkMode(condition: true)
 
             // Discover tenant-specific resources, pages, and widgets
             ->discoverResources(in: app_path('Filament/Tenant/Resources'), for: 'App\\Filament\\Tenant\\Resources')
@@ -106,6 +107,9 @@ class TenantPanelProvider extends PanelProvider
             ->userMenu(false)
 
             ->renderHook('panels::topbar.end', fn (): string => view('filament.components.custom-topbar')->render())
-            ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.tenant-support-card')->render());
+            ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.tenant-support-card')->render())
+
+            // Set dark mode as default if not already set
+            ->renderHook('panels::head.end', fn () => '<script>if(!localStorage.getItem("theme")){localStorage.setItem("theme","dark");document.documentElement.classList.add("dark");}</script>');
     }
 }
