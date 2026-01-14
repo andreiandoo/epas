@@ -19,6 +19,7 @@ const FeaturedCarousel = {
     track: null,
     container: null,
     animationPaused: false,
+    initialized: false,
 
     /**
      * Initialize the carousel
@@ -28,11 +29,15 @@ const FeaturedCarousel = {
      * @param {string} options.genre - Optional genre slug to filter by
      */
     async init(options = {}) {
+        // Prevent double initialization
+        if (this.initialized) return;
+
         const section = document.getElementById(this.elements.section);
         const track = document.getElementById(this.elements.track);
 
         if (!section || !track) return;
 
+        this.initialized = true;
         this.track = track;
         this.container = track.parentElement;
 
@@ -48,7 +53,15 @@ const FeaturedCarousel = {
             if (options.genre) params.append('genre', options.genre);
 
             const response = await AmbiletAPI.get('/events/featured?' + params.toString());
-            const events = response.data?.events || (Array.isArray(response.data) ? response.data : []);
+            let events = response.data?.events || (Array.isArray(response.data) ? response.data : []);
+
+            // Deduplicate events by id
+            const seenIds = new Set();
+            events = events.filter(event => {
+                if (seenIds.has(event.id)) return false;
+                seenIds.add(event.id);
+                return true;
+            });
 
             if (events.length > 0) {
                 // Shuffle events for random order

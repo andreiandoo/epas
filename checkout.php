@@ -30,6 +30,18 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 
+    <!-- Reservation Timer -->
+    <div id="timer-bar" class="hidden border-b bg-warning/10 border-warning/20">
+        <div class="px-4 py-3 mx-auto max-w-7xl">
+            <div class="flex items-center justify-center gap-2 text-sm">
+                <svg class="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="text-secondary">Finalizează comanda în</span>
+                <span id="countdown" class="font-bold countdown text-warning tabular-nums">14:59</span>
+                <span class="text-secondary">minute</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Content -->
     <main class="px-4 py-8 mx-auto max-w-7xl">
         <div class="flex flex-col gap-8 lg:flex-row">
@@ -214,7 +226,7 @@ require_once __DIR__ . '/includes/header.php';
                     </div>
                     <h3 class="mb-2 text-xl font-bold text-secondary">Coșul tău este gol</h3>
                     <p class="mb-6 text-muted">Adaugă bilete în coș pentru a continua.</p>
-                    <a href="/" class="inline-flex items-center gap-2 px-6 py-3 font-bold text-white btn-primary rounded-xl">
+                    <a href="/evenimente" class="inline-flex items-center gap-2 px-6 py-3 font-bold text-white btn-primary rounded-xl">
                         Descoperă evenimente
                     </a>
                 </div>
@@ -341,6 +353,8 @@ const CheckoutPage = {
     items: [],
     taxes: [],
     totals: { subtotal: 0, tax: 0, discount: 0, total: 0, savings: 0 },
+    timerInterval: null,
+    endTime: null,
 
     init() {
         this.items = AmbiletCart.getItems();
@@ -352,6 +366,7 @@ const CheckoutPage = {
             return;
         }
 
+        this.setupTimer();
         this.setupPaymentOptions();
         this.setupTermsCheckbox();
         this.prefillBuyerInfo();
@@ -361,6 +376,56 @@ const CheckoutPage = {
         document.getElementById('checkout-loading').classList.add('hidden');
         document.getElementById('checkout-form').classList.remove('hidden');
         document.getElementById('summary-section').classList.remove('hidden');
+    },
+
+    setupTimer() {
+        const savedEndTime = localStorage.getItem('cart_end_time');
+        const timerBar = document.getElementById('timer-bar');
+
+        if (savedEndTime && parseInt(savedEndTime) > Date.now()) {
+            this.endTime = parseInt(savedEndTime);
+            timerBar.classList.remove('hidden');
+            this.updateCountdown();
+            this.timerInterval = setInterval(() => this.updateCountdown(), 1000);
+        } else if (this.items.length > 0) {
+            // Start a new timer if cart has items but no saved time
+            this.endTime = Date.now() + (15 * 60 * 1000); // 15 minutes
+            localStorage.setItem('cart_end_time', this.endTime);
+            timerBar.classList.remove('hidden');
+            this.updateCountdown();
+            this.timerInterval = setInterval(() => this.updateCountdown(), 1000);
+        }
+    },
+
+    updateCountdown() {
+        const remaining = Math.max(0, this.endTime - Date.now());
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+
+        const countdownEl = document.getElementById('countdown');
+        if (!countdownEl) return;
+
+        countdownEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+        if (remaining <= 0) {
+            clearInterval(this.timerInterval);
+            countdownEl.textContent = '00:00';
+            countdownEl.classList.remove('text-warning');
+            countdownEl.classList.add('text-primary');
+            AmbiletCart.clear();
+            localStorage.removeItem('cart_end_time');
+            if (typeof AmbiletNotifications !== 'undefined') {
+                AmbiletNotifications.warning('Timpul de rezervare a expirat. Biletele au fost eliberate.');
+            }
+            // Redirect to cart page after short delay
+            setTimeout(() => {
+                window.location.href = '/cos';
+            }, 2000);
+        } else if (remaining < 60000) {
+            // Less than 1 minute - make it red
+            countdownEl.classList.remove('text-warning');
+            countdownEl.classList.add('text-primary');
+        }
     },
 
     setupPaymentOptions() {

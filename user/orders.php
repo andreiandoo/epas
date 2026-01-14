@@ -135,13 +135,17 @@ const UserOrders = {
     },
 
     updateStats() {
-        const confirmed = this.orders.filter(o => o.status !== 'refunded');
-        const totalSpent = confirmed.reduce((sum, o) => sum + o.total, 0);
-        const totalSaved = confirmed.reduce((sum, o) => sum + (o.discount || 0), 0);
+        const confirmed = this.orders.filter(o => o.status !== 'refunded' && o.status !== 'cancelled');
+        const totalSpent = confirmed.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+        // Look for savings in various fields: discount, promo_discount, savings, meta.discount_amount
+        const totalSaved = confirmed.reduce((sum, o) => {
+            const discount = o.discount || o.promo_discount || o.savings || o.meta?.discount_amount || 0;
+            return sum + (parseFloat(discount) || 0);
+        }, 0);
 
         document.getElementById('stat-total').textContent = this.orders.length;
-        document.getElementById('stat-spent').textContent = totalSpent.toLocaleString() + ' lei';
-        document.getElementById('stat-saved').textContent = totalSaved.toLocaleString() + ' lei';
+        document.getElementById('stat-spent').textContent = totalSpent.toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' lei';
+        document.getElementById('stat-saved').textContent = totalSaved.toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' lei';
     },
 
     filterOrders() {
@@ -176,6 +180,7 @@ const UserOrders = {
             'confirmed': 'bg-success/10 text-success',
             'completed': 'bg-muted/20 text-muted',
             'pending': 'bg-warning/10 text-warning',
+            'paid': 'bg-success/10 text-success',
             'refunded': 'bg-error/10 text-error'
         }[order.status] || 'bg-muted/20 text-muted';
 
@@ -183,25 +188,36 @@ const UserOrders = {
             'confirmed': 'CONFIRMAT',
             'completed': 'INCHEIAT',
             'pending': 'IN ASTEPTARE',
+            'paid': 'PLATIT',
             'refunded': 'RAMBURSAT'
-        }[order.status] || order.status.toUpperCase();
+        }[order.status] || (order.status || 'UNKNOWN').toUpperCase();
 
         const isPast = order.status === 'completed' || order.status === 'refunded';
+
+        // Get event info with fallbacks
+        const eventImage = order.event?.image || order.event?.featured_image || order.tickets?.[0]?.event?.image || '/assets/images/placeholder-event.jpg';
+        const eventTitle = order.event?.title || order.event_name || order.tickets?.[0]?.event?.title || 'Eveniment';
+        const orderRef = order.reference || order.order_number || '#' + String(order.id).padStart(6, '0');
+
+        // Get items info with fallbacks
+        const items = order.items || order.order_items || [];
+        const ticketCount = order.tickets_count || items.reduce((sum, i) => sum + (i.quantity || 1), 0) || order.tickets?.length || 0;
+        const ticketName = items[0]?.name || order.tickets?.[0]?.ticketType?.name || 'Bilet';
 
         return `
             <div class="overflow-hidden bg-white border order-card rounded-xl border-border">
                 <button onclick="toggleOrder(this)" class="w-full p-4 text-left lg:p-5">
                     <div class="flex items-center gap-4">
                         <div class="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 ${isPast ? 'grayscale opacity-75' : ''}">
-                            <img src="${order.event.image}" class="object-cover w-full h-full" alt="">
+                            <img src="${eventImage}" class="object-cover w-full h-full" alt="" onerror="this.src='/assets/images/placeholder-event.jpg'">
                         </div>
                         <div class="flex-1 min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
-                                <span class="font-mono text-xs text-muted">#${order.reference}</span>
+                                <span class="font-mono text-xs text-muted">${orderRef}</span>
                                 <span class="px-2 py-0.5 ${statusClass} text-xs font-bold rounded">${statusLabel}</span>
                             </div>
-                            <h3 class="mt-1 font-semibold text-secondary">${order.event.title}</h3>
-                            <p class="text-sm text-muted">${this.formatDateTime(order.created_at)} • ${order.items.reduce((sum, i) => sum + i.quantity, 0)} bilete ${order.items[0].name}</p>
+                            <h3 class="mt-1 font-semibold text-secondary">${eventTitle}</h3>
+                            <p class="text-sm text-muted">${this.formatDateTime(order.created_at)} • ${ticketCount} bilete ${ticketName}</p>
                         </div>
                         <div class="flex-shrink-0 text-right">
                             ${order.status === 'refunded' ?
