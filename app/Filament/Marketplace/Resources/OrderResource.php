@@ -101,6 +101,86 @@ class OrderResource extends Resource
                             }),
                     ]),
 
+                SC\Section::make('Detalii sume')
+                    ->icon('heroicon-o-calculator')
+                    ->columns(2)
+                    ->collapsible()
+                    ->schema([
+                        Forms\Components\Placeholder::make('price_breakdown')
+                            ->label('Detalii preț')
+                            ->content(function ($record) {
+                                $currency = $record->currency ?? 'RON';
+                                $subtotal = $record->subtotal ?? $record->total;
+                                $commission = $record->commission_amount ?? 0;
+                                $commissionRate = $record->commission_rate ?? 0;
+                                $total = $record->total;
+                                $discount = $record->discount_amount ?? $record->promo_discount ?? 0;
+
+                                // Get commission mode
+                                $event = $record->tickets->first()?->event;
+                                $commissionMode = $event?->commission_mode
+                                    ?? $event?->marketplaceOrganizer?->default_commission_mode
+                                    ?? $record->marketplaceClient?->commission_mode
+                                    ?? 'included';
+
+                                $html = '<div class="space-y-2 text-sm">';
+
+                                // Calculate base tickets value
+                                $ticketsValue = $record->tickets->sum('price');
+
+                                $html .= '<div class="flex justify-between"><span class="text-gray-500">Valoare bilete:</span><span class="font-medium">' . number_format($ticketsValue, 2) . ' ' . $currency . '</span></div>';
+
+                                if ($commission > 0) {
+                                    $modeLabel = $commissionMode === 'on_top' ? '(peste preț)' : '(inclus în preț)';
+                                    $html .= '<div class="flex justify-between"><span class="text-gray-500">Comision ' . number_format($commissionRate, 1) . '% ' . $modeLabel . ':</span><span class="font-medium">' . number_format($commission, 2) . ' ' . $currency . '</span></div>';
+                                }
+
+                                if ($discount > 0) {
+                                    $html .= '<div class="flex justify-between"><span class="text-gray-500">Reducere:</span><span class="font-medium text-success-600">-' . number_format($discount, 2) . ' ' . $currency . '</span></div>';
+                                }
+
+                                $html .= '<hr class="my-2 border-gray-200">';
+                                $html .= '<div class="flex justify-between"><span class="font-semibold">Total plătit:</span><span class="font-bold text-lg">' . number_format($total, 2) . ' ' . $currency . '</span></div>';
+
+                                $html .= '</div>';
+
+                                return new HtmlString($html);
+                            }),
+                        Forms\Components\Placeholder::make('commission_details')
+                            ->label('Detalii comision')
+                            ->content(function ($record) {
+                                $commission = $record->commission_amount ?? 0;
+                                $commissionRate = $record->commission_rate ?? 0;
+                                $currency = $record->currency ?? 'RON';
+
+                                // Get commission mode
+                                $event = $record->tickets->first()?->event;
+                                $commissionMode = $event?->commission_mode
+                                    ?? $event?->marketplaceOrganizer?->default_commission_mode
+                                    ?? $record->marketplaceClient?->commission_mode
+                                    ?? 'included';
+
+                                if ($commission <= 0 && $commissionRate <= 0) {
+                                    return new HtmlString('<span class="text-gray-500">Fără comision</span>');
+                                }
+
+                                $html = '<div class="space-y-2 text-sm">';
+                                $html .= '<div class="flex justify-between"><span class="text-gray-500">Rată comision:</span><span class="font-medium">' . number_format($commissionRate, 2) . '%</span></div>';
+                                $html .= '<div class="flex justify-between"><span class="text-gray-500">Valoare comision:</span><span class="font-medium">' . number_format($commission, 2) . ' ' . $currency . '</span></div>';
+                                $html .= '<div class="flex justify-between"><span class="text-gray-500">Mod:</span><span class="font-medium">' . ($commissionMode === 'on_top' ? 'Adăugat peste preț' : 'Inclus în preț') . '</span></div>';
+
+                                // Calculate organizer revenue
+                                $ticketsValue = $record->tickets->sum('price');
+                                $organizerRevenue = $ticketsValue - ($commissionMode === 'included' ? $commission : 0);
+
+                                $html .= '<hr class="my-2 border-gray-200">';
+                                $html .= '<div class="flex justify-between"><span class="text-gray-500">Organizator primește:</span><span class="font-semibold text-success-600">' . number_format($organizerRevenue, 2) . ' ' . $currency . '</span></div>';
+                                $html .= '</div>';
+
+                                return new HtmlString($html);
+                            }),
+                    ]),
+
                 SC\Section::make('Client')
                     ->icon('heroicon-o-user')
                     ->columns(3)

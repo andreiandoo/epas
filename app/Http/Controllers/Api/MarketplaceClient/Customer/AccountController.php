@@ -21,9 +21,12 @@ class AccountController extends BaseController
         $query = Order::where('marketplace_customer_id', $customer->id)
             ->with([
                 'marketplaceEvent:id,name,slug,starts_at,venue_name,venue_city,image',
-                'event:id,title,slug,event_date,featured_image,poster_url',
+                'marketplaceEvent.marketplaceOrganizer:id,default_commission_mode',
+                'event:id,title,slug,event_date,featured_image,poster_url,commission_mode',
                 'event.venue:id,name,city',
-                'tickets',
+                'event.marketplaceOrganizer:id,default_commission_mode',
+                'marketplaceClient:id,commission_mode',
+                'tickets.ticketType:id,name',
             ]);
 
         // Filters
@@ -89,24 +92,71 @@ class AccountController extends BaseController
                 ];
             }
 
+            // Get commission mode from event or organizer
+            $commissionMode = 'included';
+            if ($order->event) {
+                $commissionMode = $order->event->commission_mode
+                    ?? $order->event->marketplaceOrganizer?->default_commission_mode
+                    ?? $order->marketplaceClient?->commission_mode
+                    ?? 'included';
+            } elseif ($order->marketplaceEvent) {
+                $commissionMode = $order->marketplaceEvent->marketplaceOrganizer?->default_commission_mode
+                    ?? $order->marketplaceClient?->commission_mode
+                    ?? 'included';
+            }
+
+            // Format payment method for display
+            $paymentMethod = null;
+            if ($order->payment_processor) {
+                $paymentMethod = match ($order->payment_processor) {
+                    'netopia', 'payment-netopia' => 'Card bancar (Netopia)',
+                    'stripe' => 'Card bancar (Stripe)',
+                    'paypal' => 'PayPal',
+                    'cash' => 'Numerar',
+                    'bank_transfer' => 'Transfer bancar',
+                    default => ucfirst(str_replace(['_', '-'], ' ', $order->payment_processor)),
+                };
+            }
+
             return [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
                 'reference' => $order->order_number,
                 'status' => $order->status,
+                'subtotal' => (float) ($order->subtotal ?? $order->total),
                 'total' => (float) $order->total,
                 'currency' => $order->currency,
                 'tickets_count' => $order->tickets->count(),
                 'promo_discount' => (float) ($order->discount_amount ?? 0),
                 'discount' => (float) ($order->discount_amount ?? 0),
                 'promo_code' => $order->meta['promo_code'] ?? $order->promo_code ?? null,
+                // Commission info
+                'commission_rate' => (float) ($order->commission_rate ?? 0),
+                'commission_amount' => (float) ($order->commission_amount ?? 0),
+                'commission_mode' => $commissionMode, // 'included' or 'on_top'
+                // Payment info
+                'payment_method' => $paymentMethod,
+                'payment_processor' => $order->payment_processor,
+                'payment_status' => $order->payment_status,
+                'paid_at' => $order->paid_at?->toIso8601String(),
                 'event' => $eventData,
-                'items' => $order->tickets->groupBy('ticket_type_id')->map(function ($tickets, $typeId) {
+                'items' => $order->tickets->groupBy('ticket_type_id')->map(function ($tickets, $typeId) use ($order) {
                     $first = $tickets->first();
+                    $basePrice = (float) ($first->price ?? 0);
+                    $quantity = $tickets->count();
+
+                    // Calculate commission per ticket if on_top
+                    $commissionPerTicket = 0;
+                    if ($order->commission_amount && $order->tickets->count() > 0) {
+                        $commissionPerTicket = (float) $order->commission_amount / $order->tickets->count();
+                    }
+
                     return [
                         'name' => $first->ticketType?->name ?? 'Bilet',
-                        'quantity' => $tickets->count(),
-                        'price' => (float) ($first->price ?? 0),
+                        'quantity' => $quantity,
+                        'base_price' => $basePrice,
+                        'price' => $basePrice, // Total price per ticket (includes commission if on_top was already added)
+                        'commission_per_ticket' => round($commissionPerTicket, 2),
                     ];
                 })->values()->toArray(),
                 'created_at' => $order->created_at->toIso8601String(),

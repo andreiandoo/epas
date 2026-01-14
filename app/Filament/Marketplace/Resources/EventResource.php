@@ -292,6 +292,53 @@ class EventResource extends Resource
                         ->visible(fn (SGet $get) => (bool) $get('is_promoted')),
                 ])->columns(1),
 
+            // PUBLICATION STATUS
+            SC\Section::make('Publicare')
+                ->icon('heroicon-o-eye')
+                ->description('Controlează vizibilitatea evenimentului pe site-ul marketplace')
+                ->schema([
+                    SC\Grid::make(2)->schema([
+                        Forms\Components\Toggle::make('is_published')
+                            ->label('Publicat')
+                            ->helperText('Când este activat, evenimentul va fi vizibil pe site-ul marketplace. Când este dezactivat, evenimentul nu va apărea nicăieri.')
+                            ->onIcon('heroicon-m-eye')
+                            ->offIcon('heroicon-m-eye-slash')
+                            ->default(true)
+                            ->live(),
+                        Forms\Components\Placeholder::make('preview_link')
+                            ->label('Link previzualizare')
+                            ->content(function ($record) {
+                                if (!$record) {
+                                    return 'Salvați evenimentul pentru a genera link-ul de previzualizare';
+                                }
+                                $marketplace = $record->marketplaceClient;
+                                $domain = $marketplace?->domains->where('is_primary', true)->first()?->domain
+                                    ?? $marketplace?->domains->first()?->domain;
+                                if (!$domain) {
+                                    return 'Niciun domeniu configurat';
+                                }
+                                $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
+                                $eventUrl = $protocol . '://' . $domain . '/bilete/' . $record->slug;
+                                $previewUrl = $eventUrl . '?preview=1';
+
+                                return new \Illuminate\Support\HtmlString(
+                                    '<div class="space-y-2">' .
+                                    '<a href="' . e($eventUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-primary-600 hover:underline">' .
+                                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>' .
+                                        'Vezi pe site' .
+                                    '</a>' .
+                                    (!$record->is_published ? '<br><a href="' . e($previewUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-warning-600 hover:underline text-sm">' .
+                                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>' .
+                                        'Previzualizare (doar admin)' .
+                                    '</a>' : '') .
+                                    '</div>'
+                                );
+                            })
+                            ->visible(fn ($record) => $record !== null),
+                    ]),
+                ])
+                ->collapsible(),
+
             // FEATURED SETTINGS (Marketplace only)
             SC\Section::make('Featured Settings')
                 ->description('Control where this event appears as featured on the marketplace website')
@@ -1570,6 +1617,13 @@ class EventResource extends Resource
                         return $state?->format('d M Y') ?? $record->range_start_date?->format('d M Y') ?? '-';
                     })
                     ->sortable(),
+                Tables\Columns\IconColumn::make('is_published')
+                    ->boolean()
+                    ->label('Publicat')
+                    ->trueIcon('heroicon-o-eye')
+                    ->falseIcon('heroicon-o-eye-slash')
+                    ->trueColor('success')
+                    ->falseColor('danger'),
                 Tables\Columns\IconColumn::make('is_cancelled')
                     ->boolean()
                     ->label('Cancelled'),
@@ -1582,6 +1636,8 @@ class EventResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\TernaryFilter::make('is_published')
+                    ->label('Publicat'),
                 Tables\Filters\TernaryFilter::make('is_cancelled'),
                 Tables\Filters\TernaryFilter::make('is_sold_out'),
                 Tables\Filters\SelectFilter::make('marketplace_organizer_id')
@@ -1589,6 +1645,26 @@ class EventResource extends Resource
                     ->relationship('marketplaceOrganizer', 'name'),
             ])
             ->actions([
+                Action::make('view_on_site')
+                    ->label('Vezi pe site')
+                    ->icon('heroicon-o-arrow-top-right-on-square')
+                    ->color('gray')
+                    ->url(function (Event $record) {
+                        $marketplace = $record->marketplaceClient;
+                        $domain = $marketplace?->domains->where('is_primary', true)->first()?->domain
+                            ?? $marketplace?->domains->first()?->domain;
+                        if (!$domain) {
+                            return null;
+                        }
+                        $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
+                        $url = $protocol . '://' . $domain . '/bilete/' . $record->slug;
+                        // Add preview param if not published
+                        if (!$record->is_published) {
+                            $url .= '?preview=1';
+                        }
+                        return $url;
+                    })
+                    ->openUrlInNewTab(),
                 Action::make('statistics')
                     ->label('Statistics')
                     ->icon('heroicon-o-chart-bar')

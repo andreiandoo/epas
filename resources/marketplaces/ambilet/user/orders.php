@@ -286,45 +286,62 @@ const UserOrders = {
                         ${order.items.map(item => `
                         <div class="flex justify-between text-sm">
                             <span class="text-muted">${item.quantity}x ${item.name}</span>
-                            <span class="text-secondary">${item.quantity * item.price} lei</span>
+                            <span class="text-secondary">${(item.quantity * item.price).toFixed(2)} lei</span>
                         </div>
                         `).join('')}
+                        ${order.commission_amount && order.commission_mode === 'on_top' ? `
+                        <div class="flex justify-between text-sm">
+                            <span class="text-muted">Comision servicii ${order.commission_rate ? `(${order.commission_rate}%)` : ''}</span>
+                            <span class="text-secondary">${parseFloat(order.commission_amount).toFixed(2)} lei</span>
+                        </div>
+                        ` : ''}
                         ${order.discount ? `
                         <div class="flex justify-between text-sm">
-                            <span class="text-muted">Cod promotional ${order.discount_code ? `(${order.discount_code})` : ''}</span>
-                            <span class="text-success">-${order.discount} lei</span>
+                            <span class="text-muted">Cod promotional ${order.promo_code ? `(${order.promo_code})` : ''}</span>
+                            <span class="text-success">-${parseFloat(order.discount).toFixed(2)} lei</span>
                         </div>
                         ` : ''}
                         <hr class="border-border">
                         <div class="flex justify-between font-semibold">
                             <span class="text-secondary">Total platit</span>
-                            <span class="text-secondary">${order.total} lei</span>
+                            <span class="text-secondary">${parseFloat(order.total).toFixed(2)} lei</span>
                         </div>
+                        ${order.commission_amount && order.commission_mode === 'included' ? `
+                        <div class="flex justify-between text-xs text-muted">
+                            <span>din care comision inclus</span>
+                            <span>${parseFloat(order.commission_amount).toFixed(2)} lei</span>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
-                ${order.payment_method ? `
                 <div>
                     <h4 class="mb-2 text-sm font-semibold text-secondary">Informatii plata</h4>
                     <div class="space-y-2 text-sm">
+                        ${order.payment_method ? `
                         <div class="flex justify-between">
                             <span class="text-muted">Metoda</span>
                             <span class="text-secondary">${order.payment_method}</span>
                         </div>
-                        ${order.payment_date ? `
+                        ` : `
                         <div class="flex justify-between">
-                            <span class="text-muted">Data platii</span>
-                            <span class="text-secondary">${this.formatDateTime(order.payment_date)}</span>
+                            <span class="text-muted">Metoda</span>
+                            <span class="text-secondary">-</span>
+                        </div>
+                        `}
+                        ${order.payment_status ? `
+                        <div class="flex justify-between">
+                            <span class="text-muted">Status</span>
+                            <span class="${order.payment_status === 'paid' ? 'text-success' : 'text-warning'}">${order.payment_status === 'paid' ? 'Platit' : order.payment_status === 'pending' ? 'In asteptare' : order.payment_status}</span>
                         </div>
                         ` : ''}
-                        ${order.transaction_id ? `
+                        ${order.paid_at ? `
                         <div class="flex justify-between">
-                            <span class="text-muted">ID tranzactie</span>
-                            <span class="font-mono text-xs text-secondary">${order.transaction_id}</span>
+                            <span class="text-muted">Data platii</span>
+                            <span class="text-secondary">${this.formatDateTime(order.paid_at)}</span>
                         </div>
                         ` : ''}
                     </div>
                 </div>
-                ` : ''}
             </div>
 
             <div class="flex flex-wrap gap-2 pt-4 border-t border-border">
