@@ -94,17 +94,21 @@ const UserTickets = {
 
     async loadTickets() {
         try {
-            const response = await AmbiletAPI.customer.getTickets();
+            // Use getAllTickets to get all tickets (upcoming + past)
+            const response = await AmbiletAPI.customer.getAllTickets('all');
+            console.log('Tickets response:', response);
             if (response.success && response.data) {
-                const now = new Date();
                 const tickets = response.data.tickets || response.data || [];
-                this.tickets.upcoming = tickets.filter(t => new Date(t.event?.date) >= now);
-                this.tickets.past = tickets.filter(t => new Date(t.event?.date) < now);
+                // API already provides is_upcoming flag
+                this.tickets.upcoming = tickets.filter(t => t.event?.is_upcoming === true);
+                this.tickets.past = tickets.filter(t => t.event?.is_upcoming === false);
+                console.log('Upcoming:', this.tickets.upcoming.length, 'Past:', this.tickets.past.length);
             } else {
+                console.log('No data, using demo');
                 this.loadDemoData();
             }
         } catch (error) {
-            console.log('Using demo data:', error);
+            console.error('Error loading tickets:', error);
             this.loadDemoData();
         }
 
@@ -137,35 +141,56 @@ const UserTickets = {
             return;
         }
 
-        container.innerHTML = this.tickets.upcoming.map((ticket, idx) => `
+        // Group tickets by event
+        const groupedByEvent = {};
+        this.tickets.upcoming.forEach(ticket => {
+            const eventId = ticket.event?.id || 'unknown';
+            if (!groupedByEvent[eventId]) {
+                groupedByEvent[eventId] = {
+                    event: ticket.event,
+                    tickets: []
+                };
+            }
+            groupedByEvent[eventId].tickets.push(ticket);
+        });
+
+        const eventGroups = Object.values(groupedByEvent);
+
+        container.innerHTML = eventGroups.map((group, idx) => {
+            const event = group.event || {};
+            const tickets = group.tickets || [];
+            const daysUntil = event.date ? Math.ceil((new Date(event.date) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+
+            return `
             <div class="overflow-hidden bg-white border ticket-card rounded-2xl border-border">
                 <!-- Event Header -->
                 <div class="p-5 border-b lg:p-6 border-border">
                     <div class="flex gap-4">
+                        ${event.image ? `
                         <div class="flex-shrink-0 w-20 h-20 overflow-hidden lg:w-24 lg:h-24 rounded-xl">
-                            <img src="${ticket.event.image}" class="object-cover w-full h-full" alt="">
-                        </div>
+                            <img src="${event.image}" class="object-cover w-full h-full" alt="">
+                        </div>` : ''}
                         <div class="flex-1 min-w-0">
                             <div class="flex flex-wrap items-center gap-2 mb-2">
-                                <span class="px-2 py-0.5 ${ticket.days_until <= 7 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'} text-xs font-bold rounded">IN ${ticket.days_until} ZILE</span>
-                                <span class="px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded">${ticket.event.genre}</span>
-                                <span class="px-2 py-0.5 ${ticket.ticket_type === 'VIP' ? 'bg-accent text-white' : 'bg-surface text-secondary'} text-xs font-semibold rounded">${ticket.quantity}x ${ticket.ticket_type}</span>
+                                <span class="px-2 py-0.5 ${daysUntil <= 7 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'} text-xs font-bold rounded">IN ${daysUntil} ZILE</span>
+                                <span class="px-2 py-0.5 bg-surface text-secondary text-xs font-semibold rounded">${tickets.length}x ${tickets[0]?.type || 'Bilet'}</span>
                             </div>
-                            <h2 class="text-lg font-bold truncate lg:text-xl text-secondary">${ticket.event.title}</h2>
-                            <p class="hidden mt-1 text-sm text-muted sm:block">${ticket.event.subtitle || ''}</p>
+                            <h2 class="text-lg font-bold truncate lg:text-xl text-secondary">${event.name || 'Eveniment'}</h2>
                             <div class="flex flex-wrap mt-3 text-sm gap-x-4 gap-y-1">
                                 <span class="flex items-center gap-1.5 text-secondary">
                                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                    ${this.formatDateShort(ticket.event.date)}
+                                    ${event.date_formatted || this.formatDateShort(event.date)}
                                 </span>
+                                ${event.time ? `
                                 <span class="flex items-center gap-1.5 text-secondary">
                                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                    ${ticket.event.time}
-                                </span>
+                                    ${event.time}
+                                </span>` : ''}
+                                ${event.venue ? `
                                 <span class="flex items-center gap-1.5 text-secondary">
                                     <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
-                                    ${ticket.event.venue}
-                                </span>
+                                    ${event.venue}${event.city ? ', ' + event.city : ''}
+                                </span>` : ''}
                             </div>
                         </div>
                     </div>
@@ -174,43 +199,23 @@ const UserTickets = {
                 <!-- Tickets Grid -->
                 <div class="p-5 lg:p-6 bg-surface/50">
                     <div class="flex items-center justify-between mb-4">
-                        <p class="text-sm font-semibold text-secondary">${ticket.quantity > 1 ? 'Biletele tale' : 'Biletul tau'}</p>
+                        <p class="text-sm font-semibold text-secondary">${tickets.length > 1 ? 'Biletele tale' : 'Biletul tau'}</p>
                         <div class="flex gap-2 no-print">
                             <button onclick="UserTickets.addToCalendar(${idx})" class="flex items-center gap-1.5 px-3 py-1.5 bg-white text-secondary text-xs font-medium rounded-lg border border-border hover:border-primary hover:text-primary transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                 Calendar
                             </button>
-                            <button onclick="UserTickets.downloadPDF(${idx})" class="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary-dark transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                                PDF
-                            </button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-${Math.min(ticket.tickets.length, 4)} gap-3">
-                        ${ticket.tickets.map((t, i) => `
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-${Math.min(tickets.length, 4)} gap-3">
+                        ${tickets.map((t, i) => `
                         <div class="p-3 text-center bg-white border ticket-qr rounded-xl border-border">
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-xs text-muted">#${i + 1}</span>
-                                <span class="px-1.5 py-0.5 bg-success/10 text-success text-[10px] font-bold rounded">VALID</span>
+                                <span class="px-1.5 py-0.5 ${t.status === 'valid' ? 'bg-success/10 text-success' : t.status === 'used' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'} text-[10px] font-bold rounded uppercase">${t.status === 'valid' ? 'VALID' : t.status === 'used' ? 'FOLOSIT' : t.status?.toUpperCase()}</span>
                             </div>
                             <div class="w-full aspect-square bg-white rounded-lg flex items-center justify-center border border-border mb-2 mx-auto max-w-[120px]">
-                                <svg class="w-full h-full p-2" viewBox="0 0 100 100">
-                                    <rect width="100" height="100" fill="white"/>
-                                    <g fill="#1E293B">
-                                        <rect x="10" y="10" width="25" height="25"/>
-                                        <rect x="65" y="10" width="25" height="25"/>
-                                        <rect x="10" y="65" width="25" height="25"/>
-                                        <rect x="15" y="15" width="15" height="15" fill="white"/>
-                                        <rect x="70" y="15" width="15" height="15" fill="white"/>
-                                        <rect x="15" y="70" width="15" height="15" fill="white"/>
-                                        <rect x="18" y="18" width="9" height="9"/>
-                                        <rect x="73" y="18" width="9" height="9"/>
-                                        <rect x="18" y="73" width="9" height="9"/>
-                                        <rect x="40" y="40" width="20" height="20"/>
-                                        <rect x="45" y="45" width="10" height="10" fill="white"/>
-                                        <rect x="48" y="48" width="4" height="4"/>
-                                    </g>
-                                </svg>
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(t.code)}&color=181622&margin=0" alt="QR" class="w-full h-full">
                             </div>
                             <p class="text-[10px] text-muted font-mono truncate">${t.code}</p>
                             <p class="mt-1 text-xs font-medium text-secondary">${t.type}</p>
@@ -219,7 +224,10 @@ const UserTickets = {
                     </div>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
+
+        // Store grouped data for calendar function
+        this.eventGroups = eventGroups;
     },
 
     renderPast() {
@@ -229,24 +237,45 @@ const UserTickets = {
             return;
         }
 
-        container.innerHTML = this.tickets.past.map(ticket => `
+        // Group tickets by event
+        const groupedByEvent = {};
+        this.tickets.past.forEach(ticket => {
+            const eventId = ticket.event?.id || 'unknown';
+            if (!groupedByEvent[eventId]) {
+                groupedByEvent[eventId] = {
+                    event: ticket.event,
+                    tickets: []
+                };
+            }
+            groupedByEvent[eventId].tickets.push(ticket);
+        });
+
+        const eventGroups = Object.values(groupedByEvent);
+
+        container.innerHTML = eventGroups.map(group => {
+            const event = group.event || {};
+            const tickets = group.tickets || [];
+            const hasCheckedIn = tickets.some(t => t.checked_in);
+
+            return `
             <div class="p-4 bg-white border opacity-75 rounded-xl border-border lg:p-5">
                 <div class="flex gap-4">
+                    ${event.image ? `
                     <div class="flex-shrink-0 w-16 h-16 overflow-hidden rounded-lg lg:w-20 lg:h-20 grayscale">
-                        <img src="${ticket.event.image}" class="object-cover w-full h-full" alt="">
-                    </div>
+                        <img src="${event.image}" class="object-cover w-full h-full" alt="">
+                    </div>` : ''}
                     <div class="flex-1 min-w-0">
                         <div class="flex items-center gap-2 mb-1">
                             <span class="px-2 py-0.5 bg-muted/20 text-muted text-xs font-bold rounded">INCHEIAT</span>
-                            ${ticket.checked_in ? '<span class="px-2 py-0.5 bg-success/10 text-success text-xs font-bold rounded">CHECK-IN OK</span>' : ''}
+                            ${hasCheckedIn ? '<span class="px-2 py-0.5 bg-success/10 text-success text-xs font-bold rounded">CHECK-IN OK</span>' : ''}
                         </div>
-                        <h3 class="font-semibold text-secondary">${ticket.event.title}</h3>
-                        <p class="text-sm text-muted">${this.formatDateShort(ticket.event.date)} - ${ticket.event.venue}</p>
-                        <p class="mt-1 text-xs text-muted">${ticket.quantity}x ${ticket.ticket_type}</p>
+                        <h3 class="font-semibold text-secondary">${event.name || 'Eveniment'}</h3>
+                        <p class="text-sm text-muted">${event.date_formatted || this.formatDateShort(event.date)}${event.venue ? ' - ' + event.venue : ''}</p>
+                        <p class="mt-1 text-xs text-muted">${tickets.length}x ${tickets[0]?.type || 'Bilet'}</p>
                     </div>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     },
 
     showTab(tabName) {
@@ -277,11 +306,25 @@ const UserTickets = {
     },
 
     addToCalendar(idx) {
-        const ticket = this.tickets.upcoming[idx];
-        if (!ticket) return;
+        const group = this.eventGroups?.[idx];
+        if (!group) return;
 
-        const event = ticket.event;
-        const startDate = new Date(event.date + 'T' + event.time + ':00');
+        const event = group.event;
+        const tickets = group.tickets;
+        const ticketCode = tickets[0]?.code || 'ticket';
+
+        // Parse date - handle ISO format
+        let startDate;
+        if (event.date) {
+            startDate = new Date(event.date);
+            // If time is separate, add it
+            if (event.time && !event.date.includes('T')) {
+                const [hours, minutes] = event.time.split(':');
+                startDate.setHours(parseInt(hours) || 19, parseInt(minutes) || 0);
+            }
+        } else {
+            startDate = new Date();
+        }
         const endDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000); // +3 hours
 
         const formatICSDate = (d) => {
@@ -295,11 +338,11 @@ const UserTickets = {
             'BEGIN:VEVENT',
             `DTSTART:${formatICSDate(startDate)}`,
             `DTEND:${formatICSDate(endDate)}`,
-            `SUMMARY:${event.title}`,
-            `DESCRIPTION:${event.subtitle || ''} - ${ticket.quantity}x ${ticket.ticket_type}`,
-            `LOCATION:${event.venue}`,
+            `SUMMARY:${event.name || 'Eveniment'}`,
+            `DESCRIPTION:${tickets.length}x ${tickets[0]?.type || 'Bilet'}`,
+            `LOCATION:${event.venue || ''}${event.city ? ', ' + event.city : ''}`,
             'STATUS:CONFIRMED',
-            `UID:${ticket.code}@ambilet.ro`,
+            `UID:${ticketCode}@ambilet.ro`,
             'END:VEVENT',
             'END:VCALENDAR'
         ].join('\r\n');
@@ -307,7 +350,7 @@ const UserTickets = {
         const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `${event.title.replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
+        link.download = `${(event.name || 'event').replace(/[^a-zA-Z0-9]/g, '_')}.ics`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

@@ -396,6 +396,16 @@ const EventPage = {
             is_featured: eventData.is_featured,
             interested_count: eventData.interested_count || 0,
             views_count: eventData.views_count || 0,
+            // Status flags
+            is_sold_out: eventData.is_sold_out || false,
+            is_cancelled: eventData.is_cancelled || false,
+            cancel_reason: eventData.cancel_reason || null,
+            is_postponed: eventData.is_postponed || false,
+            postponed_reason: eventData.postponed_reason || null,
+            postponed_date: eventData.postponed_date || null,
+            postponed_start_time: eventData.postponed_start_time || null,
+            postponed_door_time: eventData.postponed_door_time || null,
+            postponed_end_time: eventData.postponed_end_time || null,
             venue: venueData ? {
                 name: venueData.name,
                 slug: venueData.slug,
@@ -494,6 +504,9 @@ const EventPage = {
         // Badges
         this.renderBadges(e);
 
+        // Status alerts (cancelled, postponed)
+        this.renderStatusAlerts(e);
+
         // Title
         document.getElementById(this.elements.eventTitle).textContent = e.title;
 
@@ -546,13 +559,104 @@ const EventPage = {
      */
     renderBadges(e) {
         const badgesHtml = [];
+
+        // Status badges (priority order)
+        if (e.is_cancelled) {
+            badgesHtml.push('<span class="px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg uppercase">ANULAT</span>');
+        } else if (e.is_postponed) {
+            badgesHtml.push('<span class="px-3 py-1.5 bg-orange-500 text-white text-xs font-bold rounded-lg uppercase">AMÂNAT</span>');
+        } else if (e.is_sold_out) {
+            badgesHtml.push('<span class="px-3 py-1.5 bg-gray-600 text-white text-xs font-bold rounded-lg uppercase">SOLD OUT</span>');
+        }
+
+        // Category badge
         if (e.category) {
             badgesHtml.push('<span class="px-3 py-1.5 bg-accent text-white text-xs font-bold rounded-lg uppercase">' + e.category + '</span>');
         }
-        if (e.is_popular) {
+
+        // Popular badge (only if not cancelled/postponed/sold out)
+        if (e.is_popular && !e.is_cancelled && !e.is_postponed && !e.is_sold_out) {
             badgesHtml.push('<span class="px-3 py-1.5 bg-primary text-white text-xs font-bold rounded-lg uppercase">Popular</span>');
         }
+
         document.getElementById(this.elements.eventBadges).innerHTML = badgesHtml.join('');
+    },
+
+    /**
+     * Render status alerts (cancelled, postponed, sold out)
+     */
+    renderStatusAlerts(e) {
+        // Remove any existing status alert
+        const existingAlert = document.getElementById('event-status-alert');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+
+        let alertHtml = '';
+
+        if (e.is_cancelled) {
+            alertHtml = `
+                <div id="event-status-alert" class="p-4 mb-6 border-l-4 border-red-500 bg-red-50 rounded-r-xl">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-6 h-6 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div>
+                            <h3 class="font-bold text-red-800">Eveniment anulat</h3>
+                            ${e.cancel_reason ? '<p class="mt-1 text-sm text-red-700">' + e.cancel_reason + '</p>' : ''}
+                            <p class="mt-2 text-sm text-red-600">Biletele nu mai sunt disponibile pentru acest eveniment.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (e.is_postponed) {
+            const months = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'];
+            let newDateText = '';
+            if (e.postponed_date) {
+                const newDate = new Date(e.postponed_date);
+                newDateText = newDate.getDate() + ' ' + months[newDate.getMonth()] + ' ' + newDate.getFullYear();
+                if (e.postponed_start_time) {
+                    newDateText += ' la ora ' + e.postponed_start_time;
+                }
+            }
+
+            alertHtml = `
+                <div id="event-status-alert" class="p-4 mb-6 border-l-4 border-orange-500 bg-orange-50 rounded-r-xl">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-6 h-6 text-orange-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div>
+                            <h3 class="font-bold text-orange-800">Eveniment amânat</h3>
+                            ${e.postponed_reason ? '<p class="mt-1 text-sm text-orange-700">' + e.postponed_reason + '</p>' : ''}
+                            ${newDateText ? '<p class="mt-2 text-sm font-semibold text-orange-800">Noua dată: ' + newDateText + '</p>' : '<p class="mt-2 text-sm text-orange-600">Noua dată va fi anunțată în curând.</p>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else if (e.is_sold_out) {
+            alertHtml = `
+                <div id="event-status-alert" class="p-4 mb-6 border-l-4 border-gray-500 bg-gray-50 rounded-r-xl">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-6 h-6 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div>
+                            <h3 class="font-bold text-gray-800">Sold Out</h3>
+                            <p class="mt-1 text-sm text-gray-600">Toate biletele pentru acest eveniment au fost vândute.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (alertHtml) {
+            // Insert alert before the title
+            const titleEl = document.getElementById(this.elements.eventTitle);
+            if (titleEl) {
+                titleEl.insertAdjacentHTML('beforebegin', alertHtml);
+            }
+        }
     },
 
     /**

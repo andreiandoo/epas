@@ -57,7 +57,30 @@ class OrderResource extends Resource
                             } . '</span>')),
                         Forms\Components\Placeholder::make('total')
                             ->label('Total')
-                            ->content(fn ($record) => new HtmlString('<span class="text-lg font-bold">' . number_format($record->total ?? ($record->total_cents / 100), 2) . ' ' . ($record->currency ?? 'RON') . '</span>')),
+                            ->content(function ($record) {
+                                $currency = $record->currency ?? 'RON';
+                                $baseTotal = $record->total ?? ($record->total_cents / 100);
+
+                                // Get commission info from event
+                                $event = $record->event;
+                                $commissionRate = $event?->commission_rate
+                                    ?? $event?->marketplaceOrganizer?->commission_rate
+                                    ?? 0;
+                                $commissionMode = $event?->commission_mode
+                                    ?? $event?->marketplaceOrganizer?->default_commission_mode
+                                    ?? $record->marketplaceClient?->commission_mode
+                                    ?? 'included';
+
+                                // If on_top mode, add commission to total
+                                $isOnTop = in_array($commissionMode, ['on_top', 'add_on_top', 'added_on_top']);
+                                if ($isOnTop && $commissionRate > 0) {
+                                    $ticketsValue = $record->tickets->sum('price');
+                                    $commission = $ticketsValue * ($commissionRate / 100);
+                                    $baseTotal = $ticketsValue + $commission;
+                                }
+
+                                return new HtmlString('<span class="text-lg font-bold">' . number_format($baseTotal, 2) . ' ' . $currency . '</span>');
+                            }),
                         Forms\Components\Placeholder::make('created_at')
                             ->label('Data comenzii')
                             ->content(fn ($record) => $record->created_at?->format('d M Y H:i')),
@@ -67,6 +90,33 @@ class OrderResource extends Resource
                         Forms\Components\Placeholder::make('updated_at')
                             ->label('Ultima actualizare')
                             ->content(fn ($record) => $record->updated_at?->format('d M Y H:i')),
+                        Forms\Components\Placeholder::make('savings')
+                            ->label('Economii')
+                            ->content(function ($record) {
+                                $currency = $record->currency ?? 'RON';
+                                $savings = 0;
+
+                                // Add promo/discount savings
+                                $discount = $record->promo_discount ?? $record->discount_amount ?? $record->meta['discount_amount'] ?? $record->meta['discount'] ?? 0;
+                                $savings += (float) $discount;
+
+                                // Add target_price savings (if event had target_price > ticket price)
+                                $event = $record->event;
+                                $targetPrice = $event?->target_price ?? 0;
+                                if ($targetPrice > 0) {
+                                    foreach ($record->tickets as $ticket) {
+                                        $ticketPrice = $ticket->price ?? 0;
+                                        if ($targetPrice > $ticketPrice && $ticketPrice > 0) {
+                                            $savings += ($targetPrice - $ticketPrice);
+                                        }
+                                    }
+                                }
+
+                                if ($savings > 0) {
+                                    return new HtmlString('<span class="text-lg font-bold text-success-600">-' . number_format($savings, 2) . ' ' . $currency . '</span>');
+                                }
+                                return new HtmlString('<span class="text-muted">-</span>');
+                            }),
                     ]),
 
                 SC\Section::make('Reducere aplicată')
@@ -144,8 +194,12 @@ class OrderResource extends Resource
                                     $html .= '<div class="flex justify-between"><span class="text-gray-500">Reducere:</span><span class="font-medium text-success-600">-' . number_format($discount, 2) . ' ' . $currency . '</span></div>';
                                 }
 
+                                // Calculate final total - for on_top, add commission
+                                $isOnTop = in_array($commissionMode, ['on_top', 'add_on_top', 'added_on_top']);
+                                $finalTotal = $isOnTop ? ($ticketsValue + $commission - $discount) : $total;
+
                                 $html .= '<hr class="my-2 border-gray-200">';
-                                $html .= '<div class="flex justify-between"><span class="font-semibold">Total plătit:</span><span class="font-bold text-lg">' . number_format($total, 2) . ' ' . $currency . '</span></div>';
+                                $html .= '<div class="flex justify-between"><span class="font-semibold">Total plătit:</span><span class="font-bold text-lg">' . number_format($finalTotal, 2) . ' ' . $currency . '</span></div>';
 
                                 $html .= '</div>';
 
