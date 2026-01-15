@@ -140,8 +140,8 @@ class EventResource extends Resource
                                     ])->columns(3)->columnSpanFull(),
                             ]),
 
-                        // FLAGS
-                        SC\Section::make('Status Flags')
+                        // FLAGS (no header - just the toggles)
+                        SC\Group::make()
                             ->schema([
                                 SC\Grid::make(5)->schema([
                                     Forms\Components\Toggle::make('is_sold_out')
@@ -1528,6 +1528,52 @@ class EventResource extends Resource
                 SC\Group::make()
                     ->columnSpan(1)
                     ->schema([
+                        SC\Grid::make(1)->schema([
+                            Forms\Components\Toggle::make('is_published')
+                                ->label('Publicat')
+                                ->hintIcon('heroicon-o-information-circle', tooltip: 'Când este activat, evenimentul va fi vizibil pe site-ul marketplace. Când este dezactivat, evenimentul nu va apărea nicăieri.')
+                                ->onIcon('heroicon-m-eye')
+                                ->offIcon('heroicon-m-eye-slash')
+                                ->default(true)
+                                ->live(),
+                            Forms\Components\Placeholder::make('preview_link')
+                                ->label('Link previzualizare')
+                                ->content(function (?Event $record) use ($marketplace) {
+                                    if (!$record || !$record->exists) {
+                                        return new \Illuminate\Support\HtmlString('<span class="text-gray-500">Salvați evenimentul pentru a genera link-ul de previzualizare</span>');
+                                    }
+                                    // Use the marketplace from form context (not from record) for consistency
+                                    $eventMarketplace = $record->marketplaceClient ?? $marketplace;
+                                    if (!$eventMarketplace) {
+                                        return new \Illuminate\Support\HtmlString('<span class="text-warning-600">Niciun marketplace configurat</span>');
+                                    }
+                                    // MarketplaceClient has a single 'domain' field, not a 'domains' relationship
+                                    $domain = $eventMarketplace->domain;
+                                    if (!$domain) {
+                                        return new \Illuminate\Support\HtmlString('<span class="text-warning-600">Niciun domeniu configurat pentru marketplace</span>');
+                                    }
+                                    // Strip any existing protocol from domain (handle various formats)
+                                    $domain = preg_replace('#^(https?:?/?/?|//)#i', '', $domain);
+                                    $domain = ltrim($domain, '/');
+                                    $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
+                                    $eventUrl = $protocol . '://' . $domain . '/bilete/' . $record->slug;
+                                    $previewUrl = $eventUrl . '?preview=1';
+
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<div class="space-y-2">' .
+                                        '<a href="' . e($eventUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-primary-600 hover:underline">' .
+                                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>' .
+                                            'Vezi pe site' .
+                                        '</a>' .
+                                        (!$record->is_published ? '<br><a href="' . e($previewUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-warning-600 hover:underline text-sm">' .
+                                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>' .
+                                            'Previzualizare (doar admin)' .
+                                        '</a>' : '') .
+                                        '</div>'
+                                    );
+                                }),
+                        ]),
+                        
                         // 1. Quick Stats Card - Vânzări LIVE
                         SC\Section::make(fn () => new HtmlString('Vânzări <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 ring-1 ring-inset ring-green-500/30">LIVE</span>'))
                             ->icon('heroicon-o-chart-bar')
@@ -1592,7 +1638,6 @@ class EventResource extends Resource
                             // 2. Organizer Quick Info
                         SC\Section::make('Organizator')
                             ->icon('heroicon-o-building-office-2')
-                            ->description('Selectează organizatorul evenimentului')
                             ->compact()
                             ->schema([
                                 Forms\Components\Select::make('marketplace_organizer_id')
@@ -1663,8 +1708,8 @@ class EventResource extends Resource
                                         $commissionModeLabel = $commissionMode === 'included' ? 'inclus' : 'peste';
                                         
                                         return new HtmlString("
-                                            <div class='space-y-2 text-sm'>
-                                                <div class='flex items-center gap-2'>
+                                            <div class='text-sm'>
+                                                <div class='pb-2 flex items-center gap-2'>
                                                     <div class='w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-xs font-bold'>
                                                         " . strtoupper(substr($organizer->name, 0, 2)) . "
                                                     </div>
@@ -1858,7 +1903,7 @@ class EventResource extends Resource
                                 ])->fullWidth(),
                                 SC\Actions::make([
                                     Action::make('generate_document')
-                                        ->label('Generează document')
+                                        ->label('Generează')
                                         ->icon('heroicon-o-document-plus')
                                         ->color('primary')
                                         ->size('sm')
@@ -1879,7 +1924,7 @@ class EventResource extends Resource
                                                     ->helperText('Alege un template de document pentru a genera PDF-ul.'),
                                             ];
                                         })
-                                        ->modalHeading('Generează')
+                                        ->modalHeading('Generează documente')
                                         ->modalDescription('Selectează un template pentru a genera documentul PDF pentru acest eveniment.')
                                         ->modalSubmitActionLabel('Generează')
                                         ->action(function (array $data, ?Event $record) {

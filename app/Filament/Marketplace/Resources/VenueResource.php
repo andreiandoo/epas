@@ -50,7 +50,6 @@ class VenueResource extends Resource
             // ============================================================
             SC\Section::make('Caută locații existente')
                 ->description('Caută în toate locațiile din sistem. Dacă găsești locația dorită, o poți adăuga ca partener în loc să creezi una nouă.')
-                ->icon('heroicon-o-magnifying-glass')
                 ->collapsed(false)
                 ->visible(fn ($operation) => $operation === 'create')
                 ->schema([
@@ -58,6 +57,7 @@ class VenueResource extends Resource
                         ->label('Caută o locație existentă')
                         ->placeholder('Scrie numele sau orașul pentru a căuta...')
                         ->searchable()
+                        ->prefixIcon('heroicon-o-magnifying-glass')
                         ->getSearchResultsUsing(function (string $search) use ($marketplace): array {
                             if (strlen($search) < 2) {
                                 return [];
@@ -69,11 +69,7 @@ class VenueResource extends Resource
                             $normalizedSearch = strtr($normalizedSearch, $diacritics);
 
                             return Venue::query()
-                                ->where(function (Builder $q) use ($marketplace) {
-                                    // Show venues that are NOT already associated with this marketplace
-                                    $q->whereNull('marketplace_client_id')
-                                        ->orWhere('marketplace_client_id', '!=', $marketplace?->id);
-                                })
+                                // Search ALL venues (including this marketplace's own to prevent duplicates)
                                 ->where(function (Builder $q) use ($normalizedSearch, $search) {
                                     // Search in name JSON field
                                     $q->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ["%{$normalizedSearch}%"])
@@ -85,11 +81,18 @@ class VenueResource extends Resource
                                 })
                                 ->limit(20)
                                 ->get()
-                                ->mapWithKeys(function (Venue $venue) {
+                                ->mapWithKeys(function (Venue $venue) use ($marketplace) {
                                     $name = $venue->getTranslation('name', 'ro') ?? $venue->getTranslation('name', 'en') ?? 'Locație';
                                     $city = $venue->city ? " - {$venue->city}" : '';
                                     $capacity = $venue->capacity_total ? " ({$venue->capacity_total} locuri)" : '';
-                                    $status = $venue->marketplace_client_id ? ' [Aparține altui marketplace]' : '';
+                                    // Show different status based on ownership
+                                    if ($venue->marketplace_client_id === $marketplace?->id) {
+                                        $status = ' [Deja în lista ta]';
+                                    } elseif ($venue->marketplace_client_id) {
+                                        $status = ' [Aparține altui marketplace]';
+                                    } else {
+                                        $status = '';
+                                    }
                                     return [$venue->id => $name . $city . $capacity . $status];
                                 })
                                 ->toArray();
@@ -99,7 +102,7 @@ class VenueResource extends Resource
                             // Store the selected venue ID for the action to use
                             $set('selected_venue_id', $state);
                         })
-                        ->helperText('Selectează o locație pentru a vedea detaliile și opțiunea de adăugare ca partener')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Selectează o locație pentru a vedea detaliile și opțiunea de adăugare ca partener')
                         ->columnSpanFull(),
 
                     Forms\Components\Hidden::make('selected_venue_id'),
@@ -120,10 +123,14 @@ class VenueResource extends Resource
                             $address = $venue->address ?? '-';
                             $capacity = $venue->capacity_total ?? '-';
 
-                            $isAvailable = is_null($venue->marketplace_client_id);
-                            $statusBadge = $isAvailable
-                                ? '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full dark:text-green-400 dark:bg-green-900/30">Disponibilă pentru parteneriat</span>'
-                                : '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 rounded-full dark:text-yellow-400 dark:bg-yellow-900/30">Aparține altui marketplace</span>';
+                            // Determine status based on ownership
+                            if ($venue->marketplace_client_id === $marketplace?->id) {
+                                $statusBadge = '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full dark:text-blue-400 dark:bg-blue-900/30">Deja în lista ta</span>';
+                            } elseif ($venue->marketplace_client_id) {
+                                $statusBadge = '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 rounded-full dark:text-yellow-400 dark:bg-yellow-900/30">Aparține altui marketplace</span>';
+                            } else {
+                                $statusBadge = '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full dark:text-green-400 dark:bg-green-900/30">Disponibilă pentru parteneriat</span>';
+                            }
 
                             return new HtmlString("
                                 <div class='p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
@@ -204,18 +211,20 @@ class VenueResource extends Resource
                                 return redirect(static::getUrl('index'));
                             }),
                     ])->visible(fn (SGet $get) => !empty($get('search_existing_venue'))),
-
-                    Forms\Components\Placeholder::make('or_create_new')
-                        ->label('')
-                        ->content(new HtmlString('
-                            <div class="flex items-center gap-4 py-2">
-                                <div class="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
-                                <span class="text-sm text-gray-500 dark:text-gray-400">sau creează o locație nouă mai jos</span>
-                                <div class="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
-                            </div>
-                        '))
-                        ->columnSpanFull(),
                 ]),
+
+            // Separator between search and create new (only on create page)
+            Forms\Components\Placeholder::make('or_create_new')
+                ->hiddenLabel()
+                ->visible(fn ($operation) => $operation === 'create')
+                ->content(new HtmlString('
+                    <div class="flex items-center gap-4 py-4">
+                        <div class="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">sau creează o locație nouă mai jos</span>
+                        <div class="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+                    </div>
+                '))
+                ->columnSpanFull(),
 
             // NAME & SLUG - EN/RO
             SC\Section::make('Venue Identity')
@@ -489,7 +498,7 @@ class VenueResource extends Resource
                 ->schema([
                     Forms\Components\Toggle::make('is_featured')
                         ->label('Locație promovată')
-                        ->helperText('Locația va apărea în secțiunea de locații promovate pe website')
+                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Locația va apărea în secțiunea de locații promovate pe website')
                         ->default(false),
                 ])->columns(1),
 
