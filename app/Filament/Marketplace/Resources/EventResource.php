@@ -15,6 +15,10 @@ use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceRegion;
 use App\Models\Tax\GeneralTax;
 use App\Models\Venue;
+use App\Models\MarketplaceTaxTemplate;
+use App\Models\EventGeneratedDocument;
+use App\Models\MarketplaceEvent;
+use Illuminate\Support\Facades\Storage;
 use Filament\Forms;
 use Illuminate\Support\HtmlString;
 use Filament\Resources\Resource;
@@ -1729,8 +1733,8 @@ class EventResource extends Resource
                             ->compact()
                             ->collapsed()
                             ->schema([
-                                Forms\Components\Actions::make([
-                                    Forms\Components\Actions\Action::make('duplicate')
+                                SC\Actions::make([
+                                    SC\Actions\Action::make('duplicate')
                                         ->label('Duplică')
                                         ->icon('heroicon-o-document-duplicate')
                                         ->color('gray')
@@ -1774,7 +1778,7 @@ class EventResource extends Resource
 
                                             return redirect(static::getUrl('edit', ['record' => $newEvent]));
                                         }),
-                                    Forms\Components\Actions\Action::make('preview')
+                                    SC\Actions\Action::make('preview')
                                         ->label('Preview')
                                         ->icon('heroicon-o-eye')
                                         ->color('gray')
@@ -1789,8 +1793,8 @@ class EventResource extends Resource
                                         })
                                         ->openUrlInNewTab(),
                                 ])->fullWidth(),
-                                Forms\Components\Actions::make([
-                                    Forms\Components\Actions\Action::make('export')
+                                SC\Actions::make([
+                                    SC\Actions\Action::make('export')
                                         ->label('Export')
                                         ->icon('heroicon-o-arrow-down-tray')
                                         ->color('gray')
@@ -1812,13 +1816,261 @@ class EventResource extends Resource
                                                 'Content-Type' => 'application/json',
                                             ]);
                                         }),
-                                    Forms\Components\Actions\Action::make('report')
-                                        ->label('Raport')
-                                        ->icon('heroicon-o-document-chart-bar')
+                                    SC\Actions\Action::make('statistics')
+                                        ->label('Statistici')
+                                        ->icon('heroicon-o-chart-pie')
                                         ->color('gray')
                                         ->size('sm')
                                         ->visible(fn (?Event $record) => $record && $record->exists)
                                         ->url(fn (?Event $record) => $record ? static::getUrl('statistics', ['record' => $record]) : null),
+                                ])->fullWidth(),
+                                SC\Actions::make([
+                                    SC\Actions\Action::make('generate_document')
+                                        ->label('Generează document')
+                                        ->icon('heroicon-o-document-plus')
+                                        ->color('primary')
+                                        ->size('sm')
+                                        ->visible(fn (?Event $record) => $record && $record->exists)
+                                        ->form(function () use ($marketplace) {
+                                            $templates = MarketplaceTaxTemplate::where('marketplace_client_id', $marketplace?->id)
+                                                ->where('is_active', true)
+                                                ->orderBy('name')
+                                                ->pluck('name', 'id')
+                                                ->toArray();
+
+                                            return [
+                                                Forms\Components\Select::make('template_id')
+                                                    ->label('Selectează template')
+                                                    ->options($templates)
+                                                    ->required()
+                                                    ->searchable()
+                                                    ->helperText('Alege un template de document pentru a genera PDF-ul.'),
+                                            ];
+                                        })
+                                        ->modalHeading('Generează document')
+                                        ->modalDescription('Selectează un template pentru a genera documentul PDF pentru acest eveniment.')
+                                        ->modalSubmitActionLabel('Generează')
+                                        ->action(function (array $data, ?Event $record) {
+                                            if (!$record) return;
+
+                                            $template = MarketplaceTaxTemplate::find($data['template_id']);
+                                            if (!$template) {
+                                                \Filament\Notifications\Notification::make()
+                                                    ->title('Eroare')
+                                                    ->body('Template-ul selectat nu a fost găsit.')
+                                                    ->danger()
+                                                    ->send();
+                                                return;
+                                            }
+
+                                            try {
+                                                $user = auth()->user();
+                                                $document = EventGeneratedDocument::generateDocument(
+                                                    event: $record,
+                                                    template: $template,
+                                                    generatedBy: $user
+                                                );
+
+                                                \Filament\Notifications\Notification::make()
+                                                    ->title('Document generat')
+                                                    ->body("Documentul \"{$document->filename}\" a fost generat cu succes.")
+                                                    ->success()
+                                                    ->actions([
+                                                        \Filament\Notifications\Actions\Action::make('download')
+                                                            ->label('Descarcă')
+                                                            ->url(Storage::disk('public')->url($document->file_path))
+                                                            ->openUrlInNewTab(),
+                                                    ])
+                                                    ->send();
+                                            } catch (\Exception $e) {
+                                                \Filament\Notifications\Notification::make()
+                                                    ->title('Eroare la generare')
+                                                    ->body($e->getMessage())
+                                                    ->danger()
+                                                    ->send();
+                                            }
+                                        }),
+                                    SC\Actions\Action::make('view_documents')
+                                        ->label('Documente')
+                                        ->icon('heroicon-o-folder-open')
+                                        ->color('gray')
+                                        ->size('sm')
+                                        ->visible(fn (?Event $record) => $record && $record->exists)
+                                        ->modalHeading('Documente generate')
+                                        ->modalSubmitAction(false)
+                                        ->modalCancelActionLabel('Închide')
+                                        ->modalContent(function (?Event $record) {
+                                            if (!$record) return new HtmlString('<p>Nu există documente.</p>');
+
+                                            $documents = EventGeneratedDocument::where('event_id', $record->id)
+                                                ->orderByDesc('created_at')
+                                                ->get();
+
+                                            if ($documents->isEmpty()) {
+                                                return new HtmlString('
+                                                    <div class="text-center py-8">
+                                                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                                        </svg>
+                                                        <p class="mt-2 text-sm text-gray-500">Nu există documente generate pentru acest eveniment.</p>
+                                                        <p class="text-xs text-gray-400">Folosește butonul "Generează document" pentru a crea un nou document.</p>
+                                                    </div>
+                                                ');
+                                            }
+
+                                            $html = '<div class="divide-y divide-gray-200 dark:divide-gray-700">';
+                                            foreach ($documents as $doc) {
+                                                $downloadUrl = Storage::disk('public')->url($doc->file_path);
+                                                $templateName = $doc->template?->name ?? $doc->meta['template_name'] ?? 'Unknown';
+                                                $templateType = $doc->template?->type ?? $doc->meta['template_type'] ?? '';
+                                                $typeLabel = MarketplaceTaxTemplate::TYPES[$templateType] ?? ucfirst($templateType);
+                                                $generatedBy = $doc->generated_by_name ?? 'System';
+                                                $createdAt = $doc->created_at->format('d M Y, H:i');
+                                                $fileSize = $doc->file_size_formatted;
+
+                                                $html .= "
+                                                    <div class='py-3 flex items-center justify-between gap-4'>
+                                                        <div class='flex items-center gap-3 min-w-0'>
+                                                            <div class='flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center'>
+                                                                <svg class='w-5 h-5 text-red-600 dark:text-red-400' fill='currentColor' viewBox='0 0 20 20'>
+                                                                    <path fill-rule='evenodd' d='M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z' clip-rule='evenodd'/>
+                                                                </svg>
+                                                            </div>
+                                                            <div class='min-w-0'>
+                                                                <div class='text-sm font-medium text-gray-900 dark:text-white truncate'>{$doc->filename}</div>
+                                                                <div class='text-xs text-gray-500 dark:text-gray-400'>
+                                                                    <span class='inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 mr-1'>{$typeLabel}</span>
+                                                                    {$templateName}
+                                                                </div>
+                                                                <div class='text-xs text-gray-400 dark:text-gray-500 mt-0.5'>
+                                                                    {$generatedBy} · {$createdAt} · {$fileSize}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <a href='{$downloadUrl}' target='_blank' class='flex-shrink-0 inline-flex items-center px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 shadow-sm text-xs font-medium rounded text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500'>
+                                                            <svg class='w-4 h-4 mr-1' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                                                                <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4'/>
+                                                            </svg>
+                                                            Descarcă
+                                                        </a>
+                                                    </div>
+                                                ";
+                                            }
+                                            $html .= '</div>';
+
+                                            return new HtmlString($html);
+                                        }),
+                                ])->fullWidth(),
+                                SC\Actions::make([
+                                    SC\Actions\Action::make('activity_log')
+                                        ->label('Istoric complet')
+                                        ->icon('heroicon-o-clock')
+                                        ->color('gray')
+                                        ->size('sm')
+                                        ->visible(fn (?Event $record) => $record && $record->exists)
+                                        ->modalHeading('Istoric activitate')
+                                        ->modalSubmitAction(false)
+                                        ->modalCancelActionLabel('Închide')
+                                        ->modalWidth('2xl')
+                                        ->modalContent(function (?Event $record) {
+                                            if (!$record) return new HtmlString('<p>Nu există activitate.</p>');
+
+                                            try {
+                                                $activities = \Spatie\Activitylog\Models\Activity::query()
+                                                    ->where('subject_type', Event::class)
+                                                    ->where('subject_id', $record->id)
+                                                    ->orderByDesc('created_at')
+                                                    ->limit(50)
+                                                    ->get();
+
+                                                if ($activities->isEmpty()) {
+                                                    return new HtmlString('
+                                                        <div class="text-center py-8">
+                                                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                            </svg>
+                                                            <p class="mt-2 text-sm text-gray-500">Nu există activitate înregistrată.</p>
+                                                        </div>
+                                                    ');
+                                                }
+
+                                                $html = '<div class="space-y-3 max-h-96 overflow-y-auto">';
+                                                foreach ($activities as $activity) {
+                                                    $eventName = match ($activity->event ?? $activity->description) {
+                                                        'created' => 'Creat',
+                                                        'updated' => 'Modificat',
+                                                        'deleted' => 'Șters',
+                                                        'published' => 'Publicat',
+                                                        'unpublished' => 'Nepublicat',
+                                                        'approved' => 'Aprobat',
+                                                        'rejected' => 'Respins',
+                                                        default => ucfirst($activity->event ?? $activity->description ?? 'Acțiune'),
+                                                    };
+
+                                                    $iconBg = match ($activity->event ?? $activity->description) {
+                                                        'created' => 'bg-emerald-100 dark:bg-emerald-900',
+                                                        'updated' => 'bg-blue-100 dark:bg-blue-900',
+                                                        'deleted' => 'bg-red-100 dark:bg-red-900',
+                                                        'published', 'approved' => 'bg-green-100 dark:bg-green-900',
+                                                        'unpublished', 'rejected' => 'bg-orange-100 dark:bg-orange-900',
+                                                        default => 'bg-gray-100 dark:bg-gray-700',
+                                                    };
+
+                                                    $iconColor = match ($activity->event ?? $activity->description) {
+                                                        'created' => 'text-emerald-600 dark:text-emerald-400',
+                                                        'updated' => 'text-blue-600 dark:text-blue-400',
+                                                        'deleted' => 'text-red-600 dark:text-red-400',
+                                                        'published', 'approved' => 'text-green-600 dark:text-green-400',
+                                                        'unpublished', 'rejected' => 'text-orange-600 dark:text-orange-400',
+                                                        default => 'text-gray-600 dark:text-gray-400',
+                                                    };
+
+                                                    $causer = $activity->causer?->name ?? 'Sistem';
+                                                    $time = $activity->created_at->format('d M Y, H:i');
+                                                    $timeAgo = $activity->created_at->diffForHumans();
+
+                                                    // Show changed properties if available
+                                                    $changes = '';
+                                                    if ($activity->properties && isset($activity->properties['attributes'])) {
+                                                        $attrs = $activity->properties['attributes'];
+                                                        $oldAttrs = $activity->properties['old'] ?? [];
+                                                        $changedFields = array_keys($attrs);
+                                                        if (count($changedFields) > 0 && count($changedFields) <= 5) {
+                                                            $changes = '<div class="mt-1 text-xs text-gray-400">Câmpuri modificate: ' . implode(', ', $changedFields) . '</div>';
+                                                        } elseif (count($changedFields) > 5) {
+                                                            $changes = '<div class="mt-1 text-xs text-gray-400">' . count($changedFields) . ' câmpuri modificate</div>';
+                                                        }
+                                                    }
+
+                                                    $html .= "
+                                                        <div class='flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50'>
+                                                            <div class='flex-shrink-0 w-8 h-8 {$iconBg} rounded-full flex items-center justify-center'>
+                                                                <svg class='w-4 h-4 {$iconColor}' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                                                                    <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'/>
+                                                                </svg>
+                                                            </div>
+                                                            <div class='flex-1 min-w-0'>
+                                                                <div class='flex items-center gap-2'>
+                                                                    <span class='font-medium text-sm text-gray-900 dark:text-white'>{$eventName}</span>
+                                                                    <span class='text-xs text-gray-500'>de {$causer}</span>
+                                                                </div>
+                                                                <div class='text-xs text-gray-400 mt-0.5'>{$time} ({$timeAgo})</div>
+                                                                {$changes}
+                                                            </div>
+                                                        </div>
+                                                    ";
+                                                }
+                                                $html .= '</div>';
+
+                                                return new HtmlString($html);
+                                            } catch (\Exception $e) {
+                                                return new HtmlString('
+                                                    <div class="text-center py-8">
+                                                        <p class="text-sm text-gray-500">Nu s-a putut încărca istoricul activității.</p>
+                                                    </div>
+                                                ');
+                                            }
+                                        }),
                                 ])->fullWidth(),
                             ]),
 
