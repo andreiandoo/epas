@@ -1734,7 +1734,7 @@ class EventResource extends Resource
                             ->collapsed()
                             ->schema([
                                 SC\Actions::make([
-                                    SC\Actions\Action::make('duplicate')
+                                    Action::make('duplicate')
                                         ->label('Duplică')
                                         ->icon('heroicon-o-document-duplicate')
                                         ->color('gray')
@@ -1778,7 +1778,7 @@ class EventResource extends Resource
 
                                             return redirect(static::getUrl('edit', ['record' => $newEvent]));
                                         }),
-                                    SC\Actions\Action::make('preview')
+                                    Action::make('preview')
                                         ->label('Preview')
                                         ->icon('heroicon-o-eye')
                                         ->color('gray')
@@ -1794,7 +1794,7 @@ class EventResource extends Resource
                                         ->openUrlInNewTab(),
                                 ])->fullWidth(),
                                 SC\Actions::make([
-                                    SC\Actions\Action::make('export')
+                                    Action::make('export')
                                         ->label('Export')
                                         ->icon('heroicon-o-arrow-down-tray')
                                         ->color('gray')
@@ -1816,7 +1816,7 @@ class EventResource extends Resource
                                                 'Content-Type' => 'application/json',
                                             ]);
                                         }),
-                                    SC\Actions\Action::make('statistics')
+                                    Action::make('statistics')
                                         ->label('Statistici')
                                         ->icon('heroicon-o-chart-pie')
                                         ->color('gray')
@@ -1825,7 +1825,7 @@ class EventResource extends Resource
                                         ->url(fn (?Event $record) => $record ? static::getUrl('statistics', ['record' => $record]) : null),
                                 ])->fullWidth(),
                                 SC\Actions::make([
-                                    SC\Actions\Action::make('generate_document')
+                                    Action::make('generate_document')
                                         ->label('Generează document')
                                         ->icon('heroicon-o-document-plus')
                                         ->color('primary')
@@ -1890,7 +1890,7 @@ class EventResource extends Resource
                                                     ->send();
                                             }
                                         }),
-                                    SC\Actions\Action::make('view_documents')
+                                    Action::make('view_documents')
                                         ->label('Documente')
                                         ->icon('heroicon-o-folder-open')
                                         ->color('gray')
@@ -1962,7 +1962,7 @@ class EventResource extends Resource
                                         }),
                                 ])->fullWidth(),
                                 SC\Actions::make([
-                                    SC\Actions\Action::make('activity_log')
+                                    Action::make('activity_log')
                                         ->label('Istoric complet')
                                         ->icon('heroicon-o-clock')
                                         ->color('gray')
