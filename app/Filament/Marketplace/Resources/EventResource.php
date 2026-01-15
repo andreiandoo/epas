@@ -1584,9 +1584,11 @@ class EventResource extends Resource
 
                                         // Get stats from the event or calculate from ticket types
                                         $ticketsSold = $record->tickets_sold ?? $record->ticketTypes->sum('quantity_sold') ?? 0;
-                                        $totalRevenue = $record->revenue ?? $record->orders()->whereIn('status', ['completed', 'paid', 'confirmed'])->sum('total') ?? 0;
+                                        // Calculate revenue from ticket types (sold * price)
+                                        $calculatedRevenue = $record->ticketTypes->sum(fn ($tt) => ($tt->quantity_sold ?? 0) * ($tt->price ?? 0));
+                                        $totalRevenue = $record->revenue ?? $calculatedRevenue ?? 0;
                                         $totalCapacity = $record->capacity ?? $record->ticketTypes->sum('quantity') ?? 0;
-                                        $views = $record->views ?? 0;
+                                        $views = $record->views ?? $record->views_count ?? 0;
 
                                         $percentSold = $totalCapacity > 0 ? round(($ticketsSold / $totalCapacity) * 100) : 0;
                                         $conversion = $views > 0 ? round(($ticketsSold / $views) * 100, 1) : 0;
