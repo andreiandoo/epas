@@ -506,7 +506,7 @@ function renderLatestEvents(events) {
 
     // Use AmbiletEventCard component for rendering
     container.innerHTML = AmbiletEventCard.renderMany(events, {
-        urlPrefix: '/eveniment/',
+        urlPrefix: '/bilete/',
         showCategory: true,
         showPrice: true,
         showVenue: true
