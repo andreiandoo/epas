@@ -102,11 +102,19 @@ class PaymentController extends BaseController
                 'processor' => $processorType,
             ]);
 
-            return $this->success([
+            $response = [
                 'payment_url' => $paymentData['redirect_url'] ?? $paymentData['payment_url'],
                 'payment_reference' => $paymentData['reference'] ?? $paymentData['payment_id'] ?? null,
                 'processor' => $processorType,
-            ], 'Payment initiated');
+            ];
+
+            // For processors that require POST form submission (like Netopia)
+            if (($paymentData['method'] ?? 'GET') === 'POST' && !empty($paymentData['form_data'])) {
+                $response['method'] = 'POST';
+                $response['form_data'] = $paymentData['form_data'];
+            }
+
+            return $this->success($response, 'Payment initiated');
 
         } catch (\Exception $e) {
             Log::channel('marketplace')->error('Failed to initiate payment', [
@@ -176,14 +184,15 @@ class PaymentController extends BaseController
             $processor = PaymentProcessorFactory::makeFromArray($processorType, $paymentConfig);
 
             // Verify and process the callback
-            $result = $processor->handleCallback($request->all());
+            $result = $processor->processCallback($request->all(), $request->headers->all());
 
-            if ($result['success']) {
-                // Payment successful
+            if ($result['status'] === 'success') {
+                // Payment successful - save transaction ID from processor
                 $order->update([
                     'status' => 'completed',
                     'payment_status' => 'paid',
                     'paid_at' => now(),
+                    'payment_reference' => $result['transaction_id'] ?? $result['payment_id'] ?? $order->payment_reference,
                 ]);
 
                 // Activate tickets
@@ -248,19 +257,22 @@ class PaymentController extends BaseController
                 ], 'Payment successful');
 
             } else {
-                // Payment failed
+                // Payment failed or pending
+                $errorMessage = $result['metadata']['error_message'] ?? $result['message'] ?? 'Payment failed';
                 $order->update([
-                    'payment_status' => 'failed',
-                    'payment_error' => $result['message'] ?? 'Payment failed',
+                    'payment_status' => $result['status'] === 'pending' ? 'pending' : 'failed',
+                    'payment_error' => $errorMessage,
+                    'payment_reference' => $result['transaction_id'] ?? $result['payment_id'] ?? $order->payment_reference,
                 ]);
 
-                Log::channel('marketplace')->warning('Payment failed for marketplace order', [
+                Log::channel('marketplace')->warning('Payment failed/pending for marketplace order', [
                     'order_id' => $order->id,
                     'client_slug' => $clientSlug,
-                    'error' => $result['message'] ?? 'Unknown error',
+                    'status' => $result['status'],
+                    'error' => $errorMessage,
                 ]);
 
-                return $this->error($result['message'] ?? 'Payment failed', 400);
+                return $this->error($errorMessage, 400);
             }
 
         } catch (\Exception $e) {

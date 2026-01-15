@@ -796,7 +796,28 @@ const CheckoutPage = {
                 if (payResponse.success && payResponse.data.payment_url) {
                     AmbiletCart.clear();
                     localStorage.removeItem('cart_end_time');
-                    window.location.href = payResponse.data.payment_url;
+
+                    // Check if payment requires POST form submission (e.g., Netopia)
+                    if (payResponse.data.method === 'POST' && payResponse.data.form_data) {
+                        // Create and submit a form
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = payResponse.data.payment_url;
+
+                        for (const [key, value] of Object.entries(payResponse.data.form_data)) {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = key;
+                            input.value = value;
+                            form.appendChild(input);
+                        }
+
+                        document.body.appendChild(form);
+                        form.submit();
+                    } else {
+                        // Standard redirect for other processors
+                        window.location.href = payResponse.data.payment_url;
+                    }
                 } else {
                     throw new Error(payResponse.message || 'Nu s-a putut iniția plata');
                 }

@@ -77,15 +77,16 @@ class NetopiaProcessor implements PaymentProcessorInterface
         // Encrypt data with public key
         $encryptedData = $this->encryptData($xml);
 
-        // Create redirect URL with encrypted data
-        $redirectUrl = $this->baseUrl . '/pay?' . http_build_query([
-            'env_key' => base64_encode($encryptedData['env_key']),
-            'data' => base64_encode($encryptedData['data']),
-        ]);
-
+        // Netopia requires POST form submission, not GET
+        // Return form data for the frontend to create a POST form
         return [
             'payment_id' => $paymentId,
-            'redirect_url' => $redirectUrl,
+            'redirect_url' => $this->baseUrl . '/pay',
+            'method' => 'POST', // Signal that this requires POST
+            'form_data' => [
+                'env_key' => base64_encode($encryptedData['env_key']),
+                'data' => base64_encode($encryptedData['data']),
+            ],
             'additional_data' => [
                 'order_id' => $paymentData['orderId'],
                 'encrypted' => true,

@@ -86,7 +86,11 @@ class OrderResource extends Resource
                             ->content(fn ($record) => $record->created_at?->format('d M Y H:i')),
                         Forms\Components\Placeholder::make('payment_method')
                             ->label('Metodă plată')
-                            ->content(fn ($record) => $record->meta['payment_method'] ?? 'Card'),
+                            ->content(fn ($record) => ucfirst($record->payment_processor ?? $record->meta['payment_method'] ?? 'Card')),
+                        Forms\Components\Placeholder::make('payment_reference')
+                            ->label('ID Tranzacție')
+                            ->visible(fn ($record) => !empty($record->payment_reference))
+                            ->content(fn ($record) => new HtmlString('<code class="px-2 py-1 bg-gray-100 rounded text-sm font-mono">' . e($record->payment_reference) . '</code>')),
                         Forms\Components\Placeholder::make('updated_at')
                             ->label('Ultima actualizare')
                             ->content(fn ($record) => $record->updated_at?->format('d M Y H:i')),
