@@ -969,7 +969,7 @@ class EventResource extends Resource
                                         ->nullable(),
 
                                     Forms\Components\TextInput::make('target_price')
-                                        ->label('Target Price')
+                                        ->label('Door Price')
                                         ->numeric()
                                         ->minValue(0)
                                         ->step(0.01)
@@ -1010,7 +1010,7 @@ class EventResource extends Resource
                                             ->rows(2)
                                             ->columnSpan(12),
 
-                                        SC\Grid::make(4)->schema([
+                                        SC\Grid::make(3)->schema([
                                             Forms\Components\TextInput::make('currency')
                                                 ->label('Currency')
                                                 ->default($marketplace?->currency ?? 'RON')
@@ -1036,6 +1036,72 @@ class EventResource extends Resource
                                                         $set('discount_percent', max(0, min(100, $d)));
                                                     }
                                                 }),
+                                            Forms\Components\TextInput::make('capacity')
+                                                ->label('Stoc bilete')
+                                                ->placeholder('Leave empty for unlimited')
+                                                ->numeric()
+                                                ->minValue(0)
+                                                ->nullable()
+                                                ->live(debounce: 500)
+                                                ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                    // Auto-generate series_end based on capacity if not already set
+                                                    $seriesEnd = $get('series_end');
+                                                    if (!$seriesEnd && $state && (int)$state > 0) {
+                                                        $eventSeries = $get('../../event_series');
+                                                        if ($eventSeries) {
+                                                            $endNumber = (int)$state;
+                                                            $set('series_end', $eventSeries . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
+                                                        }
+                                                    }
+                                                    // Auto-generate series_start if not already set
+                                                    $seriesStart = $get('series_start');
+                                                    if (!$seriesStart && $state && (int)$state > 0) {
+                                                        $eventSeries = $get('../../event_series');
+                                                        if ($eventSeries) {
+                                                            $set('series_start', $eventSeries . '-00001');
+                                                        }
+                                                    }
+                                                }),
+                                        ])->columnSpan(12),
+
+                                        // Commission calculation for this ticket
+                                        Forms\Components\Placeholder::make('ticket_commission_calc')
+                                            ->live()
+                                            ->content(function (SGet $get) use ($marketplace) {
+                                                $price = (float) ($get('price') ?: $get('price_max') ?: 0);
+
+                                                $eventMode = $get('../../commission_mode');
+                                                $mode = $eventMode ?: ($marketplace->commission_mode ?? 'included');
+
+                                                // Get effective commission rate: event custom > organizer > marketplace
+                                                $eventRate = $get('../../commission_rate');
+                                                if ($eventRate !== null && $eventRate !== '') {
+                                                    $rate = (float) $eventRate;
+                                                } else {
+                                                    $organizerId = $get('../../marketplace_organizer_id');
+                                                    if ($organizerId) {
+                                                        $organizer = MarketplaceOrganizer::find($organizerId);
+                                                        $rate = $organizer?->commission_rate ?? $marketplace->commission_rate ?? 5.00;
+                                                    } else {
+                                                        $rate = $marketplace->commission_rate ?? 5.00;
+                                                    }
+                                                }
+
+                                                $commission = round($price * ($rate / 100), 2);
+                                                $currency = $get('currency') ?: 'RON';
+                                                $marketplaceName = $marketplace->name ?? 'Marketplace';
+
+                                                if ($mode === 'included') {
+                                                    $revenue = round($price - $commission, 2);
+                                                    return "Customer pays: **{$price} {$currency}** → Organizer receives: **{$revenue} {$currency}** → {$marketplaceName} receives: **{$commission} {$currency}** @ {$rate}%";
+                                                } else {
+                                                    $total = round($price + $commission, 2);
+                                                    return "Customer pays: **{$total} {$currency}** → Organizer receives: **{$price} {$currency}** → {$marketplaceName} receives: **{$commission} {$currency}** @ {$rate}%";
+                                                }
+                                            })
+                                            ->columnSpan(12),
+
+                                        SC\Grid::make(4)->schema([
                                             Forms\Components\TextInput::make('price')
                                                 ->label('Sale price')
                                                 ->placeholder('leave empty if no sale')
@@ -1081,72 +1147,6 @@ class EventResource extends Resource
                                                     }
                                                     $disc = max(0, min(100, (float)$state));
                                                     $set('price', round($price * (1 - $disc/100), 2));
-                                                }),
-                                        ])->columnSpan(12),
-
-                                        // Commission calculation for this ticket
-                                        Forms\Components\Placeholder::make('ticket_commission_calc')
-                                            ->live()
-                                            ->content(function (SGet $get) use ($marketplace) {
-                                                $price = (float) ($get('price') ?: $get('price_max') ?: 0);
-
-                                                $eventMode = $get('../../commission_mode');
-                                                $mode = $eventMode ?: ($marketplace->commission_mode ?? 'included');
-
-                                                // Get effective commission rate: event custom > organizer > marketplace
-                                                $eventRate = $get('../../commission_rate');
-                                                if ($eventRate !== null && $eventRate !== '') {
-                                                    $rate = (float) $eventRate;
-                                                } else {
-                                                    $organizerId = $get('../../marketplace_organizer_id');
-                                                    if ($organizerId) {
-                                                        $organizer = MarketplaceOrganizer::find($organizerId);
-                                                        $rate = $organizer?->commission_rate ?? $marketplace->commission_rate ?? 5.00;
-                                                    } else {
-                                                        $rate = $marketplace->commission_rate ?? 5.00;
-                                                    }
-                                                }
-
-                                                $commission = round($price * ($rate / 100), 2);
-                                                $currency = $get('currency') ?: 'RON';
-                                                $marketplaceName = $marketplace->name ?? 'Marketplace';
-
-                                                if ($mode === 'included') {
-                                                    $revenue = round($price - $commission, 2);
-                                                    return "Customer pays: **{$price} {$currency}** → Organizer receives: **{$revenue} {$currency}** → {$marketplaceName} receives: **{$commission} {$currency}** @ {$rate}%";
-                                                } else {
-                                                    $total = round($price + $commission, 2);
-                                                    return "Customer pays: **{$total} {$currency}** → Organizer receives: **{$price} {$currency}** → {$marketplaceName} receives: **{$commission} {$currency}** @ {$rate}%";
-                                                }
-                                            })
-                                            ->columnSpan(12),
-
-                                        SC\Grid::make(3)->schema([
-                                            Forms\Components\TextInput::make('capacity')
-                                                ->label('Capacity')
-                                                ->placeholder('Leave empty for unlimited')
-                                                ->numeric()
-                                                ->minValue(0)
-                                                ->nullable()
-                                                ->live(debounce: 500)
-                                                ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
-                                                    // Auto-generate series_end based on capacity if not already set
-                                                    $seriesEnd = $get('series_end');
-                                                    if (!$seriesEnd && $state && (int)$state > 0) {
-                                                        $eventSeries = $get('../../event_series');
-                                                        if ($eventSeries) {
-                                                            $endNumber = (int)$state;
-                                                            $set('series_end', $eventSeries . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
-                                                        }
-                                                    }
-                                                    // Auto-generate series_start if not already set
-                                                    $seriesStart = $get('series_start');
-                                                    if (!$seriesStart && $state && (int)$state > 0) {
-                                                        $eventSeries = $get('../../event_series');
-                                                        if ($eventSeries) {
-                                                            $set('series_start', $eventSeries . '-00001');
-                                                        }
-                                                    }
                                                 }),
                                             Forms\Components\DateTimePicker::make('sales_start_at')
                                                 ->label('Sale starts')
