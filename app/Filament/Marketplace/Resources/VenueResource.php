@@ -514,7 +514,7 @@ class VenueResource extends Resource
                         ->rows(4)
                         ->columnSpanFull(),
                 ]),
-        ]);
+        ])->columns(1);
     }
 
     public static function table(Table $table): Table

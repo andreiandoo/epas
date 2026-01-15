@@ -140,8 +140,9 @@ class EventResource extends Resource
                                     ])->columns(3)->columnSpanFull(),
                             ]),
 
-                        // FLAGS (no header - just the toggles)
-                        SC\Group::make()
+                        // FLAGS (section with background but no visible heading)
+                        SC\Section::make()
+                            ->headerActions([])
                             ->schema([
                                 SC\Grid::make(5)->schema([
                                     Forms\Components\Toggle::make('is_sold_out')
@@ -236,59 +237,6 @@ class EventResource extends Resource
                                     ->native(false)
                                     ->visible(fn (SGet $get) => (bool) $get('is_promoted')),
                             ])->columns(1),
-
-                        // PUBLICATION STATUS
-                        SC\Section::make('Publicare')
-                            ->icon('heroicon-o-eye')
-                            ->description('Controlează vizibilitatea evenimentului pe site-ul marketplace')
-                            ->schema([
-                                SC\Grid::make(2)->schema([
-                                    Forms\Components\Toggle::make('is_published')
-                                        ->label('Publicat')
-                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Când este activat, evenimentul va fi vizibil pe site-ul marketplace. Când este dezactivat, evenimentul nu va apărea nicăieri.')
-                                        ->onIcon('heroicon-m-eye')
-                                        ->offIcon('heroicon-m-eye-slash')
-                                        ->default(true)
-                                        ->live(),
-                                    Forms\Components\Placeholder::make('preview_link')
-                                        ->label('Link previzualizare')
-                                        ->content(function (?Event $record) use ($marketplace) {
-                                            if (!$record || !$record->exists) {
-                                                return new \Illuminate\Support\HtmlString('<span class="text-gray-500">Salvați evenimentul pentru a genera link-ul de previzualizare</span>');
-                                            }
-                                            // Use the marketplace from form context (not from record) for consistency
-                                            $eventMarketplace = $record->marketplaceClient ?? $marketplace;
-                                            if (!$eventMarketplace) {
-                                                return new \Illuminate\Support\HtmlString('<span class="text-warning-600">Niciun marketplace configurat</span>');
-                                            }
-                                            // MarketplaceClient has a single 'domain' field, not a 'domains' relationship
-                                            $domain = $eventMarketplace->domain;
-                                            if (!$domain) {
-                                                return new \Illuminate\Support\HtmlString('<span class="text-warning-600">Niciun domeniu configurat pentru marketplace</span>');
-                                            }
-                                            // Strip any existing protocol from domain (handle various formats)
-                                            $domain = preg_replace('#^(https?:?/?/?|//)#i', '', $domain);
-                                            $domain = ltrim($domain, '/');
-                                            $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
-                                            $eventUrl = $protocol . '://' . $domain . '/bilete/' . $record->slug;
-                                            $previewUrl = $eventUrl . '?preview=1';
-
-                                            return new \Illuminate\Support\HtmlString(
-                                                '<div class="space-y-2">' .
-                                                '<a href="' . e($eventUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-primary-600 hover:underline">' .
-                                                    '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>' .
-                                                    'Vezi pe site' .
-                                                '</a>' .
-                                                (!$record->is_published ? '<br><a href="' . e($previewUrl) . '" target="_blank" class="inline-flex items-center gap-1 text-warning-600 hover:underline text-sm">' .
-                                                    '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>' .
-                                                    'Previzualizare (doar admin)' .
-                                                '</a>' : '') .
-                                                '</div>'
-                                            );
-                                        }),
-                                ]),
-                            ])
-                            ->collapsible(),
 
                         // FEATURED SETTINGS (Marketplace only)
                         SC\Section::make('Featured Settings')
@@ -1537,7 +1485,6 @@ class EventResource extends Resource
                                 ->default(true)
                                 ->live(),
                             Forms\Components\Placeholder::make('preview_link')
-                                ->label('Link previzualizare')
                                 ->content(function (?Event $record) use ($marketplace) {
                                     if (!$record || !$record->exists) {
                                         return new \Illuminate\Support\HtmlString('<span class="text-gray-500">Salvați evenimentul pentru a genera link-ul de previzualizare</span>');
@@ -1739,68 +1686,6 @@ class EventResource extends Resource
                                     }),
                             ]),
 
-                        // 3. Publish Checklist
-                        SC\Section::make('Checklist publicare')
-                            ->icon('heroicon-o-clipboard-document-check')
-                            ->compact()
-                            ->collapsed()
-                            ->schema([
-                                Forms\Components\Placeholder::make('publish_checklist')
-                                    ->hiddenLabel()
-                                    ->live()
-                                    ->content(function (SGet $get, ?Event $record) use ($marketplaceLanguage) {
-                                        // Check ticket types from form state or database
-                                        $ticketTypesData = $get('ticketTypes') ?? [];
-                                        $hasTicketTypes = false;
-
-                                        if (!empty($ticketTypesData)) {
-                                            // Check if any ticket type has a name set
-                                            foreach ($ticketTypesData as $tt) {
-                                                if (!empty($tt['name'])) {
-                                                    $hasTicketTypes = true;
-                                                    break;
-                                                }
-                                            }
-                                        } elseif ($record && $record->exists) {
-                                            // Fallback to database
-                                            $hasTicketTypes = $record->ticketTypes()->count() > 0;
-                                        }
-
-                                        $checks = [
-                                            ['done' => !empty($get("title.{$marketplaceLanguage}")), 'label' => 'Titlu eveniment', 'icon' => 'text'],
-                                            ['done' => !empty($get('poster_url')) || !empty($get('hero_image_url')), 'label' => 'Imagini încărcate', 'icon' => 'image'],
-                                            ['done' => !empty($get('venue_id')) || !empty($get('venue_name')), 'label' => 'Locație setată', 'icon' => 'location'],
-                                            ['done' => !empty($get('event_date')) || !empty($get('range_start_date')), 'label' => 'Date setate', 'icon' => 'calendar'],
-                                            ['done' => !empty($get('marketplace_organizer_id')), 'label' => 'Organizator selectat', 'icon' => 'user'],
-                                            ['done' => $hasTicketTypes, 'label' => 'Tipuri de bilete', 'icon' => 'ticket'],
-                                        ];
-
-                                        $completed = collect($checks)->where('done', true)->count();
-                                        $total = count($checks);
-                                        $isReady = $completed === $total;
-
-                                        $html = "<div class='space-y-1.5'>";
-                                        foreach ($checks as $check) {
-                                            $icon = $check['done']
-                                                ? '<svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>'
-                                                : '<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/></svg>';
-                                            $textClass = $check['done'] ? 'text-gray-400 line-through' : 'text-white';
-                                            $html .= "<div class='flex items-center gap-2'>{$icon}<span class='text-sm {$textClass}'>{$check['label']}</span></div>";
-                                        }
-                                        $html .= "</div>";
-
-                                        // Status badge
-                                        $statusColor = $isReady ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400';
-                                        $statusText = $isReady ? 'Gata pentru publicare' : 'Incomplet';
-                                        $html .= "<div class='mt-3 flex items-center justify-between'>";
-                                        $html .= "<span class='text-xs text-gray-400'>{$completed}/{$total} completate</span>";
-                                        $html .= "<span class='px-2 py-0.5 text-[10px] font-bold rounded {$statusColor}'>{$statusText}</span>";
-                                        $html .= "</div>";
-
-                                        return new HtmlString($html);
-                                    }),
-                            ]),
-
                         // 4. Quick Actions
                         SC\Section::make('Acțiuni rapide')
                             ->icon('heroicon-o-bolt')
@@ -1905,7 +1790,7 @@ class EventResource extends Resource
                                     Action::make('generate_document')
                                         ->label('Generează')
                                         ->icon('heroicon-o-document-plus')
-                                        ->color('primary')
+                                        ->color('gray')
                                         ->size('sm')
                                         ->visible(fn (?Event $record) => $record && $record->exists)
                                         ->form(function () use ($marketplace) {
@@ -2038,117 +1923,6 @@ class EventResource extends Resource
                                             return new HtmlString($html);
                                         }),
                                 ])->fullWidth(),
-                                SC\Actions::make([
-                                    Action::make('activity_log')
-                                        ->label('Istoric complet')
-                                        ->icon('heroicon-o-clock')
-                                        ->color('gray')
-                                        ->size('sm')
-                                        ->visible(fn (?Event $record) => $record && $record->exists)
-                                        ->modalHeading('Istoric activitate')
-                                        ->modalSubmitAction(false)
-                                        ->modalCancelActionLabel('Închide')
-                                        ->modalWidth('2xl')
-                                        ->modalContent(function (?Event $record) {
-                                            if (!$record) return new HtmlString('<p>Nu există activitate.</p>');
-
-                                            try {
-                                                $activities = \Spatie\Activitylog\Models\Activity::query()
-                                                    ->where('subject_type', Event::class)
-                                                    ->where('subject_id', $record->id)
-                                                    ->orderByDesc('created_at')
-                                                    ->limit(50)
-                                                    ->get();
-
-                                                if ($activities->isEmpty()) {
-                                                    return new HtmlString('
-                                                        <div class="text-center py-8">
-                                                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                            </svg>
-                                                            <p class="mt-2 text-sm text-gray-500">Nu există activitate înregistrată.</p>
-                                                        </div>
-                                                    ');
-                                                }
-
-                                                $html = '<div class="space-y-3 max-h-96 overflow-y-auto">';
-                                                foreach ($activities as $activity) {
-                                                    $eventName = match ($activity->event ?? $activity->description) {
-                                                        'created' => 'Creat',
-                                                        'updated' => 'Modificat',
-                                                        'deleted' => 'Șters',
-                                                        'published' => 'Publicat',
-                                                        'unpublished' => 'Nepublicat',
-                                                        'approved' => 'Aprobat',
-                                                        'rejected' => 'Respins',
-                                                        default => ucfirst($activity->event ?? $activity->description ?? 'Acțiune'),
-                                                    };
-
-                                                    $iconBg = match ($activity->event ?? $activity->description) {
-                                                        'created' => 'bg-emerald-100 dark:bg-emerald-900',
-                                                        'updated' => 'bg-blue-100 dark:bg-blue-900',
-                                                        'deleted' => 'bg-red-100 dark:bg-red-900',
-                                                        'published', 'approved' => 'bg-green-100 dark:bg-green-900',
-                                                        'unpublished', 'rejected' => 'bg-orange-100 dark:bg-orange-900',
-                                                        default => 'bg-gray-100 dark:bg-gray-700',
-                                                    };
-
-                                                    $iconColor = match ($activity->event ?? $activity->description) {
-                                                        'created' => 'text-emerald-600 dark:text-emerald-400',
-                                                        'updated' => 'text-blue-600 dark:text-blue-400',
-                                                        'deleted' => 'text-red-600 dark:text-red-400',
-                                                        'published', 'approved' => 'text-green-600 dark:text-green-400',
-                                                        'unpublished', 'rejected' => 'text-orange-600 dark:text-orange-400',
-                                                        default => 'text-gray-600 dark:text-gray-400',
-                                                    };
-
-                                                    $causer = $activity->causer?->name ?? 'Sistem';
-                                                    $time = $activity->created_at->format('d M Y, H:i');
-                                                    $timeAgo = $activity->created_at->diffForHumans();
-
-                                                    // Show changed properties if available
-                                                    $changes = '';
-                                                    if ($activity->properties && isset($activity->properties['attributes'])) {
-                                                        $attrs = $activity->properties['attributes'];
-                                                        $oldAttrs = $activity->properties['old'] ?? [];
-                                                        $changedFields = array_keys($attrs);
-                                                        if (count($changedFields) > 0 && count($changedFields) <= 5) {
-                                                            $changes = '<div class="mt-1 text-xs text-gray-400">Câmpuri modificate: ' . implode(', ', $changedFields) . '</div>';
-                                                        } elseif (count($changedFields) > 5) {
-                                                            $changes = '<div class="mt-1 text-xs text-gray-400">' . count($changedFields) . ' câmpuri modificate</div>';
-                                                        }
-                                                    }
-
-                                                    $html .= "
-                                                        <div class='flex gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50'>
-                                                            <div class='flex-shrink-0 w-8 h-8 {$iconBg} rounded-full flex items-center justify-center'>
-                                                                <svg class='w-4 h-4 {$iconColor}' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                                                                    <path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'/>
-                                                                </svg>
-                                                            </div>
-                                                            <div class='flex-1 min-w-0'>
-                                                                <div class='flex items-center gap-2'>
-                                                                    <span class='font-medium text-sm text-gray-900 dark:text-white'>{$eventName}</span>
-                                                                    <span class='text-xs text-gray-500'>de {$causer}</span>
-                                                                </div>
-                                                                <div class='text-xs text-gray-400 mt-0.5'>{$time} ({$timeAgo})</div>
-                                                                {$changes}
-                                                            </div>
-                                                        </div>
-                                                    ";
-                                                }
-                                                $html .= '</div>';
-
-                                                return new HtmlString($html);
-                                            } catch (\Exception $e) {
-                                                return new HtmlString('
-                                                    <div class="text-center py-8">
-                                                        <p class="text-sm text-gray-500">Nu s-a putut încărca istoricul activității.</p>
-                                                    </div>
-                                                ');
-                                            }
-                                        }),
-                                ])->fullWidth(),
                             ]),
 
                         // 5. Activity Log (doar pentru edit)
@@ -2247,6 +2021,69 @@ class EventResource extends Resource
 
                                         // Link to full activity log page
                                         $html .= "<a href='" . static::getUrl('activity-log', ['record' => $record]) . "' class='mt-3 block text-xs text-primary-400 hover:text-primary-300 transition-colors'>Vezi tot istoricul →</a>";
+
+                                        return new HtmlString($html);
+                                    }),
+                            ]),
+
+                        // 6. Publish Checklist (sticky)
+                        SC\Section::make('Checklist publicare')
+                            ->icon('heroicon-o-clipboard-document-check')
+                            ->compact()
+                            ->collapsible()
+                            ->extraAttributes(['class' => 'sticky top-8 z-10'])
+                            ->schema([
+                                Forms\Components\Placeholder::make('publish_checklist')
+                                    ->hiddenLabel()
+                                    ->live()
+                                    ->content(function (SGet $get, ?Event $record) use ($marketplaceLanguage) {
+                                        // Check ticket types from form state or database
+                                        $ticketTypesData = $get('ticketTypes') ?? [];
+                                        $hasTicketTypes = false;
+
+                                        if (!empty($ticketTypesData)) {
+                                            // Check if any ticket type has a name set
+                                            foreach ($ticketTypesData as $tt) {
+                                                if (!empty($tt['name'])) {
+                                                    $hasTicketTypes = true;
+                                                    break;
+                                                }
+                                            }
+                                        } elseif ($record && $record->exists) {
+                                            // Fallback to database
+                                            $hasTicketTypes = $record->ticketTypes()->count() > 0;
+                                        }
+
+                                        $checks = [
+                                            ['done' => !empty($get("title.{$marketplaceLanguage}")), 'label' => 'Titlu eveniment', 'icon' => 'text'],
+                                            ['done' => !empty($get('poster_url')) || !empty($get('hero_image_url')), 'label' => 'Imagini încărcate', 'icon' => 'image'],
+                                            ['done' => !empty($get('venue_id')) || !empty($get('venue_name')), 'label' => 'Locație setată', 'icon' => 'location'],
+                                            ['done' => !empty($get('event_date')) || !empty($get('range_start_date')), 'label' => 'Date setate', 'icon' => 'calendar'],
+                                            ['done' => !empty($get('marketplace_organizer_id')), 'label' => 'Organizator selectat', 'icon' => 'user'],
+                                            ['done' => $hasTicketTypes, 'label' => 'Tipuri de bilete', 'icon' => 'ticket'],
+                                        ];
+
+                                        $completed = collect($checks)->where('done', true)->count();
+                                        $total = count($checks);
+                                        $isReady = $completed === $total;
+
+                                        $html = "<div class='space-y-1.5'>";
+                                        foreach ($checks as $check) {
+                                            $icon = $check['done']
+                                                ? '<svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>'
+                                                : '<svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/></svg>';
+                                            $textClass = $check['done'] ? 'text-gray-400 line-through' : 'text-white';
+                                            $html .= "<div class='flex items-center gap-2'>{$icon}<span class='text-sm {$textClass}'>{$check['label']}</span></div>";
+                                        }
+                                        $html .= "</div>";
+
+                                        // Status badge
+                                        $statusColor = $isReady ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400';
+                                        $statusText = $isReady ? 'Gata pentru publicare' : 'Incomplet';
+                                        $html .= "<div class='mt-3 flex items-center justify-between'>";
+                                        $html .= "<span class='text-xs text-gray-400'>{$completed}/{$total} completate</span>";
+                                        $html .= "<span class='px-2 py-0.5 text-[10px] font-bold rounded {$statusColor}'>{$statusText}</span>";
+                                        $html .= "</div>";
 
                                         return new HtmlString($html);
                                     }),

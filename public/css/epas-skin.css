@@ -1992,7 +1992,9 @@ nav.fi-topbar .fi-topbar-end {
 .pb-20 {
 	padding-bottom: 5rem;
 }
-
+.pb-2 {
+	padding-bottom: 0.5rem;
+}
 .pb-3 {
 	padding-bottom: 0.75rem;
 }
