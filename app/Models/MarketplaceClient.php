@@ -419,4 +419,75 @@ class MarketplaceClient extends Model
     {
         return $this->email_settings['from_name'] ?? $this->name;
     }
+
+    /**
+     * Get ticket insurance settings for checkout
+     *
+     * @return array{
+     *     is_enabled: bool,
+     *     label: string,
+     *     description: string,
+     *     price: float,
+     *     price_type: string,
+     *     price_percentage: float,
+     *     apply_to: string,
+     *     terms_url: string|null,
+     *     show_in_checkout: bool,
+     *     pre_checked: bool,
+     *     currency: string
+     * }|null
+     */
+    public function getTicketInsuranceSettings(): ?array
+    {
+        if (!$this->hasMicroservice('ticket-insurance')) {
+            return null;
+        }
+
+        $settings = $this->getMicroserviceConfig('ticket-insurance');
+
+        if (!$settings || !($settings['is_enabled'] ?? false)) {
+            return null;
+        }
+
+        return [
+            'is_enabled' => true,
+            'label' => $settings['label'] ?? 'Taxa de retur',
+            'description' => $settings['description'] ?? '',
+            'price' => (float) ($settings['price'] ?? 5.00),
+            'price_type' => $settings['price_type'] ?? 'fixed',
+            'price_percentage' => (float) ($settings['price_percentage'] ?? 5),
+            'apply_to' => $settings['apply_to'] ?? 'all',
+            'terms_url' => $settings['terms_url'] ?? null,
+            'show_in_checkout' => $settings['show_in_checkout'] ?? true,
+            'pre_checked' => $settings['pre_checked'] ?? false,
+            'currency' => $this->currency ?? 'RON',
+        ];
+    }
+
+    /**
+     * Calculate ticket insurance amount for checkout
+     *
+     * @param float $orderTotal Total order amount
+     * @param bool $hasRefundableTickets Whether order contains refundable tickets
+     * @return float|null Insurance amount or null if not applicable
+     */
+    public function calculateTicketInsuranceAmount(float $orderTotal, bool $hasRefundableTickets = true): ?float
+    {
+        $settings = $this->getTicketInsuranceSettings();
+
+        if (!$settings) {
+            return null;
+        }
+
+        // Check if should apply based on refundable tickets setting
+        if ($settings['apply_to'] === 'refundable_only' && !$hasRefundableTickets) {
+            return null;
+        }
+
+        if ($settings['price_type'] === 'percentage') {
+            return round($orderTotal * ($settings['price_percentage'] / 100), 2);
+        }
+
+        return $settings['price'];
+    }
 }

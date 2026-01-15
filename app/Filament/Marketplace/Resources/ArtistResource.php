@@ -232,19 +232,22 @@ class ArtistResource extends Resource
                         ->schema([
                             Forms\Components\Repeater::make('youtube_videos')
                                 ->hiddenLabel()
-                                ->simple(
+                                ->schema([
                                     Forms\Components\TextInput::make('url')
                                         ->hiddenLabel()
                                         ->placeholder('https://www.youtube.com/watch?v=...')
                                         ->url()
                                         ->required()
-                                        ->prefixIcon('heroicon-o-play'),
-                                )
+                                        ->prefixIcon('heroicon-o-play')
+                                        ->columnSpanFull(),
+                                ])
                                 ->maxItems(5)
                                 ->defaultItems(0)
                                 ->addActionLabel('Adaugă videoclip')
                                 ->reorderable()
                                 ->reorderableWithDragAndDrop()
+                                ->collapsed()
+                                ->itemLabel(fn (array $state) => $state['url'] ?? 'Video')
                                 ->columnSpanFull(),
                             ]),
 
