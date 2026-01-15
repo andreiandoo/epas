@@ -1221,6 +1221,12 @@ class EventResource extends Resource
                                             ->live()
                                             ->columnSpan(4),
 
+                                        Forms\Components\Toggle::make('is_refundable')
+                                            ->label('Returnabil')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Dacă evenimentul este anulat sau amânat, clienții pot cere retur pentru acest tip de bilet')
+                                            ->default(false)
+                                            ->columnSpan(4),
+
                                         // Scheduling fields - shown when ticket is NOT active
                                         Forms\Components\DateTimePicker::make('scheduled_at')
                                             ->label('Schedule Activation')

@@ -28,6 +28,7 @@ class MarketplaceTicketType extends Model
         'autostart_when_previous_sold_out',
         'status',
         'is_visible',
+        'is_refundable',
         'sort_order',
         'series_start',
         'series_end',
@@ -41,6 +42,7 @@ class MarketplaceTicketType extends Model
         'scheduled_at' => 'datetime',
         'autostart_when_previous_sold_out' => 'boolean',
         'is_visible' => 'boolean',
+        'is_refundable' => 'boolean',
     ];
 
     // =========================================
