@@ -31,6 +31,10 @@ class TicketType extends Model
         'price',
         'capacity',
         'is_active',
+        // Series fields for ticket numbering
+        'series_start',
+        'series_end',
+        'event_series',
     ];
 
     protected $casts = [

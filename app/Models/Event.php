@@ -30,6 +30,7 @@ class Event extends Model
         'commission_rate',
         'title',
         'slug',
+        'event_series',
         'duration_mode',
 
         // Parent/child event relationships
@@ -121,6 +122,22 @@ class Event extends Model
         'views_count'       => 'integer',
         'interested_count'  => 'integer',
     ];
+
+    /**
+     * Boot the model and add event listeners
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Auto-generate event_series after creating an event
+        static::created(function ($event) {
+            if (empty($event->event_series)) {
+                $event->event_series = 'AMB-' . $event->id;
+                $event->saveQuietly(); // Save without triggering events again
+            }
+        });
+    }
 
     /* Parent/Child Event Relations */
     public function parent(): BelongsTo

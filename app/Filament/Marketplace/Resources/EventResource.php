@@ -106,83 +106,6 @@ class EventResource extends Resource
                 SC\Group::make()
                     ->columnSpan(3)
                     ->schema([
-                        // Organizer selector - marketplace selects which organizer owns this event
-                        SC\Section::make('Organizer')
-                            ->description('Select the organizer who will own this event')
-                            ->schema([
-                                Forms\Components\Select::make('marketplace_organizer_id')
-                                    ->label('Organizer')
-                                    ->options(function () use ($marketplace) {
-                                        return MarketplaceOrganizer::query()
-                                            ->where('marketplace_client_id', $marketplace?->id)
-                                            ->where('status', 'active')
-                                            ->orderBy('name')
-                                            ->pluck('name', 'id');
-                                    })
-                                    ->required()
-                                    ->searchable()
-                                    ->preload()
-                                    ->live()
-                                    ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
-                                        // When organizer changes, update commission info and ticket terms
-                                        if ($state) {
-                                            $organizer = MarketplaceOrganizer::find($state);
-                                            if ($organizer) {
-                                                // Pre-fill commission rate with organizer's rate if set
-                                                $rate = $organizer->commission_rate ?? $marketplace?->commission_rate;
-                                                $set('commission_rate', $rate);
-
-                                                // Pre-fill commission mode with organizer's default if set
-                                                if ($organizer->default_commission_mode) {
-                                                    $set('commission_mode', $organizer->default_commission_mode);
-                                                }
-
-                                                // Pre-fill ticket terms from organizer if available
-                                                if ($organizer->ticket_terms) {
-                                                    $set("ticket_terms.{$marketplaceLanguage}", $organizer->ticket_terms);
-                                                }
-                                            }
-                                        }
-                                    })
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'The selected organizer will receive payouts for this event')
-                                    ->prefixIcon('heroicon-m-building-office-2'),
-
-                                Forms\Components\Placeholder::make('organizer_info')
-                                    ->label('Organizer Details')
-                                    ->visible(fn (SGet $get) => (bool) $get('marketplace_organizer_id'))
-                                    ->content(function (SGet $get) use ($marketplace) {
-                                        $organizerId = $get('marketplace_organizer_id');
-                                        if (!$organizerId) return '';
-
-                                        $organizer = MarketplaceOrganizer::find($organizerId);
-                                        if (!$organizer) return '';
-
-                                        $status = match($organizer->status) {
-                                            'active' => '<span class="text-green-600">Active</span>',
-                                            'pending' => '<span class="text-yellow-600">Pending</span>',
-                                            'suspended' => '<span class="text-red-600">Suspended</span>',
-                                            default => $organizer->status,
-                                        };
-
-                                        $verified = $organizer->verified_at
-                                            ? '<span class="text-green-600">✓ Verified</span>'
-                                            : '<span class="text-gray-500">Not verified</span>';
-
-                                        $commissionRate = $organizer->commission_rate ?? $marketplace?->commission_rate ?? 5;
-                                        $commissionMode = $organizer->default_commission_mode ?? $marketplace->commission_mode ?? 'included';
-                                        $commissionModeLabel = $commissionMode === 'included' ? 'Included in price' : 'Added on top';
-
-                                        return new HtmlString("
-                                            <div class='space-y-1 text-sm'>
-                                                <div><strong>Email:</strong> {$organizer->email}</div>
-                                                <div><strong>Status:</strong> {$status} | {$verified}</div>
-                                                <div><strong>Default Commission:</strong> {$commissionRate}% ({$commissionModeLabel})</div>
-                                                <div><strong>Events:</strong> {$organizer->total_events} | <strong>Revenue:</strong> " . number_format($organizer->total_revenue, 2) . " RON</div>
-                                            </div>
-                                        ");
-                                    }),
-                            ])->columns(2),
-
                         // BASICS - Single Language based on Tenant setting
                         SC\Section::make('Event Details')
                             ->schema([
@@ -201,7 +124,20 @@ class EventResource extends Resource
                                             ->label('Slug')
                                             ->maxLength(190)
                                             ->rule('alpha_dash'),
-                                    ])->columns(2)->columnSpanFull(),
+                                        Forms\Components\TextInput::make('event_series')
+                                            ->label('Serie eveniment')
+                                            ->placeholder('Se generează automat: AMB-[ID]')
+                                            ->maxLength(50)
+                                            ->helperText('Codul unic al seriei de bilete pentru acest eveniment. Se generează automat la salvare.')
+                                            ->disabled(fn (?Event $record) => $record && $record->exists && $record->event_series)
+                                            ->dehydrated(true)
+                                            ->afterStateHydrated(function ($state, SSet $set, ?Event $record) {
+                                                // Auto-generate event_series if not set and record exists
+                                                if (!$state && $record && $record->exists && $record->id) {
+                                                    $set('event_series', 'AMB-' . $record->id);
+                                                }
+                                            }),
+                                    ])->columns(3)->columnSpanFull(),
                             ]),
 
                         // FLAGS
@@ -1254,7 +1190,27 @@ class EventResource extends Resource
                                                 ->placeholder('Leave empty for unlimited')
                                                 ->numeric()
                                                 ->minValue(0)
-                                                ->nullable(),
+                                                ->nullable()
+                                                ->live(debounce: 500)
+                                                ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                    // Auto-generate series_end based on capacity if not already set
+                                                    $seriesEnd = $get('series_end');
+                                                    if (!$seriesEnd && $state && (int)$state > 0) {
+                                                        $eventSeries = $get('../../event_series');
+                                                        if ($eventSeries) {
+                                                            $endNumber = (int)$state;
+                                                            $set('series_end', $eventSeries . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
+                                                        }
+                                                    }
+                                                    // Auto-generate series_start if not already set
+                                                    $seriesStart = $get('series_start');
+                                                    if (!$seriesStart && $state && (int)$state > 0) {
+                                                        $eventSeries = $get('../../event_series');
+                                                        if ($eventSeries) {
+                                                            $set('series_start', $eventSeries . '-00001');
+                                                        }
+                                                    }
+                                                }),
                                             Forms\Components\DateTimePicker::make('sales_start_at')
                                                 ->label('Sale starts')
                                                 ->native(false)
@@ -1285,6 +1241,41 @@ class EventResource extends Resource
                                                 ->native(false)
                                                 ->seconds(false)
                                                 ->displayFormat('Y-m-d H:i'),
+                                        ])->columnSpan(12),
+
+                                        // Ticket Series Fields
+                                        SC\Grid::make(2)->schema([
+                                            Forms\Components\TextInput::make('series_start')
+                                                ->label('Serie start')
+                                                ->placeholder('Ex: AMB-5-00001')
+                                                ->maxLength(50)
+                                                ->helperText('Numărul de start al seriei de bilete. Se generează automat.')
+                                                ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                    // Auto-generate if not set and capacity exists
+                                                    if (!$state) {
+                                                        $eventSeries = $get('../../event_series');
+                                                        $capacity = $get('capacity');
+                                                        if ($eventSeries && $capacity && (int)$capacity > 0) {
+                                                            $set('series_start', $eventSeries . '-00001');
+                                                        }
+                                                    }
+                                                }),
+                                            Forms\Components\TextInput::make('series_end')
+                                                ->label('Serie end')
+                                                ->placeholder('Ex: AMB-5-00500')
+                                                ->maxLength(50)
+                                                ->helperText('Numărul de final al seriei de bilete. Se generează automat din capacitate.')
+                                                ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                    // Auto-generate if not set and capacity exists
+                                                    if (!$state) {
+                                                        $eventSeries = $get('../../event_series');
+                                                        $capacity = $get('capacity');
+                                                        if ($eventSeries && $capacity && (int)$capacity > 0) {
+                                                            $endNumber = (int)$capacity;
+                                                            $set('series_end', $eventSeries . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
+                                                        }
+                                                    }
+                                                }),
                                         ])->columnSpan(12),
 
                                         Forms\Components\Toggle::make('is_active')
@@ -1629,12 +1620,49 @@ class EventResource extends Resource
                                     }),
                             ]),
 
-                        // 2. Organizer Quick Info
+                            // 2. Organizer Quick Info
                         SC\Section::make('Organizator')
                             ->icon('heroicon-o-building-office-2')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Select the event organizer')
                             ->compact()
-                            ->collapsed()
                             ->schema([
+                                Forms\Components\Select::make('marketplace_organizer_id')
+                                    ->options(function () use ($marketplace) {
+                                        return MarketplaceOrganizer::query()
+                                            ->where('marketplace_client_id', $marketplace?->id)
+                                            ->where('status', 'active')
+                                            ->orderBy('name')
+                                            ->pluck('name', 'id');
+                                    })
+                                    ->required()
+                                    ->searchable()
+                                    ->preload()
+                                    ->live()
+                                    ->placeholder('Selecteaza organizator...')
+                                    ->afterStateUpdated(function ($state, SSet $set) use ($marketplace, $marketplaceLanguage) {
+                                        // When organizer changes, update commission info and ticket terms
+                                        if ($state) {
+                                            $organizer = MarketplaceOrganizer::find($state);
+                                            if ($organizer) {
+                                                // Pre-fill commission rate with organizer's rate if set
+                                                $rate = $organizer->commission_rate ?? $marketplace?->commission_rate;
+                                                $set('commission_rate', $rate);
+
+                                                // Pre-fill commission mode with organizer's default if set
+                                                if ($organizer->default_commission_mode) {
+                                                    $set('commission_mode', $organizer->default_commission_mode);
+                                                }
+
+                                                // Pre-fill ticket terms from organizer if available
+                                                if ($organizer->ticket_terms) {
+                                                    $set("ticket_terms.{$marketplaceLanguage}", $organizer->ticket_terms);
+                                                }
+                                            }
+                                        }
+                                    })
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'The selected organizer will receive payouts for this event')
+                                    ->prefixIcon('heroicon-m-building-office-2'),
+
                                 Forms\Components\Placeholder::make('organizer_quick_info')
                                     ->hiddenLabel()
                                     ->visible(fn (SGet $get) => (bool) $get('marketplace_organizer_id'))
@@ -1646,6 +1674,24 @@ class EventResource extends Resource
                                         if (!$organizer) return '';
                                         
                                         $commissionRate = $organizer->commission_rate ?? $marketplace?->commission_rate ?? 5;
+
+                                        $organizerId = $get('marketplace_organizer_id');
+                                        if (!$organizerId) return '';
+
+                                        $status = match($organizer->status) {
+                                            'active' => '<span class="text-green-600">Activ</span>',
+                                            'pending' => '<span class="text-yellow-600">În așteptare</span>',
+                                            'suspended' => '<span class="text-red-600">Suspendat</span>',
+                                            default => $organizer->status,
+                                        };
+
+                                        $verified = $organizer->verified_at
+                                            ? '<span class="text-green-600">✓ Verificat</span>'
+                                            : '<span class="text-gray-500">Neverificat</span>';
+
+                                        $commissionRate = $organizer->commission_rate ?? $marketplace?->commission_rate ?? 5;
+                                        $commissionMode = $organizer->default_commission_mode ?? $marketplace->commission_mode ?? 'included';
+                                        $commissionModeLabel = $commissionMode === 'included' ? 'inclus' : 'peste';
                                         
                                         return new HtmlString("
                                             <div class='space-y-2 text-sm'>
@@ -1659,8 +1705,20 @@ class EventResource extends Resource
                                                     </div>
                                                 </div>
                                                 <div class='flex justify-between py-1 border-t border-gray-700'>
-                                                    <span class='text-gray-400'>Comision</span>
+                                                    <span class='text-gray-400'>Status</span>
+                                                    <span class='text-white font-medium'>{$status} | {$verified}</span>
+                                                </div>
+                                                <div class='flex justify-between py-1 border-t border-gray-700'>
+                                                    <span class='text-gray-400'>Comision ({$commissionModeLabel})</span>
                                                     <span class='text-white font-medium'>{$commissionRate}%</span>
+                                                </div>
+                                                <div class='flex justify-between py-1 border-t border-gray-700'>
+                                                    <span class='text-gray-400'>Evenimente</span>
+                                                    <span class='text-white font-medium'>{$organizer->total_events}</span>
+                                                </div>
+                                                <div class='flex justify-between py-1 border-t border-gray-700'>
+                                                    <span class='text-gray-400'>Venit</span>
+                                                    <span class='text-white font-medium'>" . number_format($organizer->total_revenue, 2) . " RON</span>
                                                 </div>
                                             </div>
                                         ");
@@ -2178,7 +2236,7 @@ class EventResource extends Resource
                             ]),
                     ]),
             ]),
-        ]);
+        ])->columns(1);
     }
 
     public static function table(Table $table): Table
