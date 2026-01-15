@@ -592,7 +592,7 @@ class EventResource extends Resource
                                     ->searchable()
                                     ->preload()
                                     ->placeholder('Select a city')
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Filter events by city on the website')
+                                    ->helperText('Filter events by city on the website')
                                     ->nullable(),
                                 Forms\Components\TextInput::make('address')
                                     ->label('Address')
@@ -666,7 +666,7 @@ class EventResource extends Resource
                                     ->searchable()
                                     ->preload()
                                     ->placeholder('Select a category')
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Custom marketplace event category')
+                                    ->helperText('Custom marketplace event category')
                                     ->live()
                                     ->afterStateUpdated(function ($state, SSet $set) {
                                         // Auto-fill eventTypes from the category's linked event types
@@ -943,7 +943,7 @@ class EventResource extends Resource
                                     )
                                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ($record->is_default ? ' (Default)' : ''))
                                     ->placeholder('Use default template')
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Select a template for tickets generated for this event. Leave empty to use the default template.')
+                                    ->helperText('Select a template for tickets generated for this event. Leave empty to use the default template.')
                                     ->searchable()
                                     ->preload()
                                     ->nullable()
@@ -1287,7 +1287,7 @@ class EventResource extends Resource
                                         // Scheduling fields - shown when ticket is NOT active
                                         Forms\Components\DateTimePicker::make('scheduled_at')
                                             ->label('Schedule Activation')
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'When this ticket type should automatically become active')
+                                            ->helperText('When this ticket type should automatically become active')
                                             ->native(false)
                                             ->seconds(false)
                                             ->displayFormat('Y-m-d H:i')
@@ -1297,7 +1297,7 @@ class EventResource extends Resource
 
                                         Forms\Components\Toggle::make('autostart_when_previous_sold_out')
                                             ->label('Autostart when previous sold out')
-                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Activate automatically when previous ticket types reach 0 capacity')
+                                            ->helperText('Activate automatically when previous ticket types reach 0 capacity')
                                             ->visible(fn (SGet $get) => !$get('is_active'))
                                             ->columnSpan(4),
 
@@ -1623,7 +1623,7 @@ class EventResource extends Resource
                             // 2. Organizer Quick Info
                         SC\Section::make('Organizator')
                             ->icon('heroicon-o-building-office-2')
-                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Select the event organizer')
+                            ->description('Selectează organizatorul evenimentului')
                             ->compact()
                             ->schema([
                                 Forms\Components\Select::make('marketplace_organizer_id')
