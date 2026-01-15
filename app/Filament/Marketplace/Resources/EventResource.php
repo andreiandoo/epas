@@ -1155,7 +1155,7 @@ class EventResource extends Resource
                                                 ->displayFormat('Y-m-d H:i')
                                                 ->minDate(now())
                                                 ->live(debounce: 500)
-                                                ->afterStateUpdated(function ($state, SSet $set, SGet $get, string $statePath) {
+                                                ->afterStateUpdated(function ($state, SSet $set) {
                                                     if (!$state) return;
 
                                                     $selectedDate = Carbon::parse($state);
@@ -1165,12 +1165,12 @@ class EventResource extends Resource
                                                     if ($selectedDate->isToday() && $selectedDate->format('H:i') === '00:00') {
                                                         // Set to current time, rounded up to next 5 minutes
                                                         $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
-                                                        $set($statePath, $newTime->format('Y-m-d H:i'));
+                                                        $set('sales_start_at', $newTime->format('Y-m-d H:i'));
                                                     }
                                                     // Ensure the datetime is not in the past
                                                     elseif ($selectedDate->lt($now)) {
                                                         $newTime = $now->copy()->addMinutes(5 - ($now->minute % 5))->second(0);
-                                                        $set($statePath, $newTime->format('Y-m-d H:i'));
+                                                        $set('sales_start_at', $newTime->format('Y-m-d H:i'));
                                                     }
                                                 }),
                                             Forms\Components\DateTimePicker::make('sales_end_at')
