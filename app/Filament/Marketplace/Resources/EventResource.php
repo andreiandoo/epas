@@ -128,7 +128,7 @@ class EventResource extends Resource
                                             ->label('Serie eveniment')
                                             ->placeholder('Se generează automat: AMB-[ID]')
                                             ->maxLength(50)
-                                            ->helperText('Codul unic al seriei de bilete pentru acest eveniment. Se generează automat la salvare.')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Codul unic al seriei de bilete pentru acest eveniment. Se generează automat la salvare.')
                                             ->disabled(fn (?Event $record) => $record && $record->exists && $record->event_series)
                                             ->dehydrated(true)
                                             ->afterStateHydrated(function ($state, SSet $set, ?Event $record) {
@@ -245,28 +245,30 @@ class EventResource extends Resource
                                 SC\Grid::make(2)->schema([
                                     Forms\Components\Toggle::make('is_published')
                                         ->label('Publicat')
-                                        ->helperText('Când este activat, evenimentul va fi vizibil pe site-ul marketplace. Când este dezactivat, evenimentul nu va apărea nicăieri.')
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Când este activat, evenimentul va fi vizibil pe site-ul marketplace. Când este dezactivat, evenimentul nu va apărea nicăieri.')
                                         ->onIcon('heroicon-m-eye')
                                         ->offIcon('heroicon-m-eye-slash')
                                         ->default(true)
                                         ->live(),
                                     Forms\Components\Placeholder::make('preview_link')
                                         ->label('Link previzualizare')
-                                        ->content(function ($record) {
-                                            if (!$record) {
-                                                return 'Salvați evenimentul pentru a genera link-ul de previzualizare';
+                                        ->content(function (?Event $record) use ($marketplace) {
+                                            if (!$record || !$record->exists) {
+                                                return new \Illuminate\Support\HtmlString('<span class="text-gray-500">Salvați evenimentul pentru a genera link-ul de previzualizare</span>');
                                             }
-                                            $marketplace = $record->marketplaceClient;
-                                            if (!$marketplace) {
-                                                return 'Niciun marketplace configurat';
+                                            // Use the marketplace from form context (not from record) for consistency
+                                            $eventMarketplace = $record->marketplaceClient ?? $marketplace;
+                                            if (!$eventMarketplace) {
+                                                return new \Illuminate\Support\HtmlString('<span class="text-warning-600">Niciun marketplace configurat</span>');
                                             }
                                             // MarketplaceClient has a single 'domain' field, not a 'domains' relationship
-                                            $domain = $marketplace->domain;
+                                            $domain = $eventMarketplace->domain;
                                             if (!$domain) {
-                                                return 'Niciun domeniu configurat';
+                                                return new \Illuminate\Support\HtmlString('<span class="text-warning-600">Niciun domeniu configurat pentru marketplace</span>');
                                             }
-                                            // Strip any existing protocol from domain
-                                            $domain = preg_replace('#^https?://|^https?//#i', '', $domain);
+                                            // Strip any existing protocol from domain (handle various formats)
+                                            $domain = preg_replace('#^(https?:?/?/?|//)#i', '', $domain);
+                                            $domain = ltrim($domain, '/');
                                             $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
                                             $eventUrl = $protocol . '://' . $domain . '/bilete/' . $record->slug;
                                             $previewUrl = $eventUrl . '?preview=1';
@@ -283,8 +285,7 @@ class EventResource extends Resource
                                                 '</a>' : '') .
                                                 '</div>'
                                             );
-                                        })
-                                        ->visible(fn ($record) => $record !== null),
+                                        }),
                                 ]),
                             ])
                             ->collapsible(),
@@ -296,19 +297,19 @@ class EventResource extends Resource
                                 SC\Grid::make(3)->schema([
                                     Forms\Components\Toggle::make('is_homepage_featured')
                                         ->label('Homepage Featured')
-                                        ->helperText('Show on homepage hero/featured section')
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Show on homepage hero/featured section')
                                         ->onIcon('heroicon-m-home')
                                         ->offIcon('heroicon-m-home')
                                         ->live(),
                                     Forms\Components\Toggle::make('is_general_featured')
                                         ->label('General Featured')
-                                        ->helperText('Show in general featured events lists')
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Show in general featured events lists')
                                         ->onIcon('heroicon-m-star')
                                         ->offIcon('heroicon-m-star')
                                         ->live(),
                                     Forms\Components\Toggle::make('is_category_featured')
                                         ->label('Category Featured')
-                                        ->helperText('Show as featured in its category page')
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Show as featured in its category page')
                                         ->onIcon('heroicon-m-tag')
                                         ->offIcon('heroicon-m-tag')
                                         ->live(),
@@ -342,14 +343,14 @@ class EventResource extends Resource
                                 SC\Grid::make(1)->schema([
                                     Forms\Components\Toggle::make('has_custom_related')
                                         ->label('Custom Related Events')
-                                        ->helperText('Manually select which events to show in the "Îți recomandăm" section')
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Manually select which events to show in the "Îți recomandăm" section')
                                         ->onIcon('heroicon-m-queue-list')
                                         ->offIcon('heroicon-m-queue-list')
                                         ->live(),
 
                                     Forms\Components\Select::make('custom_related_event_ids')
                                         ->label('Select Related Events')
-                                        ->helperText('Choose events to display in the "Îți recomandăm" section (max 8)')
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Choose events to display in the "Îți recomandăm" section (max 8)')
                                         ->multiple()
                                         ->searchable()
                                         ->preload()
@@ -592,7 +593,7 @@ class EventResource extends Resource
                                     ->searchable()
                                     ->preload()
                                     ->placeholder('Select a city')
-                                    ->helperText('Filter events by city on the website')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Filter events by city on the website')
                                     ->nullable(),
                                 Forms\Components\TextInput::make('address')
                                     ->label('Address')
@@ -666,7 +667,7 @@ class EventResource extends Resource
                                     ->searchable()
                                     ->preload()
                                     ->placeholder('Select a category')
-                                    ->helperText('Custom marketplace event category')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Custom marketplace event category')
                                     ->live()
                                     ->afterStateUpdated(function ($state, SSet $set) {
                                         // Auto-fill eventTypes from the category's linked event types
@@ -943,7 +944,7 @@ class EventResource extends Resource
                                     )
                                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->name . ($record->is_default ? ' (Default)' : ''))
                                     ->placeholder('Use default template')
-                                    ->helperText('Select a template for tickets generated for this event. Leave empty to use the default template.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Select a template for tickets generated for this event. Leave empty to use the default template.')
                                     ->searchable()
                                     ->preload()
                                     ->nullable()
@@ -953,7 +954,7 @@ class EventResource extends Resource
                                         ->exists() ?? false),
 
                                 // Commission Mode and Rate for event
-                                SC\Grid::make(4)->schema([
+                                SC\Grid::make(3)->schema([
                                     Forms\Components\Select::make('commission_mode')
                                         ->label('Commission Mode')
                                         ->options([
@@ -973,7 +974,7 @@ class EventResource extends Resource
                                             $modeText = $mode === 'included' ? 'Included' : 'Added on top';
                                             return "{$modeText} (marketplace default)";
                                         })
-                                        ->helperText('Leave empty to use organizer\'s or marketplace default mode')
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Leave empty to use organizer\'s or marketplace default mode')
                                         ->live()
                                         ->nullable(),
 
@@ -994,7 +995,7 @@ class EventResource extends Resource
                                             }
                                             return ($marketplace->commission_rate ?? 5) . '% (marketplace default)';
                                         })
-                                        ->helperText('Leave empty to use organizer\'s or marketplace default rate')
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Leave empty to use organizer\'s or marketplace default rate')
                                         ->live()
                                         ->nullable(),
 
@@ -1005,40 +1006,7 @@ class EventResource extends Resource
                                         ->step(0.01)
                                         ->suffix($marketplace?->currency ?? 'RON')
                                         ->placeholder('e.g. 100.00')
-                                        ->helperText('Reference price for planning and negotiations. Not displayed publicly.'),
-
-                                    Forms\Components\Placeholder::make('commission_example')
-                                        ->label('Example (100 RON ticket)')
-                                        ->live()
-                                        ->content(function (SGet $get) use ($marketplace) {
-                                            $eventMode = $get('commission_mode');
-                                            $mode = $eventMode ?: ($marketplace->commission_mode ?? 'included');
-
-                                            // Get effective commission rate: event custom > organizer > marketplace
-                                            $eventRate = $get('commission_rate');
-                                            if ($eventRate !== null && $eventRate !== '') {
-                                                $rate = (float) $eventRate;
-                                            } else {
-                                                $organizerId = $get('marketplace_organizer_id');
-                                                if ($organizerId) {
-                                                    $organizer = MarketplaceOrganizer::find($organizerId);
-                                                    $rate = $organizer?->commission_rate ?? $marketplace->commission_rate ?? 5.00;
-                                                } else {
-                                                    $rate = $marketplace->commission_rate ?? 5.00;
-                                                }
-                                            }
-
-                                            $ticketPrice = 100;
-                                            $commission = round($ticketPrice * ($rate / 100), 2);
-
-                                            if ($mode === 'included') {
-                                                $revenue = $ticketPrice - $commission;
-                                                return "Customer pays: **{$ticketPrice} RON** → Organizer receives: **{$revenue} RON** (commission: {$commission} RON @ {$rate}%)";
-                                            } else {
-                                                $total = $ticketPrice + $commission;
-                                                return "Customer pays: **{$total} RON** → Organizer receives: **{$ticketPrice} RON** (commission: {$commission} RON @ {$rate}%)";
-                                            }
-                                        }),
+                                        ->hintIcon('heroicon-o-information-circle', tooltip: 'Reference price for planning and negotiations. Not displayed publicly.'),
                                 ]),
 
                                 Forms\Components\Repeater::make('ticketTypes')
@@ -1249,7 +1217,7 @@ class EventResource extends Resource
                                                 ->label('Serie start')
                                                 ->placeholder('Ex: AMB-5-00001')
                                                 ->maxLength(50)
-                                                ->helperText('Numărul de start al seriei de bilete. Se generează automat.')
+                                                ->hintIcon('heroicon-o-information-circle', tooltip: 'Numărul de start al seriei de bilete. Se generează automat.')
                                                 ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
                                                     // Auto-generate if not set and capacity exists
                                                     if (!$state) {
@@ -1264,7 +1232,7 @@ class EventResource extends Resource
                                                 ->label('Serie end')
                                                 ->placeholder('Ex: AMB-5-00500')
                                                 ->maxLength(50)
-                                                ->helperText('Numărul de final al seriei de bilete. Se generează automat din capacitate.')
+                                                ->hintIcon('heroicon-o-information-circle', tooltip: 'Numărul de final al seriei de bilete. Se generează automat din capacitate.')
                                                 ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
                                                     // Auto-generate if not set and capacity exists
                                                     if (!$state) {
@@ -1287,7 +1255,7 @@ class EventResource extends Resource
                                         // Scheduling fields - shown when ticket is NOT active
                                         Forms\Components\DateTimePicker::make('scheduled_at')
                                             ->label('Schedule Activation')
-                                            ->helperText('When this ticket type should automatically become active')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'When this ticket type should automatically become active')
                                             ->native(false)
                                             ->seconds(false)
                                             ->displayFormat('Y-m-d H:i')
@@ -1297,7 +1265,7 @@ class EventResource extends Resource
 
                                         Forms\Components\Toggle::make('autostart_when_previous_sold_out')
                                             ->label('Autostart when previous sold out')
-                                            ->helperText('Activate automatically when previous ticket types reach 0 capacity')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Activate automatically when previous ticket types reach 0 capacity')
                                             ->visible(fn (SGet $get) => !$get('is_active'))
                                             ->columnSpan(4),
 
@@ -1574,11 +1542,12 @@ class EventResource extends Resource
                                         }
 
                                         // Get stats from the event or calculate from ticket types
-                                        $ticketsSold = $record->tickets_sold ?? $record->ticketTypes->sum('quantity_sold') ?? 0;
-                                        // Calculate revenue from ticket types (sold * price)
-                                        $calculatedRevenue = $record->ticketTypes->sum(fn ($tt) => ($tt->quantity_sold ?? 0) * ($tt->price ?? 0));
+                                        // TicketType uses quota_sold (not quantity_sold), capacity accessor (quota_total), and display_price
+                                        $ticketsSold = $record->tickets_sold ?? $record->ticketTypes->sum('quota_sold') ?? 0;
+                                        // Calculate revenue from ticket types (sold * display_price)
+                                        $calculatedRevenue = $record->ticketTypes->sum(fn ($tt) => ($tt->quota_sold ?? 0) * ($tt->display_price ?? 0));
                                         $totalRevenue = $record->revenue ?? $calculatedRevenue ?? 0;
-                                        $totalCapacity = $record->capacity ?? $record->ticketTypes->sum('quantity') ?? 0;
+                                        $totalCapacity = $record->capacity ?? $record->ticketTypes->sum('capacity') ?? 0;
                                         $views = $record->views ?? $record->views_count ?? 0;
 
                                         $percentSold = $totalCapacity > 0 ? round(($ticketsSold / $totalCapacity) * 100) : 0;
@@ -1848,6 +1817,9 @@ class EventResource extends Resource
                                             if (!$record) return null;
                                             $domain = $marketplace?->domain;
                                             if (!$domain) return null;
+                                            // Strip any existing protocol from domain
+                                            $domain = preg_replace('#^(https?:?/?/?|//)#i', '', $domain);
+                                            $domain = ltrim($domain, '/');
                                             $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
                                             return "{$protocol}://{$domain}/bilete/{$record->slug}?preview=1";
                                         })
@@ -1907,7 +1879,7 @@ class EventResource extends Resource
                                                     ->helperText('Alege un template de document pentru a genera PDF-ul.'),
                                             ];
                                         })
-                                        ->modalHeading('Generează document')
+                                        ->modalHeading('Generează')
                                         ->modalDescription('Selectează un template pentru a genera documentul PDF pentru acest eveniment.')
                                         ->modalSubmitActionLabel('Generează')
                                         ->action(function (array $data, ?Event $record) {
@@ -1973,7 +1945,7 @@ class EventResource extends Resource
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                                         </svg>
                                                         <p class="mt-2 text-sm text-gray-500">Nu există documente generate pentru acest eveniment.</p>
-                                                        <p class="text-xs text-gray-400">Folosește butonul "Generează document" pentru a crea un nou document.</p>
+                                                        <p class="text-xs text-gray-400">Folosește butonul "Generează" pentru a crea un nou document.</p>
                                                     </div>
                                                 ');
                                             }
@@ -2345,6 +2317,9 @@ class EventResource extends Resource
                         if (!$domain) {
                             return null;
                         }
+                        // Strip any existing protocol from domain
+                        $domain = preg_replace('#^(https?:?/?/?|//)#i', '', $domain);
+                        $domain = ltrim($domain, '/');
                         $protocol = str_contains($domain, 'localhost') ? 'http' : 'https';
                         $url = $protocol . '://' . $domain . '/bilete/' . $record->slug;
                         // Add preview param if not published
@@ -2359,10 +2334,6 @@ class EventResource extends Resource
                     ->icon('heroicon-o-chart-bar')
                     ->color('info')
                     ->url(fn (Event $record) => static::getUrl('statistics', ['record' => $record])),
-                Action::make('edit')
-                    ->label('Edit')
-                    ->icon('heroicon-o-pencil')
-                    ->url(fn (Event $record) => static::getUrl('edit', ['record' => $record])),
             ])
             ->bulkActions([
                 BulkActionGroup::make([

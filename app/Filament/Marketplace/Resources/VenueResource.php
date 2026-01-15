@@ -6,14 +6,18 @@ use App\Filament\Marketplace\Resources\VenueResource\Pages;
 use App\Models\Venue;
 use App\Models\MarketplaceVenueCategory;
 use Filament\Actions\EditAction;
+use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Schemas\Components as SC;
 use Filament\Schemas\Components\Utilities\Set as SSet;
+use Filament\Schemas\Components\Utilities\Get as SGet;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
 use Illuminate\Support\Str;
 
@@ -40,6 +44,178 @@ class VenueResource extends Resource
             // Hidden tenant_id
             Forms\Components\Hidden::make('marketplace_client_id')
                 ->default($marketplace?->id),
+
+            // ============================================================
+            // SEARCH EXISTING VENUES (only on create page)
+            // ============================================================
+            SC\Section::make('Caută locații existente')
+                ->description('Caută în toate locațiile din sistem. Dacă găsești locația dorită, o poți adăuga ca partener în loc să creezi una nouă.')
+                ->icon('heroicon-o-magnifying-glass')
+                ->collapsed(false)
+                ->visible(fn ($operation) => $operation === 'create')
+                ->schema([
+                    Forms\Components\Select::make('search_existing_venue')
+                        ->label('Caută o locație existentă')
+                        ->placeholder('Scrie numele sau orașul pentru a căuta...')
+                        ->searchable()
+                        ->getSearchResultsUsing(function (string $search) use ($marketplace): array {
+                            if (strlen($search) < 2) {
+                                return [];
+                            }
+
+                            // Normalize search (remove diacritics)
+                            $normalizedSearch = mb_strtolower($search);
+                            $diacritics = ['ă' => 'a', 'â' => 'a', 'î' => 'i', 'ș' => 's', 'ț' => 't'];
+                            $normalizedSearch = strtr($normalizedSearch, $diacritics);
+
+                            return Venue::query()
+                                ->where(function (Builder $q) use ($marketplace) {
+                                    // Show venues that are NOT already associated with this marketplace
+                                    $q->whereNull('marketplace_client_id')
+                                        ->orWhere('marketplace_client_id', '!=', $marketplace?->id);
+                                })
+                                ->where(function (Builder $q) use ($normalizedSearch, $search) {
+                                    // Search in name JSON field
+                                    $q->whereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ["%{$normalizedSearch}%"])
+                                        ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en'))) LIKE ?", ["%{$normalizedSearch}%"])
+                                        ->orWhereRaw("LOWER(city) LIKE ?", ["%{$normalizedSearch}%"])
+                                        // Also search with original term
+                                        ->orWhereRaw("LOWER(JSON_UNQUOTE(JSON_EXTRACT(name, '$.ro'))) LIKE ?", ["%" . mb_strtolower($search) . "%"])
+                                        ->orWhereRaw("LOWER(city) LIKE ?", ["%" . mb_strtolower($search) . "%"]);
+                                })
+                                ->limit(20)
+                                ->get()
+                                ->mapWithKeys(function (Venue $venue) {
+                                    $name = $venue->getTranslation('name', 'ro') ?? $venue->getTranslation('name', 'en') ?? 'Locație';
+                                    $city = $venue->city ? " - {$venue->city}" : '';
+                                    $capacity = $venue->capacity_total ? " ({$venue->capacity_total} locuri)" : '';
+                                    $status = $venue->marketplace_client_id ? ' [Aparține altui marketplace]' : '';
+                                    return [$venue->id => $name . $city . $capacity . $status];
+                                })
+                                ->toArray();
+                        })
+                        ->live()
+                        ->afterStateUpdated(function ($state, SSet $set) {
+                            // Store the selected venue ID for the action to use
+                            $set('selected_venue_id', $state);
+                        })
+                        ->helperText('Selectează o locație pentru a vedea detaliile și opțiunea de adăugare ca partener')
+                        ->columnSpanFull(),
+
+                    Forms\Components\Hidden::make('selected_venue_id'),
+
+                    // Show selected venue details and add button
+                    Forms\Components\Placeholder::make('venue_preview')
+                        ->label('')
+                        ->visible(fn (SGet $get) => !empty($get('search_existing_venue')))
+                        ->content(function (SGet $get) use ($marketplace) {
+                            $venueId = $get('search_existing_venue');
+                            if (!$venueId) return '';
+
+                            $venue = Venue::find($venueId);
+                            if (!$venue) return '';
+
+                            $name = $venue->getTranslation('name', 'ro') ?? $venue->getTranslation('name', 'en') ?? 'Locație';
+                            $city = $venue->city ?? '-';
+                            $address = $venue->address ?? '-';
+                            $capacity = $venue->capacity_total ?? '-';
+
+                            $isAvailable = is_null($venue->marketplace_client_id);
+                            $statusBadge = $isAvailable
+                                ? '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded-full dark:text-green-400 dark:bg-green-900/30">Disponibilă pentru parteneriat</span>'
+                                : '<span class="inline-flex items-center px-2 py-1 text-xs font-medium text-yellow-700 bg-yellow-100 rounded-full dark:text-yellow-400 dark:bg-yellow-900/30">Aparține altui marketplace</span>';
+
+                            return new HtmlString("
+                                <div class='p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+                                    <div class='flex justify-between items-start mb-3'>
+                                        <h4 class='text-lg font-semibold text-gray-900 dark:text-white'>{$name}</h4>
+                                        {$statusBadge}
+                                    </div>
+                                    <div class='grid grid-cols-3 gap-4 text-sm'>
+                                        <div>
+                                            <span class='text-gray-500 dark:text-gray-400'>Oraș:</span>
+                                            <span class='ml-2 text-gray-900 dark:text-white'>{$city}</span>
+                                        </div>
+                                        <div>
+                                            <span class='text-gray-500 dark:text-gray-400'>Adresă:</span>
+                                            <span class='ml-2 text-gray-900 dark:text-white'>{$address}</span>
+                                        </div>
+                                        <div>
+                                            <span class='text-gray-500 dark:text-gray-400'>Capacitate:</span>
+                                            <span class='ml-2 text-gray-900 dark:text-white'>{$capacity}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ");
+                        })
+                        ->columnSpanFull(),
+
+                    SC\Actions::make([
+                        Action::make('add_as_partner')
+                            ->label('Adaugă ca partener')
+                            ->icon('heroicon-o-plus-circle')
+                            ->color('success')
+                            ->size('lg')
+                            ->visible(function (SGet $get) use ($marketplace) {
+                                $venueId = $get('search_existing_venue');
+                                if (!$venueId) return false;
+                                $venue = Venue::find($venueId);
+                                return $venue && is_null($venue->marketplace_client_id);
+                            })
+                            ->requiresConfirmation()
+                            ->modalHeading('Adaugă locație ca partener')
+                            ->modalDescription('Această locație va fi adăugată în lista ta de locații partenere. Vei putea să o folosești pentru evenimentele tale.')
+                            ->action(function (SGet $get) use ($marketplace) {
+                                $venueId = $get('search_existing_venue');
+                                $venue = Venue::find($venueId);
+
+                                if (!$venue) {
+                                    Notification::make()
+                                        ->title('Eroare')
+                                        ->body('Locația nu a fost găsită.')
+                                        ->danger()
+                                        ->send();
+                                    return;
+                                }
+
+                                if ($venue->marketplace_client_id) {
+                                    Notification::make()
+                                        ->title('Eroare')
+                                        ->body('Această locație aparține deja unui alt marketplace.')
+                                        ->danger()
+                                        ->send();
+                                    return;
+                                }
+
+                                $venueName = $venue->getTranslation('name', 'ro') ?? $venue->getTranslation('name', 'en') ?? 'Locație';
+
+                                $venue->update([
+                                    'marketplace_client_id' => $marketplace?->id,
+                                    'is_partner' => true,
+                                ]);
+
+                                Notification::make()
+                                    ->title('Locație adăugată')
+                                    ->body('"' . $venueName . '" a fost adăugată ca partener. Vei fi redirecționat către lista de locații.')
+                                    ->success()
+                                    ->send();
+
+                                // Redirect to the venues list
+                                return redirect(static::getUrl('index'));
+                            }),
+                    ])->visible(fn (SGet $get) => !empty($get('search_existing_venue'))),
+
+                    Forms\Components\Placeholder::make('or_create_new')
+                        ->label('')
+                        ->content(new HtmlString('
+                            <div class="flex items-center gap-4 py-2">
+                                <div class="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+                                <span class="text-sm text-gray-500 dark:text-gray-400">sau creează o locație nouă mai jos</span>
+                                <div class="flex-1 border-t border-gray-300 dark:border-gray-600"></div>
+                            </div>
+                        '))
+                        ->columnSpanFull(),
+                ]),
 
             // NAME & SLUG - EN/RO
             SC\Section::make('Venue Identity')
