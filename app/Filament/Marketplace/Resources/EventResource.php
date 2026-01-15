@@ -581,6 +581,27 @@ class EventResource extends Resource
                                 Forms\Components\Textarea::make("short_description.{$marketplaceLanguage}")
                                     ->label($marketplaceLanguage === 'ro' ? 'Descriere scurtă' : 'Short description')
                                     ->rows(3)
+                                    ->maxLength(1000)
+                                    ->live(debounce: 300)
+                                    ->helperText(function ($state) {
+                                        $wordCount = $state ? str_word_count(strip_tags($state)) : 0;
+                                        $remaining = 120 - $wordCount;
+                                        $color = $remaining < 0 ? 'text-danger-500' : ($remaining < 20 ? 'text-warning-500' : 'text-gray-500');
+                                        return new \Illuminate\Support\HtmlString(
+                                            "<span class='{$color}'>{$wordCount}/120 cuvinte</span>" .
+                                            ($remaining < 0 ? " <span class='text-danger-500 font-semibold'>(depășit cu " . abs($remaining) . " cuvinte)</span>" : '')
+                                        );
+                                    })
+                                    ->rules([
+                                        function () {
+                                            return function (string $attribute, $value, \Closure $fail) {
+                                                $wordCount = str_word_count(strip_tags($value ?? ''));
+                                                if ($wordCount > 120) {
+                                                    $fail("Descrierea scurtă nu poate depăși 120 de cuvinte. Ai {$wordCount} cuvinte.");
+                                                }
+                                            };
+                                        },
+                                    ])
                                     ->columnSpanFull(),
                                 Forms\Components\RichEditor::make("description.{$marketplaceLanguage}")
                                     ->label($marketplaceLanguage === 'ro' ? 'Descriere' : 'Description')
@@ -1162,7 +1183,7 @@ class EventResource extends Resource
                                         // Ticket Series Fields
                                         SC\Grid::make(2)->schema([
                                             Forms\Components\TextInput::make('series_start')
-                                                ->label('Serie start')
+                                                ->label('Serie start bilete')
                                                 ->placeholder('Ex: AMB-5-00001')
                                                 ->maxLength(50)
                                                 ->hintIcon('heroicon-o-information-circle', tooltip: 'Numărul de start al seriei de bilete. Se generează automat.')
@@ -1177,7 +1198,7 @@ class EventResource extends Resource
                                                     }
                                                 }),
                                             Forms\Components\TextInput::make('series_end')
-                                                ->label('Serie end')
+                                                ->label('Serie end bilete')
                                                 ->placeholder('Ex: AMB-5-00500')
                                                 ->maxLength(50)
                                                 ->hintIcon('heroicon-o-information-circle', tooltip: 'Numărul de final al seriei de bilete. Se generează automat din capacitate.')
