@@ -267,7 +267,7 @@ class OrganizerResource extends Resource
                                     ->color('success')
                                     ->visible(fn ($record) => $record->status === 'suspended')
                                     ->action(fn ($record) => $record->update(['status' => 'active'])),
-                            ])->fullWidth(),
+                            ]),
                         ]),
 
                     // Events Stats (doar pe Edit/View)
@@ -510,13 +510,10 @@ class OrganizerResource extends Resource
 
         $totalEvents = $record->events()->count();
         $activeEvents = $record->events()
-            ->where('is_published', true)
-            ->where(function ($q) {
-                $q->where('is_cancelled', false)->orWhereNull('is_cancelled');
-            })
+            ->whereIn('status', ['published', 'active'])
             ->count();
-        $upcomingEvents = $record->events()->where('event_date', '>=', now())->count();
-        $completedEvents = $record->events()->where('event_date', '<', now())->count();
+        $upcomingEvents = $record->events()->where('starts_at', '>=', now())->count();
+        $completedEvents = $record->events()->where('starts_at', '<', now())->count();
 
         return new HtmlString("
             <div style='display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;'>

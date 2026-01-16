@@ -604,15 +604,13 @@ class VenueResource extends Resource
                                     ->label('Vezi evenimente')
                                     ->icon('heroicon-o-calendar')
                                     ->color('gray')
-                                    ->fullWidth()
                                     ->url(fn (?Venue $record) => $record ? EventResource::getUrl('index', ['tableFilters[venue_id][value]' => $record->id]) : null),
                                 Action::make('create_event')
                                     ->label('Eveniment nou')
                                     ->icon('heroicon-o-plus')
                                     ->color('primary')
-                                    ->fullWidth()
                                     ->url(fn (?Venue $record) => $record ? EventResource::getUrl('create', ['venue_id' => $record->id]) : null),
-                            ])->fullWidth(),
+                            ]),
                         ]),
 
                     // Meta Info (doar pe Edit)
