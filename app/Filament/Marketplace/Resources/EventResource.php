@@ -2349,7 +2349,7 @@ class EventResource extends Resource
             ])
             ->actions([
                 Action::make('view_on_site')
-                    ->label('Vezi pe site')
+                    ->labelHidden()
                     ->icon('heroicon-o-arrow-top-right-on-square')
                     ->color('gray')
                     ->url(function (Event $record) {
@@ -2375,7 +2375,7 @@ class EventResource extends Resource
                     })
                     ->openUrlInNewTab(),
                 Action::make('statistics')
-                    ->label('Statistics')
+                    ->labelHidden()
                     ->icon('heroicon-o-chart-bar')
                     ->color('info')
                     ->url(fn (Event $record) => static::getUrl('statistics', ['record' => $record])),
