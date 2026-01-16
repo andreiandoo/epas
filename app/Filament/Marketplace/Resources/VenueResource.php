@@ -53,7 +53,6 @@ class VenueResource extends Resource
                     // ============================================================
                     SC\Section::make('Caută locații existente')
                         ->description('Caută în toate locațiile din sistem. Dacă găsești locația dorită, o poți adăuga ca partener în loc să creezi una nouă.')
-                        ->collapsed(false)
                         ->icon('heroicon-o-magnifying-glass')
                         ->extraAttributes(['class' => 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 border-emerald-500/30'])
                         ->visible(fn ($operation) => $operation === 'create')
@@ -283,9 +282,12 @@ class VenueResource extends Resource
                                     ->label('Gallery')
                                     ->image()
                                     ->multiple()
+                                    ->maxFiles(3)
                                     ->directory('venues/gallery')
                                     ->visibility('public')
                                     ->reorderable()
+                                    ->panelLayout('grid')
+                                    ->imagePreviewHeight('80')
                                     ->columnSpanFull(),
                             ]),
                     ]),
@@ -328,7 +330,7 @@ class VenueResource extends Resource
                                     ->placeholder('https://maps.google.com/...')
                                     ->prefixIcon('heroicon-o-map')
                                     ->columnSpanFull(),
-                            ]),
+                            ])->columns(2),
                         // CAPACITY
                         SC\Section::make('Capacity')
                             ->icon('heroicon-o-users')
@@ -352,44 +354,6 @@ class VenueResource extends Resource
                             ]),
                     ]),
 
-                    // FACILITIES
-                    SC\Section::make('Facilități')
-                        ->description('Selectează facilitățile disponibile la această locație')
-                        ->icon('heroicon-o-wrench-screwdriver')
-                        ->collapsible()
-                        ->collapsed()
-                        ->schema([
-                            Forms\Components\CheckboxList::make('facilities')
-                                ->label('')
-                                ->options(Venue::getFacilitiesOptions())
-                                ->columns(4)
-                                ->gridDirection('row')
-                                ->searchable()
-                                ->bulkToggleable()
-                                ->columnSpanFull(),
-                        ]),
-
-                    // DESCRIPTION - EN/RO
-                    SC\Section::make('Description')
-                        ->icon('heroicon-o-document-text')
-                        ->schema([
-                            SC\Tabs::make('Description Translations')
-                                ->tabs([
-                                    SC\Tabs\Tab::make('English')
-                                        ->schema([
-                                            Forms\Components\RichEditor::make('description.en')
-                                                ->label('Description (EN)')
-                                                ->columnSpanFull(),
-                                        ]),
-                                    SC\Tabs\Tab::make('Română')
-                                        ->schema([
-                                            Forms\Components\RichEditor::make('description.ro')
-                                                ->label('Descriere (RO)')
-                                                ->columnSpanFull(),
-                                        ]),
-                                ])->columnSpanFull(),
-                        ]),
-                    
                     // CONTACT & LINKS
                     SC\Section::make('Contact & Links')
                         ->icon('heroicon-o-phone')
@@ -435,6 +399,44 @@ class VenueResource extends Resource
                                 ->placeholder('https://tiktok.com/@...')
                                 ->prefixIcon('heroicon-o-link'),
                         ])->columns(2),
+
+                    // FACILITIES
+                    SC\Section::make('Facilități')
+                        ->description('Selectează facilitățile disponibile la această locație')
+                        ->icon('heroicon-o-wrench-screwdriver')
+                        ->collapsible()
+                        ->collapsed()
+                        ->schema([
+                            Forms\Components\CheckboxList::make('facilities')
+                                ->label('')
+                                ->options(Venue::getFacilitiesOptions())
+                                ->columns(4)
+                                ->gridDirection('row')
+                                ->searchable()
+                                ->bulkToggleable()
+                                ->columnSpanFull(),
+                        ]),
+
+                    // DESCRIPTION - EN/RO
+                    SC\Section::make('Description')
+                        ->icon('heroicon-o-document-text')
+                        ->schema([
+                            SC\Tabs::make('Description Translations')
+                                ->tabs([
+                                    SC\Tabs\Tab::make('English')
+                                        ->schema([
+                                            Forms\Components\RichEditor::make('description.en')
+                                                ->label('Description (EN)')
+                                                ->columnSpanFull(),
+                                        ]),
+                                    SC\Tabs\Tab::make('Română')
+                                        ->schema([
+                                            Forms\Components\RichEditor::make('description.ro')
+                                                ->label('Descriere (RO)')
+                                                ->columnSpanFull(),
+                                        ]),
+                                ])->columnSpanFull(),
+                        ]),
 
                     // PARTNER NOTES (internal)
                     SC\Section::make('Note interne')
@@ -522,7 +524,7 @@ class VenueResource extends Resource
                         ]),
 
                     // Video field
-                    SC\Grid::make(2)->schema([
+                    SC\Grid::make(1)->schema([
                         Forms\Components\Select::make('video_type')
                             ->label('Video Type')
                             ->options([
@@ -602,11 +604,13 @@ class VenueResource extends Resource
                                     ->label('Vezi evenimente')
                                     ->icon('heroicon-o-calendar')
                                     ->color('gray')
+                                    ->fullWidth()
                                     ->url(fn (?Venue $record) => $record ? EventResource::getUrl('index', ['tableFilters[venue_id][value]' => $record->id]) : null),
                                 Action::make('create_event')
                                     ->label('Eveniment nou')
                                     ->icon('heroicon-o-plus')
                                     ->color('primary')
+                                    ->fullWidth()
                                     ->url(fn (?Venue $record) => $record ? EventResource::getUrl('create', ['venue_id' => $record->id]) : null),
                             ])->fullWidth(),
                         ]),
