@@ -144,7 +144,7 @@ class OrderResource extends Resource
                                     ->requiresConfirmation()
                                     ->visible(fn ($record) => in_array($record->status, ['confirmed', 'paid'])),
                             ])->fullWidth(),
-                        ]),
+                        ])->columns(1),
 
                     // Order Timeline
                     SC\Section::make('Istoric comandă')
