@@ -2268,11 +2268,10 @@ class EventResource extends Resource
                     ->label('Venue')
                     ->formatStateUsing(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()) ?? '-')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('marketplaceCity.name')
+                Tables\Columns\TextColumn::make('marketplace_city_id')
                     ->label('Oraș')
-                    ->sortable()
-                    ->searchable()
-                    ->placeholder('-'),
+                    ->formatStateUsing(fn ($state, $record) => $record->marketplaceCity?->getTranslation('name', app()->getLocale()) ?? '-')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('event_date')
                     ->label('Event Date')
                     ->formatStateUsing(function ($state, $record) {
@@ -2333,6 +2332,37 @@ class EventResource extends Resource
                 Tables\Columns\IconColumn::make('is_sold_out')
                     ->boolean()
                     ->label('Sold Out'),
+                Tables\Columns\BadgeColumn::make('status_display')
+                    ->label('Status')
+                    ->getStateUsing(function ($record) {
+                        // Determine event end date based on duration mode
+                        $endDate = null;
+
+                        if ($record->duration_mode === 'range') {
+                            $endDate = $record->range_end_date ?? $record->range_start_date;
+                        } elseif ($record->duration_mode === 'multi_day' && !empty($record->multi_slots)) {
+                            $lastSlot = collect($record->multi_slots)->pluck('date')->filter()->sort()->last();
+                            $endDate = $lastSlot ? Carbon::parse($lastSlot) : null;
+                        } else {
+                            // Single day
+                            $endDate = $record->event_date;
+                        }
+
+                        if (!$endDate) {
+                            return 'unknown';
+                        }
+
+                        return $endDate->endOfDay()->isPast() ? 'ended' : 'active';
+                    })
+                    ->formatStateUsing(fn ($state) => match($state) {
+                        'active' => 'Activ',
+                        'ended' => 'Încheiat',
+                        default => '-',
+                    })
+                    ->colors([
+                        'success' => 'active',
+                        'gray' => 'ended',
+                    ]),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
