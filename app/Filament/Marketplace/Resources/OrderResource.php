@@ -472,41 +472,6 @@ class OrderResource extends Resource
         return new HtmlString($html);
     }
 
-    protected static function renderTimeline(Order $record): HtmlString
-    {
-        $events = [
-            ['status' => 'success', 'text' => 'Comandă confirmată', 'time' => $record->updated_at->format('d M Y, H:i')],
-            ['status' => 'success', 'text' => 'Plată procesată cu succes', 'time' => $record->created_at->addMinutes(2)->format('d M Y, H:i')],
-            ['status' => 'info', 'text' => 'Email confirmare trimis', 'time' => $record->created_at->addMinutes(2)->format('d M Y, H:i')],
-            ['status' => 'warning', 'text' => 'Comandă plasată', 'time' => $record->created_at->format('d M Y, H:i')],
-        ];
-
-        $html = '<div style="position: relative; padding-left: 24px;">';
-        $html .= '<div style="position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: #334155;"></div>';
-        
-        foreach ($events as $event) {
-            $dotColor = match($event['status']) {
-                'success' => '#10B981',
-                'warning' => '#F59E0B',
-                'danger' => '#EF4444',
-                'info' => '#60A5FA',
-                default => '#334155',
-            };
-            
-            $html .= "
-                <div style='position: relative; padding-bottom: 16px;'>
-                    <div style='position: absolute; left: -24px; top: 4px; width: 16px; height: 16px; border-radius: 50%; background: {$dotColor}; border: 3px solid #1E293B;'></div>
-                    <div style='font-size: 13px; color: #E2E8F0;'>{$event['text']}</div>
-                    <div style='font-size: 11px; color: #64748B; margin-top: 2px;'>{$event['time']}</div>
-                </div>
-            ";
-        }
-        
-        $html .= '</div>';
-
-        return new HtmlString($html);
-    }
-
     protected static function renderEventCard(Order $record): HtmlString
     {
         $events = $record->tickets
