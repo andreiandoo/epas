@@ -13,6 +13,19 @@ class CreateEvent extends CreateRecord
 
     protected static string $resource = EventResource::class;
 
+    public function mount(): void
+    {
+        parent::mount();
+
+        // Pre-fill organizer from query parameter if provided
+        $organizerId = request()->query('organizer');
+        if ($organizerId) {
+            $this->form->fill([
+                'marketplace_organizer_id' => (int) $organizerId,
+            ]);
+        }
+    }
+
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $marketplace = static::getMarketplaceClient();

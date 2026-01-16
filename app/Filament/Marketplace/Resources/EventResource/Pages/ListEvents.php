@@ -10,6 +10,17 @@ class ListEvents extends ListRecords
 {
     protected static string $resource = EventResource::class;
 
+    public function mount(): void
+    {
+        parent::mount();
+
+        // Check for organizer query parameter and apply filter
+        $organizerId = request()->query('organizer');
+        if ($organizerId) {
+            $this->tableFilters['marketplace_organizer_id']['value'] = $organizerId;
+        }
+    }
+
     protected function getHeaderActions(): array
     {
         return [
