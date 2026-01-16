@@ -589,13 +589,13 @@ class VenueResource extends Resource
                         ->compact()
                         ->visible(fn ($operation) => $operation === 'edit')
                         ->schema([
-                            Forms\Components\Actions::make([
-                                Forms\Components\Actions\Action::make('view_events')
+                            SC\Actions::make([
+                                Action::make('view_events')
                                     ->label('Vezi evenimente')
                                     ->icon('heroicon-o-calendar')
                                     ->color('gray')
                                     ->url(fn (?Venue $record) => $record ? EventResource::getUrl('index', ['tableFilters[venue_id][value]' => $record->id]) : null),
-                                Forms\Components\Actions\Action::make('create_event')
+                                Action::make('create_event')
                                     ->label('Eveniment nou')
                                     ->icon('heroicon-o-plus')
                                     ->color('primary')
