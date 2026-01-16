@@ -81,7 +81,7 @@ const AmbiletEventCard = {
                     '<div class="flex items-center justify-between pt-2 border-t border-border">' +
                         '<span class="font-bold ' + (event.isCancelled || event.isPostponed || event.isSoldOut ? 'text-gray-400 line-through' : 'text-primary') + '">' + event.priceFormatted + '</span>' +
                         '<span class="text-xs ' + (event.isCancelled ? 'text-red-600 font-semibold' : event.isPostponed ? 'text-orange-600 font-semibold' : event.isSoldOut ? 'text-gray-600 font-semibold' : 'text-muted') + '">' +
-                            (event.isCancelled ? 'Anulat' : event.isPostponed ? 'Amânat' : event.isSoldOut ? 'Sold Out' : 'Disponibil') +
+                            (event.isCancelled ? 'Anulat' : event.isPostponed ? 'Amânat' : event.isSoldOut ? 'Sold Out' : '') +
                         '</span>' +
                     '</div>' : '') +
             '</div>' +

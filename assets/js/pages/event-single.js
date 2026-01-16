@@ -960,6 +960,8 @@ const EventPage = {
                 availabilityHtml = '<span class="text-xs font-semibold text-gray-500">Sold Out</span>';
             } else if (isSoldOut) {
                 availabilityHtml = '<span class="text-xs font-semibold text-gray-400">Indisponibil</span>';
+            } else if (tt.available <= 1) {
+                availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Ultimul bilet</span>';
             } else if (tt.available <= 5) {
                 availabilityHtml = '<span class="text-xs font-semibold text-primary">🔥 Ultimele ' + tt.available + ' disponibile</span>';
             } else if (tt.available <= 20) {
@@ -967,7 +969,7 @@ const EventPage = {
             } else if (tt.available < 40) {
                 availabilityHtml = '<span class="text-xs font-semibold text-success">⚡ ' + tt.available + ' disponibile</span>';
             } else {
-                availabilityHtml = '<span class="text-xs font-semibold text-success">✓ Disponibil</span>';
+                availabilityHtml = '<span class="text-xs font-semibold text-success"></span>';
             }
 
             // Calculate commission for tooltip (displayPrice already calculated above)
