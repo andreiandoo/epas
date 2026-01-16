@@ -186,16 +186,86 @@ class EventStatistics extends Page
     }
 
     /**
+     * Get the effective commission rate for this event
+     * Priority: Event > Organizer > Marketplace
+     */
+    public function getEffectiveCommissionRate(): float
+    {
+        // 1. Event's custom commission rate
+        if ($this->record->commission_rate !== null) {
+            return (float) $this->record->commission_rate;
+        }
+
+        // 2. Organizer's commission rate
+        $organizer = $this->record->marketplaceOrganizer;
+        if ($organizer && $organizer->commission_rate !== null) {
+            return (float) $organizer->commission_rate;
+        }
+
+        // 3. Marketplace client's commission rate
+        $marketplace = $this->record->marketplaceClient ?? static::getMarketplaceClient();
+        return (float) ($marketplace->commission_rate ?? 5.00);
+    }
+
+    /**
+     * Get the effective commission mode for this event
+     * Priority: Event > Organizer > Marketplace
+     * Returns: 'included' or 'added_on_top'
+     */
+    public function getEffectiveCommissionMode(): string
+    {
+        // 1. Event's custom commission mode
+        if ($this->record->commission_mode !== null) {
+            return $this->record->commission_mode;
+        }
+
+        // 2. Organizer's default commission mode
+        $organizer = $this->record->marketplaceOrganizer;
+        if ($organizer && $organizer->default_commission_mode !== null) {
+            return $organizer->default_commission_mode;
+        }
+
+        // 3. Marketplace client's commission mode
+        $marketplace = $this->record->marketplaceClient ?? static::getMarketplaceClient();
+        return $marketplace->commission_mode ?? 'included';
+    }
+
+    /**
      * Get total commissions earned for this event
+     * Calculates based on the effective commission rate and mode
      */
     public function getTotalCommissions(): float
     {
-        // Query orders directly by event_id for marketplace orders
-        $commission = Order::where('event_id', $this->record->id)
-            ->whereIn('status', ['paid', 'confirmed'])
-            ->sum('commission_amount');
+        $rate = $this->getEffectiveCommissionRate();
+        $mode = $this->getEffectiveCommissionMode();
 
-        return (float) $commission;
+        // Get total revenue from paid orders
+        $orders = Order::where('event_id', $this->record->id)
+            ->whereIn('status', ['paid', 'confirmed'])
+            ->get(['total']);
+
+        $totalCommission = 0;
+
+        foreach ($orders as $order) {
+            $orderTotal = (float) $order->total;
+
+            if ($mode === 'included') {
+                // Commission is included in the ticket price
+                // Customer pays: ticket_price (= total)
+                // Commission = total * (rate / 100)
+                $commission = $orderTotal * ($rate / 100);
+            } else {
+                // Commission is added on top of ticket price
+                // Customer pays: ticket_price + commission (= total)
+                // ticket_price = total / (1 + rate/100)
+                // Commission = total - ticket_price = total * (rate / (100 + rate))
+                $commission = $orderTotal * ($rate / (100 + $rate));
+            }
+
+            $totalCommission += $commission;
+        }
+
+        return round($totalCommission, 2);
     }
 
     /**

@@ -4,6 +4,8 @@
         $ticketTypesData = $this->getTicketTypesData();
         $totalRevenue = $this->getTotalRevenue();
         $totalCommissions = $this->getTotalCommissions();
+        $commissionRate = $this->getEffectiveCommissionRate();
+        $commissionMode = $this->getEffectiveCommissionMode();
         $totalTicketsSold = $this->getTotalTicketsSold();
         $totalCapacity = $this->getTotalCapacity();
         $orderStats = $this->getOrderStats();
@@ -13,6 +15,7 @@
 
         $occupancy = $totalCapacity > 0 ? round(($totalTicketsSold / $totalCapacity) * 100, 1) : 0;
         $totalViews = $pageAnalytics['total_views'] ?? 0;
+        $commissionModeLabel = $commissionMode === 'included' ? 'inclus în preț' : 'peste preț';
     @endphp
 
     <div class="space-y-6">
@@ -72,6 +75,7 @@
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-amber-600">{{ number_format($totalCommissions, 2) }} RON</div>
                 <div class="text-sm text-gray-500 dark:text-gray-400">Comisioane</div>
+                <div class="mt-1 text-xs text-gray-400">{{ number_format($commissionRate, 1) }}% ({{ $commissionModeLabel }})</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-emerald-600">{{ number_format($totalRevenue - $totalCommissions, 2) }} RON</div>
