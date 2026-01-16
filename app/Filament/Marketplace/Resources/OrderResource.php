@@ -571,7 +571,7 @@ class OrderResource extends Resource
                         </div>
                     </div>
                     <div>
-                        <a href='" . EventResource::getUrl('view', ['record' => $event->id]) . "' 
+                        <a href='" . EventResource::getUrl('edit', ['record' => $event->id]) . "' 
                         style='padding: 8px 12px; background: #334155; border-radius: 6px; color: #E2E8F0; font-size: 12px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;'>
                             <svg style='width: 14px; height: 14px;' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'/><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'/></svg>
                             Vezi eveniment
