@@ -429,7 +429,8 @@ class OrderResource extends Resource
         $html = '';
         
         foreach ($record->tickets as $ticket) {
-            $typeName = $ticket->ticketType?->getTranslation('name', 'ro') ?? 'Bilet';
+            $typeNameRaw = $ticket->ticketType?->name;
+            $typeName = is_array($typeNameRaw) ? ($typeNameRaw['ro'] ?? $typeNameRaw['en'] ?? reset($typeNameRaw) ?: 'Bilet') : ($typeNameRaw ?? 'Bilet');
             $code = $ticket->code ?? $ticket->unique_code ?? 'N/A';
             $price = number_format($ticket->price ?? 0, 2);
             $currency = $ticket->ticketType?->currency ?? 'RON';
@@ -721,7 +722,10 @@ class OrderResource extends Resource
             ->map(fn ($ticket) => [
                 'name' => $ticket->beneficiary_name ?? $record->customer_name ?? 'N/A',
                 'email' => $ticket->beneficiary_email ?? $record->customer_email ?? '',
-                'ticket_type' => $ticket->ticketType?->getTranslation('name', 'ro') ?? 'Bilet',
+                'ticket_type' => (function() use ($ticket) {
+                    $name = $ticket->ticketType?->name;
+                    return is_array($name) ? ($name['ro'] ?? $name['en'] ?? reset($name) ?: 'Bilet') : ($name ?? 'Bilet');
+                })(),
                 'ticket_code' => $ticket->code ?? $ticket->unique_code ?? '',
             ]);
 
