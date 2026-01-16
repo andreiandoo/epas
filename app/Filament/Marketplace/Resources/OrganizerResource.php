@@ -295,8 +295,8 @@ class OrganizerResource extends Resource
                                 ->content(fn (?MarketplaceOrganizer $record) => self::renderMetaInfo($record)),
                         ]),
                 ]),
-            ])->columns(1),
-        ]);
+            ]),
+        ])->columns(1);
     }
 
     public static function table(Table $table): Table
