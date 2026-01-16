@@ -723,6 +723,37 @@ class EventResource extends Resource
                                             ->openUrlInNewTab()
                                     ),
 
+                                Forms\Components\Select::make('tags')
+                                    ->label('Event tags')
+                                    ->relationship('tags', 'name')
+                                    ->multiple()
+                                    ->preload()
+                                    ->searchable()
+                                    ->createOptionForm([
+                                        Forms\Components\TextInput::make('name')
+                                            ->label('Tag name')
+                                            ->required()
+                                            ->maxLength(100)
+                                            ->live(onBlur: true)
+                                            ->afterStateUpdated(function ($state, SSet $set) {
+                                                if ($state) {
+                                                    $set('slug', Str::slug($state));
+                                                }
+                                            }),
+                                        Forms\Components\TextInput::make('slug')
+                                            ->label('Slug')
+                                            ->maxLength(100)
+                                            ->rule('alpha_dash'),
+                                    ])
+                                    ->createOptionUsing(function (array $data) use ($marketplace): int {
+                                        $tag = EventTag::create([
+                                            'marketplace_client_id' => $marketplace?->id,
+                                            'name' => $data['name'],
+                                            'slug' => $data['slug'] ?: Str::slug($data['name']),
+                                        ]);
+                                        return $tag->id;
+                                    }),
+
                                 // Artist ordering and headliner settings (visible when >2 artists)
                                 SC\Section::make('Artist Display Settings')
                                     ->description('Configure display order and headliner status for artists')
@@ -779,38 +810,7 @@ class EventResource extends Resource
                                         Forms\Components\Placeholder::make('artist_settings_help')
                                             ->content('Drag and drop to reorder artists. The order here determines how they appear on the event page. Headliners will be displayed prominently.')
                                             ->columnSpanFull(),
-                                    ]),
-
-                                Forms\Components\Select::make('tags')
-                                    ->label('Event tags')
-                                    ->relationship('tags', 'name')
-                                    ->multiple()
-                                    ->preload()
-                                    ->searchable()
-                                    ->createOptionForm([
-                                        Forms\Components\TextInput::make('name')
-                                            ->label('Tag name')
-                                            ->required()
-                                            ->maxLength(100)
-                                            ->live(onBlur: true)
-                                            ->afterStateUpdated(function ($state, SSet $set) {
-                                                if ($state) {
-                                                    $set('slug', Str::slug($state));
-                                                }
-                                            }),
-                                        Forms\Components\TextInput::make('slug')
-                                            ->label('Slug')
-                                            ->maxLength(100)
-                                            ->rule('alpha_dash'),
-                                    ])
-                                    ->createOptionUsing(function (array $data) use ($marketplace): int {
-                                        $tag = EventTag::create([
-                                            'marketplace_client_id' => $marketplace?->id,
-                                            'name' => $data['name'],
-                                            'slug' => $data['slug'] ?: Str::slug($data['name']),
-                                        ]);
-                                        return $tag->id;
-                                    }),
+                                    ])->columnSpanFull(),
 
                                 // Dynamic tax display based on selected event types
                                 Forms\Components\Placeholder::make('applicable_taxes')
@@ -1180,6 +1180,17 @@ class EventResource extends Resource
                                                 ->displayFormat('Y-m-d H:i'),
                                         ])->columnSpan(12),
 
+                                        // Sale stock - limit how many tickets can be sold at sale price
+                                        Forms\Components\TextInput::make('sale_stock')
+                                            ->label('Sale stoc')
+                                            ->placeholder('Nelimitat')
+                                            ->numeric()
+                                            ->minValue(0)
+                                            ->nullable()
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Numărul de bilete disponibile la preț redus. Când se consumă stocul, oferta se închide automat.')
+                                            ->visible(fn (SGet $get) => $get('price') !== null && $get('price') !== '')
+                                            ->columnSpan(6),
+
                                         // Ticket Series Fields
                                         SC\Grid::make(2)->schema([
                                             Forms\Components\TextInput::make('series_start')
@@ -1219,7 +1230,17 @@ class EventResource extends Resource
                                             ->label('Active?')
                                             ->default(true)
                                             ->live()
-                                            ->columnSpan(4),
+                                            ->columnSpan(3),
+
+                                        Forms\Components\DateTimePicker::make('active_until')
+                                            ->label('Active until')
+                                            ->native(false)
+                                            ->seconds(false)
+                                            ->displayFormat('Y-m-d H:i')
+                                            ->minDate(now())
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Când se atinge această dată, tipul de bilet va fi marcat ca sold out, chiar dacă mai sunt bilete în stoc.')
+                                            ->visible(fn (SGet $get) => $get('is_active'))
+                                            ->columnSpan(5),
 
                                         Forms\Components\Toggle::make('is_refundable')
                                             ->label('Returnabil')
@@ -1547,7 +1568,71 @@ class EventResource extends Resource
                                     );
                                 }),
                         ]),
-                        
+
+                        // Event Status Badge (Încheiat/Amânat/Anulat)
+                        Forms\Components\Placeholder::make('event_status_badge')
+                            ->hiddenLabel()
+                            ->visible(fn (?Event $record) => $record && $record->exists)
+                            ->content(function (?Event $record) {
+                                if (!$record || !$record->exists) {
+                                    return null;
+                                }
+
+                                // Check if cancelled
+                                if ($record->is_cancelled) {
+                                    return new HtmlString('
+                                        <div class="flex items-center justify-center p-3 bg-red-500/10 rounded-lg border border-red-500/20">
+                                            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold bg-red-500/20 text-red-400 ring-1 ring-inset ring-red-500/30">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                ANULAT
+                                            </span>
+                                        </div>
+                                    ');
+                                }
+
+                                // Check if postponed
+                                if ($record->is_postponed) {
+                                    return new HtmlString('
+                                        <div class="flex items-center justify-center p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                                            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold bg-amber-500/20 text-amber-400 ring-1 ring-inset ring-amber-500/30">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                AMÂNAT
+                                            </span>
+                                        </div>
+                                    ');
+                                }
+
+                                // Check if event has ended
+                                $eventEndDateTime = null;
+                                if ($record->duration_mode === 'single_day' && $record->event_date) {
+                                    $endTime = $record->end_time ?? '23:59';
+                                    $eventEndDateTime = Carbon::parse($record->event_date->format('Y-m-d') . ' ' . $endTime);
+                                } elseif ($record->duration_mode === 'range' && $record->range_end_date) {
+                                    $endTime = $record->range_end_time ?? '23:59';
+                                    $eventEndDateTime = Carbon::parse($record->range_end_date->format('Y-m-d') . ' ' . $endTime);
+                                } elseif ($record->duration_mode === 'multi_day' && !empty($record->multi_slots)) {
+                                    $slots = collect($record->multi_slots);
+                                    $lastSlot = $slots->sortByDesc('date')->first();
+                                    if ($lastSlot) {
+                                        $endTime = $lastSlot['end_time'] ?? '23:59';
+                                        $eventEndDateTime = Carbon::parse($lastSlot['date'] . ' ' . $endTime);
+                                    }
+                                }
+
+                                if ($eventEndDateTime && $eventEndDateTime->isPast()) {
+                                    return new HtmlString('
+                                        <div class="flex items-center justify-center p-3 bg-gray-500/10 rounded-lg border border-gray-500/20">
+                                            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold bg-gray-500/20 text-gray-400 ring-1 ring-inset ring-gray-500/30">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                                ÎNCHEIAT
+                                            </span>
+                                        </div>
+                                    ');
+                                }
+
+                                return null;
+                            }),
+
                         // 1. Quick Stats Card - Vânzări LIVE
                         SC\Section::make(fn () => new HtmlString('Vânzări <span class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400 ring-1 ring-inset ring-green-500/30">LIVE</span>'))
                             ->icon('heroicon-o-chart-bar')
@@ -1734,14 +1819,27 @@ class EventResource extends Resource
                                             if (!$record) return;
 
                                             $newEvent = $record->replicate();
-                                            $newEvent->name = $record->name . ' (Copie)';
+
+                                            // Prepend "[Duplicat]" to all title translations
+                                            $titleArray = $record->title ?? [];
+                                            if (is_array($titleArray)) {
+                                                foreach ($titleArray as $locale => $value) {
+                                                    if (!empty($value)) {
+                                                        $titleArray[$locale] = '[Duplicat] ' . $value;
+                                                    }
+                                                }
+                                            }
+                                            $newEvent->title = $titleArray;
+
                                             $newEvent->slug = null; // Will be auto-generated
                                             $newEvent->status = 'draft';
                                             $newEvent->is_public = false;
                                             $newEvent->is_featured = false;
-                                            $newEvent->tickets_sold = 0;
-                                            $newEvent->revenue = 0;
-                                            $newEvent->views = 0;
+                                            $newEvent->is_homepage_featured = false;
+                                            $newEvent->is_general_featured = false;
+                                            $newEvent->is_category_featured = false;
+                                            $newEvent->views_count = 0;
+                                            $newEvent->interested_count = 0;
                                             $newEvent->submitted_at = null;
                                             $newEvent->approved_at = null;
                                             $newEvent->approved_by = null;
@@ -1756,9 +1854,12 @@ class EventResource extends Resource
                                                 $newTicketType->save();
                                             }
 
+                                            // Get display title for notification
+                                            $displayTitle = $newEvent->getTranslation('title') ?? 'Eveniment';
+
                                             \Filament\Notifications\Notification::make()
                                                 ->title('Eveniment duplicat')
-                                                ->body("Evenimentul \"{$newEvent->name}\" a fost creat.")
+                                                ->body("Evenimentul \"{$displayTitle}\" a fost creat.")
                                                 ->success()
                                                 ->send();
 
@@ -2137,6 +2238,11 @@ class EventResource extends Resource
                     ->label('Venue')
                     ->formatStateUsing(fn ($state, $record) => $record->venue?->getTranslation('name', app()->getLocale()) ?? '-')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('marketplaceCity.name')
+                    ->label('Oraș')
+                    ->sortable()
+                    ->searchable()
+                    ->placeholder('-'),
                 Tables\Columns\TextColumn::make('event_date')
                     ->label('Event Date')
                     ->formatStateUsing(function ($state, $record) {

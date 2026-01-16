@@ -75,7 +75,11 @@ class CouponCodeResource extends Resource
 
                         Forms\Components\Select::make('campaign_id')
                             ->label('Campaign')
-                            ->relationship('campaign', 'name')
+                            ->relationship(
+                                'campaign',
+                                'name',
+                                modifyQueryUsing: fn ($query) => $query->where('marketplace_client_id', $marketplace?->id)
+                            )
                             ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?? ($record->name[app()->getLocale()] ?? ($record->name['en'] ?? array_values((array) $record->name)[0] ?? 'Untitled')))
                             ->searchable()
                             ->preload(),
@@ -236,7 +240,11 @@ class CouponCodeResource extends Resource
                     ]),
                 Tables\Filters\SelectFilter::make('campaign_id')
                     ->label('Campaign')
-                    ->relationship('campaign', 'name')
+                    ->relationship(
+                        'campaign',
+                        'name',
+                        modifyQueryUsing: fn ($query) => $query->where('marketplace_client_id', static::getMarketplaceClientId())
+                    )
                     ->getOptionLabelFromRecordUsing(fn ($record) => $record->getTranslation('name', app()->getLocale()) ?? ($record->name[app()->getLocale()] ?? ($record->name['en'] ?? array_values((array) $record->name)[0] ?? 'Untitled')))
                     ->searchable()
                     ->preload(),

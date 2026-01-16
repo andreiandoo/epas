@@ -26,6 +26,11 @@ class TicketType extends Model
         'sales_end_at',
         'scheduled_at',
         'autostart_when_previous_sold_out',
+        // Sale stock - limit tickets sold at sale price
+        'sale_stock',
+        'sale_stock_sold',
+        // Active until - auto mark as soldout when date is reached
+        'active_until',
         // Virtual fields (handled by mutators)
         'price_max',
         'price',
@@ -43,6 +48,7 @@ class TicketType extends Model
         'sales_start_at' => 'datetime',
         'sales_end_at'   => 'datetime',
         'scheduled_at'   => 'datetime',
+        'active_until'   => 'datetime',
         'autostart_when_previous_sold_out' => 'boolean',
     ];
 
