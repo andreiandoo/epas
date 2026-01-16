@@ -116,14 +116,23 @@ class EventResource extends Resource
                                             ->required()
                                             ->maxLength(190)
                                             ->live(onBlur: true)
-                                            ->afterStateUpdated(function ($state, SSet $set) {
+                                            ->afterStateUpdated(function ($state, SSet $set, ?Event $record) {
                                                 // Slug is NOT translatable - it's a plain string field
-                                                if ($state) $set('slug', Str::slug($state));
+                                                // Format: event-name-[id] (ID is appended after save if record exists)
+                                                if ($state) {
+                                                    $baseSlug = Str::slug($state);
+                                                    if ($record && $record->exists && $record->id) {
+                                                        $set('slug', $baseSlug . '-' . $record->id);
+                                                    } else {
+                                                        $set('slug', $baseSlug);
+                                                    }
+                                                }
                                             }),
                                         Forms\Components\TextInput::make('slug')
                                             ->label('Slug')
                                             ->maxLength(190)
-                                            ->rule('alpha_dash'),
+                                            ->rule('alpha_dash')
+                                            ->hintIcon('heroicon-o-information-circle', tooltip: 'ID-ul evenimentului va fi adăugat automat la salvare'),
                                         Forms\Components\TextInput::make('event_series')
                                             ->label('Serie eveniment')
                                             ->placeholder('Se generează automat: AMB-[ID]')
@@ -1048,17 +1057,19 @@ class EventResource extends Resource
                                                     $seriesEnd = $get('series_end');
                                                     if (!$seriesEnd && $state && (int)$state > 0) {
                                                         $eventSeries = $get('../../event_series');
-                                                        if ($eventSeries) {
+                                                        $ticketTypeId = $get('id');
+                                                        if ($eventSeries && $ticketTypeId) {
                                                             $endNumber = (int)$state;
-                                                            $set('series_end', $eventSeries . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
+                                                            $set('series_end', $eventSeries . '-' . $ticketTypeId . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
                                                         }
                                                     }
                                                     // Auto-generate series_start if not already set
                                                     $seriesStart = $get('series_start');
                                                     if (!$seriesStart && $state && (int)$state > 0) {
                                                         $eventSeries = $get('../../event_series');
-                                                        if ($eventSeries) {
-                                                            $set('series_start', $eventSeries . '-00001');
+                                                        $ticketTypeId = $get('id');
+                                                        if ($eventSeries && $ticketTypeId) {
+                                                            $set('series_start', $eventSeries . '-' . $ticketTypeId . '-00001');
                                                         }
                                                     }
                                                 }),
@@ -1097,6 +1108,21 @@ class EventResource extends Resource
                                                 } else {
                                                     $total = round($price + $commission, 2);
                                                     return "Customer pays: **{$total} {$currency}** → Organizer receives: **{$price} {$currency}** → {$marketplaceName} receives: **{$commission} {$currency}** @ {$rate}%";
+                                                }
+                                            })
+                                            ->columnSpan(12),
+
+                                        // Sale toggle - controls visibility of sale fields
+                                        Forms\Components\Toggle::make('has_sale')
+                                            ->label('Enable Sale Discount')
+                                            ->live()
+                                            ->default(false)
+                                            ->dehydrated(false)
+                                            ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
+                                                // Auto-enable if there's existing sale data
+                                                $hasSaleData = $get('price') || $get('discount_percent') || $get('sales_start_at') || $get('sales_end_at') || $get('sale_stock');
+                                                if ($hasSaleData) {
+                                                    $set('has_sale', true);
                                                 }
                                             })
                                             ->columnSpan(12),
@@ -1178,7 +1204,9 @@ class EventResource extends Resource
                                                 ->native(false)
                                                 ->seconds(false)
                                                 ->displayFormat('Y-m-d H:i'),
-                                        ])->columnSpan(12),
+                                        ])
+                                            ->visible(fn (SGet $get) => $get('has_sale'))
+                                            ->columnSpan(12),
 
                                         // Sale stock - limit how many tickets can be sold at sale price
                                         Forms\Components\TextInput::make('sale_stock')
@@ -1188,7 +1216,7 @@ class EventResource extends Resource
                                             ->minValue(0)
                                             ->nullable()
                                             ->hintIcon('heroicon-o-information-circle', tooltip: 'Numărul de bilete disponibile la preț redus. Când se consumă stocul, oferta se închide automat.')
-                                            ->visible(fn (SGet $get) => $get('price') !== null && $get('price') !== '')
+                                            ->visible(fn (SGet $get) => $get('has_sale'))
                                             ->columnSpan(6),
 
                                         // Ticket Series Fields
@@ -1203,8 +1231,9 @@ class EventResource extends Resource
                                                     if (!$state) {
                                                         $eventSeries = $get('../../event_series');
                                                         $capacity = $get('capacity');
-                                                        if ($eventSeries && $capacity && (int)$capacity > 0) {
-                                                            $set('series_start', $eventSeries . '-00001');
+                                                        $ticketTypeId = $get('id');
+                                                        if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeId) {
+                                                            $set('series_start', $eventSeries . '-' . $ticketTypeId . '-00001');
                                                         }
                                                     }
                                                 }),
@@ -1218,9 +1247,10 @@ class EventResource extends Resource
                                                     if (!$state) {
                                                         $eventSeries = $get('../../event_series');
                                                         $capacity = $get('capacity');
-                                                        if ($eventSeries && $capacity && (int)$capacity > 0) {
+                                                        $ticketTypeId = $get('id');
+                                                        if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeId) {
                                                             $endNumber = (int)$capacity;
-                                                            $set('series_end', $eventSeries . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
+                                                            $set('series_end', $eventSeries . '-' . $ticketTypeId . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
                                                         }
                                                     }
                                                 }),
