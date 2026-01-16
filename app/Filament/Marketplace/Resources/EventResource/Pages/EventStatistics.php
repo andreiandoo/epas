@@ -84,13 +84,89 @@ class EventStatistics extends Page
      */
     public function getTotalRevenue(): float
     {
-        $ticketTypeIds = $this->record->ticketTypes()->pluck('id');
-
-        return Order::whereHas('tickets', function ($q) use ($ticketTypeIds) {
-                $q->whereIn('ticket_type_id', $ticketTypeIds);
-            })
+        // Query orders directly by event_id for marketplace orders
+        $revenue = Order::where('event_id', $this->record->id)
             ->whereIn('status', ['paid', 'confirmed'])
-            ->sum('total_cents') / 100;
+            ->sum('total');
+
+        // If no results, fallback to summing from ticket types (for older orders using total_cents)
+        if ($revenue == 0) {
+            $ticketTypeIds = $this->record->ticketTypes()->pluck('id');
+            $revenueCents = Order::whereHas('tickets', function ($q) use ($ticketTypeIds) {
+                    $q->whereIn('ticket_type_id', $ticketTypeIds);
+                })
+                ->whereIn('status', ['paid', 'confirmed'])
+                ->sum('total_cents');
+
+            if ($revenueCents > 0) {
+                return $revenueCents / 100;
+            }
+        }
+
+        return (float) $revenue;
+    }
+
+    /**
+     * Get event context info (name, venue, city, artists)
+     */
+    public function getEventContext(): array
+    {
+        $event = $this->record;
+        $locale = app()->getLocale();
+
+        // Get event title
+        $title = is_array($event->title)
+            ? ($event->title[$locale] ?? $event->title['ro'] ?? $event->title['en'] ?? reset($event->title))
+            : $event->title;
+
+        // Get venue info
+        $venue = $event->venue;
+        $venueName = null;
+        $cityName = null;
+
+        if ($venue) {
+            $venueName = is_array($venue->name)
+                ? ($venue->name[$locale] ?? $venue->name['ro'] ?? $venue->name['en'] ?? reset($venue->name))
+                : $venue->name;
+        }
+
+        // Get city name
+        $city = $event->marketplaceCity;
+        if ($city) {
+            $cityName = is_array($city->name)
+                ? ($city->name[$locale] ?? $city->name['ro'] ?? $city->name['en'] ?? reset($city->name))
+                : $city->name;
+        }
+
+        // Get artists
+        $artists = $event->artists()->get()->map(function ($artist) use ($locale) {
+            $name = is_array($artist->name)
+                ? ($artist->name[$locale] ?? $artist->name['ro'] ?? $artist->name['en'] ?? reset($artist->name))
+                : $artist->name;
+            return $name;
+        })->toArray();
+
+        // Get event date
+        $eventDate = null;
+        if ($event->duration_mode === 'range' && $event->range_start_date) {
+            $eventDate = $event->range_start_date->format('d M Y');
+            if ($event->range_end_date && $event->range_end_date->format('Y-m-d') !== $event->range_start_date->format('Y-m-d')) {
+                $eventDate .= ' - ' . $event->range_end_date->format('d M Y');
+            }
+        } elseif ($event->event_date) {
+            $eventDate = $event->event_date->format('d M Y');
+        }
+
+        return [
+            'title' => $title,
+            'venue_name' => $venueName,
+            'city_name' => $cityName,
+            'artists' => $artists,
+            'event_date' => $eventDate,
+            'status' => $event->is_published ? 'Publicat' : 'Draft',
+            'is_cancelled' => $event->is_cancelled,
+            'is_sold_out' => $event->is_sold_out,
+        ];
     }
 
     /**
@@ -114,15 +190,24 @@ class EventStatistics extends Page
      */
     public function getOrderStats(): array
     {
-        $ticketTypeIds = $this->record->ticketTypes()->pluck('id');
-
-        $orders = Order::whereHas('tickets', function ($q) use ($ticketTypeIds) {
-                $q->whereIn('ticket_type_id', $ticketTypeIds);
-            })
+        // Query orders directly by event_id for marketplace orders
+        $orders = Order::where('event_id', $this->record->id)
             ->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->pluck('count', 'status')
             ->toArray();
+
+        // If no results, fallback to ticket-based query
+        if (empty($orders)) {
+            $ticketTypeIds = $this->record->ticketTypes()->pluck('id');
+            $orders = Order::whereHas('tickets', function ($q) use ($ticketTypeIds) {
+                    $q->whereIn('ticket_type_id', $ticketTypeIds);
+                })
+                ->select('status', DB::raw('count(*) as count'))
+                ->groupBy('status')
+                ->pluck('count', 'status')
+                ->toArray();
+        }
 
         return [
             'total' => array_sum($orders),
@@ -130,6 +215,8 @@ class EventStatistics extends Page
             'paid' => ($orders['paid'] ?? 0) + ($orders['confirmed'] ?? 0),
             'cancelled' => $orders['cancelled'] ?? 0,
             'refunded' => $orders['refunded'] ?? 0,
+            'failed' => $orders['failed'] ?? 0,
+            'expired' => $orders['expired'] ?? 0,
         ];
     }
 
