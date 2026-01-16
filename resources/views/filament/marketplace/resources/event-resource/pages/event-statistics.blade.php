@@ -2,10 +2,15 @@
     @php
         $eventContext = $this->getEventContext();
         $ticketTypesData = $this->getTicketTypesData();
-        $totalRevenue = $this->getTotalRevenue();
-        $totalCommissions = $this->getTotalCommissions();
-        $commissionRate = $this->getEffectiveCommissionRate();
-        $commissionMode = $this->getEffectiveCommissionMode();
+
+        // Get financial breakdown with proper calculations based on mode
+        $financials = $this->getFinancialBreakdown();
+        $customerPaymentTotal = $financials['customer_payment_total'];
+        $netOrganizerRevenue = $financials['organizer_base_revenue'];
+        $totalCommissions = $financials['total_commission'];
+        $commissionRate = $financials['commission_rate'];
+        $commissionMode = $financials['commission_mode'];
+
         $totalTicketsSold = $this->getTotalTicketsSold();
         $totalCapacity = $this->getTotalCapacity();
         $orderStats = $this->getOrderStats();
@@ -69,8 +74,11 @@
         {{-- Stats Cards - Row 1: Financial --}}
         <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-                <div class="text-2xl font-bold text-green-600">{{ number_format($totalRevenue, 2) }} RON</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Încasări totale</div>
+                <div class="text-2xl font-bold text-green-600">{{ number_format($customerPaymentTotal, 2) }} RON</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Încasări clienți</div>
+                @if($commissionMode === 'added_on_top')
+                    <div class="mt-1 text-xs text-gray-400">include comision {{ number_format($commissionRate, 1) }}%</div>
+                @endif
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-amber-600">{{ number_format($totalCommissions, 2) }} RON</div>
@@ -78,7 +86,7 @@
                 <div class="mt-1 text-xs text-gray-400">{{ number_format($commissionRate, 1) }}% ({{ $commissionModeLabel }})</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-                <div class="text-2xl font-bold text-emerald-600">{{ number_format($totalRevenue - $totalCommissions, 2) }} RON</div>
+                <div class="text-2xl font-bold text-emerald-600">{{ number_format($netOrganizerRevenue, 2) }} RON</div>
                 <div class="text-sm text-gray-500 dark:text-gray-400">Net organizator</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">

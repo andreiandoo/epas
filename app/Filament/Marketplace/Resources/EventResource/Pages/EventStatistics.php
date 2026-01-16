@@ -231,41 +231,90 @@ class EventStatistics extends Page
     }
 
     /**
-     * Get total commissions earned for this event
-     * Calculates based on the effective commission rate and mode
+     * Get financial breakdown for this event
+     * Returns all financial metrics calculated correctly based on commission mode
      */
-    public function getTotalCommissions(): float
+    public function getFinancialBreakdown(): array
     {
         $rate = $this->getEffectiveCommissionRate();
         $mode = $this->getEffectiveCommissionMode();
 
-        // Get total revenue from paid orders
+        // Get orders data
         $orders = Order::where('event_id', $this->record->id)
             ->whereIn('status', ['paid', 'confirmed'])
-            ->get(['total']);
+            ->get(['total', 'subtotal']);
 
-        $totalCommission = 0;
+        $customerPaymentTotal = 0;  // What customers actually paid
+        $organizerBaseRevenue = 0;  // Organizer's ticket prices (before commission)
+        $totalCommission = 0;       // Marketplace commission
 
         foreach ($orders as $order) {
             $orderTotal = (float) $order->total;
+            $orderSubtotal = (float) ($order->subtotal ?? $orderTotal);
 
             if ($mode === 'included') {
                 // Commission is included in the ticket price
-                // Customer pays: ticket_price (= total)
-                // Commission = total * (rate / 100)
+                // Customer pays = ticket_price (order.total)
+                // Commission = ticket_price * rate / 100
+                // Organizer receives = ticket_price - commission
+                $customerPaymentTotal += $orderTotal;
                 $commission = $orderTotal * ($rate / 100);
+                $totalCommission += $commission;
+                $organizerBaseRevenue += ($orderTotal - $commission);
             } else {
                 // Commission is added on top of ticket price
-                // Customer pays: ticket_price + commission (= total)
-                // ticket_price = total / (1 + rate/100)
-                // Commission = total - ticket_price = total * (rate / (100 + rate))
-                $commission = $orderTotal * ($rate / (100 + $rate));
+                // order.subtotal = organizer's base price (what they set)
+                // order.total = subtotal + commission (what customer pays)
+                // Use subtotal if available, otherwise calculate from total
+                if ($order->subtotal && $order->subtotal > 0) {
+                    // We have subtotal - use it directly
+                    $basePrice = $orderSubtotal;
+                    $commission = $basePrice * ($rate / 100);
+                    $customerPaymentTotal += ($basePrice + $commission);
+                } else {
+                    // Calculate base price from total
+                    // total = base * (1 + rate/100)
+                    // base = total / (1 + rate/100)
+                    $basePrice = $orderTotal / (1 + $rate / 100);
+                    $commission = $orderTotal - $basePrice;
+                    $customerPaymentTotal += $orderTotal;
+                }
+                $organizerBaseRevenue += $basePrice;
+                $totalCommission += $commission;
             }
-
-            $totalCommission += $commission;
         }
 
-        return round($totalCommission, 2);
+        return [
+            'customer_payment_total' => round($customerPaymentTotal, 2),
+            'organizer_base_revenue' => round($organizerBaseRevenue, 2),
+            'total_commission' => round($totalCommission, 2),
+            'commission_rate' => $rate,
+            'commission_mode' => $mode,
+        ];
+    }
+
+    /**
+     * Get total commissions earned for this event
+     */
+    public function getTotalCommissions(): float
+    {
+        return $this->getFinancialBreakdown()['total_commission'];
+    }
+
+    /**
+     * Get net organizer revenue (what organizer receives)
+     */
+    public function getNetOrganizerRevenue(): float
+    {
+        return $this->getFinancialBreakdown()['organizer_base_revenue'];
+    }
+
+    /**
+     * Get total customer payments
+     */
+    public function getCustomerPaymentTotal(): float
+    {
+        return $this->getFinancialBreakdown()['customer_payment_total'];
     }
 
     /**
