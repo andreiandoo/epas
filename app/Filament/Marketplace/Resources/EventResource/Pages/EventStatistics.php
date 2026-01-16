@@ -186,6 +186,115 @@ class EventStatistics extends Page
     }
 
     /**
+     * Get total commissions earned for this event
+     */
+    public function getTotalCommissions(): float
+    {
+        // Query orders directly by event_id for marketplace orders
+        $commission = Order::where('event_id', $this->record->id)
+            ->whereIn('status', ['paid', 'confirmed'])
+            ->sum('commission_amount');
+
+        return (float) $commission;
+    }
+
+    /**
+     * Get ticket metrics (issued, valid, used/checked-in, cancelled, etc.)
+     */
+    public function getTicketMetrics(): array
+    {
+        // Query tickets directly by event_id for marketplace events
+        $tickets = Ticket::where('event_id', $this->record->id)
+            ->select('status', 'is_cancelled', DB::raw('count(*) as count'))
+            ->groupBy('status', 'is_cancelled')
+            ->get();
+
+        $totalIssued = 0;
+        $valid = 0;
+        $used = 0; // checked-in
+        $void = 0;
+        $cancelled = 0;
+        $pending = 0;
+
+        foreach ($tickets as $ticket) {
+            $totalIssued += $ticket->count;
+
+            if ($ticket->is_cancelled) {
+                $cancelled += $ticket->count;
+            } else {
+                switch ($ticket->status) {
+                    case 'valid':
+                        $valid += $ticket->count;
+                        break;
+                    case 'used':
+                        $used += $ticket->count;
+                        break;
+                    case 'void':
+                        $void += $ticket->count;
+                        break;
+                    case 'pending':
+                        $pending += $ticket->count;
+                        break;
+                    default:
+                        // Count as valid if unknown status
+                        $valid += $ticket->count;
+                }
+            }
+        }
+
+        // If no results, fallback to ticket-based query via ticket types
+        if ($totalIssued == 0) {
+            $ticketTypeIds = $this->record->ticketTypes()->pluck('id');
+            if ($ticketTypeIds->isNotEmpty()) {
+                $tickets = Ticket::whereIn('ticket_type_id', $ticketTypeIds)
+                    ->select('status', 'is_cancelled', DB::raw('count(*) as count'))
+                    ->groupBy('status', 'is_cancelled')
+                    ->get();
+
+                foreach ($tickets as $ticket) {
+                    $totalIssued += $ticket->count;
+
+                    if ($ticket->is_cancelled) {
+                        $cancelled += $ticket->count;
+                    } else {
+                        switch ($ticket->status) {
+                            case 'valid':
+                                $valid += $ticket->count;
+                                break;
+                            case 'used':
+                                $used += $ticket->count;
+                                break;
+                            case 'void':
+                                $void += $ticket->count;
+                                break;
+                            case 'pending':
+                                $pending += $ticket->count;
+                                break;
+                            default:
+                                $valid += $ticket->count;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Calculate check-in rate
+        $validTickets = $valid + $used; // tickets that are either valid or already used
+        $checkinRate = $validTickets > 0 ? round(($used / $validTickets) * 100, 1) : 0;
+
+        return [
+            'total_issued' => $totalIssued,
+            'valid' => $valid,
+            'used' => $used, // checked-in
+            'void' => $void,
+            'cancelled' => $cancelled,
+            'pending' => $pending,
+            'checkin_rate' => $checkinRate,
+            'active_tickets' => $valid + $used, // tickets that can be/were used
+        ];
+    }
+
+    /**
      * Get order statistics
      */
     public function getOrderStats(): array

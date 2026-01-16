@@ -3,9 +3,11 @@
         $eventContext = $this->getEventContext();
         $ticketTypesData = $this->getTicketTypesData();
         $totalRevenue = $this->getTotalRevenue();
+        $totalCommissions = $this->getTotalCommissions();
         $totalTicketsSold = $this->getTotalTicketsSold();
         $totalCapacity = $this->getTotalCapacity();
         $orderStats = $this->getOrderStats();
+        $ticketMetrics = $this->getTicketMetrics();
         $dailySalesData = $this->getDailySalesData();
         $pageAnalytics = $this->getPageAnalytics();
 
@@ -61,15 +63,31 @@
             </div>
         </div>
 
-        {{-- Stats Cards --}}
-        <div class="grid grid-cols-2 gap-4 md:grid-cols-5">
-            <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-                <div class="text-2xl font-bold text-primary-600">{{ number_format($totalTicketsSold) }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Bilete vândute</div>
-            </div>
+        {{-- Stats Cards - Row 1: Financial --}}
+        <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-green-600">{{ number_format($totalRevenue, 2) }} RON</div>
                 <div class="text-sm text-gray-500 dark:text-gray-400">Încasări totale</div>
+            </div>
+            <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="text-2xl font-bold text-amber-600">{{ number_format($totalCommissions, 2) }} RON</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Comisioane</div>
+            </div>
+            <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="text-2xl font-bold text-emerald-600">{{ number_format($totalRevenue - $totalCommissions, 2) }} RON</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Net organizator</div>
+            </div>
+            <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="text-2xl font-bold text-cyan-600">{{ number_format($totalViews) }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Vizualizări</div>
+            </div>
+        </div>
+
+        {{-- Stats Cards - Row 2: Sales & Orders --}}
+        <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="text-2xl font-bold text-primary-600">{{ number_format($totalTicketsSold) }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Bilete vândute</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
                 <div class="text-2xl font-bold text-blue-600">{{ $occupancy }}%</div>
@@ -83,8 +101,8 @@
                 <div class="text-sm text-gray-500 dark:text-gray-400">Comenzi totale</div>
             </div>
             <div class="p-4 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
-                <div class="text-2xl font-bold text-cyan-600">{{ number_format($totalViews) }}</div>
-                <div class="text-sm text-gray-500 dark:text-gray-400">Vizualizări</div>
+                <div class="text-2xl font-bold text-green-600">{{ number_format($orderStats['paid']) }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">Comenzi finalizate</div>
             </div>
         </div>
 
@@ -137,6 +155,48 @@
                     </div>
                     <div class="mt-2 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
                         <div class="h-full {{ $completedRate >= 70 ? 'bg-green-500' : ($completedRate >= 40 ? 'bg-yellow-500' : 'bg-red-500') }}" style="width: {{ $completedRate }}%"></div>
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        {{-- Ticket Status Metrics --}}
+        <div class="p-6 rounded-lg bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
+            <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Status bilete</h2>
+
+            <div class="grid grid-cols-2 gap-4 md:grid-cols-5">
+                <div class="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                    <div class="text-xl font-bold text-gray-900 dark:text-white">{{ $ticketMetrics['total_issued'] }}</div>
+                    <div class="text-xs text-gray-500">Total emise</div>
+                </div>
+                <div class="text-center p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
+                    <div class="text-xl font-bold text-green-600">{{ $ticketMetrics['valid'] }}</div>
+                    <div class="text-xs text-gray-500">Valide</div>
+                </div>
+                <div class="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                    <div class="text-xl font-bold text-blue-600">{{ $ticketMetrics['used'] }}</div>
+                    <div class="text-xs text-gray-500">Check-in</div>
+                </div>
+                <div class="text-center p-3 rounded-lg bg-red-50 dark:bg-red-900/20">
+                    <div class="text-xl font-bold text-red-600">{{ $ticketMetrics['cancelled'] }}</div>
+                    <div class="text-xs text-gray-500">Anulate</div>
+                </div>
+                <div class="text-center p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                    <div class="text-xl font-bold text-slate-600">{{ $ticketMetrics['void'] }}</div>
+                    <div class="text-xs text-gray-500">Void</div>
+                </div>
+            </div>
+
+            @if($ticketMetrics['total_issued'] > 0)
+                <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-gray-600 dark:text-gray-400">Rată check-in</span>
+                        <span class="font-semibold {{ $ticketMetrics['checkin_rate'] >= 70 ? 'text-green-600' : ($ticketMetrics['checkin_rate'] >= 40 ? 'text-yellow-600' : 'text-blue-600') }}">
+                            {{ $ticketMetrics['checkin_rate'] }}% ({{ $ticketMetrics['used'] }} din {{ $ticketMetrics['valid'] + $ticketMetrics['used'] }})
+                        </span>
+                    </div>
+                    <div class="mt-2 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                        <div class="h-full {{ $ticketMetrics['checkin_rate'] >= 70 ? 'bg-green-500' : ($ticketMetrics['checkin_rate'] >= 40 ? 'bg-yellow-500' : 'bg-blue-500') }}" style="width: {{ $ticketMetrics['checkin_rate'] }}%"></div>
                     </div>
                 </div>
             @endif
