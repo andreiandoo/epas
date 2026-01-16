@@ -434,9 +434,6 @@ class VenueResource extends Resource
                                 ->url()
                                 ->placeholder('https://tiktok.com/@...')
                                 ->prefixIcon('heroicon-o-link'),
-                            Forms\Components\DatePicker::make('established_at')
-                                ->label('Established')
-                                ->native(false),
                         ])->columns(2),
 
                     // PARTNER NOTES (internal)
@@ -502,6 +499,17 @@ class VenueResource extends Resource
                         ]),
 
                     // SCHEDULE
+                    SC\Section::make('Established')
+                        ->icon('heroicon-o-clock')
+                        ->compact()
+                        ->schema([
+                            Forms\Components\DatePicker::make('established_at')
+                                ->label('Established')
+                                ->native(false)
+                                ->columnSpanFull(),
+                        ]),
+
+                    // SCHEDULE
                     SC\Section::make('Program')
                         ->icon('heroicon-o-clock')
                         ->compact()
@@ -556,8 +564,8 @@ class VenueResource extends Resource
                                     if (!$record) return '';
 
                                     $totalEvents = $record->events()->count();
-                                    $upcomingEvents = $record->events()->where('start_date', '>', now())->count();
-                                    $pastEvents = $record->events()->where('start_date', '<=', now())->count();
+                                    $upcomingEvents = $record->events()->where('event_date', '>', now())->count();
+                                    $pastEvents = $record->events()->where('event_date', '<=', now())->count();
                                     $categoriesCount = $record->venueCategories()->count();
 
                                     return new HtmlString("
