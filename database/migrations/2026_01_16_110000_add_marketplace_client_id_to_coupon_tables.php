@@ -12,82 +12,55 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Helper to check if foreign key exists
-        $foreignKeyExists = function (string $table, string $column): bool {
-            $foreignKeys = Schema::getConnection()->getDoctrineSchemaManager()->listTableForeignKeys($table);
-            foreach ($foreignKeys as $foreignKey) {
-                if (in_array($column, $foreignKey->getLocalColumns())) {
-                    return true;
-                }
-            }
-            return false;
-        };
-
-        // Helper to check if index exists
-        $indexExists = function (string $table, string $indexName): bool {
-            $indexes = Schema::getConnection()->getDoctrineSchemaManager()->listTableIndexes($table);
-            return isset($indexes[$indexName]);
-        };
-
         // ==================== COUPON_CAMPAIGNS ====================
 
-        // Drop tenant_id foreign key if exists
-        if ($foreignKeyExists('coupon_campaigns', 'tenant_id')) {
+        // Check and drop tenant_id foreign key if exists (using raw SQL for MySQL)
+        $this->dropForeignKeyIfExists('coupon_campaigns', 'coupon_campaigns_tenant_id_foreign');
+
+        Schema::table('coupon_campaigns', function (Blueprint $table) {
+            // Make tenant_id nullable
+            $table->unsignedBigInteger('tenant_id')->nullable()->change();
+        });
+
+        // Add marketplace_client_id if it doesn't exist
+        if (!Schema::hasColumn('coupon_campaigns', 'marketplace_client_id')) {
             Schema::table('coupon_campaigns', function (Blueprint $table) {
-                $table->dropForeign(['tenant_id']);
+                $table->foreignId('marketplace_client_id')->nullable()->after('tenant_id')->constrained('marketplace_clients')->onDelete('cascade');
             });
         }
 
-        Schema::table('coupon_campaigns', function (Blueprint $table) use ($foreignKeyExists) {
-            // Make tenant_id nullable (if not already)
-            $table->unsignedBigInteger('tenant_id')->nullable()->change();
-
-            // Add marketplace_client_id if it doesn't exist
-            if (!Schema::hasColumn('coupon_campaigns', 'marketplace_client_id')) {
-                $table->foreignId('marketplace_client_id')->nullable()->after('tenant_id')->constrained('marketplace_clients')->onDelete('cascade');
-            }
-
-            // Re-add foreign key for tenant_id if it doesn't exist
-            if (!$foreignKeyExists('coupon_campaigns', 'tenant_id')) {
-                $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
-            }
-        });
+        // Re-add tenant_id foreign key
+        $this->addForeignKeyIfNotExists('coupon_campaigns', 'tenant_id', 'tenants', 'id', 'cascade');
 
         // ==================== COUPON_CODES ====================
 
         // Drop unique constraint if exists
-        if ($indexExists('coupon_codes', 'coupon_codes_tenant_id_code_unique')) {
-            Schema::table('coupon_codes', function (Blueprint $table) {
-                $table->dropUnique(['tenant_id', 'code']);
-            });
-        }
+        $this->dropIndexIfExists('coupon_codes', 'coupon_codes_tenant_id_code_unique');
 
         // Drop tenant_id foreign key if exists
-        if ($foreignKeyExists('coupon_codes', 'tenant_id')) {
+        $this->dropForeignKeyIfExists('coupon_codes', 'coupon_codes_tenant_id_foreign');
+
+        Schema::table('coupon_codes', function (Blueprint $table) {
+            // Make tenant_id nullable
+            $table->unsignedBigInteger('tenant_id')->nullable()->change();
+        });
+
+        // Add marketplace_client_id if it doesn't exist
+        if (!Schema::hasColumn('coupon_codes', 'marketplace_client_id')) {
             Schema::table('coupon_codes', function (Blueprint $table) {
-                $table->dropForeign(['tenant_id']);
+                $table->foreignId('marketplace_client_id')->nullable()->after('tenant_id')->constrained('marketplace_clients')->onDelete('cascade');
             });
         }
 
-        Schema::table('coupon_codes', function (Blueprint $table) use ($foreignKeyExists, $indexExists) {
-            // Make tenant_id nullable (if not already)
-            $table->unsignedBigInteger('tenant_id')->nullable()->change();
+        // Re-add tenant_id foreign key
+        $this->addForeignKeyIfNotExists('coupon_codes', 'tenant_id', 'tenants', 'id', 'cascade');
 
-            // Add marketplace_client_id if it doesn't exist
-            if (!Schema::hasColumn('coupon_codes', 'marketplace_client_id')) {
-                $table->foreignId('marketplace_client_id')->nullable()->after('tenant_id')->constrained('marketplace_clients')->onDelete('cascade');
-            }
-
-            // Re-add foreign key for tenant_id if it doesn't exist
-            if (!$foreignKeyExists('coupon_codes', 'tenant_id')) {
-                $table->foreign('tenant_id')->references('id')->on('tenants')->onDelete('cascade');
-            }
-
-            // Add unique constraint if it doesn't exist
-            if (!$indexExists('coupon_codes', 'coupon_codes_marketplace_code_unique')) {
+        // Add marketplace unique constraint if it doesn't exist
+        if (!$this->indexExists('coupon_codes', 'coupon_codes_marketplace_code_unique')) {
+            Schema::table('coupon_codes', function (Blueprint $table) {
                 $table->unique(['marketplace_client_id', 'code'], 'coupon_codes_marketplace_code_unique');
-            }
-        });
+            });
+        }
     }
 
     /**
@@ -96,21 +69,87 @@ return new class extends Migration
     public function down(): void
     {
         if (Schema::hasColumn('coupon_codes', 'marketplace_client_id')) {
+            $this->dropIndexIfExists('coupon_codes', 'coupon_codes_marketplace_code_unique');
+            $this->dropForeignKeyIfExists('coupon_codes', 'coupon_codes_marketplace_client_id_foreign');
             Schema::table('coupon_codes', function (Blueprint $table) {
-                $sm = Schema::getConnection()->getDoctrineSchemaManager();
-                $indexes = $sm->listTableIndexes('coupon_codes');
-                if (isset($indexes['coupon_codes_marketplace_code_unique'])) {
-                    $table->dropUnique('coupon_codes_marketplace_code_unique');
-                }
-                $table->dropForeign(['marketplace_client_id']);
                 $table->dropColumn('marketplace_client_id');
             });
         }
 
         if (Schema::hasColumn('coupon_campaigns', 'marketplace_client_id')) {
+            $this->dropForeignKeyIfExists('coupon_campaigns', 'coupon_campaigns_marketplace_client_id_foreign');
             Schema::table('coupon_campaigns', function (Blueprint $table) {
-                $table->dropForeign(['marketplace_client_id']);
                 $table->dropColumn('marketplace_client_id');
+            });
+        }
+    }
+
+    /**
+     * Check if a foreign key exists
+     */
+    private function foreignKeyExists(string $table, string $keyName): bool
+    {
+        $foreignKeys = DB::select("
+            SELECT CONSTRAINT_NAME
+            FROM information_schema.TABLE_CONSTRAINTS
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = ?
+            AND CONSTRAINT_TYPE = 'FOREIGN KEY'
+            AND CONSTRAINT_NAME = ?
+        ", [$table, $keyName]);
+
+        return count($foreignKeys) > 0;
+    }
+
+    /**
+     * Check if an index exists
+     */
+    private function indexExists(string $table, string $indexName): bool
+    {
+        $indexes = DB::select("
+            SELECT INDEX_NAME
+            FROM information_schema.STATISTICS
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = ?
+            AND INDEX_NAME = ?
+        ", [$table, $indexName]);
+
+        return count($indexes) > 0;
+    }
+
+    /**
+     * Drop foreign key if it exists
+     */
+    private function dropForeignKeyIfExists(string $table, string $keyName): void
+    {
+        if ($this->foreignKeyExists($table, $keyName)) {
+            Schema::table($table, function (Blueprint $table) use ($keyName) {
+                $table->dropForeign($keyName);
+            });
+        }
+    }
+
+    /**
+     * Drop index if it exists
+     */
+    private function dropIndexIfExists(string $table, string $indexName): void
+    {
+        if ($this->indexExists($table, $indexName)) {
+            Schema::table($table, function (Blueprint $table) use ($indexName) {
+                $table->dropIndex($indexName);
+            });
+        }
+    }
+
+    /**
+     * Add foreign key if it doesn't exist
+     */
+    private function addForeignKeyIfNotExists(string $table, string $column, string $referencedTable, string $referencedColumn, string $onDelete): void
+    {
+        $keyName = "{$table}_{$column}_foreign";
+        if (!$this->foreignKeyExists($table, $keyName)) {
+            Schema::table($table, function (Blueprint $table) use ($column, $referencedTable, $referencedColumn, $onDelete) {
+                $table->foreign($column)->references($referencedColumn)->on($referencedTable)->onDelete($onDelete);
             });
         }
     }
