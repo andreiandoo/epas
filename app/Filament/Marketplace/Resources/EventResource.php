@@ -1057,19 +1057,21 @@ class EventResource extends Resource
                                                     $seriesEnd = $get('series_end');
                                                     if (!$seriesEnd && $state && (int)$state > 0) {
                                                         $eventSeries = $get('../../event_series');
-                                                        $ticketTypeId = $get('id');
-                                                        if ($eventSeries && $ticketTypeId) {
+                                                        // Use ticket type ID if available, otherwise use SKU
+                                                        $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                        if ($eventSeries && $ticketTypeIdentifier) {
                                                             $endNumber = (int)$state;
-                                                            $set('series_end', $eventSeries . '-' . $ticketTypeId . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
+                                                            $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
                                                         }
                                                     }
                                                     // Auto-generate series_start if not already set
                                                     $seriesStart = $get('series_start');
                                                     if (!$seriesStart && $state && (int)$state > 0) {
                                                         $eventSeries = $get('../../event_series');
-                                                        $ticketTypeId = $get('id');
-                                                        if ($eventSeries && $ticketTypeId) {
-                                                            $set('series_start', $eventSeries . '-' . $ticketTypeId . '-00001');
+                                                        // Use ticket type ID if available, otherwise use SKU
+                                                        $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                        if ($eventSeries && $ticketTypeIdentifier) {
+                                                            $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001');
                                                         }
                                                     }
                                                 }),
@@ -1223,23 +1225,24 @@ class EventResource extends Resource
                                         SC\Grid::make(2)->schema([
                                             Forms\Components\TextInput::make('series_start')
                                                 ->label('Serie start bilete')
-                                                ->placeholder('Ex: AMB-5-00001')
+                                                ->placeholder('Ex: AMB-5-00001 sau AMB-SKU-00001')
                                                 ->maxLength(50)
-                                                ->hintIcon('heroicon-o-information-circle', tooltip: 'Numărul de start al seriei de bilete. Se generează automat.')
+                                                ->hintIcon('heroicon-o-information-circle', tooltip: 'Numărul de start al seriei de bilete. Se generează automat folosind ID-ul tipului de bilet sau SKU.')
                                                 ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
                                                     // Auto-generate if not set and capacity exists
                                                     if (!$state) {
                                                         $eventSeries = $get('../../event_series');
                                                         $capacity = $get('capacity');
-                                                        $ticketTypeId = $get('id');
-                                                        if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeId) {
-                                                            $set('series_start', $eventSeries . '-' . $ticketTypeId . '-00001');
+                                                        // Use ticket type ID if available, otherwise use SKU
+                                                        $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                        if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
+                                                            $set('series_start', $eventSeries . '-' . $ticketTypeIdentifier . '-00001');
                                                         }
                                                     }
                                                 }),
                                             Forms\Components\TextInput::make('series_end')
                                                 ->label('Serie end bilete')
-                                                ->placeholder('Ex: AMB-5-00500')
+                                                ->placeholder('Ex: AMB-5-00500 sau AMB-SKU-00500')
                                                 ->maxLength(50)
                                                 ->hintIcon('heroicon-o-information-circle', tooltip: 'Numărul de final al seriei de bilete. Se generează automat din capacitate.')
                                                 ->afterStateHydrated(function ($state, SSet $set, SGet $get) {
@@ -1247,10 +1250,11 @@ class EventResource extends Resource
                                                     if (!$state) {
                                                         $eventSeries = $get('../../event_series');
                                                         $capacity = $get('capacity');
-                                                        $ticketTypeId = $get('id');
-                                                        if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeId) {
+                                                        // Use ticket type ID if available, otherwise use SKU
+                                                        $ticketTypeIdentifier = $get('id') ?: $get('sku');
+                                                        if ($eventSeries && $capacity && (int)$capacity > 0 && $ticketTypeIdentifier) {
                                                             $endNumber = (int)$capacity;
-                                                            $set('series_end', $eventSeries . '-' . $ticketTypeId . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
+                                                            $set('series_end', $eventSeries . '-' . $ticketTypeIdentifier . '-' . str_pad($endNumber, 5, '0', STR_PAD_LEFT));
                                                         }
                                                     }
                                                 }),

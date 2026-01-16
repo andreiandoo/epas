@@ -34,6 +34,22 @@ class CreateEvent extends CreateRecord
 
     protected function afterCreate(): void
     {
+        // Fix slug to include the actual event ID (since we couldn't know it before save)
+        $record = $this->record;
+        $slug = $record->slug;
+
+        // If slug doesn't already end with the ID, append it
+        if ($slug && !str_ends_with($slug, '-' . $record->id)) {
+            $record->slug = $slug . '-' . $record->id;
+            $record->saveQuietly();
+        }
+
+        // Auto-generate event_series if not set
+        if (!$record->event_series) {
+            $record->event_series = 'AMB-' . $record->id;
+            $record->saveQuietly();
+        }
+
         // Process multi-day and recurring event scheduling
         // Creates child events for each occurrence
         app(EventSchedulingService::class)->processEventScheduling($this->record);
