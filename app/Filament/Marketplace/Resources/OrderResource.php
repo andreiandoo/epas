@@ -352,15 +352,35 @@ class OrderResource extends Resource
         $total = number_format($record->total ?? ($record->total_cents / 100), 2);
         $ticketCount = $record->tickets->count();
 
-        // Payment method display - show processor name properly
-        $paymentMethod = match($record->payment_processor) {
+        // Payment method display - show processor name properly, with fallbacks
+        $paymentProcessor = $record->payment_processor ?? $record->meta['payment_processor'] ?? null;
+        $paymentMethod = match($paymentProcessor) {
             'netopia', 'payment-netopia' => 'Netopia',
             'stripe', 'payment-stripe' => 'Stripe',
             'paypal' => 'PayPal',
             'cash' => 'Cash',
             'bank_transfer' => 'Transfer',
-            default => $record->payment_processor ? ucfirst(str_replace(['_', '-', 'payment-'], ['', '', ''], $record->payment_processor)) : 'N/A',
+            default => null,
         };
+
+        // If no processor found, check meta for payment method
+        if (!$paymentMethod) {
+            $metaMethod = $record->meta['payment_method'] ?? $record->meta['method'] ?? null;
+            if ($metaMethod) {
+                $paymentMethod = match(strtolower($metaMethod)) {
+                    'card', 'credit_card', 'card bancar' => 'Card',
+                    'cash', 'numerar' => 'Cash',
+                    'transfer', 'bank_transfer' => 'Transfer',
+                    default => ucfirst($metaMethod),
+                };
+            } elseif ($paymentProcessor) {
+                $paymentMethod = ucfirst(str_replace(['_', '-', 'payment-'], [' ', ' ', ''], $paymentProcessor));
+            } elseif (in_array($record->status, ['pending'])) {
+                $paymentMethod = 'În așteptare';
+            } else {
+                $paymentMethod = '-';
+            }
+        }
         $updatedAt = $record->updated_at->format('d M H:i');
 
         // Calculate savings (promo discount + target price savings)
@@ -770,18 +790,18 @@ class OrderResource extends Resource
             <div>
                 <!-- Commission Stats Grid -->
                 <div style='display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;'>
-                    <div style='text-align: center; padding: 12px; background: rgba(15, 23, 42, 0.5); border-radius: 8px;'>
+                    <div style='text-align: center; padding: 12px; border-radius: 8px;'>
                         <div style='font-size: 16px; font-weight: 700; color: white;'>" . number_format($commissionRate, 2) . "%</div>
                         <div style='font-size: 10px; color: #64748B; text-transform: uppercase; margin-top: 2px;'>Rată</div>
                     </div>
-                    <div style='text-align: center; padding: 12px; background: rgba(15, 23, 42, 0.5); border-radius: 8px;'>
+                    <div style='text-align: center; padding: 12px; border-radius: 8px;'>
                         <div style='font-size: 16px; font-weight: 700; color: white;'>" . number_format($commission, 2) . " {$currency}</div>
                         <div style='font-size: 10px; color: #64748B; text-transform: uppercase; margin-top: 2px;'>Valoare</div>
                     </div>
                 </div>
                 
                 <!-- Commission Mode -->
-                <div style='padding: 12px; background: rgba(15, 23, 42, 0.5); border-radius: 8px; margin-bottom: 12px;'>
+                <div style='padding: 12px; border-radius: 8px; margin-bottom: 12px;'>
                     <div style='display: flex; justify-content: space-between; align-items: center;'>
                         <span style='font-size: 13px; color: #94A3B8;'>Mod comision</span>
                         <span style='font-size: 13px; font-weight: 600; color: #E2E8F0;'>{$modeLabel}</span>

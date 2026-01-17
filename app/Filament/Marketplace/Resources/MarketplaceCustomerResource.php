@@ -301,7 +301,7 @@ class MarketplaceCustomerResource extends Resource
                                 ->content(fn ($record) => self::renderPaymentMethods($record)),
                         ]),
 
-                    // Quick Actions (doar pe Edit)
+                    // Quick Actions (doar pe Edit) - stacked vertically with fullWidth
                     SC\Section::make('Quick Actions')
                         ->icon('heroicon-o-bolt')
                         ->compact()
@@ -313,16 +313,22 @@ class MarketplaceCustomerResource extends Resource
                                     ->icon('heroicon-o-shopping-bag')
                                     ->color('gray')
                                     ->url(fn ($record) => OrderResource::getUrl('index', ['customer' => $record->id])),
+                            ])->fullWidth(),
+                            SC\Actions::make([
                                 Action::make('view_tickets')
                                     ->label('View Tickets')
                                     ->icon('heroicon-o-ticket')
                                     ->color('gray')
                                     ->url(fn ($record) => TicketResource::getUrl('index', ['customer' => $record->id])),
+                            ])->fullWidth(),
+                            SC\Actions::make([
                                 Action::make('send_email')
                                     ->label('Send Email')
                                     ->icon('heroicon-o-envelope')
                                     ->color('success')
                                     ->url(fn ($record) => "mailto:{$record->email}"),
+                            ])->fullWidth(),
+                            SC\Actions::make([
                                 Action::make('suspend')
                                     ->label('Suspend User')
                                     ->icon('heroicon-o-x-circle')
@@ -330,6 +336,8 @@ class MarketplaceCustomerResource extends Resource
                                     ->requiresConfirmation()
                                     ->visible(fn ($record) => $record->status === 'active')
                                     ->action(fn ($record) => $record->update(['status' => 'suspended'])),
+                            ])->fullWidth(),
+                            SC\Actions::make([
                                 Action::make('reactivate')
                                     ->label('Reactivate User')
                                     ->icon('heroicon-o-arrow-path')
@@ -337,7 +345,7 @@ class MarketplaceCustomerResource extends Resource
                                     ->visible(fn ($record) => $record->status === 'suspended')
                                     ->action(fn ($record) => $record->update(['status' => 'active'])),
                             ])->fullWidth(),
-                        ]),
+                        ])->columns(1),
 
                     // Meta Info (doar pe Edit, collapsed)
                     SC\Section::make('Meta Info')
