@@ -575,7 +575,7 @@ class Event extends Model
         }
 
         // Otherwise sum from ticket types
-        return $this->ticketTypes()->sum('quantity') ?: 0;
+        return $this->ticketTypes()->sum('quota_total') ?: 0;
     }
 
     /**
