@@ -19,6 +19,7 @@ use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
+use Filament\Schemas\Components as SC;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
@@ -372,7 +373,7 @@ class EventAnalytics extends Page implements HasForms
                 ->rows(2)
                 ->columnSpanFull(),
 
-            Forms\Components\Section::make('UTM Parameters')
+            SC\Section::make('UTM Parameters')
                 ->description('Auto-generated if left empty')
                 ->collapsible()
                 ->collapsed()
