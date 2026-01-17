@@ -82,6 +82,8 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </section>
 
+<?php require_once __DIR__ . '/includes/featured-carousel.php'; ?>
+
 <!-- Latest Events -->
 <section class="py-10 md:py-14 bg-surface">
     <div class="px-4 mx-auto max-w-7xl">
@@ -161,10 +163,6 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 </section>
-
-
-
-<?php require_once __DIR__ . '/includes/featured-carousel.php'; ?>
 
 <!-- Organizers CTA -->
 <section class="py-12 bg-white md:py-16">

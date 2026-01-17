@@ -331,7 +331,7 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                             </div>
 
                             <!-- Featured Events -->
-                            <div class="flex-1 p-3">
+                            <div class="flex-1 p-3 flex flex-col justify-between">
                                 <div class="flex items-center justify-between mb-4">
                                     <span class="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
                                         <svg class="w-3.5 h-3.5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
@@ -347,22 +347,24 @@ $navVenueTypes = applyNavCounts($navVenueTypes, 'venue_types');
                                     </a>
                                 </div>
 
+                                <div class="flex flex-col">
                                 <?php foreach ($navFeaturedEvents as $event): ?>
-                                <a href="/bilete/<?= $event['slug'] ?>" class="flex gap-3.5 p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all mb-2">
-                                    <div class="w-[72px] h-[72px] rounded-lg overflow-hidden flex-shrink-0">
-                                        <img src="<?= $event['image'] ?>" alt="<?= htmlspecialchars($event['name']) ?>" class="object-cover w-full h-full">
-                                    </div>
-                                    <div class="flex flex-col justify-center flex-1">
-                                        <div class="text-[11px] font-semibold text-primary uppercase tracking-wide mb-1"><?= htmlspecialchars($event['category']) ?></div>
-                                        <div class="text-sm font-bold text-gray-900 mb-1.5 leading-tight"><?= htmlspecialchars($event['name']) ?></div>
-                                        <div class="flex gap-3 text-xs text-gray-500">
-                                            <span><?= htmlspecialchars($event['date']) ?></span>
-                                            <span><?= htmlspecialchars($event['venue']) ?></span>
+                                    <a href="/bilete/<?= $event['slug'] ?>" class="flex gap-3.5 p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all mb-2 justify-between">
+                                        <div class="w-[72px] h-[72px] rounded-lg overflow-hidden flex-shrink-0 flex-none">
+                                            <img src="<?= $event['image'] ?>" alt="<?= htmlspecialchars($event['name']) ?>" class="object-cover w-full h-full">
                                         </div>
-                                        <div class="mt-1 text-sm font-bold text-emerald-500">de la <?= $event['price'] ?> lei</div>
-                                    </div>
-                                </a>
+                                        <div class="ml-0 flex flex-col justify-center flex-1">
+                                            <div class="text-[11px] font-semibold text-primary uppercase tracking-wide mb-1"><?= htmlspecialchars($event['category']) ?></div>
+                                            <div class="text-sm font-bold text-gray-900 mb-1.5 leading-tight"><?= htmlspecialchars($event['name']) ?></div>
+                                            <div class="flex gap-3 text-xs text-gray-500">
+                                                <span><?= htmlspecialchars($event['date']) ?></span>
+                                                <span><?= htmlspecialchars($event['venue']) ?></span>
+                                            </div>
+                                        </div>
+                                        <div class="mr-0 text-sm font-bold text-emerald-500">de la <?= $event['price'] ?> lei</div>
+                                    </a>
                                 <?php endforeach; ?>
+                                </div>
 
                                 <div class="flex gap-2 pt-4 mt-4 border-t border-gray-200">
                                     <?php foreach ($navQuickLinks as $link): ?>
