@@ -800,6 +800,215 @@
             </div>
         </div>
 
+        {{-- Milestone Detail Modal --}}
+        <div x-show="$wire.showMilestoneDetailModal" x-transition class="fixed inset-0 z-50" x-cloak>
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" wire:click="$set('showMilestoneDetailModal', false)"></div>
+            <div class="fixed inset-0 flex items-center justify-center p-4">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" @click.stop>
+                    @if($this->selectedMilestone)
+                    <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background-color: {{ $this->selectedMilestone['color'] }}20">
+                                    <x-heroicon-o-megaphone class="w-5 h-5" style="color: {{ $this->selectedMilestone['color'] }}" />
+                                </div>
+                                <div>
+                                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ $this->selectedMilestone['title'] }}</h2>
+                                    <p class="text-sm text-gray-500">{{ $this->selectedMilestone['label'] }}</p>
+                                </div>
+                            </div>
+                            <button wire:click="$set('showMilestoneDetailModal', false)" class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                                <x-heroicon-o-x-mark class="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        @if($this->selectedMilestone['description'])
+                        <div>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">{{ $this->selectedMilestone['description'] }}</p>
+                        </div>
+                        @endif
+
+                        <div class="flex items-center gap-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                            <div class="flex-1">
+                                <div class="text-xs text-gray-500 mb-1">Start Date</div>
+                                <div class="font-medium text-gray-900 dark:text-white">{{ $this->selectedMilestone['start_date_formatted'] ?? 'N/A' }}</div>
+                            </div>
+                            <x-heroicon-o-arrow-right class="w-5 h-5 text-gray-400" />
+                            <div class="flex-1">
+                                <div class="text-xs text-gray-500 mb-1">End Date</div>
+                                <div class="font-medium text-gray-900 dark:text-white">{{ $this->selectedMilestone['end_date_formatted'] ?? 'Ongoing' }}</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20">
+                                <div class="text-xs text-blue-600 dark:text-blue-400 mb-1">Budget</div>
+                                <div class="text-xl font-bold text-blue-700 dark:text-blue-300">
+                                    {{ number_format($this->selectedMilestone['budget'] ?? 0, 2) }} {{ $this->selectedMilestone['currency'] ?? 'RON' }}
+                                </div>
+                            </div>
+                            <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20">
+                                <div class="text-xs text-emerald-600 dark:text-emerald-400 mb-1">Revenue</div>
+                                <div class="text-xl font-bold text-emerald-700 dark:text-emerald-300">
+                                    {{ number_format($this->selectedMilestone['attributed_revenue'] ?? 0, 2) }} RON
+                                </div>
+                            </div>
+                            <div class="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20">
+                                <div class="text-xs text-purple-600 dark:text-purple-400 mb-1">Conversions</div>
+                                <div class="text-xl font-bold text-purple-700 dark:text-purple-300">
+                                    {{ number_format($this->selectedMilestone['conversions'] ?? 0) }}
+                                </div>
+                            </div>
+                            <div class="p-4 rounded-xl {{ ($this->selectedMilestone['roi'] ?? 0) >= 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20' }}">
+                                <div class="text-xs {{ ($this->selectedMilestone['roi'] ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }} mb-1">ROI</div>
+                                <div class="text-xl font-bold {{ ($this->selectedMilestone['roi'] ?? 0) >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300' }}">
+                                    {{ number_format($this->selectedMilestone['roi'] ?? 0, 1) }}%
+                                </div>
+                            </div>
+                        </div>
+
+                        @if(($this->selectedMilestone['cac'] ?? null) || ($this->selectedMilestone['targeting'] ?? null))
+                        <div class="space-y-3">
+                            @if($this->selectedMilestone['cac'] ?? null)
+                            <div class="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Customer Acquisition Cost</span>
+                                <span class="font-medium text-gray-900 dark:text-white">{{ number_format($this->selectedMilestone['cac'], 2) }} RON</span>
+                            </div>
+                            @endif
+                            @if($this->selectedMilestone['targeting'] ?? null)
+                            <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                                <div class="text-xs text-gray-500 mb-1">Targeting</div>
+                                <p class="text-sm text-gray-700 dark:text-gray-300">{{ $this->selectedMilestone['targeting'] }}</p>
+                            </div>
+                            @endif
+                        </div>
+                        @endif
+                    </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
+        {{-- Buyer Journey Modal --}}
+        <div x-show="$wire.showBuyerJourneyModal" x-transition class="fixed inset-0 z-50" x-cloak>
+            <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" wire:click="$set('showBuyerJourneyModal', false)"></div>
+            <div class="fixed inset-0 flex items-center justify-center p-4">
+                <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" @click.stop>
+                    @if($this->selectedBuyer)
+                    <div class="p-6 border-b border-gray-100 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-lg">
+                                    {{ $this->selectedBuyer['customer']['initials'] ?? 'U' }}
+                                </div>
+                                <div>
+                                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ $this->selectedBuyer['customer']['name'] ?? 'Customer' }}</h2>
+                                    <p class="text-sm text-gray-500">{{ $this->selectedBuyer['customer']['email'] ?? '' }}</p>
+                                </div>
+                            </div>
+                            <button wire:click="$set('showBuyerJourneyModal', false)" class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                                <x-heroicon-o-x-mark class="w-5 h-5" />
+                            </button>
+                        </div>
+                    </div>
+                    <div class="p-6 space-y-6">
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-center">
+                                <div class="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{{ number_format($this->selectedBuyer['purchase']['amount'] ?? 0, 2) }}</div>
+                                <div class="text-xs text-emerald-600">Amount (RON)</div>
+                            </div>
+                            <div class="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-center">
+                                <div class="text-2xl font-bold text-blue-700 dark:text-blue-300">{{ $this->selectedBuyer['purchase']['quantity'] ?? 0 }}</div>
+                                <div class="text-xs text-blue-600">Tickets</div>
+                            </div>
+                            <div class="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-center">
+                                <div class="text-2xl font-bold text-purple-700 dark:text-purple-300">{{ $this->selectedBuyer['timing']['sessions_count'] ?? 1 }}</div>
+                                <div class="text-xs text-purple-600">Sessions</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                                <div class="text-xs text-gray-500 mb-2">Source</div>
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-1 text-xs font-medium rounded-lg bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400">
+                                        {{ $this->selectedBuyer['source']['channel'] ?? 'Direct' }}
+                                    </span>
+                                    @if($this->selectedBuyer['source']['campaign'] ?? null)
+                                    <span class="text-xs text-gray-500">{{ $this->selectedBuyer['source']['campaign'] }}</span>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                                <div class="text-xs text-gray-500 mb-2">Device</div>
+                                <div class="flex items-center gap-2">
+                                    @if(($this->selectedBuyer['device']['type'] ?? 'Desktop') === 'Mobile')
+                                    <x-heroicon-o-device-phone-mobile class="w-4 h-4 text-gray-500" />
+                                    @else
+                                    <x-heroicon-o-computer-desktop class="w-4 h-4 text-gray-500" />
+                                    @endif
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ $this->selectedBuyer['device']['type'] ?? 'Desktop' }}</span>
+                                    <span class="text-xs text-gray-400">{{ $this->selectedBuyer['device']['browser'] ?? '' }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                                <div class="text-xs text-gray-500 mb-2">Location</div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-lg">{{ $this->selectedBuyer['location']['flag'] ?? '🌍' }}</span>
+                                    <span class="text-sm text-gray-700 dark:text-gray-300">{{ $this->selectedBuyer['location']['city'] ?? 'Unknown' }}</span>
+                                </div>
+                            </div>
+                            <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50">
+                                <div class="text-xs text-gray-500 mb-2">Time to Purchase</div>
+                                <div class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $this->selectedBuyer['timing']['time_to_purchase'] ?? 'N/A' }}</div>
+                            </div>
+                        </div>
+
+                        @if(!empty($this->selectedBuyer['journey']))
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Customer Journey</h3>
+                            <div class="relative pl-6 space-y-4">
+                                <div class="absolute left-2 top-2 bottom-2 w-0.5 bg-gray-200 dark:bg-gray-600"></div>
+                                @foreach($this->selectedBuyer['journey'] as $step)
+                                <div class="relative flex items-start gap-3">
+                                    <div class="absolute -left-4 w-4 h-4 rounded-full {{ ($step['type'] ?? '') === 'purchase' ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-500' }} ring-4 ring-white dark:ring-gray-800"></div>
+                                    <div class="flex-1 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ $step['title'] ?? $step['type'] ?? 'Event' }}</span>
+                                            <span class="text-xs text-gray-400">{{ $step['time'] ?? '' }}</span>
+                                        </div>
+                                        @if(!empty($step['description']))
+                                        <p class="text-xs text-gray-500 mt-1">{{ $step['description'] }}</p>
+                                        @endif
+                                    </div>
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endif
+
+                        @if($this->selectedBuyer['customer']['is_returning'] ?? false)
+                        <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+                            <div class="flex items-center gap-2 mb-2">
+                                <x-heroicon-s-star class="w-5 h-5 text-amber-500" />
+                                <span class="font-medium text-amber-700 dark:text-amber-300">Returning Customer</span>
+                            </div>
+                            <div class="text-sm text-amber-600 dark:text-amber-400">
+                                {{ $this->selectedBuyer['customer']['previous_purchases'] ?? 0 }} previous purchases •
+                                {{ number_format($this->selectedBuyer['customer']['lifetime_value'] ?? 0, 2) }} RON lifetime value
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+
         {{-- Globe Modal --}}
         <div x-show="showGlobeModal" x-transition class="fixed inset-0 z-50" x-cloak>
             <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" @click="showGlobeModal = false"></div>

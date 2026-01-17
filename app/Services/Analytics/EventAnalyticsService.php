@@ -129,8 +129,13 @@ class EventAnalyticsService
         }
 
         // Get visits from tracking - use helper for backwards compatibility
+        // Include page_view events OR any records without event_type (for legacy data)
         $visits = (clone $this->getTrackingQuery($event))
-            ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+            ->where(function ($q) {
+                $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                  ->orWhereNull('event_type')
+                  ->orWhere('event_type', '');
+            })
             ->where(function ($q) use ($dateRange) {
                 $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
                   ->orWhereNull('created_at'); // Include records with null created_at
@@ -138,7 +143,11 @@ class EventAnalyticsService
             ->count();
 
         $uniqueVisitors = (clone $this->getTrackingQuery($event))
-            ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+            ->where(function ($q) {
+                $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                  ->orWhereNull('event_type')
+                  ->orWhere('event_type', '');
+            })
             ->where(function ($q) use ($dateRange) {
                 $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
                   ->orWhereNull('created_at');
@@ -262,8 +271,13 @@ class EventAnalyticsService
         }
 
         // Use helper for backwards compatibility with tracking data
+        // Include page_view events OR any records without event_type (for legacy data)
         $visitsByDay = (clone $this->getTrackingQuery($event))
-            ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+            ->where(function ($q) {
+                $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                  ->orWhereNull('event_type')
+                  ->orWhere('event_type', '');
+            })
             ->whereNotNull('created_at')
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->selectRaw('DATE(created_at) as date, COUNT(*) as visits')
@@ -590,8 +604,13 @@ class EventAnalyticsService
         $isMarketplace = $this->isMarketplaceEvent($event);
 
         // Use helper for backwards compatibility
+        // Include page_view events OR any records without event_type (for legacy data)
         $pageViews = (clone $this->getTrackingQuery($event))
-            ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+            ->where(function ($q) {
+                $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                  ->orWhereNull('event_type')
+                  ->orWhere('event_type', '');
+            })
             ->where(function ($q) use ($dateRange) {
                 $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
                   ->orWhereNull('created_at');
@@ -599,7 +618,11 @@ class EventAnalyticsService
             ->count();
 
         $uniqueVisitors = (clone $this->getTrackingQuery($event))
-            ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+            ->where(function ($q) {
+                $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                  ->orWhereNull('event_type')
+                  ->orWhere('event_type', '');
+            })
             ->where(function ($q) use ($dateRange) {
                 $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
                   ->orWhereNull('created_at');
@@ -728,8 +751,13 @@ class EventAnalyticsService
         $fiveMinutesAgo = now()->subMinutes(5);
 
         // Use helper for backwards compatibility
+        // Include page_view events OR any records without event_type (for legacy data)
         $visitors = (clone $this->getTrackingQuery($event))
-            ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+            ->where(function ($q) {
+                $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                  ->orWhereNull('event_type')
+                  ->orWhere('event_type', '');
+            })
             ->where(function ($q) use ($fiveMinutesAgo) {
                 $q->where('created_at', '>=', $fiveMinutesAgo)
                   ->orWhereNull('created_at');
@@ -738,8 +766,13 @@ class EventAnalyticsService
             ->count('visitor_id');
 
         // Get visitor locations
+        // Include page_view events OR any records without event_type (for legacy data)
         $locations = (clone $this->getTrackingQuery($event))
-            ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+            ->where(function ($q) {
+                $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                  ->orWhereNull('event_type')
+                  ->orWhere('event_type', '');
+            })
             ->where(function ($q) use ($fiveMinutesAgo) {
                 $q->where('created_at', '>=', $fiveMinutesAgo)
                   ->orWhereNull('created_at');
@@ -789,8 +822,13 @@ class EventAnalyticsService
         $fiveMinutesAgo = now()->subMinutes(5);
 
         // Get recent sessions with location data - use helper for backwards compatibility
+        // Include page_view events OR any records without event_type (for legacy data)
         $visitors = (clone $this->getTrackingQuery($event))
-            ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+            ->where(function ($q) {
+                $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                  ->orWhereNull('event_type')
+                  ->orWhere('event_type', '');
+            })
             ->where(function ($q) use ($fiveMinutesAgo) {
                 $q->where('created_at', '>=', $fiveMinutesAgo)
                   ->orWhereNull('created_at');
@@ -1037,13 +1075,22 @@ class EventAnalyticsService
             $hourEnd = $hourStart->copy()->addHour();
 
             // Use helper for backwards compatibility
+            // Include page_view events OR any records without event_type (for legacy data)
             $pageViews = (clone $this->getTrackingQuery($event))
-                ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                ->where(function ($q) {
+                    $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                      ->orWhereNull('event_type')
+                      ->orWhere('event_type', '');
+                })
                 ->whereBetween('created_at', [$hourStart, $hourEnd])
                 ->count();
 
             $uniqueVisitors = (clone $this->getTrackingQuery($event))
-                ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                ->where(function ($q) {
+                    $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                      ->orWhereNull('event_type')
+                      ->orWhere('event_type', '');
+                })
                 ->whereBetween('created_at', [$hourStart, $hourEnd])
                 ->distinct('visitor_id')
                 ->count('visitor_id');
@@ -1326,8 +1373,13 @@ class EventAnalyticsService
             ->sum('total');
 
         // Use helper for backwards compatibility
+        // Include page_view events OR any records without event_type (for legacy data)
         $currentVisitors = (clone $this->getTrackingQuery($event))
-            ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+            ->where(function ($q) {
+                $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                  ->orWhereNull('event_type')
+                  ->orWhere('event_type', '');
+            })
             ->where(function ($q) use ($currentRange) {
                 $q->whereBetween('created_at', [$currentRange['start'], $currentRange['end']])
                   ->orWhereNull('created_at');
@@ -1349,8 +1401,13 @@ class EventAnalyticsService
             ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
             ->sum('total');
 
+        // Include page_view events OR any records without event_type (for legacy data)
         $previousVisitors = (clone $this->getTrackingQuery($event))
-            ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+            ->where(function ($q) {
+                $q->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                  ->orWhereNull('event_type')
+                  ->orWhere('event_type', '');
+            })
             ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
             ->distinct('visitor_id')
             ->count('visitor_id');

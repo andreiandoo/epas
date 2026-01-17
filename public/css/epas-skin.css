@@ -16,7 +16,7 @@ body.fi-panel-marketplace .fi-topbar {
 		height: 100dvh !important;
 		top: 0 !important;
 		border-right-width: 1px;
-		border-color: rgb(55, 65, 81)!important;
+		border-color: #33323e!important;
 	}
 }
 
@@ -4117,7 +4117,7 @@ html.dark {
 	background-color: var(--metro-accent-hover) !important;
 }
 
-.dark .fi-btn:not(.fi-btn-primary):not([data-color="primary"]):not([data-color="danger"]):not([data-color="success"]):not([data-color="warning"]) {
+/* .dark .fi-btn:not(.fi-btn-primary):not([data-color="primary"]):not([data-color="danger"]):not([data-color="success"]):not([data-color="warning"]) {
 	background-color: var(--metro-bg-primary) !important;
 	border-color: var(--metro-border) !important;
 	color: var(--metro-text-secondary) !important;
@@ -4126,7 +4126,7 @@ html.dark {
 .dark .fi-btn:not(.fi-btn-primary):not([data-color="primary"]):not([data-color="danger"]):not([data-color="success"]):not([data-color="warning"]):hover {
 	background-color: var(--metro-border) !important;
 	color: var(--metro-text-primary) !important;
-}
+} */
 
 .dark h1,
 .dark h2,
