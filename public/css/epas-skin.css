@@ -9,6 +9,19 @@ body.fi-panel-marketplace .fi-topbar {
 	height: 0 !important;
 	overflow: hidden !important;
 }
+
+/* Fix sidebar height and position when topbar is hidden */
+@media (min-width: 64rem) {
+	body.fi-panel-marketplace.fi-body-has-topbar .fi-sidebar {
+		height: 100dvh !important;
+		top: 0 !important;
+	}
+}
+
+/* Fix sidebar nav padding */
+body.fi-panel-marketplace .fi-sidebar-nav {
+	padding-block: calc(var(--spacing) * 6) !important;
+}
 /* ===== END MARKETPLACE PANEL TOPBAR HIDE ===== */
 
 .fi-custom-topbar {
