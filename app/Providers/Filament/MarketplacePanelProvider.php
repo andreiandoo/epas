@@ -102,15 +102,21 @@ class MarketplacePanelProvider extends PanelProvider
                 Js::make('epas-skin', asset('js/epas-skin.js')),
             ])
 
-            // Custom brand
-            ->brandLogo(fn () => view('filament.components.marketplace-brand'))
-            ->brandLogoHeight('2rem')
+            // Hide default brand logo (we use sidebar logo instead)
+            ->brandLogo(fn () => '')
+            ->brandLogoHeight('0')
 
             // Disable default topbar elements (we have custom-topbar)
             ->globalSearch(false)
             ->userMenu(false)
 
-            ->renderHook('panels::topbar.end', fn (): string => view('filament.components.custom-topbar')->render())
+            // Logo at the top of sidebar navigation
+            ->renderHook('panels::sidebar.nav.start', fn (): string => view('filament.components.marketplace-sidebar-logo')->render())
+
+            // Custom topbar inside main content area
+            ->renderHook('panels::content.start', fn (): string => view('filament.components.custom-topbar')->render())
+
+            // Sidebar footer with support card
             ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.marketplace-support-card')->render())
 
             // Set dark mode as default if not already set

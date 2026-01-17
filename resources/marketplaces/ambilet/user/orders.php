@@ -175,6 +175,9 @@ const UserOrders = {
         document.getElementById('load-more').classList.remove('hidden');
     },
 
+    // give me a list of diacritic characters and their replacements
+    
+
     renderOrderCard(order) {
         const statusClass = {
             'confirmed': 'bg-success/10 text-success',
@@ -214,15 +217,14 @@ const UserOrders = {
                         <div class="flex-1 min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <span class="font-mono text-xs text-muted">${orderRef}</span>
-                                <span class="px-2 py-0.5 ${statusClass} text-xs font-bold rounded">${statusLabel}</span>
                             </div>
-                            <h3 class="mt-1 font-semibold text-secondary">${eventTitle}</h3>
-                            <p class="text-sm text-muted">${this.formatDateTime(order.created_at)} • ${ticketCount} bilete ${ticketName}</p>
+                            <h3 class="font-semibold text-secondary">${eventTitle}</h3>
+                            <p class="text-sm text-muted">${this.formatDateTime(order.created_at)} • ${ticketCount < 2 ? '1 bilet' : ticketCount + ' bilete'} ${ticketName}</p>
                         </div>
-                        <div class="flex-shrink-0 text-right">
+                        <div class="flex items-center gap-x-4 flex-shrink-0 text-right">
                             ${order.status === 'refunded' ?
                                 `<p class="font-bold line-through text-muted">${order.total} lei</p><p class="text-xs text-error">Rambursat</p>` :
-                                `<p class="font-bold text-secondary">${order.total} lei</p>${order.points_earned ? `<p class="text-xs text-success">+${order.points_earned} puncte</p>` : ''}`
+                                `<span class="flex items-center justify-center px-2 py-0.5 ${statusClass} text-xs font-bold rounded">${statusLabel}</span> <p class="font-bold text-secondary">${order.total} lei</p>${order.points_earned ? `<p class="text-xs text-success">+${order.points_earned} puncte</p>` : ''}`
                             }
                         </div>
                         <svg class="w-5 h-5 expand-icon text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>

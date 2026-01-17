@@ -72,8 +72,8 @@
         $publicSiteUrl = $domain;
     }
 @endphp
-<div class="sticky top-0 z-20 px-4 fi-custom-topbar">
-    <div class="flex items-center justify-between max-w-full gap-4">
+<div class="sticky top-0 z-20 px-4 py-3 mb-4 bg-white border-b border-gray-200 fi-custom-topbar dark:bg-gray-900 dark:border-gray-700 -mx-4 -mt-4 lg:-mx-6 lg:-mt-6">
+    <div class="flex items-center justify-between max-w-full gap-4 lg:px-2">
         {{-- Center: Global Search --}}
         <div class="flex-1 hidden md:block">
             <div class="epas-global-search">

@@ -686,9 +686,9 @@ select.pr-10 {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.toggle:checked::before {
+/* .toggle:checked::before {
     transform: translateX(20px);
-}
+} */
 
 /* Credit Card Styles */
 .card-item {

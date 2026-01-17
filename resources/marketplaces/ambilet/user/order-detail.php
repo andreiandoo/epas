@@ -260,34 +260,41 @@ const OrderDetailPage = {
         // Update view tickets link
         document.getElementById('view-tickets-btn').href = '/cont/bilete?order=' + order.number;
 
+        // DEBUG: Log full order response for troubleshooting
+        console.log('=== ORDER API RESPONSE DEBUG ===');
+        console.log('Order status:', order.status);
+        console.log('Order can_download_tickets:', order.can_download_tickets);
+        console.log('Order can_request_refund:', order.can_request_refund);
+        console.log('Order refund_reason:', order.refund_reason);
+        console.log('Full order object:', order);
+        console.log('================================');
+
         // Show/hide refund button
         const refundBtn = document.getElementById('refund-btn');
-        console.log('Refund eligibility:', { can_request_refund: order.can_request_refund, refund_reason: order.refund_reason });
         if (order.can_request_refund) {
+            console.log('Showing refund button');
             refundBtn.classList.remove('hidden');
             // Store refund reason for later use
             this.refundReason = order.refund_reason;
         } else {
+            console.log('Hiding refund button (can_request_refund is false or undefined)');
             refundBtn.classList.add('hidden');
         }
 
         // Show/hide sections based on order status (only for confirmed/paid/completed)
-        const isPaidOrder = ['confirmed', 'paid', 'completed'].includes(order.status) || order.can_download_tickets;
+        const isPaidOrder = ['confirmed', 'paid', 'completed'].includes(order.status) || order.can_download_tickets === true;
+        console.log('isPaidOrder check:', isPaidOrder, '(status:', order.status, ', can_download_tickets:', order.can_download_tickets, ')');
 
         // View tickets and Download PDF buttons
         if (isPaidOrder) {
             document.getElementById('view-tickets-btn').classList.remove('hidden');
             document.getElementById('download-pdf-btn').classList.remove('hidden');
-        }
-
-        // Invoice section (only for paid orders)
-        if (isPaidOrder) {
+            // Invoice section (only for paid orders)
             document.getElementById('invoice-section').classList.remove('hidden');
-        }
-
-        // Support section (only for paid orders)
-        if (isPaidOrder) {
+            // Support section (only for paid orders)
             document.getElementById('support-section').classList.remove('hidden');
+        } else {
+            console.log('Order is NOT paid - hiding tickets/pdf/invoice/support sections');
         }
     },
 

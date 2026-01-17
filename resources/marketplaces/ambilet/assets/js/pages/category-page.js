@@ -435,7 +435,7 @@ const CategoryPage = {
         } else if (event.is_low_stock) {
             priceDisplay = '<span class="font-bold text-primary">' + normalized.priceFormatted + '</span><span class="text-xs font-semibold text-accent">Ultimele locuri</span>';
         } else {
-            priceDisplay = '<span class="font-bold text-primary">' + normalized.priceFormatted + '</span><span class="text-xs text-muted">Disponibil</span>';
+            priceDisplay = '<span class="font-bold text-primary">' + normalized.priceFormatted + '</span><span class="text-xs text-muted"></span>';
         }
 
         // Date badge - show range for festivals, single date otherwise
