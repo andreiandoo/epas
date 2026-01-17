@@ -35,6 +35,7 @@ class EventAnalytics extends Page implements HasForms
 
     protected string $view = 'filament.marketplace.pages.organizer-event-analytics';
 
+    public ?int $eventId = null;
     public Event|MarketplaceEvent|null $event = null;
     public string $period = '30d';
     public string $eventMode = 'live';
@@ -112,6 +113,7 @@ class EventAnalytics extends Page implements HasForms
     {
         $this->record = $this->resolveRecord($record);
         $this->event = $this->record;
+        $this->eventId = $this->record?->id;
 
         if (!$this->event) {
             Notification::make()
