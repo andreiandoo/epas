@@ -153,7 +153,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
 
     public function getTitle(): string|Htmlable
     {
-        return $this->event?->title ?? 'Event Analytics';
+        return $this->event?->getTranslation('title', app()->getLocale()) ?? 'Event Analytics';
     }
 
     public function getSubheading(): ?string
