@@ -20,6 +20,7 @@ use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Schemas\Components as SC;
+use Filament\Schemas\Components\Utilities\Get as SGet;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
@@ -354,19 +355,19 @@ class EventAnalytics extends Page implements HasForms
 
             Forms\Components\DatePicker::make('end_date')
                 ->label('End Date')
-                ->visible(fn (Forms\Get $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES))
+                ->visible(fn (SGet $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES))
                 ->columnSpan(1),
 
             Forms\Components\TextInput::make('budget')
                 ->label('Budget (RON)')
                 ->numeric()
                 ->minValue(0)
-                ->visible(fn (Forms\Get $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES)),
+                ->visible(fn (SGet $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES)),
 
             Forms\Components\TextInput::make('targeting')
                 ->label('Targeting')
                 ->placeholder('e.g., 18-35, Music lovers, Romania')
-                ->visible(fn (Forms\Get $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES)),
+                ->visible(fn (SGet $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES)),
 
             Forms\Components\Textarea::make('description')
                 ->label('Notes')
@@ -533,6 +534,7 @@ class EventAnalytics extends Page implements HasForms
             $goal = EventGoal::find($this->editingGoalId);
             if ($goal) {
                 $goal->update($goalData);
+                $goal->load('event');
                 $goal->updateProgress();
             }
             $message = 'Goal updated successfully';
@@ -540,6 +542,7 @@ class EventAnalytics extends Page implements HasForms
             $goal = EventGoal::create(array_merge($goalData, [
                 'event_id' => $this->event->id,
             ]));
+            $goal->load('event');
             $goal->updateProgress();
             $message = 'Goal created successfully';
         }
@@ -570,7 +573,7 @@ class EventAnalytics extends Page implements HasForms
 
     public function refreshGoalProgress(int $goalId): void
     {
-        $goal = EventGoal::find($goalId);
+        $goal = EventGoal::with('event')->find($goalId);
         if ($goal) {
             $goal->updateProgress();
             $this->loadGoals();
@@ -598,7 +601,7 @@ class EventAnalytics extends Page implements HasForms
                 ->columnSpanFull(),
 
             Forms\Components\TextInput::make('target_value')
-                ->label(fn (Forms\Get $get) => match ($get('type')) {
+                ->label(fn (SGet $get) => match ($get('type')) {
                     'revenue' => 'Target Revenue (RON)',
                     'tickets' => 'Target Tickets',
                     'visitors' => 'Target Visitors',
@@ -870,12 +873,12 @@ class EventAnalytics extends Page implements HasForms
                     5 => 'Friday',
                     6 => 'Saturday',
                 ])
-                ->visible(fn (Forms\Get $get) => $get('frequency') === 'weekly'),
+                ->visible(fn (SGet $get) => $get('frequency') === 'weekly'),
 
             Forms\Components\Select::make('day_of_month')
                 ->label('Day of Month')
                 ->options(array_combine(range(1, 28), range(1, 28)))
-                ->visible(fn (Forms\Get $get) => $get('frequency') === 'monthly'),
+                ->visible(fn (SGet $get) => $get('frequency') === 'monthly'),
 
             Forms\Components\TimePicker::make('send_at')
                 ->label('Send At')
