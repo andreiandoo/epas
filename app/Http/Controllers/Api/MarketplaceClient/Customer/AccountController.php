@@ -22,12 +22,13 @@ class AccountController extends BaseController
             ->with([
                 'marketplaceEvent:id,name,slug,starts_at,venue_name,venue_city,image,marketplace_organizer_id,target_price',
                 'marketplaceEvent.marketplaceOrganizer:id,default_commission_mode,commission_rate',
-                'event:id,title,slug,event_date,featured_image,poster_url,commission_mode,commission_rate,marketplace_organizer_id,target_price',
+                'event:id,title,slug,event_date,featured_image,poster_url,commission_mode,commission_rate,marketplace_organizer_id,target_price,venue_id',
                 'event.venue:id,name,city',
                 'event.marketplaceOrganizer:id,default_commission_mode,commission_rate',
                 'marketplaceClient:id,commission_mode',
-                'tickets.ticketType:id,name',
-                'tickets:id,order_id,ticket_type_id,price',
+                'tickets.ticketType:id,name,is_refundable',
+                'tickets.marketplaceTicketType:id,name,is_refundable',
+                'tickets:id,order_id,ticket_type_id,marketplace_ticket_type_id,price',
             ]);
 
         // Filters
@@ -186,7 +187,7 @@ class AccountController extends BaseController
             // Check if any ticket type is refundable (only if not already eligible)
             if (!$canRequestRefund) {
                 foreach ($order->tickets as $ticket) {
-                    $isRefundable = (bool) ($ticket->ticketType?->is_refundable ?? false);
+                    $isRefundable = (bool) ($ticket->marketplaceTicketType?->is_refundable ?? $ticket->ticketType?->is_refundable ?? false);
                     if ($isRefundable) {
                         $canRequestRefund = true;
                         $refundReason = 'ticket_refundable';
@@ -225,7 +226,10 @@ class AccountController extends BaseController
                 'payment_status' => $order->payment_status,
                 'paid_at' => $order->paid_at?->toIso8601String(),
                 'event' => $eventData,
-                'items' => $order->tickets->groupBy('ticket_type_id')->map(function ($tickets, $typeId) use ($order, $eventCommissionAmount) {
+                'items' => $order->tickets->groupBy(function ($ticket) {
+                    // Group by marketplace_ticket_type_id if set, otherwise ticket_type_id
+                    return $ticket->marketplace_ticket_type_id ?? $ticket->ticket_type_id ?? 0;
+                })->map(function ($tickets, $typeId) use ($order, $eventCommissionAmount) {
                     $first = $tickets->first();
                     $basePrice = (float) ($first->price ?? 0);
                     $quantity = $tickets->count();
@@ -236,12 +240,17 @@ class AccountController extends BaseController
                         $commissionPerTicket = $eventCommissionAmount / $order->tickets->count();
                     }
 
+                    // Get ticket type (marketplace or tenant)
+                    $ticketType = $first->marketplaceTicketType ?? $first->ticketType;
+                    $isRefundable = (bool) ($ticketType?->is_refundable ?? false);
+
                     return [
-                        'name' => $first->ticketType?->name ?? 'Bilet',
+                        'name' => $ticketType?->name ?? 'Bilet',
                         'quantity' => $quantity,
                         'base_price' => $basePrice,
                         'price' => $basePrice, // Total price per ticket (includes commission if on_top was already added)
                         'commission_per_ticket' => round($commissionPerTicket, 2),
+                        'is_refundable' => $isRefundable,
                     ];
                 })->values()->toArray(),
                 'can_request_refund' => $canRequestRefund,
@@ -638,7 +647,8 @@ class AccountController extends BaseController
                 'event:id,title,slug,event_date,featured_image,poster_url',
                 'event.venue:id,name,city',
                 'tickets.marketplaceTicketType:id,name',
-                'tickets.ticketType:id,name',
+                'tickets.ticketType:id,name,is_refundable',
+                'tickets.marketplaceTicketType:id,name,is_refundable',
             ]);
 
         if ($filter === 'upcoming') {
