@@ -30,7 +30,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
     protected static ?string $navigationLabel = 'Event Analytics';
     protected static bool $shouldRegisterNavigation = false; // Accessed via event resource
 
-    protected static string $view = 'filament.marketplace.pages.organizer-event-analytics';
+    protected string $view = 'filament.marketplace.pages.organizer-event-analytics';
 
     public ?int $eventId = null;
     public ?Event $event = null;
