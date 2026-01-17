@@ -2,7 +2,7 @@
 
 namespace App\Filament\Marketplace\Pages;
 
-use App\Models\Event;
+use App\Models\MarketplaceEvent;
 use App\Models\EventGoal;
 use App\Models\EventMilestone;
 use App\Models\EventReportSchedule;
@@ -33,7 +33,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
     protected string $view = 'filament.marketplace.pages.organizer-event-analytics';
 
     public ?int $eventId = null;
-    public ?Event $event = null;
+    public ?MarketplaceEvent $event = null;
     public string $period = '30d';
     public string $eventMode = 'live';
 
@@ -116,7 +116,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
             return;
         }
 
-        $this->event = Event::with(['venue', 'ticketTypes', 'marketplaceOrganizer'])
+        $this->event = MarketplaceEvent::with(['venue', 'ticketTypes', 'organizer'])
             ->find($this->eventId);
 
         if (!$this->event) {
@@ -132,7 +132,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
         $this->authorizeAccess();
 
         // Determine event mode
-        $this->eventMode = $this->event->isPast() ? 'past' : 'live';
+        $this->eventMode = $this->event->starts_at?->isPast() ? 'past' : 'live';
 
         // Load initial data
         $this->loadDashboardData();
@@ -153,15 +153,15 @@ class OrganizerEventAnalytics extends Page implements HasForms
 
     public function getTitle(): string|Htmlable
     {
-        return $this->event?->getTranslation('title', app()->getLocale()) ?? 'Event Analytics';
+        return $this->event?->name ?? 'Event Analytics';
     }
 
     public function getSubheading(): ?string
     {
         if (!$this->event) return null;
 
-        $venueName = $this->event->venue?->getTranslation('name', app()->getLocale()) ?? 'TBA';
-        return $this->event->start_date?->format('d M Y') . ' - ' . $venueName;
+        $venueName = $this->event->venue_name ?? $this->event->venue?->name ?? 'TBA';
+        return $this->event->starts_at?->format('d M Y') . ' - ' . $venueName;
     }
 
     protected function getHeaderActions(): array

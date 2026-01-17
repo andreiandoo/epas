@@ -3,6 +3,7 @@
 namespace App\Services\Analytics;
 
 use App\Models\Event;
+use App\Models\MarketplaceEvent;
 use App\Models\EventMilestone;
 use App\Models\EventAnalyticsDaily;
 use App\Models\EventAnalyticsHourly;
@@ -22,11 +23,20 @@ class EventAnalyticsService
     protected int $cacheTtl = 300; // 5 minutes
 
     /**
+     * Check if this is a marketplace event
+     */
+    protected function isMarketplaceEvent(Event|MarketplaceEvent $event): bool
+    {
+        return $event instanceof MarketplaceEvent;
+    }
+
+    /**
      * Get complete dashboard data for an event
      */
-    public function getDashboardData(Event $event, string $period = '30d'): array
+    public function getDashboardData(Event|MarketplaceEvent $event, string $period = '30d'): array
     {
-        $cacheKey = "event_analytics_{$event->id}_{$period}";
+        $prefix = $this->isMarketplaceEvent($event) ? 'mp_' : '';
+        $cacheKey = "{$prefix}event_analytics_{$event->id}_{$period}";
 
         return Cache::remember($cacheKey, $this->cacheTtl, function () use ($event, $period) {
             $dateRange = $this->getDateRange($period);
@@ -46,36 +56,53 @@ class EventAnalyticsService
     /**
      * Get overview stats for the stat cards
      */
-    public function getOverviewStats(Event $event, array $dateRange): array
+    public function getOverviewStats(Event|MarketplaceEvent $event, array $dateRange): array
     {
+        $isMarketplace = $this->isMarketplaceEvent($event);
+
+        // Orders query - marketplace events use marketplace_event_id
         $orders = Order::where('marketplace_event_id', $event->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed']);
 
         $totalRevenue = (clone $orders)->sum('total');
-        $ticketsSold = Ticket::whereHas('ticketType', fn($q) => $q->where('event_id', $event->id))
-            ->whereIn('status', ['valid', 'checked_in'])
-            ->count();
 
-        // Today's tickets
-        $ticketsToday = Ticket::whereHas('ticketType', fn($q) => $q->where('event_id', $event->id))
-            ->whereIn('status', ['valid', 'checked_in'])
-            ->whereDate('created_at', today())
-            ->count();
+        // Tickets sold - for marketplace events, query by marketplace_event_id directly
+        if ($isMarketplace) {
+            $ticketsSold = Ticket::where('marketplace_event_id', $event->id)
+                ->whereIn('status', ['valid', 'checked_in'])
+                ->count();
 
-        // Get visits from tracking
-        $visits = CoreCustomerEvent::where('event_id', $event->id)
+            $ticketsToday = Ticket::where('marketplace_event_id', $event->id)
+                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereDate('created_at', today())
+                ->count();
+        } else {
+            $ticketsSold = Ticket::whereHas('ticketType', fn($q) => $q->where('event_id', $event->id))
+                ->whereIn('status', ['valid', 'checked_in'])
+                ->count();
+
+            $ticketsToday = Ticket::whereHas('ticketType', fn($q) => $q->where('event_id', $event->id))
+                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereDate('created_at', today())
+                ->count();
+        }
+
+        // Get visits from tracking - for marketplace events use marketplace_event_id column
+        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
+
+        $visits = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->count();
 
-        $uniqueVisitors = CoreCustomerEvent::where('event_id', $event->id)
+        $uniqueVisitors = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->distinct('visitor_id')
             ->count('visitor_id');
 
         // Conversion rate
-        $purchases = CoreCustomerEvent::where('event_id', $event->id)
+        $purchases = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->count();
@@ -96,9 +123,14 @@ class EventAnalyticsService
             ? round((($totalRevenue - $previousRevenue) / $previousRevenue) * 100, 1)
             : 0;
 
-        // Capacity
-        $capacity = $event->total_capacity;
+        // Capacity - MarketplaceEvent uses capacity directly
+        $capacity = $isMarketplace ? ($event->capacity ?? 0) : ($event->total_capacity ?? 0);
         $revenueTarget = $event->revenue_target ?? ($capacity * 100); // Default estimate
+
+        // Event info - different field names for MarketplaceEvent
+        $startDate = $isMarketplace ? $event->starts_at : $event->start_date;
+        $daysUntil = $startDate ? now()->diffInDays($startDate, false) : 0;
+        $statusLabel = $isMarketplace ? $event->status : ($event->status_label ?? $event->status);
 
         return [
             'revenue' => [
@@ -122,9 +154,9 @@ class EventAnalyticsService
                 'purchases' => $purchases,
             ],
             'event' => [
-                'days_until' => $event->days_until,
-                'status' => $event->status_label,
-                'date' => $event->start_date?->format('d M Y'),
+                'days_until' => $daysUntil,
+                'status' => $statusLabel,
+                'date' => $startDate?->format('d M Y'),
             ],
         ];
     }
@@ -132,8 +164,11 @@ class EventAnalyticsService
     /**
      * Get chart data for performance overview
      */
-    public function getChartData(Event $event, array $dateRange): array
+    public function getChartData(Event|MarketplaceEvent $event, array $dateRange): array
     {
+        $isMarketplace = $this->isMarketplaceEvent($event);
+        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
+
         $days = [];
         $current = $dateRange['start']->copy();
 
@@ -142,13 +177,16 @@ class EventAnalyticsService
             $current->addDay();
         }
 
-        // Get daily analytics if available
-        $dailyData = EventAnalyticsDaily::forEvent($event->id)
-            ->inDateRange($dateRange['start'], $dateRange['end'])
-            ->get()
-            ->keyBy(fn($d) => $d->date->format('Y-m-d'));
+        // Get daily analytics if available (only for tenant events)
+        $dailyData = collect();
+        if (!$isMarketplace) {
+            $dailyData = EventAnalyticsDaily::forEvent($event->id)
+                ->inDateRange($dateRange['start'], $dateRange['end'])
+                ->get()
+                ->keyBy(fn($d) => $d->date->format('Y-m-d'));
+        }
 
-        // Fallback: calculate from raw data if daily analytics not populated
+        // Fallback: calculate from raw data
         $revenueByDay = Order::where('marketplace_event_id', $event->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
@@ -157,15 +195,26 @@ class EventAnalyticsService
             ->get()
             ->keyBy('date');
 
-        $ticketsByDay = Ticket::whereHas('ticketType', fn($q) => $q->where('event_id', $event->id))
-            ->whereIn('status', ['valid', 'checked_in'])
-            ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
-            ->selectRaw('DATE(created_at) as date, COUNT(*) as tickets')
-            ->groupBy('date')
-            ->get()
-            ->keyBy('date');
+        // Get tickets by day
+        if ($isMarketplace) {
+            $ticketsByDay = Ticket::where('marketplace_event_id', $event->id)
+                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                ->selectRaw('DATE(created_at) as date, COUNT(*) as tickets')
+                ->groupBy('date')
+                ->get()
+                ->keyBy('date');
+        } else {
+            $ticketsByDay = Ticket::whereHas('ticketType', fn($q) => $q->where('event_id', $event->id))
+                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                ->selectRaw('DATE(created_at) as date, COUNT(*) as tickets')
+                ->groupBy('date')
+                ->get()
+                ->keyBy('date');
+        }
 
-        $visitsByDay = CoreCustomerEvent::where('event_id', $event->id)
+        $visitsByDay = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->selectRaw('DATE(created_at) as date, COUNT(*) as visits')
@@ -193,29 +242,46 @@ class EventAnalyticsService
     /**
      * Get ticket performance breakdown
      */
-    public function getTicketPerformance(Event $event, array $dateRange): array
+    public function getTicketPerformance(Event|MarketplaceEvent $event, array $dateRange): array
     {
-        $ticketTypes = TicketType::where('event_id', $event->id)->get();
+        $isMarketplace = $this->isMarketplaceEvent($event);
+        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
+
+        // Get ticket types based on event type
+        if ($isMarketplace) {
+            $ticketTypes = \App\Models\MarketplaceTicketType::where('marketplace_event_id', $event->id)->get();
+        } else {
+            $ticketTypes = TicketType::where('event_id', $event->id)->get();
+        }
+
         $performance = [];
 
         // Define colors for ticket types
         $colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#ef4444'];
 
         foreach ($ticketTypes as $index => $ticketType) {
-            $sold = Ticket::where('ticket_type_id', $ticketType->id)
-                ->whereIn('status', ['valid', 'checked_in'])
-                ->count();
+            // Query tickets differently based on event type
+            if ($isMarketplace) {
+                $sold = Ticket::where('marketplace_ticket_type_id', $ticketType->id)
+                    ->whereIn('status', ['valid', 'checked_in'])
+                    ->count();
+            } else {
+                $sold = Ticket::where('ticket_type_id', $ticketType->id)
+                    ->whereIn('status', ['valid', 'checked_in'])
+                    ->count();
+            }
 
-            $revenue = $sold * ($ticketType->price ?? 0);
+            $price = $isMarketplace ? ($ticketType->price ?? 0) : ($ticketType->price ?? 0);
+            $revenue = $sold * $price;
 
             // Calculate conversion rate for this ticket type
-            $addToCartCount = CoreCustomerEvent::where('event_id', $event->id)
+            $addToCartCount = CoreCustomerEvent::where($trackingColumn, $event->id)
                 ->where('event_type', CoreCustomerEvent::TYPE_ADD_TO_CART)
                 ->where('content_id', $ticketType->id)
                 ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
                 ->count();
 
-            $purchaseCount = CoreCustomerEvent::where('event_id', $event->id)
+            $purchaseCount = CoreCustomerEvent::where($trackingColumn, $event->id)
                 ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
                 ->where('content_id', $ticketType->id)
                 ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
@@ -225,7 +291,8 @@ class EventAnalyticsService
 
             // Calculate trend (compare to previous period)
             $periodDays = $dateRange['start']->diffInDays($dateRange['end']);
-            $previousSold = Ticket::where('ticket_type_id', $ticketType->id)
+            $ticketColumn = $isMarketplace ? 'marketplace_ticket_type_id' : 'ticket_type_id';
+            $previousSold = Ticket::where($ticketColumn, $ticketType->id)
                 ->whereIn('status', ['valid', 'checked_in'])
                 ->whereBetween('created_at', [
                     $dateRange['start']->copy()->subDays($periodDays),
@@ -238,7 +305,7 @@ class EventAnalyticsService
             $performance[] = [
                 'id' => $ticketType->id,
                 'name' => $ticketType->name ?? 'General',
-                'price' => $ticketType->price ?? 0,
+                'price' => $price,
                 'sold' => $sold,
                 'revenue' => $revenue,
                 'conversion_rate' => $conversionRate,
@@ -256,8 +323,11 @@ class EventAnalyticsService
     /**
      * Get traffic sources breakdown
      */
-    public function getTrafficSources(Event $event, array $dateRange): array
+    public function getTrafficSources(Event|MarketplaceEvent $event, array $dateRange): array
     {
+        $isMarketplace = $this->isMarketplaceEvent($event);
+        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
+
         $sourceCase = "
             CASE
                 WHEN fbclid IS NOT NULL OR utm_source = 'facebook' THEN 'Facebook'
@@ -270,7 +340,7 @@ class EventAnalyticsService
             END
         ";
 
-        $sources = CoreCustomerEvent::where('event_id', $event->id)
+        $sources = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->selectRaw("
                 {$sourceCase} as source,
@@ -312,8 +382,11 @@ class EventAnalyticsService
     /**
      * Get top locations
      */
-    public function getTopLocations(Event $event, array $dateRange, int $limit = 10): array
+    public function getTopLocations(Event|MarketplaceEvent $event, array $dateRange, int $limit = 10): array
     {
+        $isMarketplace = $this->isMarketplaceEvent($event);
+        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
+
         // Country flags mapping
         $flags = [
             'Romania' => '🇷🇴', 'RO' => '🇷🇴',
@@ -335,7 +408,7 @@ class EventAnalyticsService
             'United States' => '🇺🇸', 'US' => '🇺🇸',
         ];
 
-        $locations = CoreCustomerEvent::where('event_id', $event->id)
+        $locations = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->whereNotNull('city')
@@ -378,8 +451,13 @@ class EventAnalyticsService
     /**
      * Get milestones with calculated metrics
      */
-    public function getMilestonesWithMetrics(Event $event): array
+    public function getMilestonesWithMetrics(Event|MarketplaceEvent $event): array
     {
+        // Milestones are only available for tenant events
+        if ($this->isMarketplaceEvent($event)) {
+            return [];
+        }
+
         $milestones = EventMilestone::forEvent($event->id)
             ->orderBy('start_date', 'desc')
             ->get();
@@ -411,32 +489,35 @@ class EventAnalyticsService
     /**
      * Get funnel metrics
      */
-    public function getFunnelMetrics(Event $event, array $dateRange): array
+    public function getFunnelMetrics(Event|MarketplaceEvent $event, array $dateRange): array
     {
-        $pageViews = CoreCustomerEvent::where('event_id', $event->id)
+        $isMarketplace = $this->isMarketplaceEvent($event);
+        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
+
+        $pageViews = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->count();
 
-        $uniqueVisitors = CoreCustomerEvent::where('event_id', $event->id)
+        $uniqueVisitors = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->distinct('visitor_id')
             ->count('visitor_id');
 
-        $addToCart = CoreCustomerEvent::where('event_id', $event->id)
+        $addToCart = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_ADD_TO_CART)
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->distinct('session_id')
             ->count('session_id');
 
-        $checkoutStarted = CoreCustomerEvent::where('event_id', $event->id)
+        $checkoutStarted = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_BEGIN_CHECKOUT)
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->distinct('session_id')
             ->count('session_id');
 
-        $purchases = CoreCustomerEvent::where('event_id', $event->id)
+        $purchases = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->count();
@@ -457,16 +538,18 @@ class EventAnalyticsService
     /**
      * Get recent sales for the event
      */
-    public function getRecentSales(Event $event, int $limit = 20): array
+    public function getRecentSales(Event|MarketplaceEvent $event, int $limit = 20): array
     {
+        $isMarketplace = $this->isMarketplaceEvent($event);
+
         $orders = Order::where('marketplace_event_id', $event->id)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
-            ->with(['marketplaceCustomer', 'tickets.ticketType'])
+            ->with(['marketplaceCustomer', 'tickets.ticketType', 'tickets.marketplaceTicketType'])
             ->orderBy('paid_at', 'desc')
             ->limit($limit)
             ->get();
 
-        return $orders->map(function ($order) {
+        return $orders->map(function ($order) use ($isMarketplace) {
             $customer = $order->marketplaceCustomer;
             $name = $customer?->name ?? $order->customer_name ?? 'Anonymous';
             $nameParts = explode(' ', $name);
@@ -478,9 +561,13 @@ class EventAnalyticsService
             $email = $order->customer_email ?? '';
             $maskedEmail = $email ? substr($email, 0, 1) . '***@' . explode('@', $email)[1] ?? '' : '';
 
-            // Get ticket info
+            // Get ticket info - for marketplace events, use marketplaceTicketType
             $tickets = $order->tickets;
-            $ticketType = $tickets->first()?->ticketType?->name ?? 'General';
+            if ($isMarketplace) {
+                $ticketType = $tickets->first()?->marketplaceTicketType?->name ?? 'General';
+            } else {
+                $ticketType = $tickets->first()?->ticketType?->name ?? 'General';
+            }
             $quantity = $tickets->count();
 
             // Determine source from metadata or tracking
@@ -524,18 +611,20 @@ class EventAnalyticsService
     /**
      * Get live visitors count
      */
-    public function getLiveVisitors(Event $event): array
+    public function getLiveVisitors(Event|MarketplaceEvent $event): array
     {
+        $isMarketplace = $this->isMarketplaceEvent($event);
+        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
         $fiveMinutesAgo = now()->subMinutes(5);
 
-        $visitors = CoreCustomerEvent::where('event_id', $event->id)
+        $visitors = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
             ->where('created_at', '>=', $fiveMinutesAgo)
             ->distinct('visitor_id')
             ->count('visitor_id');
 
         // Get visitor locations
-        $locations = CoreCustomerEvent::where('event_id', $event->id)
+        $locations = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
             ->where('created_at', '>=', $fiveMinutesAgo)
             ->whereNotNull('city')
@@ -546,17 +635,17 @@ class EventAnalyticsService
             ->get();
 
         // Get recent activity
-        $recentActivity = CoreCustomerEvent::where('event_id', $event->id)
+        $recentActivity = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('created_at', '>=', $fiveMinutesAgo)
             ->orderBy('created_at', 'desc')
             ->limit(20)
             ->get()
-            ->map(function ($event) {
+            ->map(function ($evt) {
                 return [
-                    'action' => $this->formatEventAction($event),
-                    'city' => $event->city ?? 'Unknown',
-                    'country' => $event->country_code ?? 'Unknown',
-                    'time' => $event->created_at->diffForHumans(short: true),
+                    'action' => $this->formatEventAction($evt),
+                    'city' => $evt->city ?? 'Unknown',
+                    'country' => $evt->country_code ?? 'Unknown',
+                    'time' => $evt->created_at->diffForHumans(short: true),
                 ];
             });
 
@@ -574,12 +663,14 @@ class EventAnalyticsService
     /**
      * Get live visitors for globe modal with detailed location data
      */
-    public function getLiveVisitorsForGlobe(Event $event): array
+    public function getLiveVisitorsForGlobe(Event|MarketplaceEvent $event): array
     {
+        $isMarketplace = $this->isMarketplaceEvent($event);
+        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
         $fiveMinutesAgo = now()->subMinutes(5);
 
         // Get recent sessions with location data
-        $visitors = CoreCustomerEvent::where('event_id', $event->id)
+        $visitors = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
             ->where('created_at', '>=', $fiveMinutesAgo)
             ->whereNotNull('latitude')
@@ -629,10 +720,15 @@ class EventAnalyticsService
     }
 
     /**
-     * Aggregate daily analytics for an event
+     * Aggregate daily analytics for an event (tenant events only)
      */
-    public function aggregateDailyAnalytics(Event $event, Carbon $date): EventAnalyticsDaily
+    public function aggregateDailyAnalytics(Event|MarketplaceEvent $event, Carbon $date): ?EventAnalyticsDaily
     {
+        // Aggregated analytics tables are only for tenant events
+        if ($this->isMarketplaceEvent($event)) {
+            return null;
+        }
+
         $startOfDay = $date->copy()->startOfDay();
         $endOfDay = $date->copy()->endOfDay();
 
@@ -753,16 +849,18 @@ class EventAnalyticsService
     /**
      * Get real-time dashboard data (uses aggregated hourly data for performance)
      */
-    public function getRealTimeDashboardData(Event $event): array
+    public function getRealTimeDashboardData(Event|MarketplaceEvent $event): array
     {
-        $cacheKey = "event_analytics_realtime_{$event->id}";
+        $isMarketplace = $this->isMarketplaceEvent($event);
+        $prefix = $isMarketplace ? 'mp_' : '';
+        $cacheKey = "{$prefix}event_analytics_realtime_{$event->id}";
 
-        return Cache::remember($cacheKey, 60, function () use ($event) {
+        return Cache::remember($cacheKey, 60, function () use ($event, $isMarketplace) {
             $realTimeService = app(RealTimeAnalyticsService::class);
 
             return [
-                'realtime' => $realTimeService->getRealtimeStats($event->id),
-                'live_visitors' => $realTimeService->getLiveVisitorsCount($event->id),
+                'realtime' => $realTimeService->getRealtimeStats($event->id, $isMarketplace),
+                'live_visitors' => $realTimeService->getLiveVisitorsCount($event->id, $isMarketplace),
                 'hourly_chart' => $this->getTodayHourlyChart($event),
             ];
         });
@@ -771,10 +869,16 @@ class EventAnalyticsService
     /**
      * Get today's hourly chart data from aggregated hourly table
      */
-    public function getTodayHourlyChart(Event $event): array
+    public function getTodayHourlyChart(Event|MarketplaceEvent $event): array
     {
+        $isMarketplace = $this->isMarketplaceEvent($event);
         $today = now()->toDateString();
         $currentHour = now()->hour;
+
+        // For marketplace events, compute hourly data from raw tracking
+        if ($isMarketplace) {
+            return $this->computeHourlyChartFromRaw($event, $today, $currentHour);
+        }
 
         $hourlyData = EventAnalyticsHourly::where('event_id', $event->id)
             ->where('date', $today)
@@ -799,10 +903,66 @@ class EventAnalyticsService
     }
 
     /**
+     * Compute hourly chart data from raw tracking (for marketplace events)
+     */
+    protected function computeHourlyChartFromRaw(MarketplaceEvent $event, string $date, int $upToHour): array
+    {
+        $chart = [];
+        $startOfDay = Carbon::parse($date)->startOfDay();
+
+        for ($hour = 0; $hour <= $upToHour; $hour++) {
+            $hourStart = $startOfDay->copy()->addHours($hour);
+            $hourEnd = $hourStart->copy()->addHour();
+
+            $pageViews = CoreCustomerEvent::where('marketplace_event_id', $event->id)
+                ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                ->whereBetween('created_at', [$hourStart, $hourEnd])
+                ->count();
+
+            $uniqueVisitors = CoreCustomerEvent::where('marketplace_event_id', $event->id)
+                ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+                ->whereBetween('created_at', [$hourStart, $hourEnd])
+                ->distinct('visitor_id')
+                ->count('visitor_id');
+
+            $purchases = CoreCustomerEvent::where('marketplace_event_id', $event->id)
+                ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
+                ->whereBetween('created_at', [$hourStart, $hourEnd])
+                ->count();
+
+            $revenue = Order::where('marketplace_event_id', $event->id)
+                ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                ->whereBetween('paid_at', [$hourStart, $hourEnd])
+                ->sum('total');
+
+            $ticketsSold = Ticket::where('marketplace_event_id', $event->id)
+                ->whereIn('status', ['valid', 'checked_in'])
+                ->whereBetween('created_at', [$hourStart, $hourEnd])
+                ->count();
+
+            $chart[] = [
+                'hour' => sprintf('%02d:00', $hour),
+                'page_views' => $pageViews,
+                'unique_visitors' => $uniqueVisitors,
+                'purchases' => $purchases,
+                'revenue' => $revenue,
+                'tickets_sold' => $ticketsSold,
+            ];
+        }
+
+        return $chart;
+    }
+
+    /**
      * Get chart data optimized with aggregated data (falls back to raw if not available)
      */
-    public function getOptimizedChartData(Event $event, array $dateRange, string $granularity = 'daily'): array
+    public function getOptimizedChartData(Event|MarketplaceEvent $event, array $dateRange, string $granularity = 'daily'): array
     {
+        // For marketplace events, use raw chart data calculation
+        if ($this->isMarketplaceEvent($event)) {
+            return $this->getChartData($event, $dateRange);
+        }
+
         return match ($granularity) {
             'hourly' => $this->getHourlyChartData($event, $dateRange),
             'weekly' => $this->getWeeklyChartData($event, $dateRange),
@@ -812,9 +972,9 @@ class EventAnalyticsService
     }
 
     /**
-     * Get hourly chart data for a specific date range
+     * Get hourly chart data for a specific date range (tenant events only)
      */
-    protected function getHourlyChartData(Event $event, array $dateRange): array
+    protected function getHourlyChartData(Event|MarketplaceEvent $event, array $dateRange): array
     {
         return EventAnalyticsHourly::where('event_id', $event->id)
             ->whereBetween('date', [$dateRange['start']->toDateString(), $dateRange['end']->toDateString()])
@@ -834,9 +994,9 @@ class EventAnalyticsService
     }
 
     /**
-     * Get daily chart data from aggregated table
+     * Get daily chart data from aggregated table (tenant events only)
      */
-    protected function getDailyChartData(Event $event, array $dateRange): array
+    protected function getDailyChartData(Event|MarketplaceEvent $event, array $dateRange): array
     {
         $dailyData = EventAnalyticsDaily::where('event_id', $event->id)
             ->whereBetween('date', [$dateRange['start']->toDateString(), $dateRange['end']->toDateString()])
@@ -871,9 +1031,9 @@ class EventAnalyticsService
     }
 
     /**
-     * Get weekly chart data from aggregated table
+     * Get weekly chart data from aggregated table (tenant events only)
      */
-    protected function getWeeklyChartData(Event $event, array $dateRange): array
+    protected function getWeeklyChartData(Event|MarketplaceEvent $event, array $dateRange): array
     {
         return EventAnalyticsWeekly::where('event_id', $event->id)
             ->whereBetween('week_start', [$dateRange['start']->startOfWeek()->toDateString(), $dateRange['end']->toDateString()])
@@ -894,9 +1054,9 @@ class EventAnalyticsService
     }
 
     /**
-     * Get monthly chart data from aggregated table
+     * Get monthly chart data from aggregated table (tenant events only)
      */
-    protected function getMonthlyChartData(Event $event, array $dateRange): array
+    protected function getMonthlyChartData(Event|MarketplaceEvent $event, array $dateRange): array
     {
         return EventAnalyticsMonthly::where('event_id', $event->id)
             ->whereBetween('month_start', [$dateRange['start']->startOfMonth()->toDateString(), $dateRange['end']->toDateString()])
@@ -919,8 +1079,13 @@ class EventAnalyticsService
     /**
      * Get aggregated traffic sources from daily data
      */
-    public function getAggregatedTrafficSources(Event $event, array $dateRange): array
+    public function getAggregatedTrafficSources(Event|MarketplaceEvent $event, array $dateRange): array
     {
+        // For marketplace events, use raw calculation
+        if ($this->isMarketplaceEvent($event)) {
+            return $this->getTrafficSources($event, $dateRange);
+        }
+
         $dailyData = EventAnalyticsDaily::where('event_id', $event->id)
             ->whereBetween('date', [$dateRange['start']->toDateString(), $dateRange['end']->toDateString()])
             ->get();
@@ -967,8 +1132,9 @@ class EventAnalyticsService
     /**
      * Get period comparison stats (useful for trend analysis)
      */
-    public function getPeriodComparison(Event $event, string $period = '7d'): array
+    public function getPeriodComparison(Event|MarketplaceEvent $event, string $period = '7d'): array
     {
+        $isMarketplace = $this->isMarketplaceEvent($event);
         $currentRange = $this->getDateRange($period);
         $periodDays = $currentRange['start']->diffInDays($currentRange['end']);
 
@@ -977,7 +1143,12 @@ class EventAnalyticsService
             'end' => $currentRange['start']->copy()->subDay(),
         ];
 
-        // Get aggregated data for both periods
+        // For marketplace events, compute from raw data
+        if ($isMarketplace) {
+            return $this->computePeriodComparisonFromRaw($event, $currentRange, $previousRange);
+        }
+
+        // Get aggregated data for both periods (tenant events only)
         $currentDaily = EventAnalyticsDaily::where('event_id', $event->id)
             ->whereBetween('date', [$currentRange['start']->toDateString(), $currentRange['end']->toDateString()])
             ->get();
@@ -994,6 +1165,66 @@ class EventAnalyticsService
 
         $currentPurchases = $currentDaily->sum('purchases') ?: $currentDaily->sum('purchases_count');
         $previousPurchases = $previousDaily->sum('purchases') ?: $previousDaily->sum('purchases_count');
+
+        return [
+            'current' => [
+                'revenue' => $currentRevenue,
+                'visitors' => $currentVisitors,
+                'purchases' => $currentPurchases,
+                'conversion_rate' => $currentVisitors > 0 ? round(($currentPurchases / $currentVisitors) * 100, 2) : 0,
+            ],
+            'previous' => [
+                'revenue' => $previousRevenue,
+                'visitors' => $previousVisitors,
+                'purchases' => $previousPurchases,
+                'conversion_rate' => $previousVisitors > 0 ? round(($previousPurchases / $previousVisitors) * 100, 2) : 0,
+            ],
+            'changes' => [
+                'revenue' => $previousRevenue > 0 ? round((($currentRevenue - $previousRevenue) / $previousRevenue) * 100, 1) : 0,
+                'visitors' => $previousVisitors > 0 ? round((($currentVisitors - $previousVisitors) / $previousVisitors) * 100, 1) : 0,
+                'purchases' => $previousPurchases > 0 ? round((($currentPurchases - $previousPurchases) / $previousPurchases) * 100, 1) : 0,
+            ],
+        ];
+    }
+
+    /**
+     * Compute period comparison from raw data (for marketplace events)
+     */
+    protected function computePeriodComparisonFromRaw(MarketplaceEvent $event, array $currentRange, array $previousRange): array
+    {
+        // Current period
+        $currentRevenue = Order::where('marketplace_event_id', $event->id)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->whereBetween('created_at', [$currentRange['start'], $currentRange['end']])
+            ->sum('total');
+
+        $currentVisitors = CoreCustomerEvent::where('marketplace_event_id', $event->id)
+            ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+            ->whereBetween('created_at', [$currentRange['start'], $currentRange['end']])
+            ->distinct('visitor_id')
+            ->count('visitor_id');
+
+        $currentPurchases = CoreCustomerEvent::where('marketplace_event_id', $event->id)
+            ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
+            ->whereBetween('created_at', [$currentRange['start'], $currentRange['end']])
+            ->count();
+
+        // Previous period
+        $previousRevenue = Order::where('marketplace_event_id', $event->id)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
+            ->sum('total');
+
+        $previousVisitors = CoreCustomerEvent::where('marketplace_event_id', $event->id)
+            ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+            ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
+            ->distinct('visitor_id')
+            ->count('visitor_id');
+
+        $previousPurchases = CoreCustomerEvent::where('marketplace_event_id', $event->id)
+            ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
+            ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
+            ->count();
 
         return [
             'current' => [

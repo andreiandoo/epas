@@ -318,13 +318,14 @@ class RealTimeAnalyticsService
     /**
      * Get real-time stats for an event (cached for performance)
      */
-    public function getRealtimeStats(int $eventId): array
+    public function getRealtimeStats(int $eventId, bool $isMarketplace = false): array
     {
+        $prefix = $isMarketplace ? 'mp_' : '';
         return Cache::remember(
-            "event_analytics_realtime_{$eventId}",
+            "{$prefix}event_analytics_realtime_{$eventId}",
             self::REALTIME_CACHE_TTL,
-            function () use ($eventId) {
-                return $this->calculateRealtimeStats($eventId);
+            function () use ($eventId, $isMarketplace) {
+                return $this->calculateRealtimeStats($eventId, $isMarketplace);
             }
         );
     }
@@ -332,8 +333,13 @@ class RealTimeAnalyticsService
     /**
      * Calculate real-time stats from hourly data
      */
-    protected function calculateRealtimeStats(int $eventId): array
+    protected function calculateRealtimeStats(int $eventId, bool $isMarketplace = false): array
     {
+        // For marketplace events, compute from raw tracking data
+        if ($isMarketplace) {
+            return $this->calculateRealtimeStatsFromRaw($eventId);
+        }
+
         $now = now();
 
         // Last 24 hours data
@@ -379,6 +385,155 @@ class RealTimeAnalyticsService
     }
 
     /**
+     * Calculate real-time stats from raw tracking data (for marketplace events)
+     */
+    protected function calculateRealtimeStatsFromRaw(int $eventId): array
+    {
+        $now = now();
+        $startOfDay = $now->copy()->startOfDay();
+        $startOfHour = $now->copy()->startOfHour();
+        $last24h = $now->copy()->subHours(24);
+
+        // Current hour stats
+        $currentHourPageViews = CoreCustomerEvent::where('marketplace_event_id', $eventId)
+            ->where('event_type', 'page_view')
+            ->where('created_at', '>=', $startOfHour)
+            ->count();
+
+        $currentHourUniqueVisitors = CoreCustomerEvent::where('marketplace_event_id', $eventId)
+            ->where('event_type', 'page_view')
+            ->where('created_at', '>=', $startOfHour)
+            ->distinct('visitor_id')
+            ->count('visitor_id');
+
+        $currentHourPurchases = CoreCustomerEvent::where('marketplace_event_id', $eventId)
+            ->where('event_type', 'purchase')
+            ->where('created_at', '>=', $startOfHour)
+            ->count();
+
+        $currentHourRevenue = Order::where('marketplace_event_id', $eventId)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->where('paid_at', '>=', $startOfHour)
+            ->sum('total');
+
+        // Today stats
+        $todayPageViews = CoreCustomerEvent::where('marketplace_event_id', $eventId)
+            ->where('event_type', 'page_view')
+            ->where('created_at', '>=', $startOfDay)
+            ->count();
+
+        $todayUniqueVisitors = CoreCustomerEvent::where('marketplace_event_id', $eventId)
+            ->where('event_type', 'page_view')
+            ->where('created_at', '>=', $startOfDay)
+            ->distinct('visitor_id')
+            ->count('visitor_id');
+
+        $todayPurchases = CoreCustomerEvent::where('marketplace_event_id', $eventId)
+            ->where('event_type', 'purchase')
+            ->where('created_at', '>=', $startOfDay)
+            ->count();
+
+        $todayRevenue = Order::where('marketplace_event_id', $eventId)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->where('paid_at', '>=', $startOfDay)
+            ->sum('total');
+
+        $todayTicketsSold = \App\Models\Ticket::where('marketplace_event_id', $eventId)
+            ->whereIn('status', ['valid', 'checked_in'])
+            ->where('created_at', '>=', $startOfDay)
+            ->count();
+
+        // Last 24h stats
+        $last24hPageViews = CoreCustomerEvent::where('marketplace_event_id', $eventId)
+            ->where('event_type', 'page_view')
+            ->where('created_at', '>=', $last24h)
+            ->count();
+
+        $last24hUniqueVisitors = CoreCustomerEvent::where('marketplace_event_id', $eventId)
+            ->where('event_type', 'page_view')
+            ->where('created_at', '>=', $last24h)
+            ->distinct('visitor_id')
+            ->count('visitor_id');
+
+        $last24hPurchases = CoreCustomerEvent::where('marketplace_event_id', $eventId)
+            ->where('event_type', 'purchase')
+            ->where('created_at', '>=', $last24h)
+            ->count();
+
+        $last24hRevenue = Order::where('marketplace_event_id', $eventId)
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->where('paid_at', '>=', $last24h)
+            ->sum('total');
+
+        $last24hTicketsSold = \App\Models\Ticket::where('marketplace_event_id', $eventId)
+            ->whereIn('status', ['valid', 'checked_in'])
+            ->where('created_at', '>=', $last24h)
+            ->count();
+
+        return [
+            'current_hour' => [
+                'page_views' => $currentHourPageViews,
+                'unique_visitors' => $currentHourUniqueVisitors,
+                'purchases' => $currentHourPurchases,
+                'revenue' => $currentHourRevenue,
+            ],
+            'today' => [
+                'page_views' => $todayPageViews,
+                'unique_visitors' => $todayUniqueVisitors,
+                'purchases' => $todayPurchases,
+                'tickets_sold' => $todayTicketsSold,
+                'revenue' => $todayRevenue,
+            ],
+            'last_24h' => [
+                'page_views' => $last24hPageViews,
+                'unique_visitors' => $last24hUniqueVisitors,
+                'purchases' => $last24hPurchases,
+                'tickets_sold' => $last24hTicketsSold,
+                'revenue' => $last24hRevenue,
+            ],
+            'hourly_chart' => $this->buildHourlyChartFromRaw($eventId, $now),
+        ];
+    }
+
+    /**
+     * Build hourly chart from raw tracking data (for marketplace events)
+     */
+    protected function buildHourlyChartFromRaw(int $eventId, \Carbon\Carbon $now): array
+    {
+        $chart = [];
+
+        for ($i = 23; $i >= 0; $i--) {
+            $time = $now->copy()->subHours($i);
+            $hourStart = $time->copy()->startOfHour();
+            $hourEnd = $time->copy()->endOfHour();
+
+            $pageViews = CoreCustomerEvent::where('marketplace_event_id', $eventId)
+                ->where('event_type', 'page_view')
+                ->whereBetween('created_at', [$hourStart, $hourEnd])
+                ->count();
+
+            $purchases = CoreCustomerEvent::where('marketplace_event_id', $eventId)
+                ->where('event_type', 'purchase')
+                ->whereBetween('created_at', [$hourStart, $hourEnd])
+                ->count();
+
+            $revenue = Order::where('marketplace_event_id', $eventId)
+                ->whereIn('status', ['paid', 'confirmed', 'completed'])
+                ->whereBetween('paid_at', [$hourStart, $hourEnd])
+                ->sum('total');
+
+            $chart[] = [
+                'time' => $time->format('H:00'),
+                'page_views' => $pageViews,
+                'purchases' => $purchases,
+                'revenue' => $revenue,
+            ];
+        }
+
+        return $chart;
+    }
+
+    /**
      * Build hourly chart data for last 24 hours
      */
     protected function buildHourlyChart($data, Carbon $now): array
@@ -405,9 +560,11 @@ class RealTimeAnalyticsService
     /**
      * Get live visitors count (from recent tracking events)
      */
-    public function getLiveVisitorsCount(int $eventId): int
+    public function getLiveVisitorsCount(int $eventId, bool $isMarketplace = false): int
     {
-        return CoreCustomerEvent::where('event_id', $eventId)
+        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
+
+        return CoreCustomerEvent::where($trackingColumn, $eventId)
             ->where('event_type', 'page_view')
             ->where('created_at', '>=', now()->subMinutes(5))
             ->distinct('visitor_id')
@@ -417,9 +574,11 @@ class RealTimeAnalyticsService
     /**
      * Get live visitors with location for globe display
      */
-    public function getLiveVisitorsForGlobe(int $eventId): array
+    public function getLiveVisitorsForGlobe(int $eventId, bool $isMarketplace = false): array
     {
-        return CoreCustomerEvent::where('event_id', $eventId)
+        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
+
+        return CoreCustomerEvent::where($trackingColumn, $eventId)
             ->where('event_type', 'page_view')
             ->where('created_at', '>=', now()->subMinutes(5))
             ->whereNotNull('latitude')
