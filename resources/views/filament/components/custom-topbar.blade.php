@@ -72,8 +72,8 @@
         $publicSiteUrl = $domain;
     }
 @endphp
-<div class="sticky top-0 z-20 px-4 py-3 mb-4 bg-white border-b border-gray-200 fi-custom-topbar dark:bg-gray-900 dark:border-gray-700 -mx-4 -mt-4 lg:-mx-6 lg:-mt-6">
-    <div class="flex items-center justify-between max-w-full gap-4 lg:px-2">
+<div class="sticky top-0 z-20 px-4 py-3 mb-4 bg-white border-b border-gray-200 fi-custom-topbar dark:bg-gray-900 dark:border-gray-700">
+    <div class="flex items-center justify-between max-w-full gap-4">
         {{-- Center: Global Search --}}
         <div class="flex-1 hidden md:block">
             <div class="epas-global-search">
@@ -213,47 +213,9 @@
                 <span class="hidden md:inline">Public Site</span>
             </a>
 
-            {{-- User Account Menu --}}
+            {{-- Filament User Menu --}}
             @if(filament()->auth()->check())
-                <div x-data="{ open: false }" class="relative">
-                    <button
-                        @click="open = !open"
-                        type="button"
-                        class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 transition rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    >
-                        <div class="flex items-center justify-center w-8 h-8 text-xs font-semibold text-white rounded-full bg-primary-500">
-                            {{ strtoupper(substr(filament()->auth()->user()->name, 0, 2)) }}
-                        </div>
-                        <span class="hidden font-medium md:inline">{{ filament()->auth()->user()->name }}</span>
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                    </button>
-
-                    <div
-                        x-show="open"
-                        @click.away="open = false"
-                        x-cloak
-                        class="absolute right-0 z-50 w-48 py-1 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg dark:bg-gray-800 dark:border-gray-700"
-                    >
-                        <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                            <div class="text-sm font-semibold text-gray-900 dark:text-white">{{ filament()->auth()->user()->name }}</div>
-                            <div class="text-xs text-gray-500">{{ filament()->auth()->user()->email }}</div>
-                        </div>
-
-                        <form method="POST" action="{{ filament()->getLogoutUrl() }}">
-                            @csrf
-                            <button type="submit" class="w-full px-4 py-2 text-sm text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <div class="flex items-center gap-2">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                                    </svg>
-                                    Logout
-                                </div>
-                            </button>
-                        </form>
-                    </div>
-                </div>
+                <x-filament-panels::user-menu />
             @endif
         </div>
     </div>

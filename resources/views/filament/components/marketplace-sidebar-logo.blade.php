@@ -31,44 +31,16 @@
         $logoDark = $getLogoUrl($branding['logo_dark'] ?? $branding['logo_url'] ?? null);
     }
 @endphp
-<style>
-    /* Sidebar logo styling */
-    .ep-sidebar-logo {
-        padding: 1rem 1rem 0.75rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        margin-bottom: 0.5rem;
-    }
-    .ep-sidebar-logo-light { display: block; }
-    .ep-sidebar-logo-dark { display: none; }
-    .dark .ep-sidebar-logo-light { display: none; }
-    .dark .ep-sidebar-logo-dark { display: block; }
-</style>
 <div class="ep-sidebar-logo">
     @if($logoLight || $logoDark)
         @if($logoLight && $logoDark)
-            {{-- Both logos provided --}}
-            <img
-                src="{{ $logoLight }}"
-                alt="{{ $brandName }}"
-                class="ep-sidebar-logo-light h-8 w-auto max-w-full object-contain"
-            >
-            <img
-                src="{{ $logoDark }}"
-                alt="{{ $brandName }}"
-                class="ep-sidebar-logo-dark h-8 w-auto max-w-full object-contain"
-            >
+            {{-- Both logos provided - use dark mode classes --}}
+            <img src="{{ $logoLight }}" alt="{{ $brandName }}" class="dark:hidden h-8 w-auto max-w-full object-contain">
+            <img src="{{ $logoDark }}" alt="{{ $brandName }}" class="hidden dark:block h-8 w-auto max-w-full object-contain">
         @elseif($logoLight)
-            <img
-                src="{{ $logoLight }}"
-                alt="{{ $brandName }}"
-                class="h-8 w-auto max-w-full object-contain"
-            >
+            <img src="{{ $logoLight }}" alt="{{ $brandName }}" class="h-8 w-auto max-w-full object-contain">
         @elseif($logoDark)
-            <img
-                src="{{ $logoDark }}"
-                alt="{{ $brandName }}"
-                class="h-8 w-auto max-w-full object-contain"
-            >
+            <img src="{{ $logoDark }}" alt="{{ $brandName }}" class="h-8 w-auto max-w-full object-contain">
         @endif
     @else
         {{-- Fallback: Default icon and text --}}

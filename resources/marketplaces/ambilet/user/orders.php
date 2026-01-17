@@ -18,13 +18,13 @@ require_once dirname(__DIR__) . '/includes/header.php';
         <div class="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-secondary">Comenzile mele</h1>
-                <p class="mt-1 text-sm text-muted">Istoric complet al achizitiilor tale</p>
+                <p class="mt-1 text-sm text-muted">Istoric complet al achizițiilor tale</p>
             </div>
             <div class="flex items-center gap-2">
                 <select id="filter-status" class="px-4 py-2 text-sm border bg-surface border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20">
                     <option value="">Toate comenzile</option>
                     <option value="confirmed">Confirmate</option>
-                    <option value="pending">In asteptare</option>
+                    <option value="pending">În așteptare</option>
                     <option value="refunded">Rambursate</option>
                 </select>
             </div>
@@ -50,14 +50,14 @@ require_once dirname(__DIR__) . '/includes/header.php';
         <div id="orders-list" class="space-y-4">
             <div class="py-8 text-center">
                 <div class="w-8 h-8 mx-auto border-4 rounded-full animate-spin border-primary border-t-transparent"></div>
-                <p class="mt-2 text-muted">Se incarca comenzile...</p>
+                <p class="mt-2 text-muted">Se încarcă comenzile...</p>
             </div>
         </div>
 
         <!-- Load More -->
         <div id="load-more" class="hidden mt-8 text-center">
             <button class="px-6 py-2.5 bg-surface text-secondary font-medium rounded-xl text-sm hover:bg-primary/10 hover:text-primary transition-colors">
-                Incarca mai multe comenzi
+                Încarcă mai multe comenzi
             </button>
         </div>
 <?php 
@@ -175,9 +175,6 @@ const UserOrders = {
         document.getElementById('load-more').classList.remove('hidden');
     },
 
-    // give me a list of diacritic characters and their replacements
-    
-
     renderOrderCard(order) {
         const statusClass = {
             'confirmed': 'bg-success/10 text-success',
@@ -189,9 +186,9 @@ const UserOrders = {
 
         const statusLabel = {
             'confirmed': 'CONFIRMAT',
-            'completed': 'INCHEIAT',
-            'pending': 'IN ASTEPTARE',
-            'paid': 'PLATIT',
+            'completed': 'ÎNCHEIAT',
+            'pending': 'ÎN AȘTEPTARE',
+            'paid': 'PLĂTIT',
             'refunded': 'RAMBURSAT'
         }[order.status] || (order.status || 'UNKNOWN').toUpperCase();
 
@@ -244,7 +241,7 @@ const UserOrders = {
         return `
             ${order.status === 'confirmed' ? `
             <div class="mb-6">
-                <h4 class="mb-3 text-sm font-semibold text-secondary">Status comanda</h4>
+                <h4 class="mb-3 text-sm font-semibold text-secondary">Status comandă</h4>
                 <div class="flex items-center justify-between">
                     <div class="flex-1 flex items-center">
                         <div class="flex items-center justify-center w-8 h-8 rounded-full bg-success">
@@ -265,8 +262,8 @@ const UserOrders = {
                     </div>
                 </div>
                 <div class="flex justify-between mt-2 text-xs text-muted">
-                    <span>Comanda plasata</span>
-                    <span>Plata confirmata</span>
+                    <span>Comanda plasată</span>
+                    <span>Plata confirmată</span>
                     <span>Bilete emise</span>
                 </div>
             </div>
@@ -299,13 +296,13 @@ const UserOrders = {
                         ` : ''}
                         ${order.discount ? `
                         <div class="flex justify-between text-sm">
-                            <span class="text-muted">Cod promotional ${order.promo_code ? `(${order.promo_code})` : ''}</span>
+                            <span class="text-muted">Cod promoțional ${order.promo_code ? `(${order.promo_code})` : ''}</span>
                             <span class="text-success">-${parseFloat(order.discount).toFixed(2)} lei</span>
                         </div>
                         ` : ''}
                         <hr class="border-border">
                         <div class="flex justify-between font-semibold">
-                            <span class="text-secondary">Total platit</span>
+                            <span class="text-secondary">Total plătit</span>
                             <span class="text-secondary">${(['on_top', 'add_on_top', 'added_on_top'].includes(order.commission_mode) ? parseFloat(order.total) + parseFloat(order.commission_amount || 0) : parseFloat(order.total)).toFixed(2)} lei</span>
                         </div>
                         ${order.commission_amount > 0 && order.commission_mode === 'included' ? `
@@ -317,7 +314,7 @@ const UserOrders = {
                     </div>
                 </div>
                 <div>
-                    <h4 class="mb-2 text-sm font-semibold text-secondary">Informatii plata</h4>
+                    <h4 class="mb-2 text-sm font-semibold text-secondary">Informații plată</h4>
                     <div class="space-y-2 text-sm">
                         ${order.payment_method ? `
                         <div class="flex justify-between">
@@ -332,11 +329,11 @@ const UserOrders = {
                         `}
                         <div class="flex justify-between">
                             <span class="text-muted">Status</span>
-                            <span class="${(order.payment_status === 'paid' || order.status === 'paid' || order.status === 'confirmed') ? 'text-success' : 'text-warning'}">${(order.payment_status === 'paid' || order.status === 'paid' || order.status === 'confirmed') ? 'Platit' : order.payment_status === 'pending' ? 'In asteptare' : (order.payment_status || order.status)}</span>
+                            <span class="${(order.payment_status === 'paid' || order.status === 'paid' || order.status === 'confirmed') ? 'text-success' : 'text-warning'}">${(order.payment_status === 'paid' || order.status === 'paid' || order.status === 'confirmed') ? 'Plătit' : order.payment_status === 'pending' ? 'În așteptare' : (order.payment_status || order.status)}</span>
                         </div>
                         ${order.paid_at ? `
                         <div class="flex justify-between">
-                            <span class="text-muted">Data platii</span>
+                            <span class="text-muted">Data plății</span>
                             <span class="text-secondary">${this.formatDateTime(order.paid_at)}</span>
                         </div>
                         ` : ''}
@@ -353,7 +350,7 @@ const UserOrders = {
                 ` : ''}
                 <button class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-surface text-secondary hover:bg-primary/10 hover:text-primary">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                    Descarca factura
+                    Descarcă factura
                 </button>
                 <button class="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg text-muted hover:bg-surface">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -371,8 +368,8 @@ const UserOrders = {
                         <svg class="w-5 h-5 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                     </div>
                     <div>
-                        <p class="font-semibold text-error">${order.refund_reason || 'Comanda rambursata'}</p>
-                        <p class="mt-1 text-sm text-muted">Rambursarea a fost procesata automat in contul tau pe ${order.refund_date}.</p>
+                        <p class="font-semibold text-error">${order.refund_reason || 'Comandă rambursată'}</p>
+                        <p class="mt-1 text-sm text-muted">Rambursarea a fost procesată automat în contul tău pe ${order.refund_date}.</p>
                     </div>
                 </div>
             </div>
@@ -381,11 +378,11 @@ const UserOrders = {
                     <h4 class="mb-2 text-sm font-semibold text-secondary">Detalii rambursare</h4>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between">
-                            <span class="text-muted">Suma rambursata</span>
+                            <span class="text-muted">Suma rambursată</span>
                             <span class="font-medium text-success">${order.refunded_amount} lei</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-muted">Data rambursarii</span>
+                            <span class="text-muted">Data rambursării</span>
                             <span class="text-secondary">${order.refund_date}</span>
                         </div>
                         ${order.points_earned ? `

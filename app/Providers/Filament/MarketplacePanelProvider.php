@@ -106,15 +106,14 @@ class MarketplacePanelProvider extends PanelProvider
             ->brandLogo(fn () => '')
             ->brandLogoHeight('0')
 
-            // Disable default topbar elements (we have custom-topbar)
+            // Disable default global search (we have custom search)
             ->globalSearch(false)
-            ->userMenu(false)
 
             // Logo at the top of sidebar navigation
             ->renderHook('panels::sidebar.nav.start', fn (): string => view('filament.components.marketplace-sidebar-logo')->render())
 
-            // Custom topbar inside main content area
-            ->renderHook('panels::content.start', fn (): string => view('filament.components.custom-topbar')->render())
+            // Custom topbar above fi-main but inside fi-main-ctn
+            ->renderHook('panels::page.start', fn (): string => view('filament.components.custom-topbar')->render())
 
             // Sidebar footer with support card
             ->renderHook('panels::sidebar.footer', fn (): string => view('filament.components.marketplace-support-card')->render())
