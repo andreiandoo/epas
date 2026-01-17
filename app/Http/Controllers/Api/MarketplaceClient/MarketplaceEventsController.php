@@ -631,7 +631,7 @@ class MarketplaceEventsController extends BaseController
 
         CoreCustomerEvent::create([
             'marketplace_client_id' => $client->id,
-            'event_id' => $event->id,
+            'marketplace_event_id' => $event->id, // Use marketplace_event_id for analytics queries
             'visitor_id' => $visitorId,
             'session_id' => $sessionId,
             'event_type' => CoreCustomerEvent::TYPE_PAGE_VIEW,

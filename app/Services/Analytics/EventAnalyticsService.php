@@ -57,7 +57,12 @@ class EventAnalyticsService
         $cacheKey = "{$prefix}event_analytics_{$event->id}_{$period}";
 
         return Cache::remember($cacheKey, $this->cacheTtl, function () use ($event, $period) {
-            $dateRange = $this->getDateRange($period);
+            $isMarketplace = $this->isMarketplaceEvent($event);
+            $dateRange = $this->getDateRange(
+                $period,
+                $isMarketplace ? null : $event,
+                $isMarketplace ? $event : null
+            );
 
             return [
                 'overview' => $this->getOverviewStats($event, $dateRange),
@@ -510,12 +515,8 @@ class EventAnalyticsService
      */
     public function getMilestonesWithMetrics(Event|MarketplaceEvent $event): array
     {
-        // Milestones are only available for tenant events
-        if ($this->isMarketplaceEvent($event)) {
-            return [];
-        }
-
-        $milestones = EventMilestone::forEvent($event->id)
+        // For marketplace events, query by event_id (which stores the marketplace event id)
+        $milestones = EventMilestone::where('event_id', $event->id)
             ->orderBy('start_date', 'desc')
             ->get();
 
@@ -525,8 +526,10 @@ class EventAnalyticsService
                 'type' => $milestone->type,
                 'title' => $milestone->title,
                 'description' => $milestone->description,
-                'start_date' => $milestone->start_date->format('M d, Y'),
-                'end_date' => $milestone->end_date?->format('M d, Y'),
+                'start_date' => $milestone->start_date?->format('Y-m-d'), // ISO format for JS
+                'start_date_formatted' => $milestone->start_date?->format('M d, Y'),
+                'end_date' => $milestone->end_date?->format('Y-m-d'),
+                'end_date_formatted' => $milestone->end_date?->format('M d, Y'),
                 'budget' => $milestone->budget,
                 'currency' => $milestone->currency,
                 'targeting' => $milestone->targeting,
@@ -1192,7 +1195,11 @@ class EventAnalyticsService
     public function getPeriodComparison(Event|MarketplaceEvent $event, string $period = '7d'): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
-        $currentRange = $this->getDateRange($period);
+        $currentRange = $this->getDateRange(
+            $period,
+            $isMarketplace ? null : $event,
+            $isMarketplace ? $event : null
+        );
         $periodDays = $currentRange['start']->diffInDays($currentRange['end']);
 
         $previousRange = [
@@ -1308,15 +1315,25 @@ class EventAnalyticsService
 
     /* Helper methods */
 
-    protected function getDateRange(string $period): array
+    public function getDateRange(string $period, ?Event $event = null, ?MarketplaceEvent $marketplaceEvent = null): array
     {
-        return match ($period) {
+        // Get the event creation date as the minimum start date
+        $eventCreatedAt = $event?->created_at ?? $marketplaceEvent?->created_at ?? now()->subYear();
+
+        $ranges = match ($period) {
             '7d' => ['start' => now()->subDays(7)->startOfDay(), 'end' => now()->endOfDay()],
             '30d' => ['start' => now()->subDays(30)->startOfDay(), 'end' => now()->endOfDay()],
             '90d' => ['start' => now()->subDays(90)->startOfDay(), 'end' => now()->endOfDay()],
-            'all' => ['start' => now()->subYear()->startOfDay(), 'end' => now()->endOfDay()],
+            'all' => ['start' => $eventCreatedAt->copy()->startOfDay(), 'end' => now()->endOfDay()],
             default => ['start' => now()->subDays(30)->startOfDay(), 'end' => now()->endOfDay()],
         };
+
+        // Ensure start date is not before event creation
+        if ($ranges['start']->lt($eventCreatedAt)) {
+            $ranges['start'] = $eventCreatedAt->copy()->startOfDay();
+        }
+
+        return $ranges;
     }
 
     protected function maskName(string $name): string
