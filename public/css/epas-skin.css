@@ -4257,7 +4257,7 @@ html.dark {
 }
 
 .dark ::-webkit-scrollbar-track {
-	background: var(--metro-bg-primary);
+	background: var(--metro-bg-secondary);
 }
 
 .dark ::-webkit-scrollbar-thumb {

@@ -14,8 +14,9 @@ body {
     border-top: 3px solid #10b981;
 }
 
-/* Hide default topbar for marketplace panel */
-.fi-topbar {
+/* Hide default topbar and its container for marketplace panel */
+.fi-topbar,
+.fi-topbar-ctn {
     display: none !important;
 }
 
