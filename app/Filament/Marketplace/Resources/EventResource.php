@@ -2412,7 +2412,7 @@ class EventResource extends Resource
                     ->label('Analytics')
                     ->icon('heroicon-o-presentation-chart-line')
                     ->color('success')
-                    ->url(fn (Event $record) => \App\Filament\Marketplace\Pages\OrganizerEventAnalytics::getUrl(['event' => $record->id])),
+                    ->url(fn (Event $record) => route('filament.marketplace.pages.organizer-event-analytics', ['event' => $record->id])),
                 Action::make('statistics')
                     ->label('')
                     ->icon('heroicon-o-chart-bar')

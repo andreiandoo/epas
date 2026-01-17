@@ -29,7 +29,6 @@ class OrganizerEventAnalytics extends Page implements HasForms
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar-square';
     protected static ?string $navigationLabel = 'Event Analytics';
     protected static bool $shouldRegisterNavigation = false; // Accessed via event resource
-    protected static ?string $slug = 'event-analytics/{event?}';
 
     protected string $view = 'filament.marketplace.pages.organizer-event-analytics';
 
