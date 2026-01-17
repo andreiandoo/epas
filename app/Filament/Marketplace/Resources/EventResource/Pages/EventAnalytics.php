@@ -286,6 +286,26 @@ class EventAnalytics extends Page implements HasForms
         $this->loadDashboardData();
     }
 
+    /**
+     * Get dashboard data for Alpine.js without full re-render
+     */
+    public function fetchDashboardData(string $period): array
+    {
+        $this->period = $period;
+        $this->loadDashboardData();
+
+        return [
+            'period' => $this->period,
+            'overview' => $this->getOverviewStats(),
+            'chartData' => $this->getChartData(),
+            'ticketPerformance' => $this->getTicketPerformance(),
+            'trafficSources' => $this->getTrafficSources(),
+            'topLocations' => $this->getTopLocations(),
+            'milestones' => $this->milestones,
+            'recentSales' => $this->recentSales,
+        ];
+    }
+
     public function switchEventMode(string $mode): void
     {
         $this->eventMode = $mode;

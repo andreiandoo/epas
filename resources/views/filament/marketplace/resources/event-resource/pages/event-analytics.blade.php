@@ -32,9 +32,7 @@
         'recentSales' => $this->recentSales,
         'adCampaigns' => $this->getAdCampaigns(),
         'liveVisitors' => $this->eventMode === 'live' ? $this->getLiveVisitorCount() : 0,
-    ]))" x-init="init()"
-         @period-updated.window="Object.assign($data, $event.detail)"
-         @data-refreshed.window="Object.assign($data, $event.detail)">
+    ]))" x-init="init()">
 
         {{-- Top Navigation Bar --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
@@ -58,9 +56,9 @@
 
                         {{-- Period Selector --}}
                         <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
-                            <button wire:click="setPeriod('7d')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="'{{ $this->period }}' === '7d' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">7D</button>
-                            <button wire:click="setPeriod('30d')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="'{{ $this->period }}' === '30d' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">30D</button>
-                            <button wire:click="setPeriod('all')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="'{{ $this->period }}' === 'all' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">All</button>
+                            <button @click="changePeriod('7d')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="period === '7d' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">7D</button>
+                            <button @click="changePeriod('30d')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="period === '30d' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">30D</button>
+                            <button @click="changePeriod('all')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="period === 'all' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">All</button>
                         </div>
                     </div>
 
@@ -867,22 +865,37 @@
                 init() {
                     this.$nextTick(() => this.initCharts());
 
-                    // Live visitors are loaded from server - real-time updates require tracking API
-                    // When tracking is active, uncomment to poll for live visitor count:
-                    // if (this.eventMode === 'live') {
-                    //     setInterval(() => {
-                    //         this.$wire.refreshLiveVisitors().then(count => {
-                    //             if (count !== null) this.liveVisitors = count;
-                    //         });
-                    //     }, 30000);
-                    // }
-
                     // Watch for globe modal
                     this.$watch('showGlobeModal', (value) => {
                         if (value) {
                             setTimeout(() => this.initGlobe(), 500);
                         }
                     });
+                },
+
+                async changePeriod(newPeriod) {
+                    if (this.period === newPeriod) return;
+                    this.period = newPeriod;
+
+                    try {
+                        const data = await this.$wire.fetchDashboardData(newPeriod);
+                        if (data) {
+                            this.overview = data.overview || this.overview;
+                            this.chartData = data.chartData || this.chartData;
+                            this.ticketPerformance = data.ticketPerformance || this.ticketPerformance;
+                            this.trafficSources = data.trafficSources || this.trafficSources;
+                            this.topLocations = data.topLocations || this.topLocations;
+                            this.milestones = data.milestones || this.milestones;
+                            this.recentSales = data.recentSales || this.recentSales;
+                            this.$nextTick(() => this.initCharts());
+                        }
+                    } catch (e) {
+                        console.error('Failed to fetch dashboard data:', e);
+                    }
+                },
+
+                async openBuyerJourney(orderId) {
+                    this.$dispatch('open-buyer-journey', { orderId: orderId });
                 },
 
                 formatCurrency(v) {
