@@ -398,7 +398,17 @@ class EventAnalytics extends Page implements HasForms
     public function openBuyerJourney(int $orderId): void
     {
         $order = \App\Models\Order::find($orderId);
-        if ($order && $order->marketplace_event_id === $this->event->id) {
+        if (!$order) {
+            return;
+        }
+
+        // Check ownership based on event type
+        $isMarketplace = $this->event instanceof MarketplaceEvent;
+        $ownsOrder = $isMarketplace
+            ? $order->marketplace_event_id === $this->event->id
+            : $order->event_id === $this->event->id;
+
+        if ($ownsOrder) {
             $this->selectedBuyer = $this->journeyService->getOrderJourney($order);
             $this->showBuyerJourneyModal = true;
         }

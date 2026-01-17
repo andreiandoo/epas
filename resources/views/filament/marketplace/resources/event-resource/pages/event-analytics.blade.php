@@ -19,7 +19,8 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     @endpush
 
-    <div x-data="eventAnalyticsDashboard(@js([
+    <div wire:key="analytics-dashboard-{{ $this->eventId }}-{{ $this->period }}"
+         x-data="eventAnalyticsDashboard(@js([
         'eventId' => $this->eventId,
         'eventMode' => $this->eventMode,
         'period' => $this->period,
