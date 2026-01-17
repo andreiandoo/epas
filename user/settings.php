@@ -213,6 +213,55 @@ $judete = [
                     </div>
                 </div>
 
+                <!-- Billing Address -->
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <h2 class="section-title">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                        </svg>
+                        Adresa de facturare
+                    </h2>
+                    <p class="mb-4 text-sm text-muted">Aceasta adresa va fi folosita pentru generarea facturilor.</p>
+
+                    <form id="billingAddressForm">
+                        <div class="grid gap-4 md:grid-cols-2">
+                            <div class="form-group md:col-span-2">
+                                <label for="billing_address">Adresa</label>
+                                <input type="text" id="billing_address" name="billing_address" placeholder="Strada, numar, bloc, apartament">
+                            </div>
+                            <div class="form-group">
+                                <label for="billing_city">Oras</label>
+                                <input type="text" id="billing_city" name="billing_city" placeholder="Bucuresti">
+                            </div>
+                            <div class="form-group">
+                                <label for="billing_state">Judet</label>
+                                <select id="billing_state" name="billing_state">
+                                    <option value="">Selecteaza judetul</option>
+                                    <?php foreach ($judete as $code => $name): ?>
+                                    <option value="<?= $code ?>"><?= $name ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="billing_postal_code">Cod postal</label>
+                                <input type="text" id="billing_postal_code" name="billing_postal_code" placeholder="012345">
+                            </div>
+                            <div class="form-group">
+                                <label for="billing_country">Tara</label>
+                                <select id="billing_country" name="billing_country">
+                                    <option value="RO" selected>Romania</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end mt-4">
+                            <button type="submit" class="btn btn-primary" id="saveBillingBtn">
+                                Salveaza adresa
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
                 <!-- Language & Region -->
                 <div class="p-6 bg-white border rounded-2xl border-border">
                     <h2 class="section-title">
@@ -350,6 +399,14 @@ const SettingsPage = {
         document.getElementById('city').value = c.city || '';
         document.getElementById('language').value = c.locale || 'ro';
 
+        // Load billing address
+        const billing = c.settings?.billing_address || {};
+        document.getElementById('billing_address').value = billing.address || c.address || '';
+        document.getElementById('billing_city').value = billing.city || c.city || '';
+        document.getElementById('billing_state').value = billing.state || c.state || '';
+        document.getElementById('billing_postal_code').value = billing.postal_code || c.postal_code || '';
+        document.getElementById('billing_country').value = billing.country || 'RO';
+
         // Load notification preferences from customer settings
         this.loadNotificationSettings();
     },
@@ -395,6 +452,12 @@ const SettingsPage = {
         document.getElementById('deleteAccountForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             await this.deleteAccount();
+        });
+
+        // Billing address form
+        document.getElementById('billingAddressForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.saveBillingAddress();
         });
 
         // Password strength indicator
@@ -545,6 +608,40 @@ const SettingsPage = {
         } catch (error) {
             console.error('Delete account error:', error);
             AmbiletNotifications.error(error.message || 'Eroare la stergerea contului');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    },
+
+    async saveBillingAddress() {
+        const btn = document.getElementById('saveBillingBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="loading-spinner"></span> Se salveaza...';
+        btn.disabled = true;
+
+        try {
+            const billingAddress = {
+                address: document.getElementById('billing_address').value,
+                city: document.getElementById('billing_city').value,
+                state: document.getElementById('billing_state').value,
+                postal_code: document.getElementById('billing_postal_code').value,
+                country: document.getElementById('billing_country').value
+            };
+
+            // Save to API using settings endpoint
+            const response = await AmbiletAPI.put('/customer/settings', {
+                billing_address: billingAddress
+            });
+
+            if (response.success) {
+                AmbiletNotifications.success('Adresa de facturare a fost salvata!');
+            } else {
+                AmbiletNotifications.error(response.message || 'Eroare la salvare');
+            }
+        } catch (error) {
+            console.error('Save billing address error:', error);
+            AmbiletNotifications.error(error.message || 'Eroare la salvare');
         } finally {
             btn.innerHTML = originalText;
             btn.disabled = false;

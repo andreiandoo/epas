@@ -62,7 +62,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <p id="stat-events" class="text-3xl font-bold lg:text-3xl text-secondary">0</p>
                 <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
             </div>
-            <p class="text-xs lg:text-sm text-muted">Evenimente participat</p>
+            <p class="text-xs lg:text-sm text-muted text-center">Evenimente participat</p>
         </div>
 
         <div class="p-4 bg-white border rounded-xl lg:rounded-2xl lg:p-5 border-border">
@@ -70,7 +70,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <p id="stat-points" class="text-3xl font-bold lg:text-3xl text-secondary">0</p>
                 <svg class="w-6 h-6 text-accent" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg>
             </div>
-            <p class="text-xs lg:text-sm text-muted">Puncte acumulate</p>
+            <p class="text-xs lg:text-sm text-muted text-center">Puncte acumulate</p>
         </div>
 
         <div class="p-4 bg-white border rounded-xl lg:rounded-2xl lg:p-5 border-border">
@@ -78,7 +78,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <p id="stat-badges" class="text-3xl font-bold lg:text-3xl text-secondary">0</p>
                 <svg class="w-6 h-6 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
             </div>
-            <p class="text-xs lg:text-sm text-muted">Badge-uri obtinute</p>
+            <p class="text-xs lg:text-sm text-muted text-center">Badge-uri obtinute</p>
         </div>
 
         <div class="p-4 bg-white border rounded-xl lg:rounded-2xl lg:p-5 border-border">
@@ -86,7 +86,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
                 <p id="stat-favorites" class="text-3xl font-bold lg:text-3xl text-secondary">0</p>
                 <svg class="w-6 h-6 text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
             </div>
-            <p class="text-xs lg:text-sm text-muted">Evenimente favorite</p>
+            <p class="text-xs lg:text-sm text-muted text-center">Evenimente favorite</p>
         </div>
     </div>
 

@@ -28,11 +28,11 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     </div>
                 </div>
                 <div class="flex flex-wrap gap-3">
-                    <a href="/cont/bilete" class="btn btn-primary" id="view-tickets-btn">
+                    <a href="/cont/bilete" class="hidden btn btn-primary" id="view-tickets-btn">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
                         Vezi biletele
                     </a>
-                    <button class="btn btn-secondary" id="download-pdf-btn">
+                    <button class="hidden btn btn-secondary" id="download-pdf-btn">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                         Descarca PDF
                     </button>
@@ -69,8 +69,8 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         </div>
                     </div>
 
-                    <!-- Invoice Download -->
-                    <div class="overflow-hidden bg-white border rounded-2xl border-border">
+                    <!-- Invoice Download (hidden by default, shown for confirmed orders) -->
+                    <div class="hidden overflow-hidden bg-white border rounded-2xl border-border" id="invoice-section">
                         <div class="p-5 border-b border-border">
                             <h2 class="font-semibold text-secondary">Documente</h2>
                         </div>
@@ -143,8 +143,8 @@ require_once dirname(__DIR__) . '/includes/header.php';
                         </div>
                     </div>
 
-                    <!-- Support -->
-                    <div class="overflow-hidden bg-white border rounded-2xl border-border">
+                    <!-- Support (hidden by default, shown for confirmed orders) -->
+                    <div class="hidden overflow-hidden bg-white border rounded-2xl border-border" id="support-section">
                         <div class="p-5">
                             <div class="p-5 text-center text-white rounded-xl bg-gradient-to-br from-secondary to-gray-900">
                                 <h4 class="mb-2 font-semibold">Ai nevoie de ajutor?</h4>
@@ -262,12 +262,32 @@ const OrderDetailPage = {
 
         // Show/hide refund button
         const refundBtn = document.getElementById('refund-btn');
+        console.log('Refund eligibility:', { can_request_refund: order.can_request_refund, refund_reason: order.refund_reason });
         if (order.can_request_refund) {
             refundBtn.classList.remove('hidden');
             // Store refund reason for later use
             this.refundReason = order.refund_reason;
         } else {
             refundBtn.classList.add('hidden');
+        }
+
+        // Show/hide sections based on order status (only for confirmed/paid/completed)
+        const isPaidOrder = ['confirmed', 'paid', 'completed'].includes(order.status) || order.can_download_tickets;
+
+        // View tickets and Download PDF buttons
+        if (isPaidOrder) {
+            document.getElementById('view-tickets-btn').classList.remove('hidden');
+            document.getElementById('download-pdf-btn').classList.remove('hidden');
+        }
+
+        // Invoice section (only for paid orders)
+        if (isPaidOrder) {
+            document.getElementById('invoice-section').classList.remove('hidden');
+        }
+
+        // Support section (only for paid orders)
+        if (isPaidOrder) {
+            document.getElementById('support-section').classList.remove('hidden');
         }
     },
 
