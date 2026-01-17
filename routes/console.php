@@ -478,3 +478,133 @@ Schedule::command('activitylog:cleanup --days=10')
     ->onFailure(function () {
         \Log::error('Failed to cleanup tenant activity logs');
     });
+
+/*
+|--------------------------------------------------------------------------
+| Event Analytics Aggregation Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Process real-time analytics (every minute)
+// This processes raw tracking events into hourly buckets for dashboard display
+Schedule::command('analytics:process-realtime --minutes=5')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::debug('Real-time analytics processing completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to process real-time analytics');
+    });
+
+// Aggregate hourly data into daily summaries (hourly at :05)
+// This ensures hourly data is aggregated into daily buckets
+Schedule::command('analytics:aggregate --type=daily')
+    ->hourlyAt(5)
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::info('Daily analytics aggregation completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to aggregate daily analytics');
+    });
+
+// Full daily aggregation (daily at 1:00 AM for previous day)
+Schedule::command('analytics:aggregate --type=daily')
+    ->dailyAt('01:00')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::info('Full daily analytics aggregation completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to complete full daily analytics aggregation');
+    });
+
+// Aggregate daily data into weekly summaries (every Monday at 2:00 AM)
+Schedule::command('analytics:aggregate --type=weekly')
+    ->weeklyOn(1, '02:00')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::info('Weekly analytics aggregation completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to aggregate weekly analytics');
+    });
+
+// Aggregate daily data into monthly summaries (1st of month at 3:00 AM)
+Schedule::command('analytics:aggregate --type=monthly')
+    ->monthlyOn(1, '03:00')
+    ->timezone('Europe/Bucharest')
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::info('Monthly analytics aggregation completed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to aggregate monthly analytics');
+    });
+
+// Recalculate milestone metrics (every 30 minutes)
+// This updates ROI, CAC, ROAS for ad campaign milestones
+Schedule::call(function () {
+    $service = app(\App\Services\Analytics\MilestoneAttributionService::class);
+
+    // Get all active events with ad campaigns
+    $events = \App\Models\Event::whereHas('milestones', function ($q) {
+        $q->whereIn('type', \App\Models\EventMilestone::AD_CAMPAIGN_TYPES)
+          ->where(function ($inner) {
+              $inner->whereNull('end_date')
+                    ->orWhere('end_date', '>=', now()->subDays(7)); // Include recently ended
+          });
+    })->get();
+
+    foreach ($events as $event) {
+        foreach ($event->milestones()->whereIn('type', \App\Models\EventMilestone::AD_CAMPAIGN_TYPES)->get() as $milestone) {
+            $service->updateMilestoneMetrics($milestone);
+        }
+    }
+
+    \Log::info('Milestone metrics recalculated', ['events_processed' => $events->count()]);
+})->everyThirtyMinutes();
+
+/*
+|--------------------------------------------------------------------------
+| Event Analytics Reports & Goals Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Process scheduled analytics reports (every 5 minutes)
+// Checks for due report schedules and sends them to recipients
+Schedule::command('analytics:process-reports --type=reports')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::info('Scheduled analytics reports processed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to process scheduled analytics reports');
+    });
+
+// Process goal alerts (every 15 minutes)
+// Checks goal progress and sends threshold notifications
+Schedule::command('analytics:process-reports --type=goals')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->onSuccess(function () {
+        \Log::info('Goal alerts processed');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to process goal alerts');
+    });
+
+// Cleanup old export files (daily at 4:00 AM)
+Schedule::command('analytics:process-reports --type=cleanup')
+    ->dailyAt('04:00')
+    ->timezone('Europe/Bucharest')
+    ->onSuccess(function () {
+        \Log::info('Old analytics export files cleaned up');
+    })
+    ->onFailure(function () {
+        \Log::error('Failed to cleanup analytics export files');
+    });

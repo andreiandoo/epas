@@ -2217,3 +2217,121 @@ Route::prefix('admin')->middleware(['throttle:api', 'admin.auth'])->group(functi
             ->name('api.admin.api-usage.show');
     });
 });
+
+
+/*
+|--------------------------------------------------------------------------
+| Organizer Event Analytics API Routes
+|--------------------------------------------------------------------------
+|
+| Analytics endpoints for event organizers to track performance,
+| milestones, traffic sources, and buyer journeys
+|
+*/
+
+Route::prefix('organizer/events/{event}')->middleware(['throttle:120,1', 'auth:sanctum'])->group(function () {
+    // Dashboard & Overview
+    Route::get('/analytics', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'dashboard'])
+        ->name('api.organizer.event.analytics');
+
+    Route::get('/analytics/overview', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'overview'])
+        ->name('api.organizer.event.analytics.overview');
+
+    Route::get('/analytics/chart', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'chartData'])
+        ->name('api.organizer.event.analytics.chart');
+
+    // Real-time & Live
+    Route::get('/analytics/realtime', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'realtime'])
+        ->name('api.organizer.event.analytics.realtime');
+
+    Route::get('/analytics/globe', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'globeData'])
+        ->name('api.organizer.event.analytics.globe');
+
+    // Breakdowns
+    Route::get('/analytics/tickets', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'ticketPerformance'])
+        ->name('api.organizer.event.analytics.tickets');
+
+    Route::get('/analytics/traffic', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'trafficSources'])
+        ->name('api.organizer.event.analytics.traffic');
+
+    Route::get('/analytics/locations', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'topLocations'])
+        ->name('api.organizer.event.analytics.locations');
+
+    Route::get('/analytics/funnel', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'funnel'])
+        ->name('api.organizer.event.analytics.funnel');
+
+    // Sales & Journeys
+    Route::get('/analytics/sales', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'recentSales'])
+        ->name('api.organizer.event.analytics.sales');
+
+    Route::get('/analytics/journey/{order}', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'buyerJourney'])
+        ->name('api.organizer.event.analytics.journey');
+
+    // Campaign Performance
+    Route::get('/analytics/campaigns', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'campaignComparison'])
+        ->name('api.organizer.event.analytics.campaigns');
+
+    // Milestones CRUD
+    Route::get('/milestones', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'milestones'])
+        ->name('api.organizer.event.milestones');
+
+    Route::post('/milestones', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'createMilestone'])
+        ->name('api.organizer.event.milestones.create');
+
+    Route::get('/milestones/{milestone}', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'milestoneDetails'])
+        ->name('api.organizer.event.milestones.show');
+
+    Route::put('/milestones/{milestone}', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'updateMilestone'])
+        ->name('api.organizer.event.milestones.update');
+
+    Route::delete('/milestones/{milestone}', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'deleteMilestone'])
+        ->name('api.organizer.event.milestones.delete');
+
+    // Admin actions
+    Route::post('/analytics/recalculate', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'recalculate'])
+        ->name('api.organizer.event.analytics.recalculate');
+
+    // Export
+    Route::get('/analytics/export/csv', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'exportCsv'])
+        ->name('api.organizer.event.analytics.export.csv');
+
+    Route::get('/analytics/export/pdf', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'exportPdf'])
+        ->name('api.organizer.event.analytics.export.pdf');
+
+    Route::get('/analytics/export/sales', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'exportSales'])
+        ->name('api.organizer.event.analytics.export.sales');
+
+    // Goals CRUD
+    Route::get('/goals', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'goals'])
+        ->name('api.organizer.event.goals');
+
+    Route::post('/goals', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'createGoal'])
+        ->name('api.organizer.event.goals.create');
+
+    Route::put('/goals/{goal}', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'updateGoal'])
+        ->name('api.organizer.event.goals.update');
+
+    Route::delete('/goals/{goal}', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'deleteGoal'])
+        ->name('api.organizer.event.goals.delete');
+
+    // Report Schedules
+    Route::get('/report-schedules', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'reportSchedules'])
+        ->name('api.organizer.event.report-schedules');
+
+    Route::post('/report-schedules', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'createReportSchedule'])
+        ->name('api.organizer.event.report-schedules.create');
+
+    Route::put('/report-schedules/{schedule}', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'updateReportSchedule'])
+        ->name('api.organizer.event.report-schedules.update');
+
+    Route::delete('/report-schedules/{schedule}', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'deleteReportSchedule'])
+        ->name('api.organizer.event.report-schedules.delete');
+
+    Route::post('/report-schedules/{schedule}/test', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'sendTestReport'])
+        ->name('api.organizer.event.report-schedules.test');
+});
+
+// Download route (outside event group)
+Route::get('organizer/analytics/download/{filename}', [App\Http\Controllers\Api\OrganizerEventAnalyticsController::class, 'download'])
+    ->middleware(['throttle:60,1', 'auth:sanctum'])
+    ->name('api.organizer.analytics.download');

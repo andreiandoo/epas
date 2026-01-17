@@ -3,6 +3,7 @@
 namespace App\Filament\Marketplace\Resources\EventResource\Pages;
 
 use App\Filament\Marketplace\Resources\EventResource;
+use App\Filament\Marketplace\Pages\OrganizerEventAnalytics;
 use App\Services\EventSchedulingService;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
@@ -44,6 +45,13 @@ class EditEvent extends EditRecord
             ->icon('heroicon-o-chart-bar')
             ->color('info')
             ->url(fn () => EventResource::getUrl('statistics', ['record' => $this->record]));
+
+        // Analytics Dashboard button
+        $actions[] = Actions\Action::make('analytics')
+            ->label('Analytics Dashboard')
+            ->icon('heroicon-o-presentation-chart-line')
+            ->color('success')
+            ->url(fn () => OrganizerEventAnalytics::getUrl(['event' => $this->record->id]));
 
         // Activity Log button - always visible
         $actions[] = Actions\Action::make('activity_log')

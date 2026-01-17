@@ -482,4 +482,148 @@ class Event extends Model
     {
         $activity->properties = $activity->properties->put('tenant_id', $this->tenant_id);
     }
+
+    /* Analytics Relations */
+
+    /**
+     * Get milestones for this event
+     */
+    public function milestones(): HasMany
+    {
+        return $this->hasMany(EventMilestone::class)->orderBy('start_date', 'desc');
+    }
+
+    /**
+     * Get daily analytics records for this event
+     */
+    public function analyticsDaily(): HasMany
+    {
+        return $this->hasMany(EventAnalyticsDaily::class)->orderBy('date', 'desc');
+    }
+
+    /**
+     * Get hourly analytics records for this event
+     */
+    public function analyticsHourly(): HasMany
+    {
+        return $this->hasMany(EventAnalyticsHourly::class)->orderBy('date', 'desc')->orderBy('hour', 'desc');
+    }
+
+    /**
+     * Get weekly analytics records for this event
+     */
+    public function analyticsWeekly(): HasMany
+    {
+        return $this->hasMany(EventAnalyticsWeekly::class)->orderBy('week_start', 'desc');
+    }
+
+    /**
+     * Get monthly analytics records for this event
+     */
+    public function analyticsMonthly(): HasMany
+    {
+        return $this->hasMany(EventAnalyticsMonthly::class)->orderBy('month_start', 'desc');
+    }
+
+    /**
+     * Get active ad campaigns for this event
+     */
+    public function activeAdCampaigns(): HasMany
+    {
+        return $this->hasMany(EventMilestone::class)
+            ->whereIn('type', EventMilestone::AD_CAMPAIGN_TYPES)
+            ->where('is_active', true)
+            ->whereNotNull('budget');
+    }
+
+    /**
+     * Get orders for this event (via marketplace_event_id)
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'marketplace_event_id');
+    }
+
+    /**
+     * Calculate total revenue for this event
+     */
+    public function getTotalRevenueAttribute(): float
+    {
+        return $this->orders()
+            ->whereIn('status', ['paid', 'confirmed', 'completed'])
+            ->sum('total');
+    }
+
+    /**
+     * Calculate total tickets sold for this event
+     */
+    public function getTotalTicketsSoldAttribute(): int
+    {
+        return $this->tickets()
+            ->whereIn('status', ['valid', 'checked_in'])
+            ->count();
+    }
+
+    /**
+     * Get total capacity from all ticket types
+     */
+    public function getTotalCapacityAttribute(): int
+    {
+        // If capacity is set directly on event, use it
+        if ($this->capacity) {
+            return $this->capacity;
+        }
+
+        // Otherwise sum from ticket types
+        return $this->ticketTypes()->sum('quantity') ?: 0;
+    }
+
+    /**
+     * Calculate sold percentage
+     */
+    public function getSoldPercentageAttribute(): float
+    {
+        $capacity = $this->total_capacity;
+        if ($capacity <= 0) {
+            return 0;
+        }
+
+        return round(($this->total_tickets_sold / $capacity) * 100, 2);
+    }
+
+    /**
+     * Get days until event (negative if past)
+     */
+    public function getDaysUntilAttribute(): int
+    {
+        $startDate = $this->start_date;
+        if (!$startDate) {
+            return 0;
+        }
+
+        return now()->startOfDay()->diffInDays($startDate, false);
+    }
+
+    /**
+     * Get event status label
+     */
+    public function getStatusLabelAttribute(): string
+    {
+        if ($this->is_cancelled) {
+            return 'Cancelled';
+        }
+        if ($this->is_postponed) {
+            return 'Postponed';
+        }
+        if ($this->is_sold_out) {
+            return 'Sold Out';
+        }
+        if ($this->isPast()) {
+            return 'Completed';
+        }
+        if ($this->door_sales_only) {
+            return 'Door Sales';
+        }
+        return 'On Sale';
+    }
 }

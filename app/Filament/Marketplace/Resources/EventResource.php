@@ -2408,6 +2408,11 @@ class EventResource extends Resource
                         return $url;
                     })
                     ->openUrlInNewTab(),
+                Action::make('analytics')
+                    ->label('Analytics')
+                    ->icon('heroicon-o-presentation-chart-line')
+                    ->color('success')
+                    ->url(fn (Event $record) => \App\Filament\Marketplace\Pages\OrganizerEventAnalytics::getUrl(['event' => $record->id])),
                 Action::make('statistics')
                     ->label('')
                     ->icon('heroicon-o-chart-bar')
