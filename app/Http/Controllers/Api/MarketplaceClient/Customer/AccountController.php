@@ -163,6 +163,44 @@ class AccountController extends BaseController
                 }
             }
 
+            // Determine refund eligibility
+            $canRequestRefund = false;
+            $refundReason = null;
+
+            // Check if event is cancelled or postponed
+            if ($order->marketplaceEvent) {
+                if ($order->marketplaceEvent->isCancelled()) {
+                    $canRequestRefund = true;
+                    $refundReason = 'event_cancelled';
+                }
+            } elseif ($order->event) {
+                if ($order->event->is_cancelled) {
+                    $canRequestRefund = true;
+                    $refundReason = 'event_cancelled';
+                } elseif ($order->event->is_postponed) {
+                    $canRequestRefund = true;
+                    $refundReason = 'event_postponed';
+                }
+            }
+
+            // Check if any ticket type is refundable (only if not already eligible)
+            if (!$canRequestRefund) {
+                foreach ($order->tickets as $ticket) {
+                    $isRefundable = (bool) ($ticket->ticketType?->is_refundable ?? false);
+                    if ($isRefundable) {
+                        $canRequestRefund = true;
+                        $refundReason = 'ticket_refundable';
+                        break;
+                    }
+                }
+            }
+
+            // Only allow refund requests for paid/confirmed orders
+            if (!in_array($order->status, ['completed', 'paid', 'confirmed'])) {
+                $canRequestRefund = false;
+                $refundReason = null;
+            }
+
             return [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
@@ -206,6 +244,8 @@ class AccountController extends BaseController
                         'commission_per_ticket' => round($commissionPerTicket, 2),
                     ];
                 })->values()->toArray(),
+                'can_request_refund' => $canRequestRefund,
+                'refund_reason' => $refundReason,
                 'created_at' => $order->created_at->toIso8601String(),
             ];
         });
