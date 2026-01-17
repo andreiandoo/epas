@@ -19,8 +19,7 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     @endpush
 
-    <div wire:key="analytics-dashboard-{{ $this->eventId }}-{{ $this->period }}"
-         x-data="eventAnalyticsDashboard(@js([
+    <div x-data="eventAnalyticsDashboard(@js([
         'eventId' => $this->eventId,
         'eventMode' => $this->eventMode,
         'period' => $this->period,
@@ -33,7 +32,9 @@
         'recentSales' => $this->recentSales,
         'adCampaigns' => $this->getAdCampaigns(),
         'liveVisitors' => $this->eventMode === 'live' ? $this->getLiveVisitorCount() : 0,
-    ]))" x-init="init()">
+    ]))" x-init="init()"
+         @period-updated.window="Object.assign($data, $event.detail)"
+         @data-refreshed.window="Object.assign($data, $event.detail)">
 
         {{-- Top Navigation Bar --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
@@ -391,7 +392,7 @@
                     </thead>
                     <tbody>
                         <template x-for="s in recentSales" :key="s.id">
-                            <tr @click="$wire.openBuyerJourney(s.id)" class="border-b border-gray-50 dark:border-gray-700 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 cursor-pointer transition-colors">
+                            <tr @click="$dispatch('open-buyer-journey', { orderId: s.id })" class="border-b border-gray-50 dark:border-gray-700 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 cursor-pointer transition-colors">
                                 <td class="py-3">
                                     <div class="flex items-center gap-3">
                                         <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary-200 to-primary-300 flex items-center justify-center text-xs font-semibold text-primary-700" x-text="s.initials"></div>

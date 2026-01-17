@@ -23,6 +23,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Illuminate\Contracts\Support\Htmlable;
+use Livewire\Attributes\On;
 
 class EventAnalytics extends Page implements HasForms
 {
@@ -395,6 +396,7 @@ class EventAnalytics extends Page implements HasForms
 
     /* Buyer Journey methods */
 
+    #[On('open-buyer-journey')]
     public function openBuyerJourney(int $orderId): void
     {
         $order = \App\Models\Order::find($orderId);
