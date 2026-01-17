@@ -3,35 +3,46 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('event_milestones', function (Blueprint $table) {
-            // Make tenant_id nullable (for marketplace events without tenant)
-            $table->foreignId('tenant_id')->nullable()->change();
+        // First, make tenant_id nullable using raw SQL (avoids doctrine/dbal requirement)
+        DB::statement('ALTER TABLE event_milestones MODIFY tenant_id BIGINT UNSIGNED NULL');
 
-            // Add marketplace_client_id for marketplace context
-            $table->foreignId('marketplace_client_id')
-                ->nullable()
-                ->after('tenant_id')
-                ->constrained()
-                ->onDelete('cascade');
+        // Drop the foreign key constraint first if it exists
+        try {
+            Schema::table('event_milestones', function (Blueprint $table) {
+                $table->dropForeign(['tenant_id']);
+            });
+        } catch (\Exception $e) {
+            // Foreign key might not exist or have different name
+        }
 
-            // Add index for marketplace client queries
-            $table->index(['marketplace_client_id', 'type']);
-        });
+        // Add marketplace_client_id column if it doesn't exist
+        if (!Schema::hasColumn('event_milestones', 'marketplace_client_id')) {
+            Schema::table('event_milestones', function (Blueprint $table) {
+                $table->foreignId('marketplace_client_id')
+                    ->nullable()
+                    ->after('tenant_id')
+                    ->constrained()
+                    ->onDelete('cascade');
+
+                $table->index(['marketplace_client_id', 'type']);
+            });
+        }
     }
 
     public function down(): void
     {
         Schema::table('event_milestones', function (Blueprint $table) {
-            $table->dropIndex(['marketplace_client_id', 'type']);
-            $table->dropForeign(['marketplace_client_id']);
-            $table->dropColumn('marketplace_client_id');
-
-            // Note: Cannot easily revert nullable change
+            if (Schema::hasColumn('event_milestones', 'marketplace_client_id')) {
+                $table->dropIndex(['marketplace_client_id', 'type']);
+                $table->dropForeign(['marketplace_client_id']);
+                $table->dropColumn('marketplace_client_id');
+            }
         });
     }
 };
