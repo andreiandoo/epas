@@ -56,9 +56,9 @@
 
                         {{-- Period Selector --}}
                         <div class="flex items-center bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
-                            <button wire:click="$set('period', '7d')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="'{{ $this->period }}' === '7d' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">7D</button>
-                            <button wire:click="$set('period', '30d')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="'{{ $this->period }}' === '30d' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">30D</button>
-                            <button wire:click="$set('period', 'all')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="'{{ $this->period }}' === 'all' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">All</button>
+                            <button wire:click="setPeriod('7d')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="'{{ $this->period }}' === '7d' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">7D</button>
+                            <button wire:click="setPeriod('30d')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="'{{ $this->period }}' === '30d' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">30D</button>
+                            <button wire:click="setPeriod('all')" class="px-3 py-1.5 text-xs font-medium rounded-lg transition-all" :class="'{{ $this->period }}' === 'all' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500'">All</button>
                         </div>
                     </div>
 

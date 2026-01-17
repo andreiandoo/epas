@@ -31,6 +31,24 @@ class EventAnalyticsService
     }
 
     /**
+     * Get the order query column name based on event type
+     * Event model uses event_id, MarketplaceEvent uses marketplace_event_id
+     */
+    protected function getOrderColumn(Event|MarketplaceEvent $event): string
+    {
+        return $this->isMarketplaceEvent($event) ? 'marketplace_event_id' : 'event_id';
+    }
+
+    /**
+     * Get base order query for the event
+     */
+    protected function getOrdersQuery(Event|MarketplaceEvent $event)
+    {
+        $column = $this->getOrderColumn($event);
+        return Order::where($column, $event->id);
+    }
+
+    /**
      * Get complete dashboard data for an event
      */
     public function getDashboardData(Event|MarketplaceEvent $event, string $period = '30d'): array
@@ -59,9 +77,10 @@ class EventAnalyticsService
     public function getOverviewStats(Event|MarketplaceEvent $event, array $dateRange): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
+        $orderColumn = $this->getOrderColumn($event);
 
-        // Orders query - marketplace events use marketplace_event_id
-        $orders = Order::where('marketplace_event_id', $event->id)
+        // Orders query - use correct column based on event type
+        $orders = $this->getOrdersQuery($event)
             ->whereIn('status', ['paid', 'confirmed', 'completed']);
 
         $totalRevenue = (clone $orders)->sum('total');
@@ -114,7 +133,7 @@ class EventAnalyticsService
         $previousStart = $dateRange['start']->copy()->subDays($periodDays);
         $previousEnd = $dateRange['start']->copy()->subDay();
 
-        $previousRevenue = Order::where('marketplace_event_id', $event->id)
+        $previousRevenue = $this->getOrdersQuery($event)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereBetween('created_at', [$previousStart, $previousEnd])
             ->sum('total');
@@ -129,7 +148,7 @@ class EventAnalyticsService
 
         // Event info - different field names for MarketplaceEvent
         $startDate = $isMarketplace ? $event->starts_at : $event->start_date;
-        $daysUntil = $startDate ? now()->diffInDays($startDate, false) : 0;
+        $daysUntil = $startDate ? (int) round(now()->diffInDays($startDate, false)) : 0;
         $statusLabel = $isMarketplace ? $event->status : ($event->status_label ?? $event->status);
 
         return [
@@ -187,7 +206,7 @@ class EventAnalyticsService
         }
 
         // Fallback: calculate from raw data
-        $revenueByDay = Order::where('marketplace_event_id', $event->id)
+        $revenueByDay = $this->getOrdersQuery($event)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->selectRaw('DATE(created_at) as date, SUM(total) as revenue, COUNT(*) as orders')
@@ -542,7 +561,7 @@ class EventAnalyticsService
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
 
-        $orders = Order::where('marketplace_event_id', $event->id)
+        $orders = $this->getOrdersQuery($event)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->with(['marketplaceCustomer', 'tickets.ticketType', 'tickets.marketplaceTicketType'])
             ->orderBy('paid_at', 'desc')
@@ -764,13 +783,13 @@ class EventAnalyticsService
             ->distinct('session_id')
             ->count('session_id');
 
-        $purchases = Order::where('marketplace_event_id', $event->id)
+        $purchases = $this->getOrdersQuery($event)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereDate('paid_at', $date)
             ->count();
 
         // Revenue
-        $revenue = Order::where('marketplace_event_id', $event->id)
+        $revenue = $this->getOrdersQuery($event)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereDate('paid_at', $date)
             ->sum('total');
@@ -930,7 +949,7 @@ class EventAnalyticsService
                 ->whereBetween('created_at', [$hourStart, $hourEnd])
                 ->count();
 
-            $revenue = Order::where('marketplace_event_id', $event->id)
+            $revenue = $this->getOrdersQuery($event)
                 ->whereIn('status', ['paid', 'confirmed', 'completed'])
                 ->whereBetween('paid_at', [$hourStart, $hourEnd])
                 ->sum('total');
@@ -1190,38 +1209,40 @@ class EventAnalyticsService
     /**
      * Compute period comparison from raw data (for marketplace events)
      */
-    protected function computePeriodComparisonFromRaw(MarketplaceEvent $event, array $currentRange, array $previousRange): array
+    protected function computePeriodComparisonFromRaw(Event|MarketplaceEvent $event, array $currentRange, array $previousRange): array
     {
         // Current period
-        $currentRevenue = Order::where('marketplace_event_id', $event->id)
+        $currentRevenue = $this->getOrdersQuery($event)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereBetween('created_at', [$currentRange['start'], $currentRange['end']])
             ->sum('total');
 
-        $currentVisitors = CoreCustomerEvent::where('marketplace_event_id', $event->id)
+        $trackingColumn = $this->isMarketplaceEvent($event) ? 'marketplace_event_id' : 'event_id';
+
+        $currentVisitors = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
             ->whereBetween('created_at', [$currentRange['start'], $currentRange['end']])
             ->distinct('visitor_id')
             ->count('visitor_id');
 
-        $currentPurchases = CoreCustomerEvent::where('marketplace_event_id', $event->id)
+        $currentPurchases = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
             ->whereBetween('created_at', [$currentRange['start'], $currentRange['end']])
             ->count();
 
         // Previous period
-        $previousRevenue = Order::where('marketplace_event_id', $event->id)
+        $previousRevenue = $this->getOrdersQuery($event)
             ->whereIn('status', ['paid', 'confirmed', 'completed'])
             ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
             ->sum('total');
 
-        $previousVisitors = CoreCustomerEvent::where('marketplace_event_id', $event->id)
+        $previousVisitors = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
             ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
             ->distinct('visitor_id')
             ->count('visitor_id');
 
-        $previousPurchases = CoreCustomerEvent::where('marketplace_event_id', $event->id)
+        $previousPurchases = CoreCustomerEvent::where($trackingColumn, $event->id)
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
             ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
             ->count();

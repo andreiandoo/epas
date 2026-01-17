@@ -279,6 +279,12 @@ class EventAnalytics extends Page implements HasForms
         $this->loadDashboardData();
     }
 
+    public function setPeriod(string $period): void
+    {
+        $this->period = $period;
+        $this->loadDashboardData();
+    }
+
     public function switchEventMode(string $mode): void
     {
         $this->eventMode = $mode;
