@@ -170,15 +170,23 @@ const OrderDetailPage = {
     orderId: null,
 
     init() {
+        console.log('=== ORDER DETAIL PAGE INIT ===');
+        console.log('Current URL:', window.location.href);
+        console.log('Pathname:', window.location.pathname);
+
         if (!AmbiletAuth.isAuthenticated()) {
+            console.log('User not authenticated, redirecting...');
             window.location.href = '/autentificare?redirect=' + window.location.pathname;
             return;
         }
 
         this.orderId = this.getOrderIdFromUrl();
+        console.log('Extracted orderId:', this.orderId);
+
         if (this.orderId) {
             this.loadOrder();
         } else {
+            console.log('No orderId found, redirecting to orders list');
             AmbiletNotifications.error('Comanda nu a fost gasita.');
             window.location.href = '/cont/comenzi';
         }
@@ -198,11 +206,15 @@ const OrderDetailPage = {
     },
 
     async loadOrder() {
+        console.log('=== LOADING ORDER ===');
+        console.log('Calling API: /customer/orders/' + this.orderId);
         try {
             const response = await AmbiletAPI.get('/customer/orders/' + this.orderId);
+            console.log('API Response received:', response);
             if (response.success && response.order) {
                 this.renderOrder(response.order);
             } else {
+                console.log('API returned success=false or no order:', response);
                 AmbiletNotifications.error('Comanda nu a fost gasita.');
                 window.location.href = '/cont/comenzi';
             }
