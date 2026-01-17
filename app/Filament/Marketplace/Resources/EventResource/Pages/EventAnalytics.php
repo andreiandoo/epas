@@ -192,7 +192,22 @@ class EventAnalytics extends Page implements HasForms
                 ->icon('heroicon-o-plus')
                 ->color('primary')
                 ->visible(fn () => $this->eventMode === 'live')
-                ->action(fn () => $this->showMilestoneModal = true),
+                ->modalHeading('Add Campaign Milestone')
+                ->modalWidth('lg')
+                ->form($this->getMilestoneFormSchema())
+                ->action(function (array $data) {
+                    $milestone = new EventMilestone($data);
+                    $milestone->event_id = $this->event->id;
+                    $milestone->tenant_id = $this->event->tenant_id;
+                    $milestone->save();
+
+                    $this->loadDashboardData();
+
+                    Notification::make()
+                        ->success()
+                        ->title('Milestone created successfully')
+                        ->send();
+                }),
 
             Action::make('exportReport')
                 ->label('Export')
