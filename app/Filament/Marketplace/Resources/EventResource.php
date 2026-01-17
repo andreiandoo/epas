@@ -1424,6 +1424,11 @@ class EventResource extends Resource
                     ->relationship('marketplaceOrganizer', 'name'),
             ])
             ->actions([
+                Action::make('analytics')
+                    ->label('Analytics')
+                    ->icon('heroicon-o-presentation-chart-line')
+                    ->color('success')
+                    ->url(fn (Event $record) => \App\Filament\Marketplace\Pages\OrganizerEventAnalytics::getUrl(['event' => $record->id])),
                 Action::make('statistics')
                     ->label('Statistics')
                     ->icon('heroicon-o-chart-bar')
