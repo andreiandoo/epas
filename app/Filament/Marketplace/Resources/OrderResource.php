@@ -112,23 +112,19 @@ class OrderResource extends Resource
                                     ->label('Retrimite confirmare')
                                     ->icon('heroicon-o-envelope')
                                     ->color('gray')
-                                    ->fullWidth()
                                     ->action(fn ($record) => self::resendConfirmation($record)),
                                 Action::make('download_tickets')
                                     ->label('Download bilete')
                                     ->icon('heroicon-o-arrow-down-tray')
-                                    ->fullWidth()
                                     ->color('gray'),
                                 Action::make('print_invoice')
                                     ->label('Printează factura')
                                     ->icon('heroicon-o-printer')
-                                    ->fullWidth()
                                     ->color('gray'),
                                 Action::make('change_status')
                                     ->label('Schimbă status')
                                     ->icon('heroicon-o-arrow-path')
                                     ->color('warning')
-                                    ->fullWidth()
                                     ->form([
                                         Forms\Components\Select::make('status')
                                             ->options([
@@ -145,9 +141,8 @@ class OrderResource extends Resource
                                     ->icon('heroicon-o-arrow-uturn-left')
                                     ->color('gray')
                                     ->requiresConfirmation()
-                                    ->fullWidth()
                                     ->visible(fn ($record) => in_array($record->status, ['confirmed', 'paid'])),
-                            ])->columns(1),
+                            ])->fullWidth(),
                         ]),
 
                     // Order Timeline
