@@ -24,6 +24,7 @@ use Filament\Resources\Pages\Page;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Illuminate\Contracts\Support\Htmlable;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Renderless;
 
 class EventAnalytics extends Page implements HasForms
 {
@@ -289,6 +290,7 @@ class EventAnalytics extends Page implements HasForms
     /**
      * Get dashboard data for Alpine.js without full re-render
      */
+    #[Renderless]
     public function fetchDashboardData(string $period): array
     {
         $this->period = $period;
