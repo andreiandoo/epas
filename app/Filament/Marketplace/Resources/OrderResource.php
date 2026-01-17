@@ -102,7 +102,7 @@ class OrderResource extends Resource
                                 ->content(fn ($record) => self::renderCommissionDetails($record)),
                         ]),
 
-                    // Quick Actions
+                    // Quick Actions - stacked vertically with fullWidth
                     SC\Section::make('Acțiuni rapide')
                         ->icon('heroicon-o-bolt')
                         ->compact()
@@ -113,14 +113,20 @@ class OrderResource extends Resource
                                     ->icon('heroicon-o-envelope')
                                     ->color('gray')
                                     ->action(fn ($record) => self::resendConfirmation($record)),
+                            ])->fullWidth(),
+                            SC\Actions::make([
                                 Action::make('download_tickets')
                                     ->label('Download bilete')
                                     ->icon('heroicon-o-arrow-down-tray')
                                     ->color('gray'),
+                            ])->fullWidth(),
+                            SC\Actions::make([
                                 Action::make('print_invoice')
                                     ->label('Printează factura')
                                     ->icon('heroicon-o-printer')
                                     ->color('gray'),
+                            ])->fullWidth(),
+                            SC\Actions::make([
                                 Action::make('change_status')
                                     ->label('Schimbă status')
                                     ->icon('heroicon-o-arrow-path')
@@ -136,10 +142,12 @@ class OrderResource extends Resource
                                             ->required(),
                                     ])
                                     ->action(fn ($record, array $data) => $record->update(['status' => $data['status']])),
+                            ])->fullWidth(),
+                            SC\Actions::make([
                                 Action::make('request_refund')
                                     ->label('Solicită rambursare')
                                     ->icon('heroicon-o-arrow-uturn-left')
-                                    ->color('gray')
+                                    ->color('danger')
                                     ->requiresConfirmation()
                                     ->visible(fn ($record) => in_array($record->status, ['confirmed', 'paid'])),
                             ])->fullWidth(),
@@ -337,7 +345,8 @@ class OrderResource extends Resource
 
     protected static function renderOrderHero(Order $record): HtmlString
     {
-        $orderNumber = '#' . str_pad($record->id, 6, '0', STR_PAD_LEFT);
+        $incrementalId = '#' . str_pad($record->id, 6, '0', STR_PAD_LEFT);
+        $customerRef = $record->order_number; // Customer-facing reference like MKT-xxx
         $date = $record->created_at->format('d M Y, H:i');
         $currency = $record->currency ?? 'RON';
         $total = number_format($record->total ?? ($record->total_cents / 100), 2);
@@ -380,11 +389,17 @@ class OrderResource extends Resource
             </div>'
             : '';
 
+        // Customer-facing reference display
+        $customerRefHtml = $customerRef
+            ? "<div style='font-size: 14px; font-weight: 500; color: #94A3B8; margin-top: 2px;'>{$customerRef}</div>"
+            : '';
+
         return new HtmlString("
             <div style='background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); border: 1px solid #334155; border-radius: 16px; padding: 24px; margin-bottom: 20px; position: relative; overflow: hidden;'>
                 <div style='display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;'>
                     <div>
-                        <div style='font-size: 32px; font-weight: 800; color: white;'>{$orderNumber}</div>
+                        <div style='font-size: 32px; font-weight: 800; color: white;'>{$incrementalId}</div>
+                        {$customerRefHtml}
                         <div style='font-size: 13px; color: #64748B; margin-top: 4px;'>{$date}</div>
                     </div>
                     {$savingsHtml}

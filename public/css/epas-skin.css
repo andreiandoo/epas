@@ -2547,7 +2547,10 @@ nav.fi-topbar .fi-topbar-end {
 	text-decoration-line: underline;
 	text-decoration: underline;
 }
-
+.no-underline {
+	text-decoration-line: none;
+	text-decoration: none;
+}
 .overline {
 	text-decoration-line: overline;
 }
