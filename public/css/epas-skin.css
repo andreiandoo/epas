@@ -1,4 +1,16 @@
 /* EPAS Admin Panel Custom Styles */
+
+/* ===== MARKETPLACE PANEL: Hide default Filament topbar ===== */
+/* This is scoped to marketplace panel only */
+body.fi-panel-marketplace .fi-topbar-ctn,
+body.fi-panel-marketplace .fi-topbar {
+	display: none !important;
+	visibility: hidden !important;
+	height: 0 !important;
+	overflow: hidden !important;
+}
+/* ===== END MARKETPLACE PANEL TOPBAR HIDE ===== */
+
 .fi-custom-topbar {
 	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 	width: auto;
@@ -4262,7 +4274,6 @@ html.dark {
 
 .dark ::-webkit-scrollbar-thumb {
 	background: var(--metro-border);
-	border-radius: 4px;
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
