@@ -149,7 +149,13 @@ class EventAnalytics extends Page implements HasForms
 
     public function getTitle(): string|Htmlable
     {
-        return $this->event?->name ?? 'Event Analytics';
+        $name = $this->event?->name ?? $this->event?->title ?? 'Event Analytics';
+        // Handle translatable fields (JSON arrays)
+        if (is_array($name)) {
+            $locale = app()->getLocale();
+            $name = $name[$locale] ?? $name['ro'] ?? $name['en'] ?? reset($name) ?: 'Event Analytics';
+        }
+        return $name;
     }
 
     public function getSubheading(): ?string
@@ -157,6 +163,11 @@ class EventAnalytics extends Page implements HasForms
         if (!$this->event) return null;
 
         $venueName = $this->event->venue_name ?? $this->event->venue?->name ?? 'TBA';
+        // Handle translatable fields (JSON arrays)
+        if (is_array($venueName)) {
+            $locale = app()->getLocale();
+            $venueName = $venueName[$locale] ?? $venueName['ro'] ?? $venueName['en'] ?? reset($venueName) ?: 'TBA';
+        }
         return $this->event->starts_at?->format('d M Y') . ' - ' . $venueName;
     }
 
