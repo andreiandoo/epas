@@ -5,6 +5,7 @@ namespace App\Filament\Marketplace\Resources;
 use App\Filament\Marketplace\Resources\OrderResource\Pages;
 use App\Filament\Marketplace\Resources\MarketplaceCustomerResource;
 use App\Filament\Marketplace\Resources\EventResource;
+use App\Filament\Marketplace\Resources\TicketResource;
 use App\Models\Order;
 use Filament\Actions\Action;
 use Filament\Forms;
@@ -15,6 +16,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 
 class OrderResource extends Resource
@@ -72,9 +74,6 @@ class OrderResource extends Resource
                                 ->size('sm'),
                         ])
                         ->schema([
-                            Forms\Components\Placeholder::make('tickets_summary')
-                                ->label('Total bilete')
-                                ->content(fn ($record) => $record->tickets->count() . ' bilet' . ($record->tickets->count() > 1 ? 'e' : '')),
                             Forms\Components\Placeholder::make('tickets_list')
                                 ->hiddenLabel()
                                 ->content(fn ($record) => self::renderTicketsList($record)),
@@ -143,8 +142,8 @@ class OrderResource extends Resource
                                     ->color('danger')
                                     ->requiresConfirmation()
                                     ->visible(fn ($record) => in_array($record->status, ['confirmed', 'paid'])),
-                            ])->fullWidth(),
-                        ])->columns(1),
+                            ])->columns(1),
+                        ]),
 
                     // Order Timeline
                     SC\Section::make('Istoric comandă')
@@ -376,7 +375,7 @@ class OrderResource extends Resource
                         <div style='font-size: 24px; font-weight: 700; color: #10B981;'>{$paymentMethod}</div>
                         <div style='font-size: 11px; color: #64748B; text-transform: uppercase;'>Plată</div>
                     </div>
-                    <div style='text-align: center; padding: 16px; background: rgba(15, 23, 42, 0.5); border-radius: 12px; border: 1px solid #334155;'>
+                    <div style='text-align: center; padding: 16px; background: rgba(15, 23, 42, 0.5); border-radius: 12px; border: 1px solid #334155;' class='flex flex-col items-center justify-center'>
                         <div style='font-size: 14px; font-weight: 700; color: white;'>{$updatedAt}</div>
                         <div style='font-size: 11px; color: #64748B; text-transform: uppercase;'>Ultima actualizare</div>
                     </div>
@@ -410,13 +409,11 @@ class OrderResource extends Resource
                         {$phoneHtml}
                     </div>
                 </div>
-                <div style='display: flex; flex-direction: column; gap: 8px;'>
-                    <a href='" . MarketplaceCustomerResource::getUrl('edit', ['record' => $record->marketplace_customer_id]) . "' 
-                    style='padding: 8px 12px; background: #334155; border-radius: 6px; color: #E2E8F0; font-size: 12px; text-decoration: none; display: flex; align-items: center; gap: 6px;'>
+                <div class='flex gap-8'>
+                    <a href='" . MarketplaceCustomerResource::getUrl('edit', ['record' => $record->marketplace_customer_id]) . "' class='fi-btn fi-size-sm  fi-ac-btn-action'>
                         👤 Vezi profil
                     </a>
-                    <a href='mailto:{$email}' 
-                    style='padding: 8px 12px; background: #334155; border-radius: 6px; color: #E2E8F0; font-size: 12px; text-decoration: none; display: flex; align-items: center; gap: 6px;'>
+                    <a href='mailto:{$email}' class='fi-btn fi-size-sm fi-ac-btn-action'>
                         ✉️ Trimite email
                     </a>
                 </div>
@@ -427,16 +424,20 @@ class OrderResource extends Resource
     protected static function renderTicketsList(Order $record): HtmlString
     {
         $html = '';
-        
+
         foreach ($record->tickets as $ticket) {
             $typeNameRaw = $ticket->ticketType?->name;
             $typeName = is_array($typeNameRaw) ? ($typeNameRaw['ro'] ?? $typeNameRaw['en'] ?? reset($typeNameRaw) ?: 'Bilet') : ($typeNameRaw ?? 'Bilet');
             $code = $ticket->code ?? $ticket->unique_code ?? 'N/A';
+            $barcode = $ticket->barcode ?? $code;
             $price = number_format($ticket->price ?? 0, 2);
             $currency = $ticket->ticketType?->currency ?? 'RON';
-            $beneficiary = $ticket->beneficiary_name ?? $record->customer_name ?? '';
-            $beneficiaryEmail = $ticket->beneficiary_email ?? $record->customer_email ?? '';
-            
+
+            // Get beneficiary from meta or order
+            $meta = $ticket->meta ?? [];
+            $beneficiary = $meta['beneficiary']['name'] ?? $meta['beneficiary_name'] ?? $ticket->attendee_name ?? $record->customer_name ?? '';
+            $beneficiaryEmail = $meta['beneficiary']['email'] ?? $meta['beneficiary_email'] ?? $ticket->attendee_email ?? $record->customer_email ?? '';
+
             $statusBadge = match($ticket->status ?? 'valid') {
                 'valid' => '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(16, 185, 129, 0.15); color: #10B981;">✓ Valid</span>',
                 'used' => '<span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; background: rgba(59, 130, 246, 0.15); color: #60A5FA;">✓ Folosit</span>',
@@ -444,27 +445,63 @@ class OrderResource extends Resource
                 default => '',
             };
 
+            // Generate QR code URL using a simple QR generator API (Google Charts or similar)
+            $qrData = urlencode($barcode);
+            $qrCodeUrl = "https://api.qrserver.com/v1/create-qr-code/?size=80x80&data={$qrData}";
+
+            // View URL for ticket
+            $viewUrl = TicketResource::getUrl('view', ['record' => $ticket->id]);
+
             $html .= "
-                <div style='display: flex; align-items: center; gap: 16px; padding: 16px; background: #0F172A; border-radius: 12px; margin-bottom: 12px; border: 1px solid #334155;'>
+                <div style='display: flex; align-items: stretch; gap: 16px; padding: 16px; background: #0F172A; border-radius: 12px; margin-bottom: 12px; border: 1px solid #334155;'>
+                    <!-- Ticket icon -->
                     <div style='width: 48px; height: 48px; background: linear-gradient(135deg, #10B981, #059669); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;'>
-                        🎫
+                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' style='width: 24px; height: 24px;'>
+                            <path stroke-linecap='round' stroke-linejoin='round' d='M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 0 1 0 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 0 1 0-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z' />
+                        </svg>
                     </div>
+
+                    <!-- Ticket details -->
                     <div style='flex: 1;'>
                         <div style='display: flex; align-items: center; gap: 8px; margin-bottom: 4px;'>
                             <span style='font-size: 14px; font-weight: 600; color: white;'>" . e($typeName) . "</span>
-                            <span style='padding: 2px 8px; background: #334155; border-radius: 4px; font-size: 10px; font-family: monospace; color: #94A3B8;'>" . e($code) . "</span>
+                            {$statusBadge}
                         </div>
-                        <div style='font-size: 12px; color: #64748B; display: flex; align-items: center; gap: 4px;'>
-                            👤 " . e($beneficiary) . " (" . e($beneficiaryEmail) . ")
+                        <div style='font-size: 12px; color: #64748B; display: flex; align-items: center; gap: 4px; margin-bottom: 6px;'>
+                            <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' style='width: 16px; height: 16px;'>
+                                <path stroke-linecap='round' stroke-linejoin='round' d='M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z' />
+                            </svg>
+                            " . e($beneficiary) . " (" . e($beneficiaryEmail) . ")
+                        </div>
+                        <!-- Barcode display -->
+                        <div style='display: flex; align-items: center; gap: 8px;'>
+                            <span style='font-size: 11px; color: #64748B;'>Cod:</span>
+                            <span style='padding: 2px 8px; background: #334155; border-radius: 4px; font-size: 11px; font-family: monospace; color: #94A3B8; letter-spacing: 1px;'>" . e($barcode) . "</span>
                         </div>
                     </div>
-                    <div style='text-align: right;'>
+
+                    <!-- QR Code -->
+                    <div style='display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0;'>
+                        <img src='{$qrCodeUrl}' alt='QR Code' style='width: 60px; height: 60px; border-radius: 4px; background: white; padding: 2px;'>
+                        <span style='font-size: 9px; color: #64748B;'>QR Code</span>
+                    </div>
+
+                    <!-- Price and actions -->
+                    <div style='display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; min-width: 120px;'>
                         <div style='font-size: 16px; font-weight: 700; color: white;'>{$price} {$currency}</div>
-                        <div style='margin-top: 4px;'>{$statusBadge}</div>
-                    </div>
-                    <div style='display: flex; gap: 8px;'>
-                        <button style='width: 32px; height: 32px; border-radius: 6px; background: #334155; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94A3B8;' title='Barcode'>📊</button>
-                        <button style='width: 32px; height: 32px; border-radius: 6px; background: #334155; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94A3B8;' title='Download'>📄</button>
+                        <div style='display: flex; gap: 8px;'>
+                            <a href='{$viewUrl}' style='width: 32px; height: 32px; border-radius: 6px; background: #334155; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94A3B8; text-decoration: none;' title='Vezi bilet'>
+                                <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' style='width: 16px; height: 16px;'>
+                                    <path stroke-linecap='round' stroke-linejoin='round' d='M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z' />
+                                    <path stroke-linecap='round' stroke-linejoin='round' d='M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z' />
+                                </svg>
+                            </a>
+                            <button style='width: 32px; height: 32px; border-radius: 6px; background: #334155; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94A3B8;' title='Download bilet'>
+                                <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' style='width: 16px; height: 16px;'>
+                                    <path stroke-linecap='round' stroke-linejoin='round' d='M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z' />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
             ";
@@ -529,15 +566,16 @@ class OrderResource extends Resource
             }
             $locationStr = $venueName . ($venueCity ? ', ' . $venueCity : '');
             
-            // Poster/Image
-            $posterUrl = $event->poster_url ?? $event->image_url ?? null;
-            $posterHtml = $posterUrl 
+            // Poster/Image - use Storage::url() for correct path
+            $posterPath = $event->poster_url ?? $event->hero_image_url ?? null;
+            $posterUrl = $posterPath ? Storage::disk('public')->url($posterPath) : null;
+            $posterHtml = $posterUrl
                 ? "<img src='{$posterUrl}' alt='" . e($title) . "' style='width: 100%; height: 100%; object-fit: cover;'>"
                 : "<span style='font-size: 32px;'>🎸</span>";
 
             $html .= "
-                <div style='display: flex; gap: 16px; margin-bottom: 16px;'>
-                    <div style='width: 100px; height: 100px; border-radius: 12px; background: linear-gradient(135deg, #374151, #1F2937); display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;'>
+                <div style='display: flex; gap: 16px;'>
+                    <div style='width: 100px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #374151, #1F2937); display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;'>
                         {$posterHtml}
                     </div>
                     <div style='flex: 1;'>
@@ -573,7 +611,7 @@ class OrderResource extends Resource
                     </div>
                     <div>
                         <a href='" . EventResource::getUrl('edit', ['record' => $event->id]) . "' 
-                        style='padding: 8px 12px; background: #334155; border-radius: 6px; color: #E2E8F0; font-size: 12px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;'>
+                        class='fi-btn fi-size-sm fi-ac-btn-action'>
                             <svg style='width: 14px; height: 14px;' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'/><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'/></svg>
                             Vezi eveniment
                         </a>
@@ -643,7 +681,7 @@ class OrderResource extends Resource
 
         // Total
         $html .= "
-            <div style='display: flex; justify-content: space-between; align-items: center; padding: 12px 0 0; border-top: 2px solid #334155; margin-top: 4px;'>
+            <div style='display: flex; justify-content: space-between; align-items: center; padding: 12px 0 0; margin-top: 4px;'>
                 <span style='font-size: 13px; font-weight: 600; color: white;'>Total plătit</span>
                 <span style='font-size: 18px; font-weight: 700; color: white;'>" . number_format($finalTotal, 2) . " {$currency}</span>
             </div>
