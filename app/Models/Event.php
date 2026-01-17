@@ -560,7 +560,7 @@ class Event extends Model
     public function getTotalTicketsSoldAttribute(): int
     {
         return $this->tickets()
-            ->whereIn('status', ['valid', 'checked_in'])
+            ->whereIn('tickets.status', ['valid', 'checked_in'])
             ->count();
     }
 

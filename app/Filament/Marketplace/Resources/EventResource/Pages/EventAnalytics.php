@@ -346,16 +346,15 @@ class EventAnalytics extends Page implements HasForms
                 ->maxLength(255)
                 ->columnSpanFull(),
 
-            Forms\Components\Grid::make(2)
-                ->schema([
-                    Forms\Components\DatePicker::make('start_date')
-                        ->label('Start Date')
-                        ->required(),
+            Forms\Components\DatePicker::make('start_date')
+                ->label('Start Date')
+                ->required()
+                ->columnSpan(1),
 
-                    Forms\Components\DatePicker::make('end_date')
-                        ->label('End Date')
-                        ->visible(fn (Forms\Get $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES)),
-                ]),
+            Forms\Components\DatePicker::make('end_date')
+                ->label('End Date')
+                ->visible(fn (Forms\Get $get) => in_array($get('type'), EventMilestone::AD_CAMPAIGN_TYPES))
+                ->columnSpan(1),
 
             Forms\Components\TextInput::make('budget')
                 ->label('Budget (RON)')
@@ -377,18 +376,16 @@ class EventAnalytics extends Page implements HasForms
                 ->description('Auto-generated if left empty')
                 ->collapsible()
                 ->collapsed()
+                ->columns(2)
                 ->schema([
-                    Forms\Components\Grid::make(2)
-                        ->schema([
-                            Forms\Components\TextInput::make('utm_source')
-                                ->label('UTM Source'),
-                            Forms\Components\TextInput::make('utm_medium')
-                                ->label('UTM Medium'),
-                            Forms\Components\TextInput::make('utm_campaign')
-                                ->label('UTM Campaign'),
-                            Forms\Components\TextInput::make('utm_content')
-                                ->label('UTM Content'),
-                        ]),
+                    Forms\Components\TextInput::make('utm_source')
+                        ->label('UTM Source'),
+                    Forms\Components\TextInput::make('utm_medium')
+                        ->label('UTM Medium'),
+                    Forms\Components\TextInput::make('utm_campaign')
+                        ->label('UTM Campaign'),
+                    Forms\Components\TextInput::make('utm_content')
+                        ->label('UTM Content'),
                 ]),
         ];
     }
