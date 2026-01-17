@@ -359,7 +359,7 @@
                             <span class="text-sm font-bold" :class="(m.roi || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'" x-text="((m.roi || 0) >= 0 ? '+' : '') + (m.roi || 0) + '%'"></span>
                         </div>
                         <div x-show="m.impact && !m.budget" class="mt-2 flex items-center gap-1 text-xs text-emerald-600">
-                            <x-heroicon-o-trending-up class="w-3 h-3" />
+                            <x-heroicon-o-arrow-trending-up class="w-3 h-3" />
                             <span x-text="m.impact"></span>
                         </div>
                         <div x-show="!m.budget && !m.impact" class="text-xs text-gray-500 mt-2" x-text="m.description"></div>
