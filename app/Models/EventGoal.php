@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\Order;
+use App\Models\Ticket;
 
 class EventGoal extends Model
 {
@@ -190,9 +192,22 @@ class EventGoal extends Model
             return $this;
         }
 
+        // Query orders directly - check both event_id and marketplace_event_id
+        // This handles marketplace context where orders might use either column
+        $ordersQuery = Order::where(function ($q) use ($event) {
+            $q->where('event_id', $event->id)
+              ->orWhere('marketplace_event_id', $event->id);
+        })->whereIn('status', ['paid', 'confirmed', 'completed']);
+
+        // Query tickets directly - check both columns for marketplace support
+        $ticketsQuery = Ticket::where(function ($q) use ($event) {
+            $q->where('event_id', $event->id)
+              ->orWhere('marketplace_event_id', $event->id);
+        })->whereIn('status', ['valid', 'checked_in']);
+
         $this->current_value = match ($this->type) {
-            self::TYPE_REVENUE => (int) ($event->total_revenue * 100), // Convert to cents
-            self::TYPE_TICKETS => $event->total_tickets_sold,
+            self::TYPE_REVENUE => (int) ((clone $ordersQuery)->sum('total') * 100), // Convert to cents
+            self::TYPE_TICKETS => (clone $ticketsQuery)->count(),
             self::TYPE_VISITORS => $event->analyticsDaily()->sum('unique_visitors'),
             self::TYPE_CONVERSION => (int) ($event->analyticsDaily()->avg('conversion_rate') * 100),
             default => 0,

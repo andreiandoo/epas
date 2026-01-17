@@ -200,14 +200,27 @@ class EventAnalytics extends Page implements HasForms
                 ->action(function (array $data) {
                     $milestone = new EventMilestone($data);
                     $milestone->event_id = $this->event->id;
-                    $milestone->tenant_id = $this->event->tenant_id;
+                    // In marketplace context, use marketplace_client_id
+                    $milestone->marketplace_client_id = $this->event->marketplace_client_id;
+                    $milestone->tenant_id = $this->event->tenant_id; // May be null
+                    $milestone->created_by = auth()->id();
+                    $milestone->is_active = true;
+                    $milestone->autoGenerateUtmParameters();
                     $milestone->save();
 
-                    $this->loadDashboardData();
+                    // Update milestones list without full re-render
+                    $this->milestones = EventMilestone::forEvent($this->event->id)
+                        ->orderBy('start_date', 'desc')
+                        ->get()
+                        ->toArray();
+
+                    // Dispatch event for Alpine.js to update
+                    $this->dispatch('milestones-updated', milestones: $this->milestones);
 
                     Notification::make()
                         ->success()
                         ->title('Milestone created successfully')
+                        ->body("Tracking URL: " . $milestone->generateTrackingUrl(url('/event/' . $this->event->slug)))
                         ->send();
                 }),
 

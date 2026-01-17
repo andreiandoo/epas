@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api\MarketplaceClient;
 use App\Models\Event;
 use App\Models\MarketplaceEventCategory;
 use App\Models\MarketplaceOrganizer;
+use App\Models\Platform\CoreCustomerEvent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Public API for browsing marketplace events (stored in events table)
@@ -623,9 +625,81 @@ class MarketplaceEventsController extends BaseController
         // Increment views count
         $event->increment('views_count');
 
+        // Create CoreCustomerEvent for analytics tracking
+        $visitorId = $request->cookie('visitor_id') ?? $request->header('X-Visitor-ID') ?? Str::uuid()->toString();
+        $sessionId = $request->cookie('session_id') ?? $request->header('X-Session-ID') ?? Str::uuid()->toString();
+
+        CoreCustomerEvent::create([
+            'marketplace_client_id' => $client->id,
+            'event_id' => $event->id,
+            'visitor_id' => $visitorId,
+            'session_id' => $sessionId,
+            'event_type' => CoreCustomerEvent::TYPE_PAGE_VIEW,
+            'page_type' => 'event',
+            'content_id' => $event->id,
+            'content_type' => 'event',
+            'content_name' => $event->getTranslation('title', $client->language ?? 'ro'),
+            'page_url' => $request->header('Referer'),
+            'page_path' => '/bilete/' . $event->slug,
+            'referrer' => $request->header('Referer'),
+            'utm_source' => $request->input('utm_source'),
+            'utm_medium' => $request->input('utm_medium'),
+            'utm_campaign' => $request->input('utm_campaign'),
+            'utm_term' => $request->input('utm_term'),
+            'utm_content' => $request->input('utm_content'),
+            'ip_address' => $request->ip(),
+            'device_type' => $this->detectDeviceType($request),
+            'browser' => $this->detectBrowser($request),
+            'os' => $this->detectOS($request),
+            'occurred_at' => now(),
+        ]);
+
         return $this->success([
             'views_count' => $event->views_count,
         ]);
+    }
+
+    /**
+     * Detect device type from user agent
+     */
+    protected function detectDeviceType(Request $request): string
+    {
+        $userAgent = strtolower($request->userAgent() ?? '');
+        if (str_contains($userAgent, 'mobile') || str_contains($userAgent, 'android') || str_contains($userAgent, 'iphone')) {
+            return 'mobile';
+        }
+        if (str_contains($userAgent, 'tablet') || str_contains($userAgent, 'ipad')) {
+            return 'tablet';
+        }
+        return 'desktop';
+    }
+
+    /**
+     * Detect browser from user agent
+     */
+    protected function detectBrowser(Request $request): ?string
+    {
+        $userAgent = $request->userAgent() ?? '';
+        if (str_contains($userAgent, 'Chrome')) return 'Chrome';
+        if (str_contains($userAgent, 'Firefox')) return 'Firefox';
+        if (str_contains($userAgent, 'Safari')) return 'Safari';
+        if (str_contains($userAgent, 'Edge')) return 'Edge';
+        if (str_contains($userAgent, 'MSIE') || str_contains($userAgent, 'Trident')) return 'IE';
+        return null;
+    }
+
+    /**
+     * Detect OS from user agent
+     */
+    protected function detectOS(Request $request): ?string
+    {
+        $userAgent = $request->userAgent() ?? '';
+        if (str_contains($userAgent, 'Windows')) return 'Windows';
+        if (str_contains($userAgent, 'Mac OS')) return 'macOS';
+        if (str_contains($userAgent, 'Linux')) return 'Linux';
+        if (str_contains($userAgent, 'Android')) return 'Android';
+        if (str_contains($userAgent, 'iOS') || str_contains($userAgent, 'iPhone') || str_contains($userAgent, 'iPad')) return 'iOS';
+        return null;
     }
 
     /**

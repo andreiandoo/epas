@@ -32,11 +32,11 @@
         'recentSales' => $this->recentSales,
         'adCampaigns' => $this->getAdCampaigns(),
         'liveVisitors' => $this->eventMode === 'live' ? $this->getLiveVisitorCount() : 0,
-    ]))" x-init="init()">
+    ]))" x-init="init()" @milestones-updated.window="milestones = $event.detail.milestones; $nextTick(() => initCharts())">
 
         {{-- Top Navigation Bar --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
-            <div class="px-6 py-3">
+            <div class="px-2 py-2">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-4">
                         {{-- Event Mode Tabs --}}
@@ -369,7 +369,7 @@
         </div>
 
         {{-- Recent Sales --}}
-        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
             <div class="flex items-center justify-between mb-4">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Sales</h2>
@@ -591,7 +591,7 @@
                         <form wire:submit="saveGoal" class="space-y-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Goal Type</label>
-                                <select wire:model.live="goalData.type" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
+                                <select wire:model.live="goalData.type" class="p-2 w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
                                     <option value="revenue">Revenue Target</option>
                                     <option value="tickets">Tickets Target</option>
                                     <option value="visitors">Visitors Target</option>
@@ -600,7 +600,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name (Optional)</label>
-                                <input type="text" wire:model="goalData.name" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" placeholder="e.g., Q1 Revenue Goal">
+                                <input type="text" wire:model="goalData.name" class="p-2 w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" placeholder="e.g., Q1 Revenue Goal">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -611,11 +611,11 @@
                                     (%)
                                     @endif
                                 </label>
-                                <input type="number" wire:model="goalData.target_value" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" required min="0" step="any">
+                                <input type="number" wire:model="goalData.target_value" class="p-2 w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm" required min="0" step="any">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Deadline (Optional)</label>
-                                <input type="date" wire:model="goalData.deadline" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
+                                <input type="date" wire:model="goalData.deadline" class="p-2 w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 text-sm">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Alert at milestones</label>
@@ -976,6 +976,37 @@
                     });
 
                     const self = this;
+
+                    // Build milestone annotations for the chart
+                    const milestoneAnnotations = (this.milestones || [])
+                        .filter(m => m.start_date)
+                        .map(m => {
+                            const date = m.start_date.split('T')[0]; // Get just the date part
+                            // Find matching category index
+                            const dateIndex = data.findIndex(d => d.date === date || d.full_date?.includes(date));
+                            if (dateIndex === -1) return null;
+
+                            return {
+                                x: data[dateIndex]?.date,
+                                borderColor: m.type?.includes('campaign') ? '#3b82f6' : '#8b5cf6',
+                                strokeDashArray: 4,
+                                label: {
+                                    borderColor: m.type?.includes('campaign') ? '#3b82f6' : '#8b5cf6',
+                                    style: {
+                                        color: '#fff',
+                                        background: m.type?.includes('campaign') ? '#3b82f6' : '#8b5cf6',
+                                        fontSize: '10px',
+                                        fontWeight: 500,
+                                        padding: { left: 8, right: 8, top: 4, bottom: 4 }
+                                    },
+                                    text: m.title?.substring(0, 20) + (m.title?.length > 20 ? '...' : ''),
+                                    position: 'top',
+                                    offsetY: -8
+                                }
+                            };
+                        })
+                        .filter(Boolean);
+
                     new ApexCharts(el, {
                         chart: {
                             type: 'line',
@@ -986,6 +1017,9 @@
                         },
                         series: series,
                         colors: colors,
+                        annotations: {
+                            xaxis: milestoneAnnotations
+                        },
                         stroke: {curve: 'smooth', width: series.map(s => s.type === 'column' ? 0 : 2.5)},
                         fill: {
                             type: series.map(s => s.type === 'column' ? 'solid' : 'gradient'),
