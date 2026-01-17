@@ -36,6 +36,8 @@ class TicketType extends Model
         'price',
         'capacity',
         'is_active',
+        // Refund eligibility
+        'is_refundable',
         // Series fields for ticket numbering
         'series_start',
         'series_end',
@@ -50,6 +52,7 @@ class TicketType extends Model
         'scheduled_at'   => 'datetime',
         'active_until'   => 'datetime',
         'autostart_when_previous_sold_out' => 'boolean',
+        'is_refundable'  => 'boolean',
     ];
 
     protected $appends = [

@@ -222,12 +222,107 @@ class AccountController extends BaseController
             ->where('marketplace_customer_id', $customer->id)
             ->with([
                 'marketplaceEvent',
+                'event',
                 'tickets.marketplaceTicketType',
+                'tickets.ticketType',
             ])
             ->first();
 
         if (!$order) {
             return $this->error('Order not found', 404);
+        }
+
+        // Determine refund eligibility
+        $canRequestRefund = false;
+        $refundReason = null;
+
+        // Check if event is cancelled or postponed
+        if ($order->marketplaceEvent) {
+            if ($order->marketplaceEvent->isCancelled()) {
+                $canRequestRefund = true;
+                $refundReason = 'event_cancelled';
+            }
+        } elseif ($order->event) {
+            if ($order->event->is_cancelled) {
+                $canRequestRefund = true;
+                $refundReason = 'event_cancelled';
+            } elseif ($order->event->is_postponed) {
+                $canRequestRefund = true;
+                $refundReason = 'event_postponed';
+            }
+        }
+
+        // Check if any ticket type is refundable (only if not already eligible)
+        if (!$canRequestRefund) {
+            foreach ($order->tickets as $ticket) {
+                $isRefundable = false;
+                if ($ticket->marketplaceTicketType) {
+                    $isRefundable = (bool) $ticket->marketplaceTicketType->is_refundable;
+                } elseif ($ticket->ticketType) {
+                    $isRefundable = (bool) $ticket->ticketType->is_refundable;
+                }
+
+                if ($isRefundable) {
+                    $canRequestRefund = true;
+                    $refundReason = 'ticket_refundable';
+                    break;
+                }
+            }
+        }
+
+        // Only allow refund requests for paid/confirmed orders that haven't been cancelled/refunded
+        if (!in_array($order->status, ['completed', 'paid', 'confirmed'])) {
+            $canRequestRefund = false;
+            $refundReason = null;
+        }
+
+        // Build event data
+        $eventData = null;
+        if ($order->marketplaceEvent) {
+            $eventData = [
+                'id' => $order->marketplaceEvent->id,
+                'name' => $order->marketplaceEvent->name,
+                'slug' => $order->marketplaceEvent->slug,
+                'description' => $order->marketplaceEvent->short_description,
+                'date' => $order->marketplaceEvent->starts_at->toIso8601String(),
+                'end_date' => $order->marketplaceEvent->ends_at?->toIso8601String(),
+                'doors_open' => $order->marketplaceEvent->doors_open_at?->toIso8601String(),
+                'venue' => $order->marketplaceEvent->venue_name,
+                'venue_address' => $order->marketplaceEvent->venue_address,
+                'city' => $order->marketplaceEvent->venue_city,
+                'image' => $order->marketplaceEvent->image_url,
+                'is_upcoming' => $order->marketplaceEvent->starts_at >= now(),
+                'is_cancelled' => $order->marketplaceEvent->isCancelled(),
+                'is_postponed' => false,
+            ];
+        } elseif ($order->event) {
+            $imageUrl = null;
+            if ($order->event->featured_image) {
+                $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($order->event->featured_image);
+            } elseif ($order->event->poster_url) {
+                $imageUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($order->event->poster_url);
+            }
+
+            $eventTitle = is_array($order->event->title)
+                ? ($order->event->title['ro'] ?? $order->event->title['en'] ?? reset($order->event->title))
+                : $order->event->title;
+
+            $eventData = [
+                'id' => $order->event->id,
+                'name' => $eventTitle,
+                'slug' => $order->event->slug,
+                'description' => $order->event->short_description ?? null,
+                'date' => $order->event->event_date?->toIso8601String(),
+                'end_date' => null,
+                'doors_open' => $order->event->door_time,
+                'venue' => $order->event->venue?->name ?? null,
+                'venue_address' => $order->event->venue?->address ?? null,
+                'city' => $order->event->venue?->city ?? null,
+                'image' => $imageUrl,
+                'is_upcoming' => $order->event->event_date ? $order->event->event_date >= now() : false,
+                'is_cancelled' => (bool) $order->event->is_cancelled,
+                'is_postponed' => (bool) $order->event->is_postponed,
+            ];
         }
 
         return $this->success([
@@ -239,33 +334,24 @@ class AccountController extends BaseController
                 'subtotal' => (float) $order->subtotal,
                 'total' => (float) $order->total,
                 'currency' => $order->currency,
-                'event' => $order->marketplaceEvent ? [
-                    'id' => $order->marketplaceEvent->id,
-                    'name' => $order->marketplaceEvent->name,
-                    'slug' => $order->marketplaceEvent->slug,
-                    'description' => $order->marketplaceEvent->short_description,
-                    'date' => $order->marketplaceEvent->starts_at->toIso8601String(),
-                    'end_date' => $order->marketplaceEvent->ends_at?->toIso8601String(),
-                    'doors_open' => $order->marketplaceEvent->doors_open_at?->toIso8601String(),
-                    'venue' => $order->marketplaceEvent->venue_name,
-                    'venue_address' => $order->marketplaceEvent->venue_address,
-                    'city' => $order->marketplaceEvent->venue_city,
-                    'image' => $order->marketplaceEvent->image_url,
-                    'is_upcoming' => $order->marketplaceEvent->starts_at >= now(),
-                ] : null,
+                'event' => $eventData,
                 'tickets' => $order->tickets->map(function ($ticket) {
+                    $ticketType = $ticket->marketplaceTicketType ?? $ticket->ticketType;
                     return [
                         'id' => $ticket->id,
                         'barcode' => $ticket->barcode,
-                        'type' => $ticket->marketplaceTicketType?->name,
-                        'price' => (float) ($ticket->marketplaceTicketType?->price ?? 0),
+                        'type' => $ticketType?->name,
+                        'price' => (float) ($ticketType?->price ?? $ticket->price ?? 0),
                         'status' => $ticket->status,
                         'attendee_name' => $ticket->attendee_name,
                         'checked_in' => $ticket->checked_in_at !== null,
                         'checked_in_at' => $ticket->checked_in_at?->toIso8601String(),
+                        'is_refundable' => (bool) ($ticketType?->is_refundable ?? false),
                     ];
                 }),
                 'can_download_tickets' => in_array($order->status, ['completed', 'paid', 'confirmed']) || $order->payment_status === 'paid',
+                'can_request_refund' => $canRequestRefund,
+                'refund_reason' => $refundReason,
                 'created_at' => $order->created_at->toIso8601String(),
                 'paid_at' => $order->paid_at?->toIso8601String(),
             ],
