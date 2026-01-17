@@ -147,72 +147,6 @@ $judete = [
                     </form>
                 </div>
 
-                <!-- Notifications -->
-                <div class="p-6 bg-white border rounded-2xl border-border">
-                    <h2 class="section-title">
-                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                        </svg>
-                        Notificari email
-                    </h2>
-
-                    <div class="space-y-4">
-                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
-                            <div>
-                                <p class="font-medium text-secondary">Confirmare comenzi</p>
-                                <p class="text-sm text-muted">Primeste email cu detaliile comenzii si biletele</p>
-                            </div>
-                            <input type="checkbox" class="toggle" id="notif-orders" checked disabled>
-                        </label>
-
-                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
-                            <div>
-                                <p class="font-medium text-secondary">Remindere evenimente</p>
-                                <p class="text-sm text-muted">Primeste reminder cu 24h inainte de eveniment</p>
-                            </div>
-                            <input type="checkbox" class="toggle" id="notif-reminders">
-                        </label>
-
-                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
-                            <div>
-                                <p class="font-medium text-secondary">Newsletter si oferte</p>
-                                <p class="text-sm text-muted">Afla despre evenimente noi si oferte speciale</p>
-                            </div>
-                            <input type="checkbox" class="toggle" id="notif-newsletter">
-                        </label>
-
-                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
-                            <div>
-                                <p class="font-medium text-secondary">Actualizari favorite</p>
-                                <p class="text-sm text-muted">Primeste notificari cand evenimentele favorite se apropie</p>
-                            </div>
-                            <input type="checkbox" class="toggle" id="notif-favorites">
-                        </label>
-
-                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
-                            <div>
-                                <p class="font-medium text-secondary">Istoric navigare</p>
-                                <p class="text-sm text-muted">Salveaza evenimentele vizualizate pentru recomandari personalizate</p>
-                            </div>
-                            <input type="checkbox" class="toggle" id="notif-history">
-                        </label>
-
-                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
-                            <div>
-                                <p class="font-medium text-secondary">Cookie-uri marketing</p>
-                                <p class="text-sm text-muted">Permite afisarea de reclame personalizate</p>
-                            </div>
-                            <input type="checkbox" class="toggle" id="notif-marketing">
-                        </label>
-                    </div>
-
-                    <div class="flex justify-end mt-4">
-                        <button onclick="saveNotificationSettings()" class="btn btn-primary" id="saveNotificationsBtn">
-                            Salveaza preferintele
-                        </button>
-                    </div>
-                </div>
-
                 <!-- Billing Address -->
                 <div class="p-6 bg-white border rounded-2xl border-border">
                     <h2 class="section-title">
@@ -287,6 +221,72 @@ $judete = [
                             </select>
                             <p class="hint">Moneda este determinata automat</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Notifications -->
+                <div class="p-6 bg-white border rounded-2xl border-border">
+                    <h2 class="section-title">
+                        <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        Notificari email
+                    </h2>
+
+                    <div class="space-y-4">
+                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
+                            <div>
+                                <p class="font-medium text-secondary">Confirmare comenzi</p>
+                                <p class="text-sm text-muted">Primeste email cu detaliile comenzii si biletele</p>
+                            </div>
+                            <input type="checkbox" class="toggle" id="notif-orders" checked disabled>
+                        </label>
+
+                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
+                            <div>
+                                <p class="font-medium text-secondary">Remindere evenimente</p>
+                                <p class="text-sm text-muted">Primeste reminder cu 24h inainte de eveniment</p>
+                            </div>
+                            <input type="checkbox" class="toggle" id="notif-reminders">
+                        </label>
+
+                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
+                            <div>
+                                <p class="font-medium text-secondary">Newsletter si oferte</p>
+                                <p class="text-sm text-muted">Afla despre evenimente noi si oferte speciale</p>
+                            </div>
+                            <input type="checkbox" class="toggle" id="notif-newsletter">
+                        </label>
+
+                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
+                            <div>
+                                <p class="font-medium text-secondary">Actualizari favorite</p>
+                                <p class="text-sm text-muted">Primeste notificari cand evenimentele favorite se apropie</p>
+                            </div>
+                            <input type="checkbox" class="toggle" id="notif-favorites">
+                        </label>
+
+                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
+                            <div>
+                                <p class="font-medium text-secondary">Istoric navigare</p>
+                                <p class="text-sm text-muted">Salveaza evenimentele vizualizate pentru recomandari personalizate</p>
+                            </div>
+                            <input type="checkbox" class="toggle" id="notif-history">
+                        </label>
+
+                        <label class="flex items-center justify-between p-3 cursor-pointer bg-surface rounded-xl">
+                            <div>
+                                <p class="font-medium text-secondary">Cookie-uri marketing</p>
+                                <p class="text-sm text-muted">Permite afisarea de reclame personalizate</p>
+                            </div>
+                            <input type="checkbox" class="toggle" id="notif-marketing">
+                        </label>
+                    </div>
+
+                    <div class="flex justify-end mt-4">
+                        <button onclick="saveNotificationSettings()" class="btn btn-primary" id="saveNotificationsBtn">
+                            Salveaza preferintele
+                        </button>
                     </div>
                 </div>
 
