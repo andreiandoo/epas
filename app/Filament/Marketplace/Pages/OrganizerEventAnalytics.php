@@ -160,7 +160,8 @@ class OrganizerEventAnalytics extends Page implements HasForms
     {
         if (!$this->event) return null;
 
-        return $this->event->start_date?->format('d M Y') . ' - ' . ($this->event->venue?->name ?? 'TBA');
+        $venueName = $this->event->venue?->getTranslation('name', app()->getLocale()) ?? 'TBA';
+        return $this->event->start_date?->format('d M Y') . ' - ' . $venueName;
     }
 
     protected function getHeaderActions(): array
