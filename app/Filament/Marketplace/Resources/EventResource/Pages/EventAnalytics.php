@@ -262,9 +262,11 @@ class EventAnalytics extends Page implements HasForms
 
     protected function loadGoals(): void
     {
-        $this->goals = EventGoal::where('event_id', $this->event->id)
+        $this->goals = EventGoal::with('event')
+            ->where('event_id', $this->event->id)
             ->orderBy('type')
             ->get()
+            ->each(fn ($goal) => $goal->updateProgress()) // Auto-refresh progress
             ->map(fn ($goal) => [
                 'id' => $goal->id,
                 'type' => $goal->type,
