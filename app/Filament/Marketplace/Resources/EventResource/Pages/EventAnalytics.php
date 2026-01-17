@@ -398,7 +398,9 @@ class EventAnalytics extends Page implements HasForms
 
         $milestone = new EventMilestone($data);
         $milestone->event_id = $this->event->id;
-        $milestone->tenant_id = $this->event->tenant_id;
+        // In marketplace context, use marketplace_client_id instead of tenant_id
+        $milestone->marketplace_client_id = $this->event->marketplace_client_id;
+        $milestone->tenant_id = $this->event->tenant_id; // May be null in marketplace context
         $milestone->created_by = auth()->id();
         $milestone->is_active = true;
         $milestone->autoGenerateUtmParameters();

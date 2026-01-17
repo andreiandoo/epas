@@ -3,7 +3,7 @@
     @push('styles')
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        .stat-card { background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 100%); backdrop-filter: blur(10px); }
+        .stat-card { background: rgb(19 17 28); backdrop-filter: blur(10px); }
         .forecast-card { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); }
         .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
         @keyframes pulse-ring { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(2); opacity: 0; } }
@@ -80,19 +80,19 @@
         {{-- Stats Cards --}}
         <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
             {{-- Revenue --}}
-            <div class="stat-card rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div class="stat-card rounded-2xl p-5 border border-gray-700 shadow-sm">
                 <div class="flex items-center justify-between mb-3">
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
                         <x-heroicon-o-currency-dollar class="w-5 h-5 text-white" />
                     </div>
-                    <span x-show="overview.revenue?.change" class="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full" :class="overview.revenue?.change >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'">
+                    <span x-show="overview.revenue?.change" class="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full" :class="overview.revenue?.change >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'">
                         <span x-text="(overview.revenue?.change >= 0 ? '+' : '') + overview.revenue?.change + '%'"></span>
                     </span>
                 </div>
-                <div class="text-2xl font-bold text-gray-900 dark:text-white" x-text="formatCurrency(overview.revenue?.total || 0)"></div>
-                <div class="text-xs text-gray-500 mt-1">Total Revenue</div>
+                <div class="text-2xl font-bold text-white" x-text="formatCurrency(overview.revenue?.total || 0)"></div>
+                <div class="text-xs text-gray-400 mt-1">Total Revenue</div>
                 <div class="mt-3 flex items-center gap-2">
-                    <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                         <div class="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full" :style="'width:' + Math.min(overview.revenue?.progress || 0, 100) + '%'"></div>
                     </div>
                     <span class="text-[10px] text-gray-400" x-text="(overview.revenue?.progress || 0) + '%'"></span>
@@ -100,17 +100,17 @@
             </div>
 
             {{-- Tickets Sold --}}
-            <div class="stat-card rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div class="stat-card rounded-2xl p-5 border border-gray-700 shadow-sm">
                 <div class="flex items-center justify-between mb-3">
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
                         <x-heroicon-o-ticket class="w-5 h-5 text-white" />
                     </div>
-                    <span x-show="eventMode === 'live' && overview.tickets?.today" class="text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-700" x-text="'+' + overview.tickets?.today + ' today'"></span>
+                    <span x-show="eventMode === 'live' && overview.tickets?.today" class="text-xs font-medium px-2 py-1 rounded-full bg-blue-500/20 text-blue-400" x-text="'+' + overview.tickets?.today + ' today'"></span>
                 </div>
-                <div class="text-2xl font-bold text-gray-900 dark:text-white" x-text="(overview.tickets?.sold || 0).toLocaleString()"></div>
-                <div class="text-xs text-gray-500 mt-1">Tickets Sold</div>
+                <div class="text-2xl font-bold text-white" x-text="(overview.tickets?.sold || 0).toLocaleString()"></div>
+                <div class="text-xs text-gray-400 mt-1">Tickets Sold</div>
                 <div class="mt-3 flex items-center gap-2">
-                    <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div class="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                         <div class="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full" :style="'width:' + (overview.tickets?.progress || 0) + '%'"></div>
                     </div>
                     <span class="text-[10px] text-gray-400" x-text="(overview.tickets?.progress || 0) + '%'"></span>
@@ -118,40 +118,40 @@
             </div>
 
             {{-- Total Visits --}}
-            <div class="stat-card rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div class="stat-card rounded-2xl p-5 border border-gray-700 shadow-sm">
                 <div class="flex items-center justify-between mb-3">
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
                         <x-heroicon-o-eye class="w-5 h-5 text-white" />
                     </div>
                 </div>
-                <div class="text-2xl font-bold text-gray-900 dark:text-white" x-text="(overview.visits?.total || 0).toLocaleString()"></div>
-                <div class="text-xs text-gray-500 mt-1">Total Visits</div>
-                <div class="mt-3 text-[11px] text-gray-400" x-text="(overview.visits?.unique || 0).toLocaleString() + ' unique'"></div>
+                <div class="text-2xl font-bold text-white" x-text="(overview.visits?.total || 0).toLocaleString()"></div>
+                <div class="text-xs text-gray-400 mt-1">Total Visits</div>
+                <div class="mt-3 text-[11px] text-gray-500" x-text="(overview.visits?.unique || 0).toLocaleString() + ' unique'"></div>
             </div>
 
             {{-- Conversion Rate --}}
-            <div class="stat-card rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div class="stat-card rounded-2xl p-5 border border-gray-700 shadow-sm">
                 <div class="flex items-center justify-between mb-3">
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
                         <x-heroicon-o-chart-bar class="w-5 h-5 text-white" />
                     </div>
                 </div>
-                <div class="text-2xl font-bold text-gray-900 dark:text-white" x-text="(overview.conversion?.rate || 0) + '%'"></div>
-                <div class="text-xs text-gray-500 mt-1">Conversion Rate</div>
-                <div class="mt-3 text-[11px] text-gray-400">Visits -> Purchases</div>
+                <div class="text-2xl font-bold text-white" x-text="(overview.conversion?.rate || 0) + '%'"></div>
+                <div class="text-xs text-gray-400 mt-1">Conversion Rate</div>
+                <div class="mt-3 text-[11px] text-gray-500">Visits -> Purchases</div>
             </div>
 
             {{-- Days Until / Status --}}
-            <div class="stat-card rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div class="stat-card rounded-2xl p-5 border border-gray-700 shadow-sm">
                 <div class="flex items-center justify-between mb-3">
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-400 to-pink-600 flex items-center justify-center">
                         <x-heroicon-o-calendar class="w-5 h-5 text-white" />
                     </div>
-                    <span class="text-xs font-medium px-2 py-1 rounded-full" :class="eventMode === 'live' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'" x-text="overview.event?.status || 'On Sale'"></span>
+                    <span class="text-xs font-medium px-2 py-1 rounded-full" :class="eventMode === 'live' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-700 text-gray-400'" x-text="overview.event?.status || 'On Sale'"></span>
                 </div>
-                <div class="text-2xl font-bold text-gray-900 dark:text-white" x-text="eventMode === 'live' ? (overview.event?.days_until || 0) : '—'"></div>
-                <div class="text-xs text-gray-500 mt-1" x-text="eventMode === 'live' ? 'Days Until Event' : 'Event Ended'"></div>
-                <div class="mt-3 text-[11px] text-gray-400" x-text="overview.event?.date || ''"></div>
+                <div class="text-2xl font-bold text-white" x-text="eventMode === 'live' ? (overview.event?.days_until || 0) : '—'"></div>
+                <div class="text-xs text-gray-400 mt-1" x-text="eventMode === 'live' ? 'Days Until Event' : 'Event Ended'"></div>
+                <div class="mt-3 text-[11px] text-gray-500" x-text="overview.event?.date || ''"></div>
             </div>
         </div>
 

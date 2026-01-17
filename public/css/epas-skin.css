@@ -5227,6 +5227,9 @@ html.dark {
 	--tw-gradient-to: #d97706 var(--tw-gradient-to-position);
 }
 
+.to-blue-500 {
+	--tw-gradient-to: #3b82f6 var(--tw-gradient-to-position);
+}
 .to-blue-700 {
 	--tw-gradient-to: #1d4ed8 var(--tw-gradient-to-position);
 }

@@ -15,6 +15,7 @@ class EventMilestone extends Model
     protected $fillable = [
         'event_id',
         'tenant_id',
+        'marketplace_client_id',
         'created_by',
         'type',
         'title',
@@ -139,6 +140,11 @@ class EventMilestone extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function marketplaceClient(): BelongsTo
+    {
+        return $this->belongsTo(MarketplaceClient::class);
     }
 
     public function creator(): BelongsTo
