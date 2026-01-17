@@ -258,23 +258,27 @@ class EventAnalyticsService
      */
     public function getTrafficSources(Event $event, array $dateRange): array
     {
+        $sourceCase = "
+            CASE
+                WHEN fbclid IS NOT NULL OR utm_source = 'facebook' THEN 'Facebook'
+                WHEN gclid IS NOT NULL OR utm_source = 'google' THEN 'Google'
+                WHEN utm_source = 'instagram' OR referrer LIKE '%instagram%' THEN 'Instagram'
+                WHEN ttclid IS NOT NULL OR utm_source = 'tiktok' THEN 'TikTok'
+                WHEN utm_medium = 'email' THEN 'Email'
+                WHEN referrer IS NULL OR referrer = '' THEN 'Direct'
+                ELSE 'Organic'
+            END
+        ";
+
         $sources = CoreCustomerEvent::where('event_id', $event->id)
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->selectRaw("
-                CASE
-                    WHEN fbclid IS NOT NULL OR utm_source = 'facebook' THEN 'Facebook'
-                    WHEN gclid IS NOT NULL OR utm_source = 'google' THEN 'Google'
-                    WHEN utm_source = 'instagram' OR referrer LIKE '%instagram%' THEN 'Instagram'
-                    WHEN ttclid IS NOT NULL OR utm_source = 'tiktok' THEN 'TikTok'
-                    WHEN utm_medium = 'email' THEN 'Email'
-                    WHEN referrer IS NULL OR referrer = '' THEN 'Direct'
-                    ELSE 'Organic'
-                END as source,
+                {$sourceCase} as source,
                 COUNT(DISTINCT visitor_id) as visitors,
                 COUNT(CASE WHEN event_type = 'purchase' THEN 1 END) as conversions,
                 SUM(CASE WHEN event_type = 'purchase' THEN event_value ELSE 0 END) as revenue
             ")
-            ->groupBy('source')
+            ->groupByRaw($sourceCase)
             ->orderByDesc('visitors')
             ->get();
 
