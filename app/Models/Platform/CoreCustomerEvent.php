@@ -91,9 +91,12 @@ class CoreCustomerEvent extends Model
         'sent_to_tenant' => 'boolean',
         'processing_log' => 'array',
         'occurred_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    public $timestamps = false;
+    // Enable timestamps for analytics tracking
+    public $timestamps = true;
 
     // Event types
     const TYPE_PAGE_VIEW = 'page_view';

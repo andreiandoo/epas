@@ -331,15 +331,25 @@
 {{-- Move topbar before .fi-main for marketplace panel --}}
 @if($isMarketplacePanel)
 <script>
-// Run immediately and on Livewire updates
+// Topbar deduplication and positioning with MutationObserver
 (function() {
+    // Mark this topbar as the original
+    const thisTopbar = document.currentScript?.previousElementSibling;
+    if (thisTopbar?.classList.contains('fi-custom-topbar')) {
+        thisTopbar.setAttribute('data-topbar-id', 'original');
+    }
+
     function setupTopbar() {
-        // Remove any duplicate topbars first (keep only the last one)
+        // Remove any duplicate topbars (keep only the one marked as original, or the first one)
         const topbars = document.querySelectorAll('.fi-custom-topbar');
         if (topbars.length > 1) {
-            // Keep only the first one, remove the rest
-            for (let i = 1; i < topbars.length; i++) {
-                topbars[i].remove();
+            let originalFound = false;
+            for (let i = 0; i < topbars.length; i++) {
+                if (topbars[i].getAttribute('data-topbar-id') === 'original' && !originalFound) {
+                    originalFound = true;
+                } else if (originalFound || i > 0) {
+                    topbars[i].remove();
+                }
             }
         }
 
@@ -350,35 +360,48 @@
         if (topbar && mainCtn && main) {
             // Only move if not already in correct position
             if (topbar.parentElement !== mainCtn || topbar.nextElementSibling !== main) {
-                topbar.remove();
                 mainCtn.insertBefore(topbar, main);
             }
         }
     }
 
-    // Run on initial load
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupTopbar);
-    } else {
+    // Use MutationObserver to catch new topbars immediately
+    const observer = new MutationObserver(function(mutations) {
+        for (const mutation of mutations) {
+            if (mutation.type === 'childList') {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType === 1) {
+                        // Check if the added node is a duplicate topbar
+                        if (node.classList?.contains('fi-custom-topbar') && !node.getAttribute('data-topbar-id')) {
+                            node.remove();
+                            return;
+                        }
+                        // Check if it contains a duplicate topbar
+                        const innerTopbars = node.querySelectorAll?.('.fi-custom-topbar:not([data-topbar-id])');
+                        if (innerTopbars?.length) {
+                            innerTopbars.forEach(t => t.remove());
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Start observing once DOM is ready
+    function startObserver() {
+        observer.observe(document.body, { childList: true, subtree: true });
         setupTopbar();
     }
 
-    // Run after Livewire updates
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', startObserver);
+    } else {
+        startObserver();
+    }
+
+    // Also run on Livewire events as fallback
     document.addEventListener('livewire:navigated', setupTopbar);
     document.addEventListener('livewire:morph-updated', setupTopbar);
-
-    // Also run with a small delay after any Livewire message
-    if (window.Livewire) {
-        Livewire.hook('message.processed', () => {
-            setTimeout(setupTopbar, 10);
-        });
-    } else {
-        document.addEventListener('livewire:init', () => {
-            Livewire.hook('message.processed', () => {
-                setTimeout(setupTopbar, 10);
-            });
-        });
-    }
 })();
 </script>
 @endif

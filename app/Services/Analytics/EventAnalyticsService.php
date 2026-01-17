@@ -49,6 +49,23 @@ class EventAnalyticsService
     }
 
     /**
+     * Get base tracking query for CoreCustomerEvent
+     * For marketplace events, checks BOTH event_id and marketplace_event_id for backwards compatibility
+     * (Old tracking data was saved to event_id, new data uses marketplace_event_id)
+     */
+    protected function getTrackingQuery(Event|MarketplaceEvent $event)
+    {
+        if ($this->isMarketplaceEvent($event)) {
+            // Check both columns for backwards compatibility
+            return CoreCustomerEvent::where(function ($q) use ($event) {
+                $q->where('event_id', $event->id)
+                  ->orWhere('marketplace_event_id', $event->id);
+            });
+        }
+        return CoreCustomerEvent::where('event_id', $event->id);
+    }
+
+    /**
      * Get complete dashboard data for an event
      */
     public function getDashboardData(Event|MarketplaceEvent $event, string $period = '30d'): array
@@ -111,24 +128,31 @@ class EventAnalyticsService
                 ->count();
         }
 
-        // Get visits from tracking - for marketplace events use marketplace_event_id column
-        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
-
-        $visits = CoreCustomerEvent::where($trackingColumn, $event->id)
+        // Get visits from tracking - use helper for backwards compatibility
+        $visits = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
-            ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where(function ($q) use ($dateRange) {
+                $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                  ->orWhereNull('created_at'); // Include records with null created_at
+            })
             ->count();
 
-        $uniqueVisitors = CoreCustomerEvent::where($trackingColumn, $event->id)
+        $uniqueVisitors = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
-            ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where(function ($q) use ($dateRange) {
+                $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                  ->orWhereNull('created_at');
+            })
             ->distinct('visitor_id')
             ->count('visitor_id');
 
         // Conversion rate
-        $purchases = CoreCustomerEvent::where($trackingColumn, $event->id)
+        $purchases = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
-            ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where(function ($q) use ($dateRange) {
+                $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                  ->orWhereNull('created_at');
+            })
             ->count();
 
         $conversionRate = $uniqueVisitors > 0 ? round(($purchases / $uniqueVisitors) * 100, 2) : 0;
@@ -191,7 +215,6 @@ class EventAnalyticsService
     public function getChartData(Event|MarketplaceEvent $event, array $dateRange): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
-        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
 
         $days = [];
         $current = $dateRange['start']->copy();
@@ -238,8 +261,10 @@ class EventAnalyticsService
                 ->keyBy('date');
         }
 
-        $visitsByDay = CoreCustomerEvent::where($trackingColumn, $event->id)
+        // Use helper for backwards compatibility with tracking data
+        $visitsByDay = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
+            ->whereNotNull('created_at')
             ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
             ->selectRaw('DATE(created_at) as date, COUNT(*) as visits')
             ->groupBy('date')
@@ -269,7 +294,6 @@ class EventAnalyticsService
     public function getTicketPerformance(Event|MarketplaceEvent $event, array $dateRange): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
-        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
 
         // Define colors for ticket types
         $colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#ef4444'];
@@ -337,17 +361,23 @@ class EventAnalyticsService
             $revenue = (clone $ticketsQuery)->sum('price');
             $price = $ticketType->price ?? ($sold > 0 ? round($revenue / $sold, 2) : 0);
 
-            // Calculate conversion rate for this ticket type
-            $addToCartCount = CoreCustomerEvent::where($trackingColumn, $event->id)
+            // Calculate conversion rate for this ticket type - use helper for backwards compatibility
+            $addToCartCount = (clone $this->getTrackingQuery($event))
                 ->where('event_type', CoreCustomerEvent::TYPE_ADD_TO_CART)
                 ->where('content_id', $ticketType->id)
-                ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                ->where(function ($q) use ($dateRange) {
+                    $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                      ->orWhereNull('created_at');
+                })
                 ->count();
 
-            $purchaseCount = CoreCustomerEvent::where($trackingColumn, $event->id)
+            $purchaseCount = (clone $this->getTrackingQuery($event))
                 ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
                 ->where('content_id', $ticketType->id)
-                ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                ->where(function ($q) use ($dateRange) {
+                    $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                      ->orWhereNull('created_at');
+                })
                 ->count();
 
             $conversionRate = $addToCartCount > 0 ? round(($purchaseCount / $addToCartCount) * 100, 1) : 0;
@@ -388,7 +418,6 @@ class EventAnalyticsService
     public function getTrafficSources(Event|MarketplaceEvent $event, array $dateRange): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
-        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
 
         $sourceCase = "
             CASE
@@ -402,8 +431,12 @@ class EventAnalyticsService
             END
         ";
 
-        $sources = CoreCustomerEvent::where($trackingColumn, $event->id)
-            ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+        // Use helper for backwards compatibility
+        $sources = (clone $this->getTrackingQuery($event))
+            ->where(function ($q) use ($dateRange) {
+                $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                  ->orWhereNull('created_at');
+            })
             ->selectRaw("
                 {$sourceCase} as source,
                 COUNT(DISTINCT visitor_id) as visitors,
@@ -447,7 +480,6 @@ class EventAnalyticsService
     public function getTopLocations(Event|MarketplaceEvent $event, array $dateRange, int $limit = 10): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
-        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
 
         // Country flags mapping
         $flags = [
@@ -470,9 +502,13 @@ class EventAnalyticsService
             'United States' => '🇺🇸', 'US' => '🇺🇸',
         ];
 
-        $locations = CoreCustomerEvent::where($trackingColumn, $event->id)
+        // Use helper for backwards compatibility
+        $locations = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
-            ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where(function ($q) use ($dateRange) {
+                $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                  ->orWhereNull('created_at');
+            })
             ->whereNotNull('city')
             ->selectRaw("
                 city,
@@ -552,34 +588,49 @@ class EventAnalyticsService
     public function getFunnelMetrics(Event|MarketplaceEvent $event, array $dateRange): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
-        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
 
-        $pageViews = CoreCustomerEvent::where($trackingColumn, $event->id)
+        // Use helper for backwards compatibility
+        $pageViews = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
-            ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where(function ($q) use ($dateRange) {
+                $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                  ->orWhereNull('created_at');
+            })
             ->count();
 
-        $uniqueVisitors = CoreCustomerEvent::where($trackingColumn, $event->id)
+        $uniqueVisitors = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
-            ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where(function ($q) use ($dateRange) {
+                $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                  ->orWhereNull('created_at');
+            })
             ->distinct('visitor_id')
             ->count('visitor_id');
 
-        $addToCart = CoreCustomerEvent::where($trackingColumn, $event->id)
+        $addToCart = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_ADD_TO_CART)
-            ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where(function ($q) use ($dateRange) {
+                $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                  ->orWhereNull('created_at');
+            })
             ->distinct('session_id')
             ->count('session_id');
 
-        $checkoutStarted = CoreCustomerEvent::where($trackingColumn, $event->id)
+        $checkoutStarted = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_BEGIN_CHECKOUT)
-            ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where(function ($q) use ($dateRange) {
+                $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                  ->orWhereNull('created_at');
+            })
             ->distinct('session_id')
             ->count('session_id');
 
-        $purchases = CoreCustomerEvent::where($trackingColumn, $event->id)
+        $purchases = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
-            ->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+            ->where(function ($q) use ($dateRange) {
+                $q->whereBetween('created_at', [$dateRange['start'], $dateRange['end']])
+                  ->orWhereNull('created_at');
+            })
             ->count();
 
         return [
@@ -674,19 +725,25 @@ class EventAnalyticsService
     public function getLiveVisitors(Event|MarketplaceEvent $event): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
-        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
         $fiveMinutesAgo = now()->subMinutes(5);
 
-        $visitors = CoreCustomerEvent::where($trackingColumn, $event->id)
+        // Use helper for backwards compatibility
+        $visitors = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
-            ->where('created_at', '>=', $fiveMinutesAgo)
+            ->where(function ($q) use ($fiveMinutesAgo) {
+                $q->where('created_at', '>=', $fiveMinutesAgo)
+                  ->orWhereNull('created_at');
+            })
             ->distinct('visitor_id')
             ->count('visitor_id');
 
         // Get visitor locations
-        $locations = CoreCustomerEvent::where($trackingColumn, $event->id)
+        $locations = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
-            ->where('created_at', '>=', $fiveMinutesAgo)
+            ->where(function ($q) use ($fiveMinutesAgo) {
+                $q->where('created_at', '>=', $fiveMinutesAgo)
+                  ->orWhereNull('created_at');
+            })
             ->whereNotNull('city')
             ->selectRaw('city, country_code, COUNT(DISTINCT visitor_id) as count')
             ->groupBy('city', 'country_code')
@@ -695,8 +752,11 @@ class EventAnalyticsService
             ->get();
 
         // Get recent activity
-        $recentActivity = CoreCustomerEvent::where($trackingColumn, $event->id)
-            ->where('created_at', '>=', $fiveMinutesAgo)
+        $recentActivity = (clone $this->getTrackingQuery($event))
+            ->where(function ($q) use ($fiveMinutesAgo) {
+                $q->where('created_at', '>=', $fiveMinutesAgo)
+                  ->orWhereNull('created_at');
+            })
             ->orderBy('created_at', 'desc')
             ->limit(20)
             ->get()
@@ -705,7 +765,7 @@ class EventAnalyticsService
                     'action' => $this->formatEventAction($evt),
                     'city' => $evt->city ?? 'Unknown',
                     'country' => $evt->country_code ?? 'Unknown',
-                    'time' => $evt->created_at->diffForHumans(short: true),
+                    'time' => $evt->created_at ? $evt->created_at->diffForHumans(short: true) : 'recently',
                 ];
             });
 
@@ -726,13 +786,15 @@ class EventAnalyticsService
     public function getLiveVisitorsForGlobe(Event|MarketplaceEvent $event): array
     {
         $isMarketplace = $this->isMarketplaceEvent($event);
-        $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
         $fiveMinutesAgo = now()->subMinutes(5);
 
-        // Get recent sessions with location data
-        $visitors = CoreCustomerEvent::where($trackingColumn, $event->id)
+        // Get recent sessions with location data - use helper for backwards compatibility
+        $visitors = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
-            ->where('created_at', '>=', $fiveMinutesAgo)
+            ->where(function ($q) use ($fiveMinutesAgo) {
+                $q->where('created_at', '>=', $fiveMinutesAgo)
+                  ->orWhereNull('created_at');
+            })
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
             ->selectRaw('
@@ -974,18 +1036,19 @@ class EventAnalyticsService
             $hourStart = $startOfDay->copy()->addHours($hour);
             $hourEnd = $hourStart->copy()->addHour();
 
-            $pageViews = CoreCustomerEvent::where('marketplace_event_id', $event->id)
+            // Use helper for backwards compatibility
+            $pageViews = (clone $this->getTrackingQuery($event))
                 ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                 ->whereBetween('created_at', [$hourStart, $hourEnd])
                 ->count();
 
-            $uniqueVisitors = CoreCustomerEvent::where('marketplace_event_id', $event->id)
+            $uniqueVisitors = (clone $this->getTrackingQuery($event))
                 ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
                 ->whereBetween('created_at', [$hourStart, $hourEnd])
                 ->distinct('visitor_id')
                 ->count('visitor_id');
 
-            $purchases = CoreCustomerEvent::where('marketplace_event_id', $event->id)
+            $purchases = (clone $this->getTrackingQuery($event))
                 ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
                 ->whereBetween('created_at', [$hourStart, $hourEnd])
                 ->count();
@@ -1262,17 +1325,22 @@ class EventAnalyticsService
             ->whereBetween('created_at', [$currentRange['start'], $currentRange['end']])
             ->sum('total');
 
-        $trackingColumn = $this->isMarketplaceEvent($event) ? 'marketplace_event_id' : 'event_id';
-
-        $currentVisitors = CoreCustomerEvent::where($trackingColumn, $event->id)
+        // Use helper for backwards compatibility
+        $currentVisitors = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
-            ->whereBetween('created_at', [$currentRange['start'], $currentRange['end']])
+            ->where(function ($q) use ($currentRange) {
+                $q->whereBetween('created_at', [$currentRange['start'], $currentRange['end']])
+                  ->orWhereNull('created_at');
+            })
             ->distinct('visitor_id')
             ->count('visitor_id');
 
-        $currentPurchases = CoreCustomerEvent::where($trackingColumn, $event->id)
+        $currentPurchases = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
-            ->whereBetween('created_at', [$currentRange['start'], $currentRange['end']])
+            ->where(function ($q) use ($currentRange) {
+                $q->whereBetween('created_at', [$currentRange['start'], $currentRange['end']])
+                  ->orWhereNull('created_at');
+            })
             ->count();
 
         // Previous period
@@ -1281,13 +1349,13 @@ class EventAnalyticsService
             ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
             ->sum('total');
 
-        $previousVisitors = CoreCustomerEvent::where($trackingColumn, $event->id)
+        $previousVisitors = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PAGE_VIEW)
             ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
             ->distinct('visitor_id')
             ->count('visitor_id');
 
-        $previousPurchases = CoreCustomerEvent::where($trackingColumn, $event->id)
+        $previousPurchases = (clone $this->getTrackingQuery($event))
             ->where('event_type', CoreCustomerEvent::TYPE_PURCHASE)
             ->whereBetween('created_at', [$previousRange['start'], $previousRange['end']])
             ->count();
