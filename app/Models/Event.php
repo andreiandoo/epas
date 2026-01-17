@@ -30,13 +30,21 @@ class Event extends Model
         'commission_rate',
         'title',
         'slug',
+        'event_series',
         'duration_mode',
+
+        // Parent/child event relationships
+        'parent_id',
+        'is_template',
+        'occurrence_number',
 
         // flags
         'is_sold_out', 'is_cancelled', 'cancel_reason',
         'is_postponed', 'postponed_date', 'postponed_start_time', 'postponed_door_time', 'postponed_end_time', 'postponed_reason',
         'door_sales_only', 'is_promoted', 'promoted_until', 'is_featured',
-        'is_homepage_featured', 'is_general_featured', 'is_category_featured',
+        'is_homepage_featured', 'is_general_featured', 'is_category_featured', 'is_published',
+        'has_custom_related', 'custom_related_event_ids',
+        'homepage_featured_image', 'featured_image',
 
         // single day
         'event_date', 'start_time', 'door_time', 'end_time',
@@ -46,6 +54,11 @@ class Event extends Model
 
         // multi-day json
         'multi_slots',
+
+        // recurring
+        'recurring_frequency', 'recurring_start_date', 'recurring_start_time',
+        'recurring_door_time', 'recurring_end_time', 'recurring_weekday',
+        'recurring_week_of_month', 'recurring_count',
 
         // media
         'poster_url', 'hero_image_url',
@@ -75,11 +88,12 @@ class Event extends Model
         'ticket_terms'      => 'array',
 
         // date-only
-        'event_date'        => 'date',
-        'range_start_date'  => 'date',
-        'range_end_date'    => 'date',
-        'postponed_date'    => 'date',
-        'promoted_until'    => 'date',
+        'event_date'           => 'date',
+        'range_start_date'     => 'date',
+        'range_end_date'       => 'date',
+        'recurring_start_date' => 'date',
+        'postponed_date'       => 'date',
+        'promoted_until'       => 'date',
 
         // flags
         'is_sold_out'       => 'bool',
@@ -91,6 +105,10 @@ class Event extends Model
         'is_homepage_featured'  => 'bool',
         'is_general_featured'   => 'bool',
         'is_category_featured'  => 'bool',
+        'is_published'          => 'bool',
+        'has_custom_related'    => 'bool',
+        'custom_related_event_ids' => 'array',
+        'is_template'       => 'bool',
 
         // commission
         'commission_rate'   => 'decimal:2',
@@ -104,6 +122,49 @@ class Event extends Model
         'views_count'       => 'integer',
         'interested_count'  => 'integer',
     ];
+
+    /**
+     * Boot the model and add event listeners
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Auto-generate event_series after creating an event
+        static::created(function ($event) {
+            if (empty($event->event_series)) {
+                $event->event_series = 'AMB-' . $event->id;
+                $event->saveQuietly(); // Save without triggering events again
+            }
+        });
+    }
+
+    /* Parent/Child Event Relations */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Event::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(Event::class, 'parent_id')->orderBy('occurrence_number');
+    }
+
+    /**
+     * Check if this event has child events
+     */
+    public function hasChildren(): bool
+    {
+        return $this->children()->exists();
+    }
+
+    /**
+     * Check if this event is a child of another event
+     */
+    public function isChild(): bool
+    {
+        return $this->parent_id !== null;
+    }
 
     /* Core Relations */
     public function tenant(): BelongsTo
@@ -164,12 +225,48 @@ class Event extends Model
 
     public function artists(): BelongsToMany
     {
-        return $this->belongsToMany(
+        $relation = $this->belongsToMany(
             Artist::class,
             'event_artist',
             'event_id',
             'artist_id'
         );
+
+        // Only add pivot columns and ordering if the migration has been run
+        // Check if sort_order column exists in event_artist table
+        try {
+            if (\Schema::hasColumn('event_artist', 'sort_order')) {
+                $relation->withPivot(['sort_order', 'is_headliner', 'is_co_headliner'])
+                         ->orderByPivot('sort_order');
+            }
+        } catch (\Exception $e) {
+            // Silently ignore if schema check fails
+        }
+
+        return $relation;
+    }
+
+    /**
+     * Get custom related events
+     */
+    public function customRelatedEvents(): HasMany
+    {
+        return $this->hasMany(Event::class, 'id')
+            ->whereIn('id', $this->custom_related_event_ids ?? []);
+    }
+
+    /**
+     * Get the custom related events as a collection
+     */
+    public function getCustomRelatedEventsAttribute()
+    {
+        if (!$this->has_custom_related || empty($this->custom_related_event_ids)) {
+            return collect();
+        }
+
+        return Event::whereIn('id', $this->custom_related_event_ids)
+            ->where('id', '!=', $this->id)
+            ->get();
     }
 
     /* Tickets */
