@@ -26,7 +26,7 @@ class OrganizerEventAnalytics extends Page implements HasForms
     use HasMarketplaceContext;
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-chart-bar-square';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar-square';
     protected static ?string $navigationLabel = 'Event Analytics';
     protected static bool $shouldRegisterNavigation = false; // Accessed via event resource
 
