@@ -33,7 +33,7 @@ class EventAnalytics extends Page implements HasForms
     protected static string $resource = EventResource::class;
     protected static ?string $title = 'Event Analytics';
 
-    protected string $view = 'filament.marketplace.pages.organizer-event-analytics';
+    protected string $view = 'filament.marketplace.resources.event-resource.pages.event-analytics';
 
     public ?int $eventId = null;
     public Event|MarketplaceEvent|null $event = null;

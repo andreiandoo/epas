@@ -865,12 +865,15 @@
                 init() {
                     this.$nextTick(() => this.initCharts());
 
-                    // Poll for live visitors
-                    if (this.eventMode === 'live') {
-                        setInterval(() => {
-                            this.liveVisitors = Math.max(5, this.liveVisitors + Math.floor(Math.random() * 7) - 3);
-                        }, 5000);
-                    }
+                    // Live visitors are loaded from server - real-time updates require tracking API
+                    // When tracking is active, uncomment to poll for live visitor count:
+                    // if (this.eventMode === 'live') {
+                    //     setInterval(() => {
+                    //         this.$wire.refreshLiveVisitors().then(count => {
+                    //             if (count !== null) this.liveVisitors = count;
+                    //         });
+                    //     }, 30000);
+                    // }
 
                     // Watch for globe modal
                     this.$watch('showGlobeModal', (value) => {

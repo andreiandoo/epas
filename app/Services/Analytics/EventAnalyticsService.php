@@ -266,32 +266,71 @@ class EventAnalyticsService
         $isMarketplace = $this->isMarketplaceEvent($event);
         $trackingColumn = $isMarketplace ? 'marketplace_event_id' : 'event_id';
 
+        // Define colors for ticket types
+        $colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#ef4444'];
+
         // Get ticket types based on event type
         if ($isMarketplace) {
             $ticketTypes = \App\Models\MarketplaceTicketType::where('marketplace_event_id', $event->id)->get();
+            $ticketColumn = 'marketplace_ticket_type_id';
         } else {
+            // For Event model, try ticket types first
             $ticketTypes = TicketType::where('event_id', $event->id)->get();
+            $ticketColumn = 'ticket_type_id';
+
+            // If no ticket types found, query tickets by event_id directly and group
+            if ($ticketTypes->isEmpty()) {
+                $tickets = Ticket::where('event_id', $event->id)
+                    ->whereIn('status', ['valid', 'checked_in'])
+                    ->get();
+
+                if ($tickets->isNotEmpty()) {
+                    $grouped = $tickets->groupBy('ticket_type_id');
+                    $performance = [];
+                    $index = 0;
+
+                    foreach ($grouped as $typeId => $typeTickets) {
+                        $sold = $typeTickets->count();
+                        $revenue = $typeTickets->sum('price');
+                        $avgPrice = $sold > 0 ? round($revenue / $sold, 2) : 0;
+                        $ticketType = $typeId ? $typeTickets->first()->ticketType : null;
+                        $name = $ticketType?->name ?? 'General';
+
+                        $performance[] = [
+                            'id' => $typeId ?? 0,
+                            'name' => $name,
+                            'price' => $avgPrice,
+                            'sold' => $sold,
+                            'revenue' => $revenue,
+                            'conversion_rate' => 0,
+                            'trend' => 0,
+                            'color' => $colors[$index % count($colors)],
+                        ];
+                        $index++;
+                    }
+
+                    usort($performance, fn($a, $b) => $b['revenue'] <=> $a['revenue']);
+                    return $performance;
+                }
+            }
         }
 
         $performance = [];
 
-        // Define colors for ticket types
-        $colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#ef4444'];
-
         foreach ($ticketTypes as $index => $ticketType) {
-            // Query tickets differently based on event type
+            // Query tickets - use sum of actual ticket prices for accurate revenue
             if ($isMarketplace) {
-                $sold = Ticket::where('marketplace_ticket_type_id', $ticketType->id)
-                    ->whereIn('status', ['valid', 'checked_in'])
-                    ->count();
+                $ticketsQuery = Ticket::where('marketplace_ticket_type_id', $ticketType->id)
+                    ->whereIn('status', ['valid', 'checked_in']);
             } else {
-                $sold = Ticket::where('ticket_type_id', $ticketType->id)
-                    ->whereIn('status', ['valid', 'checked_in'])
-                    ->count();
+                $ticketsQuery = Ticket::where('ticket_type_id', $ticketType->id)
+                    ->whereIn('status', ['valid', 'checked_in']);
             }
 
-            $price = $isMarketplace ? ($ticketType->price ?? 0) : ($ticketType->price ?? 0);
-            $revenue = $sold * $price;
+            $sold = (clone $ticketsQuery)->count();
+            // Sum actual ticket prices for accurate revenue
+            $revenue = (clone $ticketsQuery)->sum('price');
+            $price = $ticketType->price ?? ($sold > 0 ? round($revenue / $sold, 2) : 0);
 
             // Calculate conversion rate for this ticket type
             $addToCartCount = CoreCustomerEvent::where($trackingColumn, $event->id)
@@ -310,7 +349,6 @@ class EventAnalyticsService
 
             // Calculate trend (compare to previous period)
             $periodDays = $dateRange['start']->diffInDays($dateRange['end']);
-            $ticketColumn = $isMarketplace ? 'marketplace_ticket_type_id' : 'ticket_type_id';
             $previousSold = Ticket::where($ticketColumn, $ticketType->id)
                 ->whereIn('status', ['valid', 'checked_in'])
                 ->whereBetween('created_at', [
