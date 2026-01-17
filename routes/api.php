@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\PublicDataController;
 use App\Http\Controllers\Api\AffiliateController;
 use App\Http\Controllers\Api\TrackingController;
 use App\Http\Controllers\Api\PlatformTrackingController;
+use App\Http\Controllers\Api\MarketplaceTrackingController;
 use App\Http\Controllers\Api\TicketTemplateController;
 use App\Http\Controllers\Api\InviteController;
 use App\Http\Controllers\Api\InsuranceController;
@@ -272,6 +273,31 @@ Route::prefix('tracking')->middleware(['throttle:api', 'tenant.client.cors'])->g
 
     Route::get('/customers/insights', [PlatformTrackingController::class, 'getCustomerInsights'])
         ->name('api.tracking.customers.insights');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Marketplace Tracking API Routes
+|--------------------------------------------------------------------------
+|
+| Public API endpoints for marketplace event tracking.
+| No authentication required - uses marketplace_client_id for identification.
+| CORS enabled for marketplace client domains.
+|
+*/
+
+Route::prefix('marketplace-tracking')->middleware(['throttle:300,1', 'marketplace.auth'])->group(function () {
+    // Track single event
+    Route::post('/track', [MarketplaceTrackingController::class, 'track'])
+        ->name('api.marketplace-tracking.track');
+
+    // Track multiple events in batch
+    Route::post('/batch', [MarketplaceTrackingController::class, 'trackBatch'])
+        ->name('api.marketplace-tracking.batch');
+
+    // Tracking pixel (for email opens, etc.)
+    Route::get('/pixel', [MarketplaceTrackingController::class, 'pixel'])
+        ->name('api.marketplace-tracking.pixel');
 });
 
 /*

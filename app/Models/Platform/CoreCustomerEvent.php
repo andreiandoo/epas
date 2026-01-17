@@ -12,6 +12,7 @@ class CoreCustomerEvent extends Model
     protected $fillable = [
         'customer_id',
         'tenant_id',
+        'marketplace_client_id',
         'session_id',
         'visitor_id',
         'event_type',
@@ -27,6 +28,7 @@ class CoreCustomerEvent extends Model
         'content_type',
         'content_name',
         'event_id',
+        'marketplace_event_id',
         'order_id',
         'ticket_id',
         'product_sku',
@@ -177,6 +179,16 @@ class CoreCustomerEvent extends Model
     public function scopeForTenant($query, int $tenantId)
     {
         return $query->where('tenant_id', $tenantId);
+    }
+
+    public function scopeForMarketplaceEvent($query, int $marketplaceEventId)
+    {
+        return $query->where('marketplace_event_id', $marketplaceEventId);
+    }
+
+    public function scopeForMarketplaceClient($query, int $marketplaceClientId)
+    {
+        return $query->where('marketplace_client_id', $marketplaceClientId);
     }
 
     public function scopeWithClickId($query)
