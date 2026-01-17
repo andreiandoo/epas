@@ -50,19 +50,18 @@ class EventAnalyticsService
 
     /**
      * Get base tracking query for CoreCustomerEvent
-     * For marketplace events, checks BOTH event_id and marketplace_event_id for backwards compatibility
+     * Always checks BOTH event_id and marketplace_event_id for backwards compatibility
      * (Old tracking data was saved to event_id, new data uses marketplace_event_id)
+     * This handles the case where Marketplace EventResource uses Event model instead of MarketplaceEvent
      */
     protected function getTrackingQuery(Event|MarketplaceEvent $event)
     {
-        if ($this->isMarketplaceEvent($event)) {
-            // Check both columns for backwards compatibility
-            return CoreCustomerEvent::where(function ($q) use ($event) {
-                $q->where('event_id', $event->id)
-                  ->orWhere('marketplace_event_id', $event->id);
-            });
-        }
-        return CoreCustomerEvent::where('event_id', $event->id);
+        // Always check both columns - the Marketplace panel uses Event model, not MarketplaceEvent
+        // So we can't rely on instanceof check to determine if we should check both columns
+        return CoreCustomerEvent::where(function ($q) use ($event) {
+            $q->where('event_id', $event->id)
+              ->orWhere('marketplace_event_id', $event->id);
+        });
     }
 
     /**
