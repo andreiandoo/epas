@@ -222,7 +222,7 @@ class AccountController extends BaseController
             ->where('marketplace_customer_id', $customer->id)
             ->with([
                 'marketplaceEvent',
-                'event',
+                'event.venue',
                 'tickets.marketplaceTicketType',
                 'tickets.ticketType',
             ])
@@ -325,16 +325,107 @@ class AccountController extends BaseController
             ];
         }
 
+        // Status label for display
+        $statusLabels = [
+            'pending' => 'În așteptare',
+            'confirmed' => 'Confirmată',
+            'paid' => 'Plătită',
+            'completed' => 'Finalizată',
+            'cancelled' => 'Anulată',
+            'refunded' => 'Rambursată',
+        ];
+        $statusLabel = $statusLabels[$order->status] ?? ucfirst($order->status);
+
+        // Payment method display
+        $paymentMethod = match($order->payment_processor) {
+            'netopia', 'payment-netopia' => 'Card bancar (Netopia)',
+            'stripe', 'payment-stripe' => 'Card bancar (Stripe)',
+            'paypal' => 'PayPal',
+            'cash' => 'Numerar',
+            'bank_transfer' => 'Transfer bancar',
+            default => $order->payment_processor ? ucfirst(str_replace(['_', '-'], ' ', $order->payment_processor)) : 'Card',
+        };
+
+        // Build items grouped by ticket type (for frontend display)
+        $items = $order->tickets->groupBy(function ($ticket) {
+            return $ticket->marketplace_ticket_type_id ?? $ticket->ticket_type_id ?? 0;
+        })->map(function ($tickets, $typeId) use ($eventData) {
+            $first = $tickets->first();
+            $ticketType = $first->marketplaceTicketType ?? $first->ticketType;
+            $typeName = $ticketType?->name ?? 'Bilet';
+            $price = (float) ($first->price ?? $ticketType?->price ?? 0);
+
+            return [
+                'name' => $typeName,
+                'quantity' => $tickets->count(),
+                'price' => $price,
+                'total' => $price * $tickets->count(),
+                'event_title' => $eventData['name'] ?? '',
+                'event_date' => $eventData['date'] ?? null,
+                'image' => $eventData['image'] ?? null,
+            ];
+        })->values()->toArray();
+
+        // Build timeline
+        $timeline = [];
+        $timeline[] = [
+            'title' => 'Comanda plasata',
+            'date' => $order->created_at->format('d M Y, H:i'),
+            'status' => 'completed',
+        ];
+        if ($order->paid_at) {
+            $timeline[] = [
+                'title' => 'Plata confirmata',
+                'date' => $order->paid_at->format('d M Y, H:i'),
+                'status' => 'completed',
+            ];
+        }
+        if (in_array($order->status, ['confirmed', 'completed', 'paid'])) {
+            $timeline[] = [
+                'title' => 'Bilete emise',
+                'date' => ($order->paid_at ?? $order->created_at)->format('d M Y, H:i'),
+                'status' => 'completed',
+            ];
+        }
+        if ($order->status === 'cancelled') {
+            $timeline[] = [
+                'title' => 'Comanda anulata',
+                'date' => ($order->cancelled_at ?? $order->updated_at)->format('d M Y, H:i'),
+                'status' => 'cancelled',
+            ];
+        }
+        if ($order->status === 'refunded') {
+            $timeline[] = [
+                'title' => 'Comanda rambursata',
+                'date' => ($order->refunded_at ?? $order->updated_at)->format('d M Y, H:i'),
+                'status' => 'refunded',
+            ];
+        }
+
+        // Service fee (commission)
+        $serviceFee = (float) ($order->commission_amount ?? 0);
+
+        // Discount
+        $discount = (float) ($order->discount_amount ?? $order->promo_discount ?? 0);
+
         return $this->success([
             'order' => [
                 'id' => $order->id,
                 'order_number' => $order->order_number,
+                'number' => $order->order_number, // Alias for frontend
                 'status' => $order->status,
+                'status_label' => $statusLabel,
                 'payment_status' => $order->payment_status,
-                'subtotal' => (float) $order->subtotal,
-                'total' => (float) $order->total,
-                'currency' => $order->currency,
+                'date' => $order->created_at->format('d M Y, H:i'),
+                'subtotal' => number_format((float) $order->subtotal, 2, '.', ''),
+                'service_fee' => number_format($serviceFee, 2, '.', ''),
+                'discount' => number_format($discount, 2, '.', ''),
+                'total' => number_format((float) $order->total, 2, '.', ''),
+                'currency' => $order->currency ?? 'RON',
+                'tickets_count' => $order->tickets->count(),
                 'event' => $eventData,
+                'items' => $items,
+                'timeline' => $timeline,
                 'tickets' => $order->tickets->map(function ($ticket) {
                     $ticketType = $ticket->marketplaceTicketType ?? $ticket->ticketType;
                     return [
@@ -349,6 +440,10 @@ class AccountController extends BaseController
                         'is_refundable' => (bool) ($ticketType?->is_refundable ?? false),
                     ];
                 }),
+                'payment_method' => $paymentMethod,
+                'payment_exp' => $order->meta['card_exp'] ?? '',
+                'billing_address' => $order->meta['billing_address'] ?? $order->customer_name ?? '',
+                'invoice_filename' => $order->meta['invoice_filename'] ?? null,
                 'can_download_tickets' => in_array($order->status, ['completed', 'paid', 'confirmed']) || $order->payment_status === 'paid',
                 'can_request_refund' => $canRequestRefund,
                 'refund_reason' => $refundReason,

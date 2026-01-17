@@ -111,20 +111,24 @@ class OrderResource extends Resource
                                 Action::make('resend_confirmation')
                                     ->label('Retrimite confirmare')
                                     ->icon('heroicon-o-envelope')
-                                    ->color('primary')
+                                    ->color('gray')
+                                    ->fullWidth()
                                     ->action(fn ($record) => self::resendConfirmation($record)),
                                 Action::make('download_tickets')
                                     ->label('Download bilete')
                                     ->icon('heroicon-o-arrow-down-tray')
+                                    ->fullWidth()
                                     ->color('gray'),
                                 Action::make('print_invoice')
                                     ->label('Printează factura')
                                     ->icon('heroicon-o-printer')
+                                    ->fullWidth()
                                     ->color('gray'),
                                 Action::make('change_status')
                                     ->label('Schimbă status')
                                     ->icon('heroicon-o-arrow-path')
                                     ->color('warning')
+                                    ->fullWidth()
                                     ->form([
                                         Forms\Components\Select::make('status')
                                             ->options([
@@ -139,8 +143,9 @@ class OrderResource extends Resource
                                 Action::make('request_refund')
                                     ->label('Solicită rambursare')
                                     ->icon('heroicon-o-arrow-uturn-left')
-                                    ->color('danger')
+                                    ->color('gray')
                                     ->requiresConfirmation()
+                                    ->fullWidth()
                                     ->visible(fn ($record) => in_array($record->status, ['confirmed', 'paid'])),
                             ])->columns(1),
                         ]),
@@ -342,12 +347,39 @@ class OrderResource extends Resource
         $currency = $record->currency ?? 'RON';
         $total = number_format($record->total ?? ($record->total_cents / 100), 2);
         $ticketCount = $record->tickets->count();
-        $paymentMethod = ucfirst($record->payment_processor ?? 'Card');
+
+        // Payment method display - show processor name properly
+        $paymentMethod = match($record->payment_processor) {
+            'netopia', 'payment-netopia' => 'Netopia',
+            'stripe', 'payment-stripe' => 'Stripe',
+            'paypal' => 'PayPal',
+            'cash' => 'Cash',
+            'bank_transfer' => 'Transfer',
+            default => $record->payment_processor ? ucfirst(str_replace(['_', '-', 'payment-'], ['', '', ''], $record->payment_processor)) : 'N/A',
+        };
         $updatedAt = $record->updated_at->format('d M H:i');
-        
-        // Calculate savings
-        $savings = ($record->promo_discount ?? $record->discount_amount ?? 0);
-        $savingsHtml = $savings > 0 
+
+        // Calculate savings (promo discount + target price savings)
+        $savings = (float) ($record->promo_discount ?? $record->discount_amount ?? 0);
+
+        // Add target price savings
+        $targetPrice = 0;
+        if ($record->event) {
+            $targetPrice = (float) ($record->event->target_price ?? 0);
+        } elseif ($record->marketplaceEvent) {
+            $targetPrice = (float) ($record->marketplaceEvent->target_price ?? 0);
+        }
+
+        if ($targetPrice > 0) {
+            foreach ($record->tickets as $ticket) {
+                $ticketPrice = (float) ($ticket->price ?? 0);
+                if ($targetPrice > $ticketPrice && $ticketPrice > 0) {
+                    $savings += ($targetPrice - $ticketPrice);
+                }
+            }
+        }
+
+        $savingsHtml = $savings > 0
             ? '<div style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; font-size: 13px; color: #10B981;">
                 🏷️ Economii: -' . number_format($savings, 2) . ' ' . $currency . '
             </div>'
@@ -393,7 +425,10 @@ class OrderResource extends Resource
 
         $phoneHtml = $phone ? "
             <div style='display: flex; align-items: center; gap: 6px;'>
-                📞 {$phone}
+                <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='size-4'>
+                    <path stroke-linecap='round' stroke-linejoin='round' d='M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3' />
+                </svg>
+                {$phone}
             </div>
         " : '';
 
@@ -404,17 +439,26 @@ class OrderResource extends Resource
                     <div style='font-size: 16px; font-weight: 700; color: white; margin-bottom: 4px;'>" . e($name) . "</div>
                     <div style='display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: #94A3B8;'>
                         <div style='display: flex; align-items: center; gap: 6px;'>
-                            ✉️ <a href='mailto:{$email}' style='color: #60A5FA; text-decoration: none;'>{$email}</a>
+                            <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='size-4'>
+                                <path stroke-linecap='round' stroke-linejoin='round' d='M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75' />
+                            </svg>
+                            <a href='mailto:{$email}' style='color: #60A5FA; text-decoration: none;'>{$email}</a>
                         </div>
                         {$phoneHtml}
                     </div>
                 </div>
-                <div class='flex gap-8'>
-                    <a href='" . MarketplaceCustomerResource::getUrl('edit', ['record' => $record->marketplace_customer_id]) . "' class='fi-btn fi-size-sm  fi-ac-btn-action'>
-                        👤 Vezi profil
+                <div class='flex gap-8 pr-2'>
+                    <a href='" . MarketplaceCustomerResource::getUrl('edit', ['record' => $record->marketplace_customer_id]) . "' class='fi-btn fi-size-sm  fi-ac-btn-action no-underline'>
+                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='size-4'>
+                            <path stroke-linecap='round' stroke-linejoin='round' d='M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z' />
+                        </svg>
+                         Vezi profil
                     </a>
-                    <a href='mailto:{$email}' class='fi-btn fi-size-sm fi-ac-btn-action'>
-                        ✉️ Trimite email
+                    <a href='mailto:{$email}' class='fi-btn fi-size-sm fi-ac-btn-action no-underline'>
+                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='size-4'>
+                            <path stroke-linecap='round' stroke-linejoin='round' d='M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75' />
+                        </svg>
+                        Trimite email
                     </a>
                 </div>
             </div>
@@ -454,11 +498,10 @@ class OrderResource extends Resource
 
             $html .= "
                 <div style='display: flex; align-items: stretch; gap: 16px; padding: 16px; background: #0F172A; border-radius: 12px; margin-bottom: 12px; border: 1px solid #334155;'>
-                    <!-- Ticket icon -->
-                    <div style='width: 48px; height: 48px; background: linear-gradient(135deg, #10B981, #059669); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;'>
-                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' style='width: 24px; height: 24px;'>
-                            <path stroke-linecap='round' stroke-linejoin='round' d='M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 0 1 0 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 0 1 0-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375Z' />
-                        </svg>
+                    <!-- QR Code -->
+                    <div style='display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0;'>
+                        <img src='{$qrCodeUrl}' alt='QR Code' style='width: 60px; height: 60px; border-radius: 4px; background: white; padding: 2px;'>
+                        <span style='font-size: 9px; color: #64748B;'>QR Code</span>
                     </div>
 
                     <!-- Ticket details -->
@@ -478,12 +521,6 @@ class OrderResource extends Resource
                             <span style='font-size: 11px; color: #64748B;'>Cod:</span>
                             <span style='padding: 2px 8px; background: #334155; border-radius: 4px; font-size: 11px; font-family: monospace; color: #94A3B8; letter-spacing: 1px;'>" . e($barcode) . "</span>
                         </div>
-                    </div>
-
-                    <!-- QR Code -->
-                    <div style='display: flex; flex-direction: column; align-items: center; gap: 4px; flex-shrink: 0;'>
-                        <img src='{$qrCodeUrl}' alt='QR Code' style='width: 60px; height: 60px; border-radius: 4px; background: white; padding: 2px;'>
-                        <span style='font-size: 9px; color: #64748B;'>QR Code</span>
                     </div>
 
                     <!-- Price and actions -->
@@ -574,7 +611,7 @@ class OrderResource extends Resource
                 : "<span style='font-size: 32px;'>🎸</span>";
 
             $html .= "
-                <div style='display: flex; gap: 16px;'>
+                <div style='display: flex; gap: 16px;align-items:center;padding-right:3px;'>
                     <div style='width: 100px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #374151, #1F2937); display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden;'>
                         {$posterHtml}
                     </div>
@@ -611,7 +648,7 @@ class OrderResource extends Resource
                     </div>
                     <div>
                         <a href='" . EventResource::getUrl('edit', ['record' => $event->id]) . "' 
-                        class='fi-btn fi-size-sm fi-ac-btn-action'>
+                        class='fi-btn fi-size-sm fi-ac-btn-action no-underline'>
                             <svg style='width: 14px; height: 14px;' fill='none' stroke='currentColor' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'/><path stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'/></svg>
                             Vezi eveniment
                         </a>
@@ -814,29 +851,64 @@ class OrderResource extends Resource
 
     protected static function renderPaymentDetails(Order $record): HtmlString
     {
-        $processor = ucfirst($record->payment_processor ?? $record->meta['payment_method'] ?? 'Card');
+        // Processor name (Netopia, Stripe, etc.)
+        $processorRaw = $record->payment_processor;
+        $processor = match($processorRaw) {
+            'netopia', 'payment-netopia' => 'Netopia',
+            'stripe', 'payment-stripe' => 'Stripe',
+            'paypal' => 'PayPal',
+            'cash' => 'Numerar',
+            'bank_transfer' => 'Transfer bancar',
+            default => $processorRaw ? ucfirst(str_replace(['_', '-', 'payment-'], [' ', ' ', ''], $processorRaw)) : null,
+        };
+
+        // Payment method (Card, Bank transfer, etc.) - from meta or derived from processor
+        $paymentMethod = $record->meta['payment_method'] ?? $record->meta['method'] ?? null;
+        if (!$paymentMethod && $processorRaw) {
+            // Derive method from processor if not explicitly set
+            $paymentMethod = match($processorRaw) {
+                'netopia', 'payment-netopia', 'stripe', 'payment-stripe' => 'Card bancar',
+                'paypal' => 'PayPal',
+                'cash' => 'Numerar',
+                'bank_transfer' => 'Transfer bancar',
+                default => null,
+            };
+        }
+
         $transactionId = $record->payment_reference ?? $record->meta['payment_intent_id'] ?? $record->meta['transaction_id'] ?? '';
         $cardLast4 = $record->meta['card_last4'] ?? $record->meta['card_last_four'] ?? '';
         $cardBrand = ucfirst($record->meta['card_brand'] ?? '');
         $paidAt = $record->paid_at ?? $record->meta['paid_at'] ?? null;
-        
+
         $html = '<div>';
 
         // Payment Processor
-        $html .= "
-            <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
-                <span style='font-size: 13px; color: #94A3B8;'>Procesor</span>
-                <span style='font-size: 13px; font-weight: 600; color: #E2E8F0;'>{$processor}</span>
-            </div>
-        ";
+        if ($processor) {
+            $html .= "
+                <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
+                    <span style='font-size: 13px; color: #94A3B8;'>Procesor</span>
+                    <span style='font-size: 13px; font-weight: 600; color: #E2E8F0;'>{$processor}</span>
+                </div>
+            ";
+        }
+
+        // Payment Method
+        if ($paymentMethod) {
+            $html .= "
+                <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
+                    <span style='font-size: 13px; color: #94A3B8;'>Metodă plată</span>
+                    <span style='font-size: 13px; font-weight: 600; color: #E2E8F0;'>{$paymentMethod}</span>
+                </div>
+            ";
+        }
 
         // Transaction ID
         if ($transactionId) {
             // Truncate long transaction IDs
-            $displayId = strlen($transactionId) > 20 
-                ? substr($transactionId, 0, 10) . '...' . substr($transactionId, -6) 
+            $displayId = strlen($transactionId) > 20
+                ? substr($transactionId, 0, 10) . '...' . substr($transactionId, -6)
                 : $transactionId;
-            
+
             $html .= "
                 <div style='display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(51, 65, 85, 0.5);'>
                     <span style='font-size: 13px; color: #94A3B8;'>ID Tranzacție</span>
