@@ -15,6 +15,8 @@ body.fi-panel-marketplace .fi-topbar {
 	body.fi-panel-marketplace.fi-body-has-topbar .fi-sidebar {
 		height: 100dvh !important;
 		top: 0 !important;
+		border-right-width: 1px;
+		border-color: rgb(55, 65, 81)!important;
 	}
 }
 
@@ -23,6 +25,10 @@ body.fi-panel-marketplace .fi-sidebar-nav {
 	padding-block: calc(var(--spacing) * 6) !important;
 }
 /* ===== END MARKETPLACE PANEL TOPBAR HIDE ===== */
+.fi-page-header-main-ctn {
+	row-gap: calc(var(--spacing) * 6)!important;
+    padding-block: calc(var(--spacing) * 6)!important;
+}
 
 .fi-custom-topbar {
 	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
@@ -48,6 +54,7 @@ body.fi-panel-marketplace .fi-sidebar-nav {
 	border-radius: 0.5rem;
 	font-size: 0.875rem;
 	transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+	border-color: rgb(55, 65, 81)!important;
 }
 
 .epas-global-search input:focus {

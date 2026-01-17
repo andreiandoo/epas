@@ -537,11 +537,11 @@ class Event extends Model
     }
 
     /**
-     * Get orders for this event (via marketplace_event_id)
+     * Get orders for this event
      */
     public function orders(): HasMany
     {
-        return $this->hasMany(Order::class, 'marketplace_event_id');
+        return $this->hasMany(Order::class, 'event_id');
     }
 
     /**
@@ -562,6 +562,14 @@ class Event extends Model
         return $this->tickets()
             ->whereIn('status', ['valid', 'checked_in'])
             ->count();
+    }
+
+    /**
+     * Get currency from marketplace client or default to RON
+     */
+    public function getCurrencyAttribute(): string
+    {
+        return $this->marketplaceClient?->currency ?? 'RON';
     }
 
     /**
