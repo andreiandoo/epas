@@ -4,6 +4,7 @@ namespace App\Filament\Marketplace\Resources\EventResource\Pages;
 
 use App\Filament\Marketplace\Resources\EventResource;
 use App\Filament\Marketplace\Concerns\HasMarketplaceContext;
+use App\Models\Event;
 use App\Models\MarketplaceEvent;
 use App\Models\EventGoal;
 use App\Models\EventMilestone;
@@ -34,7 +35,7 @@ class EventAnalytics extends Page implements HasForms
 
     protected string $view = 'filament.marketplace.pages.organizer-event-analytics';
 
-    public ?MarketplaceEvent $event = null;
+    public Event|MarketplaceEvent|null $event = null;
     public string $period = '30d';
     public string $eventMode = 'live';
 
