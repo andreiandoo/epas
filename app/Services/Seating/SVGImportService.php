@@ -403,7 +403,7 @@ class SVGImportService
                     'label' => $seatLabel,
                     'display_name' => $section->generateSeatDisplayName($rowLabel, $seatLabel),
                     'x' => $importedSeat->cx - $section->x_position, // Relative to section
-                    'y' => $importedSeat->cy - $section->y_position - ($avgY - $section->y_position), // Relative to row
+                    'y' => $importedSeat->cy - $section->y_position, // Relative to section
                     'angle' => 0,
                     'shape' => 'circle',
                     'seat_uid' => $section->generateSeatUid($rowLabel, $seatLabel),

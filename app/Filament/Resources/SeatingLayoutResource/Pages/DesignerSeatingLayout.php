@@ -144,15 +144,27 @@ class DesignerSeatingLayout extends Page
                             clearExisting: $data['clear_existing'] ?? false
                         );
 
+                        // Save background image URL if found
+                        if ($imported->backgroundUrl) {
+                            $this->seatingLayout->update([
+                                'background_image_url' => $imported->backgroundUrl,
+                            ]);
+                        }
+
                         $this->reloadSections();
 
                         // Dispatch event to reload canvas
                         $this->dispatch('layout-imported', sections: $this->sections);
 
+                        $message = "Imported {$stats['sections_created']} sections, {$stats['rows_created']} rows, and {$stats['seats_created']} seats";
+                        if ($imported->backgroundUrl) {
+                            $message .= ". Background image URL saved.";
+                        }
+
                         Notification::make()
                             ->success()
                             ->title('Import successful')
-                            ->body("Imported {$stats['sections_created']} sections, {$stats['rows_created']} rows, and {$stats['seats_created']} seats")
+                            ->body($message)
                             ->send();
 
                     } catch (\Exception $e) {

@@ -19,6 +19,7 @@ class SeatingLayout extends Model
         'canvas_w',
         'canvas_h',
         'background_image_path',
+        'background_image_url',
         'version',
         'notes',
     ];

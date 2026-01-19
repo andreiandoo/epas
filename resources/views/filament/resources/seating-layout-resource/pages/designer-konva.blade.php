@@ -924,6 +924,10 @@
                     // Background image (preserve aspect ratio)
                     if (this.backgroundUrl) {
                         const imageObj = new Image();
+                        imageObj.crossOrigin = 'anonymous'; // Handle CORS for external images
+                        imageObj.onerror = () => {
+                            console.warn('Failed to load background image:', this.backgroundUrl);
+                        };
                         imageObj.onload = () => {
                             // Calculate dimensions while preserving aspect ratio
                             const imgAspect = imageObj.width / imageObj.height;
@@ -1180,10 +1184,10 @@
                     seatShape.on('mouseover', (e) => {
                         const container = document.getElementById('konva-container');
                         const containerRect = container.getBoundingClientRect();
-                        const pos = this.stage.getPointerPosition();
+                        const mouseEvent = e.evt;
                         this.showSeatTooltip(seatShape, {
-                            x: pos.x,
-                            y: pos.y
+                            x: mouseEvent.clientX - containerRect.left + container.scrollLeft,
+                            y: mouseEvent.clientY - containerRect.top + container.scrollTop
                         });
                         // Highlight on hover
                         seatShape.strokeWidth(2);
@@ -1196,6 +1200,45 @@
                         const isSelected = this.selectedSeats.find(s => s.id === seat.id);
                         seatShape.strokeWidth(isSelected ? 3 : 1);
                         this.layer.batchDraw();
+                    });
+
+                    // Click to select individual seat
+                    seatShape.on('click', (e) => {
+                        e.cancelBubble = true; // Stop propagation to section
+
+                        if (this.drawMode === 'select') {
+                            // Toggle selection in select mode
+                            const existingIndex = this.selectedSeats.findIndex(s => s.id === seat.id);
+                            if (existingIndex >= 0) {
+                                // Deselect
+                                this.selectedSeats.splice(existingIndex, 1);
+                                seatShape.stroke('#1F2937');
+                                seatShape.strokeWidth(1);
+                            } else {
+                                // Select (hold Shift for multi-select)
+                                if (!e.evt.shiftKey) {
+                                    // Clear previous selection
+                                    this.clearSelection();
+                                }
+                                this.selectedSeats.push({ id: seat.id, node: seatShape });
+                                seatShape.stroke('#F97316');
+                                seatShape.strokeWidth(3);
+                            }
+                            this.layer.batchDraw();
+                        } else if (this.drawMode === 'multiselect') {
+                            // Multi-select mode - toggle seat
+                            const existingIndex = this.selectedSeats.findIndex(s => s.id === seat.id);
+                            if (existingIndex >= 0) {
+                                this.selectedSeats.splice(existingIndex, 1);
+                                seatShape.stroke('#1F2937');
+                                seatShape.strokeWidth(1);
+                            } else {
+                                this.selectedSeats.push({ id: seat.id, node: seatShape });
+                                seatShape.stroke('#F97316');
+                                seatShape.strokeWidth(3);
+                            }
+                            this.layer.batchDraw();
+                        }
                     });
 
                     return seatShape;
