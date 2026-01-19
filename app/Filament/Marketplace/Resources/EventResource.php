@@ -15,6 +15,8 @@ use App\Models\MarketplaceOrganizer;
 use App\Models\MarketplaceRegion;
 use App\Models\Tax\GeneralTax;
 use App\Models\Venue;
+use App\Models\Seating\SeatingLayout;
+use App\Models\Seating\SeatingSection;
 use App\Models\MarketplaceTaxTemplate;
 use App\Models\EventGeneratedDocument;
 use App\Models\MarketplaceEvent;
@@ -532,6 +534,27 @@ class EventResource extends Resource
                                             ->url(fn () => VenueResource::getUrl('create'))
                                             ->openUrlInNewTab()
                                     )
+                                    ->nullable(),
+                                Forms\Components\Select::make('seating_layout_id')
+                                    ->label('Seating Layout')
+                                    ->searchable()
+                                    ->preload()
+                                    ->live()
+                                    ->visible(fn (SGet $get) => (bool) $get('venue_id'))
+                                    ->options(function (SGet $get) {
+                                        $venueId = $get('venue_id');
+                                        if (!$venueId) return [];
+
+                                        return SeatingLayout::query()
+                                            ->where('venue_id', $venueId)
+                                            ->where('status', 'published')
+                                            ->orderBy('name')
+                                            ->get()
+                                            ->mapWithKeys(fn ($layout) => [
+                                                $layout->id => $layout->name . ' (' . $layout->sections()->count() . ' sections)'
+                                            ]);
+                                    })
+                                    ->helperText('Select a seating layout for assigned seating. Leave empty for general admission.')
                                     ->nullable(),
                                 Forms\Components\Select::make('marketplace_city_id')
                                     ->label('City')
@@ -1076,6 +1099,40 @@ class EventResource extends Resource
                                                     }
                                                 }),
                                         ])->columnSpan(12),
+
+                                        // Seating Sections selector (visible when event has a seating layout)
+                                        Forms\Components\Select::make('seatingSections')
+                                            ->label('Assigned Seating Sections')
+                                            ->relationship('seatingSections', 'name')
+                                            ->multiple()
+                                            ->preload()
+                                            ->searchable()
+                                            ->visible(fn (SGet $get) => (bool) $get('../../seating_layout_id'))
+                                            ->options(function (SGet $get) {
+                                                $layoutId = $get('../../seating_layout_id');
+                                                if (!$layoutId) return [];
+
+                                                return SeatingSection::query()
+                                                    ->where('layout_id', $layoutId)
+                                                    ->where('section_type', 'standard')
+                                                    ->orderBy('display_order')
+                                                    ->get()
+                                                    ->mapWithKeys(fn ($section) => [
+                                                        $section->id => $section->name . ' (' . $section->total_seats . ' seats)'
+                                                    ]);
+                                            })
+                                            ->live()
+                                            ->afterStateUpdated(function ($state, SSet $set, SGet $get) {
+                                                // Auto-update capacity based on total seats in selected sections
+                                                if (!empty($state)) {
+                                                    $totalSeats = SeatingSection::whereIn('id', $state)
+                                                        ->get()
+                                                        ->sum(fn ($s) => $s->total_seats);
+                                                    $set('capacity', $totalSeats);
+                                                }
+                                            })
+                                            ->helperText('Assign seating sections to this ticket type. Capacity will be auto-calculated from total seats.')
+                                            ->columnSpan(12),
 
                                         // Commission calculation for this ticket
                                         Forms\Components\Placeholder::make('ticket_commission_calc')
