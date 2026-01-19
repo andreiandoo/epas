@@ -395,18 +395,18 @@
                 createTooltip() {
                     this.tooltip = document.createElement('div');
                     this.tooltip.style.cssText = `
-                        position: absolute;
+                        position: fixed;
                         padding: 6px 10px;
                         background: rgba(0,0,0,0.85);
                         color: white;
                         border-radius: 4px;
                         font-size: 12px;
                         pointer-events: none;
-                        z-index: 1000;
+                        z-index: 9999;
                         display: none;
                         white-space: nowrap;
                     `;
-                    document.getElementById('konva-container').appendChild(this.tooltip);
+                    document.body.appendChild(this.tooltip);
                 },
 
                 // Show tooltip for seat
@@ -1123,6 +1123,10 @@
                     });
 
                     this.layer.add(group);
+
+                    // Cache sections with many seats for performance
+                    const seatCount = (section.rows || []).reduce((sum, row) => sum + (row.seats?.length || 0), 0);
+                    if (seatCount > 100) { group.cache(); }
                     this.layer.batchDraw();
                 },
 
@@ -1137,7 +1141,7 @@
                     if (shape === 'circle') {
                         seatShape = new Konva.Circle({
                             x: x,
-                            y: y + 20, // Offset to not overlap with label
+                            y: y,
                             radius: seatSize / 2,
                             fill: seatColor || '#22C55E',
                             stroke: '#1F2937',
@@ -1150,7 +1154,7 @@
                     } else if (shape === 'rect') {
                         seatShape = new Konva.Rect({
                             x: x - seatSize / 2,
-                            y: y + 20 - seatSize / 2,
+                            y: y - seatSize / 2,
                             width: seatSize,
                             height: seatSize,
                             fill: seatColor || '#22C55E',
@@ -1165,7 +1169,7 @@
                     } else { // stadium
                         seatShape = new Konva.Rect({
                             x: x - seatSize / 2,
-                            y: y + 20 - seatSize / 2,
+                            y: y - seatSize / 2,
                             width: seatSize,
                             height: seatSize,
                             fill: seatColor || '#22C55E',
@@ -1182,12 +1186,10 @@
 
                     // Add tooltip events
                     seatShape.on('mouseover', (e) => {
-                        const container = document.getElementById('konva-container');
-                        const containerRect = container.getBoundingClientRect();
                         const mouseEvent = e.evt;
                         this.showSeatTooltip(seatShape, {
-                            x: mouseEvent.clientX - containerRect.left + container.scrollLeft,
-                            y: mouseEvent.clientY - containerRect.top + container.scrollTop
+                            x: mouseEvent.clientX,
+                            y: mouseEvent.clientY
                         });
                         // Highlight on hover
                         seatShape.strokeWidth(2);

@@ -121,9 +121,14 @@ class DesignerSeatingLayout extends Page
                                 ->default(false)
                                 ->helperText('Warning: This will delete all existing sections and their seats'),
 
+                            Forms\Components\Toggle::make('resize_canvas')
+                                ->label('Resize canvas to match import')
+                                ->default(false)
+                                ->helperText('Adjusts canvas size to match the original map dimensions (recommended for better alignment)'),
+
                             Forms\Components\Placeholder::make('current_layout_info')
                                 ->label('Current Layout')
-                                ->content(fn () => "This layout currently has **{$this->seatingLayout->sections()->count()}** sections.")
+                                ->content(fn () => "Current canvas: **{$this->seatingLayout->canvas_width}x{$this->seatingLayout->canvas_height}px** with **{$this->seatingLayout->sections()->count()}** sections.")
                                 ->columnSpanFull(),
                         ]),
                 ])
@@ -132,6 +137,17 @@ class DesignerSeatingLayout extends Page
 
                     try {
                         $imported = $service->parseIabiletHtml($data['html_content']);
+
+                        // Resize canvas if requested and viewBox is available
+                        if (($data['resize_canvas'] ?? false) && $imported->viewBox) {
+                            $newWidth = (int) ceil($imported->viewBox['width']);
+                            $newHeight = (int) ceil($imported->viewBox['height']);
+                            $this->seatingLayout->update([
+                                'canvas_w' => $newWidth,
+                                'canvas_h' => $newHeight,
+                            ]);
+                        }
+
                         $imported->normalizeToCanvas(
                             $this->seatingLayout->canvas_w,
                             $this->seatingLayout->canvas_h
@@ -605,6 +621,75 @@ class DesignerSeatingLayout extends Page
                         ->success()
                         ->title('Row added')
                         ->body("Added row '{$data['new_row_label']}' with {$numSeats} seats")
+                        ->send();
+                }),
+
+            Actions\Action::make('editSection')
+                ->label('Edit Section')
+                ->icon('heroicon-o-pencil-square')
+                ->color('warning')
+                ->modalHeading('Edit Section')
+                ->form([
+                    Forms\Components\Select::make('section_id')
+                        ->label('Section')
+                        ->options(fn () => $this->seatingLayout->sections()
+                            ->orderBy('display_order')
+                            ->pluck('name', 'id'))
+                        ->required()
+                        ->searchable()
+                        ->reactive()
+                        ->afterStateUpdated(function ($state, Forms\Components\Component $component) {
+                            if ($state) {
+                                $section = SeatingSection::find($state);
+                                if ($section) {
+                                    $component->getContainer()->getComponent('name')->state($section->name);
+                                    $component->getContainer()->getComponent('section_code')->state($section->section_code);
+                                }
+                            }
+                        })
+                        ->columnSpanFull(),
+
+                    Forms\Components\TextInput::make('name')
+                        ->label('Section Name')
+                        ->required()
+                        ->maxLength(100)
+                        ->columnSpanFull(),
+
+                    Forms\Components\TextInput::make('section_code')
+                        ->label('Section Code')
+                        ->required()
+                        ->maxLength(20)
+                        ->columnSpanFull(),
+
+                    Forms\Components\ColorPicker::make('color_hex')
+                        ->label('Background Color')
+                        ->columnSpan(1),
+
+                    Forms\Components\ColorPicker::make('seat_color')
+                        ->label('Seat Color')
+                        ->columnSpan(1),
+                ])
+                ->action(function (array $data): void {
+                    $section = SeatingSection::find($data['section_id']);
+                    if (!$section) return;
+
+                    $updates = ['name' => $data['name'], 'section_code' => $data['section_code']];
+                    if (!empty($data['color_hex'])) {
+                        $updates['color_hex'] = $data['color_hex'];
+                    }
+                    if (!empty($data['seat_color'])) {
+                        $updates['seat_color'] = $data['seat_color'];
+                    }
+
+                    $section->update($updates);
+
+                    $this->reloadSections();
+                    $this->dispatch('layout-updated', sections: $this->sections);
+
+                    Notification::make()
+                        ->success()
+                        ->title('Section updated')
+                        ->body("Section '{$data['name']}' has been updated")
                         ->send();
                 }),
 
