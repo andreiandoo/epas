@@ -1203,15 +1203,15 @@
         </div>
 
         {{-- Globe Modal --}}
-        <div x-show="showGlobeModal"
+        <div x-cloak
+             x-show="showGlobeModal"
              x-transition:enter="transition ease-out duration-300"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100"
              x-transition:leave="transition ease-in duration-200"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
-             class="fixed inset-0 globe-modal-overlay"
-             style="display: none;">
+             class="fixed inset-0 globe-modal-overlay">
             <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" @click="showGlobeModal = false"></div>
             <div class="fixed top-4 left-4 right-4 bottom-4 bg-slate-50 rounded-3xl overflow-hidden shadow-2xl" style="z-index: 100000; position: relative;">
                 <div id="globeMap" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; min-height: 400px;"></div>
