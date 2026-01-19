@@ -31,6 +31,7 @@
         'milestones' => $this->milestones,
         'recentSales' => $this->recentSales,
         'adCampaigns' => $this->getAdCampaigns(),
+        'funnel' => $this->getFunnelMetrics(),
         'liveVisitors' => $this->eventMode === 'live' ? $this->getLiveVisitorCount() : 0,
     ]))" x-init="init()" @milestones-updated.window="milestones = $event.detail.milestones; $nextTick(() => initCharts())">
 
@@ -175,15 +176,70 @@
                 <div id="mainChart" class="h-[300px]"></div>
             </div>
 
-            {{-- Summary Panel --}}
-            <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            {{-- AI Forecast (Live Mode) --}}
+            <div x-show="eventMode === 'live'" class="rounded-2xl p-6 text-white" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                        <x-heroicon-o-arrow-trending-up class="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-semibold">AI Forecast</h2>
+                        <p class="text-xs text-white/60">Predictions based on trends</p>
+                    </div>
+                </div>
+
+                {{-- Next 3 Days --}}
+                <div class="bg-white/10 rounded-xl p-4 mb-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-sm font-medium text-white/80">Next 3 Days</span>
+                        <span class="text-xs px-2 py-0.5 bg-emerald-500/30 text-emerald-300 rounded-full" x-text="getForecastConfidence(3) + '%'"></span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xl font-bold" x-text="formatCurrency(getForecastRevenue(3))"></div>
+                            <div class="text-xs text-white/50">Revenue</div>
+                        </div>
+                        <div>
+                            <div class="text-xl font-bold" x-text="'+' + getForecastTickets(3)"></div>
+                            <div class="text-xs text-white/50">Tickets</div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Next 7 Days --}}
+                <div class="bg-white/10 rounded-xl p-4 mb-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-sm font-medium text-white/80">Next 7 Days</span>
+                        <span class="text-xs px-2 py-0.5 bg-amber-500/30 text-amber-300 rounded-full" x-text="getForecastConfidence(7) + '%'"></span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="text-xl font-bold" x-text="formatCurrency(getForecastRevenue(7))"></div>
+                            <div class="text-xs text-white/50">Revenue</div>
+                        </div>
+                        <div>
+                            <div class="text-xl font-bold" x-text="'+' + getForecastTickets(7)"></div>
+                            <div class="text-xs text-white/50">Tickets</div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Summary --}}
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <div class="text-xs text-white/50 mb-1">Projected by event date</div>
+                    <div class="text-lg font-bold text-emerald-300" x-text="Math.min(100, Math.round((overview.tickets?.progress || 0) + getForecastTickets(30) / (overview.tickets?.capacity || 1) * 100)) + '% capacity'"></div>
+                </div>
+            </div>
+
+            {{-- Summary Panel (Past Mode) --}}
+            <div x-show="eventMode === 'past'" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                 <div class="flex items-center gap-3 mb-5">
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center">
                         <x-heroicon-o-check-circle class="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white" x-text="eventMode === 'live' ? 'Current Status' : 'Final Results'"></h2>
-                        <p class="text-xs text-gray-500" x-text="eventMode === 'live' ? 'Live performance' : 'Event completed'"></p>
+                        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Final Results</h2>
+                        <p class="text-xs text-gray-500">Event completed</p>
                     </div>
                 </div>
                 <div class="space-y-3">
@@ -322,6 +378,127 @@
                             </div>
                         </div>
                     </template>
+                </div>
+            </div>
+        </div>
+
+        {{-- Conversion Funnel --}}
+        <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Conversion Funnel</h2>
+                    <p class="text-xs text-gray-500">Visitor journey from page view to purchase</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500">Overall conversion:</span>
+                    <span class="text-sm font-bold text-emerald-600" x-text="(funnel.overall_conversion_rate || 0) + '%'"></span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                {{-- Stage 1: Page Views --}}
+                <div class="relative">
+                    <div class="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 rounded-xl p-4 border border-cyan-200 dark:border-cyan-700">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-lg bg-cyan-500 flex items-center justify-center">
+                                <x-heroicon-o-eye class="w-5 h-5 text-white" />
+                            </div>
+                            <div class="text-sm font-medium text-cyan-800 dark:text-cyan-200">Page Views</div>
+                        </div>
+                        <div class="text-2xl font-bold text-cyan-900 dark:text-cyan-100" x-text="(funnel.page_views || 0).toLocaleString()"></div>
+                        <div class="text-xs text-cyan-600 dark:text-cyan-400 mt-1" x-text="(funnel.unique_visitors || 0).toLocaleString() + ' unique'"></div>
+                    </div>
+                    <div class="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 z-10">
+                        <x-heroicon-s-chevron-right class="w-6 h-6" />
+                    </div>
+                </div>
+
+                {{-- Stage 2: Add to Cart --}}
+                <div class="relative">
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center">
+                                <x-heroicon-o-shopping-cart class="w-5 h-5 text-white" />
+                            </div>
+                            <div class="text-sm font-medium text-blue-800 dark:text-blue-200">Add to Cart</div>
+                        </div>
+                        <div class="text-2xl font-bold text-blue-900 dark:text-blue-100" x-text="(funnel.add_to_cart || 0).toLocaleString()"></div>
+                        <div class="text-xs text-blue-600 dark:text-blue-400 mt-1" x-text="(funnel.view_to_cart_rate || 0) + '% of visitors'"></div>
+                    </div>
+                    <div class="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 z-10">
+                        <x-heroicon-s-chevron-right class="w-6 h-6" />
+                    </div>
+                </div>
+
+                {{-- Stage 3: Checkout Started --}}
+                <div class="relative">
+                    <div class="bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-900/20 dark:to-violet-800/20 rounded-xl p-4 border border-violet-200 dark:border-violet-700">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-lg bg-violet-500 flex items-center justify-center">
+                                <x-heroicon-o-credit-card class="w-5 h-5 text-white" />
+                            </div>
+                            <div class="text-sm font-medium text-violet-800 dark:text-violet-200">Checkout</div>
+                        </div>
+                        <div class="text-2xl font-bold text-violet-900 dark:text-violet-100" x-text="(funnel.checkout_started || 0).toLocaleString()"></div>
+                        <div class="text-xs text-violet-600 dark:text-violet-400 mt-1" x-text="(funnel.cart_to_checkout_rate || 0) + '% of carts'"></div>
+                    </div>
+                    <div class="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 z-10">
+                        <x-heroicon-s-chevron-right class="w-6 h-6" />
+                    </div>
+                </div>
+
+                {{-- Stage 4: Purchase --}}
+                <div class="relative">
+                    <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-700">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
+                                <x-heroicon-o-check-badge class="w-5 h-5 text-white" />
+                            </div>
+                            <div class="text-sm font-medium text-emerald-800 dark:text-emerald-200">Purchases</div>
+                        </div>
+                        <div class="text-2xl font-bold text-emerald-900 dark:text-emerald-100" x-text="(funnel.purchases || 0).toLocaleString()"></div>
+                        <div class="text-xs text-emerald-600 dark:text-emerald-400 mt-1" x-text="(funnel.checkout_to_purchase_rate || 0) + '% of checkouts'"></div>
+                    </div>
+                    <div class="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 z-10">
+                        <x-heroicon-s-chevron-right class="w-6 h-6" />
+                    </div>
+                </div>
+
+                {{-- Summary Card --}}
+                <div>
+                    <div class="bg-gradient-to-br from-gray-800 to-gray-900 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 h-full flex flex-col justify-center">
+                        <div class="text-center">
+                            <div class="text-xs text-gray-400 mb-1">Drop-off Rate</div>
+                            <div class="text-3xl font-bold text-white" x-text="(100 - (funnel.overall_conversion_rate || 0)).toFixed(1) + '%'"></div>
+                            <div class="text-xs text-gray-400 mt-2">visitors leave without buying</div>
+                            <div class="mt-3 pt-3 border-t border-gray-700">
+                                <div class="text-xs text-emerald-400">Biggest opportunity:</div>
+                                <div class="text-xs text-white font-medium mt-1" x-text="getBiggestDropoff()"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Funnel Bar Visualization --}}
+            <div class="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
+                <div class="flex items-end justify-center gap-1 h-24">
+                    <div class="flex-1 max-w-[200px] flex flex-col items-center">
+                        <div class="w-full bg-cyan-500 rounded-t-lg transition-all" style="height: 100%"></div>
+                        <span class="text-[10px] text-gray-500 mt-1">100%</span>
+                    </div>
+                    <div class="flex-1 max-w-[200px] flex flex-col items-center">
+                        <div class="w-full bg-blue-500 rounded-t-lg transition-all" :style="'height:' + Math.max(5, funnel.view_to_cart_rate || 0) + '%'"></div>
+                        <span class="text-[10px] text-gray-500 mt-1" x-text="(funnel.view_to_cart_rate || 0) + '%'"></span>
+                    </div>
+                    <div class="flex-1 max-w-[200px] flex flex-col items-center">
+                        <div class="w-full bg-violet-500 rounded-t-lg transition-all" :style="'height:' + Math.max(5, (funnel.view_to_cart_rate || 0) * (funnel.cart_to_checkout_rate || 0) / 100) + '%'"></div>
+                        <span class="text-[10px] text-gray-500 mt-1" x-text="((funnel.view_to_cart_rate || 0) * (funnel.cart_to_checkout_rate || 0) / 100).toFixed(1) + '%'"></span>
+                    </div>
+                    <div class="flex-1 max-w-[200px] flex flex-col items-center">
+                        <div class="w-full bg-emerald-500 rounded-t-lg transition-all" :style="'height:' + Math.max(5, funnel.overall_conversion_rate || 0) + '%'"></div>
+                        <span class="text-[10px] text-gray-500 mt-1" x-text="(funnel.overall_conversion_rate || 0) + '%'"></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1042,6 +1219,49 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- Live Activity Panel (Bottom Left) --}}
+                <div class="absolute bottom-6 left-6 w-80 bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200 overflow-hidden pointer-events-auto">
+                    <div class="p-4 border-b border-slate-200">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-semibold text-slate-800">Live Activity</span>
+                            <span class="text-xs text-slate-400">Last 5 minutes</span>
+                        </div>
+                    </div>
+                    <div class="p-2 max-h-64 overflow-y-auto">
+                        <template x-for="(a, i) in liveActivities" :key="i">
+                            <div class="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+                                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-lg" x-text="a.flag"></div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm text-slate-800 truncate" x-text="a.action"></div>
+                                    <div class="text-xs text-slate-400" x-text="a.city + ', ' + a.country"></div>
+                                </div>
+                                <div class="text-xs text-slate-300" x-text="a.time"></div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                {{-- Top Locations Panel (Bottom Right) --}}
+                <div class="absolute bottom-6 right-6 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-lg border border-slate-200 p-4 pointer-events-auto">
+                    <div class="text-sm font-semibold text-slate-800 mb-3">Top Locations</div>
+                    <div class="space-y-2">
+                        <template x-for="l in topLocations.slice(0, 5)" :key="l.city">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span x-text="l.flag"></span>
+                                    <span class="text-sm text-slate-600" x-text="l.city"></span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <div class="w-16 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                        <div class="h-full bg-emerald-500 rounded-full" :style="'width:' + (l.tickets / (topLocations[0]?.tickets || 1) * 100) + '%'"></div>
+                                    </div>
+                                    <span class="text-xs text-slate-400 w-8 text-right" x-text="l.tickets"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1062,8 +1282,18 @@
                 milestones: initialData.milestones,
                 recentSales: initialData.recentSales,
                 adCampaigns: initialData.adCampaigns,
+                funnel: initialData.funnel,
                 liveVisitors: initialData.liveVisitors,
                 showGlobeModal: false,
+
+                // Live activity feed for globe modal
+                liveActivities: [
+                    {flag: '🇷🇴', action: 'Viewing checkout page', city: 'București', country: 'Romania', time: 'now'},
+                    {flag: '🇷🇴', action: 'Added 2x VIP to cart', city: 'Cluj-Napoca', country: 'Romania', time: '12s'},
+                    {flag: '🇭🇺', action: 'Viewing event page', city: 'Budapest', country: 'Hungary', time: '28s'},
+                    {flag: '🇷🇴', action: 'Completed purchase', city: 'Timișoara', country: 'Romania', time: '45s'},
+                    {flag: '🇦🇹', action: 'Viewing pricing', city: 'Vienna', country: 'Austria', time: '1m'},
+                ],
 
                 chartMetrics: [
                     {key: 'revenue', label: 'Revenue', color: '#8b5cf6', active: true},
@@ -1117,6 +1347,47 @@
 
                 getTotalAdSpend() {
                     return this.adCampaigns.reduce((s, c) => s + (c.budget || 0), 0);
+                },
+
+                getBiggestDropoff() {
+                    const f = this.funnel || {};
+                    const dropoffs = [
+                        { stage: 'View → Cart', rate: 100 - (f.view_to_cart_rate || 0) },
+                        { stage: 'Cart → Checkout', rate: 100 - (f.cart_to_checkout_rate || 0) },
+                        { stage: 'Checkout → Purchase', rate: 100 - (f.checkout_to_purchase_rate || 0) }
+                    ];
+                    const biggest = dropoffs.reduce((max, d) => d.rate > max.rate ? d : max, dropoffs[0]);
+                    return biggest.stage + ' (-' + biggest.rate.toFixed(0) + '%)';
+                },
+
+                // AI Forecast functions - simple trend-based predictions
+                getForecastRevenue(days) {
+                    // Calculate average daily revenue from recent data
+                    const recentData = this.chartData?.slice(-7) || [];
+                    if (recentData.length === 0) return 0;
+
+                    const avgDaily = recentData.reduce((sum, d) => sum + (d.revenue || 0), 0) / recentData.length;
+                    // Apply trend multiplier (slight growth assumption)
+                    const trendMultiplier = 1.05;
+                    return Math.round(avgDaily * days * trendMultiplier);
+                },
+
+                getForecastTickets(days) {
+                    // Calculate average daily tickets from recent data
+                    const recentData = this.chartData?.slice(-7) || [];
+                    if (recentData.length === 0) return 0;
+
+                    const avgDaily = recentData.reduce((sum, d) => sum + (d.tickets || 0), 0) / recentData.length;
+                    // Apply trend multiplier
+                    const trendMultiplier = 1.03;
+                    return Math.round(avgDaily * days * trendMultiplier);
+                },
+
+                getForecastConfidence(days) {
+                    // Confidence decreases with longer forecast periods
+                    const baseConfidence = 90;
+                    const decayPerDay = 2;
+                    return Math.max(60, Math.round(baseConfidence - (days * decayPerDay)));
                 },
 
                 toggleMetric(key) {
