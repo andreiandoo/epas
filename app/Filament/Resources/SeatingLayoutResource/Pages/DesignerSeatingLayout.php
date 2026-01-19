@@ -12,6 +12,7 @@ use Filament\Actions;
 use Filament\Forms;
 use Filament\Resources\Pages\Page;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Wizard\Step;
 
 class DesignerSeatingLayout extends Page
 {
@@ -43,7 +44,7 @@ class DesignerSeatingLayout extends Page
                 ->modalWidth('5xl')
                 ->modalHeading('Import Seating Map')
                 ->steps([
-                    Forms\Components\Wizard\Step::make('Upload')
+                    Step::make('Upload')
                         ->description('Paste HTML/SVG content')
                         ->icon('heroicon-o-document-text')
                         ->schema([
@@ -54,7 +55,7 @@ class DesignerSeatingLayout extends Page
                                 ->required()
                                 ->columnSpanFull(),
                         ]),
-                    Forms\Components\Wizard\Step::make('Preview')
+                    Step::make('Preview')
                         ->description('Review detected elements')
                         ->icon('heroicon-o-eye')
                         ->schema([
@@ -106,7 +107,7 @@ class DesignerSeatingLayout extends Page
                                 })
                                 ->columnSpanFull(),
                         ]),
-                    Forms\Components\Wizard\Step::make('Options')
+                    Step::make('Options')
                         ->description('Configure import settings')
                         ->icon('heroicon-o-cog-6-tooth')
                         ->schema([
