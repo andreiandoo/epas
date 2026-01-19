@@ -1202,19 +1202,12 @@
             </div>
         </div>
 
-        {{-- Globe Modal --}}
-        <div x-cloak
-             x-show="showGlobeModal"
-             x-transition:enter="transition ease-out duration-300"
-             x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100"
-             x-transition:leave="transition ease-in duration-200"
-             x-transition:leave-start="opacity-100"
-             x-transition:leave-end="opacity-0"
-             class="fixed inset-0 globe-modal-overlay">
-            <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" @click="showGlobeModal = false"></div>
-            <div class="fixed top-4 left-4 right-4 bottom-4 bg-slate-50 rounded-3xl overflow-hidden shadow-2xl" style="z-index: 100000; position: relative;">
-                <div id="globeMap" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; min-height: 400px;"></div>
+        {{-- Globe Modal - Using template x-if for proper DOM insertion --}}
+        <template x-if="showGlobeModal">
+            <div class="fixed inset-0" style="z-index: 99999;">
+                <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" @click="showGlobeModal = false"></div>
+                <div class="fixed top-4 left-4 right-4 bottom-4 bg-slate-50 rounded-3xl overflow-hidden shadow-2xl" style="z-index: 100000;">
+                    <div id="globeMapContainer" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; min-height: 400px; background: #f8fafc;"></div>
 
                 {{-- Header Overlay --}}
                 <div class="absolute top-0 left-0 right-0 p-6 bg-gradient-to-b from-slate-50 via-slate-50/80 to-transparent pointer-events-none">
@@ -1287,7 +1280,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </template>
 
     </div>
 
@@ -1328,10 +1321,15 @@
                 init() {
                     this.$nextTick(() => this.initCharts());
 
-                    // Watch for globe modal
+                    // Watch for globe modal - use $nextTick to ensure x-if template is rendered
                     this.$watch('showGlobeModal', (value) => {
+                        console.log('showGlobeModal changed to:', value);
                         if (value) {
-                            setTimeout(() => this.initGlobe(), 500);
+                            // Use $nextTick to ensure template x-if has rendered the DOM
+                            this.$nextTick(() => {
+                                console.log('Calling initGlobe after $nextTick');
+                                this.initGlobe();
+                            });
                         }
                     });
                 },
@@ -1656,7 +1654,8 @@
                 },
 
                 initGlobe(retryCount = 0) {
-                    const container = document.getElementById('globeMap');
+                    const container = document.getElementById('globeMapContainer');
+                    console.log('initGlobe called, retryCount:', retryCount, 'container:', container);
 
                     // Check if Leaflet is loaded
                     if (typeof L === 'undefined') {
@@ -1667,11 +1666,11 @@
                         return;
                     }
 
-                    // Check if container exists
+                    // Check if container exists (with x-if, it may take a moment to appear in DOM)
                     if (!container) {
                         console.warn('Globe container not found, retrying...', retryCount);
-                        if (retryCount < 10) {
-                            setTimeout(() => this.initGlobe(retryCount + 1), 200);
+                        if (retryCount < 15) {
+                            setTimeout(() => this.initGlobe(retryCount + 1), 100);
                         }
                         return;
                     }
