@@ -629,6 +629,22 @@ class DesignerSeatingLayout extends Page
                 ->icon('heroicon-o-pencil-square')
                 ->color('warning')
                 ->modalHeading('Edit Section')
+                ->fillForm(function () {
+                    // Pre-select the selected section from canvas if available
+                    if ($this->selectedSection) {
+                        $section = SeatingSection::find($this->selectedSection);
+                        if ($section && $section->layout_id === $this->seatingLayout->id) {
+                            return [
+                                'section_id' => $section->id,
+                                'name' => $section->name,
+                                'section_code' => $section->section_code,
+                                'color_hex' => $section->color_hex,
+                                'seat_color' => $section->seat_color,
+                            ];
+                        }
+                    }
+                    return [];
+                })
                 ->form([
                     Forms\Components\Select::make('section_id')
                         ->label('Section')
@@ -638,12 +654,14 @@ class DesignerSeatingLayout extends Page
                         ->required()
                         ->searchable()
                         ->reactive()
-                        ->afterStateUpdated(function ($state, Forms\Components\Component $component) {
+                        ->afterStateUpdated(function ($state, \Filament\Schemas\Components\Utilities\Set $set) {
                             if ($state) {
                                 $section = SeatingSection::find($state);
                                 if ($section) {
-                                    $component->getContainer()->getComponent('name')->state($section->name);
-                                    $component->getContainer()->getComponent('section_code')->state($section->section_code);
+                                    $set('name', $section->name);
+                                    $set('section_code', $section->section_code);
+                                    $set('color_hex', $section->color_hex);
+                                    $set('seat_color', $section->seat_color);
                                 }
                             }
                         })
@@ -1142,14 +1160,20 @@ class DesignerSeatingLayout extends Page
      */
     protected function getViewData(): array
     {
+        // Check for background image: use uploaded file first, then external URL
+        $backgroundUrl = null;
+        if ($this->seatingLayout->background_image_path) {
+            $backgroundUrl = \Storage::disk('public')->url($this->seatingLayout->background_image_path);
+        } elseif ($this->seatingLayout->background_image_url) {
+            $backgroundUrl = $this->seatingLayout->background_image_url;
+        }
+
         return [
             'layout'       => $this->seatingLayout,
             'sections'     => $this->sections,
             'canvasWidth'  => $this->seatingLayout->canvas_width,
             'canvasHeight' => $this->seatingLayout->canvas_height,
-            'backgroundUrl' => $this->seatingLayout->background_image_path
-                ? \Storage::disk('public')->url($this->seatingLayout->background_image_path)
-                : null,
+            'backgroundUrl' => $backgroundUrl,
         ];
     }
 }

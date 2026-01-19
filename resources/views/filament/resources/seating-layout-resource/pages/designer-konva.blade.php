@@ -100,8 +100,8 @@
                 <div class="flex items-center gap-2">
                     <span class="text-sm font-medium text-orange-800" x-text="`${selectedSeats.length} seats selected`"></span>
                 </div>
-                <div class="flex items-center gap-2">
-                    <select x-model="assignToSectionId" class="text-sm border-gray-300 rounded-md">
+                <div class="flex flex-wrap items-center gap-2">
+                    <select x-model="assignToSectionId" class="text-sm text-gray-900 bg-white border-gray-300 rounded-md">
                         <option value="">Select Section...</option>
                         @foreach($sections as $section)
                             @if($section['section_type'] === 'standard')
@@ -109,16 +109,34 @@
                             @endif
                         @endforeach
                     </select>
-                    <input type="text" x-model="assignToRowLabel" placeholder="Row label (e.g., A, 1)" class="w-32 text-sm border-gray-300 rounded-md">
+                    <input type="text" x-model="assignToRowLabel" placeholder="Row label (e.g., A, 1)" class="w-32 text-sm text-gray-900 bg-white border-gray-300 rounded-md placeholder-gray-400">
                     <button @click="assignSelectedSeats" type="button" class="px-3 py-1 text-sm text-white bg-orange-600 rounded-md hover:bg-orange-700" :disabled="!assignToSectionId || !assignToRowLabel">
                         Assign to Row
                     </button>
                     <button @click="deleteSelectedSeats" type="button" class="px-3 py-1 text-sm text-white bg-red-600 rounded-md hover:bg-red-700">
                         Delete Selected
                     </button>
-                    <button @click="clearSelection" type="button" class="px-3 py-1 text-sm bg-gray-200 rounded-md hover:bg-gray-300">
+                    <button @click="clearSelection" type="button" class="px-3 py-1 text-sm text-gray-800 bg-gray-200 rounded-md hover:bg-gray-300">
                         Clear Selection
                     </button>
+                </div>
+            </div>
+
+            {{-- Background image controls --}}
+            <div x-show="backgroundUrl" x-transition class="flex items-center gap-4 p-3 mb-4 border rounded-lg bg-indigo-50 border-indigo-200">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-indigo-800">Background Image:</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="text-sm text-indigo-700">Scale:</label>
+                    <input type="range" x-model="backgroundScale" min="0.1" max="3" step="0.1" @input="updateBackgroundScale()" class="w-32">
+                    <span class="text-sm font-medium text-indigo-900" x-text="`${Math.round(backgroundScale * 100)}%`"></span>
+                    <button @click="resetBackgroundScale" type="button" class="px-2 py-1 text-xs text-indigo-700 bg-indigo-100 rounded hover:bg-indigo-200">Reset</button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="text-sm text-indigo-700">Opacity:</label>
+                    <input type="range" x-model="backgroundOpacity" min="0.1" max="1" step="0.1" @input="updateBackgroundOpacity()" class="w-24">
+                    <span class="text-sm font-medium text-indigo-900" x-text="`${Math.round(backgroundOpacity * 100)}%`"></span>
                 </div>
             </div>
 
@@ -130,19 +148,19 @@
             <div class="grid grid-cols-4 gap-4 mt-4 text-sm">
                 <div class="p-3 text-center rounded-lg bg-gray-50">
                     <div class="text-gray-600">Sections</div>
-                    <div class="text-2xl font-bold" x-text="sections.length"></div>
+                    <div class="text-2xl font-bold text-gray-900" x-text="sections.length"></div>
                 </div>
                 <div class="p-3 text-center rounded-lg bg-blue-50">
                     <div class="text-blue-600">Rows</div>
-                    <div class="text-2xl font-bold" x-text="getTotalRows()"></div>
+                    <div class="text-2xl font-bold text-blue-900" x-text="getTotalRows()"></div>
                 </div>
                 <div class="p-3 text-center rounded-lg bg-green-50">
                     <div class="text-green-600">Seats</div>
-                    <div class="text-2xl font-bold" x-text="getTotalSeats()"></div>
+                    <div class="text-2xl font-bold text-green-900" x-text="getTotalSeats()"></div>
                 </div>
                 <div class="p-3 text-center rounded-lg bg-purple-50">
                     <div class="text-purple-600">Canvas</div>
-                    <div class="text-sm font-bold" x-text="`${canvasWidth}x${canvasHeight}`"></div>
+                    <div class="text-sm font-bold text-purple-900" x-text="`${canvasWidth}x${canvasHeight}`"></div>
                 </div>
             </div>
 
@@ -261,6 +279,11 @@
 
                 // Tooltip
                 tooltip: null,
+
+                // Background image controls
+                backgroundScale: 1,
+                backgroundOpacity: 0.3,
+                backgroundImage: null,
 
                 init() {
                     this.createStage();
@@ -944,15 +967,24 @@
                                 width = this.canvasHeight * imgAspect;
                             }
 
-                            const konvaImage = new Konva.Image({
-                                x: (this.canvasWidth - width) / 2,
-                                y: (this.canvasHeight - height) / 2,
+                            // Apply current scale
+                            const scale = parseFloat(this.backgroundScale);
+                            const scaledWidth = width * scale;
+                            const scaledHeight = height * scale;
+
+                            this.backgroundImage = new Konva.Image({
+                                x: (this.canvasWidth - scaledWidth) / 2,
+                                y: (this.canvasHeight - scaledHeight) / 2,
                                 image: imageObj,
                                 width: width,
                                 height: height,
-                                opacity: 0.3,
+                                opacity: parseFloat(this.backgroundOpacity),
+                                scaleX: scale,
+                                scaleY: scale,
+                                originalWidth: width,
+                                originalHeight: height,
                             });
-                            this.backgroundLayer.add(konvaImage);
+                            this.backgroundLayer.add(this.backgroundImage);
                             this.backgroundLayer.batchDraw();
                         };
                         imageObj.src = this.backgroundUrl;
@@ -1289,6 +1321,33 @@
                     this.backgroundLayer.destroyChildren();
                     this.drawBackground();
                     this.backgroundLayer.batchDraw();
+                },
+
+                updateBackgroundScale() {
+                    if (this.backgroundImage) {
+                        const scale = parseFloat(this.backgroundScale);
+                        this.backgroundImage.scale({ x: scale, y: scale });
+
+                        // Re-center the image
+                        const width = this.backgroundImage.getAttr('originalWidth') * scale;
+                        const height = this.backgroundImage.getAttr('originalHeight') * scale;
+                        this.backgroundImage.x((this.canvasWidth - width) / 2);
+                        this.backgroundImage.y((this.canvasHeight - height) / 2);
+
+                        this.backgroundLayer.batchDraw();
+                    }
+                },
+
+                updateBackgroundOpacity() {
+                    if (this.backgroundImage) {
+                        this.backgroundImage.opacity(parseFloat(this.backgroundOpacity));
+                        this.backgroundLayer.batchDraw();
+                    }
+                },
+
+                resetBackgroundScale() {
+                    this.backgroundScale = 1;
+                    this.updateBackgroundScale();
                 },
 
                 setDrawMode(mode) {
