@@ -1771,6 +1771,34 @@ nav.fi-topbar .fi-topbar-end {
 	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 
+.from-cyan-50 {
+	--tw-gradient-from: #ecfeff var(--tw-gradient-from-position);
+	--tw-gradient-to: rgb(236 254 255 / 0) var(--tw-gradient-to-position);
+	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.to-cyan-100 {
+	--tw-gradient-to: #cffafe var(--tw-gradient-to-position);
+}
+
+.dark\:from-cyan-900\/20 {
+	--tw-gradient-from: rgb(8 145 178 / 0.2) var(--tw-gradient-from-position);
+	--tw-gradient-to: rgb(8 145 178 / 0) var(--tw-gradient-to-position);
+	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.border-cyan-200 {
+	--tw-border-opacity: 1;
+	border-color: rgb(186 230 253 / var(--tw-border-opacity));
+}
+.dark\:border-cyan-700 {
+	--tw-border-opacity: 1;
+	border-color: rgb(14 116 144 / var(--tw-border-opacity));
+}
+
+.dark\:to-cyan-800\/20 {
+	--tw-gradient-to: rgb(14 116 144 / 0.2) var(--tw-gradient-to-position);
+}
+
 .via-black\/20 {
 	--tw-gradient-to: rgb(0 0 0 / 0) var(--tw-gradient-to-position);
 	--tw-gradient-stops: var(--tw-gradient-from), rgb(0 0 0 / 0.2) var(--tw-gradient-via-position), var(--tw-gradient-to);
@@ -3148,6 +3176,9 @@ nav.fi-topbar .fi-topbar-end {
 
 .-right-2 {
 	right: -0.5rem;
+}
+.-right-3 {
+	right: -0.75rem;
 }
 
 .-top-0 {
@@ -5145,6 +5176,49 @@ html.dark {
 	background-clip: text;
 }
 
+.dark\:from-blue-900\/20 {
+	--tw-gradient-from: rgb(30 58 138 / 0.2) var(--tw-gradient-from-position);
+	--tw-gradient-to: rgb(30 58 138 / 0) var(--tw-gradient-to-position);
+	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.dark\:to-blue-800\/20 {
+	--tw-gradient-to: rgb(30 66 159 / 0.2) var(--tw-gradient-to-position);
+}
+.dark\:border-blue-700 {
+	border-color: #1e40af;
+}
+.dark\:text-blue-100 {
+	color: #dbeafe;
+}
+.dark\:text-blue-400 {
+	color: #60a5fa;
+}
+.dark\:from-violet-900\/20 {
+	--tw-gradient-from: rgb(76 29 149 / 0.2) var(--tw-gradient-from-position);
+	--tw-gradient-to: rgb(76 29 149 / 0) var(--tw-gradient-to-position);
+	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.dark\:to-violet-800\/20 {
+	--tw-gradient-to: rgb(91 33 182 / 0.2) var(--tw-gradient-to-position);
+}
+.dark\:border-violet-700 {
+	border-color: #7e22ce;
+}
+.dark\:text-violet-100 {
+	color: #ede9fe;
+}
+.dark\:text-violet-400 {
+	color: #c4b5fd;
+}
+.dark\:from-emerald-900\/20 {
+	--tw-gradient-from: rgb(6 78 59 / 0.2) var(--tw-gradient-from-position);
+	--tw-gradient-to: rgb(6 78 59 / 0) var(--tw-gradient-to-position);
+	--tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+.dark\:to-emerald-800\/20 {
+	--tw-gradient-to: rgb(16 185 129 / 0.2) var(--tw-gradient-to-position);
+}
+
 .from-white {
 	--tw-gradient-from: #fff var(--tw-gradient-from-position);
 	--tw-gradient-to: rgb(255 255 255 / 0) var(--tw-gradient-to-position);
@@ -5537,6 +5611,10 @@ h1.invoice-company-name,
 
 	.md\:grid-cols-4 {
 		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+
+	.md\:grid-cols-5 {
+		grid-template-columns: repeat(5, minmax(0, 1fr));
 	}
 
 	.md\:hidden {

@@ -3,6 +3,7 @@
     @push('styles')
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
+        [x-cloak] { display: none !important; }
         .stat-card { background: rgb(19 17 28); backdrop-filter: blur(10px); }
         .forecast-card { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); }
         .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite; }
@@ -11,6 +12,7 @@
         .milestone-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
         #globeMap { background: #f8fafc !important; z-index: 1; }
         .leaflet-container { background: #f8fafc !important; }
+        .globe-modal-overlay { z-index: 9999 !important; }
     </style>
     @endpush
 
@@ -397,8 +399,8 @@
 
             <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
                 {{-- Stage 1: Page Views --}}
-                <div class="relative">
-                    <div class="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 rounded-xl p-4 border border-cyan-200 dark:border-cyan-700">
+                <div class="relative flex flex-col">
+                    <div class="bg-gradient-to-br from-cyan-50 to-cyan-100 dark:from-cyan-900/20 dark:to-cyan-800/20 rounded-xl p-4 border border-cyan-200 dark:border-cyan-700 flex-1">
                         <div class="flex items-center gap-3 mb-3">
                             <div class="w-10 h-10 rounded-lg bg-cyan-500 flex items-center justify-center">
                                 <x-heroicon-o-eye class="w-5 h-5 text-white" />
@@ -408,14 +410,21 @@
                         <div class="text-2xl font-bold text-cyan-900 dark:text-cyan-100" x-text="(funnel.page_views || 0).toLocaleString()"></div>
                         <div class="text-xs text-cyan-600 dark:text-cyan-400 mt-1" x-text="(funnel.unique_visitors || 0).toLocaleString() + ' unique'"></div>
                     </div>
-                    <div class="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 z-10">
+                    {{-- Bar under card --}}
+                    <div class="mt-2 flex flex-col items-center">
+                        <div class="w-full h-16 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex items-end">
+                            <div class="w-full bg-cyan-500 rounded-t-lg transition-all" style="height: 100%"></div>
+                        </div>
+                        <span class="text-[10px] text-gray-500 mt-1">100%</span>
+                    </div>
+                    <div class="hidden md:block absolute -right-3 top-1/3 -translate-y-1/2 text-gray-300 dark:text-gray-600 z-10">
                         <x-heroicon-s-chevron-right class="w-6 h-6" />
                     </div>
                 </div>
 
                 {{-- Stage 2: Add to Cart --}}
-                <div class="relative">
-                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700">
+                <div class="relative flex flex-col">
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-xl p-4 border border-blue-200 dark:border-blue-700 flex-1">
                         <div class="flex items-center gap-3 mb-3">
                             <div class="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center">
                                 <x-heroicon-o-shopping-cart class="w-5 h-5 text-white" />
@@ -425,14 +434,21 @@
                         <div class="text-2xl font-bold text-blue-900 dark:text-blue-100" x-text="(funnel.add_to_cart || 0).toLocaleString()"></div>
                         <div class="text-xs text-blue-600 dark:text-blue-400 mt-1" x-text="(funnel.view_to_cart_rate || 0) + '% of visitors'"></div>
                     </div>
-                    <div class="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 z-10">
+                    {{-- Bar under card --}}
+                    <div class="mt-2 flex flex-col items-center">
+                        <div class="w-full h-16 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex items-end">
+                            <div class="w-full bg-blue-500 rounded-t-lg transition-all" :style="'height:' + Math.max(5, funnel.view_to_cart_rate || 0) + '%'"></div>
+                        </div>
+                        <span class="text-[10px] text-gray-500 mt-1" x-text="(funnel.view_to_cart_rate || 0) + '%'"></span>
+                    </div>
+                    <div class="hidden md:block absolute -right-3 top-1/3 -translate-y-1/2 text-gray-300 dark:text-gray-600 z-10">
                         <x-heroicon-s-chevron-right class="w-6 h-6" />
                     </div>
                 </div>
 
                 {{-- Stage 3: Checkout Started --}}
-                <div class="relative">
-                    <div class="bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-900/20 dark:to-violet-800/20 rounded-xl p-4 border border-violet-200 dark:border-violet-700">
+                <div class="relative flex flex-col">
+                    <div class="bg-gradient-to-br from-violet-50 to-violet-100 dark:from-violet-900/20 dark:to-violet-800/20 rounded-xl p-4 border border-violet-200 dark:border-violet-700 flex-1">
                         <div class="flex items-center gap-3 mb-3">
                             <div class="w-10 h-10 rounded-lg bg-violet-500 flex items-center justify-center">
                                 <x-heroicon-o-credit-card class="w-5 h-5 text-white" />
@@ -442,14 +458,21 @@
                         <div class="text-2xl font-bold text-violet-900 dark:text-violet-100" x-text="(funnel.checkout_started || 0).toLocaleString()"></div>
                         <div class="text-xs text-violet-600 dark:text-violet-400 mt-1" x-text="(funnel.cart_to_checkout_rate || 0) + '% of carts'"></div>
                     </div>
-                    <div class="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 z-10">
+                    {{-- Bar under card --}}
+                    <div class="mt-2 flex flex-col items-center">
+                        <div class="w-full h-16 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex items-end">
+                            <div class="w-full bg-violet-500 rounded-t-lg transition-all" :style="'height:' + Math.max(5, (funnel.view_to_cart_rate || 0) * (funnel.cart_to_checkout_rate || 0) / 100) + '%'"></div>
+                        </div>
+                        <span class="text-[10px] text-gray-500 mt-1" x-text="((funnel.view_to_cart_rate || 0) * (funnel.cart_to_checkout_rate || 0) / 100).toFixed(1) + '%'"></span>
+                    </div>
+                    <div class="hidden md:block absolute -right-3 top-1/3 -translate-y-1/2 text-gray-300 dark:text-gray-600 z-10">
                         <x-heroicon-s-chevron-right class="w-6 h-6" />
                     </div>
                 </div>
 
                 {{-- Stage 4: Purchase --}}
-                <div class="relative">
-                    <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-700">
+                <div class="relative flex flex-col">
+                    <div class="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-700 flex-1">
                         <div class="flex items-center gap-3 mb-3">
                             <div class="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center">
                                 <x-heroicon-o-check-badge class="w-5 h-5 text-white" />
@@ -459,14 +482,21 @@
                         <div class="text-2xl font-bold text-emerald-900 dark:text-emerald-100" x-text="(funnel.purchases || 0).toLocaleString()"></div>
                         <div class="text-xs text-emerald-600 dark:text-emerald-400 mt-1" x-text="(funnel.checkout_to_purchase_rate || 0) + '% of checkouts'"></div>
                     </div>
-                    <div class="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 z-10">
+                    {{-- Bar under card --}}
+                    <div class="mt-2 flex flex-col items-center">
+                        <div class="w-full h-16 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden flex items-end">
+                            <div class="w-full bg-emerald-500 rounded-t-lg transition-all" :style="'height:' + Math.max(5, funnel.overall_conversion_rate || 0) + '%'"></div>
+                        </div>
+                        <span class="text-[10px] text-gray-500 mt-1" x-text="(funnel.overall_conversion_rate || 0) + '%'"></span>
+                    </div>
+                    <div class="hidden md:block absolute -right-3 top-1/3 -translate-y-1/2 text-gray-300 dark:text-gray-600 z-10">
                         <x-heroicon-s-chevron-right class="w-6 h-6" />
                     </div>
                 </div>
 
                 {{-- Summary Card --}}
-                <div>
-                    <div class="bg-gradient-to-br from-gray-800 to-gray-900 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 h-full flex flex-col justify-center">
+                <div class="flex flex-col">
+                    <div class="bg-gradient-to-br from-gray-800 to-gray-900 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 flex-1 flex flex-col justify-center">
                         <div class="text-center">
                             <div class="text-xs text-gray-400 mb-1">Drop-off Rate</div>
                             <div class="text-3xl font-bold text-white" x-text="(100 - (funnel.overall_conversion_rate || 0)).toFixed(1) + '%'"></div>
@@ -477,28 +507,9 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            {{-- Funnel Bar Visualization --}}
-            <div class="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700">
-                <div class="flex items-end justify-center gap-1 h-24">
-                    <div class="flex-1 max-w-[200px] flex flex-col items-center">
-                        <div class="w-full bg-cyan-500 rounded-t-lg transition-all" style="height: 100%"></div>
-                        <span class="text-[10px] text-gray-500 mt-1">100%</span>
-                    </div>
-                    <div class="flex-1 max-w-[200px] flex flex-col items-center">
-                        <div class="w-full bg-blue-500 rounded-t-lg transition-all" :style="'height:' + Math.max(5, funnel.view_to_cart_rate || 0) + '%'"></div>
-                        <span class="text-[10px] text-gray-500 mt-1" x-text="(funnel.view_to_cart_rate || 0) + '%'"></span>
-                    </div>
-                    <div class="flex-1 max-w-[200px] flex flex-col items-center">
-                        <div class="w-full bg-violet-500 rounded-t-lg transition-all" :style="'height:' + Math.max(5, (funnel.view_to_cart_rate || 0) * (funnel.cart_to_checkout_rate || 0) / 100) + '%'"></div>
-                        <span class="text-[10px] text-gray-500 mt-1" x-text="((funnel.view_to_cart_rate || 0) * (funnel.cart_to_checkout_rate || 0) / 100).toFixed(1) + '%'"></span>
-                    </div>
-                    <div class="flex-1 max-w-[200px] flex flex-col items-center">
-                        <div class="w-full bg-emerald-500 rounded-t-lg transition-all" :style="'height:' + Math.max(5, funnel.overall_conversion_rate || 0) + '%'"></div>
-                        <span class="text-[10px] text-gray-500 mt-1" x-text="(funnel.overall_conversion_rate || 0) + '%'"></span>
-                    </div>
+                    {{-- Empty space for alignment --}}
+                    <div class="mt-2 h-16"></div>
+                    <div class="h-4"></div>
                 </div>
             </div>
         </div>
@@ -1187,9 +1198,9 @@
         </div>
 
         {{-- Globe Modal --}}
-        <div x-show="showGlobeModal" x-transition class="fixed inset-0 z-50" x-cloak>
+        <div x-show="showGlobeModal" x-transition class="fixed inset-0 globe-modal-overlay" x-cloak>
             <div class="fixed inset-0 bg-black/80 backdrop-blur-sm" @click="showGlobeModal = false"></div>
-            <div class="fixed inset-4 bg-slate-50 rounded-3xl overflow-hidden shadow-2xl">
+            <div class="fixed inset-4 bg-slate-50 rounded-3xl overflow-hidden shadow-2xl" style="z-index: 10000;">
                 <div id="globeMap" class="w-full h-full"></div>
 
                 {{-- Header Overlay --}}
