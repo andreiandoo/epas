@@ -27,11 +27,12 @@ class ImportedSection
     {
         $d = $path->getAttribute('d');
         $points = self::parseSvgPath($d);
+        $categoryId = $path->getAttribute('data-seat-category-id');
 
         return new self(
-            externalId: $path->getAttribute('data-seat-category-id') ?: uniqid('section_'),
+            externalId: $categoryId !== '' ? $categoryId : uniqid('section_'),
             points: $points,
-            categoryId: $path->getAttribute('data-seat-category-id') ?: null,
+            categoryId: $categoryId !== '' ? $categoryId : null, // Preserve "0" as valid
             isSelectable: $path->getAttribute('data-is-selectable') !== '0',
         );
     }

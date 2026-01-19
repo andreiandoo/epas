@@ -18,11 +18,13 @@ class ImportedSeat
 
     public static function fromCircleElement(\DOMElement $circle): self
     {
+        $categoryId = $circle->getAttribute('data-seat-category-id');
+
         return new self(
             externalId: $circle->getAttribute('data-seat-id') ?: uniqid('seat_'),
             cx: (float) $circle->getAttribute('cx'),
             cy: (float) $circle->getAttribute('cy'),
-            categoryId: $circle->getAttribute('data-seat-category-id') ?: null,
+            categoryId: $categoryId !== '' ? $categoryId : null, // Preserve "0" as valid category
             isSelectable: $circle->getAttribute('data-is-selectable') !== '0',
             isAllocated: $circle->getAttribute('data-is-allocated') === '1',
         );

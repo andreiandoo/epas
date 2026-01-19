@@ -153,7 +153,7 @@ class SVGImportService
             $assigned = false;
 
             // First try to match by category ID
-            if ($seat->categoryId) {
+            if ($seat->categoryId !== null) { // Handle category "0" properly
                 foreach ($sections as $section) {
                     if ($section->categoryId === $seat->categoryId) {
                         $section->addSeat($seat);
