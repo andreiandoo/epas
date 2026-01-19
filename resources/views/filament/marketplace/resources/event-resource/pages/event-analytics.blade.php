@@ -1325,6 +1325,9 @@
                     {key: 'visits', label: 'Visits', color: '#f59e0b', active: false}
                 ],
 
+                // Polling interval for live visitor data
+                globePollingInterval: null,
+
                 init() {
                     this.$nextTick(() => this.initCharts());
 
@@ -1336,9 +1339,93 @@
                             this.$nextTick(() => {
                                 console.log('Calling initGlobe after $nextTick');
                                 this.initGlobe();
+                                // Start polling for live updates
+                                this.startGlobePolling();
                             });
+                        } else {
+                            // Stop polling when modal closes
+                            this.stopGlobePolling();
                         }
                     });
+                },
+
+                startGlobePolling() {
+                    // Clear any existing interval
+                    this.stopGlobePolling();
+                    // Poll every 10 seconds
+                    this.globePollingInterval = setInterval(() => {
+                        this.refreshLiveData();
+                    }, 10000);
+                    console.log('Globe polling started (every 10s)');
+                },
+
+                stopGlobePolling() {
+                    if (this.globePollingInterval) {
+                        clearInterval(this.globePollingInterval);
+                        this.globePollingInterval = null;
+                        console.log('Globe polling stopped');
+                    }
+                },
+
+                async refreshLiveData() {
+                    try {
+                        const data = await this.$wire.fetchLiveVisitorData();
+                        if (data) {
+                            this.liveVisitors = data.count || 0;
+                            this.liveActivities = data.activity && data.activity.length > 0
+                                ? data.activity
+                                : [{flag: '🌍', action: 'No live visitors', city: '-', country: '-', time: '-'}];
+                            this.globeData = data.globeData || [];
+
+                            // Update map markers if map exists
+                            if (window.globeMap && this.showGlobeModal) {
+                                this.updateGlobeMarkers();
+                            }
+                            console.log('Live data refreshed:', data.count, 'visitors');
+                        }
+                    } catch (e) {
+                        console.error('Failed to refresh live data:', e);
+                    }
+                },
+
+                updateGlobeMarkers() {
+                    if (!window.globeMap) return;
+
+                    // Clear existing markers
+                    window.globeMap.eachLayer((layer) => {
+                        if (layer instanceof L.CircleMarker) {
+                            window.globeMap.removeLayer(layer);
+                        }
+                    });
+
+                    // Add new markers from updated globeData
+                    const locations = this.globeData.map(v => ({
+                        lat: v.lat,
+                        lng: v.lng,
+                        city: v.city || 'Unknown',
+                        country: v.country || '',
+                        time: v.time || '',
+                    }));
+
+                    locations.forEach(loc => {
+                        if (loc.lat && loc.lng) {
+                            L.circleMarker([loc.lat, loc.lng], {
+                                radius: 12,
+                                fillColor: '#10b981',
+                                color: '#fff',
+                                weight: 2,
+                                opacity: 1,
+                                fillOpacity: 0.8,
+                            }).addTo(window.globeMap)
+                              .bindPopup(`<b>${loc.city}</b>${loc.country ? ', ' + loc.country : ''}<br><span style="color:#10b981">Online ${loc.time}</span>`);
+                        }
+                    });
+
+                    // Fit bounds if we have locations
+                    if (locations.length > 0 && locations[0].lat) {
+                        const bounds = L.latLngBounds(locations.map(l => [l.lat, l.lng]));
+                        window.globeMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 8 });
+                    }
                 },
 
                 async changePeriod(newPeriod) {
